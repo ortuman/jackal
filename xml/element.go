@@ -17,9 +17,9 @@ type Attribute struct {
 
 type element struct {
 	name          string
+	text          string
 	attributes    []Attribute
 	childElements []Element
-	text          string
 }
 
 func newElement(name string, attributes []Attribute, childElements []Element) *element {
@@ -123,9 +123,7 @@ func (e *Element) shared() *element {
 }
 
 func (e *Element) copyOnWrite() {
-	if atomic.LoadInt32(&e.shadowed) > 0 {
-		return
+	if atomic.CompareAndSwapInt32(&e.shadowed, 0, 1) {
+		atomic.StorePointer(&e.p, unsafe.Pointer(e.shared().copy()))
 	}
-	atomic.StorePointer(&e.p, unsafe.Pointer(e.shared().copy()))
-	atomic.StoreInt32(&e.shadowed, 1)
 }
