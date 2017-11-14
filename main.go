@@ -5,7 +5,6 @@
 
 package main
 
-
 import (
 	"github.com/ortuman/jackal/xml"
 )

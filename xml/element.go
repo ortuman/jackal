@@ -115,10 +115,12 @@ func NewElement(name string, attributes []Attribute) *Element {
 	return e
 }
 
+// NewElementName creates a new Element with a given name.
 func NewElementName(name string) *Element {
 	return NewElement(name, []Attribute{})
 }
 
+// NewElementNamespace creates a new Element with a given name and namespace.
 func NewElementNamespace(name, namespace string) *Element {
 	return NewElement(name, []Attribute{{"namespace", namespace}})
 }
