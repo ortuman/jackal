@@ -10,11 +10,13 @@ import (
 	"unsafe"
 )
 
+// An Attribute represents an attribute in an XML element (label=value).
 type Attribute struct {
 	label string
 	value string
 }
 
+// element represents details for the XML representation node.
 type element struct {
 	name          string
 	text          string
@@ -49,17 +51,44 @@ func (e *element) getAttribute(label string) string {
 	return ""
 }
 
+// Appends a child element.
 func (e *element) appendElement(childElement Element) {
 	e.childElements = append(e.childElements, childElement)
 }
 
+// Appends an array of child elements.
+func (e *element) appendElements(childElements []Element) {
+	e.childElements = append(e.childElements, childElements...)
+}
+
+// Returns element identified by name, or nil if not found.
 func (e *element) getElement(name string) *Element {
+	return e.getElementNamespace(name, "")
+}
+
+// Returns element identified by name and namespace, or nil if not found.
+func (e *element) getElementNamespace(name, namespace string) *Element {
 	for i := 0; i < len(e.childElements); i++ {
-		if e.childElements[i].shared().name == name {
+		shared := e.childElements[i].shared()
+		if shared.name == name && shared.getAttribute("namespace") == namespace {
 			return &e.childElements[i]
 		}
 	}
 	return nil
+}
+
+func (e *element) getElements(name string) []Element {
+	return e.getElementsNamespace(name, "")
+}
+
+func (e *element) getElementsNamespace(name, namespace string) []Element {
+	ret := e.childElements[:0]
+	for _, c := range e.childElements {
+		if c.shared().name == name && c.shared().getAttribute("namespace") == namespace {
+			ret = append(ret, c)
+		}
+	}
+	return ret
 }
 
 func (e *element) copy() *element {
@@ -67,9 +96,12 @@ func (e *element) copy() *element {
 	cp.name = e.name
 	cp.attributes = make([]Attribute, len(e.attributes), cap(e.attributes))
 	cp.childElements = make([]Element, len(e.childElements), cap(e.childElements))
+	copy(cp.attributes, e.attributes)
+	copy(cp.childElements, e.childElements)
 	return cp
 }
 
+// Element represents a shadowed copy of an XML
 type Element struct {
 	p        unsafe.Pointer
 	shadowed int32
@@ -105,8 +137,25 @@ func (e *Element) AppendElement(element Element) {
 	e.shared().appendElement(element)
 }
 
+func (e *Element) AppendElements(elements []Element) {
+	e.copyOnWrite()
+	e.shared().appendElements(elements)
+}
+
 func (e *Element) GetElement(name string) *Element {
 	return e.shared().getElement(name)
+}
+
+func (e *Element) GetElementNamespace(name, namespace string) *Element {
+	return e.shared().getElementNamespace(name, namespace)
+}
+
+func (e *Element) GetElements(name string) []Element {
+	return e.shared().getElements(name)
+}
+
+func (e *Element) GetElementsNamespace(name, namespace string) []Element {
+	return e.shared().getElementsNamespace(name, namespace)
 }
 
 func (e *Element) SetText(text string) {
