@@ -16,7 +16,7 @@ type Attribute struct {
 	value string
 }
 
-// element represents details for the XML representation node.
+// element represents internal details for the XML representation node.
 type element struct {
 	name          string
 	text          string
@@ -101,7 +101,6 @@ func (e *element) copy() *element {
 	return cp
 }
 
-// Element represents a shadowed copy of an XML
 type Element struct {
 	p        unsafe.Pointer
 	shadowed int32
@@ -125,11 +124,13 @@ func NewElementNamespace(name, namespace string) *Element {
 	return NewElement(name, []Attribute{{"namespace", namespace}})
 }
 
+// SetAttribute writes or replace an XML node attribute value.
 func (e *Element) SetAttribute(label, value string) {
 	e.copyOnWrite()
 	e.shared().setAttribute(label, value)
 }
 
+// GetAttribute returns XML node attribute value.
 func (e *Element) GetAttribute(label string) string {
 	return e.shared().getAttribute(label)
 }
