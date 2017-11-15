@@ -40,13 +40,13 @@ func NewElementNamespace(name, namespace string) *Element {
 	return NewElement(name, []Attribute{{"namespace", namespace}})
 }
 
-// SetAttribute writes or replace an XML node attribute value.
+// SetAttribute sets an XML node attribute value.
 func (e *Element) SetAttribute(label, value string) {
 	e.copyOnWrite()
 	e.shared().setAttribute(label, value)
 }
 
-// GetAttribute returns XML node attribute value.
+// Attribute returns XML node attribute value.
 func (e *Element) Attribute(label string) string {
 	return e.shared().attribute(label)
 }
@@ -63,37 +63,37 @@ func (e *Element) AppendElements(elements []Element) {
 	e.shared().appendElements(elements)
 }
 
-// GetElement returns first element identified by name.
+// Element returns first element identified by name.
 // Returns nil if no element is found.
 func (e *Element) Element(name string) *Element {
 	return e.shared().element(name)
 }
 
-// GetElementNamespace returns first element identified by name and namespace.
+// ElementNamespace returns first element identified by name and namespace.
 // Returns nil if no element is found.
 func (e *Element) ElementNamespace(name, namespace string) *Element {
 	return e.shared().elementNamespace(name, namespace)
 }
 
-// GetElements returns all elements identified by name.
+// Elements returns all elements identified by name.
 // Returns nil if no elements are found.
 func (e *Element) Elements(name string) []Element {
 	return e.shared().elements(name)
 }
 
-// GetElementsNamespace returns all elements identified by name and namespace.
+// ElementsNamespace returns all elements identified by name and namespace.
 // Returns nil if no elements are found.
 func (e *Element) ElementsNamespace(name, namespace string) []Element {
 	return e.shared().elementsNamespace(name, namespace)
 }
 
-// SetText
+// SetText sets XML node text value.
 func (e *Element) SetText(text string) {
 	e.copyOnWrite()
 	e.shared().text = text
 }
 
-// GetText returns XML node text value.
+// Text returns XML node text value.
 // Returns empty string if not set.
 func (e *Element) Text() string {
 	return e.shared().text
