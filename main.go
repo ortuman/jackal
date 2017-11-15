@@ -13,5 +13,11 @@ func main() {
 	e := xml.NewElementNamespace("iq", "github.com")
 	e.SetAttribute("id", "123")
 	e.SetAttribute("id", "456")
-	println(e.Attribute("id"))
+	e.SetNamespace("jabber:client")
+
+	e1 := xml.NewElementName("sucess")
+	e1.SetText("a sucessful text")
+	e.AppendElement(e1)
+
+	println(e.XML(true))
 }

@@ -23,21 +23,21 @@ type Element struct {
 }
 
 // NewElement creates an XML Element instance with name and attributes.
-func NewElement(name string, attributes []Attribute) *Element {
+func NewElement(name string, attributes []Attribute) Element {
 	shared := newElement(name, attributes)
-	e := &Element{}
+	e := Element{}
 	e.p = unsafe.Pointer(shared)
 	e.shadowed = 0
 	return e
 }
 
 // NewElementName creates a new Element with a given name.
-func NewElementName(name string) *Element {
+func NewElementName(name string) Element {
 	return NewElement(name, []Attribute{})
 }
 
 // NewElementNamespace creates a new Element with a given name and namespace.
-func NewElementNamespace(name, namespace string) *Element {
+func NewElementNamespace(name, namespace string) Element {
 	return NewElement(name, []Attribute{{"xmlns", namespace}})
 }
 
