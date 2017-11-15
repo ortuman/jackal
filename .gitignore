@@ -13,7 +13,11 @@
 # System folders
 .DS_Store
 
-# Project folders
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
+
+# Project folders
 .idea/
 .vscode/
+
+debug

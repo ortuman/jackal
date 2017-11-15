@@ -38,7 +38,18 @@ func NewElementName(name string) *Element {
 
 // NewElementNamespace creates a new Element with a given name and namespace.
 func NewElementNamespace(name, namespace string) *Element {
-	return NewElement(name, []Attribute{{"namespace", namespace}})
+	return NewElement(name, []Attribute{{"xmlns", namespace}})
+}
+
+// SetName sets XML node name.
+func (e *Element) SetName(name string) {
+	e.copyOnWrite()
+	e.shared().name = name
+}
+
+// Name returns XML node name.
+func (e *Element) Name() string {
+	return e.shared().name
 }
 
 // SetAttribute sets an XML node attribute value.
@@ -190,7 +201,7 @@ func (e *element) removeElements(name string) {
 func (e *element) removeElementsNamespace(name, namespace string) {
 	childElements := e.childElements[:0]
 	for _, c := range e.childElements {
-		matches := c.shared().name == name && c.shared().attribute("namespace") == namespace
+		matches := c.Name() == name && c.Attribute("xmlns") == namespace
 		if !matches {
 			childElements = append(childElements, c)
 		}
@@ -205,7 +216,7 @@ func (e *element) element(name string) *Element {
 func (e *element) elementNamespace(name, namespace string) *Element {
 	for i := 0; i < len(e.childElements); i++ {
 		shared := e.childElements[i].shared()
-		if shared.name == name && shared.attribute("namespace") == namespace {
+		if shared.name == name && shared.attribute("xmlns") == namespace {
 			return &e.childElements[i]
 		}
 	}
@@ -219,7 +230,7 @@ func (e *element) elements(name string) []Element {
 func (e *element) elementsNamespace(name, namespace string) []Element {
 	ret := e.childElements[:0]
 	for _, c := range e.childElements {
-		if c.shared().name == name && c.shared().attribute("namespace") == namespace {
+		if c.Name() == name && c.Attribute("xmlns") == namespace {
 			ret = append(ret, c)
 		}
 	}
