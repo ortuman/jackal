@@ -10,7 +10,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Project-local folders
+# System folders
+.DS_Store
+
+# Project folders
 .glide/
 .idea/
 .vscode/
