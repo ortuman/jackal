@@ -4,19 +4,18 @@
     // Para más información, visite: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
-        {
-            "name": "jackal",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "remotePath": "",
-            "port": 2345,
-            "host": "127.0.0.1",
-            "program": "${fileDirname}",
-            "env": {},
-            "args": [],
-            "showLog": true
-        }
+		{
+			"name": "jackal",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"remotePath": "",
+			"port": 2345,
+			"host": "127.0.0.1",
+			"program": "${workspaceRoot}",
+			"env": {},
+			"args": [],
+			"showLog": true
+		}
     ]
 }
