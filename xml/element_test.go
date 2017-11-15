@@ -10,10 +10,27 @@ import "testing"
 func TestElementNameAndNamespace(t *testing.T) {
 	e := NewElementNamespace("iq", "jabber:client")
 	if e.Name() != "iq" {
-		t.Errorf("name %s. expected %s", e.Name(), "iq")
+		t.Fatalf("name %s. expected %s", e.Name(), "iq")
 	}
 	if e.Namespace() != "jabber:client" {
-		t.Errorf("namespace %s. expected %s", e.Namespace(), "jabber:client")
+		t.Fatalf("namespace %s. expected %s", e.Namespace(), "jabber:client")
+	}
+}
+
+func TestAttribute(t *testing.T) {
+}
+
+func TestAppendElement(t *testing.T) {
+	e1 := NewElementNamespace("iq", "jabber:client")
+	e1.AppendElement(NewElementNamespace("query", "im.jackal"))
+
+	q1 := e1.Element("query")
+	if q1 == nil {
+		t.Fatal("q1 not found")
+	}
+	q2 := e1.ElementNamespace("query", "im.jackal")
+	if q2 == nil || q2.shared() != q1.shared() {
+		t.Fatal("q2 not found")
 	}
 }
 
@@ -29,18 +46,18 @@ func TestShadowCopy(t *testing.T) {
 
 	e2.SetName("message")
 	if e1.shared() == e2.shared() {
-		t.Error("e1.p == e2.p after setting name")
+		t.Fatal("e1.p == e2.p after setting name")
 	}
 	e3.SetText("another text")
 	if e1.shared() == e3.shared() {
-		t.Error("e1.p == e3.p after setting text")
+		t.Fatal("e1.p == e3.p after setting text")
 	}
 	e4.SetAttribute("id", "abcde")
 	if e1.shared() == e4.shared() {
-		t.Error("e1.p == e4.p after setting attribute")
+		t.Fatal("e1.p == e4.p after setting attribute")
 	}
 	e5.AppendElement(NewElementName("item"))
 	if e1.shared() == e5.shared() {
-		t.Error("e1.p == e5.p after appending element")
+		t.Fatal("e1.p == e5.p after appending element")
 	}
 }

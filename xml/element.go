@@ -215,8 +215,8 @@ func (e *element) element(name string) *Element {
 
 func (e *element) elementNamespace(name, namespace string) *Element {
 	for i := 0; i < len(e.childElements); i++ {
-		shared := e.childElements[i].shared()
-		if shared.name == name && shared.attribute("xmlns") == namespace {
+		sh := e.childElements[i].shared()
+		if sh.name == name && sh.attribute("xmlns") == namespace {
 			return &e.childElements[i]
 		}
 	}
