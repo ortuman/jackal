@@ -10,12 +10,13 @@ import (
 	"unsafe"
 )
 
-// An Attribute represents an attribute in an XML element (label=value).
+// Attribute represents an XML node attribute (label=value).
 type Attribute struct {
 	label string
 	value string
 }
 
+// Element represents an XML node element.
 type Element struct {
 	p        unsafe.Pointer
 	shadowed int32
@@ -46,6 +47,12 @@ func (e *Element) SetAttribute(label, value string) {
 	e.shared().setAttribute(label, value)
 }
 
+// RemoveAttribute removes an XML node attribute.
+func (e *Element) RemoveAttribute(label string) {
+	e.copyOnWrite()
+	e.shared().removeAttribute(label)
+}
+
 // Attribute returns XML node attribute value.
 func (e *Element) Attribute(label string) string {
 	return e.shared().attribute(label)
@@ -61,6 +68,18 @@ func (e *Element) AppendElement(element Element) {
 func (e *Element) AppendElements(elements []Element) {
 	e.copyOnWrite()
 	e.shared().appendElements(elements)
+}
+
+// RemoveElements removes elements identified by name.
+func (e *Element) RemoveElements(name string) {
+	e.copyOnWrite()
+	e.shared().removeElements(name)
+}
+
+// RemoveElementsNamespace removes elements identified by name and namespace.
+func (e *Element) RemoveElementsNamespace(name, namespace string) {
+	e.copyOnWrite()
+	e.shared().removeElementsNamespace(name, namespace)
 }
 
 // Element returns first element identified by name.
@@ -94,7 +113,7 @@ func (e *Element) SetText(text string) {
 }
 
 // Text returns XML node text value.
-// Returns empty string if not set.
+// Returns an empty string if not set.
 func (e *Element) Text() string {
 	return e.shared().text
 }
@@ -134,6 +153,19 @@ func (e *element) setAttribute(label, value string) {
 	e.attributes = append(e.attributes, Attribute{label, value})
 }
 
+func (e *element) removeAttribute(label string) {
+	j := -1
+	for i := 0; i < len(e.attributes); i++ {
+		if e.attributes[i].label == label {
+			j = i
+			break
+		}
+	}
+	if j != -1 {
+		e.attributes = append(e.attributes[:j], e.attributes[j+1:]...)
+	}
+}
+
 func (e *element) attribute(label string) string {
 	for i := 0; i < len(e.attributes); i++ {
 		if e.attributes[i].label == label {
@@ -149,6 +181,21 @@ func (e *element) appendElement(childElement Element) {
 
 func (e *element) appendElements(childElements []Element) {
 	e.childElements = append(e.childElements, childElements...)
+}
+
+func (e *element) removeElements(name string) {
+	e.removeElementsNamespace(name, "")
+}
+
+func (e *element) removeElementsNamespace(name, namespace string) {
+	childElements := e.childElements[:0]
+	for _, c := range e.childElements {
+		matches := c.shared().name == name && c.shared().attribute("namespace") == namespace
+		if !matches {
+			childElements = append(childElements, c)
+		}
+	}
+	e.childElements = childElements
 }
 
 func (e *element) element(name string) *Element {
