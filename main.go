@@ -13,5 +13,5 @@ func main() {
 	e := xml.NewElementNamespace("iq", "github.com")
 	e.SetAttribute("id", "123")
 	e.SetAttribute("id", "456")
-	println(e.GetAttribute("id"))
+	println(e.Attribute("id"))
 }
