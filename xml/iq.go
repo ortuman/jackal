@@ -5,15 +5,11 @@
 
 package xml
 
-import "unsafe"
-
 type IQ struct {
 	Element
 }
 
-func NewIQFromElement(element Element) (*IQ, error) {
+func NewIQFromElement(element *Element) (*IQ, error) {
 	iq := &IQ{}
-	iq.p = unsafe.Pointer(element.shared())
-	iq.shadowed = 0
 	return iq, nil
 }

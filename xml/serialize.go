@@ -8,29 +8,28 @@ package xml
 // XML converts an Element entity to its raw XML representation.
 // If includeClosing is true a closing tag will be attached.
 func (e *Element) XML(includeClosing bool) string {
-	s := e.shared()
-	ret := "<" + s.name
+	ret := "<" + e.name
 
 	// serialize attributes
-	for i := 0; i < len(s.attributes); i++ {
-		if len(s.attributes[i].value) == 0 {
+	for i := 0; i < len(e.attrs); i++ {
+		if len(e.attrs[i].value) == 0 {
 			continue
 		}
-		ret += " " + s.attributes[i].label + "=\"" + s.attributes[i].value + "\""
+		ret += " " + e.attrs[i].label + "=\"" + e.attrs[i].value + "\""
 	}
-	if len(s.childElements) > 0 || len(s.text) > 0 {
+	if len(e.childs) > 0 || len(e.text) > 0 {
 		ret += ">"
 
 		// serialize text
-		if len(s.text) > 0 {
-			ret += s.text
+		if len(e.text) > 0 {
+			ret += e.text
 		}
 		// serialize child elements
-		for j := 0; j < len(s.childElements); j++ {
-			ret += s.childElements[j].XML(true)
+		for j := 0; j < len(e.childs); j++ {
+			ret += e.childs[j].XML(true)
 		}
 		if includeClosing {
-			ret += "</" + s.name + ">"
+			ret += "</" + e.name + ">"
 		}
 	} else {
 		if includeClosing {

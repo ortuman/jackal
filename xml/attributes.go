@@ -6,7 +6,7 @@
 package xml
 
 // SetID sets 'id' node attribute.
-func (e *Element) SetID(identifier string) {
+func (e *MutableElement) SetID(identifier string) {
 	e.SetAttribute("id", identifier)
 }
 
@@ -16,7 +16,7 @@ func (e *Element) ID() string {
 }
 
 // SetNamespace sets 'xmlns' node attribute.
-func (e *Element) SetNamespace(namespace string) {
+func (e *MutableElement) SetNamespace(namespace string) {
 	e.SetAttribute("xmlns", namespace)
 }
 
@@ -26,7 +26,7 @@ func (e *Element) Namespace() string {
 }
 
 // SetLanguage sets 'xml:lang' node attribute.
-func (e *Element) SetLanguage(language string) {
+func (e *MutableElement) SetLanguage(language string) {
 	e.SetAttribute("xml:lang", language)
 }
 
@@ -36,7 +36,7 @@ func (e *Element) Language() string {
 }
 
 // SetVersion sets 'version' node attribute.
-func (e *Element) SetVersion(version string) {
+func (e *MutableElement) SetVersion(version string) {
 	e.SetAttribute("version", version)
 }
 
