@@ -83,8 +83,8 @@ func (m *MutableElement) RemoveElements(name string) {
 	m.elements = filtered
 }
 
-// RemoveElementsNS removes all elements with a given name and namespace.
-func (m *MutableElement) RemoveElementsNS(name, namespace string) {
+// RemoveElementsNamespace removes all elements with a given name and namespace.
+func (m *MutableElement) RemoveElementsNamespace(name, namespace string) {
 	filtered := m.elements[:0]
 	for _, e := range m.elements {
 		if e.name != name || e.Namespace() != namespace {
