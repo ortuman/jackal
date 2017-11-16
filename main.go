@@ -10,6 +10,9 @@ import (
 )
 
 func main() {
-	e := xml.NewElementNS("iq", "jabber:client")
+	e := xml.NewMutableElementNamespace("iq", "jabber:client")
+	e.SetID("123")
+	e.SetLanguage("en")
+	e.SetVersion("1.0")
 	println(e.XML(true))
 }

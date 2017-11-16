@@ -17,7 +17,7 @@ func (e *Element) XML(includeClosing bool) string {
 		}
 		ret += " " + e.attrs[i].label + "=\"" + e.attrs[i].value + "\""
 	}
-	if len(e.childs) > 0 || len(e.text) > 0 {
+	if len(e.elements) > 0 || len(e.text) > 0 {
 		ret += ">"
 
 		// serialize text
@@ -25,8 +25,8 @@ func (e *Element) XML(includeClosing bool) string {
 			ret += e.text
 		}
 		// serialize child elements
-		for j := 0; j < len(e.childs); j++ {
-			ret += e.childs[j].XML(true)
+		for j := 0; j < len(e.elements); j++ {
+			ret += e.elements[j].XML(true)
 		}
 		if includeClosing {
 			ret += "</" + e.name + ">"

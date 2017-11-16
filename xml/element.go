@@ -11,29 +11,29 @@ type Attribute struct {
 	value string
 }
 
-// Element represents an XML node element.
+// Element represents an immutable XML node element.
 type Element struct {
-	name   string
-	text   string
-	attrs  []Attribute
-	childs []*Element
+	name     string
+	text     string
+	attrs    []Attribute
+	elements []*Element
 }
 
-// NewElement creates an XML Element instance with a given name.
-func NewElement(name string) *Element {
+// NewElementName creates an XML Element instance with a given name.
+func NewElementName(name string) *Element {
 	e := Element{}
 	e.name = name
 	e.attrs = []Attribute{}
-	e.childs = []*Element{}
+	e.elements = []*Element{}
 	return &e
 }
 
-// NewElementNS creates an XML Element instance with a given name and namespace.
-func NewElementNS(name, namespace string) *Element {
+// NewElementNamespace creates an XML Element instance with a given name and namespace.
+func NewElementNamespace(name, namespace string) *Element {
 	e := Element{}
 	e.name = name
 	e.attrs = []Attribute{{"xmlns", namespace}}
-	e.childs = []*Element{}
+	e.elements = []*Element{}
 	return &e
 }
 
@@ -55,9 +55,9 @@ func (e *Element) Attribute(label string) string {
 // FindElement returns first element identified by name.
 // Returns nil if no element is found.
 func (e *Element) FindElement(name string) *Element {
-	for i := 0; i < len(e.childs); i++ {
-		if e.childs[i].name == name {
-			return e.childs[i]
+	for i := 0; i < len(e.elements); i++ {
+		if e.elements[i].name == name {
+			return e.elements[i]
 		}
 	}
 	return nil
@@ -66,33 +66,33 @@ func (e *Element) FindElement(name string) *Element {
 // FindElements returns all elements identified by name.
 // Returns an empty array if no elements are found.
 func (e *Element) FindElements(name string) []*Element {
-	ret := e.childs[:0]
-	for i := 0; i < len(e.childs); i++ {
-		if e.childs[i].name == name {
-			ret = append(ret, e.childs[i])
+	ret := e.elements[:0]
+	for i := 0; i < len(e.elements); i++ {
+		if e.elements[i].name == name {
+			ret = append(ret, e.elements[i])
 		}
 	}
 	return ret
 }
 
-// FindElementNS returns first element identified by name and namespace.
+// FindElementNamespace returns first element identified by name and namespace.
 // Returns nil if no element is found.
-func (e *Element) FindElementNS(name, namespace string) *Element {
-	for i := 0; i < len(e.childs); i++ {
-		if e.childs[i].name == name && e.childs[i].Namespace() == namespace {
-			return e.childs[i]
+func (e *Element) FindElementNamespace(name, namespace string) *Element {
+	for i := 0; i < len(e.elements); i++ {
+		if e.elements[i].name == name && e.elements[i].Namespace() == namespace {
+			return e.elements[i]
 		}
 	}
 	return nil
 }
 
-// FindElementsNS returns all elements identified by name and namespace.
+// FindElementsNamespace returns all elements identified by name and namespace.
 // Returns an empty array if no elements are found.
-func (e *Element) FindElementsNS(name, namespace string) []*Element {
-	ret := e.childs[:0]
-	for i := 0; i < len(e.childs); i++ {
-		if e.childs[i].name == name && e.childs[i].Namespace() == namespace {
-			ret = append(ret, e.childs[i])
+func (e *Element) FindElementsNamespace(name, namespace string) []*Element {
+	ret := e.elements[:0]
+	for i := 0; i < len(e.elements); i++ {
+		if e.elements[i].name == name && e.elements[i].Namespace() == namespace {
+			ret = append(ret, e.elements[i])
 		}
 	}
 	return ret
@@ -100,11 +100,23 @@ func (e *Element) FindElementsNS(name, namespace string) []*Element {
 
 // ElementsCount returns child elements count.
 func (e *Element) ElementsCount() int {
-	return len(e.childs)
+	return len(e.elements)
 }
 
 // Text returns XML node text value.
 // Returns an empty string if not set.
 func (e *Element) Text() string {
 	return e.text
+}
+
+// Copy returns a new instance that’s an immutable copy of the receiver.
+func (e *Element) Copy() *Element {
+	cp := &Element{}
+	cp.name = e.name
+	cp.text = e.text
+	cp.attrs = make([]Attribute, len(e.attrs), cap(e.attrs))
+	cp.elements = make([]*Element, len(e.elements), cap(e.elements))
+	copy(cp.attrs, e.attrs)
+	copy(cp.elements, e.elements)
+	return cp
 }
