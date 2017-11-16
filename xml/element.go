@@ -109,6 +109,11 @@ func (e *Element) FindElementsNamespace(name, namespace string) []*Element {
 	return ret
 }
 
+// Elements returns all instance's child elements.
+func (e *Element) Elements() []*Element {
+	return e.elements
+}
+
 // ElementsCount returns child elements count.
 func (e *Element) ElementsCount() int {
 	return len(e.elements)

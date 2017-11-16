@@ -3,12 +3,16 @@
  * See the COPYING file for more information.
  */
 
-package xml
+package xml_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ortuman/jackal/xml"
+)
 
 func TestElementNameAndNamespace(t *testing.T) {
-	e := NewElementNamespace("n", "ns")
+	e := xml.NewElementNamespace("n", "ns")
 	if e.Name() != "n" {
 		t.Fatalf("wrong name: '%s'. expected 'n'", e.Name())
 	}
@@ -18,7 +22,7 @@ func TestElementNameAndNamespace(t *testing.T) {
 }
 
 func TestAttribute(t *testing.T) {
-	e := NewMutableElementName("n")
+	e := xml.NewMutableElementName("n")
 	e.SetID("123")
 	e.SetLanguage("en")
 	e.SetVersion("1.0")
@@ -36,13 +40,13 @@ func TestAttribute(t *testing.T) {
 }
 
 func TestElement(t *testing.T) {
-	e := NewMutableElementName("n")
-	e.AppendElement(NewElementName("a"))
-	e.AppendElement(NewElementName("b"))
-	e.AppendElement(NewElementNamespace("c", "ns1"))
-	e.AppendElement(NewElementNamespace("c", "ns2"))
-	e.AppendElement(NewElementNamespace("c", "ns3"))
-	e.AppendElement(NewElementName("d"))
+	e := xml.NewMutableElementName("n")
+	e.AppendElement(xml.NewElementName("a"))
+	e.AppendElement(xml.NewElementName("b"))
+	e.AppendElement(xml.NewElementNamespace("c", "ns1"))
+	e.AppendElement(xml.NewElementNamespace("c", "ns2"))
+	e.AppendElement(xml.NewElementNamespace("c", "ns3"))
+	e.AppendElement(xml.NewElementName("d"))
 	a := e.FindElement("a")
 	if a == nil {
 		t.Fatal("a == nil")
@@ -54,5 +58,31 @@ func TestElement(t *testing.T) {
 	c1 := e.FindElementsNamespace("c", "ns1")
 	if len(c1) != 1 {
 		t.Fatalf("len(c1) == %d. expected 1", len(c1))
+	}
+	count := e.ElementsCount()
+	if count != 6 {
+		t.Fatalf("count == %d. expected 6", count)
+	}
+}
+
+func TestCopy(t *testing.T) {
+	e := xml.NewMutableElementName("n")
+	e.SetID("123")
+	e.AppendElement(xml.NewElementName("a"))
+	cp := e.Copy()
+
+	if cp.Name() != e.Name() {
+		t.Fatal("cp.Name() != e.Name()")
+	}
+	if cp.ID() != e.ID() {
+		t.Fatal("cp.ID() != e.ID() ")
+	}
+	if cp.ElementsCount() != e.ElementsCount() {
+		t.Fatal("cp.ElementsCount() != e.ElementsCount()")
+	}
+	cpElems := cp.Elements()
+	eElems := e.Elements()
+	if cpElems[0] != eElems[0] {
+		t.Fatal("cpElems[0] != eElems[0]")
 	}
 }
