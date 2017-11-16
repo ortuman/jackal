@@ -58,6 +58,11 @@ func (e *Element) Attribute(label string) string {
 	return ""
 }
 
+// AttributesCount XML attributes count.
+func (e *Element) AttributesCount() int {
+	return len(e.attrs)
+}
+
 // FindElement returns first element identified by name.
 // Returns nil if no element is found.
 func (e *Element) FindElement(name string) *Element {

@@ -14,5 +14,18 @@ func main() {
 	e.SetID("123")
 	e.SetLanguage("en")
 	e.SetVersion("1.0")
+
+	e.AppendElement(xml.NewElementName("a"))
+	e.AppendElement(xml.NewElementName("b"))
+	e.AppendElement(xml.NewElementName("c"))
+	e.AppendElement(xml.NewElementName("c"))
+	e.AppendElement(xml.NewElementName("c"))
+	e.AppendElement(xml.NewElementName("d"))
+	e.AppendElement(xml.NewElementName("e"))
+
+	e.RemoveElements("c")
+	e.RemoveElements("e")
+	e.RemoveElements("a")
+
 	println(e.XML(true))
 }
