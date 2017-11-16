@@ -22,9 +22,11 @@ func TestAttribute(t *testing.T) {
 
 func TestAppendElement(t *testing.T) {
 	e1 := NewElementNamespace("iq", "jabber:client")
-	e1.AppendElement(NewElementNamespace("query", "im.jackal"))
+	q := NewElementNamespace("query", "im.jackal")
+	e1.AppendElement(q)
 
 	q1 := e1.Element("query")
+	t.Log(q1)
 	if q1 == nil {
 		t.Fatal("q1 not found")
 	}
