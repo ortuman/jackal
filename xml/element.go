@@ -42,6 +42,12 @@ func (e *Element) Name() string {
 	return e.name
 }
 
+// Text returns XML node text value.
+// Returns an empty string if not set.
+func (e *Element) Text() string {
+	return e.text
+}
+
 // Attribute returns XML node attribute value.
 func (e *Element) Attribute(label string) string {
 	for i := 0; i < len(e.attrs); i++ {
@@ -101,12 +107,6 @@ func (e *Element) FindElementsNamespace(name, namespace string) []*Element {
 // ElementsCount returns child elements count.
 func (e *Element) ElementsCount() int {
 	return len(e.elements)
-}
-
-// Text returns XML node text value.
-// Returns an empty string if not set.
-func (e *Element) Text() string {
-	return e.text
 }
 
 // Copy returns a new instance that’s an immutable copy of the receiver.

@@ -41,6 +41,16 @@ func NewMutableElementNamespace(name, namespace string) *MutableElement {
 	return m
 }
 
+// SetName sets XML node name.
+func (m *MutableElement) SetName(name string) {
+	m.name = name
+}
+
+// SetText sets XML node text value.
+func (m *MutableElement) SetText(text string) {
+	m.text = text
+}
+
 // SetAttribute sets an XML node attribute (label=value)
 func (m *MutableElement) SetAttribute(label, value string) {
 	for i := 0; i < len(m.attrs); i++ {
