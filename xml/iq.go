@@ -9,7 +9,8 @@ type IQ struct {
 	Element
 }
 
-func NewIQFromElement(element *Element) (*IQ, error) {
+func NewIQ(e *Element) (*IQ, error) {
 	iq := &IQ{}
 	return iq, nil
 }
+

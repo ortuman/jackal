@@ -27,5 +27,5 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	println(e.XML(true))
+	println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
