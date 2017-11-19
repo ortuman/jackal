@@ -7,65 +7,206 @@ package xml
 
 /*
 #cgo LDFLAGS: -lidn
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "stringprep.h"
 
-int nameprep(char *in, size_t maxlen) {
-	return stringprep_nameprep(in, maxlen);
+char *nodeprep(char *in) {
+	int maxlen = strlen(in)*4 + 1;
+	char *buf = (char *)(malloc(maxlen));
+
+	strcpy(buf, in);
+	int rc = stringprep_xmpp_nodeprep(buf, maxlen);
+	if (rc != 0) {
+		free(buf);
+		return NULL;
+	}
+	return buf;
 }
 
-int nodeprep(char *in, size_t maxlen) {
-	return stringprep_xmpp_nodeprep(in, maxlen);
+char *domainprep(char *str) {
+	char *in = stringprep_convert(str, "ASCII", "UTF-8");
+
+	int maxlen = strlen(in)*4 + 1;
+	char *buf = (char *)(malloc(maxlen));
+
+	strcpy(buf, in);
+	free(in);
+
+	int rc = stringprep_nameprep(buf, maxlen);
+	if (rc != 0) {
+		free(buf);
+		return NULL;
+	}
+	return buf;
 }
 
-int resourceprep(char *in, size_t maxlen) {
-	return stringprep_xmpp_resourceprep(in, maxlen);
+char *resourceprep(char *in) {
+	int maxlen = strlen(in)*4 + 1;
+	char *buf = (char *)(malloc(maxlen));
+
+	strcpy(buf, in);
+	int rc = stringprep_xmpp_resourceprep(buf, maxlen);
+	if (rc != 0) {
+		free(buf);
+		return NULL;
+	}
+	return buf;
 }
 */
 import "C"
-import "unsafe"
+import (
+	"errors"
+	"fmt"
+	"strings"
+	"unsafe"
+)
 
 type JID struct {
-	user     string
-	domain   string
-	resource string
+	User     string
+	Domain   string
+	Resource string
 }
 
-func NewJID(user string, domain string, resource string) (*JID, error) {
+// NewJID constructs a JID given a user, domain, and resource.
+func NewJID(user, domain, resource string) (*JID, error) {
+	prepUser, err := nodeprep(user)
+	if err != nil {
+		return nil, err
+	}
+	prepDomain, err := domainprep(domain)
+	if err != nil {
+		return nil, err
+	}
+	prepResource, err := resourceprep(resource)
+	if err != nil {
+		return nil, err
+	}
 	return &JID{
-		user:     user,
-		domain:   domain,
-		resource: resource,
+		User:     prepUser,
+		Domain:   prepDomain,
+		Resource: prepResource,
 	}, nil
 }
 
-func NewJIDString(jidStr string) (*JID, error) {
-	return nil, nil
+// NewJIDString constructs a JID from it's string representation.
+func NewJIDString(str string) (*JID, error) {
+	if len(str) == 0 {
+		return &JID{}, nil
+	}
+	var user, domain, resource string
+
+	atIndex := strings.Index(str, "@")
+	slashIndex := strings.Index(str, "/")
+
+	// user
+	if atIndex > 0 {
+		user = str[0:atIndex]
+	}
+
+	// domain
+	if atIndex+1 > len(str) {
+		return nil, errors.New("JID with empty domain not valid")
+	}
+	if atIndex < 0 {
+		if slashIndex > 0 {
+			domain = str[0:slashIndex]
+		} else {
+			domain = str
+		}
+	} else {
+		if slashIndex > 0 {
+			domain = str[atIndex+1 : slashIndex]
+		} else {
+			domain = str[atIndex+1:]
+		}
+	}
+
+	// resource
+	if slashIndex > 0 && slashIndex+1 < len(str) {
+		resource = str[slashIndex+1:]
+	}
+	return NewJID(user, domain, resource)
+}
+
+// ToBareJID returns the string representation of the bare JID, which is the JID with resource information removed.
+func (j *JID) ToBareJID() string {
+	if len(j.User) == 0 {
+		return j.Domain
+	}
+	return j.User + "@" + j.Domain
+}
+
+// ToFullJID returns the String representation of the full JID.
+func (j *JID) ToFullJID() string {
+	if len(j.Resource) == 0 {
+		return j.ToBareJID()
+	}
+	if len(j.User) == 0 {
+		return j.Domain + "/" + j.Resource
+	}
+	return j.User + "@" + j.Domain + "/" + j.Resource
+}
+
+// Equals returns true if two JID's are equivalent.
+func (j *JID) Equals(j2 *JID) bool {
+	if j == j2 {
+		return true
+	}
+	if j.User != j2.User {
+		return false
+	}
+	if j.Domain != j2.Domain {
+		return false
+	}
+	if j.Resource != j2.Resource {
+		return false
+	}
+	return true
 }
 
 func nodeprep(in string) (string, error) {
-	var cin *C.char = C.CString(in)
+	cin := C.CString(in)
 	defer C.free(unsafe.Pointer(cin))
-	if C.nodeprep(cin, C.size_t(len(in))) != 0 {
-		return "", nil
+
+	prep := C.nodeprep(cin)
+	if prep == nil {
+		return "", fmt.Errorf("input is not a valid JID node part: %s", in)
 	}
-	return C.GoString(cin), nil
+	defer C.free(unsafe.Pointer(prep))
+	if C.strlen(prep) > 1073 {
+		return "", fmt.Errorf("node cannot be larger than 1073. Size is %d bytes", C.strlen(prep))
+	}
+	return C.GoString(prep), nil
 }
 
 func domainprep(in string) (string, error) {
-	var cin *C.char = C.CString(in)
+	cin := C.CString(in)
 	defer C.free(unsafe.Pointer(cin))
-	if C.nameprep(cin, C.size_t(len(in))) != 0 {
-		return "", nil
+
+	prep := C.domainprep(cin)
+	if prep == nil {
+		return "", fmt.Errorf("input is not a valid JID domain part: %s", in)
 	}
-	return C.GoString(cin), nil
+	defer C.free(unsafe.Pointer(prep))
+	if C.strlen(prep) > 1073 {
+		return "", fmt.Errorf("domain cannot be larger than 1073. Size is %d bytes", C.strlen(prep))
+	}
+	return C.GoString(prep), nil
 }
 
 func resourceprep(in string) (string, error) {
-	var cin *C.char = C.CString(in)
+	cin := C.CString(in)
 	defer C.free(unsafe.Pointer(cin))
-	if C.resourceprep(cin, C.size_t(len(in))) != 0 {
-		return "", nil
+
+	prep := C.resourceprep(cin)
+	if prep == nil {
+		return "", fmt.Errorf("input is not a valid JID resource part: %s", in)
 	}
-	return C.GoString(cin), nil
+	defer C.free(unsafe.Pointer(prep))
+	if C.strlen(prep) > 1073 {
+		return "", fmt.Errorf("resource cannot be larger than 1073. Size is %d bytes", C.strlen(prep))
+	}
+	return C.GoString(prep), nil
 }

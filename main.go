@@ -27,5 +27,7 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
+	xml.NewJID("ortuman", "jackal.im", "my_resource")
+
 	println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
