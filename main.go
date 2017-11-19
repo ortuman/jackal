@@ -30,7 +30,7 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	jid, err := xml.NewJID("ortuman", "jackal.im", "my_resource", false)
+	jid, err := xml.NewJIDString("ortuman@", false)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

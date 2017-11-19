@@ -118,7 +118,7 @@ func NewJIDString(str string, skipStringPrep bool) (*JID, error) {
 	}
 
 	// domain
-	if atIndex+1 > len(str) {
+	if atIndex+1 == len(str) {
 		return nil, errors.New("JID with empty domain not valid")
 	}
 	if atIndex < 0 {
