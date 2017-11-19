@@ -130,3 +130,8 @@ func (e *Element) Copy() *Element {
 	copy(cp.elements, e.elements)
 	return cp
 }
+
+// String returns a string representation of the element.
+func (e *Element) String() string {
+	return e.XML(true)
+}

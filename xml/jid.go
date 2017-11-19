@@ -63,15 +63,26 @@ import (
 	"unsafe"
 )
 
+// JID represents an XMPP address (JID).
+// A JID is made up of a node (generally a username), a domain, and a resource.
+// The node and resource are optional; domain is required.
 type JID struct {
-	User     string
+	Node     string
 	Domain   string
 	Resource string
 }
 
 // NewJID constructs a JID given a user, domain, and resource.
-func NewJID(user, domain, resource string) (*JID, error) {
-	prepUser, err := nodeprep(user)
+// This construction allows the caller to specify if stringprep should be applied or not.
+func NewJID(node, domain, resource string, skipStringPrep bool) (*JID, error) {
+	if skipStringPrep {
+		return &JID{
+			Node:     node,
+			Domain:   domain,
+			Resource: resource,
+		}, nil
+	}
+	prepNode, err := nodeprep(node)
 	if err != nil {
 		return nil, err
 	}
@@ -84,25 +95,26 @@ func NewJID(user, domain, resource string) (*JID, error) {
 		return nil, err
 	}
 	return &JID{
-		User:     prepUser,
+		Node:     prepNode,
 		Domain:   prepDomain,
 		Resource: prepResource,
 	}, nil
 }
 
 // NewJIDString constructs a JID from it's string representation.
-func NewJIDString(str string) (*JID, error) {
+// This construction allows the caller to specify if stringprep should be applied or not.
+func NewJIDString(str string, skipStringPrep bool) (*JID, error) {
 	if len(str) == 0 {
 		return &JID{}, nil
 	}
-	var user, domain, resource string
+	var node, domain, resource string
 
 	atIndex := strings.Index(str, "@")
 	slashIndex := strings.Index(str, "/")
 
-	// user
+	// node
 	if atIndex > 0 {
-		user = str[0:atIndex]
+		node = str[0:atIndex]
 	}
 
 	// domain
@@ -127,15 +139,15 @@ func NewJIDString(str string) (*JID, error) {
 	if slashIndex > 0 && slashIndex+1 < len(str) {
 		resource = str[slashIndex+1:]
 	}
-	return NewJID(user, domain, resource)
+	return NewJID(node, domain, resource, skipStringPrep)
 }
 
 // ToBareJID returns the string representation of the bare JID, which is the JID with resource information removed.
 func (j *JID) ToBareJID() string {
-	if len(j.User) == 0 {
+	if len(j.Node) == 0 {
 		return j.Domain
 	}
-	return j.User + "@" + j.Domain
+	return j.Node + "@" + j.Domain
 }
 
 // ToFullJID returns the String representation of the full JID.
@@ -143,10 +155,10 @@ func (j *JID) ToFullJID() string {
 	if len(j.Resource) == 0 {
 		return j.ToBareJID()
 	}
-	if len(j.User) == 0 {
+	if len(j.Node) == 0 {
 		return j.Domain + "/" + j.Resource
 	}
-	return j.User + "@" + j.Domain + "/" + j.Resource
+	return j.Node + "@" + j.Domain + "/" + j.Resource
 }
 
 // Equals returns true if two JID's are equivalent.
@@ -154,7 +166,7 @@ func (j *JID) Equals(j2 *JID) bool {
 	if j == j2 {
 		return true
 	}
-	if j.User != j2.User {
+	if j.Node != j2.Node {
 		return false
 	}
 	if j.Domain != j2.Domain {
@@ -164,6 +176,11 @@ func (j *JID) Equals(j2 *JID) bool {
 		return false
 	}
 	return true
+}
+
+// String returns a string representation of the JID.
+func (j *JID) String() string {
+	return j.ToFullJID()
 }
 
 func nodeprep(in string) (string, error) {

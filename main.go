@@ -6,6 +6,9 @@
 package main
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -27,7 +30,11 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	xml.NewJID("ortuman", "jackal.im", "my_resource")
+	jid, err := xml.NewJID("ortuman", "jackal.im", "my_resource", false)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	fmt.Printf("%v", jid)
 
 	println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
