@@ -39,17 +39,17 @@ func TestBadJID(t *testing.T) {
 func TestNewJID(t *testing.T) {
 	j, err := xml.NewJID(testNode, testDomain, testResource, false)
 	assert.Nil(t, err)
-	assert.Equal(t, j.Node, testNode)
-	assert.Equal(t, j.Domain, testDomain)
-	assert.Equal(t, j.Resource, testResource)
+	assert.Equal(t, j.Node(), testNode)
+	assert.Equal(t, j.Domain(), testDomain)
+	assert.Equal(t, j.Resource(), testResource)
 }
 
 func TestNewJIDString(t *testing.T) {
 	j, err := xml.NewJIDString(testFullJid, false)
 	assert.Nil(t, err)
-	assert.Equal(t, j.Node, testNode)
-	assert.Equal(t, j.Domain, testDomain)
-	assert.Equal(t, j.Resource, testResource)
+	assert.Equal(t, j.Node(), testNode)
+	assert.Equal(t, j.Domain(), testDomain)
+	assert.Equal(t, j.Resource(), testResource)
 	assert.Equal(t, j.ToBareJID(), testBareJid)
 	assert.Equal(t, j.ToFullJID(), testFullJid)
 	assert.Equal(t, j.String(), testFullJid)

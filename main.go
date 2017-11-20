@@ -29,12 +29,15 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal.a">` +
-		"       So they say\n     LA\nLOLA     \t" +
-		`</a>\n`
+	/*
+		docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal.a">` +
+			"       So they say\n     LA\nLOLA     \t" +
+			`</a>\n`
+	*/
+	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
 
 	p := xml.NewParser()
-	p.ParseElements(strings.NewReader(docSrc))
+	p.ParseElements(strings.NewReader(docSrc2))
 
 	a := p.PopElement()
 	if a != nil {
