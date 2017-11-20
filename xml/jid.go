@@ -72,21 +72,6 @@ type JID struct {
 	resource string
 }
 
-// Node returns the node, or empty string if this JID does not contain node information.
-func (j *JID) Node() string {
-	return j.node
-}
-
-// Domain returns the domain.
-func (j *JID) Domain() string {
-	return j.domain
-}
-
-// Resource returns the resource, or empty string if this JID does not contain resource information.
-func (j *JID) Resource() string {
-	return j.resource
-}
-
 // NewJID constructs a JID given a user, domain, and resource.
 // This construction allows the caller to specify if stringprep should be applied or not.
 func NewJID(node, domain, resource string, skipStringPrep bool) (*JID, error) {
@@ -157,23 +142,38 @@ func NewJIDString(str string, skipStringPrep bool) (*JID, error) {
 	return NewJID(node, domain, resource, skipStringPrep)
 }
 
+// Node returns the node, or empty string if this JID does not contain node information.
+func (j *JID) Node() string {
+	return j.node
+}
+
+// Domain returns the domain.
+func (j *JID) Domain() string {
+	return j.domain
+}
+
+// Resource returns the resource, or empty string if this JID does not contain resource information.
+func (j *JID) Resource() string {
+	return j.resource
+}
+
 // ToBareJID returns the string representation of the bare JID, which is the JID with resource information removed.
 func (j *JID) ToBareJID() string {
-	if len(j.Node) == 0 {
-		return j.Domain
+	if len(j.node) == 0 {
+		return j.domain
 	}
-	return j.Node + "@" + j.Domain
+	return j.node + "@" + j.domain
 }
 
 // ToFullJID returns the String representation of the full JID.
 func (j *JID) ToFullJID() string {
-	if len(j.Resource) == 0 {
+	if len(j.resource) == 0 {
 		return j.ToBareJID()
 	}
-	if len(j.Node) == 0 {
-		return j.Domain + "/" + j.Resource
+	if len(j.node) == 0 {
+		return j.domain + "/" + j.resource
 	}
-	return j.Node + "@" + j.Domain + "/" + j.Resource
+	return j.node + "@" + j.domain + "/" + j.resource
 }
 
 // Equals returns true if two JID's are equivalent.
@@ -181,13 +181,13 @@ func (j *JID) Equals(j2 *JID) bool {
 	if j == j2 {
 		return true
 	}
-	if j.Node != j2.Node {
+	if j.node != j2.node {
 		return false
 	}
-	if j.Domain != j2.Domain {
+	if j.domain != j2.domain {
 		return false
 	}
-	if j.Resource != j2.Resource {
+	if j.resource != j2.resource {
 		return false
 	}
 	return true
