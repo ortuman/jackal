@@ -60,7 +60,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 	name := t.Name.Local
 	attrs := []Attribute{}
 	for _, a := range t.Attr {
-		attrs = append(attrs, Attribute{a.Name.Local, a.Name.Space})
+		attrs = append(attrs, Attribute{a.Name.Local, a.Value})
 	}
 	element := NewMutableElementAttributes(name, attrs)
 	p.parsingStack = append(p.parsingStack, element)
