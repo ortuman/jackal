@@ -67,9 +67,24 @@ import (
 // A JID is made up of a node (generally a username), a domain, and a resource.
 // The node and resource are optional; domain is required.
 type JID struct {
-	Node     string
-	Domain   string
-	Resource string
+	node     string
+	domain   string
+	resource string
+}
+
+// Node returns the node, or empty string if this JID does not contain node information.
+func (j *JID) Node() string {
+	return j.node
+}
+
+// Domain returns the domain.
+func (j *JID) Domain() string {
+	return j.domain
+}
+
+// Resource returns the resource, or empty string if this JID does not contain resource information.
+func (j *JID) Resource() string {
+	return j.resource
 }
 
 // NewJID constructs a JID given a user, domain, and resource.
@@ -77,9 +92,9 @@ type JID struct {
 func NewJID(node, domain, resource string, skipStringPrep bool) (*JID, error) {
 	if skipStringPrep {
 		return &JID{
-			Node:     node,
-			Domain:   domain,
-			Resource: resource,
+			node:     node,
+			domain:   domain,
+			resource: resource,
 		}, nil
 	}
 	prepNode, err := nodeprep(node)
@@ -95,9 +110,9 @@ func NewJID(node, domain, resource string, skipStringPrep bool) (*JID, error) {
 		return nil, err
 	}
 	return &JID{
-		Node:     prepNode,
-		Domain:   prepDomain,
-		Resource: prepResource,
+		node:     prepNode,
+		domain:   prepDomain,
+		resource: prepResource,
 	}, nil
 }
 
