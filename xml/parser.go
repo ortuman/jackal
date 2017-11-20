@@ -16,6 +16,7 @@ type Parser struct {
 	elements     []*Element
 	parsingIndex int
 	parsingStack []*MutableElement
+	inElement    bool
 }
 
 func NewParser() *Parser {
@@ -46,6 +47,15 @@ func (p *Parser) ParseElements(reader io.Reader) error {
 	return nil
 }
 
+func (p *Parser) PopElement() *Element {
+	if len(p.elements) == 0 {
+		return nil
+	}
+	element := p.elements[0]
+	p.elements = append(p.elements[:0], p.elements[1:]...)
+	return element
+}
+
 func (p *Parser) startElement(t xml.StartElement) {
 	name := t.Name.Local
 	attrs := []Attribute{}
@@ -55,12 +65,14 @@ func (p *Parser) startElement(t xml.StartElement) {
 	element := NewMutableElementAttributes(name, attrs)
 	p.parsingStack = append(p.parsingStack, element)
 	p.parsingIndex++
+	p.inElement = true
 }
 
 func (p *Parser) setElementText(t xml.CharData) {
-	text := string(t)
-	println(text)
-	// p.parsingStack[p.parsingIndex].SetText(string(t))
+	if !p.inElement {
+		return
+	}
+	p.parsingStack[p.parsingIndex].SetText(string(t))
 }
 
 func (p *Parser) endElement(t xml.EndElement) {
@@ -73,4 +85,5 @@ func (p *Parser) endElement(t xml.EndElement) {
 	} else {
 		p.parsingStack[p.parsingIndex].AppendElement(element.Copy())
 	}
+	p.inElement = false
 }

@@ -29,9 +29,16 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal.a"/>\n`
+	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal.a">` +
+		"       So they say\n     LA\nLOLA     \t" +
+		`</a>\n`
+
 	p := xml.NewParser()
 	p.ParseElements(strings.NewReader(docSrc))
 
-	println(e.Delayed("im.jackal", "Offline storage").XML(true))
+	a := p.PopElement()
+	if a != nil {
+		println(a.XML(true))
+	}
+	// println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
