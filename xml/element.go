@@ -28,13 +28,18 @@ func NewElementName(name string) *Element {
 	return &e
 }
 
-// NewElementNamespace creates an XML Element instance with a given name and namespace.
-func NewElementNamespace(name, namespace string) *Element {
+// NewElementAttributes creates an XML Element instance with a given name and attributes.
+func NewElementAttributes(name string, attributes []Attribute) *Element {
 	e := Element{}
 	e.name = name
-	e.attrs = []Attribute{{"xmlns", namespace}}
+	e.attrs = attributes
 	e.elements = []*Element{}
 	return &e
+}
+
+// NewElementNamespace creates an XML Element instance with a given name and namespace.
+func NewElementNamespace(name, namespace string) *Element {
+	return NewElementAttributes(name, []Attribute{{"xmlns", namespace}})
 }
 
 // Name returns XML node name.

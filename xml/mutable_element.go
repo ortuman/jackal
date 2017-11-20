@@ -32,13 +32,18 @@ func NewMutableElementName(name string) *MutableElement {
 	return m
 }
 
-// NewMutableElementNamespace creates MutableElement instance with a given name and namespace.
-func NewMutableElementNamespace(name, namespace string) *MutableElement {
+// NewMutableElementAttributes creates MutableElement instance with a given name and attributes.
+func NewMutableElementAttributes(name string, attributes []Attribute) *MutableElement {
 	m := &MutableElement{}
 	m.name = name
-	m.attrs = []Attribute{{"xmlns", namespace}}
+	m.attrs = attributes
 	m.elements = []*Element{}
 	return m
+}
+
+// NewMutableElementNamespace creates MutableElement instance with a given name and namespace.
+func NewMutableElementNamespace(name, namespace string) *MutableElement {
+	return NewMutableElementAttributes(name, []Attribute{{"xmlns", namespace}})
 }
 
 // SetName sets XML node name.

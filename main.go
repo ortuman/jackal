@@ -6,8 +6,7 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"strings"
 
 	"github.com/ortuman/jackal/xml"
 )
@@ -30,11 +29,9 @@ func main() {
 	e.RemoveElements("e")
 	e.RemoveElements("a")
 
-	jid, err := xml.NewJIDString("ortuman@", false)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	fmt.Printf("%v", jid)
+	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal.a"/>\n`
+	p := xml.NewParser()
+	p.ParseElements(strings.NewReader(docSrc))
 
 	println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
