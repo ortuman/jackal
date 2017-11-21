@@ -16,16 +16,11 @@ import (
 )
 
 const (
-	// Debug log level
-	Debug = iota
-	// Info log level
-	Info
-	// Warning log level
-	Warning
-	// Error log level
-	Error
-	// Fatal log level
-	Fatal
+	debug = iota
+	info
+	warning
+	error
+	fatal
 )
 
 // singleton interface
@@ -62,19 +57,18 @@ func (l *Logger) Initialize() error {
 
 	switch strings.ToLower(logLevel) {
 	case "debug":
-		l.level = Debug
+		l.level = debug
 	case "info":
-		l.level = Info
+		l.level = info
 	case "warning":
-		l.level = Warning
+		l.level = warning
 	case "error":
-		l.level = Error
+		l.level = error
 	case "fatal":
-		l.level = Fatal
+		l.level = fatal
 	default:
 		return fmt.Errorf("unrecognized log level: %s", logLevel)
 	}
-	l.initialized = true
 
 	// create logFile intermediate directories.
 	if err := os.MkdirAll(filepath.Dir(logFile), os.ModePerm); err != nil {
@@ -88,6 +82,8 @@ func (l *Logger) Initialize() error {
 	l.logChan = make(chan logEntry, 256)
 
 	go l.loop()
+
+	l.initialized = true
 	return nil
 }
 
