@@ -34,9 +34,15 @@ var (
 	once     sync.Once
 )
 
+type logEntry struct {
+	level int
+	log   string
+}
+
 type Logger struct {
 	level       int
 	f           *os.File
+	logChan     chan logEntry
 	initialized bool
 }
 
@@ -79,5 +85,17 @@ func (l *Logger) Initialize() error {
 		return err
 	}
 	l.f = f
+	l.logChan = make(chan logEntry, 256)
+
+	go l.loop()
 	return nil
+}
+
+func (l *Logger) loop() {
+	for {
+		entry := <-l.logChan
+		if entry.level >= l.level {
+
+		}
+	}
 }
