@@ -15,3 +15,7 @@ func main() {
 	d := config.DefaultConfig
 	println(d.PIDFile)
 }
+
+func printVersion() {
+
+}

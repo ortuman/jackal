@@ -60,5 +60,5 @@ func TestJIDEqual(t *testing.T) {
 	j2, _ := xml.NewJID(testNode, testDomain, testResource, false)
 	assert.NotNil(t, j1)
 	assert.NotNil(t, j2)
-	assert.Equal(t, j1.Equals(j2), true)
+	assert.Equal(t, j1.IsEqual(j2), true)
 }

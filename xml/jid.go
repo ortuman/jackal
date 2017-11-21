@@ -177,7 +177,7 @@ func (j *JID) ToFullJID() string {
 }
 
 // Equals returns true if two JID's are equivalent.
-func (j *JID) Equals(j2 *JID) bool {
+func (j *JID) IsEqual(j2 *JID) bool {
 	if j == j2 {
 		return true
 	}
