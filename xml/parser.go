@@ -13,6 +13,7 @@ import (
 
 const rootElementIndex = -1
 
+// Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
 	elements     []*Element
 	parsingIndex int
@@ -20,6 +21,7 @@ type Parser struct {
 	inElement    bool
 }
 
+// NewParser creates an empty Parser instance.
 func NewParser() *Parser {
 	p := &Parser{}
 	p.elements = make([]*Element, 0)

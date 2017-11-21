@@ -3,12 +3,16 @@
 *.dll
 *.so
 *.dylib
+debug
 
 # Test binary, build with `go test -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Configuration files
+*.yaml
 
 # System folders
 .DS_Store
@@ -19,5 +23,3 @@
 # Project folders
 .idea/
 .vscode/
-
-debug
