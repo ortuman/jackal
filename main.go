@@ -41,4 +41,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "jackal: %v", err)
 		os.Exit(-1)
 	}
+	if len(config.DefaultConfig.Servers) > 0 {
+		fmt.Fprint(os.Stderr, "jackal: couldn't find a server configuration")
+		os.Exit(-1)
+	}
+
+	// initialize logger subsystem
 }
