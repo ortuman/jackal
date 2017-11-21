@@ -31,6 +31,11 @@ func TestFailedDocParse(t *testing.T) {
 	p := xml.NewParser()
 	err := p.ParseElements(strings.NewReader(docSrc))
 	assert.NotNil(t, err)
+
+	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">`
+	p = xml.NewParser()
+	err = p.ParseElements(strings.NewReader(docSrc2))
+	assert.Nil(t, err)
 }
 
 func TestDocChildElements(t *testing.T) {

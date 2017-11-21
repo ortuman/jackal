@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/ortuman/jackal/xml"
@@ -34,14 +35,18 @@ func main() {
 			"       So they say\n     LA\nLOLA     \t" +
 			`</a>\n`
 	*/
-	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
+	docSrc := `<?xml version="1.0"?>` +
+		`<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">`
 
 	p := xml.NewParser()
-	p.ParseElements(strings.NewReader(docSrc2))
-
-	a := p.PopElement()
-	if a != nil {
-		println(a.XML(true))
+	err := p.ParseElements(strings.NewReader(docSrc))
+	if err != nil {
+		fmt.Printf("%v", err)
+	} else {
+		e := p.PopElement()
+		if e != nil {
+			fmt.Printf("%s", e.XML(true))
+		}
 	}
 	// println(e.Delayed("im.jackal", "Offline storage").XML(true))
 }
