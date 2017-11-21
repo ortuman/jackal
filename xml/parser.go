@@ -7,6 +7,7 @@ package xml
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -49,10 +50,15 @@ func (p *Parser) ParseElements(reader io.Reader) error {
 	if err != nil && err != io.EOF {
 		return err
 	}
-	if p.parsingIndex == 0 && p.parsingStack[0].Name() == "stream:stream" {
-		p.closeElement()
+	switch p.parsingIndex {
+	case 0:
+		p.closeElement() // open stream element
+		fallthrough
+	case rootElementIndex:
+		return nil
+	default:
+		return errors.New("malformed XML")
 	}
-	return nil
 }
 
 func (p *Parser) PopElement() *Element {
@@ -74,13 +80,8 @@ func (p *Parser) startElement(t xml.StartElement) {
 
 	attrs := []Attribute{}
 	for _, a := range t.Attr {
-		var label string
-		if len(a.Name.Space) > 0 {
-			label = fmt.Sprintf("%s:%s", a.Name.Space, a.Name.Local)
-		} else {
-			label = a.Name.Local
-		}
-		attrs = append(attrs, Attribute{label, a.Value})
+		name := xmlName(t.Name.Space, t.Name.Local)
+		attrs = append(attrs, Attribute{name, a.Value})
 	}
 	element := NewMutableElementAttributes(name, attrs)
 	p.parsingStack = append(p.parsingStack, element)
@@ -96,12 +97,7 @@ func (p *Parser) setElementText(t xml.CharData) {
 }
 
 func (p *Parser) endElement(t xml.EndElement) error {
-	var name string
-	if len(t.Name.Space) > 0 {
-		name = fmt.Sprintf("%s:%s", t.Name.Space, t.Name.Local)
-	} else {
-		name = t.Name.Local
-	}
+	name := xmlName(t.Name.Space, t.Name.Local)
 	if p.parsingStack[p.parsingIndex].Name() != name {
 		return fmt.Errorf("unexpected end element </" + name + ">")
 	}
@@ -120,4 +116,11 @@ func (p *Parser) closeElement() {
 		p.parsingStack[p.parsingIndex].AppendElement(element.Copy())
 	}
 	p.inElement = false
+}
+
+func xmlName(space, local string) string {
+	if len(space) > 0 {
+		return fmt.Sprintf("%s:%s", space, local)
+	}
+	return local
 }
