@@ -9,8 +9,8 @@ import (
 	"fmt"
 )
 
-// Version represents application version.
-var Version = NewVersion(0, 5, 0)
+// ApplicationVersion represents application version.
+var ApplicationVersion = NewVersion(0, 5, 0)
 
 // SemanticVersion represents version information with Semantic Versioning specifications.
 type SemanticVersion struct {
