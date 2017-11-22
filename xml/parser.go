@@ -31,6 +31,7 @@ func NewParser() *Parser {
 	return p
 }
 
+// ParseElements parses an XML document.
 func (p *Parser) ParseElements(reader io.Reader) error {
 	d := xml.NewDecoder(reader)
 	t, err := d.RawToken()
@@ -61,6 +62,8 @@ func (p *Parser) ParseElements(reader io.Reader) error {
 	}
 }
 
+// PopElement returns next parsed element available.
+// Returns nil if no elements are found.
 func (p *Parser) PopElement() *Element {
 	if len(p.elements) == 0 {
 		return nil
