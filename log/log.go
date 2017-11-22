@@ -35,32 +35,33 @@ func NewLogger(tag string) *Logger {
 	return l
 }
 
-// Debugf logs a [DEBUG] message to the log file.
-// Also echoes the message to the console.
+// Debugf logs a 'debug' message to the log file
+// and echoes it to the console.
 func (l *Logger) Debugf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), debugLevel, args...)
 }
 
-// Infof logs a [INFO] message to the log file.
-// Also echoes the message to the console.
+// Infof logs an 'info' message to the log file
+// and echoes it to the console.
 func (l *Logger) Infof(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), infoLevel, args...)
 }
 
-// Warnf logs a [WARN] message to the log file.
-// Also echoes the message to the console.
+// Warnf logs a 'warning' message to the log file
+// and echoes it to the console.
 func (l *Logger) Warnf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), warningLevel, args...)
 }
 
-// Errorf logs a [ERROR] message to the log file.
-// Also echoes the message to the console.
+// Errorf logs an 'error' message to the log file
+// and echoes it to the console.
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), errorLevel, args...)
 }
 
-// Fatalf logs a [FATAL] message to the log file.
-// Also echoes the message to the console.
+// Fatalf logs a 'fatal' message to the log file
+// and echoes it to the console.
+// Application will terminate after logging.
 func (l *Logger) Fatalf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), fatalLevel, args...)
 }
