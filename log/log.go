@@ -24,7 +24,7 @@ const (
 	fatalLevel
 )
 
-// Logger object is used to log messages for a specific system or application component
+// Logger object is used to log messages for a specific system or application component.
 type Logger struct {
 	tag string
 }
