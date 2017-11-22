@@ -12,7 +12,6 @@ import (
 )
 
 type Config struct {
-	User    string `yaml:"user"`
 	PIDFile string `yaml:"pid_path"`
 
 	Logger  Logger   `yaml:"logger"`

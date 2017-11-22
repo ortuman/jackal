@@ -137,7 +137,7 @@ func (l *log) loop() {
 		entry := <-l.logChan
 
 		t := time.Now()
-		line := fmt.Sprintf("%s %s [%s] - %s", t.Format("2006-01-02 15:04:05"), logLevelGlyph(entry.level), logLevelAbbreviation(entry.level), entry.log)
+		line := fmt.Sprintf("%s %s [%s] - %s\n", t.Format("2006-01-02 15:04:05"), logLevelGlyph(entry.level), logLevelAbbreviation(entry.level), entry.log)
 
 		if entry.level >= l.level {
 			fmt.Fprint(os.Stdout, line)

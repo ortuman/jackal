@@ -9,12 +9,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/version"
 )
 
@@ -67,7 +68,7 @@ func main() {
 
 	// start serving...
 	logger.Infof("jackal %v", version.ApplicationVersion)
-	time.Sleep(time.Second * 3)
+	server.Initialize()
 }
 
 func createPIDFile(PIDFile string) error {
