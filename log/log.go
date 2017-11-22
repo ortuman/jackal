@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -40,32 +41,32 @@ func Initialize() error {
 // Debugf logs a 'debug' message to the log file
 // and echoes it to the console.
 func Debugf(format string, args ...interface{}) {
-	instance().debugf(format, args...)
+	instance().debugf(callerFilename(), format, args...)
 }
 
 // Infof logs an 'info' message to the log file
 // and echoes it to the console.
 func Infof(format string, args ...interface{}) {
-	instance().infof(format, args...)
+	instance().infof(callerFilename(), format, args...)
 }
 
 // Warnf logs a 'warning' message to the log file
 // and echoes it to the console.
 func Warnf(format string, args ...interface{}) {
-	instance().warnf(format, args...)
+	instance().warnf(callerFilename(), format, args...)
 }
 
 // Errorf logs an 'error' message to the log file
 // and echoes it to the console.
 func Errorf(format string, args ...interface{}) {
-	instance().errorf(format, args...)
+	instance().errorf(callerFilename(), format, args...)
 }
 
 // Fatalf logs a 'fatal' message to the log file
 // and echoes it to the console.
 // Application will terminate after logging.
 func Fatalf(format string, args ...interface{}) {
-	instance().fatalf(format, args...)
+	instance().fatalf(callerFilename(), format, args...)
 }
 
 // singleton interface
@@ -125,33 +126,33 @@ func (l *Logger) initialize() error {
 	return nil
 }
 
-func (l *Logger) debugf(format string, args ...interface{}) {
-	l.writeLog(format, debugLevel, args...)
+func (l *Logger) debugf(file, format string, args ...interface{}) {
+	l.writeLog(file, format, debugLevel, args...)
 }
 
-func (l *Logger) infof(format string, args ...interface{}) {
-	l.writeLog(format, infoLevel, args...)
+func (l *Logger) infof(file, format string, args ...interface{}) {
+	l.writeLog(file, format, infoLevel, args...)
 }
 
-func (l *Logger) warnf(format string, args ...interface{}) {
-	l.writeLog(format, warningLevel, args...)
+func (l *Logger) warnf(file, format string, args ...interface{}) {
+	l.writeLog(file, format, warningLevel, args...)
 }
 
-func (l *Logger) errorf(format string, args ...interface{}) {
-	l.writeLog(format, errorLevel, args...)
+func (l *Logger) errorf(file, format string, args ...interface{}) {
+	l.writeLog(file, format, errorLevel, args...)
 }
 
-func (l *Logger) fatalf(format string, args ...interface{}) {
-	l.writeLog(format, fatalLevel, args...)
+func (l *Logger) fatalf(file, format string, args ...interface{}) {
+	l.writeLog(file, format, fatalLevel, args...)
 }
 
-func (l *Logger) writeLog(format string, logLevel int, args ...interface{}) {
+func (l *Logger) writeLog(file, format string, logLevel int, args ...interface{}) {
 	if !l.initialized {
 		return
 	}
 	entry := record{
 		level: logLevel,
-		log:   fmt.Sprintf(format, args...),
+		log:   fmt.Sprintf(file+": "+format, args...),
 	}
 	l.logChan <- entry
 }
@@ -171,6 +172,14 @@ func (l *Logger) loop() {
 			os.Exit(1)
 		}
 	}
+}
+
+func callerFilename() string {
+	_, file, _, ok := runtime.Caller(2)
+	if !ok {
+		file = "???"
+	}
+	return filepath.Base(file)
 }
 
 func logLevelAbbreviation(logLevel int) string {
