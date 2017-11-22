@@ -20,6 +20,12 @@ debug
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
+# PID files
+*.pid
+
+# Log files
+*.log
+
 # Project folders
 .idea/
 .vscode/

@@ -9,6 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
@@ -48,8 +51,34 @@ func main() {
 	}
 
 	// initialize logger subsystem
-	if err := log.Instance().Initialize(); err != nil {
+	if err := log.Initialize(); err != nil {
 		fmt.Fprintf(os.Stderr, "jackal: %v", err)
 		os.Exit(-1)
 	}
+
+	// create PID file
+	if len(config.DefaultConfig.PIDFile) > 0 {
+		if err := createPIDFile(config.DefaultConfig.PIDFile); err != nil {
+			log.Warnf("jackal %v", err)
+		}
+	}
+
+	// start serving...
+	log.Infof("jackal %v", version.ApplicationVersion)
+	time.Sleep(time.Second * 3)
+}
+
+func createPIDFile(PIDFile string) error {
+	if err := os.MkdirAll(filepath.Dir(PIDFile), os.ModePerm); err != nil {
+		return err
+	}
+	file, err := os.Create(PIDFile)
+	if err != nil {
+		return err
+	}
+	currentPid := os.Getpid()
+	if _, err := file.WriteString(strconv.FormatInt(int64(currentPid), 10)); err != nil {
+		return err
+	}
+	return nil
 }
