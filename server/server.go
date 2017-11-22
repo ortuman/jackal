@@ -6,7 +6,8 @@
 package server
 
 import (
-	"time"
+	"net"
+	"strconv"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
@@ -18,6 +19,8 @@ const (
 	// S2S represents a server-to-client server type.
 	S2S
 )
+
+const defaultServerPort = 5222
 
 type server struct {
 	cfg *config.Server
@@ -43,6 +46,30 @@ func newServerWithConfig(serverConfig *config.Server) *server {
 }
 
 func (s *server) start() {
-	log.Infof("%s: listening at %s:%d [transport: %s]", s.cfg.ID, s.cfg.Transport.BindAddress, s.cfg.Transport.Port, s.cfg.Transport.Type)
-	time.Sleep(time.Second * 5)
+	bindAddr := s.cfg.Transport.BindAddress
+	port := s.cfg.Transport.Port
+	if port == 0 {
+		port = defaultServerPort
+	}
+	address := bindAddr + ":" + strconv.Itoa(port)
+
+	log.Infof("%s: listening at %s [transport: %s]", s.cfg.ID, address, s.cfg.Transport.Type)
+
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Errorf("%v", err)
+			continue
+		}
+		go s.handleConnection(conn)
+	}
+}
+
+func (s *server) handleConnection(conn net.Conn) {
+	println(conn)
 }
