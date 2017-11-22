@@ -6,6 +6,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/ortuman/jackal/config"
 )
 
@@ -40,4 +42,5 @@ func newServerWithConfig(serverConfig *config.Server) *server {
 }
 
 func (s *server) start() {
+	time.Sleep(time.Second * 5)
 }

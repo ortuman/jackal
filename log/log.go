@@ -26,82 +26,72 @@ const (
 
 // Logger object is used to log messages for a specific system or application component.
 type Logger struct {
-	tag string
+	level       int
+	f           *os.File
+	logChan     chan record
+	initialized bool
 }
 
-// NewLogger creates a new Logger instance with a tag log prefix.
-func NewLogger(tag string) *Logger {
-	l := &Logger{tag: tag}
-	return l
+// Initialize initalizes logger subsystem.
+func Initialize() error {
+	return instance().initialize()
 }
 
 // Debugf logs a 'debug' message to the log file
 // and echoes it to the console.
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), debugLevel, args...)
+func Debugf(format string, args ...interface{}) {
+	instance().debugf(format, args...)
 }
 
 // Infof logs an 'info' message to the log file
 // and echoes it to the console.
-func (l *Logger) Infof(format string, args ...interface{}) {
-	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), infoLevel, args...)
+func Infof(format string, args ...interface{}) {
+	instance().infof(format, args...)
 }
 
 // Warnf logs a 'warning' message to the log file
 // and echoes it to the console.
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), warningLevel, args...)
+func Warnf(format string, args ...interface{}) {
+	instance().warnf(format, args...)
 }
 
 // Errorf logs an 'error' message to the log file
 // and echoes it to the console.
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), errorLevel, args...)
+func Errorf(format string, args ...interface{}) {
+	instance().errorf(format, args...)
 }
 
 // Fatalf logs a 'fatal' message to the log file
 // and echoes it to the console.
 // Application will terminate after logging.
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), fatalLevel, args...)
+func Fatalf(format string, args ...interface{}) {
+	instance().fatalf(format, args...)
 }
 
 // singleton interface
 var (
-	logInst *log
+	logInst *Logger
 	once    sync.Once
 )
 
-type logEntry struct {
+type record struct {
 	level int
 	log   string
 }
 
-type log struct {
-	level       int
-	f           *os.File
-	logChan     chan logEntry
-	initialized bool
-}
-
-func instance() *log {
+func instance() *Logger {
 	once.Do(func() {
-		logInst = &log{}
+		logInst = &Logger{}
 	})
 	return logInst
 }
 
-// Initialize initalizes logger subsystem.
-func Initialize() error {
-	logLevel := config.DefaultConfig.Logger.Level
-	logFile := config.DefaultConfig.Logger.LogFile
-	return instance().initialize(logLevel, logFile)
-}
-
-func (l *log) initialize(logLevel, logFile string) error {
+func (l *Logger) initialize() error {
 	if l.initialized {
 		return nil
 	}
+	logLevel := config.DefaultConfig.Logger.Level
+	logFile := config.DefaultConfig.Logger.LogFile
 
 	switch strings.ToLower(logLevel) {
 	case "debug":
@@ -127,7 +117,7 @@ func (l *log) initialize(logLevel, logFile string) error {
 		return err
 	}
 	l.f = f
-	l.logChan = make(chan logEntry, 256)
+	l.logChan = make(chan record, 256)
 
 	go l.loop()
 
@@ -135,18 +125,38 @@ func (l *log) initialize(logLevel, logFile string) error {
 	return nil
 }
 
-func (l *log) writeLog(format string, logLevel int, args ...interface{}) {
+func (l *Logger) debugf(format string, args ...interface{}) {
+	l.writeLog(format, debugLevel, args...)
+}
+
+func (l *Logger) infof(format string, args ...interface{}) {
+	l.writeLog(format, infoLevel, args...)
+}
+
+func (l *Logger) warnf(format string, args ...interface{}) {
+	l.writeLog(format, warningLevel, args...)
+}
+
+func (l *Logger) errorf(format string, args ...interface{}) {
+	l.writeLog(format, errorLevel, args...)
+}
+
+func (l *Logger) fatalf(format string, args ...interface{}) {
+	l.writeLog(format, fatalLevel, args...)
+}
+
+func (l *Logger) writeLog(format string, logLevel int, args ...interface{}) {
 	if !l.initialized {
 		return
 	}
-	entry := logEntry{
+	entry := record{
 		level: logLevel,
 		log:   fmt.Sprintf(format, args...),
 	}
 	l.logChan <- entry
 }
 
-func (l *log) loop() {
+func (l *Logger) loop() {
 	for {
 		entry := <-l.logChan
 
