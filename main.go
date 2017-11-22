@@ -18,6 +18,8 @@ import (
 	"github.com/ortuman/jackal/version"
 )
 
+var logger = log.NewLogger("main")
+
 func main() {
 	var configFile string
 	var showVersion bool
@@ -59,12 +61,12 @@ func main() {
 	// create PID file
 	if len(config.DefaultConfig.PIDFile) > 0 {
 		if err := createPIDFile(config.DefaultConfig.PIDFile); err != nil {
-			log.Warnf("jackal %v", err)
+			logger.Warnf("%v", err)
 		}
 	}
 
 	// start serving...
-	log.Infof("jackal %v", version.ApplicationVersion)
+	logger.Infof("jackal %v", version.ApplicationVersion)
 	time.Sleep(time.Second * 3)
 }
 

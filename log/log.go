@@ -24,10 +24,39 @@ const (
 	fatalLevel
 )
 
+type Logger struct {
+	tag string
+}
+
+func NewLogger(tag string) *Logger {
+	l := &Logger{tag: tag}
+	return l
+}
+
+func (l *Logger) Debugf(format string, args ...interface{}) {
+	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), debugLevel, args...)
+}
+
+func (l *Logger) Infof(format string, args ...interface{}) {
+	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), infoLevel, args...)
+}
+
+func (l *Logger) Warnf(format string, args ...interface{}) {
+	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), warningLevel, args...)
+}
+
+func (l *Logger) Errorf(format string, args ...interface{}) {
+	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), errorLevel, args...)
+}
+
+func (l *Logger) Fatalf(format string, args ...interface{}) {
+	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), fatalLevel, args...)
+}
+
 // singleton interface
 var (
-	loggerInst *Logger
-	once       sync.Once
+	logInst *log
+	once    sync.Once
 )
 
 type logEntry struct {
@@ -35,45 +64,25 @@ type logEntry struct {
 	log   string
 }
 
-type Logger struct {
+type log struct {
 	level       int
 	f           *os.File
 	logChan     chan logEntry
 	initialized bool
 }
 
-func instance() *Logger {
+func instance() *log {
 	once.Do(func() {
-		loggerInst = &Logger{}
+		logInst = &log{}
 	})
-	return loggerInst
+	return logInst
 }
 
 func Initialize() error {
 	return instance().initialize()
 }
 
-func Debugf(format string, args ...interface{}) {
-	instance().writeLog(format, debugLevel, args...)
-}
-
-func Infof(format string, args ...interface{}) {
-	instance().writeLog(format, infoLevel, args...)
-}
-
-func Warnf(format string, args ...interface{}) {
-	instance().writeLog(format, warningLevel, args...)
-}
-
-func Errorf(format string, args ...interface{}) {
-	instance().writeLog(format, errorLevel, args...)
-}
-
-func Fatalf(format string, args ...interface{}) {
-	instance().writeLog(format, fatalLevel, args...)
-}
-
-func (l *Logger) initialize() error {
+func (l *log) initialize() error {
 	if l.initialized {
 		return nil
 	}
@@ -112,7 +121,18 @@ func (l *Logger) initialize() error {
 	return nil
 }
 
-func (l *Logger) loop() {
+func (l *log) writeLog(format string, logLevel int, args ...interface{}) {
+	if !l.initialized {
+		return
+	}
+	entry := logEntry{
+		level: logLevel,
+		log:   fmt.Sprintf(format, args...),
+	}
+	l.logChan <- entry
+}
+
+func (l *log) loop() {
 	for {
 		entry := <-l.logChan
 
@@ -123,14 +143,6 @@ func (l *Logger) loop() {
 			fmt.Fprint(os.Stdout, line)
 		}
 	}
-}
-
-func (l *Logger) writeLog(format string, logLevel int, args ...interface{}) {
-	entry := logEntry{
-		level: logLevel,
-		log:   fmt.Sprintf(format, args...),
-	}
-	l.logChan <- entry
 }
 
 func logLevelAbbreviation(logLevel int) string {
