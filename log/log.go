@@ -141,6 +141,10 @@ func (l *log) loop() {
 
 		if entry.level >= l.level {
 			fmt.Fprint(os.Stdout, line)
+			l.f.WriteString(line)
+		}
+		if entry.level == fatalLevel {
+			os.Exit(1)
 		}
 	}
 }

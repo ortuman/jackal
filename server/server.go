@@ -5,7 +5,9 @@
 
 package server
 
-import "time"
+import (
+	"time"
+)
 
 func Initialize() {
 	time.Sleep(time.Second * 3)
