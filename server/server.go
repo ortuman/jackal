@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/log"
 )
 
 const (
@@ -42,5 +43,6 @@ func newServerWithConfig(serverConfig *config.Server) *server {
 }
 
 func (s *server) start() {
+	log.Infof("%s: listening at %s:%d [transport: %s]", s.cfg.ID, s.cfg.Transport.BindAddress, s.cfg.Transport.Port, s.cfg.Transport.Type)
 	time.Sleep(time.Second * 5)
 }
