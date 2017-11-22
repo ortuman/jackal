@@ -24,31 +24,43 @@ const (
 	fatalLevel
 )
 
+// Logger object is used to log messages for a specific system or application component
 type Logger struct {
 	tag string
 }
 
+// NewLogger creates a new Logger instance with a tag log prefix.
 func NewLogger(tag string) *Logger {
 	l := &Logger{tag: tag}
 	return l
 }
 
+// Debugf logs a [DEBUG] message to the log file.
+// Also echoes the message to the console.
 func (l *Logger) Debugf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), debugLevel, args...)
 }
 
+// Infof logs a [INFO] message to the log file.
+// Also echoes the message to the console.
 func (l *Logger) Infof(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), infoLevel, args...)
 }
 
+// Warnf logs a [WARN] message to the log file.
+// Also echoes the message to the console.
 func (l *Logger) Warnf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), warningLevel, args...)
 }
 
+// Errorf logs a [ERROR] message to the log file.
+// Also echoes the message to the console.
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), errorLevel, args...)
 }
 
+// Fatalf logs a [FATAL] message to the log file.
+// Also echoes the message to the console.
 func (l *Logger) Fatalf(format string, args ...interface{}) {
 	instance().writeLog(fmt.Sprintf("%s: %s", l.tag, format), fatalLevel, args...)
 }
@@ -78,16 +90,17 @@ func instance() *log {
 	return logInst
 }
 
+// Initialize initalizes logger subsystem.
 func Initialize() error {
-	return instance().initialize()
+	logLevel := config.DefaultConfig.Logger.Level
+	logFile := config.DefaultConfig.Logger.LogFile
+	return instance().initialize(logLevel, logFile)
 }
 
-func (l *log) initialize() error {
+func (l *log) initialize(logLevel, logFile string) error {
 	if l.initialized {
 		return nil
 	}
-	logLevel := config.DefaultConfig.Logger.Level
-	logFile := config.DefaultConfig.Logger.LogFile
 
 	switch strings.ToLower(logLevel) {
 	case "debug":
