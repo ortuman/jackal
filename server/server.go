@@ -25,6 +25,9 @@ const (
 
 const defaultServerPort = 5222
 
+const defaultMaxStanzaSize = 65536
+const defaultKeepAlive = 120
+
 type server struct {
 	cfg *config.Server
 }
@@ -74,7 +77,16 @@ func (s *server) start() {
 }
 
 func (s *server) handleConnection(conn net.Conn) {
-	tr := transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive)
+	maxStanzaSize := s.cfg.Transport.MaxStanzaSize
+	if maxStanzaSize == 0 {
+		maxStanzaSize = defaultMaxStanzaSize
+	}
+	keepAlive := s.cfg.Transport.KeepAlive
+	if keepAlive == 0 {
+		keepAlive = defaultKeepAlive
+	}
+
+	tr := transport.NewSocketTransport(conn, maxStanzaSize, keepAlive)
 	strm := stream.New(tr)
 	println(strm)
 }

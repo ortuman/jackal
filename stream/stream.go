@@ -15,5 +15,21 @@ func New(transport *transport.Transport) *Stream {
 	s := &Stream{
 		tr: transport,
 	}
+	transport.Callback = s
 	return s
+}
+
+func (s *Stream) ReadBytes([]byte) {
+}
+
+func (s *Stream) SentBytes(int) {
+}
+
+func (s *Stream) StartedTLS() {
+}
+
+func (s *Stream) FailedStartTLS(error) {
+}
+
+func (s *Stream) Error(error) {
 }

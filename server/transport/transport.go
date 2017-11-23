@@ -29,8 +29,7 @@ type Callback interface {
 }
 
 type Transport struct {
-	Callback  Callback
-	KeepAlive int
+	Callback Callback
 
 	Write               func(b io.Reader)
 	WriteAndWait        func(b io.Reader)

@@ -21,26 +21,32 @@ type enableCompressionReq struct {
 }
 
 type socketTransport struct {
-	conn      net.Conn
-	keepAlive int
+	callback     Callback
+	conn         net.Conn
+	maxReadCount int
+	keepAlive    int
 
 	writeCh             chan writeReq
 	startTLSCh          chan chan struct{}
 	enableCompressionCh chan enableCompressionReq
 	cbBytesCh           chan chan []byte
 	closeCh             chan chan struct{}
+	readCloseCh         chan struct{}
 }
 
-func NewSocketTransport(conn net.Conn, keepAlive int) *Transport {
+func NewSocketTransport(conn net.Conn, maxReadCount, keepAlive int) *Transport {
 	s := &socketTransport{
 		conn:                conn,
+		maxReadCount:        maxReadCount,
 		keepAlive:           keepAlive,
 		writeCh:             make(chan writeReq),
 		startTLSCh:          make(chan chan struct{}),
 		enableCompressionCh: make(chan enableCompressionReq),
 		cbBytesCh:           make(chan chan []byte),
 		closeCh:             make(chan chan struct{}),
+		readCloseCh:         make(chan struct{}),
 	}
+	go s.readLoop()
 	go s.writeLoop()
 
 	return &Transport{
@@ -105,6 +111,19 @@ func (s *socketTransport) writeLoop() {
 		select {
 		case <-s.closeCh:
 			alive = false
+			s.conn.Close()
+		}
+	}
+}
+
+func (s *socketTransport) readLoop() {
+	buff := make([]byte, 0, s.maxReadCount)
+	for {
+		n, err := s.conn.Read(buff)
+		if err == nil {
+			s.callback.ReadBytes(buff[:n])
+		} else {
+			s.callback.Error(err)
 		}
 	}
 }
