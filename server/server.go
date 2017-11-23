@@ -9,7 +9,6 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/stream"
 
 	"github.com/ortuman/jackal/config"
@@ -61,13 +60,13 @@ func (s *server) start() {
 
 	log.Infof("%s: listening at %s [transport: %s]", s.cfg.ID, address, s.cfg.Transport.Type)
 
-	listener, err := net.Listen("tcp", address)
+	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Errorf("%v", err)
 		return
 	}
 	for {
-		conn, err := listener.Accept()
+		conn, err := ln.Accept()
 		if err != nil {
 			log.Errorf("%v", err)
 			continue
@@ -75,6 +74,8 @@ func (s *server) start() {
 		go s.handleConnection(conn)
 	}
 }
+
+var strm *stream.Stream
 
 func (s *server) handleConnection(conn net.Conn) {
 	maxStanzaSize := s.cfg.Transport.MaxStanzaSize
@@ -85,8 +86,5 @@ func (s *server) handleConnection(conn net.Conn) {
 	if keepAlive == 0 {
 		keepAlive = defaultKeepAlive
 	}
-
-	tr := transport.NewSocketTransport(conn, maxStanzaSize, keepAlive)
-	strm := stream.New(tr)
-	println(strm)
+	strm = stream.NewStreamSocket(conn, maxStanzaSize, keepAlive)
 }

@@ -5,8 +5,6 @@
 
 package transport
 
-import "io"
-
 // compression level
 const (
 	DefaultCompressionLevel = iota
@@ -22,7 +20,7 @@ const (
 
 type Callback interface {
 	ReadBytes([]byte)
-	SentBytes(int)
+	SentBytes([]byte)
 	StartedTLS()
 	FailedStartTLS(error)
 	Error(error)
@@ -31,8 +29,8 @@ type Callback interface {
 type Transport struct {
 	Callback Callback
 
-	Write               func(b io.Reader)
-	WriteAndWait        func(b io.Reader)
+	Write               func(b []byte)
+	WriteAndWait        func(b []byte)
 	Close               func()
 	StartTLS            func()
 	EnableCompression   func(level int)
