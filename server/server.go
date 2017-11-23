@@ -9,6 +9,9 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/stream"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 )
@@ -71,5 +74,7 @@ func (s *server) start() {
 }
 
 func (s *server) handleConnection(conn net.Conn) {
-	println(conn)
+	tr := transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive)
+	strm := stream.New(tr)
+	println(strm)
 }

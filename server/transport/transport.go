@@ -20,14 +20,22 @@ const (
 	TLSServerEndPoint
 )
 
-type Transport interface {
-	Write(b io.Reader)
-	WriteAndWait(b io.Reader)
+type Callback interface {
+	ReadBytes([]byte)
+	SentBytes(int)
+	StartedTLS()
+	FailedStartTLS(error)
+	Error(error)
+}
 
-	Close()
+type Transport struct {
+	Callback  Callback
+	KeepAlive int
 
-	StartTLS()
-	EnableCompression(level int)
-
-	ChannelBindingBytes(mechanism int) []byte
+	Write               func(b io.Reader)
+	WriteAndWait        func(b io.Reader)
+	Close               func()
+	StartTLS            func()
+	EnableCompression   func(level int)
+	ChannelBindingBytes func(mechanism int) []byte
 }
