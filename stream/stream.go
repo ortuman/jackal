@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/stream/transport"
 )
 
 type Stream struct {
