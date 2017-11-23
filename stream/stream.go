@@ -14,13 +14,19 @@ import (
 )
 
 type Stream struct {
+	id string
 	tr *transport.Transport
 }
 
-func NewStreamSocket(conn net.Conn, maxReadCount, keepAlive int) *Stream {
+func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int) *Stream {
 	s := &Stream{}
+	s.id = id
 	s.tr = transport.NewSocketTransport(conn, s, maxReadCount, keepAlive)
 	return s
+}
+
+func (s *Stream) ID() string {
+	return s.id
 }
 
 func (s *Stream) ReadBytes(b []byte) {

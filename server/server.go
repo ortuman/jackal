@@ -6,8 +6,10 @@
 package server
 
 import (
+	"fmt"
 	"net"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/stream"
 
@@ -28,7 +30,8 @@ const defaultMaxStanzaSize = 65536
 const defaultKeepAlive = 120
 
 type server struct {
-	cfg *config.Server
+	cfg         *config.Server
+	strmCounter int32
 }
 
 func Initialize() {
@@ -86,5 +89,6 @@ func (s *server) handleConnection(conn net.Conn) {
 	if keepAlive == 0 {
 		keepAlive = defaultKeepAlive
 	}
-	strm = stream.NewStreamSocket(conn, maxStanzaSize, keepAlive)
+	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
+	strm = stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive)
 }
