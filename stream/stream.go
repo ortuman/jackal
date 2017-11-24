@@ -93,7 +93,7 @@ func (s *Stream) Error(err error) {
 	log.Errorf("%v", err)
 }
 
-func (s *Stream) handleElement(e *xml.Element) {
+func (s *Stream) handleElement(elem *xml.Element) {
 }
 
 func (s *Stream) procElementLoop() {
