@@ -55,7 +55,8 @@ func (s *socketTransport) Close() {
 	s.conn.Close()
 }
 
-func (s *socketTransport) StartTLS() {
+func (s *socketTransport) StartTLS() error {
+	return nil
 }
 
 func (s *socketTransport) EnableCompression(level int) {
@@ -68,9 +69,7 @@ func (s *socketTransport) ChannelBindingBytes(mechanism int) []byte {
 func (s *socketTransport) writeBytes(b []byte) {
 	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 	_, err := s.conn.Write(b)
-	if err == nil {
-		s.callback.SentBytes(b)
-	} else {
+	if err != nil {
 		s.callback.Error(err)
 	}
 }
