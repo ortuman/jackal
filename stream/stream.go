@@ -99,18 +99,16 @@ func (s *Stream) handleElement(e *xml.Element) {
 }
 
 func (s *Stream) procElementLoop() {
-	active := true
-	for active {
+	for {
+		// stop processing reads after disconnecting stream
+		if s.state() == disconnected {
+			return
+		}
 		select {
 		case b := <-s.procReadCh:
-			// stop processing reads after disconnecting stream
-			if s.state() == disconnected {
-				continue
-			}
 			// stream closed by client
 			if "</stream:stream>" == string(b) {
 				s.disconnect(false)
-				active = false
 				continue
 			}
 			if err := s.parser.ParseElements(bytes.NewReader(b)); err == nil {
@@ -122,11 +120,7 @@ func (s *Stream) procElementLoop() {
 			} else { // XML parsing error
 				log.Errorf("%v", err)
 				s.disconnect(false)
-				active = false
 			}
-
-		case <-s.closeCh:
-			active = false
 		}
 	}
 }
