@@ -78,8 +78,6 @@ func (s *server) start() {
 	}
 }
 
-var strm *stream.Stream
-
 func (s *server) handleConnection(conn net.Conn) {
 	maxStanzaSize := s.cfg.Transport.MaxStanzaSize
 	if maxStanzaSize == 0 {
@@ -90,5 +88,6 @@ func (s *server) handleConnection(conn net.Conn) {
 		keepAlive = defaultKeepAlive
 	}
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
-	strm = stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive)
+	strm := stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive)
+	stream.Manager().RegisterStream(strm)
 }

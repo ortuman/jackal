@@ -16,6 +16,10 @@ import (
 type Stream struct {
 	id string
 	tr *transport.Transport
+
+	username string
+	domain   string
+	resource string
 }
 
 func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int) *Stream {
@@ -29,10 +33,23 @@ func (s *Stream) ID() string {
 	return s.id
 }
 
+func (s *Stream) Username() string {
+	return s.username
+}
+
+func (s *Stream) Domain() string {
+	return s.domain
+}
+
+func (s *Stream) Resource() string {
+	return s.resource
+}
+
 func (s *Stream) ReadBytes(b []byte) {
 	l := strings.TrimSpace(string(b))
 	if l == "quit" {
 		s.tr.Close()
+		Manager().UnregisterStream(s)
 		return
 	}
 	log.Infof("%s", l)
