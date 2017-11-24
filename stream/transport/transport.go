@@ -6,6 +6,8 @@
 package transport
 
 // compression level
+type CompressionLevel int
+
 const (
 	DefaultCompressionLevel = iota
 	BestCompressionLevel
@@ -13,6 +15,8 @@ const (
 )
 
 // channel binding mechanisms
+type ChannelBindingMechanism int
+
 const (
 	TLSUnique = iota
 	TLSServerEndPoint
@@ -30,6 +34,6 @@ type Transport struct {
 	WriteAndWait        func(b []byte)
 	Close               func()
 	StartTLS            func() error
-	EnableCompression   func(level int)
-	ChannelBindingBytes func(mechanism int) []byte
+	EnableCompression   func(level CompressionLevel)
+	ChannelBindingBytes func(mechanism ChannelBindingMechanism) []byte
 }

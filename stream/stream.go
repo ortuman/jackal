@@ -38,8 +38,7 @@ type Stream struct {
 	authenticated bool
 	compressed    bool
 
-	procReadCh chan []byte
-	closeCh    chan struct{}
+	procElemCh chan []byte
 }
 
 func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int) *Stream {
@@ -47,8 +46,7 @@ func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int) *Str
 		id:         id,
 		parser:     xml.NewParser(),
 		st:         connecting,
-		procReadCh: make(chan []byte, 1),
-		closeCh:    make(chan struct{}),
+		procElemCh: make(chan []byte, 64),
 	}
 	s.tr = transport.NewSocketTransport(conn, s, maxReadCount, keepAlive)
 	go s.procElementLoop()
@@ -105,7 +103,7 @@ func (s *Stream) procElementLoop() {
 			return
 		}
 		select {
-		case b := <-s.procReadCh:
+		case b := <-s.procElemCh:
 			// stream closed by client
 			if "</stream:stream>" == string(b) {
 				s.disconnect(false)

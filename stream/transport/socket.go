@@ -59,10 +59,10 @@ func (s *socketTransport) StartTLS() error {
 	return nil
 }
 
-func (s *socketTransport) EnableCompression(level int) {
+func (s *socketTransport) EnableCompression(level CompressionLevel) {
 }
 
-func (s *socketTransport) ChannelBindingBytes(mechanism int) []byte {
+func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	return []byte{}
 }
 
