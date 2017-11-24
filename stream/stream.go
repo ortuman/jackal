@@ -86,7 +86,7 @@ func (s *Stream) SendElement(elem *xml.Element) {
 }
 
 func (s *Stream) ReadBytes(b []byte) {
-	s.procReadCh <- b
+	s.procElemCh <- b
 }
 
 func (s *Stream) Error(err error) {
