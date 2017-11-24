@@ -100,7 +100,7 @@ func (s *Stream) handleElement(e *xml.Element) {
 
 func (s *Stream) procElementLoop() {
 	for {
-		// stop processing reads after disconnecting stream
+		// stop processing elements after disconnecting stream
 		if s.state() == disconnected {
 			return
 		}
