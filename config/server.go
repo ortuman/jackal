@@ -5,6 +5,13 @@
 
 package config
 
+const (
+	// C2S represents a client to client server type.
+	C2S = "c2s"
+	// S2S represents a server-to-client server type.
+	S2S = "s2s"
+)
+
 type Server struct {
 	ID      string   `yaml:"id"`
 	Type    string   `yaml:"type"`
@@ -22,6 +29,11 @@ type Server struct {
 	ModVersion      ModVersion      `yaml:"mod_version"`
 	ModPing         ModPing         `yaml:"mod_ping"`
 }
+
+const (
+	// SocketTransport represents socket transport type.
+	SocketTransport = "socket"
+)
 
 type Transport struct {
 	Type           string `yaml:"type"`

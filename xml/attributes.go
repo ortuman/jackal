@@ -44,3 +44,23 @@ func (e *MutableElement) SetVersion(version string) {
 func (e *Element) Version() string {
 	return e.Attribute("version")
 }
+
+// SetFrom sets 'from' node attribute.
+func (e *MutableElement) SetFrom(from string) {
+	e.SetAttribute("from", from)
+}
+
+// From returns 'from' node attribute.
+func (e *Element) From() string {
+	return e.Attribute("from")
+}
+
+// SetTo sets 'to' node attribute.
+func (e *MutableElement) SetTo(to string) {
+	e.SetAttribute("to", to)
+}
+
+// To returns 'to' node attribute.
+func (e *Element) To() string {
+	return e.Attribute("to")
+}

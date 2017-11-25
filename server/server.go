@@ -6,22 +6,17 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/stream"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
-)
-
-const (
-	// C2S represents a client to client server type.
-	C2S = "c2s"
-	// S2S represents a server-to-client server type.
-	S2S = "s2s"
 )
 
 const defaultServerPort = 5222
@@ -55,6 +50,12 @@ func newServerWithConfig(serverConfig config.Server) *server {
 }
 
 func (s *server) start() {
+	// validate server's configuration
+	if err := s.validateConfiguration(); err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+
 	bindAddr := s.cfg.Transport.BindAddress
 	port := s.cfg.Transport.Port
 	if port == 0 {
@@ -80,10 +81,43 @@ func (s *server) start() {
 }
 
 func (s *server) handleConnection(conn net.Conn) {
-	maxStanzaSize := s.cfg.Transport.MaxStanzaSize
-	keepAlive := s.cfg.Transport.KeepAlive
-
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
-	strm := stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive, s.cfg)
+	strm := stream.NewStreamSocket(id, conn, &s.cfg)
 	stream.Manager().RegisterStream(strm)
+}
+
+func (s *server) validateConfiguration() error {
+	// validate server type
+	s.cfg.Type = strings.ToLower(s.cfg.Type)
+	switch s.cfg.Type {
+	case config.C2S, config.S2S:
+		break
+	default:
+		return fmt.Errorf("unrecognized server type: %s", s.cfg.Type)
+	}
+	// validate domain
+	if len(s.cfg.Domains) == 0 {
+		return errors.New("no domain specified")
+	}
+
+	// validate transport
+	s.cfg.Transport.Type = strings.ToLower(s.cfg.Transport.Type)
+	if s.cfg.Transport.Type != config.SocketTransport {
+		return fmt.Errorf("unrecognized transport type: %s", s.cfg.Transport.Type)
+	}
+
+	// assign transport default values
+	if s.cfg.Transport.Port == 0 {
+		s.cfg.Transport.Port = defaultServerPort
+	}
+	if s.cfg.Transport.MaxStanzaSize == 0 {
+		s.cfg.Transport.MaxStanzaSize = defaultMaxStanzaSize
+	}
+	if s.cfg.Transport.ConnectTimeout == 0 {
+		s.cfg.Transport.ConnectTimeout = defaultConnectTimeout
+	}
+	if s.cfg.Transport.KeepAlive == 0 {
+		s.cfg.Transport.KeepAlive = defaultKeepAlive
+	}
+	return nil
 }
