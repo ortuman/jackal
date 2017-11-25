@@ -10,6 +10,8 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/ortuman/jackal/log"
 )
 
 const writeDeadline = 10 * time.Second // Time allowed to write a message to the peer.
@@ -72,6 +74,7 @@ func (s *socketTransport) writeBytes(b []byte) {
 	if err != nil {
 		s.callback.Error(err)
 	}
+	log.Debugf("SEND: %s", string(b))
 }
 
 func (s *socketTransport) readLoop() {
@@ -86,7 +89,9 @@ func (s *socketTransport) readLoop() {
 			return
 		case nil:
 			if n > 0 {
-				s.callback.ReadBytes(buff[:n])
+				b := buff[:n]
+				log.Debugf("RECV: %s", string(b))
+				s.callback.ReadBytes(b)
 			}
 		default:
 			s.callback.Error(err)
