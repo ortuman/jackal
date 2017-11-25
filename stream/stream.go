@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
@@ -25,8 +26,21 @@ const (
 	disconnected
 )
 
+const (
+	InvalidXMLStreamError            = "invalid-xml"
+	InvalidNamespaceStreamError      = "invalid-namespace"
+	HostUnknownStreamError           = "host-unknown"
+	InvalidFromStreamError           = "invalid-from"
+	ConnectionTimeoutStreamError     = "connection-timeout"
+	UnsupportedStanzaTypeStreamError = "unsupported-stanza-type"
+	UnsupportedVersionStreamError    = "unsupported-version"
+	NotAuthorizedStreamError         = "not-authorized"
+	InternalServerErrorStreamError   = "internal-server-error"
+)
+
 type Stream struct {
 	sync.RWMutex
+	cfg           config.Server
 	tr            *transport.Transport
 	parser        *xml.Parser
 	st            int32
@@ -38,18 +52,23 @@ type Stream struct {
 	authenticated bool
 	compressed    bool
 
-	procElemCh chan []byte
+	writeCh chan []byte
+	readCh  chan []byte
+	discCh  chan string
 }
 
-func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int) *Stream {
+func NewStreamSocket(id string, conn net.Conn, maxReadCount, keepAlive int, config config.Server) *Stream {
 	s := &Stream{
-		id:         id,
-		parser:     xml.NewParser(),
-		st:         connecting,
-		procElemCh: make(chan []byte, 64),
+		cfg:     config,
+		id:      id,
+		parser:  xml.NewParser(),
+		st:      connecting,
+		writeCh: make(chan []byte, 32),
+		readCh:  make(chan []byte, 32),
+		discCh:  make(chan string, 1),
 	}
 	s.tr = transport.NewSocketTransport(conn, s, maxReadCount, keepAlive)
-	go s.procElementLoop()
+	go s.loop()
 	return s
 }
 
@@ -75,6 +94,14 @@ func (s *Stream) Resource() string {
 	return s.resource
 }
 
+func (s *Stream) state() int32 {
+	return atomic.LoadInt32(&s.st)
+}
+
+func (s *Stream) setState(state int32) {
+	atomic.StoreInt32(&s.st, state)
+}
+
 func (s *Stream) SendElements(elems []*xml.Element) {
 	for _, e := range elems {
 		s.SendElement(e)
@@ -82,11 +109,11 @@ func (s *Stream) SendElements(elems []*xml.Element) {
 }
 
 func (s *Stream) SendElement(elem *xml.Element) {
-	s.tr.Write([]byte(elem.XML(true)))
+	s.writeCh <- []byte(elem.XML(true))
 }
 
 func (s *Stream) ReadBytes(b []byte) {
-	s.procElemCh <- b
+	s.readCh <- b
 }
 
 func (s *Stream) Error(err error) {
@@ -94,16 +121,31 @@ func (s *Stream) Error(err error) {
 }
 
 func (s *Stream) handleElement(elem *xml.Element) {
+	switch s.state() {
+	case connecting:
+		s.handleConnecting(elem)
+	default:
+		break
+	}
 }
 
-func (s *Stream) procElementLoop() {
+func (s *Stream) handleConnecting(elem *xml.Element) {
+	// if err := s.validateStreamElement(); err != nil {
+	// 	return
+	// }
+}
+
+func (s *Stream) loop() {
 	for {
-		// stop processing elements after disconnecting stream
+		// stop looping after disconnecting stream
 		if s.state() == disconnected {
 			return
 		}
 		select {
-		case b := <-s.procElemCh:
+		case b := <-s.writeCh:
+			s.tr.Write(b)
+
+		case b := <-s.readCh:
 			// stream closed by client
 			if "</stream:stream>" == string(b) {
 				s.disconnect(false)
@@ -117,9 +159,24 @@ func (s *Stream) procElementLoop() {
 				}
 			} else { // XML parsing error
 				log.Errorf("%v", err)
-				s.disconnect(false)
+				s.disconnectWithStreamError(InvalidXMLStreamError)
 			}
+
+		case strmErr := <-s.discCh:
+			s.disconnectWithStreamError(strmErr)
 		}
+	}
+}
+
+func (s *Stream) streamDefaultNamespace() string {
+	return ""
+}
+
+func (s *Stream) disconnectWithStreamError(strmErr string) {
+	if s.state() == connected {
+		s.disconnect(false)
+	} else {
+		s.disconnect(true)
 	}
 }
 
@@ -136,12 +193,13 @@ func (s *Stream) disconnect(closeStream bool) {
 	s.Unlock()
 
 	s.setState(disconnected)
+
+	Manager().UnregisterStream(s)
 }
 
-func (s *Stream) state() int32 {
-	return atomic.LoadInt32(&s.st)
-}
-
-func (s *Stream) setState(state int32) {
-	atomic.StoreInt32(&s.st, state)
+func streamErrorElement(strmErr string) *xml.Element {
+	ret := xml.NewMutableElementName("stream:error")
+	reason := xml.NewElementNamespace(strmErr, "urn:ietf:params:xml:ns:xmpp-streams")
+	ret.AppendElement(reason)
+	return ret.Copy()
 }

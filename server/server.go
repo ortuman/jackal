@@ -19,34 +19,35 @@ import (
 
 const (
 	// C2S represents a client to client server type.
-	C2S = iota
+	C2S = "c2s"
 	// S2S represents a server-to-client server type.
-	S2S
+	S2S = "s2s"
 )
 
 const defaultServerPort = 5222
 
 const defaultMaxStanzaSize = 65536
+const defaultConnectTimeout = 5
 const defaultKeepAlive = 120
 
 type server struct {
-	cfg         *config.Server
+	cfg         config.Server
 	strmCounter int32
 }
 
 func Initialize() {
 	for i := 1; i < len(config.DefaultConfig.Servers); i++ {
-		go initializeServer(&config.DefaultConfig.Servers[i])
+		go initializeServer(config.DefaultConfig.Servers[i])
 	}
-	initializeServer(&config.DefaultConfig.Servers[0])
+	initializeServer(config.DefaultConfig.Servers[0])
 }
 
-func initializeServer(serverConfig *config.Server) {
+func initializeServer(serverConfig config.Server) {
 	srv := newServerWithConfig(serverConfig)
 	srv.start()
 }
 
-func newServerWithConfig(serverConfig *config.Server) *server {
+func newServerWithConfig(serverConfig config.Server) *server {
 	s := &server{
 		cfg: serverConfig,
 	}
@@ -80,14 +81,9 @@ func (s *server) start() {
 
 func (s *server) handleConnection(conn net.Conn) {
 	maxStanzaSize := s.cfg.Transport.MaxStanzaSize
-	if maxStanzaSize == 0 {
-		maxStanzaSize = defaultMaxStanzaSize
-	}
 	keepAlive := s.cfg.Transport.KeepAlive
-	if keepAlive == 0 {
-		keepAlive = defaultKeepAlive
-	}
+
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
-	strm := stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive)
+	strm := stream.NewStreamSocket(id, conn, maxStanzaSize, keepAlive, s.cfg)
 	stream.Manager().RegisterStream(strm)
 }
