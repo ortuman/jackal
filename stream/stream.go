@@ -99,14 +99,6 @@ func (s *Stream) Resource() string {
 	return s.resource
 }
 
-func (s *Stream) state() int32 {
-	return atomic.LoadInt32(&s.st)
-}
-
-func (s *Stream) setState(state int32) {
-	atomic.StoreInt32(&s.st, state)
-}
-
 func (s *Stream) SendElements(elems []*xml.Element) {
 	for _, e := range elems {
 		s.SendElement(e)
@@ -232,6 +224,14 @@ func (s *Stream) disconnect(closeStream bool) {
 	s.setState(disconnected)
 
 	Manager().UnregisterStream(s)
+}
+
+func (s *Stream) state() int32 {
+	return atomic.LoadInt32(&s.st)
+}
+
+func (s *Stream) setState(state int32) {
+	atomic.StoreInt32(&s.st, state)
 }
 
 func streamErrorElement(err error) *xml.Element {
