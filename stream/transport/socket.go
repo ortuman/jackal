@@ -17,14 +17,14 @@ import (
 const writeDeadline = 10 * time.Second // Time allowed to write a message to the peer.
 
 type socketTransport struct {
-	callback     Callback
+	callback     *Callback
 	conn         net.Conn
 	maxReadCount int
 	keepAlive    int
 	closed       int32
 }
 
-func NewSocketTransport(conn net.Conn, callback Callback, maxReadCount, keepAlive int) *Transport {
+func NewSocketTransport(conn net.Conn, callback *Callback, maxReadCount, keepAlive int) *Transport {
 	s := &socketTransport{
 		conn:         conn,
 		callback:     callback,
@@ -72,7 +72,7 @@ func (s *socketTransport) writeBytes(b []byte) {
 	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 	_, err := s.conn.Write(b)
 	if err != nil {
-		s.callback.TransportError(err)
+		s.callback.Error(err)
 	}
 	log.Debugf("SEND: %s", string(b))
 }
@@ -86,15 +86,16 @@ func (s *socketTransport) readLoop() {
 		}
 		switch err {
 		case io.EOF:
+			s.callback.Close()
 			return
 		case nil:
 			if n > 0 {
 				b := buff[:n]
 				log.Debugf("RECV: %s", string(b))
-				s.callback.TransportReadBytes(b)
+				s.callback.ReadBytes(b)
 			}
 		default:
-			s.callback.TransportError(err)
+			s.callback.Error(err)
 			return
 		}
 	}

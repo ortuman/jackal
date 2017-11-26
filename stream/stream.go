@@ -7,7 +7,9 @@ package stream
 
 import (
 	"bytes"
+	"io"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -47,7 +49,7 @@ type Stream struct {
 
 	writeCh chan *xml.Element
 	readCh  chan []byte
-	discCh  chan Error
+	discCh  chan error
 }
 
 func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
@@ -58,14 +60,30 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		st:      connecting,
 		writeCh: make(chan *xml.Element, 32),
 		readCh:  make(chan []byte, 32),
-		discCh:  make(chan Error, 1),
+		discCh:  make(chan error, 1),
 	}
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
 
+	// initialize authenticators
+	s.initializeAuthenticators()
+
+	// define transport callback
+	cb := &transport.Callback{
+		ReadBytes: func(b []byte) {
+			s.readCh <- b
+		},
+		Close: func() {
+			s.discCh <- io.EOF
+		},
+		Error: func(err error) {
+			log.Errorf("%v", err)
+		},
+	}
+
 	maxReadCount := config.Transport.MaxStanzaSize
 	keepAlive := config.Transport.KeepAlive
-	s.tr = transport.NewSocketTransport(conn, s, maxReadCount, keepAlive)
+	s.tr = transport.NewSocketTransport(conn, cb, maxReadCount, keepAlive)
 	go s.loop()
 	return s
 }
@@ -120,12 +138,15 @@ func (s *Stream) SendElement(elem *xml.Element) {
 	s.writeCh <- elem
 }
 
-func (s *Stream) TransportReadBytes(b []byte) {
-	s.readCh <- b
-}
-
-func (s *Stream) TransportError(err error) {
-	log.Errorf("%v", err)
+func (s *Stream) initializeAuthenticators() {
+	for _, a := range s.cfg.SASL {
+		switch strings.ToLower(a) {
+		case "plain":
+			s.authenticators = append(s.authenticators, newPlainAuthenticator(s))
+		default:
+			break
+		}
+	}
 }
 
 func (s *Stream) handleElement(elem *xml.Element) {
@@ -170,7 +191,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		}
 
 		// attach SASL mechanisms
-		shouldOfferSASL := !tlsRequired || (tlsRequired && s.Secured())
+		shouldOfferSASL := !tlsEnabled || (!tlsRequired || (tlsRequired && s.Secured()))
 
 		if shouldOfferSASL && len(s.authenticators) > 0 {
 			mechanisms := xml.NewMutableElementName("mechanisms")
@@ -243,8 +264,15 @@ func (s *Stream) loop() {
 				s.disconnectWithStreamError(ErrInvalidXML)
 			}
 
-		case strmErr := <-s.discCh:
-			s.disconnectWithStreamError(strmErr)
+		case err := <-s.discCh:
+			if strmErr, ok := err.(Error); ok {
+				s.disconnectWithStreamError(strmErr)
+			} else {
+				if err != io.EOF {
+					log.Errorf("%v", err)
+				}
+				s.disconnect(false)
+			}
 		}
 	}
 }

@@ -22,14 +22,13 @@ const (
 	TLSServerEndPoint
 )
 
-type Callback interface {
-	TransportReadBytes([]byte)
-	TransportError(error)
+type Callback struct {
+	ReadBytes func([]byte)
+	Close     func()
+	Error     func(error)
 }
 
 type Transport struct {
-	Callback Callback
-
 	Write               func(b []byte)
 	WriteAndWait        func(b []byte)
 	Close               func()
