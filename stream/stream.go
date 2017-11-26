@@ -247,10 +247,19 @@ func (s *Stream) proceedStartTLS() {
 		s.disconnectWithStreamError(ErrNotAuthorized)
 		return
 	}
-	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
+	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
+	if err != nil {
+		log.Errorf("%v", err)
+		s.writeElementAndWait(xml.NewElementNamespace("failure", tlsNamespace))
+		s.disconnect(true)
+		return
+	}
+	s.writeElementAndWait(xml.NewElementNamespace("proceed", tlsNamespace))
 
 	cfg := &tls.Config{
-		ServerName: s.Domain(),
+		ServerName:               s.Domain(),
+		Certificates:             []tls.Certificate{cer},
+		PreferServerCipherSuites: true,
 	}
 	s.tr.StartTLS(cfg)
 }

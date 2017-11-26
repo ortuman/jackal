@@ -70,7 +70,7 @@ func (s *socketTransport) Close() {
 }
 
 func (s *socketTransport) StartTLS(cfg *tls.Config) error {
-	s.conn = tls.Client(s.conn, cfg)
+	s.conn = tls.Server(s.conn, cfg)
 	return nil
 }
 
