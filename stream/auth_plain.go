@@ -9,51 +9,50 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
-type PlainAuthenticator struct {
-	strm          *stream.Stream
+type plainAuthenticator struct {
+	strm          *Stream
 	username      string
 	authenticated bool
 }
 
-func NewPlainAuthenticator(strm *Stream) *PlainAuthenticator {
-	return &PlainAuthenticator{strm: strm}
+func newPlainAuthenticator(strm *Stream) authenticator {
+	return &plainAuthenticator{strm: strm}
 }
 
-func (p *PlainAuthenticator) Mechanism() string {
+func (p *plainAuthenticator) Mechanism() string {
 	return "PLAIN"
 }
 
-func (p *PlainAuthenticator) Username() string {
+func (p *plainAuthenticator) Username() string {
 	return p.username
 }
 
-func (p *PlainAuthenticator) Authenticated() bool {
+func (p *plainAuthenticator) Authenticated() bool {
 	return p.authenticated
 }
 
-func (p *PlainAuthenticator) UsesChannelBinding() bool {
+func (p *plainAuthenticator) UsesChannelBinding() bool {
 	return false
 }
 
-func (p *PlainAuthenticator) ProcessElement(elem *xml.Element) error {
+func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 	if p.authenticated {
 		return nil
 	}
 	b64Payload := elem.Text()
 	if len(b64Payload) == 0 {
-		return InvalidFormatErr
+		return errInvalidFormat
 	}
 	b, err := base64.StdEncoding.DecodeString(b64Payload)
 	if err != nil {
-		return InvalidFormatErr
+		return errInvalidFormat
 	}
 	s := bytes.Split(b, []byte{0})
 	if len(s) != 2 {
-		return InvalidFormatErr
+		return errInvalidFormat
 	}
 	username := string(s[0])
 	// password := string(s[1])
@@ -67,7 +66,7 @@ func (p *PlainAuthenticator) ProcessElement(elem *xml.Element) error {
 	return nil
 }
 
-func (p *PlainAuthenticator) Reset() {
+func (p *plainAuthenticator) Reset() {
 	p.username = ""
 	p.authenticated = false
 }

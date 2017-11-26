@@ -43,7 +43,7 @@ type Stream struct {
 	authenticated bool
 	compressed    bool
 
-	authenticators []Authenticator
+	authenticators []authenticator
 
 	writeCh chan *xml.Element
 	readCh  chan []byte

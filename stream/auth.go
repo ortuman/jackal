@@ -11,13 +11,13 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-var IncorrectEncodingErr = errors.New("incorrect encoding")
-var InvalidFormatErr = errors.New("invalid format")
-var NotAuthorizedErr = errors.New("not authorized")
+var errIncorrectEncoding = errors.New("incorrect encoding")
+var errInvalidFormat = errors.New("invalid format")
+var errNotAuthorized = errors.New("not authorized")
 
 const saslNamespace = "urn:ietf:params:xml:ns:xmpp-sasl"
 
-type Authenticator interface {
+type authenticator interface {
 	Mechanism() string
 
 	Username() string
