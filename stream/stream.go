@@ -7,7 +7,6 @@ package stream
 
 import (
 	"bytes"
-	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -27,16 +26,6 @@ const (
 	sessionStarted
 	disconnected
 )
-
-var InvalidXMLStreamError = errors.New("invalid-xml")
-var InvalidNamespaceStreamError = errors.New("invalid-namespace")
-var HostUnknownStreamError = errors.New("host-unknown")
-var InvalidFromStreamError = errors.New("invalid-from")
-var ConnectionTimeoutStreamError = errors.New("connection-timeout")
-var UnsupportedStanzaTypeStreamError = errors.New("unsupported-stanza-type")
-var UnsupportedVersionStreamError = errors.New("unsupported-version")
-var NotAuthorizedStreamError = errors.New("not-authorized")
-var InternalServerErrorStreamError = errors.New("internal-server-error")
 
 const streamNamespace = "http://etherx.jabber.org/streams"
 
@@ -58,7 +47,7 @@ type Stream struct {
 
 	writeCh chan *xml.Element
 	readCh  chan []byte
-	discCh  chan error
+	discCh  chan Error
 }
 
 func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
@@ -69,7 +58,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		st:      connecting,
 		writeCh: make(chan *xml.Element, 32),
 		readCh:  make(chan []byte, 32),
-		discCh:  make(chan error, 1),
+		discCh:  make(chan Error, 1),
 	}
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
@@ -251,7 +240,7 @@ func (s *Stream) loop() {
 				}
 			} else { // XML parsing error
 				log.Errorf("%v", err)
-				s.disconnectWithStreamError(InvalidXMLStreamError)
+				s.disconnectWithStreamError(ErrInvalidXML)
 			}
 
 		case strmErr := <-s.discCh:
@@ -260,9 +249,9 @@ func (s *Stream) loop() {
 	}
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) error {
+func (s *Stream) validateStreamElement(elem *xml.Element) Error {
 	if elem.Name() != "stream:stream" {
-		return UnsupportedStanzaTypeStreamError
+		return ErrUnsupportedStanzaType
 	}
 	to := elem.To()
 	knownHost := false
@@ -275,13 +264,13 @@ func (s *Stream) validateStreamElement(elem *xml.Element) error {
 		}
 	}
 	if !knownHost {
-		return HostUnknownStreamError
+		return ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
-		return InvalidNamespaceStreamError
+		return ErrInvalidNamespace
 	}
 	if elem.Version() != "1.0" {
-		return UnsupportedVersionStreamError
+		return ErrUnsupportedVersion
 	}
 	return nil
 }
@@ -321,12 +310,11 @@ func (s *Stream) writeElementAndWait(elem *xml.Element) {
 	s.tr.WriteAndWait(b)
 }
 
-func (s *Stream) disconnectWithStreamError(err error) {
+func (s *Stream) disconnectWithStreamError(err Error) {
 	if s.state() == connecting {
 		s.openStreamElement()
 	}
-	strmErr := streamErrorElement(err)
-	s.writeElementAndWait(strmErr)
+	s.writeElementAndWait(err.Element())
 	s.disconnect(true)
 }
 
@@ -353,11 +341,4 @@ func (s *Stream) state() int32 {
 
 func (s *Stream) setState(state int32) {
 	atomic.StoreInt32(&s.st, state)
-}
-
-func streamErrorElement(err error) *xml.Element {
-	ret := xml.NewMutableElementName("stream:error")
-	reason := xml.NewElementNamespace(err.Error(), "urn:ietf:params:xml:ns:xmpp-streams")
-	ret.AppendElement(reason)
-	return ret.Copy()
 }

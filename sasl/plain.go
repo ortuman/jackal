@@ -9,11 +9,12 @@ import (
 	"bytes"
 	"encoding/base64"
 
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 type PlainAuthenticator struct {
-	strm          *Stream
+	strm          *stream.Stream
 	username      string
 	authenticated bool
 }
