@@ -23,8 +23,8 @@ const (
 )
 
 type Callback interface {
-	ReadBytes([]byte)
-	Error(error)
+	TransportReadBytes([]byte)
+	TransportError(error)
 }
 
 type Transport struct {

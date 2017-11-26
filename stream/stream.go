@@ -12,8 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/sasl"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream/transport"
@@ -41,7 +39,6 @@ var NotAuthorizedStreamError = errors.New("not-authorized")
 var InternalServerErrorStreamError = errors.New("internal-server-error")
 
 const streamNamespace = "http://etherx.jabber.org/streams"
-const saslNamespace = "urn:ietf:params:xml:ns:xmpp-sasl"
 
 type Stream struct {
 	sync.RWMutex
@@ -57,7 +54,7 @@ type Stream struct {
 	authenticated bool
 	compressed    bool
 
-	authenticators []sasl.Authenticator
+	authenticators []Authenticator
 
 	writeCh chan *xml.Element
 	readCh  chan []byte
@@ -134,11 +131,11 @@ func (s *Stream) SendElement(elem *xml.Element) {
 	s.writeCh <- elem
 }
 
-func (s *Stream) ReadBytes(b []byte) {
+func (s *Stream) TransportReadBytes(b []byte) {
 	s.readCh <- b
 }
 
-func (s *Stream) Error(err error) {
+func (s *Stream) TransportError(err error) {
 	log.Errorf("%v", err)
 }
 

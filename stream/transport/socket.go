@@ -72,7 +72,7 @@ func (s *socketTransport) writeBytes(b []byte) {
 	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 	_, err := s.conn.Write(b)
 	if err != nil {
-		s.callback.Error(err)
+		s.callback.TransportError(err)
 	}
 	log.Debugf("SEND: %s", string(b))
 }
@@ -91,10 +91,10 @@ func (s *socketTransport) readLoop() {
 			if n > 0 {
 				b := buff[:n]
 				log.Debugf("RECV: %s", string(b))
-				s.callback.ReadBytes(b)
+				s.callback.TransportReadBytes(b)
 			}
 		default:
-			s.callback.Error(err)
+			s.callback.TransportError(err)
 			return
 		}
 	}
