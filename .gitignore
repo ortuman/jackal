@@ -11,6 +11,9 @@ debug
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# X509 certificates
+*.pem
+
 # Configuration files
 *.yaml
 

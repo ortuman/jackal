@@ -5,7 +5,10 @@
 
 package transport
 
-import "crypto/tls"
+import (
+	"crypto/tls"
+	"errors"
+)
 
 // compression level
 type CompressionLevel int
@@ -24,15 +27,18 @@ const (
 	TLSServerEndPoint
 )
 
-type Callback struct {
-	ReadBytes func([]byte)
-	Close     func()
-	Error     func(error)
-}
+var (
+	// ErrServerClosedTransport indicates that the underlying transport has been closed by server.
+	ErrServerClosedTransport = errors.New("transport closed by server")
+
+	// ErrRemotePeerClosedTransport indicates that the underlying transport has been closed by remote peer.
+	ErrRemotePeerClosedTransport = errors.New("transport closed by remote peer")
+)
 
 type Transport struct {
 	Write               func(b []byte)
 	WriteAndWait        func(b []byte)
+	Read                func() ([]byte, error)
 	Close               func()
 	StartTLS            func(*tls.Config) error
 	EnableCompression   func(level CompressionLevel)

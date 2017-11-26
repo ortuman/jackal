@@ -11,32 +11,28 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
-
-	"github.com/ortuman/jackal/log"
 )
 
 const writeDeadline = 10 * time.Second // Time allowed to write a message to the peer.
 
 type socketTransport struct {
-	callback     *Callback
-	conn         net.Conn
-	maxReadCount int
-	keepAlive    int
-	closed       int32
+	conn      net.Conn
+	keepAlive int
+	closed    int32
+	readBuff  []byte
 }
 
-func NewSocketTransport(conn net.Conn, callback *Callback, maxReadCount, keepAlive int) *Transport {
+func NewSocketTransport(conn net.Conn, maxReadCount, keepAlive int) *Transport {
 	s := &socketTransport{
-		conn:         conn,
-		callback:     callback,
-		maxReadCount: maxReadCount,
-		keepAlive:    keepAlive,
+		conn:      conn,
+		keepAlive: keepAlive,
+		readBuff:  make([]byte, maxReadCount),
 	}
-	go s.readLoop()
 
 	t := &Transport{
 		Write:               s.Write,
 		WriteAndWait:        s.WriteAndWait,
+		Read:                s.Read,
 		Close:               s.Close,
 		StartTLS:            s.StartTLS,
 		EnableCompression:   s.EnableCompression,
@@ -51,6 +47,21 @@ func (s *socketTransport) Write(b []byte) {
 
 func (s *socketTransport) WriteAndWait(b []byte) {
 	s.writeBytes(b)
+}
+
+func (s *socketTransport) Read() ([]byte, error) {
+	n, err := s.conn.Read(s.readBuff)
+	if atomic.LoadInt32(&s.closed) == 1 {
+		return nil, ErrServerClosedTransport
+	}
+	switch err {
+	case nil:
+		return s.readBuff[:n], nil
+	case io.EOF:
+		return nil, ErrRemotePeerClosedTransport
+	default:
+		return nil, err
+	}
 }
 
 func (s *socketTransport) Close() {
@@ -72,33 +83,5 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 
 func (s *socketTransport) writeBytes(b []byte) {
 	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
-	_, err := s.conn.Write(b)
-	if err != nil {
-		s.callback.Error(err)
-	}
-	log.Debugf("SEND: %s", string(b))
-}
-
-func (s *socketTransport) readLoop() {
-	buff := make([]byte, s.maxReadCount)
-	for {
-		n, err := s.conn.Read(buff)
-		if atomic.LoadInt32(&s.closed) == 1 {
-			return
-		}
-		switch err {
-		case io.EOF:
-			s.callback.Close()
-			return
-		case nil:
-			if n > 0 {
-				b := buff[:n]
-				log.Debugf("RECV: %s", string(b))
-				s.callback.ReadBytes(b)
-			}
-		default:
-			s.callback.Error(err)
-			return
-		}
-	}
+	s.conn.Write(b)
 }

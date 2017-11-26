@@ -8,7 +8,6 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
-	"io"
 	"net"
 	"strings"
 	"sync"
@@ -51,7 +50,7 @@ type Stream struct {
 
 	authenticators []authenticator
 
-	writeCh chan *xml.Element
+	writeCh chan []byte
 	readCh  chan []byte
 	discCh  chan error
 }
@@ -62,8 +61,8 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		id:      id,
 		parser:  xml.NewParser(),
 		st:      connecting,
-		writeCh: make(chan *xml.Element, 32),
-		readCh:  make(chan []byte, 32),
+		writeCh: make(chan []byte, 32),
+		readCh:  make(chan []byte, 1),
 		discCh:  make(chan error, 1),
 	}
 	// assign default domain
@@ -72,23 +71,12 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	// initialize authenticators
 	s.initializeAuthenticators()
 
-	// define transport callback
-	cb := &transport.Callback{
-		ReadBytes: func(b []byte) {
-			s.readCh <- b
-		},
-		Close: func() {
-			s.discCh <- io.EOF
-		},
-		Error: func(err error) {
-			s.discCh <- err
-		},
-	}
-
 	maxReadCount := config.Transport.MaxStanzaSize
 	keepAlive := config.Transport.KeepAlive
-	s.tr = transport.NewSocketTransport(conn, cb, maxReadCount, keepAlive)
+	s.tr = transport.NewSocketTransport(conn, maxReadCount, keepAlive)
+
 	go s.loop()
+
 	return s
 }
 
@@ -139,7 +127,7 @@ func (s *Stream) SendElements(elems []*xml.Element) {
 }
 
 func (s *Stream) SendElement(elem *xml.Element) {
-	s.writeCh <- elem
+	s.writeCh <- []byte(elem.XML(true))
 }
 
 func (s *Stream) initializeAuthenticators() {
@@ -268,14 +256,16 @@ func (s *Stream) proceedStartTLS() {
 }
 
 func (s *Stream) loop() {
+	s.doRead() // start reading transport...
 	for {
 		// stop looping after disconnecting stream
 		if s.state() == disconnected {
 			return
 		}
+
 		select {
-		case elem := <-s.writeCh:
-			s.writeElement(elem)
+		case b := <-s.writeCh:
+			s.writeBytes(b)
 
 		case b := <-s.readCh:
 			// stream closed by client
@@ -289,6 +279,8 @@ func (s *Stream) loop() {
 					s.handleElement(e)
 					e = s.parser.PopElement()
 				}
+				s.doRead() // keep reading transport...
+
 			} else { // XML parsing error
 				log.Errorf("%v", err)
 				s.disconnectWithStreamError(ErrInvalidXML)
@@ -298,13 +290,30 @@ func (s *Stream) loop() {
 			if strmErr, ok := err.(Error); ok {
 				s.disconnectWithStreamError(strmErr)
 			} else {
-				if err != io.EOF {
+				if err != transport.ErrRemotePeerClosedTransport {
 					log.Errorf("%v", err)
 				}
 				s.disconnect(false)
 			}
 		}
 	}
+}
+
+func (s *Stream) doRead() {
+	go func() {
+		b, err := s.tr.Read()
+		switch err {
+		case nil:
+			log.Debugf("RECV: %s", string(b))
+			s.readCh <- b
+
+		case transport.ErrServerClosedTransport:
+			return
+
+		default:
+			s.discCh <- err
+		}
+	}()
 }
 
 func (s *Stream) validateStreamElement(elem *xml.Element) Error {
@@ -359,12 +368,20 @@ func (s *Stream) streamDefaultNamespace() string {
 }
 
 func (s *Stream) writeElement(elem *xml.Element) {
-	b := []byte(elem.XML(true))
-	s.tr.Write(b)
+	s.writeBytes([]byte(elem.XML(true)))
 }
 
 func (s *Stream) writeElementAndWait(elem *xml.Element) {
-	b := []byte(elem.XML(true))
+	s.writeBytesAndWait([]byte(elem.XML(true)))
+}
+
+func (s *Stream) writeBytes(b []byte) {
+	log.Debugf("SEND: %s", string(b))
+	s.tr.Write(b)
+}
+
+func (s *Stream) writeBytesAndWait(b []byte) {
+	log.Debugf("SEND: %s", string(b))
 	s.tr.WriteAndWait(b)
 }
 
