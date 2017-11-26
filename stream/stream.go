@@ -7,6 +7,7 @@ package stream
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
 	"net"
 	"strings"
@@ -29,7 +30,10 @@ const (
 	disconnected
 )
 
-const streamNamespace = "http://etherx.jabber.org/streams"
+const (
+	streamNamespace = "http://etherx.jabber.org/streams"
+	tlsNamespace    = "urn:ietf:params:xml:ns:xmpp-tls"
+)
 
 type Stream struct {
 	sync.RWMutex
@@ -153,6 +157,8 @@ func (s *Stream) handleElement(elem *xml.Element) {
 	switch s.state() {
 	case connecting:
 		s.handleConnecting(elem)
+	case connected:
+		s.handleConnected(elem)
 	default:
 		break
 	}
@@ -235,6 +241,30 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		s.setState(authenticated)
 	}
 	s.writeElement(features.Copy())
+}
+
+func (s *Stream) handleConnected(elem *xml.Element) {
+	switch elem.Name() {
+	case "starttls":
+		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
+			s.disconnectWithStreamError(ErrInvalidNamespace)
+			return
+		}
+		s.proceedStartTLS()
+	}
+}
+
+func (s *Stream) proceedStartTLS() {
+	if s.Secured() {
+		s.disconnectWithStreamError(ErrNotAuthorized)
+		return
+	}
+	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
+
+	cfg := &tls.Config{
+		ServerName: s.Domain(),
+	}
+	s.tr.StartTLS(cfg)
 }
 
 func (s *Stream) loop() {

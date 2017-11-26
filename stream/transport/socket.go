@@ -6,6 +6,7 @@
 package transport
 
 import (
+	"crypto/tls"
 	"io"
 	"net"
 	"sync/atomic"
@@ -57,7 +58,8 @@ func (s *socketTransport) Close() {
 	s.conn.Close()
 }
 
-func (s *socketTransport) StartTLS() error {
+func (s *socketTransport) StartTLS(cfg *tls.Config) error {
+	s.conn = tls.Client(s.conn, cfg)
 	return nil
 }
 

@@ -5,6 +5,8 @@
 
 package transport
 
+import "crypto/tls"
+
 // compression level
 type CompressionLevel int
 
@@ -32,7 +34,7 @@ type Transport struct {
 	Write               func(b []byte)
 	WriteAndWait        func(b []byte)
 	Close               func()
-	StartTLS            func() error
+	StartTLS            func(*tls.Config) error
 	EnableCompression   func(level CompressionLevel)
 	ChannelBindingBytes func(mechanism ChannelBindingMechanism) []byte
 }
