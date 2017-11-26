@@ -77,7 +77,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 			s.discCh <- io.EOF
 		},
 		Error: func(err error) {
-			log.Errorf("%v", err)
+			s.discCh <- err
 		},
 	}
 

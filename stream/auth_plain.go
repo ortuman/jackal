@@ -55,7 +55,10 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 		return errInvalidFormat
 	}
 	username := string(s[0])
-	// password := string(s[1])
+	password := string(s[1])
+
+	println(username)
+	println(password)
 
 	// TODO: Validate user and password.
 

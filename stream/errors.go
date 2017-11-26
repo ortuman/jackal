@@ -57,3 +57,7 @@ func (se *streamError) Element() *xml.Element {
 	ret.AppendElement(reason)
 	return ret.Copy()
 }
+
+func (se *streamError) Error() string {
+	return se.reason
+}
