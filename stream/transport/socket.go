@@ -78,6 +78,15 @@ func (s *socketTransport) EnableCompression(level CompressionLevel) {
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
+	if tlsConn, ok := s.conn.(*tls.Conn); ok {
+		switch mechanism {
+		case TLSUnique:
+			st := tlsConn.ConnectionState()
+			return st.TLSUnique
+		default:
+			return []byte{}
+		}
+	}
 	return []byte{}
 }
 
