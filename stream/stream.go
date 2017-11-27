@@ -48,7 +48,8 @@ type Stream struct {
 	authenticated bool
 	compressed    bool
 
-	authenticators []authenticator
+	authrs      []authenticator
+	activeAuthr authenticator
 
 	writeCh chan []byte
 	readCh  chan []byte
@@ -134,7 +135,7 @@ func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch strings.ToLower(a) {
 		case "plain":
-			s.authenticators = append(s.authenticators, newPlainAuthenticator(s))
+			s.authrs = append(s.authrs, newPlainAuthenticator(s))
 		default:
 			break
 		}
@@ -187,10 +188,10 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		// attach SASL mechanisms
 		shouldOfferSASL := !tlsEnabled || (!tlsRequired || (tlsRequired && s.Secured()))
 
-		if shouldOfferSASL && len(s.authenticators) > 0 {
+		if shouldOfferSASL && len(s.authrs) > 0 {
 			mechanisms := xml.NewMutableElementName("mechanisms")
 			mechanisms.SetNamespace(saslNamespace)
-			for _, athr := range s.authenticators {
+			for _, athr := range s.authrs {
 				// don't offset authenticators with channel binding on an unsecure stream
 				if athr.UsesChannelBinding() && !s.Secured() {
 					continue
@@ -239,6 +240,13 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 			return
 		}
 		s.proceedStartTLS()
+
+	case "auth":
+		if elem.Namespace() != saslNamespace {
+			s.disconnectWithStreamError(ErrInvalidNamespace)
+			return
+		}
+		s.startAuthentication(elem)
 	}
 }
 
@@ -261,6 +269,59 @@ func (s *Stream) proceedStartTLS() {
 		Certificates: []tls.Certificate{cer},
 	}
 	s.tr.StartTLS(cfg)
+}
+
+func (s *Stream) startAuthentication(elem *xml.Element) {
+	mechanism := elem.Attribute("mechanism")
+	for _, authr := range s.authrs {
+		if authr.Mechanism() == mechanism {
+			if err := authr.ProcessElement(elem); err != nil {
+				return
+			}
+			if authr.Authenticated() {
+				s.finishAuthentication(authr.Username())
+			} else {
+				s.activeAuthr = authr
+				s.setState(authenticating)
+			}
+			return
+		}
+	}
+
+	// ...mechanism not found...
+	failure := xml.NewMutableElementNamespace("failure", saslNamespace)
+	failure.AppendElement(xml.NewElementName("invalid-mechanism"))
+	s.writeElement(failure.Copy())
+}
+
+func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) {
+}
+
+func (s *Stream) finishAuthentication(username string) {
+	if s.activeAuthr != nil {
+		s.activeAuthr.Reset()
+		s.activeAuthr = nil
+	}
+	s.Lock()
+	s.username = username
+	s.authenticated = true
+	s.Unlock()
+
+	Manager().AuthenticateStream(s)
+
+	s.setState(connecting)
+}
+
+func (s *Stream) failAuthentication(elem *xml.Element) {
+	failure := xml.NewMutableElementNamespace("failure", saslNamespace)
+	failure.AppendElement(elem)
+	s.writeElement(failure.Copy())
+
+	if s.activeAuthr != nil {
+		s.activeAuthr.Reset()
+		s.activeAuthr = nil
+	}
+	s.setState(connected)
 }
 
 func (s *Stream) loop() {
