@@ -45,18 +45,18 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 	}
 	b64Payload := elem.Text()
 	if len(b64Payload) == 0 {
-		return errInvalidFormat
+		return errSASLIncorrectEncoding
 	}
 	b, err := base64.StdEncoding.DecodeString(b64Payload)
 	if err != nil {
-		return errInvalidFormat
+		return errSASLIncorrectEncoding
 	}
 	s := bytes.Split(b, []byte{0})
-	if len(s) != 2 {
-		return errInvalidFormat
+	if len(s) != 3 {
+		return errSASLIncorrectEncoding
 	}
-	username := string(s[0])
-	password := string(s[1])
+	username := string(s[1])
+	password := string(s[2])
 
 	// validate user and password
 	user, err := storage.Instance().FetchUser(username)
@@ -64,7 +64,7 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 		return err
 	}
 	if user == nil || user.Password != password {
-		return errNotAuthorized
+		return errSASLNotAuthorized
 	}
 	p.username = username
 	p.authenticated = true

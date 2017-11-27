@@ -269,13 +269,18 @@ func (s *Stream) proceedStartTLS() {
 		Certificates: []tls.Certificate{cer},
 	}
 	s.tr.StartTLS(cfg)
+
+	s.Lock()
+	s.secured = true
+	s.Unlock()
+	s.restart()
 }
 
 func (s *Stream) startAuthentication(elem *xml.Element) {
 	mechanism := elem.Attribute("mechanism")
 	for _, authr := range s.authrs {
 		if authr.Mechanism() == mechanism {
-			if err := authr.ProcessElement(elem); err != nil {
+			if err := s.continueAuthentication(elem, authr); err != nil {
 				return
 			}
 			if authr.Authenticated() {
@@ -294,7 +299,15 @@ func (s *Stream) startAuthentication(elem *xml.Element) {
 	s.writeElement(failure.Copy())
 }
 
-func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) {
+func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) error {
+	err := authr.ProcessElement(elem)
+	if saslErr, ok := err.(saslError); ok {
+		s.failAuthentication(saslErr.Element())
+	} else if err != nil {
+		log.Errorf("%v", err)
+		s.failAuthentication(errSASLTemporaryAuthFailure.(saslError).Element())
+	}
+	return err
 }
 
 func (s *Stream) finishAuthentication(username string) {
@@ -308,8 +321,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.Unlock()
 
 	Manager().AuthenticateStream(s)
-
-	s.setState(connecting)
+	s.restart()
 }
 
 func (s *Stream) failAuthentication(elem *xml.Element) {
@@ -322,6 +334,11 @@ func (s *Stream) failAuthentication(elem *xml.Element) {
 		s.activeAuthr = nil
 	}
 	s.setState(connected)
+}
+
+func (s *Stream) restart() {
+	s.setState(connecting)
+	s.parser = xml.NewParser()
 }
 
 func (s *Stream) loop() {
