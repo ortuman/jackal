@@ -37,7 +37,7 @@ const (
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
-	tr            *transport.Transport
+	tr            transport.Transport
 	parser        *xml.Parser
 	st            int32
 	id            string

@@ -11,34 +11,27 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/ortuman/jackal/stream/compress"
 )
 
-const writeDeadline = 10 * time.Second // Time allowed to write a message to the peer.
+const writeDeadline = 10 * time.Second // time allowed to write a message to the peer.
 
 type socketTransport struct {
-	conn      net.Conn
-	keepAlive int
-	closed    int32
-	readBuff  []byte
+	conn       net.Conn
+	keepAlive  int
+	closed     int32
+	readBuff   []byte
+	compressor compress.Compressor
 }
 
-func NewSocketTransport(conn net.Conn, maxReadCount, keepAlive int) *Transport {
+func NewSocketTransport(conn net.Conn, maxReadCount, keepAlive int) Transport {
 	s := &socketTransport{
 		conn:      conn,
 		keepAlive: keepAlive,
 		readBuff:  make([]byte, maxReadCount),
 	}
-
-	t := &Transport{
-		Write:               s.Write,
-		WriteAndWait:        s.WriteAndWait,
-		Read:                s.Read,
-		Close:               s.Close,
-		StartTLS:            s.StartTLS,
-		EnableCompression:   s.EnableCompression,
-		ChannelBindingBytes: s.ChannelBindingBytes,
-	}
-	return t
+	return s
 }
 
 func (s *socketTransport) Write(b []byte) {
@@ -56,7 +49,12 @@ func (s *socketTransport) Read() ([]byte, error) {
 	}
 	switch err {
 	case nil:
-		return s.readBuff[:n], nil
+		b := s.readBuff[:n]
+		if s.compressor != nil {
+			return s.compressor.Uncompress(b)
+		}
+		return b, nil
+
 	case io.EOF:
 		return nil, ErrRemotePeerClosedTransport
 	default:
@@ -69,12 +67,12 @@ func (s *socketTransport) Close() {
 	s.conn.Close()
 }
 
-func (s *socketTransport) StartTLS(cfg *tls.Config) error {
+func (s *socketTransport) StartTLS(cfg *tls.Config) {
 	s.conn = tls.Server(s.conn, cfg)
-	return nil
 }
 
-func (s *socketTransport) EnableCompression(level CompressionLevel) {
+func (s *socketTransport) EnableCompression(level compress.Level) {
+	s.compressor = compress.NewZLIBCompressor(level)
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
@@ -92,5 +90,12 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 
 func (s *socketTransport) writeBytes(b []byte) {
 	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
-	s.conn.Write(b)
+	if s.compressor != nil {
+		deflatedBytes, err := s.compressor.Compress(b)
+		if deflatedBytes != nil && err == nil {
+			s.conn.Write(deflatedBytes)
+		}
+	} else {
+		s.conn.Write(b)
+	}
 }

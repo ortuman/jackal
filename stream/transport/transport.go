@@ -8,15 +8,8 @@ package transport
 import (
 	"crypto/tls"
 	"errors"
-)
 
-// compression level
-type CompressionLevel int
-
-const (
-	DefaultCompressionLevel = iota
-	BestCompressionLevel
-	SpeedCompressionLevel
+	"github.com/ortuman/jackal/stream/compress"
 )
 
 // channel binding mechanisms
@@ -35,12 +28,12 @@ var (
 	ErrRemotePeerClosedTransport = errors.New("transport closed by remote peer")
 )
 
-type Transport struct {
-	Write               func(b []byte)
-	WriteAndWait        func(b []byte)
-	Read                func() ([]byte, error)
-	Close               func()
-	StartTLS            func(*tls.Config) error
-	EnableCompression   func(level CompressionLevel)
-	ChannelBindingBytes func(mechanism ChannelBindingMechanism) []byte
+type Transport interface {
+	Write([]byte)
+	WriteAndWait([]byte)
+	Read() ([]byte, error)
+	Close()
+	StartTLS(*tls.Config)
+	EnableCompression(compress.Level)
+	ChannelBindingBytes(ChannelBindingMechanism) []byte
 }
