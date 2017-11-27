@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -57,10 +58,14 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 	username := string(s[0])
 	password := string(s[1])
 
-	println(username)
-	println(password)
-
-	// TODO: Validate user and password.
+	// validate user and password
+	user, err := storage.Instance().FetchUser(username)
+	if err != nil {
+		return err
+	}
+	if user == nil || user.Password != password {
+		return errNotAuthorized
+	}
 
 	p.username = username
 	p.authenticated = true

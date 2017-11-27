@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 )
 
@@ -56,6 +57,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "jackal: %v", err)
 		os.Exit(-1)
 	}
+
+	// initialize storage subsystem
+	storage.Instance()
 
 	// create PID file
 	if len(config.DefaultConfig.PIDFile) > 0 {

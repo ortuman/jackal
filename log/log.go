@@ -86,10 +86,11 @@ type callerInfo struct {
 }
 
 type record struct {
-	level int
-	file  string
-	line  int
-	log   string
+	level      int
+	file       string
+	line       int
+	log        string
+	continueCh chan struct{}
 }
 
 func instance() *Logger {
@@ -139,36 +140,40 @@ func (l *Logger) initialize() error {
 }
 
 func (l *Logger) debugf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, debugLevel, args...)
+	l.writeLog(file, line, format, debugLevel, true, args...)
 }
 
 func (l *Logger) infof(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, infoLevel, args...)
+	l.writeLog(file, line, format, infoLevel, true, args...)
 }
 
 func (l *Logger) warnf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, warningLevel, args...)
+	l.writeLog(file, line, format, warningLevel, true, args...)
 }
 
 func (l *Logger) errorf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, errorLevel, args...)
+	l.writeLog(file, line, format, errorLevel, true, args...)
 }
 
 func (l *Logger) fatalf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, fatalLevel, args...)
+	l.writeLog(file, line, format, fatalLevel, false, args...)
 }
 
-func (l *Logger) writeLog(file string, line int, format string, logLevel int, args ...interface{}) {
+func (l *Logger) writeLog(file string, line int, format string, logLevel int, async bool, args ...interface{}) {
 	if !l.initialized {
 		return
 	}
 	entry := record{
-		level: logLevel,
-		file:  file,
-		line:  line,
-		log:   fmt.Sprintf(format, args...),
+		level:      logLevel,
+		file:       file,
+		line:       line,
+		log:        fmt.Sprintf(format, args...),
+		continueCh: make(chan struct{}),
 	}
 	l.logChan <- entry
+	if !async {
+		<-entry.continueCh // wait until done
+	}
 }
 
 func (l *Logger) loop() {
@@ -190,6 +195,7 @@ func (l *Logger) loop() {
 		if rec.level == fatalLevel {
 			os.Exit(1)
 		}
+		close(rec.continueCh)
 	}
 }
 

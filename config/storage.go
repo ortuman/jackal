@@ -7,7 +7,7 @@ package config
 
 type Storage struct {
 	Type  string `yaml:"type"`
-	MySQL *MySQL `yaml:"mysql"`
+	MySQL MySQL  `yaml:"mysql"`
 }
 
 type MySQL struct {
