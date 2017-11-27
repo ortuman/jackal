@@ -148,6 +148,8 @@ func (s *Stream) handleElement(elem *xml.Element) {
 		s.handleConnecting(elem)
 	case connected:
 		s.handleConnected(elem)
+	case authenticated:
+		s.handleAuthenticated(elem)
 	default:
 		break
 	}
@@ -250,6 +252,17 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 	}
 }
 
+func (s *Stream) handleAuthenticated(elem *xml.Element) {
+	switch elem.Name() {
+	case "compress":
+		if elem.Namespace() != "http://jabber.org/protocol/compress" {
+			s.disconnectWithStreamError(ErrUnsupportedStanzaType)
+			return
+		}
+		s.compress(elem)
+	}
+}
+
 func (s *Stream) proceedStartTLS() {
 	if s.Secured() {
 		s.disconnectWithStreamError(ErrNotAuthorized)
@@ -273,7 +286,15 @@ func (s *Stream) proceedStartTLS() {
 	s.Lock()
 	s.secured = true
 	s.Unlock()
+
 	s.restart()
+}
+
+func (s *Stream) compress(elem *xml.Element) {
+	if s.Compressed() {
+		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
+		return
+	}
 }
 
 func (s *Stream) startAuthentication(elem *xml.Element) {
@@ -484,12 +505,6 @@ func (s *Stream) disconnect(closeStream bool) {
 		s.tr.WriteAndWait([]byte("</stream:stream>"))
 	}
 	s.tr.Close()
-
-	s.Lock()
-	s.authenticated = false
-	s.secured = false
-	s.compressed = false
-	s.Unlock()
 
 	s.setState(disconnected)
 
