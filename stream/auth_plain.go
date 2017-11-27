@@ -66,7 +66,6 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 	if user == nil || user.Password != password {
 		return errNotAuthorized
 	}
-
 	p.username = username
 	p.authenticated = true
 
