@@ -257,9 +257,8 @@ func (s *Stream) proceedStartTLS() {
 	s.writeElementAndWait(xml.NewElementNamespace("proceed", tlsNamespace))
 
 	cfg := &tls.Config{
-		ServerName:               s.Domain(),
-		Certificates:             []tls.Certificate{cer},
-		PreferServerCipherSuites: true,
+		ServerName:   s.Domain(),
+		Certificates: []tls.Certificate{cer},
 	}
 	s.tr.StartTLS(cfg)
 }
