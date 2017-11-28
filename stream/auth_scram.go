@@ -42,24 +42,24 @@ type scramParameters struct {
 }
 
 type scramAuthenticator struct {
-	strm               *Stream
-	tp                 scramType
-	usesChannelBinding bool
-	state              scramState
-	params             *scramParameters
-	user               *entity.User
-	salt               []byte
-	srvNonce           string
-	firstMessage       string
-	authenticated      bool
+	strm          *Stream
+	tp            scramType
+	usesCb        bool
+	state         scramState
+	params        *scramParameters
+	user          *entity.User
+	salt          []byte
+	srvNonce      string
+	firstMessage  string
+	authenticated bool
 }
 
 func newScram(strm *Stream, scramType scramType, usesChannelBinding bool) authenticator {
 	s := &scramAuthenticator{
-		strm:               strm,
-		tp:                 scramType,
-		usesChannelBinding: usesChannelBinding,
-		state:              startScramState,
+		strm:   strm,
+		tp:     scramType,
+		usesCb: usesChannelBinding,
+		state:  startScramState,
 	}
 	return s
 }
@@ -67,13 +67,13 @@ func newScram(strm *Stream, scramType scramType, usesChannelBinding bool) authen
 func (s *scramAuthenticator) Mechanism() string {
 	switch s.tp {
 	case sha1ScramType:
-		if s.usesChannelBinding {
+		if s.usesCb {
 			return "SCRAM-SHA-1-PLUS"
 		}
 		return "SCRAM-SHA-1"
 
 	case sha256ScramType:
-		if s.usesChannelBinding {
+		if s.usesCb {
 			return "SCRAM-SHA-256-PLUS"
 		}
 		return "SCRAM-SHA-256"
@@ -93,7 +93,7 @@ func (s *scramAuthenticator) Authenticated() bool {
 }
 
 func (s *scramAuthenticator) UsesChannelBinding() bool {
-	return s.usesChannelBinding
+	return s.usesCb
 }
 
 func (s *scramAuthenticator) ProcessElement(elem *xml.Element) error {
@@ -186,7 +186,7 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 
 	switch gs2BindFlag {
 	case "y":
-		if !s.usesChannelBinding {
+		if !s.usesCb {
 			return errSASLNotAuthorized
 		}
 	case "n":
@@ -195,7 +195,7 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 		if !strings.HasPrefix(gs2BindFlag, "p=") {
 			return errSASLMalformedRequest
 		}
-		if !s.usesChannelBinding {
+		if !s.usesCb {
 			return errSASLNotAuthorized
 		}
 		p.cbMechanism = gs2BindFlag[2:]
