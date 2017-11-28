@@ -97,7 +97,10 @@ type digestMD5Authenticator struct {
 }
 
 func newDigestMD5(strm *Stream) authenticator {
-	return &digestMD5Authenticator{strm: strm}
+	return &digestMD5Authenticator{
+		strm:  strm,
+		state: startDigestMD5State,
+	}
 }
 
 func (d *digestMD5Authenticator) Mechanism() string {
