@@ -140,6 +140,10 @@ func (s *Stream) initializeAuthenticators() {
 			s.authrs = append(s.authrs, newPlainAuthenticator(s))
 		case "digest_md5":
 			s.authrs = append(s.authrs, newDigestMD5(s))
+		case "scram_sha_1":
+			s.authrs = append(s.authrs, newScram(s, sha1ScramType, false))
+			s.authrs = append(s.authrs, newScram(s, sha1ScramType, true))
+
 		default:
 			break
 		}

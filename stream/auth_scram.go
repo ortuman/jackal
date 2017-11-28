@@ -7,11 +7,17 @@ package stream
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 
+	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
+
+const iterationsCount = 4096
 
 type scramType int
 
@@ -41,6 +47,10 @@ type scramAuthenticator struct {
 	usesChannelBinding bool
 	state              scramState
 	params             *scramParameters
+	user               *entity.User
+	salt               []byte
+	srvNonce           string
+	firstMessage       string
 	authenticated      bool
 }
 
@@ -72,6 +82,9 @@ func (s *scramAuthenticator) Mechanism() string {
 }
 
 func (s *scramAuthenticator) Username() string {
+	if s.authenticated {
+		return s.user.Username
+	}
 	return ""
 }
 
@@ -101,11 +114,14 @@ func (s *scramAuthenticator) ProcessElement(elem *xml.Element) error {
 }
 
 func (s *scramAuthenticator) Reset() {
-	// s.user = nil
 	s.authenticated = false
 
 	s.state = startScramState
 	s.params = nil
+	s.user = nil
+	s.salt = nil
+	s.srvNonce = ""
+	s.firstMessage = ""
 }
 
 func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
@@ -115,6 +131,25 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 	}
 	s.parseParameters(p)
 
+	user, err := storage.Instance().FetchUser(s.params.n)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errSASLNotAuthorized
+	}
+	s.user = user
+
+	s.srvNonce = s.params.cNonce + "-" + uuid.New()
+	s.salt = util.RandomBytes(32)
+	sb64 := base64.StdEncoding.EncodeToString(s.salt)
+	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
+
+	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
+	s.strm.SendElement(respElem.Copy())
+
+	s.state = challengedScramState
 	return nil
 }
 
@@ -177,6 +212,9 @@ func (s *scramAuthenticator) parseParameters(str string) (*scramParameters, erro
 		default:
 			return nil, errSASLMalformedRequest
 		}
+	}
+	if len(p.n) == 0 || len(p.cNonce) == 0 {
+		return nil, errSASLMalformedRequest
 	}
 	s.params = p
 
