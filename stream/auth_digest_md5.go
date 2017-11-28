@@ -7,8 +7,17 @@ package stream
 
 import "github.com/ortuman/jackal/xml"
 
+type digestMD5State int
+
+const (
+	digestMD5Start digestMD5State = iota
+	digestMD5Challenged
+	digestMD5Authenticated
+)
+
 type digestMD5Authenticator struct {
 	strm          *Stream
+	state         digestMD5State
 	username      string
 	authenticated bool
 }
@@ -34,8 +43,42 @@ func (d *digestMD5Authenticator) UsesChannelBinding() bool {
 }
 
 func (d *digestMD5Authenticator) ProcessElement(elem *xml.Element) error {
-	return nil
+	if d.Authenticated() {
+		return nil
+	}
+	switch elem.Name() {
+	case "auth":
+		switch d.state {
+		case digestMD5Start:
+			return d.handleStart(elem)
+		}
+	case "response":
+		switch d.state {
+		case digestMD5Challenged:
+			return d.handleChallenged(elem)
+		case digestMD5Authenticated:
+			return d.handleAuthenticated(elem)
+		}
+	}
+	return errSASLNotAuthorized
 }
 
 func (d *digestMD5Authenticator) Reset() {
+	d.state = digestMD5Start
+	d.username = ""
+	d.authenticated = false
+}
+
+func (d *digestMD5Authenticator) handleStart(elem *xml.Element) error {
+	return nil
+}
+
+func (d *digestMD5Authenticator) handleChallenged(elem *xml.Element) error {
+	return nil
+}
+
+func (d *digestMD5Authenticator) handleAuthenticated(elem *xml.Element) error {
+	d.authenticated = true
+	d.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	return nil
 }
