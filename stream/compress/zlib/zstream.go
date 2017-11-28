@@ -22,8 +22,8 @@ int zlibstream_inflate_init(char *strm) {
 int zlibstream_deflate_init(char *strm, int level) {
   ((z_stream*)strm)->zalloc = Z_NULL;
   ((z_stream*)strm)->zfree = Z_NULL;
-	((z_stream*)strm)->opaque = Z_NULL;
-	((z_stream*)strm)->avail_in = 0;
+  ((z_stream*)strm)->opaque = Z_NULL;
+  ((z_stream*)strm)->avail_in = 0;
   ((z_stream*)strm)->next_in = Z_NULL;
   return deflateInit((z_stream*)strm, level);
 }
