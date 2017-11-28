@@ -149,10 +149,10 @@ func (d *digestMD5Authenticator) handleStart(elem *xml.Element) error {
 	}
 	domain := d.strm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
-	cllnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
+	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
 
 	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
-	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(cllnge)))
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(chnge)))
 	d.strm.SendElement(respElem.Copy())
 
 	d.state = challengedDigestMD5State
