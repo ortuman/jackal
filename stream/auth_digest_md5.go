@@ -10,9 +10,9 @@ import "github.com/ortuman/jackal/xml"
 type digestMD5State int
 
 const (
-	digestMD5Start digestMD5State = iota
-	digestMD5Challenged
-	digestMD5Authenticated
+	digestMD5StateStart digestMD5State = iota
+	digestMD5StateChallenged
+	digestMD5StateAuthenticated
 )
 
 type digestMD5Authenticator struct {
@@ -49,14 +49,14 @@ func (d *digestMD5Authenticator) ProcessElement(elem *xml.Element) error {
 	switch elem.Name() {
 	case "auth":
 		switch d.state {
-		case digestMD5Start:
+		case digestMD5StateStart:
 			return d.handleStart(elem)
 		}
 	case "response":
 		switch d.state {
-		case digestMD5Challenged:
+		case digestMD5StateChallenged:
 			return d.handleChallenged(elem)
-		case digestMD5Authenticated:
+		case digestMD5StateAuthenticated:
 			return d.handleAuthenticated(elem)
 		}
 	}
