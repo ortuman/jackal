@@ -44,18 +44,7 @@ type digestMD5Parameters struct {
 }
 
 func (r *digestMD5Parameters) setParameter(p string) {
-	j := -1
-	for i := 0; i < len(p); i++ {
-		if p[i] == '=' {
-			j = i
-			break
-		}
-	}
-	if j == -1 {
-		return
-	}
-	key := p[0:j]
-	val := p[j+1:]
+	key, val := util.SplitKeyAndValue(p, '=')
 
 	// strip value double quotes
 	val = strings.TrimPrefix(val, `"`)
@@ -170,7 +159,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem *xml.Element) error {
 	if err != nil {
 		return errSASLIncorrectEncoding
 	}
-	params := parseParameters(string(b))
+	params := d.parseParameters(string(b))
 
 	// validate realm
 	if params.realm != d.strm.Domain() {
@@ -225,25 +214,11 @@ func (d *digestMD5Authenticator) handleAuthenticated(elem *xml.Element) error {
 	return nil
 }
 
-func parseParameters(str string) *digestMD5Parameters {
+func (d *digestMD5Authenticator) parseParameters(str string) *digestMD5Parameters {
 	params := &digestMD5Parameters{}
-	var p string
-	for i := 0; i < len(str); {
-		j := -1
-		for k := i; k < len(str); k++ {
-			if str[k] == ',' {
-				j = k
-				break
-			}
-		}
-		if j != -1 {
-			p = str[i:j]
-			i = j + 1
-		} else {
-			p = str[i:]
-			i = len(str)
-		}
-		params.setParameter(p)
+	s := strings.Split(str, ",")
+	for i := 0; i < len(s); i++ {
+		params.setParameter(s[i])
 	}
 	return params
 }
