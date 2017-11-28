@@ -139,6 +139,8 @@ func (s *Stream) initializeAuthenticators() {
 		switch strings.ToLower(a) {
 		case "plain":
 			s.authrs = append(s.authrs, newPlainAuthenticator(s))
+		case "digest_md5":
+			s.authrs = append(s.authrs, newDigestMD5(s))
 		default:
 			break
 		}

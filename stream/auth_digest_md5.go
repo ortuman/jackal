@@ -5,14 +5,20 @@
 
 package stream
 
-import "github.com/ortuman/jackal/xml"
+import (
+	"encoding/base64"
+	"fmt"
+
+	"github.com/ortuman/jackal/util"
+	"github.com/ortuman/jackal/xml"
+)
 
 type digestMD5State int
 
 const (
-	digestMD5StateStart digestMD5State = iota
-	digestMD5StateChallenged
-	digestMD5StateAuthenticated
+	startDigestMD5State digestMD5State = iota
+	challengedDigestMD5State
+	authenticatedDigestMD5State
 )
 
 type digestMD5Authenticator struct {
@@ -49,14 +55,14 @@ func (d *digestMD5Authenticator) ProcessElement(elem *xml.Element) error {
 	switch elem.Name() {
 	case "auth":
 		switch d.state {
-		case digestMD5StateStart:
+		case startDigestMD5State:
 			return d.handleStart(elem)
 		}
 	case "response":
 		switch d.state {
-		case digestMD5StateChallenged:
+		case challengedDigestMD5State:
 			return d.handleChallenged(elem)
-		case digestMD5StateAuthenticated:
+		case authenticatedDigestMD5State:
 			return d.handleAuthenticated(elem)
 		}
 	}
@@ -64,12 +70,21 @@ func (d *digestMD5Authenticator) ProcessElement(elem *xml.Element) error {
 }
 
 func (d *digestMD5Authenticator) Reset() {
-	d.state = digestMD5Start
+	d.state = startDigestMD5State
 	d.username = ""
 	d.authenticated = false
 }
 
 func (d *digestMD5Authenticator) handleStart(elem *xml.Element) error {
+	domain := d.strm.Domain()
+	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
+	cg := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
+
+	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(cg)))
+	d.strm.SendElement(respElem.Copy())
+
+	d.state = challengedDigestMD5State
 	return nil
 }
 
