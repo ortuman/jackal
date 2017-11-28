@@ -53,6 +53,11 @@ func (e *Element) Text() string {
 	return e.text
 }
 
+// TextLen returns XML node text value length.
+func (e *Element) TextLen() int {
+	return len(e.text)
+}
+
 // Attribute returns XML node attribute value.
 func (e *Element) Attribute(label string) string {
 	for i := 0; i < len(e.attrs); i++ {

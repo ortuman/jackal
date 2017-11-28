@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/stream/compress"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream/transport"
@@ -30,8 +32,9 @@ const (
 )
 
 const (
-	streamNamespace = "http://etherx.jabber.org/streams"
-	tlsNamespace    = "urn:ietf:params:xml:ns:xmpp-tls"
+	streamNamespace           = "http://etherx.jabber.org/streams"
+	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
+	compressProtocolNamespace = "http://jabber.org/protocol/compress"
 )
 
 type Stream struct {
@@ -255,7 +258,7 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 func (s *Stream) handleAuthenticated(elem *xml.Element) {
 	switch elem.Name() {
 	case "compress":
-		if elem.Namespace() != "http://jabber.org/protocol/compress" {
+		if elem.Namespace() != compressProtocolNamespace {
 			s.disconnectWithStreamError(ErrUnsupportedStanzaType)
 			return
 		}
@@ -295,6 +298,37 @@ func (s *Stream) compress(elem *xml.Element) {
 		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
 		return
 	}
+	method := elem.FindElement("method")
+	if method == nil || method.TextLen() == 0 {
+		failure := xml.NewMutableElementNamespace("failure", compressProtocolNamespace)
+		failure.AppendElement(xml.NewElementName("setup-failed"))
+		s.writeElement(failure.Copy())
+		return
+	}
+	if method.Text() != "zlib" {
+		failure := xml.NewMutableElementNamespace("failure", compressProtocolNamespace)
+		failure.AppendElement(xml.NewElementName("unsupported-method"))
+		s.writeElement(failure.Copy())
+		return
+	}
+	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
+	s.writeElementAndWait(compressed)
+
+	var lvl compress.Level
+	switch s.cfg.Compression.Level {
+	case "best":
+		lvl = compress.BestLevel
+	case "speed":
+		lvl = compress.SpeedLevel
+	default:
+		lvl = compress.DefaultLevel
+	}
+	s.tr.EnableCompression(lvl)
+	s.Lock()
+	s.compressed = true
+	s.Unlock()
+
+	s.restart()
 }
 
 func (s *Stream) startAuthentication(elem *xml.Element) {
@@ -457,8 +491,8 @@ func (s *Stream) openStreamElement() {
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
 
-	s.tr.WriteAndWait([]byte(`<?xml version="1.0"?>`))
-	s.tr.WriteAndWait([]byte(ops.XML(false)))
+	s.writeBytesAndWait([]byte(`<?xml version="1.0"?>`))
+	s.writeBytesAndWait([]byte(ops.XML(false)))
 }
 
 func (s *Stream) streamDefaultNamespace() string {

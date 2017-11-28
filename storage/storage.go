@@ -6,7 +6,6 @@
 package storage
 
 import (
-	"strings"
 	"sync"
 
 	"github.com/ortuman/jackal/storage/entity"
@@ -31,12 +30,11 @@ var (
 
 func Instance() storage {
 	once.Do(func() {
-		storageType := strings.ToLower(config.DefaultConfig.Storage.Type)
-		switch storageType {
+		switch config.DefaultConfig.Storage.Type {
 		case "mysql":
 			instance = newMySQLStorage()
 		default:
-			log.Fatalf("unrecognized storage type: %s", storageType)
+			log.Fatalf("unrecognized storage type: %s", config.DefaultConfig.Storage.Type)
 			return
 		}
 	})

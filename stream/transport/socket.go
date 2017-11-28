@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/stream/compress"
+	"github.com/ortuman/jackal/stream/compress/zlib"
 )
 
 const writeDeadline = 10 * time.Second // time allowed to write a message to the peer.
@@ -72,7 +73,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 }
 
 func (s *socketTransport) EnableCompression(level compress.Level) {
-	s.compressor = compress.NewZLIBCompressor(level)
+	s.compressor = zlib.NewCompressor(level)
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
@@ -89,13 +90,14 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 }
 
 func (s *socketTransport) writeBytes(b []byte) {
-	s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 	if s.compressor != nil {
 		deflatedBytes, err := s.compressor.Compress(b)
 		if deflatedBytes != nil && err == nil {
+			s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 			s.conn.Write(deflatedBytes)
 		}
 	} else {
+		s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 		s.conn.Write(b)
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/stream"
@@ -88,7 +87,6 @@ func (s *server) handleConnection(conn net.Conn) {
 
 func (s *server) validateConfiguration() error {
 	// validate server type
-	s.cfg.Type = strings.ToLower(s.cfg.Type)
 	switch s.cfg.Type {
 	case config.C2S, config.S2S:
 		break
@@ -101,7 +99,6 @@ func (s *server) validateConfiguration() error {
 	}
 
 	// validate transport
-	s.cfg.Transport.Type = strings.ToLower(s.cfg.Transport.Type)
 	if s.cfg.Transport.Type != config.SocketTransport {
 		return fmt.Errorf("unrecognized transport type: %s", s.cfg.Transport.Type)
 	}
