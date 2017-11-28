@@ -37,7 +37,7 @@ type scramParameters struct {
 	gs2Header   string
 	cbMechanism string
 	authzID     string
-	n           string
+	username    string
 	cNonce      string
 }
 
@@ -133,7 +133,7 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 		return err
 	}
 
-	user, err := storage.Instance().FetchUser(s.params.n)
+	user, err := storage.Instance().FetchUser(s.params.username)
 	if err != nil {
 		return err
 	}
@@ -216,12 +216,12 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 		case "r":
 			p.cNonce = val
 		case "n":
-			p.n = val
+			p.username = val
 		default:
 			break
 		}
 	}
-	if len(p.n) == 0 || len(p.cNonce) == 0 {
+	if len(p.username) == 0 || len(p.cNonce) == 0 {
 		return errSASLMalformedRequest
 	}
 	s.params = p
