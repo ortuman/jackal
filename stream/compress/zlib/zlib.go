@@ -82,7 +82,6 @@ func (z *ZlibCompressor) Uncompress(b []byte) ([]byte, error) {
 			return nil, fmt.Errorf("zlib: inflate error (%d)", status)
 		}
 		have = zlibChunkSize - z.rstrm.availOut()
-		fmt.Printf("have: %d\n", have)
 
 		ret.Write(z.rbuff[:have])
 		if z.rstrm.availOut() != 0 {

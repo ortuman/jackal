@@ -211,6 +211,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem *xml.Element) error {
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(respAuth)))
 	d.strm.SendElement(respElem.Copy())
 
+	d.username = user.Username
 	d.state = authenticatedDigestMD5State
 	return nil
 }
@@ -246,7 +247,7 @@ func parseParameters(str string) *digestMD5Parameters {
 
 func computeResponse(params *digestMD5Parameters, user *entity.User, asClient bool) string {
 	x := params.username + ":" + params.realm + ":" + user.Password
-	y := md5Encode([]byte(x))
+	y := md5Hash([]byte(x))
 
 	a1 := bytes.NewBuffer(y)
 	a1.WriteString(":" + params.nonce + ":" + params.cnonce)
@@ -263,8 +264,8 @@ func computeResponse(params *digestMD5Parameters, user *entity.User, asClient bo
 	a2 := bytes.NewBuffer([]byte(c))
 	a2.WriteString(":" + params.digestURI)
 
-	ha1 := hex.EncodeToString(md5Encode(a1.Bytes()))
-	ha2 := hex.EncodeToString(md5Encode(a2.Bytes()))
+	ha1 := hex.EncodeToString(md5Hash(a1.Bytes()))
+	ha2 := hex.EncodeToString(md5Hash(a2.Bytes()))
 
 	kd := ha1
 	kd += ":" + params.nonce
@@ -272,10 +273,10 @@ func computeResponse(params *digestMD5Parameters, user *entity.User, asClient bo
 	kd += ":" + params.cnonce
 	kd += ":" + params.qop
 	kd += ":" + ha2
-	return hex.EncodeToString(md5Encode([]byte(kd)))
+	return hex.EncodeToString(md5Hash([]byte(kd)))
 }
 
-func md5Encode(b []byte) []byte {
+func md5Hash(b []byte) []byte {
 	hasher := md5.New()
 	hasher.Write(b)
 	return hasher.Sum(nil)
