@@ -43,6 +43,7 @@ func (se *saslErrorString) Error() string {
 
 var (
 	errSASLIncorrectEncoding    = newSASLError("incorrect-encoding")
+	errSASLMalformedRequest     = newSASLError("malformed-request")
 	errSASLNotAuthorized        = newSASLError("not-authorized")
 	errSASLTemporaryAuthFailure = newSASLError("temporary-auth-failure")
 )

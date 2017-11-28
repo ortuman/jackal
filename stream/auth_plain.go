@@ -43,11 +43,10 @@ func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
 	if p.authenticated {
 		return nil
 	}
-	b64Payload := elem.Text()
-	if len(b64Payload) == 0 {
-		return errSASLIncorrectEncoding
+	if elem.TextLen() == 0 {
+		return errSASLMalformedRequest
 	}
-	b, err := base64.StdEncoding.DecodeString(b64Payload)
+	b, err := base64.StdEncoding.DecodeString(elem.Text())
 	if err != nil {
 		return errSASLIncorrectEncoding
 	}

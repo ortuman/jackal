@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"net"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -136,7 +135,7 @@ func (s *Stream) SendElement(elem *xml.Element) {
 
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
-		switch strings.ToLower(a) {
+		switch a {
 		case "plain":
 			s.authrs = append(s.authrs, newPlainAuthenticator(s))
 		case "digest_md5":
@@ -155,6 +154,8 @@ func (s *Stream) handleElement(elem *xml.Element) {
 		s.handleConnected(elem)
 	case authenticated:
 		s.handleAuthenticated(elem)
+	case authenticating:
+		s.handleAuthenticating(elem)
 	default:
 		break
 	}
@@ -254,6 +255,18 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 			return
 		}
 		s.startAuthentication(elem)
+	}
+}
+
+func (s *Stream) handleAuthenticating(elem *xml.Element) {
+	if elem.Namespace() != saslNamespace {
+		s.disconnectWithStreamError(ErrInvalidNamespace)
+		return
+	}
+	authr := s.activeAuthr
+	s.continueAuthentication(elem, authr)
+	if authr.Authenticated() {
+		s.finishAuthentication(authr.Username())
 	}
 }
 

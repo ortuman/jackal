@@ -6,9 +6,16 @@
 package stream
 
 import (
+	"bytes"
+	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
+	"github.com/ortuman/jackal/storage/entity"
+
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 )
@@ -20,6 +27,67 @@ const (
 	challengedDigestMD5State
 	authenticatedDigestMD5State
 )
+
+type digestMD5Parameters struct {
+	username  string
+	realm     string
+	nonce     string
+	cnonce    string
+	nc        string
+	qop       string
+	servType  string
+	host      string
+	digestURI string
+	response  string
+	charset   string
+	authID    string
+}
+
+func (r *digestMD5Parameters) setParameter(p string) {
+	j := -1
+	for i := 0; i < len(p); i++ {
+		if p[i] == '=' {
+			j = i
+			break
+		}
+	}
+	if j == -1 {
+		return
+	}
+	key := p[0:j]
+	val := p[j+1:]
+
+	// strip value double quotes
+	val = strings.TrimPrefix(val, `"`)
+	val = strings.TrimSuffix(val, `"`)
+
+	switch key {
+	case "username":
+		r.username = val
+	case "realm":
+		r.realm = val
+	case "nonce":
+		r.nonce = val
+	case "cnonce":
+		r.cnonce = val
+	case "nc":
+		r.nc = val
+	case "qop":
+		r.qop = val
+	case "serv-type":
+		r.servType = val
+	case "host":
+		r.host = val
+	case "digest-uri":
+		r.digestURI = val
+	case "response":
+		r.response = val
+	case "charset":
+		r.charset = val
+	case "authzid":
+		r.authID = val
+	}
+}
 
 type digestMD5Authenticator struct {
 	strm          *Stream
@@ -76,12 +144,15 @@ func (d *digestMD5Authenticator) Reset() {
 }
 
 func (d *digestMD5Authenticator) handleStart(elem *xml.Element) error {
+	if elem.TextLen() != 0 {
+		return errSASLMalformedRequest
+	}
 	domain := d.strm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
-	cg := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
+	cllnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
 
 	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
-	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(cg)))
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(cllnge)))
 	d.strm.SendElement(respElem.Copy())
 
 	d.state = challengedDigestMD5State
@@ -89,6 +160,58 @@ func (d *digestMD5Authenticator) handleStart(elem *xml.Element) error {
 }
 
 func (d *digestMD5Authenticator) handleChallenged(elem *xml.Element) error {
+	if elem.TextLen() == 0 {
+		return errSASLMalformedRequest
+	}
+	b, err := base64.StdEncoding.DecodeString(elem.Text())
+	if err != nil {
+		return errSASLIncorrectEncoding
+	}
+	params := parseParameters(string(b))
+
+	// validate realm
+	if params.realm != d.strm.Domain() {
+		return errSASLNotAuthorized
+	}
+	// validate nc
+	if params.nc != "00000001" {
+		return errSASLNotAuthorized
+	}
+	// validate qop
+	if params.qop != "auth" {
+		return errSASLNotAuthorized
+	}
+	// validate serv-type
+	if len(params.servType) > 0 && params.servType != "xmpp" {
+		return errSASLNotAuthorized
+	}
+	// validate digest-uri
+	if !strings.HasPrefix(params.digestURI, "xmpp/") || params.digestURI[5:] != d.strm.Domain() {
+		return errSASLNotAuthorized
+	}
+	// validate user
+	user, err := storage.Instance().FetchUser(params.username)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errSASLNotAuthorized
+	}
+	// validate response
+	clientResp := computeResponse(params, user, true)
+	if clientResp != params.response {
+		return errSASLNotAuthorized
+	}
+
+	// authenticated... compute and send server response
+	serverResp := computeResponse(params, user, false)
+	respAuth := fmt.Sprintf("rspauth=%s", serverResp)
+
+	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(respAuth)))
+	d.strm.SendElement(respElem.Copy())
+
+	d.state = authenticatedDigestMD5State
 	return nil
 }
 
@@ -96,4 +219,64 @@ func (d *digestMD5Authenticator) handleAuthenticated(elem *xml.Element) error {
 	d.authenticated = true
 	d.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil
+}
+
+func parseParameters(str string) *digestMD5Parameters {
+	params := &digestMD5Parameters{}
+	var p string
+	for i := 0; i < len(str); {
+		j := -1
+		for k := i; k < len(str); k++ {
+			if str[k] == ',' {
+				j = k
+				break
+			}
+		}
+		if j != -1 {
+			p = str[i:j]
+			i = j + 1
+		} else {
+			p = str[i:]
+			i = len(str)
+		}
+		params.setParameter(p)
+	}
+	return params
+}
+
+func computeResponse(params *digestMD5Parameters, user *entity.User, asClient bool) string {
+	x := params.username + ":" + params.realm + ":" + user.Password
+	y := md5Encode([]byte(x))
+
+	a1 := bytes.NewBuffer(y)
+	a1.WriteString(":" + params.nonce + ":" + params.cnonce)
+	if len(params.authID) > 0 {
+		a1.WriteString(":" + params.authID)
+	}
+
+	var c string
+	if asClient {
+		c = "AUTHENTICATE"
+	} else {
+		c = ""
+	}
+	a2 := bytes.NewBuffer([]byte(c))
+	a2.WriteString(":" + params.digestURI)
+
+	ha1 := hex.EncodeToString(md5Encode(a1.Bytes()))
+	ha2 := hex.EncodeToString(md5Encode(a2.Bytes()))
+
+	kd := ha1
+	kd += ":" + params.nonce
+	kd += ":" + params.nc
+	kd += ":" + params.cnonce
+	kd += ":" + params.qop
+	kd += ":" + ha2
+	return hex.EncodeToString(md5Encode([]byte(kd)))
+}
+
+func md5Encode(b []byte) []byte {
+	hasher := md5.New()
+	hasher.Write(b)
+	return hasher.Sum(nil)
 }
