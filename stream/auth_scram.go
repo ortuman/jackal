@@ -129,7 +129,9 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 	if err != nil {
 		return err
 	}
-	s.parseParameters(p)
+	if err := s.parseParameters(p); err != nil {
+		return err
+	}
 
 	user, err := storage.Instance().FetchUser(s.params.n)
 	if err != nil {
@@ -154,6 +156,11 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 }
 
 func (s *scramAuthenticator) handleChallenged(elem *xml.Element) error {
+	p, err := s.getElementPayload(elem)
+	if err != nil {
+		return err
+	}
+	println(p)
 	return nil
 }
 
@@ -168,55 +175,55 @@ func (s *scramAuthenticator) getElementPayload(elem *xml.Element) (string, error
 	return string(b), nil
 }
 
-func (s *scramAuthenticator) parseParameters(str string) (*scramParameters, error) {
+func (s *scramAuthenticator) parseParameters(str string) error {
 	p := &scramParameters{}
+
 	sp := strings.Split(str, ",")
 	if len(sp) < 2 {
-		return nil, errSASLIncorrectEncoding
+		return errSASLIncorrectEncoding
 	}
 	gs2BindFlag := sp[0]
 
 	switch gs2BindFlag {
 	case "y":
 		if !s.usesChannelBinding {
-			return nil, errSASLNotAuthorized
+			return errSASLNotAuthorized
 		}
 	case "n":
 		break
 	default:
 		if !strings.HasPrefix(gs2BindFlag, "p=") {
-			return nil, errSASLMalformedRequest
+			return errSASLMalformedRequest
 		}
 		if !s.usesChannelBinding {
-			return nil, errSASLNotAuthorized
+			return errSASLNotAuthorized
 		}
 		p.cbMechanism = gs2BindFlag[2:]
 	}
-	authzID := sp[0]
+	authzID := sp[1]
 	p.gs2Header = gs2BindFlag + "," + authzID + ","
 
 	if len(authzID) > 0 {
 		key, val := util.SplitKeyAndValue(authzID, '=')
 		if len(key) == 0 || key != "a" {
-			return nil, errSASLMalformedRequest
+			return errSASLMalformedRequest
 		}
 		p.authzID = val
 	}
 	for i := 2; i < len(sp); i++ {
-		key, val := util.SplitKeyAndValue(authzID, '=')
+		key, val := util.SplitKeyAndValue(sp[i], '=')
 		switch key {
 		case "r":
 			p.cNonce = val
 		case "n":
 			p.n = val
 		default:
-			return nil, errSASLMalformedRequest
+			break
 		}
 	}
 	if len(p.n) == 0 || len(p.cNonce) == 0 {
-		return nil, errSASLMalformedRequest
+		return errSASLMalformedRequest
 	}
 	s.params = p
-
-	return p, nil
+	return nil
 }
