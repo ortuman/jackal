@@ -75,6 +75,8 @@ type scramAuthenticator struct {
 	strm          *Stream
 	tp            scramType
 	usesCb        bool
+	h             func() hash.Hash
+	hKeyLen       int
 	state         scramState
 	params        *scramParameters
 	user          *entity.User
@@ -90,6 +92,13 @@ func newScram(strm *Stream, scramType scramType, usesChannelBinding bool) authen
 		tp:     scramType,
 		usesCb: usesChannelBinding,
 		state:  startScramState,
+	}
+	if s.tp == sha1ScramType {
+		s.h = sha1.New
+		s.hKeyLen = sha1.Size
+	} else {
+		s.h = sha256.New
+		s.hKeyLen = sha256.Size
 	}
 	return s
 }
@@ -199,18 +208,30 @@ func (s *scramAuthenticator) handleChallenged(elem *xml.Element) error {
 	initialMessage := s.params.String()
 	clientFinalMessageBare := fmt.Sprintf("c=%s,r=%s", c, s.srvNonce)
 
-	var h func() hash.Hash
-	var keyLen int
-	if s.tp == sha1ScramType {
-		h = sha1.New
-		keyLen = sha1.Size
-	} else {
-		h = sha256.New
-		keyLen = sha256.Size
-	}
-	saltedPassword := pbkdf2.Key([]byte(s.user.Password), s.salt, iterationsCount, keyLen, h)
-	clientKey := mac([]byte("Client Key"), saltedPassword, h)
+	saltedPassword := s.pbkdf2([]byte(s.user.Password))
+	clientKey := s.hmac([]byte("Client Key"), saltedPassword)
+	storedKey := s.hash(clientKey)
+	authMessage := initialMessage + "," + s.firstMessage + "," + clientFinalMessageBare
+	clientSignature := s.hmac([]byte(authMessage), storedKey)
 
+	clientProof := make([]byte, len(clientKey))
+	for i := 0; i < len(clientKey); i++ {
+		clientProof[i] = clientKey[i] ^ clientSignature[i]
+	}
+	serverKey := s.hmac([]byte("Server Key"), saltedPassword)
+	serverSignature := s.hmac([]byte(authMessage), serverKey)
+
+	clientFinalMessage := clientFinalMessageBare + ",p=" + base64.StdEncoding.EncodeToString(clientProof)
+	if clientFinalMessage != p {
+		return errSASLNotAuthorized
+	}
+	v := "v=" + base64.StdEncoding.EncodeToString(serverSignature)
+
+	respElem := xml.NewMutableElementNamespace("success", saslNamespace)
+	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
+	s.strm.SendElement(respElem.Copy())
+
+	s.authenticated = true
 	return nil
 }
 
@@ -277,8 +298,18 @@ func (s *scramAuthenticator) getCBindInputString() string {
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func mac(b []byte, key []byte, h func() hash.Hash) []byte {
-	m := hmac.New(h, key)
+func (s *scramAuthenticator) pbkdf2(b []byte) []byte {
+	return pbkdf2.Key(b, s.salt, iterationsCount, s.hKeyLen, s.h)
+}
+
+func (s *scramAuthenticator) hmac(b []byte, key []byte) []byte {
+	m := hmac.New(s.h, key)
 	m.Write(b)
 	return m.Sum(nil)
+}
+
+func (s *scramAuthenticator) hash(b []byte) []byte {
+	h := s.h()
+	h.Write(b)
+	return h.Sum(nil)
 }
