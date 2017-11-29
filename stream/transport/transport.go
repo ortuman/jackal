@@ -13,11 +13,8 @@ import (
 )
 
 // channel binding mechanisms
-type ChannelBindingMechanism int
-
 const (
-	TLSUnique = iota
-	TLSServerEndPoint
+	TLSUnique = "tls-unique"
 )
 
 var (
@@ -35,5 +32,5 @@ type Transport interface {
 	Close()
 	StartTLS(*tls.Config)
 	EnableCompression(compress.Level)
-	ChannelBindingBytes(ChannelBindingMechanism) []byte
+	ChannelBindingBytes(string) []byte
 }

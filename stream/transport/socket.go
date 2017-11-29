@@ -76,14 +76,14 @@ func (s *socketTransport) EnableCompression(level compress.Level) {
 	s.compressor = zlib.NewCompressor(level)
 }
 
-func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
+func (s *socketTransport) ChannelBindingBytes(mechanism string) []byte {
 	if tlsConn, ok := s.conn.(*tls.Conn); ok {
 		switch mechanism {
 		case TLSUnique:
 			st := tlsConn.ConnectionState()
 			return st.TLSUnique
 		default:
-			return []byte{}
+			break
 		}
 	}
 	return []byte{}

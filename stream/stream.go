@@ -123,6 +123,10 @@ func (s *Stream) Compressed() bool {
 	return s.compressed
 }
 
+func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
+	return s.tr.ChannelBindingBytes(mechanism)
+}
+
 func (s *Stream) SendElements(elems []*xml.Element) {
 	for _, e := range elems {
 		s.SendElement(e)

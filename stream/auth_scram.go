@@ -6,8 +6,13 @@
 package stream
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"hash"
 	"strings"
 
 	"github.com/ortuman/jackal/storage"
@@ -15,6 +20,7 @@ import (
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 const iterationsCount = 4096
@@ -33,12 +39,36 @@ const (
 	challengedScramState
 )
 
+type scramParameter struct {
+	key string
+	val string
+}
+
 type scramParameters struct {
 	gs2Header   string
 	cbMechanism string
 	authzID     string
-	username    string
-	cNonce      string
+	params      []scramParameter
+}
+
+func (s *scramParameters) getParameter(key string) string {
+	for _, p := range s.params {
+		if p.key == key {
+			return p.val
+		}
+	}
+	return ""
+}
+
+func (s *scramParameters) String() string {
+	ret := ""
+	for i, p := range s.params {
+		if i != 0 {
+			ret += ","
+		}
+		ret += fmt.Sprintf("%s=%s", p.key, p.val)
+	}
+	return ret
 }
 
 type scramAuthenticator struct {
@@ -132,8 +162,13 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 	if err := s.parseParameters(p); err != nil {
 		return err
 	}
+	username := s.params.getParameter("n")
+	cNonce := s.params.getParameter("r")
 
-	user, err := storage.Instance().FetchUser(s.params.username)
+	if len(username) == 0 || len(cNonce) == 0 {
+		return errSASLMalformedRequest
+	}
+	user, err := storage.Instance().FetchUser(username)
 	if err != nil {
 		return err
 	}
@@ -142,7 +177,7 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 	}
 	s.user = user
 
-	s.srvNonce = s.params.cNonce + "-" + uuid.New()
+	s.srvNonce = cNonce + "-" + uuid.New()
 	s.salt = util.RandomBytes(32)
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
@@ -160,7 +195,22 @@ func (s *scramAuthenticator) handleChallenged(elem *xml.Element) error {
 	if err != nil {
 		return err
 	}
-	println(p)
+	c := s.getCBindInputString()
+	initialMessage := s.params.String()
+	clientFinalMessageBare := fmt.Sprintf("c=%s,r=%s", c, s.srvNonce)
+
+	var h func() hash.Hash
+	var keyLen int
+	if s.tp == sha1ScramType {
+		h = sha1.New
+		keyLen = sha1.Size
+	} else {
+		h = sha256.New
+		keyLen = sha256.Size
+	}
+	saltedPassword := pbkdf2.Key([]byte(s.user.Password), s.salt, iterationsCount, keyLen, h)
+	clientKey := mac([]byte("Client Key"), saltedPassword, h)
+
 	return nil
 }
 
@@ -212,18 +262,23 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 	}
 	for i := 2; i < len(sp); i++ {
 		key, val := util.SplitKeyAndValue(sp[i], '=')
-		switch key {
-		case "r":
-			p.cNonce = val
-		case "n":
-			p.username = val
-		default:
-			break
-		}
-	}
-	if len(p.username) == 0 || len(p.cNonce) == 0 {
-		return errSASLMalformedRequest
+		p.params = append(p.params, scramParameter{key, val})
 	}
 	s.params = p
 	return nil
+}
+
+func (s *scramAuthenticator) getCBindInputString() string {
+	buf := new(bytes.Buffer)
+	buf.Write([]byte(s.params.gs2Header))
+	if s.usesCb {
+		buf.Write(s.strm.ChannelBindingBytes(s.params.cbMechanism))
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func mac(b []byte, key []byte, h func() hash.Hash) []byte {
+	m := hmac.New(h, key)
+	m.Write(b)
+	return m.Sum(nil)
 }
