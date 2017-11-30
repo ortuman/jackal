@@ -7,6 +7,12 @@ package xml
 
 import "fmt"
 
+const (
+	getIQType    = "get"
+	setIQType    = "set"
+	resultIQType = "result"
+)
+
 type IQ struct {
 	Element
 	to   *JID
@@ -16,6 +22,9 @@ type IQ struct {
 func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong iq element name: %s", e.name)
+	}
+	if !isIQType(e.Type()) {
+		return nil, fmt.Errorf("wrong iq type: %s", e.Type())
 	}
 	iq := &IQ{}
 	iq.name = e.name
@@ -31,17 +40,17 @@ func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 
 // IsGet returns true if this is a 'get' type IQ.
 func (iq *IQ) IsGet() bool {
-	return iq.Type() == "get"
+	return iq.Type() == getIQType
 }
 
 // IsSet returns true if this is a 'set' type IQ.
 func (iq *IQ) IsSet() bool {
-	return iq.Type() == "set"
+	return iq.Type() == setIQType
 }
 
 // IsResult returns true if this is a 'result' type IQ.
 func (iq *IQ) IsResult() bool {
-	return iq.Type() == "result"
+	return iq.Type() == resultIQType
 }
 
 // ResultIQ returns the instance associated result IQ.
@@ -56,4 +65,12 @@ func (iq *IQ) ResultIQ(from string) *IQ {
 		rs.attrs = append(rs.attrs, Attribute{"from", from})
 	}
 	return rs
+}
+
+func isIQType(tp string) bool {
+	switch tp {
+	case getIQType, setIQType, resultIQType, "error":
+		return true
+	}
+	return false
 }
