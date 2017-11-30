@@ -13,4 +13,3 @@ func NewIQ(e *Element) (*IQ, error) {
 	iq := &IQ{}
 	return iq, nil
 }
-

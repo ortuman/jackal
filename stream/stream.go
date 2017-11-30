@@ -286,6 +286,16 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 			return
 		}
 		s.compress(elem)
+	case "iq":
+		_, err := s.buildIQ(elem)
+		if err != nil {
+			return
+		}
+		if len(s.Resource()) == 0 { // expecting bind
+			println("")
+		} else { // expecting session
+			println("")
+		}
 	}
 }
 
@@ -516,6 +526,18 @@ func (s *Stream) openStreamElement() {
 
 	s.writeBytesAndWait([]byte(`<?xml version="1.0"?>`))
 	s.writeBytesAndWait([]byte(ops.XML(false)))
+}
+
+func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
+	iq, err := xml.NewIQ(elem)
+	switch err {
+	case nil:
+		return iq, err
+	// case xml.ErrInvalidJID:
+	//	return nil, err
+	default:
+		return nil, err
+	}
 }
 
 func (s *Stream) streamDefaultNamespace() string {
