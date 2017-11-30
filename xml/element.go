@@ -129,7 +129,7 @@ func (e *Element) ElementsCount() int {
 	return len(e.elements)
 }
 
-// Copy returns a new instance that’s an immutable copy of the receiver.
+// Copy returns a deep copy of this element.
 func (e *Element) Copy() *Element {
 	cp := &Element{}
 	cp.name = e.name
@@ -139,6 +139,11 @@ func (e *Element) Copy() *Element {
 	copy(cp.attrs, e.attrs)
 	copy(cp.elements, e.elements)
 	return cp
+}
+
+// IsError returns true if element has a 'type' attribute of value 'error'.
+func (e *Element) IsError() bool {
+	return e.Type() == "error"
 }
 
 // String returns a string representation of the element.

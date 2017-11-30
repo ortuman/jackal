@@ -64,3 +64,13 @@ func (e *MutableElement) SetTo(to string) {
 func (e *Element) To() string {
 	return e.Attribute("to")
 }
+
+// Type returns 'type' node attribute.
+func (e *Element) Type() string {
+	return e.Attribute("type")
+}
+
+// SetType sets 'type' node attribute.
+func (e *MutableElement) SetType(tp string) {
+	e.SetAttribute("type", tp)
+}
