@@ -17,16 +17,6 @@ func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong iq element name: %s", e.name)
 	}
-	tp := e.Type()
-	switch tp {
-	case "get":
-	case "set":
-	case "result":
-	case "error":
-		break
-	default:
-		return nil, fmt.Errorf("wrong iq type: %s", tp)
-	}
 	iq := &IQ{}
 	iq.name = e.name
 	iq.text = e.text
