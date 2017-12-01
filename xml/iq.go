@@ -60,12 +60,11 @@ func (iq *IQ) IsResult() bool {
 func (iq *IQ) ResultIQ(from string) *IQ {
 	rs := &IQ{}
 	rs.name = "iq"
-	rs.attrs = make([]Attribute, 0, 4)
-	rs.attrs = append(rs.attrs, Attribute{"type", "result"})
-	rs.attrs = append(rs.attrs, Attribute{"id", iq.ID()})
-	rs.attrs = append(rs.attrs, Attribute{"to", iq.From()})
+	rs.setAttribute("type", resultIQType)
+	rs.setAttribute("id", iq.ID())
+	rs.setAttribute("to", iq.From())
 	if len(from) > 0 {
-		rs.attrs = append(rs.attrs, Attribute{"from", from})
+		rs.setAttribute("from", iq.From())
 	}
 	return rs
 }
