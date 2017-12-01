@@ -22,7 +22,7 @@ type IQ struct {
 	from *JID
 }
 
-func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
+func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.name)
 	}
@@ -46,6 +46,8 @@ func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 	iq.name = e.name
 	iq.copyAttributes(e.attrs)
 	iq.copyElements(e.elements)
+	iq.setAttribute("to", to.ToFullJID())
+	iq.setAttribute("from", from.ToFullJID())
 	iq.to = to
 	iq.from = from
 	return iq, nil

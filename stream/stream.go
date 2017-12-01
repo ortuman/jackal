@@ -8,6 +8,7 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -41,6 +42,7 @@ type Stream struct {
 	cfg           *config.Server
 	tr            transport.Transport
 	parser        *xml.Parser
+	myJID         *xml.JID
 	st            int32
 	id            string
 	username      string
@@ -406,6 +408,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.Lock()
 	s.username = username
 	s.authenticated = true
+	s.myJID, _ = xml.NewJID(s.username, s.domain, "", true)
 	s.Unlock()
 
 	Manager().AuthenticateStream(s)
@@ -529,15 +532,38 @@ func (s *Stream) openStreamElement() {
 }
 
 func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
-	iq, err := xml.NewIQ(elem, nil, nil)
-	switch err {
-	case nil:
-		return iq, err
-	// case xml.ErrInvalidJID:
-	//	return nil, err
-	default:
+	// build from JID
+	var fromJID *xml.JID
+	from := elem.From()
+	if len(from) > 0 && !s.validateFrom(from) {
+		s.disconnectWithStreamError(ErrInvalidFrom)
+		return nil, errors.New("invalid from attribute")
+	}
+	fromJID = s.myJID
+
+	// build to JID
+	toJID, err := xml.NewJIDString(elem.To(), false)
+	if err != nil {
+		s.writeElement(elem.JidMalformedError())
 		return nil, err
 	}
+	return xml.NewIQ(elem, fromJID, toJID)
+}
+
+func (s *Stream) validateFrom(from string) bool {
+	validFrom := false
+	j, err := xml.NewJIDString(from, false)
+	if err == nil && j != nil {
+		node := j.Node()
+		domain := j.Domain()
+		resource := j.Resource()
+
+		validFrom = node == s.myJID.Node() && domain == s.myJID.Domain()
+		if len(resource) > 0 {
+			validFrom = validFrom && resource == s.myJID.Resource()
+		}
+	}
+	return validFrom
 }
 
 func (s *Stream) streamDefaultNamespace() string {
