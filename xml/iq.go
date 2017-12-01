@@ -5,7 +5,10 @@
 
 package xml
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 const (
 	getIQType    = "get"
@@ -23,16 +26,16 @@ func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong iq element name: %s", e.name)
 	}
+	if e.TextLen() != 0 {
+		return nil, errors.New("iq bad format")
+	}
 	if !isIQType(e.Type()) {
 		return nil, fmt.Errorf("wrong iq type: %s", e.Type())
 	}
 	iq := &IQ{}
 	iq.name = e.name
-	iq.text = e.text
-	iq.attrs = make([]Attribute, len(e.attrs), cap(e.attrs))
-	iq.elements = make([]*Element, len(e.elements), cap(e.elements))
-	copy(iq.attrs, e.attrs)
-	copy(iq.elements, e.elements)
+	iq.copyAttributes(e.attrs)
+	iq.copyElements(e.elements)
 	iq.to = to
 	iq.from = from
 	return iq, nil

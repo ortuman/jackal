@@ -529,7 +529,7 @@ func (s *Stream) openStreamElement() {
 }
 
 func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
-	iq, err := xml.NewIQ(elem)
+	iq, err := xml.NewIQ(elem, nil, nil)
 	switch err {
 	case nil:
 		return iq, err

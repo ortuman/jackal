@@ -186,3 +186,64 @@ func (e *Element) XML(includeClosing bool) string {
 	}
 	return ret
 }
+
+func (e *Element) copyAttributes(attribs []Attribute) {
+	e.attrs = make([]Attribute, len(attribs), cap(attribs))
+	copy(e.attrs, attribs)
+}
+
+func (e *Element) copyElements(elements []*Element) {
+	e.elements = make([]*Element, len(elements), cap(elements))
+	copy(e.elements, elements)
+}
+
+func (e *Element) setAttribute(label, value string) {
+	for i := 0; i < len(e.attrs); i++ {
+		if e.attrs[i].label == label {
+			e.attrs[i].value = value
+			return
+		}
+	}
+	e.attrs = append(e.attrs, Attribute{label, value})
+}
+
+func (e *Element) removeAttribute(label string) {
+	for i := 0; i < len(e.attrs); i++ {
+		if e.attrs[i].label == label {
+			e.attrs = append(e.attrs[:i], e.attrs[i+1:]...)
+			return
+		}
+	}
+}
+
+func (e *Element) appendElement(element *Element) {
+	e.elements = append(e.elements, element)
+}
+
+func (e *Element) appendElements(elements []*Element) {
+	e.elements = append(e.elements, elements...)
+}
+
+func (e *Element) removeElements(name string) {
+	filtered := e.elements[:0]
+	for _, elem := range e.elements {
+		if elem.name != name {
+			filtered = append(filtered, elem)
+		}
+	}
+	e.elements = filtered
+}
+
+func (e *Element) removeElementsNamespace(name, namespace string) {
+	filtered := e.elements[:0]
+	for _, elem := range e.elements {
+		if elem.name != name || elem.Namespace() != namespace {
+			filtered = append(filtered, elem)
+		}
+	}
+	e.elements = filtered
+}
+
+func (e *Element) clearElements() {
+	e.elements = []*Element{}
+}

@@ -16,10 +16,8 @@ func NewMutableElement(e *Element) *MutableElement {
 	m := MutableElement{}
 	m.name = e.name
 	m.text = e.text
-	m.attrs = make([]Attribute, len(e.attrs), cap(e.attrs))
-	m.elements = make([]*Element, len(e.elements), cap(e.elements))
-	copy(m.attrs, e.attrs)
-	copy(m.elements, e.elements)
+	m.copyAttributes(e.attrs)
+	m.copyElements(e.elements)
 	return &m
 }
 
@@ -58,60 +56,37 @@ func (m *MutableElement) SetText(text string) {
 
 // SetAttribute sets an XML node attribute (label=value)
 func (m *MutableElement) SetAttribute(label, value string) {
-	for i := 0; i < len(m.attrs); i++ {
-		if m.attrs[i].label == label {
-			m.attrs[i].value = value
-			return
-		}
-	}
-	m.attrs = append(m.attrs, Attribute{label, value})
+	m.setAttribute(label, value)
 }
 
 // RemoveAttribute removes an XML node attribute.
 func (m *MutableElement) RemoveAttribute(label string) {
-	for i := 0; i < len(m.attrs); i++ {
-		if m.attrs[i].label == label {
-			m.attrs = append(m.attrs[:i], m.attrs[i+1:]...)
-			return
-		}
-	}
+	m.removeAttribute(label)
 }
 
 // AppendElement appends a new subelement.
 func (m *MutableElement) AppendElement(element *Element) {
-	m.elements = append(m.elements, element)
+	m.appendElement(element)
 }
 
 // AppendElements appends an array of elements.
 func (m *MutableElement) AppendElements(elements []*Element) {
-	m.elements = append(m.elements, elements...)
+	m.appendElements(elements)
 }
 
 // RemoveElements removes all elements with a given name.
 func (m *MutableElement) RemoveElements(name string) {
-	filtered := m.elements[:0]
-	for _, e := range m.elements {
-		if e.name != name {
-			filtered = append(filtered, e)
-		}
-	}
-	m.elements = filtered
+	m.removeElements(name)
 }
 
 // RemoveElementsNamespace removes all elements with a given name and namespace.
 func (m *MutableElement) RemoveElementsNamespace(name, namespace string) {
-	filtered := m.elements[:0]
-	for _, e := range m.elements {
-		if e.name != name || e.Namespace() != namespace {
-			filtered = append(filtered, e)
-		}
-	}
-	m.elements = filtered
+	m.removeElementsNamespace(name, namespace)
 }
 
 // ClearElements removes all elements.
 func (m *MutableElement) ClearElements() {
-	m.elements = []*Element{}
+	m.clearElements()
 }
 
 // MutableCopy returns a new instance that’s an mutable copy of the receiver.
@@ -119,9 +94,7 @@ func (m *MutableElement) MutableCopy() *MutableElement {
 	cp := &MutableElement{}
 	cp.name = m.name
 	cp.text = m.text
-	cp.attrs = make([]Attribute, len(m.attrs), cap(m.attrs))
-	cp.elements = make([]*Element, len(m.elements), cap(m.elements))
-	copy(cp.attrs, m.attrs)
-	copy(cp.elements, m.elements)
+	cp.copyAttributes(m.attrs)
+	cp.copyElements(m.elements)
 	return cp
 }
