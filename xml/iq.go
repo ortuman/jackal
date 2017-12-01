@@ -24,13 +24,23 @@ type IQ struct {
 
 func NewIQ(e *Element, to *JID, from *JID) (*IQ, error) {
 	if e.name != "iq" {
-		return nil, fmt.Errorf("wrong iq element name: %s", e.name)
+		return nil, fmt.Errorf("wrong IQ element name: %s", e.name)
 	}
-	if e.TextLen() != 0 {
-		return nil, errors.New("iq bad format")
+	if len(e.ID()) == 0 {
+		return nil, errors.New(`IQ "id" attribute is required`)
 	}
-	if !isIQType(e.Type()) {
-		return nil, fmt.Errorf("wrong iq type: %s", e.Type())
+	iqType := e.Type()
+	if len(iqType) == 0 {
+		return nil, errors.New(`IQ "type" attribute is required`)
+	}
+	if !isIQType(iqType) {
+		return nil, fmt.Errorf(`invalid IQ "type" attribute: %s`, iqType)
+	}
+	if (iqType == getIQType || iqType == setIQType) && len(e.elements) != 1 {
+		return nil, errors.New(`an IQ stanza of type "get" or "set" must contain one and only one child element`)
+	}
+	if iqType == resultIQType && len(e.elements) > 1 {
+		return nil, errors.New(`An IQ stanza of type "result" must include zero or one child elements`)
 	}
 	iq := &IQ{}
 	iq.name = e.name
