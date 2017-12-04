@@ -532,22 +532,29 @@ func (s *Stream) openStreamElement() {
 }
 
 func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
-	// build from JID
-	var fromJID *xml.JID
-	from := elem.From()
-	if len(from) > 0 && !s.validateFrom(from) {
-		s.disconnectWithStreamError(ErrInvalidFrom)
-		return nil, errors.New("invalid from attribute")
-	}
-	fromJID = s.myJID
-
-	// build to JID
-	toJID, err := xml.NewJIDString(elem.To(), false)
+	fromJID, toJID, err := s.validateAdresses(elem)
 	if err != nil {
-		s.writeElement(elem.JidMalformedError())
 		return nil, err
 	}
 	return xml.NewIQ(elem, fromJID, toJID)
+}
+
+func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
+	// validate from JID
+	from := elem.From()
+	if len(from) > 0 && !s.validateFrom(from) {
+		s.disconnectWithStreamError(ErrInvalidFrom)
+		return nil, nil, errors.New("invalid from attribute")
+	}
+	fromJID = s.myJID
+
+	// validate to JID
+	toJID, err = xml.NewJIDString(elem.To(), false)
+	if err != nil {
+		s.writeElement(elem.JidMalformedError())
+		return nil, nil, err
+	}
+	return
 }
 
 func (s *Stream) validateFrom(from string) bool {
