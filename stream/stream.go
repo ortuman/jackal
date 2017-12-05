@@ -8,9 +8,11 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/ortuman/jackal/stream/compress"
 
@@ -41,6 +43,7 @@ const (
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
+	connected     uint32
 	tr            transport.Transport
 	parser        *xml.Parser
 	myJID         *xml.JID
@@ -81,8 +84,10 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	keepAlive := config.Transport.KeepAlive
 	s.tr = transport.NewSocketTransport(conn, maxReadCount, keepAlive)
 
+	if config.Transport.ConnectTimeout > 0 {
+		s.startConnectTimeoutTimer(config.Transport.ConnectTimeout)
+	}
 	go s.loop()
-
 	return s
 }
 
@@ -161,6 +166,17 @@ func (s *Stream) initializeAuthenticators() {
 	}
 }
 
+func (s *Stream) startConnectTimeoutTimer(timeout int) {
+	tr := time.NewTimer(time.Second * time.Duration(timeout))
+	go func() {
+		<-tr.C
+		if atomic.LoadUint32(&s.connected) == 0 {
+			// connection timeout...
+			s.discCh <- fmt.Errorf("connection timed out: %d seconds", timeout)
+		}
+	}()
+}
+
 func (s *Stream) handleElement(elem *xml.Element) {
 	switch s.state() {
 	case connecting:
@@ -179,6 +195,9 @@ func (s *Stream) handleElement(elem *xml.Element) {
 }
 
 func (s *Stream) handleConnecting(elem *xml.Element) {
+	// activate 'connected' flag
+	atomic.StoreUint32(&s.connected, 1)
+
 	// validate stream element
 	if err := s.validateStreamElement(elem); err != nil {
 		s.disconnectWithStreamError(err)
