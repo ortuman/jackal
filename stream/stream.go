@@ -34,6 +34,8 @@ const (
 	streamNamespace           = "http://etherx.jabber.org/streams"
 	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
+	bindNamespace             = "urn:ietf:params:xml:ns:xmpp-bind"
+	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
 type Stream struct {
@@ -165,6 +167,8 @@ func (s *Stream) handleElement(elem *xml.Element) {
 		s.handleAuthenticated(elem)
 	case authenticating:
 		s.handleAuthenticating(elem)
+	case sessionStarted:
+		s.handleSessionStarted(elem)
 	default:
 		break
 	}
@@ -288,17 +292,20 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 		}
 		s.compress(elem)
 	case "iq":
-		_, err := s.buildIQ(elem)
+		iq, err := s.buildIQ(elem)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
 		}
 		if len(s.Resource()) == 0 { // expecting bind
-			println("")
+			s.bindResource(iq)
 		} else { // expecting session
-			println("")
+			s.startSession(iq)
 		}
 	}
+}
+
+func (s *Stream) handleSessionStarted(elem *xml.Element) {
 }
 
 func (s *Stream) proceedStartTLS() {
@@ -425,6 +432,52 @@ func (s *Stream) failAuthentication(elem *xml.Element) {
 		s.activeAuthr = nil
 	}
 	s.setState(connected)
+}
+
+func (s *Stream) bindResource(iq *xml.IQ) {
+	bind := iq.FindElementNamespace("bind", bindNamespace)
+	if bind == nil {
+		s.writeElement(iq.NotAllowedError())
+		return
+	}
+	var resource string
+	if resourceElem := bind.FindElement("resource"); resourceElem != nil {
+		resource = resourceElem.Text()
+	} else {
+		resource = uuid.New()
+	}
+	// try binding...
+	if !Manager().IsResourceAvailableForStream(resource, s) {
+		s.writeElement(iq.ConflictError())
+		return
+	}
+
+	s.Lock()
+	s.resource = resource
+	s.Unlock()
+
+	//...notify successful binding
+	result := xml.NewMutableIQNamespace(s.streamDefaultNamespace())
+	result.SetType(xml.ResultType)
+	result.SetID(iq.ID())
+
+	binded := xml.NewMutableElementNamespace("bind", bindNamespace)
+	jid := xml.NewMutableElementName("jid")
+	jid.SetText(s.Username() + "@" + s.Domain() + "/" + s.Resource())
+	binded.AppendElement(jid.Copy())
+	result.AppendElement(binded.Copy())
+
+	s.writeElement(result.Copy())
+}
+
+func (s *Stream) startSession(iq *xml.IQ) {
+	sess := iq.FindElementNamespace("session", sessionNamespace)
+	if sess == nil {
+		s.writeElement(iq.NotAllowedError())
+		return
+	}
+	s.writeElement(iq.ResultIQ())
+	s.setState(sessionStarted)
 }
 
 func (s *Stream) restart() {

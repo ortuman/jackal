@@ -63,6 +63,17 @@ func (m *StreamManager) AuthenticateStream(strm *Stream) {
 	m.Unlock()
 }
 
+func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
+	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+		for _, authedStrm := range authedStrms {
+			if authedStrm.Resource() == resource {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {
 	ret := strms[:0]
 	for _, s := range strms {
