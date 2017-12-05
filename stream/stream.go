@@ -306,6 +306,8 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 		} else { // expecting session
 			s.startSession(iq.(*xml.IQ))
 		}
+	default:
+		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
 	}
 }
 
@@ -507,6 +509,8 @@ func (s *Stream) startSession(iq *xml.IQ) {
 func (s *Stream) processStanza(stanza xml.Stanza) {
 	if iq, ok := stanza.(*xml.IQ); ok {
 		s.processIQ(iq)
+	} else if presence, ok := stanza.(*xml.Presence); ok {
+		s.processPresence(presence)
 	}
 }
 
@@ -521,6 +525,9 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 
 	// ...IQ not handled...
 	s.writeElement(iq.ServiceUnavailableError())
+}
+
+func (s *Stream) processPresence(presence *xml.Presence) {
 }
 
 func (s *Stream) restart() {
@@ -617,6 +624,13 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 			return nil, xml.ErrBadRequest
 		}
 		return iq, nil
+	case "presence":
+		presence, err := xml.NewPresence(elem, fromJID, toJID)
+		if err != nil {
+			log.Errorf("%v", err)
+			return nil, xml.ErrBadRequest
+		}
+		return presence, nil
 	}
 	return nil, ErrUnsupportedStanzaType
 }
