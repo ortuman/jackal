@@ -58,6 +58,36 @@ func NewMutablePresenceType(presenceType string) *MutablePresence {
 	return p
 }
 
+// IsAvailable returns true if this is an 'available' type Presence.
+func (p *Presence) IsAvailable() bool {
+	return p.Type() == AvailableType
+}
+
+// IsUnavailable returns true if this is an 'unavailable' type Presence.
+func (p *Presence) IsUnavailable() bool {
+	return p.Type() == UnavailableType
+}
+
+// IsSubscribe returns true if this is a 'subscribe' type Presence.
+func (p *Presence) IsSubscribe() bool {
+	return p.Type() == SubscribeType
+}
+
+// IsUnsubscribe returns true if this is an 'unsubscribe' type Presence.
+func (p *Presence) IsUnsubscribe() bool {
+	return p.Type() == UnsubscribeType
+}
+
+// IsSubscribed returns true if this is a 'subscribed' type Presence.
+func (p *Presence) IsSubscribed() bool {
+	return p.Type() == SubscribedType
+}
+
+// IsUnsubscribed returns true if this is an 'unsubscribed' type Presence.
+func (p *Presence) IsUnsubscribed() bool {
+	return p.Type() == UnsubscribedType
+}
+
 // ToJID satisfies stanza interface.
 func (p *Presence) ToJID() *JID {
 	return p.to

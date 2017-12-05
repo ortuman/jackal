@@ -631,6 +631,13 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 			return nil, xml.ErrBadRequest
 		}
 		return presence, nil
+	case "message":
+		message, err := xml.NewMessage(elem, fromJID, toJID)
+		if err != nil {
+			log.Errorf("%v", err)
+			return nil, xml.ErrBadRequest
+		}
+		return message, nil
 	}
 	return nil, ErrUnsupportedStanzaType
 }
