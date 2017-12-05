@@ -511,6 +511,8 @@ func (s *Stream) processStanza(stanza xml.Stanza) {
 		s.processIQ(iq)
 	} else if presence, ok := stanza.(*xml.Presence); ok {
 		s.processPresence(presence)
+	} else if message, ok := stanza.(*xml.Message); ok {
+		s.processMessage(message)
 	}
 }
 
@@ -528,6 +530,9 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 }
 
 func (s *Stream) processPresence(presence *xml.Presence) {
+}
+
+func (s *Stream) processMessage(message *xml.Message) {
 }
 
 func (s *Stream) restart() {
