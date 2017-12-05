@@ -493,32 +493,6 @@ func (s *Stream) doRead() {
 	}()
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
-	if elem.Name() != "stream:stream" {
-		return ErrUnsupportedStanzaType
-	}
-	to := elem.To()
-	knownHost := false
-	if len(to) > 0 {
-		for i := 0; i < len(s.cfg.Domains); i++ {
-			if s.cfg.Domains[i] == to {
-				knownHost = true
-				break
-			}
-		}
-	}
-	if !knownHost {
-		return ErrHostUnknown
-	}
-	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
-		return ErrInvalidNamespace
-	}
-	if elem.Version() != "1.0" {
-		return ErrUnsupportedVersion
-	}
-	return nil
-}
-
 func (s *Stream) openStreamElement() {
 	ops := xml.NewMutableElementName("stream:stream")
 	ops.SetAttribute("xmlns", s.streamDefaultNamespace())
@@ -555,6 +529,32 @@ func (s *Stream) handleElementError(elem *xml.Element, err error) {
 	} else {
 		log.Errorf("%v", err)
 	}
+}
+
+func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
+	if elem.Name() != "stream:stream" {
+		return ErrUnsupportedStanzaType
+	}
+	to := elem.To()
+	knownHost := false
+	if len(to) > 0 {
+		for i := 0; i < len(s.cfg.Domains); i++ {
+			if s.cfg.Domains[i] == to {
+				knownHost = true
+				break
+			}
+		}
+	}
+	if !knownHost {
+		return ErrHostUnknown
+	}
+	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
+		return ErrInvalidNamespace
+	}
+	if elem.Version() != "1.0" {
+		return ErrUnsupportedVersion
+	}
+	return nil
 }
 
 func (s *Stream) validateNamespace(elem *xml.Element) *Error {
