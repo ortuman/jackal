@@ -22,6 +22,10 @@ type IQ struct {
 	from *JID
 }
 
+type MutableIQ struct {
+	MutableElement
+}
+
 func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.name)
@@ -53,12 +57,15 @@ func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	return iq, nil
 }
 
-func NewMutableIQ() *MutableElement {
-	return NewMutableElementName("iq")
+func NewMutableIQ() *MutableIQ {
+	iq := &MutableIQ{}
+	iq.SetName("iq")
+	return iq
 }
 
-func NewMutableIQNamespace(namespace string) *MutableElement {
-	iq := NewMutableElementName("iq")
+func NewMutableIQNamespace(namespace string) *MutableIQ {
+	iq := &MutableIQ{}
+	iq.SetName("iq")
 	iq.SetNamespace(namespace)
 	return iq
 }

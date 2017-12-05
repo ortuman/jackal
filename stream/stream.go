@@ -130,13 +130,13 @@ func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
 	return s.tr.ChannelBindingBytes(mechanism)
 }
 
-func (s *Stream) SendElements(elems []*xml.Element) {
+func (s *Stream) SendElements(elems []xml.Serializable) {
 	for _, e := range elems {
 		s.SendElement(e)
 	}
 }
 
-func (s *Stream) SendElement(elem *xml.Element) {
+func (s *Stream) SendElement(elem xml.Serializable) {
 	s.writeCh <- []byte(elem.XML(true))
 }
 
@@ -150,6 +150,10 @@ func (s *Stream) initializeAuthenticators() {
 		case "scram_sha_1":
 			s.authrs = append(s.authrs, newScram(s, sha1ScramType, false))
 			s.authrs = append(s.authrs, newScram(s, sha1ScramType, true))
+
+		case "scram_sha_256":
+			s.authrs = append(s.authrs, newScram(s, sha256ScramType, false))
+			s.authrs = append(s.authrs, newScram(s, sha256ScramType, true))
 
 		default:
 			break
@@ -663,11 +667,11 @@ func (s *Stream) streamDefaultNamespace() string {
 	}
 }
 
-func (s *Stream) writeElement(elem *xml.Element) {
+func (s *Stream) writeElement(elem xml.Serializable) {
 	s.writeBytes([]byte(elem.XML(true)))
 }
 
-func (s *Stream) writeElementAndWait(elem *xml.Element) {
+func (s *Stream) writeElementAndWait(elem xml.Serializable) {
 	s.writeBytesAndWait([]byte(elem.XML(true)))
 }
 

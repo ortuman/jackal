@@ -5,6 +5,13 @@
 
 package xml
 
+// Serializable is an interface type. A Serializable entity describes a value
+// that could be serialized to a raw XML representation.
+// includeClosing determines if closing tag should be attached.
+type Serializable interface {
+	XML(includeClosing bool) string
+}
+
 // Attribute represents an XML node attribute (label=value).
 type Attribute struct {
 	label string
@@ -151,8 +158,7 @@ func (e *Element) String() string {
 	return e.XML(true)
 }
 
-// XML converts an Element entity to its raw XML representation.
-// If includeClosing is true a closing tag will be attached.
+// XML satisfies Serializable interface.
 func (e *Element) XML(includeClosing bool) string {
 	ret := "<" + e.name
 
