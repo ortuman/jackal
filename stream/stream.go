@@ -483,9 +483,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 	s.Unlock()
 
 	//...notify successful binding
-	result := xml.NewMutableIQNamespace(s.streamDefaultNamespace())
-	result.SetType(xml.ResultType)
-	result.SetID(iq.ID())
+	result := xml.NewMutableIQType(iq.ID(), xml.ResultType)
 
 	binded := xml.NewMutableElementNamespace("bind", bindNamespace)
 	jid := xml.NewMutableElementName("jid")

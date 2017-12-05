@@ -57,16 +57,18 @@ func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	return iq, nil
 }
 
-func NewMutableIQ() *MutableIQ {
+func NewMutableIQ(identifier string) *MutableIQ {
 	iq := &MutableIQ{}
 	iq.SetName("iq")
+	iq.SetID(identifier)
 	return iq
 }
 
-func NewMutableIQNamespace(namespace string) *MutableIQ {
+func NewMutableIQType(identifier string, iqType string) *MutableIQ {
 	iq := &MutableIQ{}
 	iq.SetName("iq")
-	iq.SetNamespace(namespace)
+	iq.SetID(identifier)
+	iq.SetType(iqType)
 	return iq
 }
 
