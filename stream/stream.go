@@ -507,6 +507,9 @@ func (s *Stream) startSession(iq *xml.IQ) {
 }
 
 func (s *Stream) processStanza(stanza xml.Stanza) {
+	if iq, ok := stanza.(*xml.IQ); ok {
+		s.processIQ(iq)
+	}
 }
 
 func (s *Stream) processComponentStanza(stanza xml.Stanza) {
