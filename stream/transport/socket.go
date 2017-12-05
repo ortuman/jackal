@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/ortuman/jackal/stream/compress"
 	"github.com/ortuman/jackal/stream/compress/zlib"
@@ -41,6 +42,7 @@ func (s *socketTransport) WriteAndWait(b []byte) {
 }
 
 func (s *socketTransport) Read() ([]byte, error) {
+	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
 	n, err := s.conn.Read(s.readBuff)
 	if atomic.LoadInt32(&s.closed) == 1 {
 		return nil, ErrServerClosedTransport
