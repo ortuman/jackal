@@ -8,7 +8,6 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
-	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -291,6 +290,7 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 	case "iq":
 		_, err := s.buildIQ(elem)
 		if err != nil {
+			s.handleElementError(elem, err)
 			return
 		}
 		if len(s.Resource()) == 0 { // expecting bind
@@ -464,7 +464,7 @@ func (s *Stream) loop() {
 			}
 
 		case err := <-s.discCh:
-			if strmErr, ok := err.(Error); ok {
+			if strmErr, ok := err.(*Error); ok {
 				s.disconnectWithStreamError(strmErr)
 			} else {
 				if err != transport.ErrRemotePeerClosedTransport {
@@ -493,7 +493,7 @@ func (s *Stream) doRead() {
 	}()
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) Error {
+func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
 	if elem.Name() != "stream:stream" {
 		return ErrUnsupportedStanzaType
 	}
@@ -532,32 +532,56 @@ func (s *Stream) openStreamElement() {
 }
 
 func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
+	if err := s.validateNamespace(elem); err != nil {
+		return nil, err
+	}
 	fromJID, toJID, err := s.validateAdresses(elem)
 	if err != nil {
 		return nil, err
 	}
-	return xml.NewIQ(elem, fromJID, toJID)
+	iq, err := xml.NewIQ(elem, fromJID, toJID)
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, xml.ErrBadRequest
+	}
+	return iq, nil
+}
+
+func (s *Stream) handleElementError(elem *xml.Element, err error) {
+	if streamErr, ok := err.(*Error); ok {
+		s.disconnectWithStreamError(streamErr)
+	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
+		s.writeElement(elem.ToError(stanzaErr))
+	} else {
+		log.Errorf("%v", err)
+	}
+}
+
+func (s *Stream) validateNamespace(elem *xml.Element) *Error {
+	ns := elem.Namespace()
+	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
+		return nil
+	}
+	return ErrInvalidNamespace
 }
 
 func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
-	if len(from) > 0 && !s.validateFrom(from) {
-		s.disconnectWithStreamError(ErrInvalidFrom)
-		return nil, nil, errors.New("invalid from attribute")
+	if len(from) > 0 && !s.isValidFrom(from) {
+		return nil, nil, ErrInvalidFrom
 	}
 	fromJID = s.myJID
 
 	// validate to JID
 	toJID, err = xml.NewJIDString(elem.To(), false)
 	if err != nil {
-		s.writeElement(elem.JidMalformedError())
-		return nil, nil, err
+		return nil, nil, xml.ErrJidMalformed
 	}
 	return
 }
 
-func (s *Stream) validateFrom(from string) bool {
+func (s *Stream) isValidFrom(from string) bool {
 	validFrom := false
 	j, err := xml.NewJIDString(from, false)
 	if err == nil && j != nil {
@@ -604,7 +628,7 @@ func (s *Stream) writeBytesAndWait(b []byte) {
 	s.tr.WriteAndWait(b)
 }
 
-func (s *Stream) disconnectWithStreamError(err Error) {
+func (s *Stream) disconnectWithStreamError(err *Error) {
 	if s.state() == connecting {
 		s.openStreamElement()
 	}

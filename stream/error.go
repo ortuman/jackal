@@ -10,8 +10,8 @@ import (
 )
 
 // Error represents a "stream:error" element.
-type Error interface {
-	Element() *xml.Element
+type Error struct {
+	reason string
 }
 
 var (
@@ -43,21 +43,17 @@ var (
 	ErrInternalServerError = newStreamError("internal-server-error")
 )
 
-type streamError struct {
-	reason string
+func newStreamError(reason string) *Error {
+	return &Error{reason}
 }
 
-func newStreamError(reason string) Error {
-	return &streamError{reason}
-}
-
-func (se *streamError) Element() *xml.Element {
+func (se *Error) Element() *xml.Element {
 	ret := xml.NewMutableElementName("stream:error")
 	reason := xml.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
 	ret.AppendElement(reason)
 	return ret.Copy()
 }
 
-func (se *streamError) Error() string {
+func (se *Error) Error() string {
 	return se.reason
 }
