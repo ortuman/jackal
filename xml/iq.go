@@ -104,6 +104,16 @@ func (iq *IQ) ResultIQFrom(from string) *Element {
 	return rs
 }
 
+// ToJID satisfies stanza interface.
+func (iq *IQ) ToJID() *JID {
+	return iq.to
+}
+
+// FromJID satisfies stanza interface.
+func (iq *IQ) FromJID() *JID {
+	return iq.from
+}
+
 func isIQType(tp string) bool {
 	switch tp {
 	case GetType, SetType, ResultType, "error":

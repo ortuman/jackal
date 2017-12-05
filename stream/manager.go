@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/xml"
 )
 
 type StreamManager struct {
@@ -72,6 +73,9 @@ func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stre
 		}
 	}
 	return true
+}
+
+func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
 }
 
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {

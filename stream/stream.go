@@ -296,20 +296,36 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 		}
 		s.compress(elem)
 	case "iq":
-		iq, err := s.buildIQ(elem)
+		iq, err := s.buildStanza(elem)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
 		}
 		if len(s.Resource()) == 0 { // expecting bind
-			s.bindResource(iq)
+			s.bindResource(iq.(*xml.IQ))
 		} else { // expecting session
-			s.startSession(iq)
+			s.startSession(iq.(*xml.IQ))
 		}
 	}
 }
 
 func (s *Stream) handleSessionStarted(elem *xml.Element) {
+	stanza, err := s.buildStanza(elem)
+	if err != nil {
+		s.handleElementError(elem, err)
+		return
+	}
+	toJid := stanza.ToJID()
+	if s.isValidDomain(toJid.Domain()) {
+		// local stanza
+		s.processStanza(stanza)
+	} else if s.isComponentDomain(toJid.Domain()) {
+		// component (MUC, pubsub, etc.)
+		s.processComponentStanza(stanza)
+	} else {
+		// S2S
+		Manager().Send(stanza, s)
+	}
 }
 
 func (s *Stream) proceedStartTLS() {
@@ -458,6 +474,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 
 	s.Lock()
 	s.resource = resource
+	s.myJID, _ = xml.NewJID(s.username, s.domain, s.resource, false)
 	s.Unlock()
 
 	//...notify successful binding
@@ -482,6 +499,12 @@ func (s *Stream) startSession(iq *xml.IQ) {
 	}
 	s.writeElement(iq.ResultIQ())
 	s.setState(sessionStarted)
+}
+
+func (s *Stream) processStanza(stanza xml.Stanza) {
+}
+
+func (s *Stream) processComponentStanza(stanza xml.Stanza) {
 }
 
 func (s *Stream) restart() {
@@ -562,7 +585,7 @@ func (s *Stream) openStreamElement() {
 	s.writeBytesAndWait([]byte(ops.XML(false)))
 }
 
-func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
+func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, err
 	}
@@ -570,12 +593,16 @@ func (s *Stream) buildIQ(elem *xml.Element) (*xml.IQ, error) {
 	if err != nil {
 		return nil, err
 	}
-	iq, err := xml.NewIQ(elem, fromJID, toJID)
-	if err != nil {
-		log.Errorf("%v", err)
-		return nil, xml.ErrBadRequest
+	switch elem.Name() {
+	case "iq":
+		iq, err := xml.NewIQ(elem, fromJID, toJID)
+		if err != nil {
+			log.Errorf("%v", err)
+			return nil, xml.ErrBadRequest
+		}
+		return iq, nil
 	}
-	return iq, nil
+	return nil, ErrUnsupportedStanzaType
 }
 
 func (s *Stream) handleElementError(elem *xml.Element, err error) {
@@ -593,16 +620,7 @@ func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
 		return ErrUnsupportedStanzaType
 	}
 	to := elem.To()
-	knownHost := false
-	if len(to) > 0 {
-		for i := 0; i < len(s.cfg.Domains); i++ {
-			if s.cfg.Domains[i] == to {
-				knownHost = true
-				break
-			}
-		}
-	}
-	if !knownHost {
+	if len(to) > 0 && !s.isValidDomain(to) {
 		return ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
@@ -631,9 +649,14 @@ func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *x
 	fromJID = s.myJID
 
 	// validate to JID
-	toJID, err = xml.NewJIDString(elem.To(), false)
-	if err != nil {
-		return nil, nil, xml.ErrJidMalformed
+	to := elem.To()
+	if len(to) > 0 {
+		toJID, err = xml.NewJIDString(elem.To(), false)
+		if err != nil {
+			return nil, nil, xml.ErrJidMalformed
+		}
+	} else {
+		toJID, err = xml.NewJID("", s.Domain(), "", true)
 	}
 	return
 }
@@ -652,6 +675,19 @@ func (s *Stream) isValidFrom(from string) bool {
 		}
 	}
 	return validFrom
+}
+
+func (s *Stream) isValidDomain(domain string) bool {
+	for i := 0; i < len(s.cfg.Domains); i++ {
+		if s.cfg.Domains[i] == domain {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Stream) isComponentDomain(domain string) bool {
+	return false
 }
 
 func (s *Stream) streamDefaultNamespace() string {
