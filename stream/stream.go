@@ -471,10 +471,15 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		s.writeElement(iq.ConflictError())
 		return
 	}
+	myJID, err := xml.NewJID(s.Username(), s.Domain(), resource, false)
+	if err != nil {
+		s.writeElement(iq.BadRequestError())
+		return
+	}
 
 	s.Lock()
 	s.resource = resource
-	s.myJID, _ = xml.NewJID(s.username, s.domain, s.resource, false)
+	s.myJID = myJID
 	s.Unlock()
 
 	//...notify successful binding
@@ -505,6 +510,9 @@ func (s *Stream) processStanza(stanza xml.Stanza) {
 }
 
 func (s *Stream) processComponentStanza(stanza xml.Stanza) {
+}
+
+func (s *Stream) processIQ(iq *xml.IQ) {
 }
 
 func (s *Stream) restart() {
