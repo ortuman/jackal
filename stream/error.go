@@ -44,7 +44,7 @@ var (
 )
 
 func newStreamError(reason string) *Error {
-	return &Error{reason}
+	return &Error{reason: reason}
 }
 
 func (se *Error) Element() *xml.Element {
