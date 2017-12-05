@@ -10,13 +10,10 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
-	"time"
 
 	"github.com/ortuman/jackal/stream/compress"
 	"github.com/ortuman/jackal/stream/compress/zlib"
 )
-
-const writeDeadline = 10 * time.Second // time allowed to write a message to the peer.
 
 type socketTransport struct {
 	conn       net.Conn
@@ -93,11 +90,9 @@ func (s *socketTransport) writeBytes(b []byte) {
 	if s.compressor != nil {
 		deflatedBytes, err := s.compressor.Compress(b)
 		if deflatedBytes != nil && err == nil {
-			s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 			s.conn.Write(deflatedBytes)
 		}
 	} else {
-		s.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 		s.conn.Write(b)
 	}
 }
