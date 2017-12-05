@@ -8,7 +8,6 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -172,7 +171,7 @@ func (s *Stream) startConnectTimeoutTimer(timeout int) {
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
-			s.discCh <- fmt.Errorf("connection timed out: %d seconds", timeout)
+			s.discCh <- ErrConnectionTimeout
 		}
 	}()
 }
