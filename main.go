@@ -38,23 +38,23 @@ func main() {
 
 	// print version
 	if showVersion {
-		fmt.Printf("jackal version: %v", version.ApplicationVersion)
+		fmt.Printf("jackal version: %v\n", version.ApplicationVersion)
 		os.Exit(-1)
 	}
 
 	// load configuration
 	if err := config.Load(configFile); err != nil {
-		fmt.Fprintf(os.Stderr, "jackal: %v", err)
+		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		os.Exit(-1)
 	}
 	if len(config.DefaultConfig.Servers) == 0 {
-		fmt.Fprint(os.Stderr, "jackal: couldn't find a server configuration")
+		fmt.Fprint(os.Stderr, "jackal: couldn't find a server configuration\n")
 		os.Exit(-1)
 	}
 
 	// initialize logger subsystem
 	if err := log.Initialize(); err != nil {
-		fmt.Fprintf(os.Stderr, "jackal: %v", err)
+		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		os.Exit(-1)
 	}
 
