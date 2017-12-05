@@ -176,6 +176,16 @@ func (j *JID) ToFullJID() string {
 	return j.node + "@" + j.domain + "/" + j.resource
 }
 
+// IsBare returns true if instance is a bare JID.
+func (j *JID) IsBare() bool {
+	return len(j.resource) == 0
+}
+
+// IsFull returns true if instance is a full JID.
+func (j *JID) IsFull() bool {
+	return len(j.resource) > 0
+}
+
 // Equals returns true if two JID's are equivalent.
 func (j *JID) IsEqual(j2 *JID) bool {
 	if j == j2 {

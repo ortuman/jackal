@@ -516,6 +516,13 @@ func (s *Stream) processComponentStanza(stanza xml.Stanza) {
 }
 
 func (s *Stream) processIQ(iq *xml.IQ) {
+	if iq.ToJID().IsFull() {
+		Manager().Send(iq, s)
+		return
+	}
+
+	// ...IQ not handled...
+	s.writeElement(iq.ServiceUnavailableError())
 }
 
 func (s *Stream) restart() {
