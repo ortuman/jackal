@@ -56,6 +56,8 @@ type Stream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 
+	iqHandlers []IQHandler
+
 	writeCh chan []byte
 	readCh  chan []byte
 	discCh  chan error
@@ -74,12 +76,15 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
 
-	// initialize authenticators
-	s.initializeAuthenticators()
-
 	maxReadCount := config.Transport.MaxStanzaSize
 	keepAlive := config.Transport.KeepAlive
 	s.tr = transport.NewSocketTransport(conn, maxReadCount, keepAlive)
+
+	// initialize authenticators
+	s.initializeAuthenticators()
+
+	// initialize XEPs
+	s.initializeXEPs()
 
 	if config.Transport.ConnectTimeout > 0 {
 		s.startConnectTimeoutTimer(config.Transport.ConnectTimeout)
@@ -157,6 +162,13 @@ func (s *Stream) initializeAuthenticators() {
 			s.authrs = append(s.authrs, newScram(s, sha256ScramType, false))
 			s.authrs = append(s.authrs, newScram(s, sha256ScramType, true))
 		}
+	}
+}
+
+func (s *Stream) initializeXEPs() {
+	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
+	if s.cfg.ModVersion != nil {
+		s.iqHandlers = append(s.iqHandlers, newXepVersion(s.cfg.ModVersion, s))
 	}
 }
 
