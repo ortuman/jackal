@@ -6,6 +6,9 @@
 package stream
 
 import (
+	"os/exec"
+	"strings"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/version"
@@ -13,6 +16,13 @@ import (
 )
 
 const versionNamespace = "jabber:iq:version"
+
+var osString string
+
+func init() {
+	out, _ := exec.Command("uname", "-rs").Output()
+	osString = strings.TrimSpace(string(out))
+}
 
 type xepVersion struct {
 	cfg  *config.ModVersion
@@ -38,7 +48,7 @@ func (x *xepVersion) ProcessIQ(iq *xml.IQ) {
 }
 
 func (x *xepVersion) sendSoftwareVersion(iq *xml.IQ) {
-	log.Infof("retriving software version: %v (username: %s)", version.ApplicationVersion, x.strm.Username())
+	log.Infof("retrieving software version: %v (username: %s)", version.ApplicationVersion, x.strm.Username())
 
 	result := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", versionNamespace)
@@ -53,13 +63,9 @@ func (x *xepVersion) sendSoftwareVersion(iq *xml.IQ) {
 
 	if x.cfg.ShowOS {
 		os := xml.NewMutableElementName("os")
-		os.SetText(x.osString())
+		os.SetText(osString)
 		query.AppendElement(os.Copy())
 	}
 	result.AppendElement(query.Copy())
 	x.strm.SendElement(result)
-}
-
-func (x *xepVersion) osString() string {
-	return "Os x"
 }
