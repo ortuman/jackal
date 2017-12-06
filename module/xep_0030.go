@@ -16,3 +16,6 @@ type DiscoIdentity struct {
 	Type     string
 	Name     string
 }
+
+type XEPDiscoInfo struct {
+}
