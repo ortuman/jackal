@@ -6,6 +6,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -17,7 +18,7 @@ const (
 
 type Storage struct {
 	Type  StorageType
-	MySQL MySQLDb
+	MySQL *MySQLDb
 }
 
 type MySQLDb struct {
@@ -29,8 +30,8 @@ type MySQLDb struct {
 }
 
 type storageProxyType struct {
-	Type  string  `yaml:"type"`
-	MySQL MySQLDb `yaml:"mysql"`
+	Type  string   `yaml:"type"`
+	MySQL *MySQLDb `yaml:"mysql"`
 }
 
 func (s *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -40,6 +41,9 @@ func (s *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	switch p.Type {
 	case "mysql":
+		if p.MySQL == nil {
+			return errors.New("config.Storage: couldn't read MySQL configuration")
+		}
 		s.Type = MySQL
 	default:
 		return fmt.Errorf("config.Storage: unrecognized storage type: %s", p.Type)
