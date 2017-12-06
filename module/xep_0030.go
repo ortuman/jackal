@@ -5,14 +5,14 @@
 
 package module
 
-type discoItem struct {
-	jid  string
-	name string
-	node string
+type DiscoItem struct {
+	Jid  string
+	Name string
+	Node string
 }
 
-type discoIdentity struct {
-	category string
-	tp       string
-	name     string
+type DiscoIdentity struct {
+	Category string
+	Type     string
+	Name     string
 }
