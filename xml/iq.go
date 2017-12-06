@@ -88,14 +88,14 @@ func (iq *IQ) IsResult() bool {
 }
 
 // ResultIQ returns the instance associated result IQ.
-func (iq *IQ) ResultIQ() *Element {
+func (iq *IQ) ResultIQ() *MutableElement {
 	return iq.ResultIQFrom("")
 }
 
 // ResultIQFrom returns the instance associated result IQ
 // attaching from attribute.
-func (iq *IQ) ResultIQFrom(from string) *Element {
-	rs := &Element{}
+func (iq *IQ) ResultIQFrom(from string) *MutableElement {
+	rs := &MutableElement{}
 	rs.name = "iq"
 	rs.setAttribute("type", ResultType)
 	rs.setAttribute("id", iq.ID())
