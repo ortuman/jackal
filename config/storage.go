@@ -10,6 +10,8 @@ import (
 	"fmt"
 )
 
+const defaultMySQLPoolSize = 16
+
 type StorageType int
 
 const (
@@ -49,5 +51,10 @@ func (s *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("config.Storage: unrecognized storage type: %s", p.Type)
 	}
 	s.MySQL = p.MySQL
+
+	// assign storage defaults
+	if s.MySQL != nil && s.MySQL.PoolSize == 0 {
+		s.MySQL.PoolSize = defaultMySQLPoolSize
+	}
 	return nil
 }

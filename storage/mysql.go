@@ -17,8 +17,6 @@ import (
 	"github.com/ortuman/jackal/storage/entity"
 )
 
-const defaultPoolSize = 16
-
 const maxTransactionRetries = 4
 
 type mySQL struct {
@@ -31,11 +29,7 @@ func newMySQLStorage() storage {
 	user := config.DefaultConfig.Storage.MySQL.User
 	pass := config.DefaultConfig.Storage.MySQL.Password
 	db := config.DefaultConfig.Storage.MySQL.Database
-
 	poolSize := config.DefaultConfig.Storage.MySQL.PoolSize
-	if poolSize == 0 {
-		poolSize = defaultPoolSize
-	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, pass, host, db)
 	conn, err := sql.Open("mysql", dsn)
