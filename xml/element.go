@@ -5,6 +5,11 @@
 
 package xml
 
+import (
+	"bytes"
+	"unicode/utf8"
+)
+
 // Serializable is an interface type. A Serializable entity describes a value
 // that could be serialized to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
@@ -62,7 +67,7 @@ func (e *Element) Text() string {
 
 // TextLen returns XML node text value length.
 func (e *Element) TextLen() int {
-	return len(e.text)
+	return utf8.RuneCountInString(e.text)
 }
 
 // Attribute returns XML node attribute value.
@@ -160,37 +165,45 @@ func (e *Element) String() string {
 
 // XML satisfies Serializable interface.
 func (e *Element) XML(includeClosing bool) string {
-	ret := "<" + e.name
+	buf := bytes.NewBufferString("<")
+	buf.WriteString(e.name)
 
 	// serialize attributes
 	for i := 0; i < len(e.attrs); i++ {
 		if len(e.attrs[i].value) == 0 {
 			continue
 		}
-		ret += " " + e.attrs[i].label + "=\"" + e.attrs[i].value + "\""
+		buf.WriteString(" ")
+		buf.WriteString(e.attrs[i].label)
+		buf.WriteString(`="`)
+		buf.WriteString(e.attrs[i].value)
+		buf.WriteString(`"`)
 	}
-	if len(e.elements) > 0 || len(e.text) > 0 {
-		ret += ">"
+	textLen := e.TextLen()
+	if len(e.elements) > 0 || textLen > 0 {
+		buf.WriteString(">")
 
 		// serialize text
-		if len(e.text) > 0 {
-			ret += e.text
+		if textLen > 0 {
+			buf.WriteString(e.text)
 		}
 		// serialize child elements
 		for j := 0; j < len(e.elements); j++ {
-			ret += e.elements[j].XML(true)
+			buf.WriteString(e.elements[j].XML(true))
 		}
 		if includeClosing {
-			ret += "</" + e.name + ">"
+			buf.WriteString("</")
+			buf.WriteString(e.name)
+			buf.WriteString(">")
 		}
 	} else {
 		if includeClosing {
-			ret += "/>"
+			buf.WriteString("/>")
 		} else {
-			ret += ">"
+			buf.WriteString(">")
 		}
 	}
-	return ret
+	return buf.String()
 }
 
 func (e *Element) copyAttributes(attribs []Attribute) {

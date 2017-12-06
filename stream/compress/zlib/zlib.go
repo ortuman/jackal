@@ -8,6 +8,7 @@ package zlib
 import (
 	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/ortuman/jackal/stream/compress"
 )
@@ -20,6 +21,8 @@ type ZlibCompressor struct {
 	rstrm  *zstream
 	wbuff  []byte
 	rbuff  []byte
+	wlock  sync.Mutex
+	rlock  sync.Mutex
 }
 
 func NewCompressor(level compress.Level) compress.Compressor {
@@ -36,6 +39,9 @@ func NewCompressor(level compress.Level) compress.Compressor {
 }
 
 func (z *ZlibCompressor) Compress(b []byte) ([]byte, error) {
+	z.wlock.Lock()
+	defer z.wlock.Unlock()
+
 	if z.wstrm == nil {
 		z.wstrm = &zstream{}
 		if err := z.wstrm.deflateInit(z.zLevel); err != nil {
@@ -64,6 +70,9 @@ func (z *ZlibCompressor) Compress(b []byte) ([]byte, error) {
 }
 
 func (z *ZlibCompressor) Uncompress(b []byte) ([]byte, error) {
+	z.rlock.Lock()
+	defer z.rlock.Unlock()
+
 	if z.rstrm == nil {
 		z.rstrm = &zstream{}
 		if err := z.rstrm.inflateInit(); err != nil {

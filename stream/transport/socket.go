@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/ortuman/jackal/stream/compress"
@@ -17,9 +17,10 @@ import (
 )
 
 type socketTransport struct {
+	sync.RWMutex
 	conn       net.Conn
 	keepAlive  int
-	closed     int32
+	closed     bool
 	readBuff   []byte
 	compressor compress.Compressor
 }
@@ -42,10 +43,13 @@ func (s *socketTransport) WriteAndWait(b []byte) {
 }
 
 func (s *socketTransport) Read() ([]byte, error) {
+	s.RLock()
+	defer s.RUnlock()
+
 	readDeadline := time.Now().Add(time.Second * time.Duration(s.keepAlive))
 	s.conn.SetReadDeadline(readDeadline)
 	n, err := s.conn.Read(s.readBuff)
-	if atomic.LoadInt32(&s.closed) == 1 {
+	if s.closed {
 		return nil, ErrServerClosedTransport
 	}
 	switch err {
@@ -64,19 +68,28 @@ func (s *socketTransport) Read() ([]byte, error) {
 }
 
 func (s *socketTransport) Close() {
-	atomic.StoreInt32(&s.closed, 1)
+	s.Lock()
+	defer s.Unlock()
 	s.conn.Close()
+	s.closed = true
 }
 
 func (s *socketTransport) StartTLS(cfg *tls.Config) {
+	s.Lock()
+	defer s.Unlock()
 	s.conn = tls.Server(s.conn, cfg)
 }
 
 func (s *socketTransport) EnableCompression(level compress.Level) {
+	s.Lock()
+	defer s.Unlock()
 	s.compressor = zlib.NewCompressor(level)
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism string) []byte {
+	s.RLock()
+	defer s.RLock()
+
 	if tlsConn, ok := s.conn.(*tls.Conn); ok {
 		switch mechanism {
 		case TLSUnique:
@@ -90,6 +103,9 @@ func (s *socketTransport) ChannelBindingBytes(mechanism string) []byte {
 }
 
 func (s *socketTransport) writeBytes(b []byte) {
+	s.RLock()
+	defer s.RUnlock()
+
 	if s.compressor != nil {
 		deflatedBytes, err := s.compressor.Compress(b)
 		if deflatedBytes != nil && err == nil {
