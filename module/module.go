@@ -7,11 +7,6 @@ package module
 
 import "github.com/ortuman/jackal/xml"
 
-type IQHandler interface {
-	MatchesIQ(*xml.IQ) bool
-	ProcessIQ(*xml.IQ)
-}
-
 type Stream interface {
 	Username() string
 	Domain() string
@@ -21,4 +16,9 @@ type Stream interface {
 
 	SendElement(xml.Serializable)
 	SendElements([]xml.Serializable)
+}
+
+type IQHandler interface {
+	MatchesIQ(*xml.IQ) bool
+	ProcessIQ(*xml.IQ)
 }
