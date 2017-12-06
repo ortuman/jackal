@@ -18,23 +18,23 @@ import (
 )
 
 type server struct {
-	cfg         config.Server
+	cfg         *config.Server
 	strmCounter int32
 }
 
 func Initialize() {
 	for i := 1; i < len(config.DefaultConfig.Servers); i++ {
-		go initializeServer(config.DefaultConfig.Servers[i])
+		go initializeServer(&config.DefaultConfig.Servers[i])
 	}
-	initializeServer(config.DefaultConfig.Servers[0])
+	initializeServer(&config.DefaultConfig.Servers[0])
 }
 
-func initializeServer(serverConfig config.Server) {
+func initializeServer(serverConfig *config.Server) {
 	srv := newServerWithConfig(serverConfig)
 	srv.start()
 }
 
-func newServerWithConfig(serverConfig config.Server) *server {
+func newServerWithConfig(serverConfig *config.Server) *server {
 	s := &server{
 		cfg: serverConfig,
 	}
@@ -65,6 +65,6 @@ func (s *server) start() {
 
 func (s *server) handleConnection(conn net.Conn) {
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
-	strm := stream.NewStreamSocket(id, conn, &s.cfg)
+	strm := stream.NewStreamSocket(id, conn, s.cfg)
 	stream.Manager().RegisterStream(strm)
 }
