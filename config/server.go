@@ -233,11 +233,11 @@ type ModOffline struct {
 }
 
 type ModPrivate struct {
-	Sync bool `yaml:"sync"`
+	Async bool `yaml:"async"`
 }
 
 type ModVCard struct {
-	Sync bool `yaml:"sync"`
+	Async bool `yaml:"async"`
 }
 
 type ModRegistration struct {
@@ -247,12 +247,12 @@ type ModRegistration struct {
 }
 
 type ModVersion struct {
-	Sync   bool `yaml:"sync"`
+	Async  bool `yaml:"async"`
 	ShowOS bool `yaml:"show_os"`
 }
 
 type ModPing struct {
-	Sync         bool `yaml:"sync"`
+	Async        bool `yaml:"async"`
 	Send         bool `yaml:"send"`
 	SendInterval int  `yaml:"send_interval"`
 }
