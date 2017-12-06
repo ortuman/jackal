@@ -26,11 +26,29 @@ const (
 	S2S
 )
 
+func (st ServerType) String() string {
+	switch st {
+	case C2S:
+		return "c2s"
+	case S2S:
+		return "s2s"
+	}
+	return ""
+}
+
 type TransportType int
 
 const (
 	Socket TransportType = iota
 )
+
+func (tt TransportType) String() string {
+	switch tt {
+	case Socket:
+		return "socket"
+	}
+	return ""
+}
 
 type CompressionLevel int
 
@@ -39,6 +57,18 @@ const (
 	BestCompression
 	SpeedCompression
 )
+
+func (cl CompressionLevel) String() string {
+	switch cl {
+	case DefaultCompression:
+		return "default"
+	case BestCompression:
+		return "best"
+	case SpeedCompression:
+		return "speed"
+	}
+	return ""
+}
 
 type Server struct {
 	ID              string
@@ -87,6 +117,14 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	if len(p.Domains) == 0 {
 		return errors.New("config.Server: no domain specified")
+	}
+	for _, sasl := range p.SASL {
+		switch sasl {
+		case "plain", "digest_md5", "scram_sha_1", "scram_sha_256":
+			continue
+		default:
+			return fmt.Errorf("config.Server: unrecognized SASL mechanism: %s", sasl)
+		}
 	}
 	s.ID = p.ID
 	s.Domains = p.Domains

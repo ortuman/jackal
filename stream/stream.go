@@ -156,9 +156,6 @@ func (s *Stream) initializeAuthenticators() {
 		case "scram_sha_256":
 			s.authrs = append(s.authrs, newScram(s, sha256ScramType, false))
 			s.authrs = append(s.authrs, newScram(s, sha256ScramType, true))
-
-		default:
-			break
 		}
 	}
 }
