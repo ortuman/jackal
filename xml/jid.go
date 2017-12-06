@@ -176,9 +176,14 @@ func (j *JID) ToFullJID() string {
 	return j.node + "@" + j.domain + "/" + j.resource
 }
 
+// IsServer returns true if instance is a server JID.
+func (j *JID) IsServer() bool {
+	return len(j.node) == 0 && len(j.resource) == 0
+}
+
 // IsBare returns true if instance is a bare JID.
 func (j *JID) IsBare() bool {
-	return len(j.resource) == 0
+	return len(j.node) > 0 && len(j.resource) == 0
 }
 
 // IsFull returns true if instance is a full JID.

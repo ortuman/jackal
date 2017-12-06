@@ -9,3 +9,10 @@ type Logger struct {
 	Level   string `yaml:"level"`
 	LogFile string `yaml:"log_path"`
 }
+
+/*
+func (l *Logger) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	println("KK")
+	return nil
+}
+*/
