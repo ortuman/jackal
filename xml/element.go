@@ -7,6 +7,7 @@ package xml
 
 import (
 	"bytes"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -15,6 +16,10 @@ import (
 // includeClosing determines if closing tag should be attached.
 type Serializable interface {
 	XML(includeClosing bool) string
+}
+
+var serializeBufs = sync.Pool{
+	New: func() interface{} { return new(bytes.Buffer) },
 }
 
 // Attribute represents an XML node attribute (label=value).
@@ -165,7 +170,13 @@ func (e *Element) String() string {
 
 // XML satisfies Serializable interface.
 func (e *Element) XML(includeClosing bool) string {
-	buf := bytes.NewBufferString("<")
+	buf := serializeBufs.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		serializeBufs.Put(buf)
+	}()
+
+	buf.WriteString("<")
 	buf.WriteString(e.name)
 
 	// serialize attributes
