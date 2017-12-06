@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/stream/compress"
 	"github.com/ortuman/jackal/stream/compress/zlib"
 )
@@ -80,7 +81,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 	s.conn = tls.Server(s.conn, cfg)
 }
 
-func (s *socketTransport) EnableCompression(level compress.Level) {
+func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 	s.Lock()
 	defer s.Unlock()
 	s.compressor = zlib.NewCompressor(level)

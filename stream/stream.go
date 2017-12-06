@@ -13,8 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/stream/compress"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream/transport"
@@ -216,8 +214,8 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 
 	if !s.Authenticated() {
 		// attach TLS feature
-		tlsEnabled := s.cfg.TLS.Enabled
-		tlsRequired := s.cfg.TLS.Required
+		tlsEnabled := s.cfg.TLS != nil
+		tlsRequired := s.cfg.TLS != nil && s.cfg.TLS.Required
 
 		if !s.Secured() && tlsEnabled {
 			startTLS := xml.NewMutableElementName("starttls")
@@ -249,7 +247,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		// allow In-band registration over encrypted stream only
 		allowRegistration := !tlsEnabled || (tlsEnabled && s.Secured())
 
-		if s.cfg.ModRegistration.Enabled && allowRegistration {
+		if s.cfg.ModRegistration != nil && allowRegistration {
 			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
 			features.AppendElement(registerFeature.Copy())
 		}
@@ -257,7 +255,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 
 	} else {
 		// attach compression feature
-		if !s.Compressed() && s.cfg.Compression.Enabled {
+		if !s.Compressed() && s.cfg.Compression != nil {
 			compression := xml.NewMutableElementNamespace("compression", "http://jabber.org/features/compress")
 			method := xml.NewMutableElementName("method")
 			method.SetText("zlib")
@@ -396,16 +394,7 @@ func (s *Stream) compress(elem *xml.Element) {
 	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
 	s.writeElementAndWait(compressed)
 
-	var lvl compress.Level
-	switch s.cfg.Compression.Level {
-	case "best":
-		lvl = compress.BestLevel
-	case "speed":
-		lvl = compress.SpeedLevel
-	default:
-		lvl = compress.DefaultLevel
-	}
-	s.tr.EnableCompression(lvl)
+	s.tr.EnableCompression(s.cfg.Compression.Level)
 	s.Lock()
 	s.compressed = true
 	s.Unlock()

@@ -5,37 +5,112 @@
 
 package config
 
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+const defaultTransportPort = 5222
+
+const defaultTransportMaxStanzaSize = 65536
+const defaultTransportConnectTimeout = 5
+const defaultTransportKeepAlive = 120
+
+type ServerType int
+
 const (
 	// C2S represents a client to client server type.
-	C2S = "c2s"
+	C2S ServerType = iota
 	// S2S represents a server-to-client server type.
-	S2S = "s2s"
+	S2S
+)
+
+type TransportType int
+
+const (
+	Socket TransportType = iota
+)
+
+type CompressionLevel int
+
+const (
+	DefaultCompression CompressionLevel = iota
+	BestCompression
+	SpeedCompression
 )
 
 type Server struct {
-	ID      string   `yaml:"id"`
-	Type    string   `yaml:"type"`
-	Domains []string `yaml:"domains"`
-
-	Transport   Transport   `yaml:"transport"`
-	TLS         TLS         `yaml:"tls"`
-	Compression Compression `yaml:"compression"`
-	SASL        []string    `yaml:"sasl"`
-
-	ModOffline      ModOffline      `yaml:"mod_offline"`
-	ModPrivate      ModPrivate      `yaml:"mod_private"`
-	ModVCard        ModVCard        `yaml:"mod_vcard"`
-	ModRegistration ModRegistration `yaml:"mod_registration"`
-	ModVersion      ModVersion      `yaml:"mod_version"`
-	ModPing         ModPing         `yaml:"mod_ping"`
+	ID              string
+	Type            ServerType
+	Domains         []string
+	Transport       Transport
+	SASL            []string
+	TLS             *TLS
+	Compression     *Compression
+	ModOffline      *ModOffline
+	ModPrivate      *ModPrivate
+	ModVCard        *ModVCard
+	ModRegistration *ModRegistration
+	ModVersion      *ModVersion
+	ModPing         *ModPing
 }
 
-const (
-	// SocketTransport represents socket transport type.
-	SocketTransport = "socket"
-)
+type serverProxyType struct {
+	ID              string           `yaml:"id"`
+	Type            string           `yaml:"type"`
+	Domains         []string         `yaml:"domains"`
+	Transport       Transport        `yaml:"transport"`
+	SASL            []string         `yaml:"sasl"`
+	TLS             *TLS             `yaml:"tls"`
+	Compression     *Compression     `yaml:"compression"`
+	ModOffline      *ModOffline      `yaml:"mod_offline"`
+	ModPrivate      *ModPrivate      `yaml:"mod_private"`
+	ModVCard        *ModVCard        `yaml:"mod_vcard"`
+	ModRegistration *ModRegistration `yaml:"mod_registration"`
+	ModVersion      *ModVersion      `yaml:"mod_version"`
+	ModPing         *ModPing         `yaml:"mod_ping"`
+}
+
+func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := serverProxyType{}
+	unmarshal(&p)
+	switch strings.ToLower(p.Type) {
+	case "c2s":
+		s.Type = C2S
+	case "s2s":
+		s.Type = S2S
+	default:
+		return fmt.Errorf("config.Server: unrecognized server type: %s", p.Type)
+	}
+	if len(p.Domains) == 0 {
+		return errors.New("config.Server: no domain specified")
+	}
+	s.ID = p.ID
+	s.Domains = p.Domains
+	s.Transport = p.Transport
+	s.SASL = p.SASL
+	s.TLS = p.TLS
+	s.Compression = p.Compression
+	s.ModOffline = p.ModOffline
+	s.ModPrivate = p.ModPrivate
+	s.ModVCard = p.ModVCard
+	s.ModRegistration = p.ModRegistration
+	s.ModVersion = p.ModVersion
+	s.ModPing = p.ModPing
+	return nil
+}
 
 type Transport struct {
+	Type           TransportType
+	BindAddress    string
+	Port           int
+	ConnectTimeout int
+	KeepAlive      int
+	MaxStanzaSize  int
+}
+
+type transportProxyType struct {
 	Type           string `yaml:"type"`
 	BindAddress    string `yaml:"bind_addr"`
 	Port           int    `yaml:"port"`
@@ -44,44 +119,85 @@ type Transport struct {
 	MaxStanzaSize  int    `yaml:"max_stanza_size"`
 }
 
+func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := transportProxyType{}
+	unmarshal(&p)
+	switch p.Type {
+	case "socket":
+		t.Type = Socket
+	default:
+		return fmt.Errorf("config.Transport: unrecognized transport type: %s", p.Type)
+	}
+	t.BindAddress = p.BindAddress
+	t.Port = p.Port
+	if t.Port == 0 {
+		t.Port = defaultTransportPort
+	}
+	t.ConnectTimeout = p.ConnectTimeout
+	if t.ConnectTimeout == 0 {
+		t.ConnectTimeout = defaultTransportConnectTimeout
+	}
+	t.KeepAlive = p.KeepAlive
+	if t.KeepAlive == 0 {
+		t.KeepAlive = defaultTransportKeepAlive
+	}
+	t.MaxStanzaSize = p.MaxStanzaSize
+	if t.MaxStanzaSize == 0 {
+		t.MaxStanzaSize = defaultTransportMaxStanzaSize
+	}
+	return nil
+}
+
 type TLS struct {
-	Enabled     bool   `yaml:"enabled"`
 	Required    bool   `yaml:"required"`
 	CertFile    string `yaml:"cert_path"`
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
 type Compression struct {
-	Enabled bool   `yaml:"enabled"`
-	Level   string `yaml:"level"`
+	Level CompressionLevel
+}
+
+type compressionProxyType struct {
+	Level string `yaml:"level"`
+}
+
+func (c *Compression) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := compressionProxyType{}
+	unmarshal(&p)
+	switch p.Level {
+	case "best":
+		c.Level = BestCompression
+	case "speed":
+		c.Level = SpeedCompression
+	case "default":
+		c.Level = DefaultCompression
+	default:
+		return fmt.Errorf("config.Compress: unrecognized compression level: %s", p.Level)
+	}
+	return nil
 }
 
 type ModOffline struct {
-	Enabled   bool `yaml:"enabled"`
-	QueueSize int  `yaml:"queue_size"`
+	QueueSize int `yaml:"queue_size"`
 }
 
 type ModPrivate struct {
-	Enabled bool `yaml:"enabled"`
 }
 
 type ModVCard struct {
-	Enabled bool `yaml:"enabled"`
 }
 
 type ModRegistration struct {
-	Enabled     bool `yaml:"enabled"`
 	AllowChange bool `yaml:"allow_change"`
 	AllowCancel bool `yaml:"allow_cancel"`
 }
 
 type ModVersion struct {
-	Enabled bool `yaml:"enabled"`
-	ShowOS  bool `yaml:"show_os"`
+	ShowOS bool `yaml:"show_os"`
 }
 
 type ModPing struct {
-	Enabled      bool `yaml:"enabled"`
 	Send         bool `yaml:"send"`
 	SendInterval int  `yaml:"send_interval"`
 }

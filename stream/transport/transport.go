@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"errors"
 
-	"github.com/ortuman/jackal/stream/compress"
+	"github.com/ortuman/jackal/config"
 )
 
 // channel binding mechanisms
@@ -31,6 +31,6 @@ type Transport interface {
 	Read() ([]byte, error)
 	Close()
 	StartTLS(*tls.Config)
-	EnableCompression(compress.Level)
+	EnableCompression(config.CompressionLevel)
 	ChannelBindingBytes(string) []byte
 }

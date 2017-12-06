@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/stream/compress"
 )
 
@@ -25,14 +26,14 @@ type ZlibCompressor struct {
 	rlock  sync.Mutex
 }
 
-func NewCompressor(level compress.Level) compress.Compressor {
+func NewCompressor(level config.CompressionLevel) compress.Compressor {
 	z := &ZlibCompressor{}
 	switch level {
-	case compress.DefaultLevel:
+	case config.DefaultCompression:
 		z.zLevel = zDefaultCompression
-	case compress.BestLevel:
+	case config.BestCompression:
 		z.zLevel = zBestCompression
-	case compress.SpeedLevel:
+	case config.SpeedCompression:
 		z.zLevel = zBestSpeed
 	}
 	return z
