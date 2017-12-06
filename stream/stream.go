@@ -166,8 +166,8 @@ func (s *Stream) initializeAuthenticators() {
 }
 
 func (s *Stream) startConnectTimeoutTimer(timeout int) {
-	tr := time.NewTimer(time.Second * time.Duration(timeout))
 	go func() {
+		tr := time.NewTimer(time.Second * time.Duration(timeout))
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
