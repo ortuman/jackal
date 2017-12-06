@@ -17,17 +17,9 @@ import (
 	"github.com/ortuman/jackal/config"
 )
 
-const (
-	debugLevel = iota
-	infoLevel
-	warningLevel
-	errorLevel
-	fatalLevel
-)
-
 // Logger object is used to log messages for a specific system or application component.
 type Logger struct {
-	level       int
+	level       config.LogLevel
 	f           *os.File
 	logChan     chan record
 	initialized bool
@@ -86,7 +78,7 @@ type callerInfo struct {
 }
 
 type record struct {
-	level      int
+	level      config.LogLevel
 	file       string
 	line       int
 	log        string
@@ -104,23 +96,8 @@ func (l *Logger) initialize() error {
 	if l.initialized {
 		return nil
 	}
-	logLevel := config.DefaultConfig.Logger.Level
+	l.level = config.DefaultConfig.Logger.Level
 	logFile := config.DefaultConfig.Logger.LogFile
-
-	switch strings.ToLower(logLevel) {
-	case "debug":
-		l.level = debugLevel
-	case "info":
-		l.level = infoLevel
-	case "warning":
-		l.level = warningLevel
-	case "error":
-		l.level = errorLevel
-	case "fatal":
-		l.level = fatalLevel
-	default:
-		return fmt.Errorf("unrecognized log level: %s", logLevel)
-	}
 
 	// create logFile intermediate directories.
 	if err := os.MkdirAll(filepath.Dir(logFile), os.ModePerm); err != nil {
@@ -140,26 +117,26 @@ func (l *Logger) initialize() error {
 }
 
 func (l *Logger) debugf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, debugLevel, true, args...)
+	l.writeLog(file, line, format, config.DebugLevel, true, args...)
 }
 
 func (l *Logger) infof(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, infoLevel, true, args...)
+	l.writeLog(file, line, format, config.InfoLevel, true, args...)
 }
 
 func (l *Logger) warnf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, warningLevel, true, args...)
+	l.writeLog(file, line, format, config.WarningLevel, true, args...)
 }
 
 func (l *Logger) errorf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, errorLevel, true, args...)
+	l.writeLog(file, line, format, config.ErrorLevel, true, args...)
 }
 
 func (l *Logger) fatalf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, fatalLevel, false, args...)
+	l.writeLog(file, line, format, config.FatalLevel, false, args...)
 }
 
-func (l *Logger) writeLog(file string, line int, format string, logLevel int, async bool, args ...interface{}) {
+func (l *Logger) writeLog(file string, line int, format string, logLevel config.LogLevel, async bool, args ...interface{}) {
 	if !l.initialized {
 		return
 	}
@@ -192,7 +169,7 @@ func (l *Logger) loop() {
 			fmt.Fprint(os.Stdout, line)
 			l.f.WriteString(line)
 		}
-		if rec.level == fatalLevel {
+		if rec.level == config.FatalLevel {
 			os.Exit(1)
 		}
 		close(rec.continueCh)
@@ -211,17 +188,17 @@ func getCallerInfo() callerInfo {
 	return ci
 }
 
-func logLevelAbbreviation(logLevel int) string {
+func logLevelAbbreviation(logLevel config.LogLevel) string {
 	switch logLevel {
-	case debugLevel:
+	case config.DebugLevel:
 		return "DBG"
-	case infoLevel:
+	case config.InfoLevel:
 		return "INF"
-	case warningLevel:
+	case config.WarningLevel:
 		return "WRN"
-	case errorLevel:
+	case config.ErrorLevel:
 		return "ERR"
-	case fatalLevel:
+	case config.FatalLevel:
 		return "FTL"
 	default:
 		// should not be reached
@@ -229,17 +206,17 @@ func logLevelAbbreviation(logLevel int) string {
 	}
 }
 
-func logLevelGlyph(logLevel int) string {
+func logLevelGlyph(logLevel config.LogLevel) string {
 	switch logLevel {
-	case debugLevel:
+	case config.DebugLevel:
 		return "\U0001f50D"
-	case infoLevel:
+	case config.InfoLevel:
 		return "\u2139\ufe0f"
-	case warningLevel:
+	case config.WarningLevel:
 		return "\u26a0\ufe0f"
-	case errorLevel:
+	case config.ErrorLevel:
 		return "\U0001f4a5"
-	case fatalLevel:
+	case config.FatalLevel:
 		return "\U0001f480"
 	default:
 		// should not be reached

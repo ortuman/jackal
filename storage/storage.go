@@ -11,7 +11,6 @@ import (
 	"github.com/ortuman/jackal/storage/entity"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/log"
 )
 
 type storage interface {
@@ -31,11 +30,11 @@ var (
 func Instance() storage {
 	once.Do(func() {
 		switch config.DefaultConfig.Storage.Type {
-		case "mysql":
+		case config.MySQL:
 			instance = newMySQLStorage()
 		default:
-			log.Fatalf("unrecognized storage type: %s", config.DefaultConfig.Storage.Type)
-			return
+			// should not be reached
+			break
 		}
 	})
 	return instance

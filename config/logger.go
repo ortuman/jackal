@@ -5,14 +5,48 @@
 
 package config
 
+import (
+	"fmt"
+	"strings"
+)
+
+type LogLevel int
+
+const (
+	DebugLevel LogLevel = iota
+	InfoLevel
+	WarningLevel
+	ErrorLevel
+	FatalLevel
+)
+
 type Logger struct {
+	Level   LogLevel
+	LogFile string
+}
+
+type loggerProxyType struct {
 	Level   string `yaml:"level"`
 	LogFile string `yaml:"log_path"`
 }
 
-/*
 func (l *Logger) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	println("KK")
+	lp := loggerProxyType{}
+	unmarshal(&lp)
+	switch strings.ToLower(lp.Level) {
+	case "debug":
+		l.Level = DebugLevel
+	case "info":
+		l.Level = InfoLevel
+	case "warning":
+		l.Level = WarningLevel
+	case "error":
+		l.Level = ErrorLevel
+	case "fatal":
+		l.Level = FatalLevel
+	default:
+		return fmt.Errorf("config.Logger: unrecognized log level: %s", lp.Level)
+	}
+	l.LogFile = lp.LogFile
 	return nil
 }
-*/
