@@ -9,7 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	// MySql driver implementation
+	// driver implementation
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/ortuman/jackal/config"
