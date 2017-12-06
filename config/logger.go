@@ -32,7 +32,9 @@ type loggerProxyType struct {
 
 func (l *Logger) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	lp := loggerProxyType{}
-	unmarshal(&lp)
+	if err := unmarshal(&lp); err != nil {
+		return err
+	}
 	switch strings.ToLower(lp.Level) {
 	case "debug":
 		l.Level = DebugLevel

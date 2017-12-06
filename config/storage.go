@@ -35,7 +35,9 @@ type storageProxyType struct {
 
 func (s *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := storageProxyType{}
-	unmarshal(&p)
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
 	switch p.Type {
 	case "mysql":
 		s.Type = MySQL

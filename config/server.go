@@ -74,7 +74,9 @@ type serverProxyType struct {
 
 func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := serverProxyType{}
-	unmarshal(&p)
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
 	switch strings.ToLower(p.Type) {
 	case "c2s":
 		s.Type = C2S
@@ -121,7 +123,9 @@ type transportProxyType struct {
 
 func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := transportProxyType{}
-	unmarshal(&p)
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
 	switch p.Type {
 	case "socket":
 		t.Type = Socket
@@ -164,7 +168,9 @@ type compressionProxyType struct {
 
 func (c *Compression) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := compressionProxyType{}
-	unmarshal(&p)
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
 	switch p.Level {
 	case "best":
 		c.Level = BestCompression
