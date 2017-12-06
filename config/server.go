@@ -107,6 +107,7 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
+	// validate server type
 	switch strings.ToLower(p.Type) {
 	case "c2s":
 		s.Type = C2S
@@ -115,9 +116,11 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	default:
 		return fmt.Errorf("config.Server: unrecognized server type: %s", p.Type)
 	}
+	// validate server domains
 	if len(p.Domains) == 0 {
 		return errors.New("config.Server: no domain specified")
 	}
+	// validate SASL mechanisms
 	for _, sasl := range p.SASL {
 		switch sasl {
 		case "plain", "digest_md5", "scram_sha_1", "scram_sha_256":
@@ -164,6 +167,7 @@ func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
+	// validate transport type
 	switch p.Type {
 	case "socket":
 		t.Type = Socket
@@ -172,6 +176,8 @@ func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	t.BindAddress = p.BindAddress
 	t.Port = p.Port
+
+	// assign transport's defaults
 	if t.Port == 0 {
 		t.Port = defaultTransportPort
 	}
