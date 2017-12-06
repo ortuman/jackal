@@ -15,6 +15,7 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -56,7 +57,7 @@ type Stream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 
-	iqHandlers []IQHandler
+	iqHandlers []module.IQHandler
 
 	writeCh chan []byte
 	readCh  chan []byte
@@ -168,7 +169,7 @@ func (s *Stream) initializeAuthenticators() {
 func (s *Stream) initializeXEPs() {
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if s.cfg.ModVersion != nil {
-		s.iqHandlers = append(s.iqHandlers, newXepVersion(s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(s.cfg.ModVersion, s))
 	}
 }
 

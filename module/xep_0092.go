@@ -3,7 +3,7 @@
  * See the COPYING file for more information.
  */
 
-package stream
+package module
 
 import (
 	"os/exec"
@@ -24,21 +24,21 @@ func init() {
 	osString = strings.TrimSpace(string(out))
 }
 
-type xepVersion struct {
+type XEPVersion struct {
 	cfg  *config.ModVersion
-	strm *Stream
+	strm Stream
 }
 
-func newXepVersion(config *config.ModVersion, strm *Stream) *xepVersion {
-	x := &xepVersion{cfg: config, strm: strm}
+func NewXEPVersion(config *config.ModVersion, strm Stream) *XEPVersion {
+	x := &XEPVersion{cfg: config, strm: strm}
 	return x
 }
 
-func (x *xepVersion) MatchesIQ(iq *xml.IQ) bool {
+func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 	return iq.IsGet() && iq.FindElementNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }
 
-func (x *xepVersion) ProcessIQ(iq *xml.IQ) {
+func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
 	q := iq.FindElementNamespace("query", versionNamespace)
 	if q.ElementsCount() != 0 {
 		x.strm.SendElement(iq.BadRequestError())
@@ -47,7 +47,7 @@ func (x *xepVersion) ProcessIQ(iq *xml.IQ) {
 	x.sendSoftwareVersion(iq)
 }
 
-func (x *xepVersion) sendSoftwareVersion(iq *xml.IQ) {
+func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
 	log.Infof("retrieving software version: %v (username: %s)", version.ApplicationVersion, x.strm.Username())
 
 	result := iq.ResultIQ()
