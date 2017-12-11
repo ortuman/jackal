@@ -7,6 +7,7 @@ package concurrent
 
 import (
 	"sync"
+	"time"
 )
 
 type dispatchQueueItem struct {
@@ -16,8 +17,7 @@ type dispatchQueueItem struct {
 
 type DispatcherQueue struct {
 	sync.Mutex
-	items  []dispatchQueueItem
-	active bool
+	items chan dispatchQueueItem
 }
 
 func (d *DispatcherQueue) Sync(f func()) {
@@ -35,34 +35,42 @@ func (d *DispatcherQueue) Async(f func()) {
 
 func (d *DispatcherQueue) enqueueItem(item dispatchQueueItem) {
 	d.Lock()
-	d.items = append(d.items, item)
-	if !d.active {
-		d.active = true
+	if d.items == nil {
+		d.items = make(chan dispatchQueueItem, 256)
 		go d.run()
 	}
+	d.items <- item
 	d.Unlock()
 }
 
 func (d *DispatcherQueue) run() {
-	d.Lock()
-	item := d.items[len(d.items)-1]
-	d.items = d.items[:len(d.items)-1]
-	d.Unlock()
-
 	for {
-		item.f()
-		if item.continueCh != nil {
-			close(item.continueCh)
-		}
+		timeout := time.After(time.Second)
+		select {
+		case item := <-d.items:
+			d.processItem(item)
 
-		d.Lock()
-		if len(d.items) == 0 {
-			d.active = false
-			d.Unlock()
-			return
+		case <-timeout:
+			d.Lock()
+			// try reading after locking...
+			select {
+			case item := <-d.items:
+				d.Unlock()
+				d.processItem(item)
+				continue
+			default:
+				close(d.items)
+				d.items = nil
+				d.Unlock()
+				return
+			}
 		}
-		item = d.items[len(d.items)-1]
-		d.items = d.items[:len(d.items)-1]
-		d.Unlock()
+	}
+}
+
+func (d *DispatcherQueue) processItem(item dispatchQueueItem) {
+	item.f()
+	if item.continueCh != nil {
+		close(item.continueCh)
 	}
 }
