@@ -43,17 +43,13 @@ func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
 	x.Async(func() {
-		x.processIQ(iq)
+		q := iq.FindElementNamespace("query", versionNamespace)
+		if q.ElementsCount() != 0 {
+			x.strm.SendElement(iq.BadRequestError())
+			return
+		}
+		x.sendSoftwareVersion(iq)
 	})
-}
-
-func (x *XEPVersion) processIQ(iq *xml.IQ) {
-	q := iq.FindElementNamespace("query", versionNamespace)
-	if q.ElementsCount() != 0 {
-		x.strm.SendElement(iq.BadRequestError())
-		return
-	}
-	x.sendSoftwareVersion(iq)
 }
 
 func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {

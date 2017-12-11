@@ -8,12 +8,14 @@ package stream
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/concurrent"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xml"
 )
 
 type StreamManager struct {
-	sync.RWMutex
+	concurrent.DispatcherQueue
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 }
@@ -35,47 +37,54 @@ func Manager() *StreamManager {
 }
 
 func (m *StreamManager) RegisterStream(strm *Stream) {
-	log.Infof("registered stream... (id: %s)", strm.ID())
-	m.Lock()
-	m.strms[strm.ID()] = strm
-	m.Unlock()
+	m.Sync(func() {
+		log.Infof("registered stream... (id: %s)", strm.ID())
+		m.strms[strm.ID()] = strm
+	})
 }
 
 func (m *StreamManager) UnregisterStream(strm *Stream) {
-	log.Infof("unregistered stream... (id: %s)", strm.ID())
-	m.Lock()
-	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-		authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
-		if len(authedStrms) == 0 {
-			delete(m.authedStrms, strm.Username())
+	m.Sync(func() {
+		log.Infof("unregistered stream... (id: %s)", strm.ID())
+		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+			authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
+			if len(authedStrms) == 0 {
+				delete(m.authedStrms, strm.Username())
+			}
 		}
-	}
-	m.Unlock()
+	})
 }
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
-	log.Infof("authenticated stream... (username: %s)", strm.Username())
-	m.Lock()
-	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-		m.authedStrms[strm.Username()] = append(authedStrms, strm)
-	} else {
-		m.authedStrms[strm.Username()] = []*Stream{strm}
-	}
-	m.Unlock()
+	m.Sync(func() {
+		log.Infof("authenticated stream... (username: %s)", strm.Username())
+		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+			m.authedStrms[strm.Username()] = append(authedStrms, strm)
+		} else {
+			m.authedStrms[strm.Username()] = []*Stream{strm}
+		}
+	})
 }
 
 func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
-	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-		for _, authedStrm := range authedStrms {
-			if authedStrm.Resource() == resource {
-				return false
+	resultCh := make(chan bool)
+	m.Async(func() {
+		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+			for _, authedStrm := range authedStrms {
+				if authedStrm.Resource() == resource {
+					resultCh <- false
+					return
+				}
 			}
+			resultCh <- true
 		}
-	}
-	return true
+	})
+	return <-resultCh
 }
 
 func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
+	m.Async(func() {
+	})
 }
 
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {

@@ -546,7 +546,7 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
-		go handler.ProcessIQ(iq)
+		handler.ProcessIQ(iq)
 		return
 	}
 
