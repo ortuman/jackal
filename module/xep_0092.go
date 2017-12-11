@@ -37,6 +37,10 @@ func NewXEPVersion(config *config.ModVersion, strm Stream) *XEPVersion {
 	return x
 }
 
+func (x *XEPVersion) AssociatedNamespaces() []string {
+	return []string{versionNamespace}
+}
+
 func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 	return iq.IsGet() && iq.FindElementNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }

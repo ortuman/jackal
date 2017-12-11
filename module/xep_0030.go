@@ -17,8 +17,6 @@ const (
 	discoItemsNamespace = "http://jabber.org/protocol/disco#items"
 )
 
-type DiscoFeature string
-
 type DiscoItem struct {
 	Jid  string
 	Name string
@@ -35,7 +33,7 @@ type XEPDiscoInfo struct {
 	concurrent.DispatcherQueue
 	strm       Stream
 	identities []DiscoIdentity
-	features   []DiscoFeature
+	features   []string
 	items      []DiscoItem
 }
 
@@ -58,15 +56,15 @@ func (x *XEPDiscoInfo) SetIdentities(identities []DiscoIdentity) {
 	})
 }
 
-func (x *XEPDiscoInfo) Features() []DiscoFeature {
-	ch := make(chan []DiscoFeature)
+func (x *XEPDiscoInfo) Features() []string {
+	ch := make(chan []string)
 	x.Async(func() {
 		ch <- x.features
 	})
 	return <-ch
 }
 
-func (x *XEPDiscoInfo) SetFeatures(features []DiscoFeature) {
+func (x *XEPDiscoInfo) SetFeatures(features []string) {
 	x.Sync(func() {
 		x.features = features
 	})
@@ -86,6 +84,10 @@ func (x *XEPDiscoInfo) SetItems(items []DiscoItem) {
 	})
 }
 
+func (x *XEPDiscoInfo) AssociatedNamespaces() []string {
+	return []string{discoInfoNamespace, discoItemsNamespace}
+}
+
 func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 	q := iq.FindElement("query")
 	if q == nil {
@@ -96,6 +98,10 @@ func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 
 func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
 	x.Async(func() {
+		if !iq.ToJID().IsServer() {
+			x.strm.SendElement(iq.FeatureNotImplementedError())
+			return
+		}
 		q := iq.FindElement("query")
 		switch q.Namespace() {
 		case discoInfoNamespace:
@@ -107,15 +113,44 @@ func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
 }
 
 func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
-	if !iq.ToJID().IsServer() {
-		x.strm.SendElement(iq.FeatureNotImplementedError())
-		return
-	}
 	sort.Slice(x.features, func(i, j int) bool { return x.features[i] < x.features[j] })
 
-	// TODO: Implement me!
+	result := iq.ResultIQ()
+	query := xml.NewMutableElementNamespace("query", discoInfoNamespace)
+	for _, identity := range x.identities {
+		identityEl := xml.NewMutableElementName("identity")
+		identityEl.SetAttribute("category", identity.Category)
+		if len(identity.Type) > 0 {
+			identityEl.SetAttribute("type", identity.Type)
+		}
+		if len(identity.Name) > 0 {
+			identityEl.SetAttribute("name", identity.Name)
+		}
+		query.AppendElement(identityEl.Copy())
+	}
+	for _, feature := range x.features {
+		featureEl := xml.NewMutableElementName("feature")
+		featureEl.SetAttribute("var", feature)
+		query.AppendElement(featureEl.Copy())
+	}
+	result.AppendElement(query.Copy())
+	x.strm.SendElement(query)
 }
 
 func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
-	x.strm.SendElement(iq.FeatureNotImplementedError())
+	result := iq.ResultIQ()
+	query := xml.NewMutableElementNamespace("query", discoItemsNamespace)
+	for _, item := range x.items {
+		itemEl := xml.NewMutableElementName("item")
+		itemEl.SetAttribute("jid", item.Jid)
+		if len(item.Name) > 0 {
+			itemEl.SetAttribute("name", item.Name)
+		}
+		if len(item.Node) > 0 {
+			itemEl.SetAttribute("node", item.Node)
+		}
+		query.AppendElement(itemEl.Copy())
+	}
+	result.AppendElement(query.Copy())
+	x.strm.SendElement(query)
 }

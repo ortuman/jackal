@@ -19,6 +19,8 @@ type Stream interface {
 }
 
 type IQHandler interface {
+	AssociatedNamespaces() []string
+
 	MatchesIQ(*xml.IQ) bool
 	ProcessIQ(*xml.IQ)
 }

@@ -167,10 +167,29 @@ func (s *Stream) initializeAuthenticators() {
 }
 
 func (s *Stream) initializeXEPs() {
+	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
+	discoInfo := module.NewXEPDiscoInfo(s)
+	s.iqHandlers = append(s.iqHandlers, discoInfo)
+
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if s.cfg.ModVersion != nil {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(s.cfg.ModVersion, s))
 	}
+
+	// register server disco info identities
+	identities := []module.DiscoIdentity{{
+		Category: "server",
+		Type:     "im",
+		Name:     s.cfg.ID,
+	}}
+	discoInfo.SetIdentities(identities)
+
+	// register disco info features
+	features := []string{}
+	for _, iqHandler := range s.iqHandlers {
+		features = append(features, iqHandler.AssociatedNamespaces()...)
+	}
+	discoInfo.SetFeatures(features)
 }
 
 func (s *Stream) startConnectTimeoutTimer(timeout int) {
