@@ -86,7 +86,7 @@ func (x *XEPDiscoInfo) SetItems(items []DiscoItem) {
 	})
 }
 
-func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
+func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 	q := iq.FindElement("query")
 	if q == nil {
 		return false
