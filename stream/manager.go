@@ -67,19 +67,19 @@ func (m *StreamManager) AuthenticateStream(strm *Stream) {
 }
 
 func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
-	resultCh := make(chan bool)
+	ch := make(chan bool)
 	m.Async(func() {
 		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 			for _, authedStrm := range authedStrms {
 				if authedStrm.Resource() == resource {
-					resultCh <- false
+					ch <- false
 					return
 				}
 			}
-			resultCh <- true
+			ch <- true
 		}
 	})
-	return <-resultCh
+	return <-ch
 }
 
 func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
