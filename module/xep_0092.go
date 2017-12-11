@@ -8,7 +8,8 @@ package module
 import (
 	"os/exec"
 	"strings"
-	"sync"
+
+	"github.com/ortuman/jackal/concurrent"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
@@ -26,7 +27,7 @@ func init() {
 }
 
 type XEPVersion struct {
-	sync.Mutex
+	concurrent.DispatcherQueue
 	cfg  *config.ModVersion
 	strm Stream
 }
@@ -41,9 +42,12 @@ func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
-	x.Lock()
-	defer x.Unlock()
+	x.Async(func() {
+		x.processIQ(iq)
+	})
+}
 
+func (x *XEPVersion) processIQ(iq *xml.IQ) {
 	q := iq.FindElementNamespace("query", versionNamespace)
 	if q.ElementsCount() != 0 {
 		x.strm.SendElement(iq.BadRequestError())
