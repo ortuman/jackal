@@ -27,7 +27,7 @@ func init() {
 }
 
 type XEPVersion struct {
-	concurrent.Executor
+	concurrent.ExecutorQueue
 	cfg  *config.ModVersion
 	strm Stream
 }

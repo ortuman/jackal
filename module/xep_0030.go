@@ -30,7 +30,7 @@ type DiscoIdentity struct {
 }
 
 type XEPDiscoInfo struct {
-	concurrent.Executor
+	concurrent.ExecutorQueue
 	strm       Stream
 	identities []DiscoIdentity
 	features   []string
