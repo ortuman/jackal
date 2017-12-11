@@ -14,7 +14,7 @@ import (
 )
 
 func TestAsync(t *testing.T) {
-	queue := concurrent.DispatcherQueue{}
+	queue := concurrent.Executor{}
 	var v int
 	for i := 0; i < 128; i++ {
 		queue.Async(func() {
