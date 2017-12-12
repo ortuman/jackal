@@ -8,7 +8,6 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -173,7 +172,6 @@ func (s *Stream) initializeXEPs() {
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
-	fmt.Println(s.cfg.ModVCard)
 	if s.cfg.ModVCard != nil {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
 	}
