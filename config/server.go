@@ -129,8 +129,6 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("config.Server: unrecognized SASL mechanism: %s", sasl)
 		}
 	}
-	fmt.Printf("%v", p)
-
 	s.ID = p.ID
 	s.Domains = p.Domains
 	s.Transport = p.Transport
