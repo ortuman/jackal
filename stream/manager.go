@@ -15,7 +15,7 @@ import (
 )
 
 type StreamManager struct {
-	queue       concurrent.ExecutorQueue
+	queue       concurrent.OperationQueue
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 }

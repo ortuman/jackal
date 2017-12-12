@@ -15,7 +15,7 @@ import (
 const vCardNamespace = "vcard-temp"
 
 type XEPVCard struct {
-	queue concurrent.ExecutorQueue
+	queue concurrent.OperationQueue
 	strm  Stream
 }
 

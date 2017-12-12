@@ -30,7 +30,7 @@ type DiscoIdentity struct {
 }
 
 type XEPDiscoInfo struct {
-	queue      concurrent.ExecutorQueue
+	queue      concurrent.OperationQueue
 	strm       Stream
 	identities []DiscoIdentity
 	features   []string
@@ -133,6 +133,7 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 		featureEl.SetAttribute("var", feature)
 		query.AppendElement(featureEl.Copy())
 	}
+
 	result.AppendElement(query.Copy())
 	x.strm.SendElement(query)
 }
