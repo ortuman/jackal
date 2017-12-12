@@ -30,7 +30,7 @@ type DiscoIdentity struct {
 }
 
 type XEPDiscoInfo struct {
-	concurrent.ExecutorQueue
+	queue      concurrent.ExecutorQueue
 	strm       Stream
 	identities []DiscoIdentity
 	features   []string
@@ -44,42 +44,42 @@ func NewXEPDiscoInfo(strm Stream) *XEPDiscoInfo {
 
 func (x *XEPDiscoInfo) Identities() []DiscoIdentity {
 	ch := make(chan []DiscoIdentity)
-	x.Async(func() {
+	x.queue.Async(func() {
 		ch <- x.identities
 	})
 	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetIdentities(identities []DiscoIdentity) {
-	x.Sync(func() {
+	x.queue.Sync(func() {
 		x.identities = identities
 	})
 }
 
 func (x *XEPDiscoInfo) Features() []string {
 	ch := make(chan []string)
-	x.Async(func() {
+	x.queue.Async(func() {
 		ch <- x.features
 	})
 	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetFeatures(features []string) {
-	x.Sync(func() {
+	x.queue.Sync(func() {
 		x.features = features
 	})
 }
 
 func (x *XEPDiscoInfo) Items() []DiscoItem {
 	ch := make(chan []DiscoItem)
-	x.Async(func() {
+	x.queue.Async(func() {
 		ch <- x.items
 	})
 	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetItems(items []DiscoItem) {
-	x.Sync(func() {
+	x.queue.Sync(func() {
 		x.items = items
 	})
 }
@@ -97,7 +97,7 @@ func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
-	x.Async(func() {
+	x.queue.Async(func() {
 		if !iq.ToJID().IsServer() {
 			x.strm.SendElement(iq.FeatureNotImplementedError())
 			return

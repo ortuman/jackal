@@ -15,7 +15,7 @@ import (
 )
 
 type StreamManager struct {
-	concurrent.ExecutorQueue
+	queue       concurrent.ExecutorQueue
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 }
@@ -37,14 +37,14 @@ func Manager() *StreamManager {
 }
 
 func (m *StreamManager) RegisterStream(strm *Stream) {
-	m.Sync(func() {
+	m.queue.Sync(func() {
 		log.Infof("registered stream... (id: %s)", strm.ID())
 		m.strms[strm.ID()] = strm
 	})
 }
 
 func (m *StreamManager) UnregisterStream(strm *Stream) {
-	m.Sync(func() {
+	m.queue.Sync(func() {
 		log.Infof("unregistered stream... (id: %s)", strm.ID())
 		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 			authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
@@ -56,7 +56,7 @@ func (m *StreamManager) UnregisterStream(strm *Stream) {
 }
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
-	m.Sync(func() {
+	m.queue.Sync(func() {
 		log.Infof("authenticated stream... (username: %s)", strm.Username())
 		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 			m.authedStrms[strm.Username()] = append(authedStrms, strm)
@@ -68,7 +68,7 @@ func (m *StreamManager) AuthenticateStream(strm *Stream) {
 
 func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
 	ch := make(chan bool)
-	m.Async(func() {
+	m.queue.Async(func() {
 		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 			for _, authedStrm := range authedStrms {
 				if authedStrm.Resource() == resource {
@@ -83,7 +83,7 @@ func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stre
 }
 
 func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
-	m.Async(func() {
+	m.queue.Async(func() {
 	})
 }
 
