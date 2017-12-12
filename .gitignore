@@ -29,3 +29,6 @@ debug
 # Log files
 *.log
 
+# Project folders
+.idea/
+.vscode/
