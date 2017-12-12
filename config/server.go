@@ -238,6 +238,7 @@ type ModPrivate struct {
 }
 
 type ModVCard struct {
+	Async bool `yaml:"async"`
 }
 
 type ModRegistration struct {
