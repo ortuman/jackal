@@ -56,13 +56,15 @@ func (x *XEPVCard) getVCard(vCard *xml.Element, iq *xml.IQ) {
 	} else {
 		username = toJid.Node()
 	}
-	resultIQ := iq.ResultIQ()
+
 	resElem, err := storage.Instance().FetchVCard(username)
 	if err != nil {
 		log.Errorf("%v", err)
 		x.strm.SendElement(iq.InternalServerError())
 		return
 	}
+
+	resultIQ := iq.ResultIQ()
 	if resElem != nil {
 		resultIQ.AppendElement(resElem)
 	} else {
