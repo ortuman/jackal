@@ -61,7 +61,7 @@ func (s *server) start() {
 
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("%v", err)
+		log.Fatalf("%v", err)
 		return
 	}
 	for {

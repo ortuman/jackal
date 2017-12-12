@@ -11,6 +11,8 @@ import (
 
 	"github.com/ortuman/jackal/concurrent"
 
+	"time"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/version"
@@ -33,7 +35,14 @@ type XEPVersion struct {
 }
 
 func NewXEPVersion(config *config.ModVersion, strm Stream) *XEPVersion {
-	x := &XEPVersion{cfg: config, strm: strm}
+	x := &XEPVersion{
+		queue: concurrent.OperationQueue{
+			QueueSize: 32,
+			Timeout:   time.Second,
+		},
+		cfg:  config,
+		strm: strm,
+	}
 	return x
 }
 

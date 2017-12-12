@@ -6,6 +6,8 @@
 package module
 
 import (
+	"time"
+
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
@@ -20,7 +22,13 @@ type XEPVCard struct {
 }
 
 func NewXEPVCard(strm Stream) *XEPVCard {
-	v := &XEPVCard{strm: strm}
+	v := &XEPVCard{
+		queue: concurrent.OperationQueue{
+			QueueSize: 32,
+			Timeout:   time.Second,
+		},
+		strm: strm,
+	}
 	return v
 }
 

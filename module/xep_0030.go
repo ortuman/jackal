@@ -8,6 +8,8 @@ package module
 import (
 	"sort"
 
+	"time"
+
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/xml"
 )
@@ -38,7 +40,13 @@ type XEPDiscoInfo struct {
 }
 
 func NewXEPDiscoInfo(strm Stream) *XEPDiscoInfo {
-	x := &XEPDiscoInfo{strm: strm}
+	x := &XEPDiscoInfo{
+		queue: concurrent.OperationQueue{
+			QueueSize: 32,
+			Timeout:   time.Second,
+		},
+		strm: strm,
+	}
 	return x
 }
 

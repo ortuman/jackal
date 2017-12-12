@@ -29,6 +29,9 @@ var (
 func Manager() *StreamManager {
 	once.Do(func() {
 		instance = &StreamManager{
+			queue: concurrent.OperationQueue{
+				QueueSize: 1000,
+			},
 			strms:       make(map[string]*Stream),
 			authedStrms: make(map[string][]*Stream),
 		}
