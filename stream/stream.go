@@ -8,6 +8,7 @@ package stream
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -170,6 +171,12 @@ func (s *Stream) initializeXEPs() {
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	discoInfo := module.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
+
+	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
+	fmt.Println(s.cfg.ModVCard)
+	if s.cfg.ModVCard != nil {
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
+	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if s.cfg.ModVersion != nil {
@@ -782,11 +789,9 @@ func (s *Stream) streamDefaultNamespace() string {
 		return "jabber:client"
 	case config.S2S:
 		return "jabber:server"
-	default:
-		// should not be reached
-		log.Fatalf("unrecognized server type: %s", s.cfg.Type)
-		return ""
 	}
+	// should not be reached
+	return ""
 }
 
 func (s *Stream) writeElement(elem xml.Serializable) {
