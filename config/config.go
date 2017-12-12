@@ -11,8 +11,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Debug struct {
+	Port int `yaml:"port"`
+}
+
 type Config struct {
 	PIDFile string `yaml:"pid_path"`
+
+	Debug *Debug `yaml:"debug"`
 
 	Logger  Logger   `yaml:"logger"`
 	Storage Storage  `yaml:"storage"`

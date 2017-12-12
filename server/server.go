@@ -8,8 +8,12 @@ package server
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"sync/atomic"
+
+	// pprof
+	_ "net/http/pprof"
 
 	"github.com/ortuman/jackal/stream"
 
@@ -23,6 +27,13 @@ type server struct {
 }
 
 func Initialize() {
+	// initialize debug
+	if config.DefaultConfig.Debug != nil {
+		go func() {
+			http.ListenAndServe(fmt.Sprintf(":%d", config.DefaultConfig.Debug.Port), nil)
+		}()
+	}
+
 	for i := 1; i < len(config.DefaultConfig.Servers); i++ {
 		go initializeServer(&config.DefaultConfig.Servers[i])
 	}

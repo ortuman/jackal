@@ -7,6 +7,7 @@ package log
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -166,7 +167,7 @@ func (l *Logger) loop() {
 		line := fmt.Sprintf("%s %s [%s] %s:%d - %s\n", tm, glyph, abbr, rec.file, rec.line, rec.log)
 
 		if rec.level >= l.level {
-			fmt.Fprint(os.Stdout, line)
+			io.CopyN(os.Stdout, strings.NewReader(line), 16*1024)
 			l.f.WriteString(line)
 		}
 		if rec.level == config.FatalLevel {
