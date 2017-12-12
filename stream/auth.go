@@ -5,9 +5,7 @@
 
 package stream
 
-import (
-	"github.com/ortuman/jackal/xml"
-)
+import "github.com/ortuman/jackal/xml"
 
 const saslNamespace = "urn:ietf:params:xml:ns:xmpp-sasl"
 

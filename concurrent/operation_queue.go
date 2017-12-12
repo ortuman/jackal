@@ -10,12 +10,17 @@ import (
 	"time"
 )
 
+const defaultQueueSize = 256
+
 type operationQueueItem struct {
 	f          func()
 	continueCh chan struct{}
 }
 
 type OperationQueue struct {
+	QueueSize int
+	Timeout   time.Duration
+
 	sync.Mutex
 	items chan operationQueueItem
 }
@@ -36,14 +41,34 @@ func (oq *OperationQueue) Async(f func()) {
 func (oq *OperationQueue) enqueueItem(item operationQueueItem) {
 	oq.Lock()
 	if oq.items == nil {
-		oq.items = make(chan operationQueueItem, 256)
-		go oq.run()
+		var queueSize int
+		if oq.QueueSize > 0 {
+			queueSize = oq.QueueSize
+		} else {
+			queueSize = defaultQueueSize
+		}
+		oq.items = make(chan operationQueueItem, queueSize)
+		go oq.run(oq.Timeout)
 	}
 	oq.items <- item
 	oq.Unlock()
 }
 
-func (oq *OperationQueue) run() {
+func (oq *OperationQueue) run(timeout time.Duration) {
+	if timeout > 0 {
+		oq.processItemsWithTimeout(timeout)
+	} else {
+		oq.processItems()
+	}
+}
+
+func (oq *OperationQueue) processItems() {
+	for {
+		oq.processItem(<-oq.items)
+	}
+}
+
+func (oq *OperationQueue) processItemsWithTimeout(timeout time.Duration) {
 	for {
 		timeout := time.After(time.Second)
 		select {

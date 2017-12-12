@@ -6,18 +6,15 @@
 package stream
 
 import (
-	"github.com/ortuman/jackal/storage/entity"
-
 	"bytes"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
-
+	"fmt"
 	"strings"
 
-	"fmt"
-
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 )

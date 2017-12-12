@@ -14,7 +14,7 @@ import (
 )
 
 func TestAsync(t *testing.T) {
-	queue := concurrent.ExecutorQueue{}
+	queue := concurrent.OperationQueue{}
 	var v int
 	for i := 0; i < 128; i++ {
 		queue.Async(func() {
@@ -31,7 +31,7 @@ func TestAsync(t *testing.T) {
 }
 
 func TestSync(t *testing.T) {
-	queue := concurrent.ExecutorQueue{}
+	queue := concurrent.OperationQueue{}
 	flag := false
 	queue.Sync(func() {
 		flag = true
