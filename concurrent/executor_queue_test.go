@@ -14,7 +14,7 @@ import (
 )
 
 func TestAsync(t *testing.T) {
-	queue := concurrent.Executor{}
+	queue := concurrent.ExecutorQueue{}
 	var v int
 	for i := 0; i < 128; i++ {
 		queue.Async(func() {
@@ -28,4 +28,13 @@ func TestAsync(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 	assert.Equal(t, v, 256)
+}
+
+func TestSync(t *testing.T) {
+	queue := concurrent.ExecutorQueue{}
+	flag := false
+	queue.Sync(func() {
+		flag = true
+	})
+	assert.Equal(t, flag, true)
 }
