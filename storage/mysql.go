@@ -6,8 +6,10 @@
 package storage
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	// driver implementation
 	_ "github.com/go-sql-driver/mysql"
@@ -15,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/entity"
+	"github.com/ortuman/jackal/xml"
 )
 
 const maxTransactionRetries = 4
@@ -62,7 +65,7 @@ func (s *mySQL) FetchUser(username string) (*entity.User, error) {
 	}
 }
 
-func (s *mySQL) InsertOrUpdate(u entity.User) error {
+func (s *mySQL) InsertOrUpdateUser(u entity.User) error {
 	stmt := `` +
 		`INSERT INTO users(username, password, updated_at, created_at)` +
 		`VALUES(?, ?, NOW(), NOW())` +
@@ -92,6 +95,142 @@ func (s *mySQL) DeleteUser(username string) error {
 		}
 		return nil
 	})
+}
+
+func (s *mySQL) UserExists(username string) (bool, error) {
+	row := s.db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username)
+	var count int
+	err := row.Scan(&count)
+	switch err {
+	case nil:
+		return count > 0, nil
+	default:
+		return false, err
+	}
+}
+
+func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
+	row := s.db.QueryRow("SELECT vcard FROM vcards WHERE username = ?", username)
+	var vCard string
+	err := row.Scan(&vCard)
+	switch err {
+	case nil:
+		parser := xml.NewParser()
+		parser.ParseElements(strings.NewReader(vCard))
+		return parser.PopElement(), nil
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
+func (s *mySQL) InsertOrUpdateVCard(vCard *xml.Element, username string) error {
+	stmt := `` +
+		`INSERT INTO vcards(username, vcard, updated_at, created_at)` +
+		`VALUES(?, ?, NOW(), NOW())` +
+		`ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()`
+	rawXML := vCard.XML(true)
+	_, err := s.db.Exec(stmt, username, rawXML, rawXML)
+	return err
+}
+
+func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Element, error) {
+	row := s.db.QueryRow("SELECT data FROM private_storage WHERE username = ? AND namespace = ?", username)
+	var privateXML string
+	err := row.Scan(&privateXML)
+	switch err {
+	case nil:
+		parser := xml.NewParser()
+		parser.ParseElements(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
+		rootEl := parser.PopElement()
+		if rootEl != nil {
+			return rootEl.Elements(), nil
+		}
+		fallthrough
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
+func (s *mySQL) InsertOrUpdatePrivateXML(privateXML []*xml.Element, namespace string, username string) error {
+	stmt := `` +
+		`INSERT INTO private_storage(username, namespace, data, updated_at, created_at)` +
+		`VALUES(?, ?, ?, NOW(), NOW())` +
+		`ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()`
+
+	buf := new(bytes.Buffer)
+	for _, elem := range privateXML {
+		buf.WriteString(elem.XML(true))
+	}
+	rawXML := buf.String()
+	_, err := s.db.Exec(stmt, username, namespace, rawXML, rawXML)
+	return err
+}
+
+func (s *mySQL) InsertOfflineMessage(message *xml.Message, username string) error {
+	stmt := `INSERT INTO offline_messages(username, data, created_at) VALUES(?, ?, NOW())`
+	_, err := s.db.Exec(stmt, username, message.XML(true))
+	return err
+}
+
+func (s *mySQL) CountOfflineMessages(username string) (int, error) {
+	row := s.db.QueryRow("SELECT COUNT(*) FROM offline_messages WHERE username = ? ORDER BY created_at", username)
+	var count int
+	err := row.Scan(&count)
+	switch err {
+	case nil:
+		return count, nil
+	default:
+		return 0, err
+	}
+}
+
+func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Message, error) {
+	rows, err := s.db.Query("SELECT data FROM offline_messages WHERE username = ? ORDER BY created_at", username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	buf := bytes.NewBufferString("<root>")
+	for rows.Next() {
+		var msg string
+		rows.Scan(&msg)
+		buf.WriteString(msg)
+	}
+	buf.WriteString("</root>")
+
+	parser := xml.NewParser()
+	parser.ParseElements(bytes.NewReader(buf.Bytes()))
+	rootEl := parser.PopElement()
+	if rootEl == nil {
+		return []*xml.Message{}, nil
+	}
+	messages := make([]*xml.Message, 0, cap(rootEl.Elements()))
+	for _, elem := range rootEl.Elements() {
+		fromJid, err := xml.NewJIDString(elem.From(), true)
+		if err != nil {
+			return nil, err
+		}
+		toJid, err := xml.NewJIDString(elem.To(), true)
+		if err != nil {
+			return nil, err
+		}
+		message, err := xml.NewMessage(elem, fromJid, toJid)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, message)
+	}
+	return messages, nil
+}
+
+func (s *mySQL) DeleteOfflineMessages(username string) error {
+	_, err := s.db.Exec("DELETE FROM offline_messages WHERE username = ?", username)
+	return err
 }
 
 func (s *mySQL) inTransaction(f func(tx *sql.Tx) error) error {

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/storage/entity"
+	"github.com/ortuman/jackal/xml"
 
 	"github.com/ortuman/jackal/config"
 )
@@ -17,8 +18,24 @@ type storage interface {
 	// User
 	FetchUser(username string) (*entity.User, error)
 
-	InsertOrUpdate(user entity.User) error
+	InsertOrUpdateUser(user entity.User) error
 	DeleteUser(username string) error
+
+	UserExists(username string) (bool, error)
+
+	// vCard
+	FetchVCard(username string) (*xml.Element, error)
+	InsertOrUpdateVCard(vCard *xml.Element, username string) error
+
+	// Private XML
+	FetchPrivateXML(namespace string, username string) ([]*xml.Element, error)
+	InsertOrUpdatePrivateXML(privateXML []*xml.Element, namespace string, username string) error
+
+	// Offline messages
+	InsertOfflineMessage(message *xml.Message, username string) error
+	CountOfflineMessages(username string) (int, error)
+	FetchOfflineMessages(username string) ([]*xml.Message, error)
+	DeleteOfflineMessages(username string) error
 }
 
 // singleton interface
