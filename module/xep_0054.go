@@ -24,7 +24,7 @@ type XEPVCard struct {
 func NewXEPVCard(strm Stream) *XEPVCard {
 	v := &XEPVCard{
 		queue: concurrent.OperationQueue{
-			QueueSize: 32,
+			QueueSize: 16,
 			Timeout:   time.Second,
 		},
 		strm: strm,
@@ -41,7 +41,7 @@ func (x *XEPVCard) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPVCard) ProcessIQ(iq *xml.IQ) {
-	x.queue.Async(func() {
+	x.queue.Exec(func() {
 		vCard := iq.FindElementNamespace("vCard", vCardNamespace)
 		if iq.IsGet() {
 			x.getVCard(vCard, iq)

@@ -8,14 +8,12 @@ package stream
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/concurrent"
-
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xml"
 )
 
 type StreamManager struct {
-	queue       concurrent.OperationQueue
+	sync.Mutex
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 }
@@ -29,9 +27,6 @@ var (
 func Manager() *StreamManager {
 	once.Do(func() {
 		instance = &StreamManager{
-			queue: concurrent.OperationQueue{
-				QueueSize: 1000,
-			},
 			strms:       make(map[string]*Stream),
 			authedStrms: make(map[string][]*Stream),
 		}
@@ -40,54 +35,49 @@ func Manager() *StreamManager {
 }
 
 func (m *StreamManager) RegisterStream(strm *Stream) {
-	m.queue.Sync(func() {
-		log.Infof("registered stream... (id: %s)", strm.ID())
-		m.strms[strm.ID()] = strm
-	})
+	m.Lock()
+	defer m.Unlock()
+	log.Infof("registered stream... (id: %s)", strm.ID())
+	m.strms[strm.ID()] = strm
 }
 
 func (m *StreamManager) UnregisterStream(strm *Stream) {
-	m.queue.Sync(func() {
-		log.Infof("unregistered stream... (id: %s)", strm.ID())
-		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-			authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
-			if len(authedStrms) == 0 {
-				delete(m.authedStrms, strm.Username())
-			}
+	m.Lock()
+	defer m.Unlock()
+	log.Infof("unregistered stream... (id: %s)", strm.ID())
+	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+		authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
+		if len(authedStrms) == 0 {
+			delete(m.authedStrms, strm.Username())
 		}
-	})
+	}
 }
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
-	m.queue.Sync(func() {
-		log.Infof("authenticated stream... (username: %s)", strm.Username())
-		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-			m.authedStrms[strm.Username()] = append(authedStrms, strm)
-		} else {
-			m.authedStrms[strm.Username()] = []*Stream{strm}
-		}
-	})
+	m.Lock()
+	defer m.Unlock()
+	log.Infof("authenticated stream... (username: %s)", strm.Username())
+	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+		m.authedStrms[strm.Username()] = append(authedStrms, strm)
+	} else {
+		m.authedStrms[strm.Username()] = []*Stream{strm}
+	}
 }
 
 func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
-	ch := make(chan bool)
-	m.queue.Async(func() {
-		if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-			for _, authedStrm := range authedStrms {
-				if authedStrm.Resource() == resource {
-					ch <- false
-					return
-				}
+	m.Lock()
+	defer m.Unlock()
+	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+		for _, authedStrm := range authedStrms {
+			if authedStrm.Resource() == resource {
+				return false
 			}
-			ch <- true
 		}
-	})
-	return <-ch
+	}
+	return true
 }
 
 func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
-	m.queue.Async(func() {
-	})
 }
 
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {

@@ -12,33 +12,19 @@ import (
 
 const defaultQueueSize = 256
 
-type operationQueueItem struct {
-	f          func()
-	continueCh chan struct{}
-}
-
 type OperationQueue struct {
 	QueueSize int
 	Timeout   time.Duration
 
 	sync.Mutex
-	items chan operationQueueItem
+	items chan func()
 }
 
-func (oq *OperationQueue) Sync(f func()) {
-	item := operationQueueItem{
-		f:          f,
-		continueCh: make(chan struct{}),
-	}
-	oq.enqueueItem(item)
-	<-item.continueCh
+func (oq *OperationQueue) Exec(f func()) {
+	oq.enqueueItem(f)
 }
 
-func (oq *OperationQueue) Async(f func()) {
-	oq.enqueueItem(operationQueueItem{f: f})
-}
-
-func (oq *OperationQueue) enqueueItem(item operationQueueItem) {
+func (oq *OperationQueue) enqueueItem(item func()) {
 	oq.Lock()
 	if oq.items == nil {
 		var queueSize int
@@ -47,7 +33,7 @@ func (oq *OperationQueue) enqueueItem(item operationQueueItem) {
 		} else {
 			queueSize = defaultQueueSize
 		}
-		oq.items = make(chan operationQueueItem, queueSize)
+		oq.items = make(chan func(), queueSize)
 		go oq.run(oq.Timeout)
 	}
 	oq.items <- item
@@ -64,7 +50,8 @@ func (oq *OperationQueue) run(timeout time.Duration) {
 
 func (oq *OperationQueue) processItems() {
 	for {
-		oq.processItem(<-oq.items)
+		f := <-oq.items
+		f()
 	}
 }
 
@@ -72,16 +59,16 @@ func (oq *OperationQueue) processItemsWithTimeout(timeout time.Duration) {
 	for {
 		timeout := time.After(time.Second)
 		select {
-		case item := <-oq.items:
-			oq.processItem(item)
+		case f := <-oq.items:
+			f()
 
 		case <-timeout:
 			oq.Lock()
 			// try reading after locking...
 			select {
-			case item := <-oq.items:
+			case f := <-oq.items:
 				oq.Unlock()
-				oq.processItem(item)
+				f()
 				continue
 			default:
 				close(oq.items)
@@ -90,12 +77,5 @@ func (oq *OperationQueue) processItemsWithTimeout(timeout time.Duration) {
 				return
 			}
 		}
-	}
-}
-
-func (oq *OperationQueue) processItem(item operationQueueItem) {
-	item.f()
-	if item.continueCh != nil {
-		close(item.continueCh)
 	}
 }

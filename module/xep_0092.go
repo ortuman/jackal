@@ -37,7 +37,7 @@ type XEPVersion struct {
 func NewXEPVersion(config *config.ModVersion, strm Stream) *XEPVersion {
 	x := &XEPVersion{
 		queue: concurrent.OperationQueue{
-			QueueSize: 32,
+			QueueSize: 16,
 			Timeout:   time.Second,
 		},
 		cfg:  config,
@@ -55,7 +55,7 @@ func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
-	x.queue.Async(func() {
+	x.queue.Exec(func() {
 		q := iq.FindElementNamespace("query", versionNamespace)
 		if q.ElementsCount() != 0 {
 			x.strm.SendElement(iq.BadRequestError())
