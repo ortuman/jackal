@@ -35,33 +35,37 @@ func Manager() *StreamManager {
 }
 
 func (m *StreamManager) RegisterStream(strm *Stream) {
-	m.Lock()
-	defer m.Unlock()
 	log.Infof("registered stream... (id: %s)", strm.ID())
+
+	m.Lock()
 	m.strms[strm.ID()] = strm
+	m.Unlock()
 }
 
 func (m *StreamManager) UnregisterStream(strm *Stream) {
-	m.Lock()
-	defer m.Unlock()
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
+
+	m.Lock()
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
 		if len(authedStrms) == 0 {
 			delete(m.authedStrms, strm.Username())
 		}
 	}
+	delete(m.strms, strm.ID())
+	m.Unlock()
 }
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
-	m.Lock()
-	defer m.Unlock()
 	log.Infof("authenticated stream... (username: %s)", strm.Username())
+
+	m.Lock()
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		m.authedStrms[strm.Username()] = append(authedStrms, strm)
 	} else {
 		m.authedStrms[strm.Username()] = []*Stream{strm}
 	}
+	m.Unlock()
 }
 
 func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
