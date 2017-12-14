@@ -17,12 +17,12 @@ func TestAsync(t *testing.T) {
 	queue := concurrent.OperationQueue{}
 	var v int
 	for i := 0; i < 128; i++ {
-		queue.Exec(func() {
+		queue.Async(func() {
 			v++
 		})
 	}
 	for i := 0; i < 128; i++ {
-		queue.Exec(func() {
+		queue.Async(func() {
 			v++
 		})
 	}

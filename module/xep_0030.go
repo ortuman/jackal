@@ -10,8 +10,6 @@ import (
 
 	"time"
 
-	"sync"
-
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/xml"
 )
@@ -34,7 +32,6 @@ type DiscoIdentity struct {
 }
 
 type XEPDiscoInfo struct {
-	sync.RWMutex
 	queue      concurrent.OperationQueue
 	strm       Stream
 	identities []DiscoIdentity
@@ -54,39 +51,39 @@ func NewXEPDiscoInfo(strm Stream) *XEPDiscoInfo {
 }
 
 func (x *XEPDiscoInfo) Identities() []DiscoIdentity {
-	x.RLock()
-	defer x.RUnlock()
-	return x.identities
+	ch := make(chan []DiscoIdentity)
+	x.queue.Async(func() {
+		ch <- x.identities
+	})
+	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetIdentities(identities []DiscoIdentity) {
-	x.Lock()
-	defer x.Unlock()
-	x.identities = identities
+	x.queue.Sync(func() { x.identities = identities })
 }
 
 func (x *XEPDiscoInfo) Features() []string {
-	x.RLock()
-	defer x.RUnlock()
-	return x.features
+	ch := make(chan []string)
+	x.queue.Async(func() {
+		ch <- x.features
+	})
+	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetFeatures(features []string) {
-	x.Lock()
-	defer x.Unlock()
-	x.features = features
+	x.queue.Sync(func() { x.features = features })
 }
 
 func (x *XEPDiscoInfo) Items() []DiscoItem {
-	x.RLock()
-	defer x.RUnlock()
-	return x.items
+	ch := make(chan []DiscoItem)
+	x.queue.Async(func() {
+		ch <- x.items
+	})
+	return <-ch
 }
 
 func (x *XEPDiscoInfo) SetItems(items []DiscoItem) {
-	x.Lock()
-	defer x.Unlock()
-	x.items = items
+	x.queue.Sync(func() { x.items = items })
 }
 
 func (x *XEPDiscoInfo) AssociatedNamespaces() []string {
@@ -102,7 +99,7 @@ func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
-	x.queue.Exec(func() {
+	x.queue.Async(func() {
 		if !iq.ToJID().IsServer() {
 			x.strm.SendElement(iq.FeatureNotImplementedError())
 			return
@@ -123,7 +120,6 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 	result := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", discoInfoNamespace)
 
-	x.RLock()
 	for _, identity := range x.identities {
 		identityEl := xml.NewMutableElementName("identity")
 		identityEl.SetAttribute("category", identity.Category)
@@ -140,7 +136,6 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 		featureEl.SetAttribute("var", feature)
 		query.AppendElement(featureEl.Copy())
 	}
-	x.RUnlock()
 
 	result.AppendElement(query.Copy())
 	x.strm.SendElement(query)
@@ -150,7 +145,6 @@ func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
 	result := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", discoItemsNamespace)
 
-	x.RLock()
 	for _, item := range x.items {
 		itemEl := xml.NewMutableElementName("item")
 		itemEl.SetAttribute("jid", item.Jid)
@@ -162,7 +156,6 @@ func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
 		}
 		query.AppendElement(itemEl.Copy())
 	}
-	x.RUnlock()
 
 	result.AppendElement(query.Copy())
 	x.strm.SendElement(query)

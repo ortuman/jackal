@@ -20,7 +20,17 @@ type OperationQueue struct {
 	items chan func()
 }
 
-func (oq *OperationQueue) Exec(f func()) {
+func (oq *OperationQueue) Sync(f func()) {
+	ch := make(chan struct{})
+	fWait := func() {
+		f()
+		close(ch)
+	}
+	oq.enqueueItem(fWait)
+	<-ch
+}
+
+func (oq *OperationQueue) Async(f func()) {
 	oq.enqueueItem(f)
 }
 
@@ -57,7 +67,7 @@ func (oq *OperationQueue) processItems() {
 
 func (oq *OperationQueue) processItemsWithTimeout(timeout time.Duration) {
 	for {
-		timeout := time.After(time.Second)
+		timeout := time.After(timeout)
 		select {
 		case f := <-oq.items:
 			f()
