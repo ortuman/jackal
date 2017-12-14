@@ -510,7 +510,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		resource = uuid.New()
 	}
 	// try binding...
-	if !Manager().IsResourceAvailableForStream(resource, s) {
+	if !Manager().IsResourceAvailable(resource, s) {
 		s.writeElement(iq.ConflictError())
 		return
 	}

@@ -12,10 +12,26 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+type resourceAvailableReq struct {
+	resource string
+	strm     *Stream
+	resultCh chan bool
+}
+
+type sendRequest struct {
+	stanza xml.Stanza
+	from   *Stream
+}
+
 type StreamManager struct {
-	sync.Mutex
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
+
+	regCh      chan *Stream
+	unregCh    chan *Stream
+	authCh     chan *Stream
+	resAvailCh chan *resourceAvailableReq
+	sendCh     chan *sendRequest
 }
 
 // singleton interface
@@ -29,23 +45,71 @@ func Manager() *StreamManager {
 		instance = &StreamManager{
 			strms:       make(map[string]*Stream),
 			authedStrms: make(map[string][]*Stream),
+			regCh:       make(chan *Stream),
+			unregCh:     make(chan *Stream),
+			authCh:      make(chan *Stream),
+			resAvailCh:  make(chan *resourceAvailableReq),
+			sendCh:      make(chan *sendRequest, 1000),
 		}
+		go instance.loop()
 	})
 	return instance
 }
 
 func (m *StreamManager) RegisterStream(strm *Stream) {
-	log.Infof("registered stream... (id: %s)", strm.ID())
-
-	m.Lock()
-	m.strms[strm.ID()] = strm
-	m.Unlock()
+	m.regCh <- strm
 }
 
 func (m *StreamManager) UnregisterStream(strm *Stream) {
+	m.unregCh <- strm
+}
+
+func (m *StreamManager) AuthenticateStream(strm *Stream) {
+	m.authCh <- strm
+}
+
+func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
+	req := &resourceAvailableReq{
+		resource: resource,
+		strm:     strm,
+		resultCh: make(chan bool),
+	}
+	m.resAvailCh <- req
+	return <-req.resultCh
+}
+
+func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
+	m.sendCh <- &sendRequest{
+		stanza: stanza,
+		from:   from,
+	}
+}
+
+func (m *StreamManager) loop() {
+	for {
+		select {
+		case req := <-m.sendCh:
+			m.send(req.stanza, req.from)
+		case strm := <-m.regCh:
+			m.registerStream(strm)
+		case strm := <-m.unregCh:
+			m.unregisterStream(strm)
+		case strm := <-m.authCh:
+			m.authenticateStream(strm)
+		case req := <-m.resAvailCh:
+			req.resultCh <- m.isResourceAvailable(req.resource, req.strm)
+		}
+	}
+}
+
+func (m *StreamManager) registerStream(strm *Stream) {
+	log.Infof("registered stream... (id: %s)", strm.ID())
+	m.strms[strm.ID()] = strm
+}
+
+func (m *StreamManager) unregisterStream(strm *Stream) {
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
 
-	m.Lock()
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
 		if len(authedStrms) == 0 {
@@ -53,24 +117,19 @@ func (m *StreamManager) UnregisterStream(strm *Stream) {
 		}
 	}
 	delete(m.strms, strm.ID())
-	m.Unlock()
 }
 
-func (m *StreamManager) AuthenticateStream(strm *Stream) {
+func (m *StreamManager) authenticateStream(strm *Stream) {
 	log.Infof("authenticated stream... (username: %s)", strm.Username())
 
-	m.Lock()
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		m.authedStrms[strm.Username()] = append(authedStrms, strm)
 	} else {
 		m.authedStrms[strm.Username()] = []*Stream{strm}
 	}
-	m.Unlock()
 }
 
-func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stream) bool {
-	m.Lock()
-	defer m.Unlock()
+func (m *StreamManager) isResourceAvailable(resource string, strm *Stream) bool {
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		for _, authedStrm := range authedStrms {
 			if authedStrm.Resource() == resource {
@@ -81,7 +140,7 @@ func (m *StreamManager) IsResourceAvailableForStream(resource string, strm *Stre
 	return true
 }
 
-func (m *StreamManager) Send(stanza xml.Stanza, from *Stream) {
+func (m *StreamManager) send(stanza xml.Stanza, from *Stream) {
 }
 
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {
