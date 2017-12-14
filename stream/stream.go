@@ -13,12 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fmt"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -611,7 +608,6 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 func (s *Stream) processMessage(message *xml.Message) {
 	Manager().Send(message, func(stanza xml.Stanza, sent bool) {
 		if s.offline != nil {
-			fmt.Println("KK")
 			s.offline.ArchiveMessage(message)
 		}
 	})
@@ -663,31 +659,6 @@ func (s *Stream) loop() {
 				s.disconnect(false)
 			}
 		}
-	}
-}
-
-func (s *Stream) archiveMessage(message *xml.Message) {
-	toJid := message.ToJID()
-	queueSize, err := storage.Instance().CountOfflineMessages(toJid.Node())
-	if err != nil {
-		log.Errorf("%v", err)
-		return
-	}
-	exists, err := storage.Instance().UserExists(toJid.Node())
-	if err != nil {
-		log.Errorf("%v", err)
-		return
-	}
-	if !exists || queueSize >= s.cfg.ModOffline.QueueSize {
-		response := message.MutableCopy()
-		response.SetFrom(toJid.String())
-		response.SetTo(s.MyJID().String())
-		s.writeElement(response.ServiceUnavailableError())
-		return
-	}
-	delayed := message.Delayed(s.Domain(), "Offline Storage")
-	if err := storage.Instance().InsertOfflineMessage(delayed, toJid.Node()); err != nil {
-		log.Errorf("%v", err)
 	}
 }
 
