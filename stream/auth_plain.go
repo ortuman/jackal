@@ -14,12 +14,12 @@ import (
 )
 
 type plainAuthenticator struct {
-	strm          *Stream
+	strm          *C2SStream
 	username      string
 	authenticated bool
 }
 
-func newPlainAuthenticator(strm *Stream) authenticator {
+func newPlainAuthenticator(strm *C2SStream) authenticator {
 	return &plainAuthenticator{strm: strm}
 }
 

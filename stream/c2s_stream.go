@@ -38,7 +38,7 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
-type Stream struct {
+type C2SStream struct {
 	sync.RWMutex
 	cfg           *config.Server
 	connected     uint32
@@ -64,8 +64,8 @@ type Stream struct {
 	discCh  chan error
 }
 
-func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
-	s := &Stream{
+func NewStreamSocket(id string, conn net.Conn, config *config.Server) *C2SStream {
+	s := &C2SStream{
 		cfg:     config,
 		id:      id,
 		parser:  xml.NewParser(),
@@ -94,65 +94,65 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	return s
 }
 
-func (s *Stream) ID() string {
+func (s *C2SStream) ID() string {
 	return s.id
 }
 
-func (s *Stream) Username() string {
+func (s *C2SStream) Username() string {
 	s.RLock()
 	defer s.RUnlock()
 	return s.username
 }
 
-func (s *Stream) Domain() string {
+func (s *C2SStream) Domain() string {
 	s.RLock()
 	defer s.RUnlock()
 	return s.domain
 }
 
-func (s *Stream) Resource() string {
+func (s *C2SStream) Resource() string {
 	s.RLock()
 	defer s.RUnlock()
 	return s.resource
 }
 
-func (s *Stream) Authenticated() bool {
+func (s *C2SStream) Authenticated() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.authenticated
 }
 
-func (s *Stream) Secured() bool {
+func (s *C2SStream) Secured() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.secured
 }
 
-func (s *Stream) Compressed() bool {
+func (s *C2SStream) Compressed() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.compressed
 }
 
-func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
+func (s *C2SStream) ChannelBindingBytes(mechanism string) []byte {
 	return s.tr.ChannelBindingBytes(mechanism)
 }
 
-func (s *Stream) SendElements(elems []xml.Serializable) {
+func (s *C2SStream) SendElements(elems []xml.Serializable) {
 	for _, e := range elems {
 		s.SendElement(e)
 	}
 }
 
-func (s *Stream) SendElement(elem xml.Serializable) {
+func (s *C2SStream) SendElement(elem xml.Serializable) {
 	s.writeCh <- []byte(elem.XML(true))
 }
 
-func (s *Stream) Disconnect(err error) {
+func (s *C2SStream) Disconnect(err error) {
 	s.discCh <- err
 }
 
-func (s *Stream) initializeAuthenticators() {
+func (s *C2SStream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
 		case "plain":
@@ -170,7 +170,7 @@ func (s *Stream) initializeAuthenticators() {
 	}
 }
 
-func (s *Stream) initializeXEPs() {
+func (s *C2SStream) initializeXEPs() {
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	discoInfo := module.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
@@ -206,7 +206,7 @@ func (s *Stream) initializeXEPs() {
 	discoInfo.SetFeatures(features)
 }
 
-func (s *Stream) startConnectTimeoutTimer(timeout int) {
+func (s *C2SStream) startConnectTimeoutTimer(timeout int) {
 	go func() {
 		tr := time.NewTimer(time.Second * time.Duration(timeout))
 		<-tr.C
@@ -217,7 +217,7 @@ func (s *Stream) startConnectTimeoutTimer(timeout int) {
 	}()
 }
 
-func (s *Stream) handleElement(elem *xml.Element) {
+func (s *C2SStream) handleElement(elem *xml.Element) {
 	switch s.state() {
 	case connecting:
 		s.handleConnecting(elem)
@@ -234,7 +234,7 @@ func (s *Stream) handleElement(elem *xml.Element) {
 	}
 }
 
-func (s *Stream) handleConnecting(elem *xml.Element) {
+func (s *C2SStream) handleConnecting(elem *xml.Element) {
 	// activate 'connected' flag
 	atomic.StoreUint32(&s.connected, 1)
 
@@ -316,7 +316,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 	s.writeElement(features.Copy())
 }
 
-func (s *Stream) handleConnected(elem *xml.Element) {
+func (s *C2SStream) handleConnected(elem *xml.Element) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
@@ -334,7 +334,7 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 	}
 }
 
-func (s *Stream) handleAuthenticating(elem *xml.Element) {
+func (s *C2SStream) handleAuthenticating(elem *xml.Element) {
 	if elem.Namespace() != saslNamespace {
 		s.disconnectWithStreamError(ErrInvalidNamespace)
 		return
@@ -346,7 +346,7 @@ func (s *Stream) handleAuthenticating(elem *xml.Element) {
 	}
 }
 
-func (s *Stream) handleAuthenticated(elem *xml.Element) {
+func (s *C2SStream) handleAuthenticated(elem *xml.Element) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
@@ -370,7 +370,7 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 	}
 }
 
-func (s *Stream) handleSessionStarted(elem *xml.Element) {
+func (s *C2SStream) handleSessionStarted(elem *xml.Element) {
 	stanza, err := s.buildStanza(elem)
 	if err != nil {
 		s.handleElementError(elem, err)
@@ -389,7 +389,7 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 	}
 }
 
-func (s *Stream) proceedStartTLS() {
+func (s *C2SStream) proceedStartTLS() {
 	if s.Secured() {
 		s.disconnectWithStreamError(ErrNotAuthorized)
 		return
@@ -416,7 +416,7 @@ func (s *Stream) proceedStartTLS() {
 	s.restart()
 }
 
-func (s *Stream) compress(elem *xml.Element) {
+func (s *C2SStream) compress(elem *xml.Element) {
 	if s.Compressed() {
 		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
 		return
@@ -445,7 +445,7 @@ func (s *Stream) compress(elem *xml.Element) {
 	s.restart()
 }
 
-func (s *Stream) startAuthentication(elem *xml.Element) {
+func (s *C2SStream) startAuthentication(elem *xml.Element) {
 	mechanism := elem.Attribute("mechanism")
 	for _, authr := range s.authrs {
 		if authr.Mechanism() == mechanism {
@@ -468,7 +468,7 @@ func (s *Stream) startAuthentication(elem *xml.Element) {
 	s.writeElement(failure.Copy())
 }
 
-func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) error {
+func (s *C2SStream) continueAuthentication(elem *xml.Element, authr authenticator) error {
 	err := authr.ProcessElement(elem)
 	if saslErr, ok := err.(saslError); ok {
 		s.failAuthentication(saslErr.Element())
@@ -479,7 +479,7 @@ func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) 
 	return err
 }
 
-func (s *Stream) finishAuthentication(username string) {
+func (s *C2SStream) finishAuthentication(username string) {
 	if s.activeAuthr != nil {
 		s.activeAuthr.Reset()
 		s.activeAuthr = nil
@@ -494,7 +494,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.restart()
 }
 
-func (s *Stream) failAuthentication(elem *xml.Element) {
+func (s *C2SStream) failAuthentication(elem *xml.Element) {
 	failure := xml.NewMutableElementNamespace("failure", saslNamespace)
 	failure.AppendElement(elem)
 	s.writeElement(failure.Copy())
@@ -506,7 +506,7 @@ func (s *Stream) failAuthentication(elem *xml.Element) {
 	s.setState(connected)
 }
 
-func (s *Stream) bindResource(iq *xml.IQ) {
+func (s *C2SStream) bindResource(iq *xml.IQ) {
 	bind := iq.FindElementNamespace("bind", bindNamespace)
 	if bind == nil {
 		s.writeElement(iq.NotAllowedError())
@@ -546,7 +546,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 	s.writeElement(result.Copy())
 }
 
-func (s *Stream) startSession(iq *xml.IQ) {
+func (s *C2SStream) startSession(iq *xml.IQ) {
 	sess := iq.FindElementNamespace("session", sessionNamespace)
 	if sess == nil {
 		s.writeElement(iq.NotAllowedError())
@@ -556,7 +556,7 @@ func (s *Stream) startSession(iq *xml.IQ) {
 	s.setState(sessionStarted)
 }
 
-func (s *Stream) processStanza(stanza xml.Stanza) {
+func (s *C2SStream) processStanza(stanza xml.Stanza) {
 	if iq, ok := stanza.(*xml.IQ); ok {
 		s.processIQ(iq)
 	} else if presence, ok := stanza.(*xml.Presence); ok {
@@ -566,10 +566,10 @@ func (s *Stream) processStanza(stanza xml.Stanza) {
 	}
 }
 
-func (s *Stream) processComponentStanza(stanza xml.Stanza) {
+func (s *C2SStream) processComponentStanza(stanza xml.Stanza) {
 }
 
-func (s *Stream) processIQ(iq *xml.IQ) {
+func (s *C2SStream) processIQ(iq *xml.IQ) {
 	if iq.ToJID().IsFull() {
 		Manager().Send(iq, s)
 		return
@@ -587,18 +587,18 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 	s.writeElement(iq.ServiceUnavailableError())
 }
 
-func (s *Stream) processPresence(presence *xml.Presence) {
+func (s *C2SStream) processPresence(presence *xml.Presence) {
 }
 
-func (s *Stream) processMessage(message *xml.Message) {
+func (s *C2SStream) processMessage(message *xml.Message) {
 }
 
-func (s *Stream) restart() {
+func (s *C2SStream) restart() {
 	s.setState(connecting)
 	s.parser = xml.NewParser()
 }
 
-func (s *Stream) loop() {
+func (s *C2SStream) loop() {
 	s.doRead() // start reading transport...
 	for {
 		// stop looping after disconnecting stream
@@ -642,7 +642,7 @@ func (s *Stream) loop() {
 	}
 }
 
-func (s *Stream) doRead() {
+func (s *C2SStream) doRead() {
 	go func() {
 		b, err := s.tr.Read()
 		switch err {
@@ -659,7 +659,7 @@ func (s *Stream) doRead() {
 	}()
 }
 
-func (s *Stream) openStreamElement() {
+func (s *C2SStream) openStreamElement() {
 	ops := xml.NewMutableElementName("stream:stream")
 	ops.SetAttribute("xmlns", s.streamDefaultNamespace())
 	ops.SetAttribute("xmlns:stream", streamNamespace)
@@ -671,7 +671,7 @@ func (s *Stream) openStreamElement() {
 	s.writeBytesAndWait([]byte(ops.XML(false)))
 }
 
-func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
+func (s *C2SStream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, err
 	}
@@ -705,7 +705,7 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 	return nil, ErrUnsupportedStanzaType
 }
 
-func (s *Stream) handleElementError(elem *xml.Element, err error) {
+func (s *C2SStream) handleElementError(elem *xml.Element, err error) {
 	if streamErr, ok := err.(*Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
@@ -715,7 +715,7 @@ func (s *Stream) handleElementError(elem *xml.Element, err error) {
 	}
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
+func (s *C2SStream) validateStreamElement(elem *xml.Element) *Error {
 	if elem.Name() != "stream:stream" {
 		return ErrUnsupportedStanzaType
 	}
@@ -732,7 +732,7 @@ func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
 	return nil
 }
 
-func (s *Stream) validateNamespace(elem *xml.Element) *Error {
+func (s *C2SStream) validateNamespace(elem *xml.Element) *Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
 		return nil
@@ -740,7 +740,7 @@ func (s *Stream) validateNamespace(elem *xml.Element) *Error {
 	return ErrInvalidNamespace
 }
 
-func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
+func (s *C2SStream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
@@ -761,7 +761,7 @@ func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *x
 	return
 }
 
-func (s *Stream) isValidFrom(from string) bool {
+func (s *C2SStream) isValidFrom(from string) bool {
 	validFrom := false
 	j, err := xml.NewJIDString(from, false)
 	if err == nil && j != nil {
@@ -777,7 +777,7 @@ func (s *Stream) isValidFrom(from string) bool {
 	return validFrom
 }
 
-func (s *Stream) isValidDomain(domain string) bool {
+func (s *C2SStream) isValidDomain(domain string) bool {
 	for i := 0; i < len(s.cfg.Domains); i++ {
 		if s.cfg.Domains[i] == domain {
 			return true
@@ -786,11 +786,11 @@ func (s *Stream) isValidDomain(domain string) bool {
 	return false
 }
 
-func (s *Stream) isComponentDomain(domain string) bool {
+func (s *C2SStream) isComponentDomain(domain string) bool {
 	return false
 }
 
-func (s *Stream) streamDefaultNamespace() string {
+func (s *C2SStream) streamDefaultNamespace() string {
 	switch s.cfg.Type {
 	case config.C2S:
 		return "jabber:client"
@@ -801,25 +801,25 @@ func (s *Stream) streamDefaultNamespace() string {
 	return ""
 }
 
-func (s *Stream) writeElement(elem xml.Serializable) {
+func (s *C2SStream) writeElement(elem xml.Serializable) {
 	s.writeBytes([]byte(elem.XML(true)))
 }
 
-func (s *Stream) writeElementAndWait(elem xml.Serializable) {
+func (s *C2SStream) writeElementAndWait(elem xml.Serializable) {
 	s.writeBytesAndWait([]byte(elem.XML(true)))
 }
 
-func (s *Stream) writeBytes(b []byte) {
+func (s *C2SStream) writeBytes(b []byte) {
 	log.Debugf("SEND: %s", string(b))
 	s.tr.Write(b)
 }
 
-func (s *Stream) writeBytesAndWait(b []byte) {
+func (s *C2SStream) writeBytesAndWait(b []byte) {
 	log.Debugf("SEND: %s", string(b))
 	s.tr.WriteAndWait(b)
 }
 
-func (s *Stream) disconnectWithStreamError(err *Error) {
+func (s *C2SStream) disconnectWithStreamError(err *Error) {
 	if s.state() == connecting {
 		s.openStreamElement()
 	}
@@ -827,7 +827,7 @@ func (s *Stream) disconnectWithStreamError(err *Error) {
 	s.disconnect(true)
 }
 
-func (s *Stream) disconnect(closeStream bool) {
+func (s *C2SStream) disconnect(closeStream bool) {
 	if closeStream {
 		s.tr.WriteAndWait([]byte("</stream:stream>"))
 	}
@@ -838,10 +838,10 @@ func (s *Stream) disconnect(closeStream bool) {
 	Manager().UnregisterStream(s)
 }
 
-func (s *Stream) state() int32 {
+func (s *C2SStream) state() int32 {
 	return atomic.LoadInt32(&s.st)
 }
 
-func (s *Stream) setState(state int32) {
+func (s *C2SStream) setState(state int32) {
 	atomic.StoreInt32(&s.st, state)
 }
