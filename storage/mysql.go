@@ -170,7 +170,7 @@ func (s *mySQL) InsertOrUpdatePrivateXML(privateXML []*xml.Element, namespace st
 	return err
 }
 
-func (s *mySQL) InsertOfflineMessage(message *xml.Message, username string) error {
+func (s *mySQL) InsertOfflineMessage(message *xml.Element, username string) error {
 	stmt := `INSERT INTO offline_messages(username, data, created_at) VALUES(?, ?, NOW())`
 	_, err := s.db.Exec(stmt, username, message.XML(true))
 	return err
@@ -188,7 +188,7 @@ func (s *mySQL) CountOfflineMessages(username string) (int, error) {
 	}
 }
 
-func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Message, error) {
+func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Element, error) {
 	rows, err := s.db.Query("SELECT data FROM offline_messages WHERE username = ? ORDER BY created_at", username)
 	if err != nil {
 		return nil, err
@@ -207,25 +207,9 @@ func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Message, error) {
 	parser.ParseElements(bytes.NewReader(buf.Bytes()))
 	rootEl := parser.PopElement()
 	if rootEl == nil {
-		return []*xml.Message{}, nil
+		return []*xml.Element{}, nil
 	}
-	messages := make([]*xml.Message, 0, cap(rootEl.Elements()))
-	for _, elem := range rootEl.Elements() {
-		fromJid, err := xml.NewJIDString(elem.From(), true)
-		if err != nil {
-			return nil, err
-		}
-		toJid, err := xml.NewJIDString(elem.To(), true)
-		if err != nil {
-			return nil, err
-		}
-		message, err := xml.NewMessage(elem, fromJid, toJid)
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, message)
-	}
-	return messages, nil
+	return rootEl.Elements(), nil
 }
 
 func (s *mySQL) DeleteOfflineMessages(username string) error {

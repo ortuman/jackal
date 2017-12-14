@@ -12,6 +12,8 @@ type Stream interface {
 	Domain() string
 	Resource() string
 
+	MyJID() *xml.JID
+
 	Authenticated() bool
 
 	SendElement(xml.Serializable)

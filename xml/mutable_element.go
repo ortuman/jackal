@@ -88,13 +88,3 @@ func (m *MutableElement) RemoveElementsNamespace(name, namespace string) {
 func (m *MutableElement) ClearElements() {
 	m.clearElements()
 }
-
-// MutableCopy returns a new instance that’s an mutable copy of the receiver.
-func (m *MutableElement) MutableCopy() *MutableElement {
-	cp := &MutableElement{}
-	cp.name = m.name
-	cp.text = m.text
-	cp.copyAttributes(m.attrs)
-	cp.copyElements(m.elements)
-	return cp
-}

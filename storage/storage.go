@@ -32,9 +32,9 @@ type storage interface {
 	InsertOrUpdatePrivateXML(privateXML []*xml.Element, namespace string, username string) error
 
 	// Offline messages
-	InsertOfflineMessage(message *xml.Message, username string) error
+	InsertOfflineMessage(message *xml.Element, username string) error
 	CountOfflineMessages(username string) (int, error)
-	FetchOfflineMessages(username string) ([]*xml.Message, error)
+	FetchOfflineMessages(username string) ([]*xml.Element, error)
 	DeleteOfflineMessages(username string) error
 }
 

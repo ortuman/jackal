@@ -13,9 +13,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"fmt"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -58,6 +61,8 @@ type Stream struct {
 	activeAuthr authenticator
 
 	iqHandlers []module.IQHandler
+
+	offline *module.Offline
 
 	writeCh chan []byte
 	readCh  chan []byte
@@ -114,6 +119,12 @@ func (s *Stream) Resource() string {
 	s.RLock()
 	defer s.RUnlock()
 	return s.resource
+}
+
+func (s *Stream) MyJID() *xml.JID {
+	s.RLock()
+	defer s.RUnlock()
+	return s.myJID
 }
 
 func (s *Stream) Authenticated() bool {
@@ -202,6 +213,12 @@ func (s *Stream) initializeXEPs() {
 	features := []string{}
 	for _, iqHandler := range s.iqHandlers {
 		features = append(features, iqHandler.AssociatedNamespaces()...)
+	}
+
+	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
+	if s.cfg.ModOffline != nil {
+		s.offline = module.NewOffline(s.cfg.ModOffline, s)
+		features = append(features, s.offline.AssociatedNamespace())
 	}
 	discoInfo.SetFeatures(features)
 }
@@ -571,9 +588,7 @@ func (s *Stream) processComponentStanza(stanza xml.Stanza) {
 
 func (s *Stream) processIQ(iq *xml.IQ) {
 	if iq.ToJID().IsFull() {
-		Manager().Send(iq, func(stanza xml.Stanza, sent bool) {
-
-		})
+		Manager().Send(iq, nil)
 		return
 	}
 
@@ -590,9 +605,16 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 }
 
 func (s *Stream) processPresence(presence *xml.Presence) {
+
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
+	Manager().Send(message, func(stanza xml.Stanza, sent bool) {
+		if s.offline != nil {
+			fmt.Println("KK")
+			s.offline.ArchiveMessage(message)
+		}
+	})
 }
 
 func (s *Stream) restart() {
@@ -641,6 +663,31 @@ func (s *Stream) loop() {
 				s.disconnect(false)
 			}
 		}
+	}
+}
+
+func (s *Stream) archiveMessage(message *xml.Message) {
+	toJid := message.ToJID()
+	queueSize, err := storage.Instance().CountOfflineMessages(toJid.Node())
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+	exists, err := storage.Instance().UserExists(toJid.Node())
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+	if !exists || queueSize >= s.cfg.ModOffline.QueueSize {
+		response := message.MutableCopy()
+		response.SetFrom(toJid.String())
+		response.SetTo(s.MyJID().String())
+		s.writeElement(response.ServiceUnavailableError())
+		return
+	}
+	delayed := message.Delayed(s.Domain(), "Offline Storage")
+	if err := storage.Instance().InsertOfflineMessage(delayed, toJid.Node()); err != nil {
+		log.Errorf("%v", err)
 	}
 }
 

@@ -158,6 +158,16 @@ func (e *Element) Copy() *Element {
 	return cp
 }
 
+// MutableCopy returns a new instance that’s an mutable copy of the receiver.
+func (m *Element) MutableCopy() *MutableElement {
+	cp := &MutableElement{}
+	cp.name = m.name
+	cp.text = m.text
+	cp.copyAttributes(m.attrs)
+	cp.copyElements(m.elements)
+	return cp
+}
+
 // IsError returns true if element has a 'type' attribute of value 'error'.
 func (e *Element) IsError() bool {
 	return e.Type() == "error"
