@@ -17,24 +17,15 @@ func TestAsync(t *testing.T) {
 	queue := concurrent.OperationQueue{}
 	var v int
 	for i := 0; i < 128; i++ {
-		queue.Async(func() {
+		queue.Exec(func() {
 			v++
 		})
 	}
 	for i := 0; i < 128; i++ {
-		queue.Async(func() {
+		queue.Exec(func() {
 			v++
 		})
 	}
 	time.Sleep(time.Second)
 	assert.Equal(t, v, 256)
-}
-
-func TestSync(t *testing.T) {
-	queue := concurrent.OperationQueue{}
-	flag := false
-	queue.Sync(func() {
-		flag = true
-	})
-	assert.Equal(t, flag, true)
 }
