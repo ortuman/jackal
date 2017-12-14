@@ -607,7 +607,7 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 
 func (s *Stream) processMessage(message *xml.Message) {
 	Manager().Send(message, func(stanza xml.Stanza, sent bool) {
-		if s.offline != nil {
+		if !sent && s.offline != nil {
 			s.offline.ArchiveMessage(message)
 		}
 	})

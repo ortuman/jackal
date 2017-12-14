@@ -156,6 +156,7 @@ func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
 		}
 		recipient.SendElement(stanza)
 	}
+	callback(stanza, true)
 }
 
 func removeStreamWithResource(strms []*Stream, resource string) []*Stream {
