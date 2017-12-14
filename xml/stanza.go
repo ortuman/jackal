@@ -6,6 +6,7 @@
 package xml
 
 type Stanza interface {
+	Serializable
 	ToJID() *JID
 	FromJID() *JID
 }

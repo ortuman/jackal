@@ -72,7 +72,7 @@ func (s *scramParameters) String() string {
 }
 
 type scramAuthenticator struct {
-	strm          *C2SStream
+	strm          *Stream
 	tp            scramType
 	usesCb        bool
 	h             func() hash.Hash
@@ -86,7 +86,7 @@ type scramAuthenticator struct {
 	authenticated bool
 }
 
-func newScram(strm *C2SStream, scramType scramType, usesChannelBinding bool) authenticator {
+func newScram(strm *Stream, scramType scramType, usesChannelBinding bool) authenticator {
 	s := &scramAuthenticator{
 		strm:   strm,
 		tp:     scramType,

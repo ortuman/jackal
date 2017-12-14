@@ -12,24 +12,26 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+type SendCallback func(stanza xml.Stanza, sent bool)
+
 type resourceAvailableReq struct {
 	resource string
-	strm     *C2SStream
+	strm     *Stream
 	resultCh chan bool
 }
 
 type sendRequest struct {
-	stanza xml.Stanza
-	from   *C2SStream
+	stanza   xml.Stanza
+	callback SendCallback
 }
 
 type StreamManager struct {
-	strms       map[string]*C2SStream
-	authedStrms map[string][]*C2SStream
+	strms       map[string]*Stream
+	authedStrms map[string][]*Stream
 
-	regCh      chan *C2SStream
-	unregCh    chan *C2SStream
-	authCh     chan *C2SStream
+	regCh      chan *Stream
+	unregCh    chan *Stream
+	authCh     chan *Stream
 	resAvailCh chan *resourceAvailableReq
 	sendCh     chan *sendRequest
 }
@@ -43,11 +45,11 @@ var (
 func Manager() *StreamManager {
 	once.Do(func() {
 		instance = &StreamManager{
-			strms:       make(map[string]*C2SStream),
-			authedStrms: make(map[string][]*C2SStream),
-			regCh:       make(chan *C2SStream),
-			unregCh:     make(chan *C2SStream),
-			authCh:      make(chan *C2SStream),
+			strms:       make(map[string]*Stream),
+			authedStrms: make(map[string][]*Stream),
+			regCh:       make(chan *Stream),
+			unregCh:     make(chan *Stream),
+			authCh:      make(chan *Stream),
 			resAvailCh:  make(chan *resourceAvailableReq),
 			sendCh:      make(chan *sendRequest, 1000),
 		}
@@ -56,19 +58,19 @@ func Manager() *StreamManager {
 	return instance
 }
 
-func (m *StreamManager) RegisterStream(strm *C2SStream) {
+func (m *StreamManager) RegisterStream(strm *Stream) {
 	m.regCh <- strm
 }
 
-func (m *StreamManager) UnregisterStream(strm *C2SStream) {
+func (m *StreamManager) UnregisterStream(strm *Stream) {
 	m.unregCh <- strm
 }
 
-func (m *StreamManager) AuthenticateStream(strm *C2SStream) {
+func (m *StreamManager) AuthenticateStream(strm *Stream) {
 	m.authCh <- strm
 }
 
-func (m *StreamManager) IsResourceAvailable(resource string, strm *C2SStream) bool {
+func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
 	req := &resourceAvailableReq{
 		resource: resource,
 		strm:     strm,
@@ -78,10 +80,10 @@ func (m *StreamManager) IsResourceAvailable(resource string, strm *C2SStream) bo
 	return <-req.resultCh
 }
 
-func (m *StreamManager) Send(stanza xml.Stanza, from *C2SStream) {
+func (m *StreamManager) Send(stanza xml.Stanza, callback SendCallback) {
 	m.sendCh <- &sendRequest{
-		stanza: stanza,
-		from:   from,
+		stanza:   stanza,
+		callback: callback,
 	}
 }
 
@@ -89,7 +91,7 @@ func (m *StreamManager) loop() {
 	for {
 		select {
 		case req := <-m.sendCh:
-			m.send(req.stanza, req.from)
+			m.send(req.stanza, req.callback)
 		case strm := <-m.regCh:
 			m.registerStream(strm)
 		case strm := <-m.unregCh:
@@ -102,12 +104,12 @@ func (m *StreamManager) loop() {
 	}
 }
 
-func (m *StreamManager) registerStream(strm *C2SStream) {
+func (m *StreamManager) registerStream(strm *Stream) {
 	log.Infof("registered stream... (id: %s)", strm.ID())
 	m.strms[strm.ID()] = strm
 }
 
-func (m *StreamManager) unregisterStream(strm *C2SStream) {
+func (m *StreamManager) unregisterStream(strm *Stream) {
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
 
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
@@ -119,17 +121,17 @@ func (m *StreamManager) unregisterStream(strm *C2SStream) {
 	delete(m.strms, strm.ID())
 }
 
-func (m *StreamManager) authenticateStream(strm *C2SStream) {
+func (m *StreamManager) authenticateStream(strm *Stream) {
 	log.Infof("authenticated stream... (username: %s)", strm.Username())
 
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		m.authedStrms[strm.Username()] = append(authedStrms, strm)
 	} else {
-		m.authedStrms[strm.Username()] = []*C2SStream{strm}
+		m.authedStrms[strm.Username()] = []*Stream{strm}
 	}
 }
 
-func (m *StreamManager) isResourceAvailable(resource string, strm *C2SStream) bool {
+func (m *StreamManager) isResourceAvailable(resource string, strm *Stream) bool {
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		for _, authedStrm := range authedStrms {
 			if authedStrm.Resource() == resource {
@@ -140,10 +142,23 @@ func (m *StreamManager) isResourceAvailable(resource string, strm *C2SStream) bo
 	return true
 }
 
-func (m *StreamManager) send(stanza xml.Stanza, from *C2SStream) {
+func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
+	toJid := stanza.ToJID()
+	recipients := m.authedStrms[toJid.Node()]
+	if recipients == nil {
+		callback(stanza, false)
+		return
+	}
+	resource := toJid.Resource()
+	for _, recipient := range recipients {
+		if len(resource) > 0 && recipient.Resource() != resource {
+			continue
+		}
+		recipient.SendElement(stanza)
+	}
 }
 
-func removeStreamWithResource(strms []*C2SStream, resource string) []*C2SStream {
+func removeStreamWithResource(strms []*Stream, resource string) []*Stream {
 	ret := strms[:0]
 	for _, s := range strms {
 		if s.Resource() != resource {
