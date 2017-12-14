@@ -148,6 +148,10 @@ func (s *Stream) SendElement(elem xml.Serializable) {
 	s.writeCh <- []byte(elem.XML(true))
 }
 
+func (s *Stream) Disconnect(err error) {
+	s.discCh <- err
+}
+
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
