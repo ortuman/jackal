@@ -42,7 +42,7 @@ type XEPDiscoInfo struct {
 func NewXEPDiscoInfo(strm Stream) *XEPDiscoInfo {
 	x := &XEPDiscoInfo{
 		queue: concurrent.OperationQueue{
-			QueueSize: 16,
+			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		strm: strm,

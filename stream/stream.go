@@ -175,6 +175,11 @@ func (s *Stream) initializeXEPs() {
 	discoInfo := module.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
+	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
+	if s.cfg.ModPrivate != nil {
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPPrivateStorage(s))
+	}
+
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if s.cfg.ModVCard != nil {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))

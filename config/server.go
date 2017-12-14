@@ -233,6 +233,7 @@ type ModOffline struct {
 }
 
 type ModPrivate struct {
+	Async bool `yaml:"async"`
 }
 
 type ModVCard struct {

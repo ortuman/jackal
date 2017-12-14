@@ -136,7 +136,7 @@ func (s *mySQL) InsertOrUpdateVCard(vCard *xml.Element, username string) error {
 }
 
 func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Element, error) {
-	row := s.db.QueryRow("SELECT data FROM private_storage WHERE username = ? AND namespace = ?", username)
+	row := s.db.QueryRow("SELECT data FROM private_storage WHERE username = ? AND namespace = ?", username, namespace)
 	var privateXML string
 	err := row.Scan(&privateXML)
 	switch err {
