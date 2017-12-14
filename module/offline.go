@@ -37,9 +37,7 @@ func (o *Offline) AssociatedNamespace() string {
 }
 
 func (o *Offline) ArchiveMessage(message *xml.Message) {
-	o.queue.Async(func() {
-		o.archiveMessage(message)
-	})
+	o.queue.Async(func() { o.archiveMessage(message) })
 }
 
 func (o *Offline) archiveMessage(message *xml.Message) {
