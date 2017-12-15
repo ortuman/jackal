@@ -404,7 +404,7 @@ func (s *Stream) proceedStartTLS() {
 	}
 	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
 	if err != nil {
-		log.Errorf("%v", err)
+		log.Error(err)
 		s.writeElementAndWait(xml.NewElementNamespace("failure", tlsNamespace))
 		s.disconnect(true)
 		return
@@ -481,7 +481,7 @@ func (s *Stream) continueAuthentication(elem *xml.Element, authr authenticator) 
 	if saslErr, ok := err.(saslError); ok {
 		s.failAuthentication(saslErr.Element())
 	} else if err != nil {
-		log.Errorf("%v", err)
+		log.Error(err)
 		s.failAuthentication(errSASLTemporaryAuthFailure.(saslError).Element())
 	}
 	return err
@@ -639,7 +639,7 @@ func (s *Stream) loop() {
 				s.doRead() // keep reading transport...
 
 			} else { // XML parsing error
-				log.Errorf("%v", err)
+				log.Error(err)
 				s.disconnectWithStreamError(ErrInvalidXML)
 			}
 
@@ -648,7 +648,7 @@ func (s *Stream) loop() {
 				s.disconnectWithStreamError(strmErr)
 			} else {
 				if err != transport.ErrRemotePeerClosedTransport {
-					log.Errorf("%v", err)
+					log.Error(err)
 				}
 				s.disconnect(false)
 			}
@@ -697,21 +697,21 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 	case "iq":
 		iq, err := xml.NewIQ(elem, fromJID, toJID)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Error(err)
 			return nil, xml.ErrBadRequest
 		}
 		return iq, nil
 	case "presence":
 		presence, err := xml.NewPresence(elem, fromJID, toJID)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Error(err)
 			return nil, xml.ErrBadRequest
 		}
 		return presence, nil
 	case "message":
 		message, err := xml.NewMessage(elem, fromJID, toJID)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Error(err)
 			return nil, xml.ErrBadRequest
 		}
 		return message, nil
@@ -725,7 +725,7 @@ func (s *Stream) handleElementError(elem *xml.Element, err error) {
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
 		s.writeElement(elem.ToError(stanzaErr))
 	} else {
-		log.Errorf("%v", err)
+		log.Error(err)
 	}
 }
 
