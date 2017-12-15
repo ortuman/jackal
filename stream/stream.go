@@ -44,12 +44,12 @@ type Stream struct {
 	connected     uint32
 	tr            transport.Transport
 	parser        *xml.Parser
-	jid           *xml.JID
 	st            int32
 	id            string
 	username      string
 	domain        string
 	resource      string
+	jid           *xml.JID
 	secured       bool
 	authenticated bool
 	compressed    bool
