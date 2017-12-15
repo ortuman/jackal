@@ -73,8 +73,8 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		parser:  xml.NewParser(),
 		st:      connecting,
 		writeCh: make(chan []byte, 32),
-		readCh:  make(chan []byte, 1),
-		discCh:  make(chan error, 1),
+		readCh:  make(chan []byte),
+		discCh:  make(chan error),
 	}
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
