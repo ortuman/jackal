@@ -58,6 +58,11 @@ func Errorf(format string, args ...interface{}) {
 	instance().errorf(ci.filename, ci.line, format, args...)
 }
 
+// Error logs an 'error' value
+func Error(err error) {
+	Errorf("%v", err)
+}
+
 // Fatalf logs a 'fatal' message to the log file
 // and echoes it to the console.
 // Application will terminate after logging.

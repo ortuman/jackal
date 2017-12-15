@@ -44,7 +44,7 @@ type Stream struct {
 	connected     uint32
 	tr            transport.Transport
 	parser        *xml.Parser
-	myJID         *xml.JID
+	jid           *xml.JID
 	st            int32
 	id            string
 	username      string
@@ -118,10 +118,10 @@ func (s *Stream) Resource() string {
 	return s.resource
 }
 
-func (s *Stream) MyJID() *xml.JID {
+func (s *Stream) JID() *xml.JID {
 	s.RLock()
 	defer s.RUnlock()
-	return s.myJID
+	return s.jid
 }
 
 func (s *Stream) Authenticated() bool {
@@ -144,12 +144,6 @@ func (s *Stream) Compressed() bool {
 
 func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
 	return s.tr.ChannelBindingBytes(mechanism)
-}
-
-func (s *Stream) SendElements(elems []xml.Serializable) {
-	for _, e := range elems {
-		s.SendElement(e)
-	}
 }
 
 func (s *Stream) SendElement(elem xml.Serializable) {
@@ -215,7 +209,7 @@ func (s *Stream) initializeXEPs() {
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if s.cfg.ModOffline != nil {
 		s.offline = module.NewOffline(s.cfg.ModOffline, s)
-		features = append(features, s.offline.AssociatedNamespace())
+		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)
 }
@@ -501,7 +495,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.Lock()
 	s.username = username
 	s.authenticated = true
-	s.myJID, _ = xml.NewJID(s.username, s.domain, "", true)
+	s.jid, _ = xml.NewJID(s.username, s.domain, "", true)
 	s.Unlock()
 
 	Manager().AuthenticateStream(s)
@@ -537,7 +531,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		s.writeElement(iq.ConflictError())
 		return
 	}
-	myJID, err := xml.NewJID(s.Username(), s.Domain(), resource, false)
+	userJID, err := xml.NewJID(s.Username(), s.Domain(), resource, false)
 	if err != nil {
 		s.writeElement(iq.BadRequestError())
 		return
@@ -545,7 +539,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 
 	s.Lock()
 	s.resource = resource
-	s.myJID = myJID
+	s.jid = userJID
 	s.Unlock()
 
 	//...notify successful binding
@@ -766,7 +760,7 @@ func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *x
 	if len(from) > 0 && !s.isValidFrom(from) {
 		return nil, nil, ErrInvalidFrom
 	}
-	fromJID = s.myJID
+	fromJID = s.JID()
 
 	// validate to JID
 	to := elem.To()
@@ -789,9 +783,10 @@ func (s *Stream) isValidFrom(from string) bool {
 		domain := j.Domain()
 		resource := j.Resource()
 
-		validFrom = node == s.myJID.Node() && domain == s.myJID.Domain()
+		userJID := s.JID()
+		validFrom = node == userJID.Node() && domain == userJID.Domain()
 		if len(resource) > 0 {
-			validFrom = validFrom && resource == s.myJID.Resource()
+			validFrom = validFrom && resource == userJID.Resource()
 		}
 	}
 	return validFrom
