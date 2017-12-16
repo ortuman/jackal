@@ -57,15 +57,8 @@ func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	return iq, nil
 }
 
-func NewMutableIQ(identifier string) *MutableIQ {
-	iq := &MutableIQ{}
-	iq.SetName("iq")
-	iq.SetID(identifier)
-	return iq
-}
-
-func NewMutableIQType(identifier string, iqType string) *MutableIQ {
-	iq := &MutableIQ{}
+func NewMutableIQType(identifier string, iqType string) *MutableElement {
+	iq := &MutableElement{}
 	iq.SetName("iq")
 	iq.SetID(identifier)
 	iq.SetType(iqType)
