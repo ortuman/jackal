@@ -77,29 +77,27 @@ type Server struct {
 	Transport       Transport
 	SASL            []string
 	TLS             *TLS
+	Modules         map[string]struct{}
 	Compression     *Compression
-	ModOffline      *ModOffline
-	ModPrivate      *ModPrivate
-	ModVCard        *ModVCard
-	ModRegistration *ModRegistration
-	ModVersion      *ModVersion
-	ModPing         *ModPing
+	ModOffline      ModOffline
+	ModRegistration ModRegistration
+	ModVersion      ModVersion
+	ModPing         ModPing
 }
 
 type serverProxyType struct {
-	ID              string           `yaml:"id"`
-	Type            string           `yaml:"type"`
-	Domains         []string         `yaml:"domains"`
-	Transport       Transport        `yaml:"transport"`
-	SASL            []string         `yaml:"sasl"`
-	TLS             *TLS             `yaml:"tls"`
-	Compression     *Compression     `yaml:"compression"`
-	ModOffline      *ModOffline      `yaml:"mod_offline"`
-	ModPrivate      *ModPrivate      `yaml:"mod_private"`
-	ModVCard        *ModVCard        `yaml:"mod_vcard"`
-	ModRegistration *ModRegistration `yaml:"mod_registration"`
-	ModVersion      *ModVersion      `yaml:"mod_version"`
-	ModPing         *ModPing         `yaml:"mod_ping"`
+	ID              string          `yaml:"id"`
+	Type            string          `yaml:"type"`
+	Domains         []string        `yaml:"domains"`
+	Transport       Transport       `yaml:"transport"`
+	SASL            []string        `yaml:"sasl"`
+	TLS             *TLS            `yaml:"tls"`
+	Modules         []string        `yaml:"modules"`
+	Compression     *Compression    `yaml:"compression"`
+	ModOffline      ModOffline      `yaml:"mod_offline"`
+	ModRegistration ModRegistration `yaml:"mod_registration"`
+	ModVersion      ModVersion      `yaml:"mod_version"`
+	ModPing         ModPing         `yaml:"mod_ping"`
 }
 
 func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -129,6 +127,18 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("config.Server: unrecognized SASL mechanism: %s", sasl)
 		}
 	}
+	// validate modules
+	s.Modules = map[string]struct{}{}
+	for _, module := range p.Modules {
+		switch module {
+		case "private", "vcard", "registration", "version", "ping", "offline":
+			break
+		default:
+			return fmt.Errorf("config.Server: unrecognized module: %s", module)
+		}
+		s.Modules[module] = struct{}{}
+	}
+
 	s.ID = p.ID
 	s.Domains = p.Domains
 	s.Transport = p.Transport
@@ -136,8 +146,6 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.TLS = p.TLS
 	s.Compression = p.Compression
 	s.ModOffline = p.ModOffline
-	s.ModPrivate = p.ModPrivate
-	s.ModVCard = p.ModVCard
 	s.ModRegistration = p.ModRegistration
 	s.ModVersion = p.ModVersion
 	s.ModPing = p.ModPing
@@ -230,14 +238,6 @@ func (c *Compression) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 type ModOffline struct {
 	QueueSize int `yaml:"queue_size"`
-}
-
-type ModPrivate struct {
-	Async bool `yaml:"async"`
-}
-
-type ModVCard struct {
-	Async bool `yaml:"async"`
 }
 
 type ModRegistration struct {

@@ -178,18 +178,18 @@ func (s *Stream) initializeXEPs() {
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
-	if s.cfg.ModPrivate != nil {
+	if _, ok := s.cfg.Modules["private"]; ok {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPPrivateStorage(s))
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
-	if s.cfg.ModVCard != nil {
+	if _, ok := s.cfg.Modules["vcard"]; ok {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
-	if s.cfg.ModVersion != nil {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(s.cfg.ModVersion, s))
+	if _, ok := s.cfg.Modules["version"]; ok {
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
 	}
 
 	// register server disco info identities
@@ -207,8 +207,8 @@ func (s *Stream) initializeXEPs() {
 	}
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
-	if s.cfg.ModOffline != nil {
-		s.offline = module.NewOffline(s.cfg.ModOffline, s)
+	if _, ok := s.cfg.Modules["offline"]; ok {
+		s.offline = module.NewOffline(&s.cfg.ModOffline, s)
 		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)
@@ -298,7 +298,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		// allow In-band registration over encrypted stream only
 		allowRegistration := !tlsEnabled || (tlsEnabled && s.Secured())
 
-		if s.cfg.ModRegistration != nil && allowRegistration {
+		if _, ok := s.cfg.Modules["offline"]; ok && allowRegistration {
 			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
 			features.AppendElement(registerFeature.Copy())
 		}
