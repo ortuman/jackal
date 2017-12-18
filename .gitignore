@@ -14,9 +14,6 @@ debug
 # X509 certificates
 *.pem
 
-# Configuration files
-*.yaml
-
 # System folders
 .DS_Store
 

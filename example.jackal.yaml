@@ -1,0 +1,75 @@
+# jackal configuration file
+
+pid_path: jackal.pid
+
+debug:
+  port: 6060
+
+logger:
+  level: debug
+  log_path: jackal.log
+
+storage:
+  type: mysql
+  mysql:
+    host: 127.0.0.1
+    user: sirius
+    password: uiubf6p4r68Zt5hg4phEa2K3xxcHAauL
+    database: sirius
+    pool_size: 8
+
+servers:
+  - id: default
+    type: c2s
+    domains: [localhost]
+
+    transport:
+      type: socket
+      bind_addr: 0.0.0.0
+      port: 5222
+      connect_timeout: 5
+      keep_alive: 120
+      max_stanza_size: 65535
+
+    tls:
+      required: false
+      cert_path: cert.pem
+      privkey_path: priv_key.pem
+
+    compression:
+      level: default
+
+    sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
+
+    modules:
+      # XEP-0049: Private XML Storage
+      - private
+
+      # XEP-0054: vcard-temp
+      - vcard
+
+      # XEP-0077: In-Band Registration
+      - registration
+
+      # XEP-0092: Software Version
+      - version
+
+      # XEP-0199: XMPP Ping
+      - ping
+
+      # Offline storage
+      - offline
+
+    mod_offline:
+      queue_size: 2500
+
+    mod_registration:
+      allow_change: yes
+      allow_cancel: yes
+
+    mod_version:
+      show_os: true
+
+    mod_ping:
+      send: yes
+      send_interval: 60
