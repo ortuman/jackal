@@ -172,16 +172,19 @@ func (m *StreamManager) send(stanza xml.Stanza, sendCallback SendCallback) {
 	} else {
 		switch stanza.(type) {
 		case *xml.Message:
-			// send to highest priority
-			break
-
-		case *xml.Presence:
-			// broadcast presence
-			for _, strm := range recipients {
+			// send to highest priority stream
+			if strm := highestPriorityStream(recipients); strm != nil {
 				strm.SendElement(stanza)
+				goto done
 			}
 		}
+		// broadcast to all streams
+		for _, strm := range recipients {
+			strm.SendElement(stanza)
+		}
 	}
+
+done:
 	if sendCallback != nil {
 		sendCallback.Sent(stanza)
 	}
@@ -196,4 +199,15 @@ func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {
 		}
 	}
 	return res
+}
+
+func highestPriorityStream(strms []*Stream) *Stream {
+	var highestPriority int8 = 0
+	var strm *Stream
+	for _, s := range strms {
+		if s.Priority() > highestPriority {
+			strm = s
+		}
+	}
+	return strm
 }
