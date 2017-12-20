@@ -113,7 +113,9 @@ func (m *StreamManager) unregisterStream(strm *Stream) {
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
 
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-		authedStrms = removeStreamWithResource(authedStrms, strm.Resource())
+		authedStrms = filterStreams(authedStrms, func(s *Stream) bool {
+			return s.Resource() != strm.Resource()
+		})
 		if len(authedStrms) == 0 {
 			delete(m.authedStrms, strm.Username())
 		}
@@ -146,25 +148,49 @@ func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
 	toJid := stanza.ToJID()
 	recipients := m.authedStrms[toJid.Node()]
 	if recipients == nil {
-		callback(stanza, false)
+		if callback != nil {
+			callback(stanza, false)
+		}
 		return
 	}
-	resource := toJid.Resource()
-	for _, recipient := range recipients {
-		if len(resource) > 0 && recipient.Resource() != resource {
-			continue
+	if toJid.IsFull() {
+		recipients = filterStreams(recipients, func(s *Stream) bool {
+			return s.Resource() == toJid.Resource()
+		})
+		if len(recipients) == 0 {
+			switch stanza.(type) {
+			case *xml.Presence:
+				// silently ignore
+				return
+			default:
+				// service unavailable
+				break
+			}
+			return
 		}
-		recipient.SendElement(stanza)
+		recipients[0].SendElement(stanza)
+
+	} else {
+		switch stanza.(type) {
+		case *xml.Message:
+			break
+
+		case *xml.Presence:
+			// broadcast presence
+			for _, strm := range recipients {
+				strm.SendElement(stanza)
+			}
+		}
 	}
-	callback(stanza, true)
 }
 
-func removeStreamWithResource(strms []*Stream, resource string) []*Stream {
-	ret := strms[:0]
-	for _, s := range strms {
-		if s.Resource() != resource {
-			ret = append(ret, s)
+func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {
+	length := len(strms)
+	res := make([]*Stream, 0, length)
+	for _, strm := range strms {
+		if include(strm) {
+			res = append(res, strm)
 		}
 	}
-	return ret
+	return res
 }
