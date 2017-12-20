@@ -748,6 +748,7 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 			return nil, xml.ErrBadRequest
 		}
 		return iq, nil
+
 	case "presence":
 		presence, err := xml.NewPresence(elem, fromJID, toJID)
 		if err != nil {
@@ -755,6 +756,7 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 			return nil, xml.ErrBadRequest
 		}
 		return presence, nil
+
 	case "message":
 		message, err := xml.NewMessage(elem, fromJID, toJID)
 		if err != nil {
