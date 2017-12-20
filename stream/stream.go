@@ -21,8 +21,10 @@ import (
 	"github.com/pborman/uuid"
 )
 
+type streamState uint8
+
 const (
-	connecting = iota
+	connecting streamState = iota
 	connected
 	authenticating
 	authenticated
@@ -78,7 +80,7 @@ type Stream struct {
 	connected     uint32
 	tr            transport.Transport
 	parser        *xml.Parser
-	st            int32
+	state         streamState
 	id            string
 	username      string
 	domain        string
@@ -108,7 +110,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		cfg:     config,
 		id:      id,
 		parser:  xml.NewParser(),
-		st:      connecting,
+		state:   connecting,
 		writeCh: make(chan []byte, 32),
 		readCh:  make(chan []byte),
 		discCh:  make(chan error),
@@ -259,9 +261,9 @@ func (s *Stream) initializeXEPs() {
 	discoInfo.SetFeatures(features)
 }
 
-func (s *Stream) startConnectTimeoutTimer(timeout int) {
+func (s *Stream) startConnectTimeoutTimer(timeoutInSeconds int) {
 	go func() {
-		tr := time.NewTimer(time.Second * time.Duration(timeout))
+		tr := time.NewTimer(time.Second * time.Duration(timeoutInSeconds))
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
@@ -271,7 +273,7 @@ func (s *Stream) startConnectTimeoutTimer(timeout int) {
 }
 
 func (s *Stream) handleElement(elem *xml.Element) {
-	switch s.state() {
+	switch s.state {
 	case connecting:
 		s.handleConnecting(elem)
 	case connected:
@@ -347,7 +349,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
 			features.AppendElement(registerFeature.Copy())
 		}
-		s.setState(connected)
+		s.state = connected
 
 	} else {
 		// attach compression feature
@@ -364,7 +366,7 @@ func (s *Stream) handleConnecting(elem *xml.Element) {
 		bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
 		features.AppendElement(bind)
 
-		s.setState(authenticated)
+		s.state = authenticated
 	}
 	s.writeElement(features.Copy())
 }
@@ -509,7 +511,7 @@ func (s *Stream) startAuthentication(elem *xml.Element) {
 				s.finishAuthentication(authr.Username())
 			} else {
 				s.activeAuthr = authr
-				s.setState(authenticating)
+				s.state = authenticating
 			}
 			return
 		}
@@ -556,7 +558,7 @@ func (s *Stream) failAuthentication(elem *xml.Element) {
 		s.activeAuthr.Reset()
 		s.activeAuthr = nil
 	}
-	s.setState(connected)
+	s.state = connected
 }
 
 func (s *Stream) bindResource(iq *xml.IQ) {
@@ -606,7 +608,7 @@ func (s *Stream) startSession(iq *xml.IQ) {
 		return
 	}
 	s.writeElement(iq.ResultIQ())
-	s.setState(sessionStarted)
+	s.state = sessionStarted
 }
 
 func (s *Stream) processStanza(stanza xml.Stanza) {
@@ -653,7 +655,7 @@ func (s *Stream) processMessage(message *xml.Message) {
 }
 
 func (s *Stream) restart() {
-	s.setState(connecting)
+	s.state = connecting
 	s.parser = xml.NewParser()
 }
 
@@ -661,7 +663,7 @@ func (s *Stream) loop() {
 	s.doRead() // start reading transport...
 	for {
 		// stop looping after disconnecting stream
-		if s.state() == disconnected {
+		if s.state == disconnected {
 			return
 		}
 
@@ -880,7 +882,7 @@ func (s *Stream) writeBytesAndWait(b []byte) {
 }
 
 func (s *Stream) disconnectWithStreamError(err *Error) {
-	if s.state() == connecting {
+	if s.state == connecting {
 		s.openStreamElement()
 	}
 	s.writeElementAndWait(err.Element())
@@ -893,15 +895,7 @@ func (s *Stream) disconnect(closeStream bool) {
 	}
 	s.tr.Close()
 
-	s.setState(disconnected)
+	s.state = disconnected
 
 	Manager().UnregisterStream(s)
-}
-
-func (s *Stream) state() int32 {
-	return atomic.LoadInt32(&s.st)
-}
-
-func (s *Stream) setState(state int32) {
-	atomic.StoreInt32(&s.st, state)
 }
