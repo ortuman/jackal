@@ -172,6 +172,7 @@ func (m *StreamManager) send(stanza xml.Stanza, sendCallback SendCallback) {
 	} else {
 		switch stanza.(type) {
 		case *xml.Message:
+			// send to highest priority
 			break
 
 		case *xml.Presence:

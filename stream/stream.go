@@ -87,6 +87,7 @@ type Stream struct {
 	secured       bool
 	authenticated bool
 	compressed    bool
+	priority      int8
 
 	sendCb *streamSendCallback
 
@@ -178,6 +179,12 @@ func (s *Stream) Compressed() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.compressed
+}
+
+func (s *Stream) Priority() int8 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.priority
 }
 
 func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
