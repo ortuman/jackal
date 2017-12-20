@@ -641,6 +641,11 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 }
 
 func (s *Stream) processPresence(presence *xml.Presence) {
+	toJid := presence.ToJID()
+	if toJid.IsFull() {
+		Manager().Send(presence, s.sendCb)
+		return
+	}
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
@@ -729,7 +734,7 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, err
 	}
-	fromJID, toJID, err := s.validateAdresses(elem)
+	fromJID, toJID, err := s.validateAddresses(elem)
 	if err != nil {
 		return nil, err
 	}
@@ -794,7 +799,7 @@ func (s *Stream) validateNamespace(elem *xml.Element) *Error {
 	return ErrInvalidNamespace
 }
 
-func (s *Stream) validateAdresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
+func (s *Stream) validateAddresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
