@@ -12,7 +12,11 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-type SendCallback func(stanza xml.Stanza, sent bool)
+type SendCallback interface {
+	Sent(xml.Stanza)
+	NotAuthenticated(xml.Stanza)
+	ResourceNotFound(xml.Stanza)
+}
 
 type resourceAvailableReq struct {
 	resource string
@@ -144,12 +148,12 @@ func (m *StreamManager) isResourceAvailable(resource string, strm *Stream) bool 
 	return true
 }
 
-func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
+func (m *StreamManager) send(stanza xml.Stanza, sendCallback SendCallback) {
 	toJid := stanza.ToJID()
 	recipients := m.authedStrms[toJid.Node()]
 	if recipients == nil {
-		if callback != nil {
-			callback(stanza, false)
+		if sendCallback != nil {
+			sendCallback.NotAuthenticated(stanza)
 		}
 		return
 	}
@@ -158,13 +162,8 @@ func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
 			return s.Resource() == toJid.Resource()
 		})
 		if len(recipients) == 0 {
-			switch stanza.(type) {
-			case *xml.Presence:
-				// silently ignore
-				return
-			default:
-				// service unavailable
-				break
+			if sendCallback != nil {
+				sendCallback.ResourceNotFound(stanza)
 			}
 			return
 		}
@@ -181,6 +180,9 @@ func (m *StreamManager) send(stanza xml.Stanza, callback SendCallback) {
 				strm.SendElement(stanza)
 			}
 		}
+	}
+	if sendCallback != nil {
+		sendCallback.Sent(stanza)
 	}
 }
 

@@ -38,6 +38,40 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
+type streamSendCallback struct {
+	strm *Stream
+}
+
+func (scb *streamSendCallback) Sent(stanza xml.Stanza) {
+}
+
+func (scb *streamSendCallback) NotAuthenticated(stanza xml.Stanza) {
+	switch v := stanza.(type) {
+	case *xml.Message:
+		if scb.strm.offline != nil {
+			scb.strm.offline.ArchiveMessage(v)
+		}
+		break
+	}
+}
+
+func (scb *streamSendCallback) ResourceNotFound(stanza xml.Stanza) {
+	var resp *xml.MutableElement
+
+	switch v := stanza.(type) {
+	case *xml.Presence:
+		// silently ignore
+		return
+	case *xml.Message:
+		resp = v.MutableCopy()
+	case *xml.IQ:
+		resp = v.MutableCopy()
+	}
+	resp.SetFrom(stanza.ToJID().String())
+	resp.SetTo(scb.strm.JID().String())
+	scb.strm.SendElement(resp.ServiceUnavailableError())
+}
+
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
@@ -53,6 +87,8 @@ type Stream struct {
 	secured       bool
 	authenticated bool
 	compressed    bool
+
+	sendCb *streamSendCallback
 
 	authrs      []authenticator
 	activeAuthr authenticator
@@ -76,6 +112,8 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		readCh:  make(chan []byte),
 		discCh:  make(chan error),
 	}
+	s.sendCb = &streamSendCallback{s}
+
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
 
@@ -393,7 +431,7 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 		s.processComponentStanza(stanza)
 	} else {
 		// S2S
-		Manager().Send(stanza, func(stanza xml.Stanza, sent bool) {})
+		Manager().Send(stanza, s.sendCb)
 	}
 }
 
@@ -579,7 +617,7 @@ func (s *Stream) processComponentStanza(stanza xml.Stanza) {
 
 func (s *Stream) processIQ(iq *xml.IQ) {
 	if iq.ToJID().IsFull() {
-		Manager().Send(iq, nil)
+		Manager().Send(iq, s.sendCb)
 		return
 	}
 
@@ -596,15 +634,10 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 }
 
 func (s *Stream) processPresence(presence *xml.Presence) {
-
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
-	Manager().Send(message, func(stanza xml.Stanza, sent bool) {
-		if !sent && s.offline != nil {
-			s.offline.ArchiveMessage(message)
-		}
-	})
+	Manager().Send(message, s.sendCb)
 }
 
 func (s *Stream) restart() {
