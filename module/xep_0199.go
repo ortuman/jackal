@@ -6,8 +6,11 @@
 package module
 
 import (
+	"time"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
 
 const pingNamespace = "urn:xmpp:ping"
@@ -16,6 +19,7 @@ type XEPPing struct {
 	cfg    *config.ModPing
 	strm   Stream
 	pingID string
+	pingTm *time.Timer
 }
 
 func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
@@ -53,10 +57,19 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 }
 
 func (x *XEPPing) ResetSendPingTimer() {
+	if !x.cfg.Send {
+		return
+	}
 }
 
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
 	return x.pingID == iq.ID() && (iq.IsResult() || iq.IsError())
+}
+
+func (x *XEPPing) sendPing() {
+	iq := xml.NewMutableIQType(uuid.New(), xml.GetType)
+	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
+	x.strm.SendElement(iq)
 }
 
 func (x *XEPPing) handlePongIQ(iq *xml.IQ) {

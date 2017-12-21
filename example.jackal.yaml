@@ -72,4 +72,4 @@ servers:
 
     mod_ping:
       send: yes
-      send_interval: 60
+      send_interval: 5
