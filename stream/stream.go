@@ -98,6 +98,7 @@ type Stream struct {
 
 	iqHandlers []module.IQHandler
 
+	ping    *module.XEPPing
 	offline *module.Offline
 
 	writeCh chan []byte
@@ -237,6 +238,12 @@ func (s *Stream) initializeXEPs() {
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
+	}
+
+	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
+	if _, ok := s.cfg.Modules["ping"]; ok {
+		s.ping = module.NewXEPPing(&s.cfg.ModPing, s)
+		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
 	// register server disco info identities
@@ -426,6 +433,11 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 }
 
 func (s *Stream) handleSessionStarted(elem *xml.Element) {
+	// reset ping timer
+	if s.ping != nil {
+		s.ping.ResetSendPingTimer()
+	}
+
 	stanza, err := s.buildStanza(elem)
 	if err != nil {
 		s.handleElementError(elem, err)

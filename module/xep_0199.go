@@ -35,6 +35,11 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 		x.handlePongIQ(iq)
 		return
 	}
+	toJid := iq.ToJID()
+	if toJid.IsBare() && toJid.Node() != x.strm.Username() {
+		x.strm.SendElement(iq.ForbiddenError())
+		return
+	}
 	p := iq.FindElementNamespace("ping", pingNamespace)
 	if p.ElementsCount() > 0 {
 		x.strm.SendElement(iq.BadRequestError())
@@ -45,6 +50,9 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 	} else {
 		x.strm.SendElement(iq.BadRequestError())
 	}
+}
+
+func (x *XEPPing) ResetSendPingTimer() {
 }
 
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
