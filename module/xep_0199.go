@@ -25,8 +25,9 @@ type XEPPing struct {
 	recv   uint32
 	pongCh chan struct{}
 
-	pingMu sync.RWMutex // guards 'pingID'
-	pingID string
+	pingMu   sync.RWMutex // guards 'pingID'
+	pingId   string
+	pingOnce sync.Once
 }
 
 func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
@@ -71,7 +72,7 @@ func (x *XEPPing) StartPinging() {
 	if !x.cfg.Send {
 		return
 	}
-	go x.startPinging()
+	x.pingOnce.Do(func() { go x.startPinging() })
 }
 
 func (x *XEPPing) NotifyReceive() {
@@ -84,7 +85,7 @@ func (x *XEPPing) NotifyReceive() {
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
 	x.pingMu.RLock()
 	defer x.pingMu.RUnlock()
-	return x.pingID == iq.ID() && (iq.IsResult() || iq.IsError())
+	return x.pingId == iq.ID() && (iq.IsResult() || iq.IsError())
 }
 
 func (x *XEPPing) startPinging() {
@@ -95,19 +96,23 @@ func (x *XEPPing) startPinging() {
 		if atomic.CompareAndSwapUint32(&x.recv, 1, 0) {
 			continue
 		} else {
-			pingID := uuid.New()
-			x.pingMu.Lock()
-			x.pingID = pingID
-			x.pingMu.Unlock()
-
-			iq := xml.NewMutableIQType(pingID, xml.GetType)
-			iq.SetTo(x.strm.JID().String())
-			iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
-			x.strm.SendElement(iq)
+			x.sendPing()
 			x.waitForPong()
 			return
 		}
 	}
+}
+
+func (x *XEPPing) sendPing() {
+	pingId := uuid.New()
+	x.pingMu.Lock()
+	x.pingId = pingId
+	x.pingMu.Unlock()
+
+	iq := xml.NewMutableIQType(pingId, xml.GetType)
+	iq.SetTo(x.strm.JID().String())
+	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
+	x.strm.SendElement(iq)
 }
 
 func (x *XEPPing) waitForPong() {
@@ -122,7 +127,7 @@ func (x *XEPPing) waitForPong() {
 
 func (x *XEPPing) handlePongIQ(iq *xml.IQ) {
 	x.pingMu.Lock()
-	x.pingID = ""
+	x.pingId = ""
 	x.pingMu.Unlock()
 
 	x.pongCh <- struct{}{}
