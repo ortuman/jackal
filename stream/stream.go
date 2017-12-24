@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/stream/transport"
@@ -274,7 +275,7 @@ func (s *Stream) startConnectTimeoutTimer(timeoutInSeconds int) {
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
-			s.discCh <- ErrConnectionTimeout
+			s.discCh <- errors.ErrConnectionTimeout
 		}
 	}()
 }
@@ -382,14 +383,14 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
-			s.disconnectWithStreamError(ErrInvalidNamespace)
+			s.disconnectWithStreamError(errors.ErrInvalidNamespace)
 			return
 		}
 		s.proceedStartTLS()
 
 	case "auth":
 		if elem.Namespace() != saslNamespace {
-			s.disconnectWithStreamError(ErrInvalidNamespace)
+			s.disconnectWithStreamError(errors.ErrInvalidNamespace)
 			return
 		}
 		s.startAuthentication(elem)
@@ -398,7 +399,7 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 
 func (s *Stream) handleAuthenticating(elem *xml.Element) {
 	if elem.Namespace() != saslNamespace {
-		s.disconnectWithStreamError(ErrInvalidNamespace)
+		s.disconnectWithStreamError(errors.ErrInvalidNamespace)
 		return
 	}
 	authr := s.activeAuthr
@@ -412,7 +413,7 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
-			s.disconnectWithStreamError(ErrUnsupportedStanzaType)
+			s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
 			return
 		}
 		s.compress(elem)
@@ -428,14 +429,14 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 			s.startSession(iq.(*xml.IQ))
 		}
 	default:
-		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
 	}
 }
 
 func (s *Stream) handleSessionStarted(elem *xml.Element) {
 	// reset ping timer
 	if s.ping != nil {
-		s.ping.ResetSendPingTimer()
+		s.ping.NotifyReceive()
 	}
 
 	stanza, err := s.buildStanza(elem)
@@ -458,7 +459,7 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 
 func (s *Stream) proceedStartTLS() {
 	if s.Secured() {
-		s.disconnectWithStreamError(ErrNotAuthorized)
+		s.disconnectWithStreamError(errors.ErrNotAuthorized)
 		return
 	}
 	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
@@ -485,7 +486,7 @@ func (s *Stream) proceedStartTLS() {
 
 func (s *Stream) compress(elem *xml.Element) {
 	if s.Compressed() {
-		s.disconnectWithStreamError(ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
 		return
 	}
 	method := elem.FindElement("method")
@@ -620,6 +621,10 @@ func (s *Stream) startSession(iq *xml.IQ) {
 		return
 	}
 	s.writeElement(iq.ResultIQ())
+
+	if s.ping != nil {
+		s.ping.StartPinging()
+	}
 	s.state = sessionStarted
 }
 
@@ -699,11 +704,11 @@ func (s *Stream) loop() {
 
 			} else { // XML parsing error
 				log.Error(err)
-				s.disconnectWithStreamError(ErrInvalidXML)
+				s.disconnectWithStreamError(errors.ErrInvalidXML)
 			}
 
 		case err := <-s.discCh:
-			if strmErr, ok := err.(*Error); ok {
+			if strmErr, ok := err.(*errors.StreamError); ok {
 				s.disconnectWithStreamError(strmErr)
 			} else {
 				if err != transport.ErrRemotePeerClosedTransport {
@@ -777,11 +782,11 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
 		}
 		return message, nil
 	}
-	return nil, ErrUnsupportedStanzaType
+	return nil, errors.ErrUnsupportedStanzaType
 }
 
 func (s *Stream) handleElementError(elem *xml.Element, err error) {
-	if streamErr, ok := err.(*Error); ok {
+	if streamErr, ok := err.(*errors.StreamError); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
 		s.writeElement(elem.ToError(stanzaErr))
@@ -790,36 +795,36 @@ func (s *Stream) handleElementError(elem *xml.Element, err error) {
 	}
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) *Error {
+func (s *Stream) validateStreamElement(elem *xml.Element) *errors.StreamError {
 	if elem.Name() != "stream:stream" {
-		return ErrUnsupportedStanzaType
+		return errors.ErrUnsupportedStanzaType
 	}
 	to := elem.To()
 	if len(to) > 0 && !s.isValidDomain(to) {
-		return ErrHostUnknown
+		return errors.ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
-		return ErrInvalidNamespace
+		return errors.ErrInvalidNamespace
 	}
 	if elem.Version() != "1.0" {
-		return ErrUnsupportedVersion
+		return errors.ErrUnsupportedVersion
 	}
 	return nil
 }
 
-func (s *Stream) validateNamespace(elem *xml.Element) *Error {
+func (s *Stream) validateNamespace(elem *xml.Element) *errors.StreamError {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
 		return nil
 	}
-	return ErrInvalidNamespace
+	return errors.ErrInvalidNamespace
 }
 
 func (s *Stream) validateAddresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
-		return nil, nil, ErrInvalidFrom
+		return nil, nil, errors.ErrInvalidFrom
 	}
 	fromJID = s.JID()
 
@@ -895,7 +900,7 @@ func (s *Stream) writeBytesAndWait(b []byte) {
 	s.tr.WriteAndWait(b)
 }
 
-func (s *Stream) disconnectWithStreamError(err *Error) {
+func (s *Stream) disconnectWithStreamError(err *errors.StreamError) {
 	if s.state == connecting {
 		s.openStreamElement()
 	}

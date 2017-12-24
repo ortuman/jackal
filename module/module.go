@@ -27,4 +27,6 @@ type Stream interface {
 	Authenticated() bool
 
 	SendElement(xml.Serializable)
+
+	Disconnect(err error)
 }

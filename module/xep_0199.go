@@ -6,9 +6,12 @@
 package module
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -16,14 +19,22 @@ import (
 const pingNamespace = "urn:xmpp:ping"
 
 type XEPPing struct {
-	cfg    *config.ModPing
-	strm   Stream
+	cfg  *config.ModPing
+	strm Stream
+
+	recv   uint32
+	pongCh chan struct{}
+
+	pingMu sync.RWMutex // guards 'pingID'
 	pingID string
-	pingTm *time.Timer
 }
 
 func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
-	return &XEPPing{cfg: cfg, strm: strm}
+	return &XEPPing{
+		cfg:    cfg,
+		strm:   strm,
+		pongCh: make(chan struct{}, 1),
+	}
 }
 
 func (x *XEPPing) AssociatedNamespaces() []string {
@@ -56,21 +67,63 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPPing) ResetSendPingTimer() {
+func (x *XEPPing) StartPinging() {
 	if !x.cfg.Send {
 		return
 	}
+	go x.startPinging()
+}
+
+func (x *XEPPing) NotifyReceive() {
+	if !x.cfg.Send {
+		return
+	}
+	atomic.CompareAndSwapUint32(&x.recv, 0, 1)
 }
 
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
+	x.pingMu.RLock()
+	defer x.pingMu.RUnlock()
 	return x.pingID == iq.ID() && (iq.IsResult() || iq.IsError())
 }
 
-func (x *XEPPing) sendPing() {
-	iq := xml.NewMutableIQType(uuid.New(), xml.GetType)
-	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
-	x.strm.SendElement(iq)
+func (x *XEPPing) startPinging() {
+	t := time.NewTicker(time.Second * time.Duration(x.cfg.SendInterval))
+	defer t.Stop()
+	for {
+		<-t.C
+		if atomic.CompareAndSwapUint32(&x.recv, 1, 0) {
+			continue
+		} else {
+			pingID := uuid.New()
+			x.pingMu.Lock()
+			x.pingID = pingID
+			x.pingMu.Unlock()
+
+			iq := xml.NewMutableIQType(pingID, xml.GetType)
+			iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
+			x.strm.SendElement(iq)
+			x.waitForPong()
+			return
+		}
+	}
+}
+
+func (x *XEPPing) waitForPong() {
+	t := time.NewTimer(time.Duration(x.cfg.SendInterval) / 3)
+	select {
+	case <-x.pongCh:
+		return
+	case <-t.C:
+		x.strm.Disconnect(errors.ErrConnectionTimeout)
+	}
 }
 
 func (x *XEPPing) handlePongIQ(iq *xml.IQ) {
+	x.pingMu.Lock()
+	x.pingID = ""
+	x.pingMu.Unlock()
+
+	x.pongCh <- struct{}{}
+	go x.startPinging()
 }
