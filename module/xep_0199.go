@@ -101,6 +101,7 @@ func (x *XEPPing) startPinging() {
 			x.pingMu.Unlock()
 
 			iq := xml.NewMutableIQType(pingID, xml.GetType)
+			iq.SetTo(x.strm.JID().String())
 			iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
 			x.strm.SendElement(iq)
 			x.waitForPong()
@@ -110,7 +111,7 @@ func (x *XEPPing) startPinging() {
 }
 
 func (x *XEPPing) waitForPong() {
-	t := time.NewTimer(time.Duration(x.cfg.SendInterval) / 3)
+	t := time.NewTimer(time.Duration(x.cfg.SendInterval))
 	select {
 	case <-x.pongCh:
 		return
