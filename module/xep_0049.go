@@ -7,7 +7,6 @@ package module
 
 import (
 	"strings"
-
 	"time"
 
 	"github.com/ortuman/jackal/concurrent"

@@ -99,8 +99,9 @@ type Stream struct {
 
 	iqHandlers []module.IQHandler
 
-	ping    *module.XEPPing
-	offline *module.Offline
+	register *module.XEPRegister
+	ping     *module.XEPPing
+	offline  *module.Offline
 
 	writeCh chan []byte
 	readCh  chan []byte
@@ -234,6 +235,12 @@ func (s *Stream) initializeXEPs() {
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
+	}
+
+	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
+	if _, ok := s.cfg.Modules["registration"]; ok {
+		s.register = module.NewXEPRegister(&s.cfg.ModRegistration, s)
+		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
@@ -394,6 +401,29 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 			return
 		}
 		s.startAuthentication(elem)
+
+	case "iq":
+		stanza, err := s.buildStanza(elem)
+		if err != nil {
+			s.handleElementError(elem, err)
+			return
+		}
+		iq := stanza.(*xml.IQ)
+
+		if s.register != nil && s.register.MatchesIQ(iq) {
+			s.register.ProcessIQ(iq)
+
+		} else if iq.FindElementNamespace("query", "jabber:iq:auth") != nil {
+			// don't allow non-SASL authentication
+			s.writeElement(iq.ServiceUnavailableError())
+		}
+		fallthrough
+
+	case "message", "presence":
+		s.disconnectWithStreamError(errors.ErrNotAuthorized)
+
+	default:
+		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
 	}
 }
 

@@ -7,7 +7,6 @@ package module
 
 import (
 	"sort"
-
 	"time"
 
 	"github.com/ortuman/jackal/concurrent"

@@ -8,11 +8,9 @@ package module
 import (
 	"os/exec"
 	"strings"
-
-	"github.com/ortuman/jackal/concurrent"
-
 	"time"
 
+	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/version"
