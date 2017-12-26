@@ -7,9 +7,8 @@ package module
 
 import (
 	"sync"
-	"time"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/errors"
@@ -30,7 +29,7 @@ type XEPPing struct {
 	pingId string
 
 	waitingPing uint32
-	pingingOnce sync.Once
+	pingOnce    sync.Once
 }
 
 func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
@@ -75,7 +74,7 @@ func (x *XEPPing) StartPinging() {
 	if !x.cfg.Send {
 		return
 	}
-	x.pingingOnce.Do(func() {
+	x.pingOnce.Do(func() {
 		x.pingTm = time.AfterFunc(time.Second*time.Duration(x.cfg.SendInterval), x.sendPing)
 	})
 }
