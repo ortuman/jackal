@@ -122,6 +122,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
+	s.jid, _ = xml.NewJID("", s.domain, "", true)
 
 	maxReadCount := config.Transport.MaxStanzaSize
 	keepAlive := config.Transport.KeepAlive

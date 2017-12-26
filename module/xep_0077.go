@@ -41,7 +41,7 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 
 	q := iq.FindElementNamespace("query", registerNamespace)
 	if !x.strm.Authenticated() {
-		if iq.IsSet() {
+		if iq.IsGet() {
 			// ...send registration fields to requester entity...
 			x.sendRegistrationFields(iq, q)
 		} else if iq.IsSet() {
@@ -75,6 +75,16 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 }
 
 func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query *xml.Element) {
+	if query.ElementsCount() > 0 {
+		x.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	result := iq.ResultIQ()
+	q := xml.NewMutableElementNamespace("query", registerNamespace)
+	q.AppendElement(xml.NewElementName("username"))
+	q.AppendElement(xml.NewElementName("password"))
+	result.AppendElement(q.Copy())
+	x.strm.SendElement(result)
 }
 
 func (x *XEPRegister) registerNewUser(iq *xml.IQ, query *xml.Element) {
