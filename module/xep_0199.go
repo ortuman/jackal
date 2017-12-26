@@ -7,8 +7,9 @@ package module
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
+
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/errors"
@@ -22,12 +23,14 @@ type XEPPing struct {
 	cfg  *config.ModPing
 	strm Stream
 
-	recv   uint32
+	pingTm *time.Timer
 	pongCh chan struct{}
 
-	pingMu   sync.RWMutex // guards 'pingID'
-	pingId   string
-	pingOnce sync.Once
+	pingMu sync.RWMutex // guards 'pingID'
+	pingId string
+
+	waitingPing uint32
+	pingingOnce sync.Once
 }
 
 func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
@@ -72,14 +75,18 @@ func (x *XEPPing) StartPinging() {
 	if !x.cfg.Send {
 		return
 	}
-	x.pingOnce.Do(func() { go x.startPinging() })
+	x.pingingOnce.Do(func() {
+		x.pingTm = time.AfterFunc(time.Second*time.Duration(x.cfg.SendInterval), x.sendPing)
+	})
 }
 
-func (x *XEPPing) NotifyReceive() {
+func (x *XEPPing) ResetDeadline() {
 	if !x.cfg.Send {
 		return
 	}
-	atomic.CompareAndSwapUint32(&x.recv, 0, 1)
+	if atomic.LoadUint32(&x.waitingPing) == 1 {
+		x.pingTm.Reset(time.Second * time.Duration(x.cfg.SendInterval))
+	}
 }
 
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
@@ -88,35 +95,24 @@ func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
 	return x.pingId == iq.ID() && (iq.IsResult() || iq.IsError())
 }
 
-func (x *XEPPing) startPinging() {
-	t := time.NewTicker(time.Second * time.Duration(x.cfg.SendInterval))
-	defer t.Stop()
-	for {
-		<-t.C
-		if atomic.CompareAndSwapUint32(&x.recv, 1, 0) {
-			continue
-		} else {
-			x.sendPing()
-			x.waitForPong()
-			return
-		}
-	}
-}
-
 func (x *XEPPing) sendPing() {
-	pingId := uuid.New()
+	atomic.StoreUint32(&x.waitingPing, 0)
+
 	x.pingMu.Lock()
-	x.pingId = pingId
+	x.pingId = uuid.New()
+	pingId := x.pingId
 	x.pingMu.Unlock()
 
 	iq := xml.NewMutableIQType(pingId, xml.GetType)
 	iq.SetTo(x.strm.JID().String())
 	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
+
 	x.strm.SendElement(iq)
+	x.waitForPong()
 }
 
 func (x *XEPPing) waitForPong() {
-	t := time.NewTimer(time.Duration(x.cfg.SendInterval))
+	t := time.NewTimer(time.Second * time.Duration(x.cfg.SendInterval))
 	select {
 	case <-x.pongCh:
 		return
@@ -131,5 +127,6 @@ func (x *XEPPing) handlePongIQ(iq *xml.IQ) {
 	x.pingMu.Unlock()
 
 	x.pongCh <- struct{}{}
-	go x.startPinging()
+	x.pingTm.Reset(time.Second * time.Duration(x.cfg.SendInterval))
+	atomic.StoreUint32(&x.waitingPing, 1)
 }

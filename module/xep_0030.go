@@ -138,7 +138,7 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 	}
 
 	result.AppendElement(query.Copy())
-	x.strm.SendElement(query)
+	x.strm.SendElement(result)
 }
 
 func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
@@ -158,5 +158,5 @@ func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
 	}
 
 	result.AppendElement(query.Copy())
-	x.strm.SendElement(query)
+	x.strm.SendElement(result)
 }

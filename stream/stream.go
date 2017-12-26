@@ -434,9 +434,9 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 }
 
 func (s *Stream) handleSessionStarted(elem *xml.Element) {
-	// reset ping timer
+	// reset ping timer deadline
 	if s.ping != nil {
-		s.ping.NotifyReceive()
+		s.ping.ResetDeadline()
 	}
 
 	stanza, err := s.buildStanza(elem)

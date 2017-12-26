@@ -71,5 +71,5 @@ servers:
       show_os: true
 
     mod_ping:
-      send: yes
+      send: no
       send_interval: 5

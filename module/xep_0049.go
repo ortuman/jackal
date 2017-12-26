@@ -26,7 +26,7 @@ type XEPPrivateStorage struct {
 func NewXEPPrivateStorage(strm Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		queue: concurrent.OperationQueue{
-			QueueSize: 32,
+			QueueSize: 16,
 			Timeout:   time.Second,
 		},
 		strm: strm,
@@ -35,7 +35,7 @@ func NewXEPPrivateStorage(strm Stream) *XEPPrivateStorage {
 }
 
 func (x *XEPPrivateStorage) AssociatedNamespaces() []string {
-	return []string{privateStorageNamespace}
+	return []string{}
 }
 
 func (x *XEPPrivateStorage) MatchesIQ(iq *xml.IQ) bool {
@@ -82,7 +82,11 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q *xml.Element) {
 	}
 	res := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", privateStorageNamespace)
-	query.AppendElements(privElements)
+	if privElements != nil {
+		query.AppendElements(privElements)
+	} else {
+		query.AppendElement(xml.NewElementNamespace(privElem.Name(), privElem.Namespace()))
+	}
 	res.AppendElement(query.Copy())
 
 	x.strm.SendElement(res)
