@@ -412,10 +412,12 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 
 		if s.register != nil && s.register.MatchesIQ(iq) {
 			s.register.ProcessIQ(iq)
+			return
 
 		} else if iq.FindElementNamespace("query", "jabber:iq:auth") != nil {
 			// don't allow non-SASL authentication
 			s.writeElement(iq.ServiceUnavailableError())
+			return
 		}
 		fallthrough
 
