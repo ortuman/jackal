@@ -86,6 +86,7 @@ func (iq *IQ) ResultIQ() *MutableElement {
 	rs.name = "iq"
 	rs.setAttribute("type", ResultType)
 	rs.setAttribute("id", iq.ID())
+	rs.setAttribute("from", iq.To())
 	rs.setAttribute("to", iq.From())
 	return rs
 }
