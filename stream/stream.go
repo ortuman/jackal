@@ -722,8 +722,11 @@ func (s *Stream) loop() {
 			s.writeBytes(b)
 
 		case e := <-s.readCh:
+			log.Debugf("RECV: %s", e.XML(true))
 			s.handleElement(e)
-			s.doRead() // keep reading transport...
+			if s.state != disconnected {
+				s.doRead() // keep reading transport...
+			}
 
 		case err := <-s.discCh:
 			if err != nil {
@@ -743,10 +746,9 @@ func (s *Stream) loop() {
 func (s *Stream) doRead() {
 	go func() {
 		if e, err := s.parser.ParseElement(s.tr); e != nil && err == nil {
-			log.Debugf("RECV: %s", e.XML(true))
 			s.readCh <- e
 		} else if err != nil {
-			if err == io.EOF || err == xml.ErrClosedStream {
+			if err == io.EOF || err == xml.ErrStreamClosedByPeer {
 				s.discCh <- nil
 			} else {
 				log.Error(err)

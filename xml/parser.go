@@ -16,7 +16,7 @@ const rootElementIndex = -1
 
 const streamName = "stream"
 
-var ErrClosedStream = errors.New("stream closed by peer")
+var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
