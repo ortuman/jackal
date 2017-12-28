@@ -6,11 +6,10 @@
 package transport
 
 import (
+	"bufio"
 	"crypto/tls"
 	"net"
 	"time"
-
-	"bufio"
 
 	"github.com/ortuman/jackal/config"
 )
