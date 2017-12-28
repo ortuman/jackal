@@ -723,6 +723,7 @@ func (s *Stream) loop() {
 
 		case e := <-s.readCh:
 			log.Debugf("RECV: %s", e.XML(true))
+
 			s.handleElement(e)
 			if s.state != disconnected {
 				s.doRead() // keep reading transport...
