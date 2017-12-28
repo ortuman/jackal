@@ -6,7 +6,6 @@
 package stream
 
 import (
-	"bytes"
 	"crypto/tls"
 	"net"
 	"sync"
@@ -104,7 +103,7 @@ type Stream struct {
 	offline  *module.Offline
 
 	writeCh chan []byte
-	readCh  chan []byte
+	readCh  chan *xml.Element
 	discCh  chan error
 }
 
@@ -115,7 +114,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		parser:  xml.NewParser(),
 		state:   connecting,
 		writeCh: make(chan []byte, 32),
-		readCh:  make(chan []byte),
+		readCh:  make(chan *xml.Element),
 		discCh:  make(chan error),
 	}
 	s.sendCb = &streamSendCallback{s}
@@ -124,9 +123,8 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	s.domain = s.cfg.Domains[0]
 	s.jid, _ = xml.NewJID("", s.domain, "", true)
 
-	maxReadCount := config.Transport.MaxStanzaSize
 	keepAlive := config.Transport.KeepAlive
-	s.tr = transport.NewSocketTransport(conn, maxReadCount, keepAlive)
+	s.tr = transport.NewSocketTransport(conn, keepAlive)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -721,24 +719,9 @@ func (s *Stream) loop() {
 		case b := <-s.writeCh:
 			s.writeBytes(b)
 
-		case b := <-s.readCh:
-			// stream closed by client
-			if "</stream:stream>" == string(b) {
-				s.disconnect(false)
-				continue
-			}
-			if err := s.parser.ParseElements(bytes.NewReader(b)); err == nil {
-				e := s.parser.PopElement()
-				for e != nil {
-					s.handleElement(e)
-					e = s.parser.PopElement()
-				}
-				s.doRead() // keep reading transport...
-
-			} else { // XML parsing error
-				log.Error(err)
-				s.disconnectWithStreamError(errors.ErrInvalidXML)
-			}
+		case e := <-s.readCh:
+			s.handleElement(e)
+			s.doRead() // keep reading transport...
 
 		case err := <-s.discCh:
 			if strmErr, ok := err.(*errors.StreamError); ok {
@@ -755,17 +738,12 @@ func (s *Stream) loop() {
 
 func (s *Stream) doRead() {
 	go func() {
-		b, err := s.tr.Read()
-		switch err {
-		case nil:
-			log.Debugf("RECV: %s", string(b))
-			s.readCh <- b
-
-		case transport.ErrServerClosedTransport:
-			return
-
-		default:
-			s.discCh <- err
+		if e, err := s.parser.ParseElement(s.tr); e != nil && err == nil {
+			log.Debugf("RECV: %s", e.XML(true))
+			s.readCh <- e
+		} else if err != nil {
+			log.Error(err)
+			s.discCh <- errors.ErrInvalidXML
 		}
 	}()
 }
@@ -930,7 +908,7 @@ func (s *Stream) writeBytes(b []byte) {
 
 func (s *Stream) writeBytesAndWait(b []byte) {
 	log.Debugf("SEND: %s", string(b))
-	s.tr.WriteAndWait(b)
+	s.tr.Write(b)
 }
 
 func (s *Stream) disconnectWithStreamError(err *errors.StreamError) {
@@ -943,7 +921,7 @@ func (s *Stream) disconnectWithStreamError(err *errors.StreamError) {
 
 func (s *Stream) disconnect(closeStream bool) {
 	if closeStream {
-		s.tr.WriteAndWait([]byte("</stream:stream>"))
+		s.tr.Write([]byte("</stream:stream>"))
 	}
 	s.tr.Close()
 

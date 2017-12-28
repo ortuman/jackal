@@ -14,9 +14,13 @@ import (
 
 const rootElementIndex = -1
 
+const streamName = "stream"
+
+var ErrClosedStream = errors.New("stream closed by peer")
+
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
-	elements     []*Element
+	nextElement  *Element
 	parsingIndex int
 	parsingStack []*MutableElement
 	inElement    bool
@@ -25,52 +29,48 @@ type Parser struct {
 // NewParser creates an empty Parser instance.
 func NewParser() *Parser {
 	p := &Parser{}
-	p.elements = make([]*Element, 0)
 	p.parsingIndex = rootElementIndex
 	p.parsingStack = make([]*MutableElement, 0)
 	return p
 }
 
-// ParseElements parses an XML document.
-func (p *Parser) ParseElements(reader io.Reader) error {
+// ParseElement parses next available XML element from reader.
+func (p *Parser) ParseElement(reader io.Reader) (*Element, error) {
 	d := xml.NewDecoder(reader)
 	t, err := d.RawToken()
-	for t != nil {
+	if err != nil {
+		return nil, err
+	}
+	for {
 		switch t1 := t.(type) {
 		case xml.StartElement:
 			p.startElement(t1)
+			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+				p.closeElement()
+				goto done
+			}
+
 		case xml.CharData:
 			p.setElementText(t1)
+
 		case xml.EndElement:
-			if err := p.endElement(t1); err != nil {
-				return err
+			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+				return nil, ErrClosedStream
+			}
+			p.endElement(t1)
+			if p.parsingIndex == rootElementIndex {
+				goto done
 			}
 		}
 		t, err = d.RawToken()
+		if err != nil {
+			return nil, err
+		}
 	}
-	if err != nil && err != io.EOF {
-		return err
-	}
-	switch p.parsingIndex {
-	case 0:
-		p.closeElement() // open stream element
-		fallthrough
-	case rootElementIndex:
-		return nil
-	default:
-		return errors.New("malformed XML")
-	}
-}
-
-// PopElement returns next parsed element available.
-// Returns nil if no elements are found.
-func (p *Parser) PopElement() *Element {
-	if len(p.elements) == 0 {
-		return nil
-	}
-	element := p.elements[0]
-	p.elements = append(p.elements[:0], p.elements[1:]...)
-	return element
+done:
+	ret := p.nextElement
+	p.nextElement = nil
+	return ret, nil
 }
 
 func (p *Parser) startElement(t xml.StartElement) {
@@ -114,7 +114,7 @@ func (p *Parser) closeElement() {
 
 	p.parsingIndex--
 	if p.parsingIndex == rootElementIndex {
-		p.elements = append(p.elements, element.Copy())
+		p.nextElement = element.Copy()
 	} else {
 		p.parsingStack[p.parsingIndex].AppendElement(element.Copy())
 	}

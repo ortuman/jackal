@@ -18,7 +18,7 @@ type storage interface {
 	// User
 	FetchUser(username string) (*entity.User, error)
 
-	InsertOrUpdateUser(user entity.User) error
+	InsertOrUpdateUser(user *entity.User) error
 	DeleteUser(username string) error
 
 	UserExists(username string) (bool, error)

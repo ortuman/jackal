@@ -26,10 +26,10 @@ var (
 )
 
 type Transport interface {
-	Write([]byte)
-	WriteAndWait([]byte)
-	Read() ([]byte, error)
-	Close()
+	Write(p []byte) (n int, err error)
+	Read(p []byte) (n int, err error)
+	Close() error
+
 	StartTLS(*tls.Config)
 	EnableCompression(config.CompressionLevel)
 	ChannelBindingBytes(string) []byte

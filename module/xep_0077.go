@@ -7,6 +7,9 @@ package module
 
 import (
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -88,6 +91,33 @@ func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query *xml.Element) {
 }
 
 func (x *XEPRegister) registerNewUser(iq *xml.IQ, query *xml.Element) {
+	userEl := query.FindElement("username")
+	passwordEl := query.FindElement("password")
+	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
+		x.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	exists, err := storage.Instance().UserExists(userEl.Text())
+	if err != nil {
+		log.Errorf("%v", err)
+		x.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	if exists {
+		x.strm.SendElement(iq.ConflictError())
+		return
+	}
+	user := entity.User{
+		Username: userEl.Text(),
+		Password: passwordEl.Text(),
+	}
+	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
+		log.Errorf("%v", err)
+		x.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	x.strm.SendElement(iq.ResultIQ())
+	x.registered = true
 }
 
 func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query *xml.Element) {

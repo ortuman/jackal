@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	// driver implementation
 	_ "github.com/go-sql-driver/mysql"
@@ -65,7 +64,7 @@ func (s *mySQL) FetchUser(username string) (*entity.User, error) {
 	}
 }
 
-func (s *mySQL) InsertOrUpdateUser(u entity.User) error {
+func (s *mySQL) InsertOrUpdateUser(u *entity.User) error {
 	stmt := `` +
 		`INSERT INTO users(username, password, updated_at, created_at)` +
 		`VALUES(?, ?, NOW(), NOW())` +
@@ -115,9 +114,12 @@ func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
 	err := row.Scan(&vCard)
 	switch err {
 	case nil:
-		parser := xml.NewParser()
-		parser.ParseElements(strings.NewReader(vCard))
-		return parser.PopElement(), nil
+		/*
+			parser := xml.NewParser()
+			parser.ParseElements(strings.NewReader(vCard))
+			return parser.PopElement(), nil
+		*/
+		return nil, nil
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
@@ -141,13 +143,16 @@ func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Eleme
 	err := row.Scan(&privateXML)
 	switch err {
 	case nil:
-		parser := xml.NewParser()
-		parser.ParseElements(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
-		rootEl := parser.PopElement()
-		if rootEl != nil {
-			return rootEl.Elements(), nil
-		}
-		fallthrough
+		/*
+			parser := xml.NewParser()
+			parser.ParseElements(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
+			rootEl := parser.PopElement()
+			if rootEl != nil {
+				return rootEl.Elements(), nil
+			}
+			fallthrough
+		*/
+		return nil, nil
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
@@ -203,13 +208,16 @@ func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Element, error) {
 	}
 	buf.WriteString("</root>")
 
-	parser := xml.NewParser()
-	parser.ParseElements(bytes.NewReader(buf.Bytes()))
-	rootEl := parser.PopElement()
-	if rootEl == nil {
-		return []*xml.Element{}, nil
-	}
-	return rootEl.Elements(), nil
+	/*
+		parser := xml.NewParser()
+		parser.ParseElements(bytes.NewReader(buf.Bytes()))
+		rootEl := parser.PopElement()
+		if rootEl == nil {
+			return []*xml.Element{}, nil
+		}
+		return rootEl.Elements(), nil
+	*/
+	return []*xml.Element{}, nil
 }
 
 func (s *mySQL) DeleteOfflineMessages(username string) error {

@@ -29,15 +29,15 @@ servers:
       port: 5222
       connect_timeout: 5
       keep_alive: 120
-      max_stanza_size: 65535
+      max_stanza_size: 65536
 
     tls:
       required: false
       cert_path: cert.pem
       privkey_path: priv_key.pem
 
-    compression:
-      level: default
+    #compression:
+    #  level: default
 
     sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 
