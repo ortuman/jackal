@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"io"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
@@ -496,11 +498,11 @@ func (s *Stream) proceedStartTLS() {
 	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
 	if err != nil {
 		log.Error(err)
-		s.writeElementAndWait(xml.NewElementNamespace("failure", tlsNamespace))
+		s.writeElement(xml.NewElementNamespace("failure", tlsNamespace))
 		s.disconnect(true)
 		return
 	}
-	s.writeElementAndWait(xml.NewElementNamespace("proceed", tlsNamespace))
+	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
 	cfg := &tls.Config{
 		ServerName:   s.Domain(),
@@ -534,7 +536,7 @@ func (s *Stream) compress(elem *xml.Element) {
 		return
 	}
 	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
-	s.writeElementAndWait(compressed)
+	s.writeElement(compressed)
 
 	s.tr.EnableCompression(s.cfg.Compression.Level)
 	s.Lock()
@@ -724,12 +726,14 @@ func (s *Stream) loop() {
 			s.doRead() // keep reading transport...
 
 		case err := <-s.discCh:
-			if strmErr, ok := err.(*errors.StreamError); ok {
-				s.disconnectWithStreamError(strmErr)
-			} else {
-				if err != transport.ErrRemotePeerClosedTransport {
+			if err != nil {
+				if strmErr, ok := err.(*errors.StreamError); ok {
+					s.disconnectWithStreamError(strmErr)
+				} else {
 					log.Error(err)
+					s.disconnect(false)
 				}
+			} else {
 				s.disconnect(false)
 			}
 		}
@@ -742,8 +746,12 @@ func (s *Stream) doRead() {
 			log.Debugf("RECV: %s", e.XML(true))
 			s.readCh <- e
 		} else if err != nil {
-			log.Error(err)
-			s.discCh <- errors.ErrInvalidXML
+			if err == io.EOF || err == xml.ErrClosedStream {
+				s.discCh <- nil
+			} else {
+				log.Error(err)
+				s.discCh <- errors.ErrInvalidXML
+			}
 		}
 	}()
 }
@@ -756,8 +764,8 @@ func (s *Stream) openStreamElement() {
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
 
-	s.writeBytesAndWait([]byte(`<?xml version="1.0"?>`))
-	s.writeBytesAndWait([]byte(ops.XML(false)))
+	s.writeBytes([]byte(`<?xml version="1.0"?>`))
+	s.writeBytes([]byte(ops.XML(false)))
 }
 
 func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
@@ -897,16 +905,7 @@ func (s *Stream) writeElement(elem xml.Serializable) {
 	s.writeBytes([]byte(elem.XML(true)))
 }
 
-func (s *Stream) writeElementAndWait(elem xml.Serializable) {
-	s.writeBytesAndWait([]byte(elem.XML(true)))
-}
-
 func (s *Stream) writeBytes(b []byte) {
-	log.Debugf("SEND: %s", string(b))
-	s.tr.Write(b)
-}
-
-func (s *Stream) writeBytesAndWait(b []byte) {
 	log.Debugf("SEND: %s", string(b))
 	s.tr.Write(b)
 }
@@ -915,7 +914,7 @@ func (s *Stream) disconnectWithStreamError(err *errors.StreamError) {
 	if s.state == connecting {
 		s.openStreamElement()
 	}
-	s.writeElementAndWait(err.Element())
+	s.writeElement(err.Element())
 	s.disconnect(true)
 }
 

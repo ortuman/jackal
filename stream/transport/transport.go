@@ -7,7 +7,6 @@ package transport
 
 import (
 	"crypto/tls"
-	"errors"
 
 	"github.com/ortuman/jackal/config"
 )
@@ -15,14 +14,6 @@ import (
 // channel binding mechanisms
 const (
 	TLSUnique = "tls-unique"
-)
-
-var (
-	// ErrServerClosedTransport indicates that the underlying transport has been closed by server.
-	ErrServerClosedTransport = errors.New("transport closed by server")
-
-	// ErrRemotePeerClosedTransport indicates that the underlying transport has been closed by remote peer.
-	ErrRemotePeerClosedTransport = errors.New("transport closed by remote peer")
 )
 
 type Transport interface {
