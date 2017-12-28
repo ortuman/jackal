@@ -11,11 +11,6 @@ import (
 	"github.com/ortuman/jackal/config"
 )
 
-// channel binding mechanisms
-const (
-	TLSUnique = "tls-unique"
-)
-
 type Transport interface {
 	Write(p []byte) (n int, err error)
 	Read(p []byte) (n int, err error)
@@ -23,5 +18,5 @@ type Transport interface {
 
 	StartTLS(*tls.Config)
 	EnableCompression(config.CompressionLevel)
-	ChannelBindingBytes(string) []byte
+	ChannelBindingBytes(config.ChannelBindingMechanism) []byte
 }

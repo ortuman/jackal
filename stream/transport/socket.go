@@ -14,6 +14,9 @@ import (
 	"github.com/ortuman/jackal/config"
 )
 
+const bufferWriterSize = 16384
+const bufferReaderSize = 16384
+
 type socketTransport struct {
 	conn         net.Conn
 	br           *bufio.Reader
@@ -24,8 +27,8 @@ type socketTransport struct {
 func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
 	s := &socketTransport{
 		conn:         conn,
-		br:           bufio.NewReader(conn),
-		bw:           bufio.NewWriter(conn),
+		br:           bufio.NewReaderSize(conn, bufferReaderSize),
+		bw:           bufio.NewWriterSize(conn, bufferWriterSize),
 		readDeadline: time.Second * time.Duration(keepAlive),
 	}
 	return s
@@ -56,10 +59,10 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 }
 
-func (s *socketTransport) ChannelBindingBytes(mechanism string) []byte {
+func (s *socketTransport) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) []byte {
 	if tlsConn, ok := s.conn.(*tls.Conn); ok {
 		switch mechanism {
-		case TLSUnique:
+		case config.TLSUnique:
 			st := tlsConn.ConnectionState()
 			return st.TLSUnique
 		default:

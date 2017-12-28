@@ -25,6 +25,12 @@ const (
 	S2S
 )
 
+type ChannelBindingMechanism int
+
+const (
+	TLSUnique ChannelBindingMechanism = iota
+)
+
 func (st ServerType) String() string {
 	switch st {
 	case C2S:

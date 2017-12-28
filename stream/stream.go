@@ -193,7 +193,7 @@ func (s *Stream) Priority() int8 {
 	return s.priority
 }
 
-func (s *Stream) ChannelBindingBytes(mechanism string) []byte {
+func (s *Stream) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) []byte {
 	return s.tr.ChannelBindingBytes(mechanism)
 }
 
