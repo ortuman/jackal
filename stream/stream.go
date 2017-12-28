@@ -729,15 +729,16 @@ func (s *Stream) loop() {
 			}
 
 		case err := <-s.discCh:
-			if err != nil {
+			switch err {
+			case nil:
+				s.disconnect(false)
+			default:
 				if strmErr, ok := err.(*errors.StreamError); ok {
 					s.disconnectWithStreamError(strmErr)
 				} else {
 					log.Error(err)
 					s.disconnect(false)
 				}
-			} else {
-				s.disconnect(false)
 			}
 		}
 	}
@@ -748,9 +749,12 @@ func (s *Stream) doRead() {
 		if e, err := s.parser.ParseElement(s.tr); e != nil && err == nil {
 			s.readCh <- e
 		} else if err != nil {
-			if err == io.EOF || err == xml.ErrStreamClosedByPeer {
+			switch err {
+			case nil:
+				break
+			case io.EOF, xml.ErrStreamClosedByPeer:
 				s.discCh <- nil
-			} else {
+			default:
 				log.Error(err)
 				s.discCh <- errors.ErrInvalidXML
 			}

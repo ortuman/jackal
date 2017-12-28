@@ -55,7 +55,7 @@ func (p *Parser) ParseElement(reader io.Reader) (*Element, error) {
 
 		case xml.EndElement:
 			if t1.Name.Local == streamName && t1.Name.Space == streamName {
-				return nil, ErrClosedStream
+				return nil, ErrStreamClosedByPeer
 			}
 			p.endElement(t1)
 			if p.parsingIndex == rootElementIndex {
