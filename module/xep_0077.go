@@ -121,6 +121,20 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query *xml.Element) {
 }
 
 func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query *xml.Element) {
+	if !x.cfg.AllowCancel {
+		x.strm.SendElement(iq.NotAllowedError())
+		return
+	}
+	if query.ElementsCount() != 1 {
+		x.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	if err := storage.Instance().DeleteUser(x.strm.Username()); err != nil {
+		log.Error(err)
+		x.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	x.strm.SendElement(iq.ResultIQ())
 }
 
 func (x *XEPRegister) changePassword(password string, user string, iq *xml.IQ) {
