@@ -91,6 +91,7 @@ type Stream struct {
 	secured       bool
 	authenticated bool
 	compressed    bool
+	available     bool
 	priority      int8
 
 	sendCb *streamSendCallback
@@ -102,7 +103,8 @@ type Stream struct {
 
 	register *module.XEPRegister
 	ping     *module.XEPPing
-	offline  *module.Offline
+
+	offline *module.Offline
 
 	writeCh chan []byte
 	readCh  chan *xml.Element
@@ -185,6 +187,12 @@ func (s *Stream) Compressed() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.compressed
+}
+
+func (s *Stream) Available() bool {
+	s.RLock()
+	defer s.RUnlock()
+	return s.available
 }
 
 func (s *Stream) Priority() int8 {
@@ -514,6 +522,8 @@ func (s *Stream) proceedStartTLS() {
 	s.secured = true
 	s.Unlock()
 
+	log.Infof("secured stream... id: %s", s.id)
+
 	s.restart()
 }
 
@@ -542,6 +552,8 @@ func (s *Stream) compress(elem *xml.Element) {
 	s.Lock()
 	s.compressed = true
 	s.Unlock()
+
+	log.Infof("compressed stream... id: %s", s.id)
 
 	s.restart()
 }
@@ -629,11 +641,12 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		s.writeElement(iq.BadRequestError())
 		return
 	}
-
 	s.Lock()
 	s.resource = resource
 	s.jid = userJID
 	s.Unlock()
+
+	log.Infof("binded resource %s... (%s)", s.Resource(), s.Username())
 
 	//...notify successful binding
 	result := xml.NewMutableIQType(iq.ID(), xml.ResultType)
@@ -698,6 +711,27 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 		Manager().Send(presence, s.sendCb)
 		return
 	}
+	if toJid.IsBare() && toJid.Node() != s.Username() {
+		// silently ignore
+		return
+	}
+	// set resource priority & availability
+	s.Lock()
+	defer s.Unlock()
+
+	s.priority = presence.Priority()
+	if presence.IsAvailable() {
+		s.available = true
+	} else if presence.IsUnavailable() {
+		s.available = false
+	} else {
+		return
+	}
+
+	// deliver offline messages
+	if s.offline != nil && s.available && s.priority >= 0 {
+		s.offline.DeliverOfflineMessages()
+	}
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
@@ -722,8 +756,6 @@ func (s *Stream) loop() {
 			s.writeBytes(b)
 
 		case e := <-s.readCh:
-			log.Debugf("RECV: %s", e.XML(true))
-
 			s.handleElement(e)
 			if s.state != disconnected {
 				s.doRead() // keep reading transport...
@@ -748,6 +780,9 @@ func (s *Stream) loop() {
 func (s *Stream) doRead() {
 	go func() {
 		if e, err := s.parser.ParseElement(s.tr); e != nil && err == nil {
+			if log.Level() >= config.DebugLevel {
+				log.Debugf("RECV: %s", e.XML(true))
+			}
 			s.readCh <- e
 		} else if err != nil {
 			switch err {
@@ -913,7 +948,9 @@ func (s *Stream) writeElement(elem xml.Serializable) {
 }
 
 func (s *Stream) writeBytes(b []byte) {
-	log.Debugf("SEND: %s", string(b))
+	if log.Level() >= config.DebugLevel {
+		log.Debugf("SEND: %s", string(b))
+	}
 	s.tr.Write(b)
 }
 

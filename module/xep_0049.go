@@ -67,13 +67,16 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q *xml.Element) {
 		return
 	}
 	privElem := q.Elements()[0]
-	isValidNS := x.isValidNamespace(privElem.Namespace())
+	privNS := privElem.Namespace()
+	isValidNS := x.isValidNamespace(privNS)
 
 	if privElem.ElementsCount() > 0 || !isValidNS {
 		x.strm.SendElement(iq.NotAcceptableError())
 		return
 	}
-	privElements, err := storage.Instance().FetchPrivateXML(privElem.Namespace(), x.strm.Username())
+	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, x.strm.Username(), x.strm.Resource())
+
+	privElements, err := storage.Instance().FetchPrivateXML(privNS, x.strm.Username())
 	if err != nil {
 		log.Errorf("%v", err)
 		x.strm.SendElement(iq.InternalServerError())
@@ -113,6 +116,8 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q *xml.Element) {
 		nsElements[ns] = elems
 	}
 	for ns, elements := range nsElements {
+		log.Infof("saving private element. ns: %s... (%s/%s)", ns, x.strm.Username(), x.strm.Resource())
+
 		if err := storage.Instance().InsertOrUpdatePrivateXML(elements, ns, x.strm.Username()); err != nil {
 			log.Errorf("%v", err)
 			x.strm.SendElement(iq.InternalServerError())

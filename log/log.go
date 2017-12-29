@@ -30,6 +30,11 @@ func Initialize() error {
 	return instance().initialize()
 }
 
+// Level returns logger subsystem log level.
+func Level() config.LogLevel {
+	return instance().level
+}
+
 // Debugf logs a 'debug' message to the log file
 // and echoes it to the console.
 func Debugf(format string, args ...interface{}) {

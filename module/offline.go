@@ -8,6 +8,8 @@ package module
 import (
 	"time"
 
+	"sync"
+
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
@@ -19,6 +21,7 @@ type Offline struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModOffline
 	strm  Stream
+	once  sync.Once
 }
 
 func NewOffline(cfg *config.ModOffline, strm Stream) *Offline {
@@ -41,7 +44,9 @@ func (o *Offline) ArchiveMessage(message *xml.Message) {
 }
 
 func (o *Offline) DeliverOfflineMessages() {
-	o.queue.Async(func() { o.deliverOfflineMessages() })
+	o.once.Do(func() {
+		o.queue.Async(func() { o.deliverOfflineMessages() })
+	})
 }
 
 func (o *Offline) archiveMessage(message *xml.Message) {
@@ -66,7 +71,9 @@ func (o *Offline) archiveMessage(message *xml.Message) {
 	delayed := message.Delayed(o.strm.Domain(), "Offline Storage")
 	if err := storage.Instance().InsertOfflineMessage(delayed, toJid.Node()); err != nil {
 		log.Errorf("%v", err)
+		return
 	}
+	log.Infof("archived offline message... id: %s", message.ID())
 }
 
 func (o *Offline) deliverOfflineMessages() {
@@ -75,6 +82,11 @@ func (o *Offline) deliverOfflineMessages() {
 		log.Error(err)
 		return
 	}
+	if len(messages) == 0 {
+		return
+	}
+	log.Infof("delivering offline messages... count: %d", len(messages))
+
 	for _, m := range messages {
 		o.strm.SendElement(m)
 	}

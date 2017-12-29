@@ -5,7 +5,10 @@
 
 package xml
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 const (
 	AvailableType    = ""
@@ -45,16 +48,9 @@ func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	return p, nil
 }
 
-func NewMutablePresence() *MutablePresence {
-	p := &MutablePresence{}
+func NewMutablePresence() *MutableElement {
+	p := &MutableElement{}
 	p.SetName("presence")
-	return p
-}
-
-func NewMutablePresenceType(presenceType string) *MutablePresence {
-	p := &MutablePresence{}
-	p.SetName("presence")
-	p.SetType(presenceType)
 	return p
 }
 
@@ -86,6 +82,15 @@ func (p *Presence) IsSubscribed() bool {
 // IsUnsubscribed returns true if this is an 'unsubscribed' type Presence.
 func (p *Presence) IsUnsubscribed() bool {
 	return p.Type() == UnsubscribedType
+}
+
+// Priority returns presence stanza priority value.
+func (p *Presence) Priority() int8 {
+	if pr := p.FindElement("priority"); pr != nil {
+		ret, _ := strconv.Atoi(pr.Text())
+		return int8(ret)
+	}
+	return 0
 }
 
 // ToJID satisfies stanza interface.

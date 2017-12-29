@@ -64,7 +64,9 @@ func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
 }
 
 func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
-	log.Infof("retrieving software version: %v (username: %s)", version.ApplicationVersion, x.strm.Username())
+	username := x.strm.Username()
+	resource := x.strm.Resource()
+	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
 
 	result := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", versionNamespace)

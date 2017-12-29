@@ -71,6 +71,7 @@ func (x *XEPVCard) getVCard(vCard *xml.Element, iq *xml.IQ) {
 		x.strm.SendElement(iq.InternalServerError())
 		return
 	}
+	log.Infof("retrieving vcard... (%s/%s)", x.strm.Username(), x.strm.Resource())
 
 	resultIQ := iq.ResultIQ()
 	if resElem != nil {
@@ -85,6 +86,8 @@ func (x *XEPVCard) getVCard(vCard *xml.Element, iq *xml.IQ) {
 func (x *XEPVCard) setVCard(vCard *xml.Element, iq *xml.IQ) {
 	toJid := iq.ToJID()
 	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.strm.Username()) {
+		log.Infof("saving vcard... (%s/%s)", x.strm.Username(), x.strm.Resource())
+
 		err := storage.Instance().InsertOrUpdateVCard(vCard, x.strm.Username())
 		if err != nil {
 			log.Errorf("%v", err)

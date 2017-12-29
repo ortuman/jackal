@@ -128,7 +128,7 @@ func (m *StreamManager) unregisterStream(strm *Stream) {
 }
 
 func (m *StreamManager) authenticateStream(strm *Stream) {
-	log.Infof("authenticated stream... (username: %s)", strm.Username())
+	log.Infof("authenticated stream... (%s)", strm.Username())
 
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
 		m.authedStrms[strm.Username()] = append(authedStrms, strm)

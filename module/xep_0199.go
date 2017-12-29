@@ -12,6 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/errors"
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -63,7 +64,9 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}
+	log.Infof("received ping... id: %s", iq.ID())
 	if iq.IsGet() {
+		log.Infof("sent pong... id: %s", iq.ID())
 		x.strm.SendElement(iq.ResultIQ())
 	} else {
 		x.strm.SendElement(iq.BadRequestError())
@@ -107,6 +110,9 @@ func (x *XEPPing) sendPing() {
 	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
 
 	x.strm.SendElement(iq)
+
+	log.Infof("sent ping... id: %s", pingId)
+
 	x.waitForPong()
 }
 
@@ -121,6 +127,8 @@ func (x *XEPPing) waitForPong() {
 }
 
 func (x *XEPPing) handlePongIQ(iq *xml.IQ) {
+	log.Infof("received pong... id: %s", iq.ID())
+
 	x.pingMu.Lock()
 	x.pingId = ""
 	x.pingMu.Unlock()
