@@ -25,7 +25,7 @@ type socketTransport struct {
 	br           *bufio.Reader
 	bw           *bufio.Writer
 	readDeadline time.Duration
-	compressor   compress.Compressor
+	zLibEnabled  bool
 }
 
 func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
@@ -63,10 +63,11 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 }
 
 func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
-	if s.compressor == nil {
-		s.compressor = compress.NewZlibCompressor(s.br, s.bw, level)
-		s.w = s.compressor
-		s.r = s.compressor
+	if !s.zLibEnabled {
+		zwr := compress.NewZlibCompressor(s.br, s.bw, level)
+		s.w = zwr
+		s.r = zwr
+		s.zLibEnabled = true
 	}
 }
 
