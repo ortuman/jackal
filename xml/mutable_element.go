@@ -64,14 +64,26 @@ func (m *MutableElement) RemoveAttribute(label string) {
 	m.removeAttribute(label)
 }
 
-// AppendElement appends a new subelement.
+// AppendElement appends a new sub element.
 func (m *MutableElement) AppendElement(element *Element) {
 	m.appendElement(element)
 }
 
-// AppendElements appends an array of elements.
+// AppendMutableElement appends a new mutable sub element.
+func (m *MutableElement) AppendMutableElement(element *MutableElement) {
+	m.appendElement(element.Copy())
+}
+
+// AppendElements appends an array of sub elements.
 func (m *MutableElement) AppendElements(elements []*Element) {
 	m.appendElements(elements)
+}
+
+// AppendMutableElements appends an array of mutable sub elements.
+func (m *MutableElement) AppendMutableElements(elements []*MutableElement) {
+	for _, e := range elements {
+		m.appendElement(e.Copy())
+	}
 }
 
 // RemoveElements removes all elements with a given name.
