@@ -5,7 +5,8 @@
 
 package compress
 
+import "io"
+
 type Compressor interface {
-	Compress(b []byte) ([]byte, error)
-	Uncompress(b []byte) ([]byte, error)
+	io.ReadWriter
 }

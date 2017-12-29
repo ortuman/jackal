@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	// driver implementation
 	_ "github.com/go-sql-driver/mysql"
@@ -114,12 +115,8 @@ func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
 	err := row.Scan(&vCard)
 	switch err {
 	case nil:
-		/*
-			parser := xml.NewParser()
-			parser.ParseElements(strings.NewReader(vCard))
-			return parser.PopElement(), nil
-		*/
-		return nil, nil
+		parser := xml.NewParser()
+		return parser.ParseElement(strings.NewReader(vCard))
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
@@ -143,16 +140,14 @@ func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Eleme
 	err := row.Scan(&privateXML)
 	switch err {
 	case nil:
-		/*
-			parser := xml.NewParser()
-			parser.ParseElements(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
-			rootEl := parser.PopElement()
-			if rootEl != nil {
-				return rootEl.Elements(), nil
-			}
-			fallthrough
-		*/
-		return nil, nil
+		parser := xml.NewParser()
+		rootEl, err := parser.ParseElement(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
+		if err != nil {
+			return nil, err
+		} else if rootEl != nil {
+			return rootEl.Elements(), nil
+		}
+		fallthrough
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
@@ -208,16 +203,14 @@ func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Element, error) {
 	}
 	buf.WriteString("</root>")
 
-	/*
-		parser := xml.NewParser()
-		parser.ParseElements(bytes.NewReader(buf.Bytes()))
-		rootEl := parser.PopElement()
-		if rootEl == nil {
-			return []*xml.Element{}, nil
-		}
-		return rootEl.Elements(), nil
-	*/
-	return []*xml.Element{}, nil
+	parser := xml.NewParser()
+	rootEl, err := parser.ParseElement(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		return nil, err
+	} else if rootEl == nil {
+		return []*xml.Element{}, nil
+	}
+	return rootEl.Elements(), nil
 }
 
 func (s *mySQL) DeleteOfflineMessages(username string) error {

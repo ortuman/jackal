@@ -7,14 +7,13 @@ package transport
 
 import (
 	"crypto/tls"
+	"io"
 
 	"github.com/ortuman/jackal/config"
 )
 
 type Transport interface {
-	Write(p []byte) (n int, err error)
-	Read(p []byte) (n int, err error)
-	Close() error
+	io.ReadWriteCloser
 
 	StartTLS(*tls.Config)
 	EnableCompression(config.CompressionLevel)

@@ -6,9 +6,10 @@
 package zlib
 
 import (
-	"bytes"
 	"fmt"
-	"sync"
+	"io"
+
+	"bytes"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/stream/compress"
@@ -18,15 +19,15 @@ const zlibChunkSize = 4096
 
 type ZlibCompressor struct {
 	zLevel int
+	w      io.Writer
 	wstrm  *zstream
-	rstrm  *zstream
 	wbuff  []byte
+	r      io.Reader
+	rstrm  *zstream
 	rbuff  []byte
-	wlock  sync.Mutex
-	rlock  sync.Mutex
 }
 
-func NewCompressor(level config.CompressionLevel) compress.Compressor {
+func NewCompressor(reader io.Reader, writer io.Writer, level config.CompressionLevel) compress.Compressor {
 	z := &ZlibCompressor{}
 	switch level {
 	case config.DefaultCompression:
@@ -36,67 +37,72 @@ func NewCompressor(level config.CompressionLevel) compress.Compressor {
 	case config.SpeedCompression:
 		z.zLevel = zBestSpeed
 	}
+	z.r = reader
+	z.w = writer
 	return z
 }
 
-func (z *ZlibCompressor) Compress(b []byte) ([]byte, error) {
-	z.wlock.Lock()
-	defer z.wlock.Unlock()
-
+func (z *ZlibCompressor) Write(p []byte) (int, error) {
 	if z.wstrm == nil {
 		z.wstrm = &zstream{}
 		if err := z.wstrm.deflateInit(z.zLevel); err != nil {
-			return nil, err
+			return 0, err
 		}
 		z.wbuff = make([]byte, zlibChunkSize)
 	}
-	z.wstrm.setInBuf(b, len(b))
+	z.wstrm.setInBuf(p, len(p))
 	z.wstrm.setOutBuf(z.wbuff, zlibChunkSize)
 
-	ret := new(bytes.Buffer)
-	var status, have int
+	var status, have, n int
 	for {
 		status = z.wstrm.deflate(zSyncFlush)
 		if status != zOK {
-			return nil, fmt.Errorf("zlib: deflate error (%d)", status)
+			return n, fmt.Errorf("zlib: deflate error (%d)", status)
 		}
 		have = zlibChunkSize - z.wstrm.availOut()
 
-		ret.Write(z.wbuff[:have])
+		wn, err := z.w.Write(z.wbuff[:have])
+		if err != nil {
+			return n, err
+		}
+		n += wn
+
 		if z.wstrm.availOut() != 0 {
 			break
 		}
 	}
-	return ret.Bytes(), nil
+	return n, nil
 }
 
-func (z *ZlibCompressor) Uncompress(b []byte) ([]byte, error) {
-	z.rlock.Lock()
-	defer z.rlock.Unlock()
-
+func (z *ZlibCompressor) Read(p []byte) (int, error) {
 	if z.rstrm == nil {
 		z.rstrm = &zstream{}
 		if err := z.rstrm.inflateInit(); err != nil {
-			return nil, err
+			return 0, err
 		}
 		z.rbuff = make([]byte, zlibChunkSize)
 	}
-	z.rstrm.setInBuf(b, len(b))
+	rbuf := make([]byte, len(p))
+	rn, err := z.r.Read(rbuf)
+	if err != nil {
+		return rn, err
+	}
+	z.rstrm.setInBuf(rbuf, len(rbuf))
 	z.rstrm.setOutBuf(z.rbuff, zlibChunkSize)
 
-	ret := new(bytes.Buffer)
-	var status, have int
+	outBuf := bytes.NewBuffer(make([]byte, len(p)))
+	var status, have, n int
 	for {
 		status = z.rstrm.inflate(zSyncFlush)
 		if status != zOK {
-			return nil, fmt.Errorf("zlib: inflate error (%d)", status)
+			return n, fmt.Errorf("zlib: inflate error (%d)", status)
 		}
 		have = zlibChunkSize - z.rstrm.availOut()
 
-		ret.Write(z.rbuff[:have])
+		outBuf.Write(z.rbuff[:have])
 		if z.rstrm.availOut() != 0 {
 			break
 		}
 	}
-	return ret.Bytes(), nil
+	return outBuf.Read(p)
 }
