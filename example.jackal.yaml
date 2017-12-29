@@ -36,8 +36,8 @@ servers:
       cert_path: cert.pem
       privkey_path: priv_key.pem
 
-    #compression:
-    #  level: default
+    compression:
+      level: default
 
     sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 

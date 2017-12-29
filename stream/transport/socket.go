@@ -8,14 +8,12 @@ package transport
 import (
 	"bufio"
 	"crypto/tls"
+	"io"
 	"net"
 	"time"
 
-	"io"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/stream/compress"
-	"github.com/ortuman/jackal/stream/compress/zlib"
 )
 
 const socketBufferSize = 8192
@@ -66,7 +64,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 
 func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 	if s.compressor == nil {
-		s.compressor = zlib.NewCompressor(s.br, s.bw, level)
+		s.compressor = compress.NewZlibCompressor(s.br, s.bw, level)
 		s.w = s.compressor
 		s.r = s.compressor
 	}
