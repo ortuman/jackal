@@ -125,7 +125,7 @@ func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query *xml.Element) {
 		x.strm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if query.ElementsCount() != 1 {
+	if query.ElementsCount() > 1 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}
@@ -137,7 +137,38 @@ func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query *xml.Element) {
 	x.strm.SendElement(iq.ResultIQ())
 }
 
-func (x *XEPRegister) changePassword(password string, user string, iq *xml.IQ) {
+func (x *XEPRegister) changePassword(password string, username string, iq *xml.IQ) {
+	if !x.cfg.AllowChange {
+		x.strm.SendElement(iq.NotAllowedError())
+		return
+	}
+	if username != x.strm.Username() {
+		x.strm.SendElement(iq.NotAllowedError())
+		return
+	}
+	if !x.strm.Secured() {
+		// channel isn't safe enough to enable a password change
+		x.strm.SendElement(iq.NotAuthorizedError())
+		return
+	}
+	user, err := storage.Instance().FetchUser(username)
+	if err != nil {
+		log.Error(err)
+		x.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	if user == nil || user.Password == password {
+		// nothing to do
+		x.strm.SendElement(iq.ResultIQ())
+		return
+	}
+	user.Password = password
+	if err := storage.Instance().InsertOrUpdateUser(user); err != nil {
+		log.Error(err)
+		x.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	x.strm.SendElement(iq.ResultIQ())
 }
 
 func (x *XEPRegister) isValidToJid(jid *xml.JID) bool {

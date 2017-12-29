@@ -24,6 +24,7 @@ type Stream interface {
 
 	JID() *xml.JID
 
+	Secured() bool
 	Authenticated() bool
 
 	SendElement(xml.Serializable)
