@@ -6,20 +6,19 @@
 package xml_test
 
 import (
+	"io"
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/ortuman/jackal/xml"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDocParse(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal">Hi!</a>\n`
 	p := xml.NewParser()
-	err := p.ParseElements(strings.NewReader(docSrc))
+	a, err := p.ParseElement(strings.NewReader(docSrc))
 	assert.Nil(t, err)
-	a := p.PopElement()
 	assert.NotNil(t, a)
 	assert.Equal(t, a.Name(), "a")
 	assert.Equal(t, a.Attribute("xmlns"), "im.jackal")
@@ -29,21 +28,21 @@ func TestDocParse(t *testing.T) {
 func TestFailedDocParse(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
 	p := xml.NewParser()
-	err := p.ParseElements(strings.NewReader(docSrc))
+	_, err := p.ParseElement(strings.NewReader(docSrc))
 	assert.NotNil(t, err)
 
-	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">`
+	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">\n`
 	p = xml.NewParser()
-	err = p.ParseElements(strings.NewReader(docSrc2))
-	assert.Nil(t, err)
+	element, err := p.ParseElement(strings.NewReader(docSrc2))
+	assert.Equal(t, err, io.EOF)
+	assert.Nil(t, element)
 }
 
 func TestDocChildElements(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<parent><a/><b/><c/></parent>\n`
 	p := xml.NewParser()
-	err := p.ParseElements(strings.NewReader(docSrc))
+	parent, err := p.ParseElement(strings.NewReader(docSrc))
 	assert.Nil(t, err)
-	parent := p.PopElement()
 	assert.NotNil(t, parent)
 	childs := parent.Elements()
 	assert.Equal(t, len(childs), 3)
