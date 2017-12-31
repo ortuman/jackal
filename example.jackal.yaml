@@ -29,7 +29,7 @@ servers:
       port: 5222
       connect_timeout: 5
       keep_alive: 120
-      max_stanza_size: 65536
+      buf_size: 8192
 
     tls:
       required: false

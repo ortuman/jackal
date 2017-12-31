@@ -16,8 +16,6 @@ import (
 	"github.com/ortuman/jackal/stream/compress"
 )
 
-const socketBufferSize = 8192
-
 type socketTransport struct {
 	conn         net.Conn
 	w            io.Writer
@@ -28,11 +26,11 @@ type socketTransport struct {
 	zLibEnabled  bool
 }
 
-func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
+func NewSocketTransport(conn net.Conn, bufferSize, keepAlive int) Transport {
 	s := &socketTransport{
 		conn:         conn,
-		br:           bufio.NewReaderSize(conn, socketBufferSize),
-		bw:           bufio.NewWriterSize(conn, socketBufferSize),
+		br:           bufio.NewReaderSize(conn, bufferSize),
+		bw:           bufio.NewWriterSize(conn, bufferSize),
 		readDeadline: time.Second * time.Duration(keepAlive),
 	}
 	s.w = s.bw

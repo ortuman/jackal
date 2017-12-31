@@ -127,8 +127,9 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	s.domain = s.cfg.Domains[0]
 	s.jid, _ = xml.NewJID("", s.domain, "", true)
 
+	bufferSize := config.Transport.BufferSize
 	keepAlive := config.Transport.KeepAlive
-	s.tr = transport.NewSocketTransport(conn, keepAlive)
+	s.tr = transport.NewSocketTransport(conn, bufferSize, keepAlive)
 
 	// initialize authenticators
 	s.initializeAuthenticators()

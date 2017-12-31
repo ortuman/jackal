@@ -13,6 +13,8 @@ import (
 
 const defaultTransportPort = 5222
 
+const defaultTransportBufferSize = 4096
+
 const defaultTransportConnectTimeout = 5
 const defaultTransportKeepAlive = 120
 
@@ -163,6 +165,7 @@ type Transport struct {
 	Port           int
 	ConnectTimeout int
 	KeepAlive      int
+	BufferSize     int
 }
 
 type transportProxyType struct {
@@ -172,6 +175,7 @@ type transportProxyType struct {
 	ConnectTimeout int    `yaml:"connect_timeout"`
 	KeepAlive      int    `yaml:"keep_alive"`
 	MaxStanzaSize  int    `yaml:"max_stanza_size"`
+	BufferSize     int    `yaml:"buf_size"`
 }
 
 func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -200,6 +204,10 @@ func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	t.KeepAlive = p.KeepAlive
 	if t.KeepAlive == 0 {
 		t.KeepAlive = defaultTransportKeepAlive
+	}
+	t.BufferSize = p.BufferSize
+	if t.BufferSize == 0 {
+		t.BufferSize = defaultTransportBufferSize
 	}
 	return nil
 }
