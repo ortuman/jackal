@@ -101,10 +101,10 @@ type Stream struct {
 
 	iqHandlers []module.IQHandler
 
+	roster   *module.Roster
 	register *module.XEPRegister
 	ping     *module.XEPPing
-
-	offline *module.Offline
+	offline  *module.Offline
 
 	writeCh chan []byte
 	readCh  chan *xml.Element

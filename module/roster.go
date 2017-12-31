@@ -4,3 +4,18 @@
  */
 
 package module
+
+import "github.com/ortuman/jackal/xml"
+
+const rosterNamespace = ""
+
+type Roster struct {
+}
+
+func (r *Roster) AssociatedNamespaces() []string {
+	return []string{}
+}
+
+func (r *Roster) MatchesIQ(iq *xml.IQ) bool {
+	return iq.FindElementNamespace("query", rosterNamespace) != nil
+}
