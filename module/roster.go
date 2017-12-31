@@ -23,7 +23,7 @@ type Roster struct {
 func NewRoster(strm Stream) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
-			QueueSize: 16,
+			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		strm: strm,

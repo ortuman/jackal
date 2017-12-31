@@ -25,7 +25,7 @@ type XEPPrivateStorage struct {
 func NewXEPPrivateStorage(strm Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		queue: concurrent.OperationQueue{
-			QueueSize: 16,
+			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		strm: strm,
