@@ -59,6 +59,10 @@ func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	if err := p.setShow(); err != nil {
 		return nil, err
 	}
+	// status
+	if err := p.validateStatus(); err != nil {
+		return nil, err
+	}
 	// priority
 	if err := p.setPriority(); err != nil {
 		return nil, err
@@ -133,6 +137,24 @@ func isPresenceType(presenceType string) bool {
 	default:
 		return false
 	}
+}
+
+func (p *Presence) validateStatus() error {
+	sts := p.FindElements("status")
+	for _, st := range sts {
+		switch st.AttributesCount() {
+		case 0:
+			break
+		case 1:
+			if st.Attributes()[0].label == "xml:lang" {
+				break
+			}
+			fallthrough
+		default:
+			return errors.New(" the <status/> element MUST NOT possess any attributes, with the exception of the 'xml:lang' attribute")
+		}
+	}
+	return nil
 }
 
 func (p *Presence) setShow() error {

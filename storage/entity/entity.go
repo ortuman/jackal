@@ -9,3 +9,10 @@ type User struct {
 	Username string
 	Password string
 }
+
+type Roster struct {
+	Jid          string
+	Name         string
+	Subscription string
+	Ask          bool
+}

@@ -233,6 +233,10 @@ func (s *Stream) initializeAuthenticators() {
 }
 
 func (s *Stream) initializeXEPs() {
+	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
+	s.roster = module.NewRoster(s)
+	s.iqHandlers = append(s.iqHandlers, s.roster)
+
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	discoInfo := module.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
@@ -789,7 +793,7 @@ func (s *Stream) doRead() {
 			switch err {
 			case nil:
 				break
-			case io.EOF, xml.ErrStreamClosedByPeer:
+			case io.EOF, io.ErrUnexpectedEOF, xml.ErrStreamClosedByPeer:
 				s.discCh <- nil
 			default:
 				log.Error(err)

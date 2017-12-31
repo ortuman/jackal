@@ -85,6 +85,11 @@ func (e *Element) Attribute(label string) string {
 	return ""
 }
 
+// Attributes returns all XML node attributes.
+func (e *Element) Attributes() []Attribute {
+	return e.attrs
+}
+
 // AttributesCount XML attributes count.
 func (e *Element) AttributesCount() int {
 	return len(e.attrs)

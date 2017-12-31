@@ -10,6 +10,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE roster_users (
+    username VARCHAR(256) NOT NULL,
+    jid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subscription TEXT NOT NULL,
+    ask BOOL NOT NULL,
+    updated_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE INDEX i_roster_users_username ON roster_users(username);
+
 CREATE TABLE IF NOT EXISTS private_storage (
     username VARCHAR(256) NOT NULL,
     namespace VARCHAR(512) NOT NULL,
