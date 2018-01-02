@@ -743,7 +743,9 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 		return
 	}
 	if toJid.IsBare() && toJid.Node() != s.Username() {
-		// silently ignore
+		if s.roster != nil {
+			s.roster.ProcessPresence(presence)
+		}
 		return
 	}
 	// set resource priority & availability

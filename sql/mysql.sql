@@ -18,11 +18,11 @@ CREATE TABLE roster_items (
   groups TEXT NOT NULL,
   ask BOOL NOT NULL,
   updated_at DATETIME NOT NULL,
-  created_at DATETIME NOT NULL
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (username, jid)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_roster_items_username ON roster_items(username);
-CREATE INDEX i_roster_items_username_jid ON roster_items(username, jid);
 
 CREATE TABLE IF NOT EXISTS private_storage (
     username VARCHAR(256) NOT NULL,

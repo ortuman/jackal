@@ -23,24 +23,24 @@ type Roster struct {
 	queue concurrent.OperationQueue
 	strm  Stream
 
-	reqRosterMu sync.RWMutex
-	reqRoster   bool
+	requestedRosterMu sync.RWMutex
+	requestedRoster   bool
 }
 
 func NewRoster(strm Stream) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
-			Timeout:   time.Second,
+			Timeout:   time.Second * 5,
 		},
 		strm: strm,
 	}
 }
 
 func (r *Roster) RequestedRoster() bool {
-	r.reqRosterMu.RLock()
-	defer r.reqRosterMu.RUnlock()
-	return r.reqRoster
+	r.requestedRosterMu.RLock()
+	defer r.requestedRosterMu.RUnlock()
+	return r.requestedRoster
 }
 
 func (r *Roster) AssociatedNamespaces() []string {
@@ -61,6 +61,12 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 		} else {
 			r.strm.SendElement(iq.BadRequestError())
 		}
+	})
+}
+
+func (r *Roster) ProcessPresence(presence *xml.Presence) {
+	r.queue.Async(func() {
+
 	})
 }
 
@@ -88,9 +94,9 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 	result.AppendMutableElement(q)
 	r.strm.SendElement(result)
 
-	r.reqRosterMu.Lock()
-	r.reqRoster = true
-	r.reqRosterMu.Unlock()
+	r.requestedRosterMu.Lock()
+	r.requestedRoster = true
+	r.requestedRosterMu.Unlock()
 }
 
 func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
