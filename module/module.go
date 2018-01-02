@@ -5,7 +5,10 @@
 
 package module
 
-import "github.com/ortuman/jackal/xml"
+import (
+	"github.com/ortuman/jackal/storage/entity"
+	"github.com/ortuman/jackal/xml"
+)
 
 type Module interface {
 	AssociatedNamespaces() []string
@@ -28,7 +31,7 @@ type Stream interface {
 	Authenticated() bool
 
 	SendElement(element xml.Serializable)
-	RosterPush(query *xml.Element)
+	PushRosterItem(item *entity.RosterItem)
 
 	Disconnect(err error)
 }

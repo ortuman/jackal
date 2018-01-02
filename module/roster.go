@@ -54,22 +54,22 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 	r.queue.Async(func() {
 		q := iq.FindElementNamespace("query", rosterNamespace)
 		if iq.IsGet() {
-			if q.ElementsCount() > 0 {
-				r.strm.SendElement(iq.BadRequestError())
-				return
-			}
-			r.sendRoster(iq)
+			r.sendRoster(iq, q)
 		} else if iq.IsSet() {
 			r.updateRoster(iq, q)
 		}
 	})
 }
 
-func (r *Roster) sendRoster(iq *xml.IQ) {
+func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
+	if query.ElementsCount() > 0 {
+		r.strm.SendElement(iq.BadRequestError())
+		return
+	}
 	log.Infof("retrieving user roster... (%s/%s)", r.strm.Username(), r.strm.Resource())
 
 	result := iq.ResultIQ()
-	query := xml.NewMutableElementNamespace("query", rosterNamespace)
+	q := xml.NewMutableElementNamespace("query", rosterNamespace)
 
 	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
 	if err != nil {
@@ -79,10 +79,10 @@ func (r *Roster) sendRoster(iq *xml.IQ) {
 	}
 	if items != nil && len(items) > 0 {
 		for _, item := range items {
-			query.AppendElement(item.Element())
+			q.AppendElement(item.Element())
 		}
 	}
-	result.AppendMutableElement(query)
+	result.AppendMutableElement(q)
 	r.strm.SendElement(result)
 
 	r.reqRosterMu.Lock()
@@ -92,34 +92,34 @@ func (r *Roster) sendRoster(iq *xml.IQ) {
 
 func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 	items := query.FindElements("item")
-	for _, item := range items {
-		if ok := r.updateRosterItem(iq, item); !ok {
-			return
-		}
+	if len(items) != 1 {
+		r.strm.SendElement(iq.BadRequestError())
+		return
 	}
-	r.strm.RosterPush(query)
+	ri, err := entity.NewRosterItem(items[0])
+	if err != nil {
+		r.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	if err := r.updateRosterItem(ri); err != nil {
+		log.Error(err)
+		r.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	r.strm.PushRosterItem(ri)
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) updateRosterItem(iq *xml.IQ, item *xml.Element) bool {
-	ri, err := entity.NewRosterItem(item)
-	if err != nil {
-		r.strm.SendElement(iq.BadRequestError())
-		return false
-	}
+func (r *Roster) updateRosterItem(ri *entity.RosterItem) error {
 	switch ri.Subscription {
 	case "remove":
 		if err := storage.Instance().DeleteRosterItem(r.strm.Username(), ri.JID.ToBareJID()); err != nil {
-			log.Error(err)
-			r.strm.SendElement(iq.InternalServerError())
-			return false
+			return err
 		}
 	default:
 		if err := storage.Instance().InsertOrUpdateRosterItem(r.strm.Username(), ri); err != nil {
-			log.Error(err)
-			r.strm.SendElement(iq.InternalServerError())
-			return false
+			return err
 		}
 	}
-	return true
+	return nil
 }

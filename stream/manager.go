@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -32,7 +33,7 @@ type sendReq struct {
 
 type rosterPushReq struct {
 	username string
-	query    *xml.Element
+	item     *entity.RosterItem
 	doneCh   chan struct{}
 }
 
@@ -100,10 +101,10 @@ func (m *StreamManager) Send(stanza xml.Stanza, callback SendCallback) {
 	}
 }
 
-func (m *StreamManager) RosterPush(query *xml.Element, username string) {
+func (m *StreamManager) PushRosterItem(item *entity.RosterItem, username string) {
 	req := &rosterPushReq{
 		username: username,
-		query:    query,
+		item:     item,
 		doneCh:   make(chan struct{}),
 	}
 	m.rosterPushCh <- req
@@ -122,7 +123,7 @@ func (m *StreamManager) loop() {
 		case strm := <-m.authCh:
 			m.authenticateStream(strm)
 		case req := <-m.rosterPushCh:
-			m.rosterPush(req.query, req.username, req.doneCh)
+			m.pushRosterItem(req.item, req.username, req.doneCh)
 		case req := <-m.resAvailCh:
 			req.resultCh <- m.isResourceAvailable(req.resource, req.strm)
 		}
@@ -211,16 +212,18 @@ done:
 	}
 }
 
-func (m *StreamManager) rosterPush(query *xml.Element, username string, doneCh chan struct{}) {
+func (m *StreamManager) pushRosterItem(item *entity.RosterItem, username string, doneCh chan struct{}) {
 	authedStrms := m.authedStrms[username]
 	if authedStrms == nil {
 		return
 	}
+	query := xml.NewMutableElementNamespace("query", "jabber:iq:roster")
+	query.AppendElement(item.Element())
 	for _, authedStrm := range authedStrms {
 		if authedStrm.RequestedRoster() {
 			pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
 			pushEl.SetTo(authedStrm.JID().ToFullJID())
-			pushEl.AppendElement(query)
+			pushEl.AppendMutableElement(query)
 			authedStrm.SendElement(pushEl)
 		}
 	}
