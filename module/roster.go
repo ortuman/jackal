@@ -66,8 +66,14 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 
 func (r *Roster) ProcessPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-
+		r.processPresence(presence)
 	})
+}
+
+func (r *Roster) processPresence(presence *xml.Presence) {
+	if presence.IsSubscribe() {
+		// TODO: Implement subscription logic
+	}
 }
 
 func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
