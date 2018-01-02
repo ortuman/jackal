@@ -20,7 +20,7 @@ type SendCallback interface {
 
 type resourceAvailableReq struct {
 	resource string
-	strm     *Stream
+	username string
 	resultCh chan bool
 }
 
@@ -93,7 +93,7 @@ func (m *StreamManager) UserStreams(username string) []*Stream {
 func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
 	req := &resourceAvailableReq{
 		resource: resource,
-		strm:     strm,
+		username: strm.Username(),
 		resultCh: make(chan bool),
 	}
 	m.resAvailCh <- req
@@ -121,7 +121,7 @@ func (m *StreamManager) loop() {
 		case req := <-m.userStrmsCh:
 			req.resultCh <- m.userStreams(req.username)
 		case req := <-m.resAvailCh:
-			req.resultCh <- m.isResourceAvailable(req.resource, req.strm)
+			req.resultCh <- m.isResourceAvailable(req.resource, req.username)
 		}
 	}
 }
@@ -162,8 +162,8 @@ func (m *StreamManager) userStreams(username string) []*Stream {
 	return []*Stream{}
 }
 
-func (m *StreamManager) isResourceAvailable(resource string, strm *Stream) bool {
-	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
+func (m *StreamManager) isResourceAvailable(resource string, username string) bool {
+	if authedStrms := m.authedStrms[username]; authedStrms != nil {
 		for _, authedStrm := range authedStrms {
 			if authedStrm.Resource() == resource {
 				return false

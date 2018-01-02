@@ -31,7 +31,7 @@ func NewRoster(strm Stream) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
-			Timeout:   time.Second * 5,
+			Timeout:   time.Second * 10,
 		},
 		strm: strm,
 	}
