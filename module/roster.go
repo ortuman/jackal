@@ -10,6 +10,7 @@ import (
 
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -49,6 +50,18 @@ func (r *Roster) sendUserRoster(iq *xml.IQ) {
 
 	result := iq.ResultIQ()
 	query := xml.NewMutableElementNamespace("query", rosterNamespace)
+
+	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+	if err != nil {
+		log.Error(err)
+		r.strm.SendElement(iq.InternalServerError())
+		return
+	}
+	if items != nil && len(items) > 0 {
+		for _, item := range items {
+			query.AppendElement(item.Element())
+		}
+	}
 	result.AppendMutableElement(query)
 	r.strm.SendElement(result)
 }
