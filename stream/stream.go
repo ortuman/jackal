@@ -91,6 +91,7 @@ type Stream struct {
 	secured       bool
 	authenticated bool
 	compressed    bool
+	active        bool
 	available     bool
 	priority      int8
 
@@ -190,10 +191,23 @@ func (s *Stream) Compressed() bool {
 	return s.compressed
 }
 
+func (s *Stream) Active() bool {
+	s.RLock()
+	defer s.RUnlock()
+	return s.active
+}
+
 func (s *Stream) Available() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.available
+}
+
+func (s *Stream) RequestedRoster() bool {
+	if s.roster != nil {
+		return s.roster.RequestedRoster()
+	}
+	return false
 }
 
 func (s *Stream) Priority() int8 {
@@ -677,6 +691,7 @@ func (s *Stream) startSession(iq *xml.IQ) {
 		s.ping.StartPinging()
 	}
 	s.state = sessionStarted
+	s.active = true
 }
 
 func (s *Stream) processStanza(stanza xml.Stanza) {
@@ -725,13 +740,7 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 	defer s.Unlock()
 
 	s.priority = presence.Priority()
-	if presence.IsAvailable() {
-		s.available = true
-	} else if presence.IsUnavailable() {
-		s.available = false
-	} else {
-		return
-	}
+	s.available = true
 
 	// deliver offline messages
 	if s.offline != nil && s.available && s.priority >= 0 {

@@ -8,9 +8,12 @@ package module
 import (
 	"time"
 
+	"sync"
+
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -19,6 +22,9 @@ const rosterNamespace = "jabber:iq:roster"
 type Roster struct {
 	queue concurrent.OperationQueue
 	strm  Stream
+
+	reqRosterMu sync.RWMutex
+	reqRoster   bool
 }
 
 func NewRoster(strm Stream) *Roster {
@@ -31,6 +37,12 @@ func NewRoster(strm Stream) *Roster {
 	}
 }
 
+func (r *Roster) RequestedRoster() bool {
+	r.reqRosterMu.RLock()
+	defer r.reqRosterMu.RUnlock()
+	return r.reqRoster
+}
+
 func (r *Roster) AssociatedNamespaces() []string {
 	return []string{}
 }
@@ -41,11 +53,20 @@ func (r *Roster) MatchesIQ(iq *xml.IQ) bool {
 
 func (r *Roster) ProcessIQ(iq *xml.IQ) {
 	r.queue.Async(func() {
-		r.sendUserRoster(iq)
+		q := iq.FindElementNamespace("query", rosterNamespace)
+		if iq.IsGet() {
+			if q.ElementsCount() > 0 {
+				r.strm.SendElement(iq.BadRequestError())
+				return
+			}
+			r.sendRoster(iq)
+		} else if iq.IsSet() {
+			r.updateRoster(iq, q)
+		}
 	})
 }
 
-func (r *Roster) sendUserRoster(iq *xml.IQ) {
+func (r *Roster) sendRoster(iq *xml.IQ) {
 	log.Infof("retrieving user roster... (%s/%s)", r.strm.Username(), r.strm.Resource())
 
 	result := iq.ResultIQ()
@@ -64,4 +85,37 @@ func (r *Roster) sendUserRoster(iq *xml.IQ) {
 	}
 	result.AppendMutableElement(query)
 	r.strm.SendElement(result)
+
+	r.reqRosterMu.Lock()
+	r.reqRoster = true
+	r.reqRosterMu.Unlock()
+}
+
+func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
+	items := query.FindElements("item")
+	for _, item := range items {
+		r.updateRosterItem(iq, item)
+	}
+}
+
+func (r *Roster) updateRosterItem(iq *xml.IQ, item *xml.Element) {
+	ri, err := entity.NewRosterItem(item)
+	if err != nil {
+		r.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	switch ri.Subscription {
+	case "remove":
+		if err := storage.Instance().DeleteRosterItem(r.strm.Username(), ri.JID.ToBareJID()); err != nil {
+			log.Error(err)
+			r.strm.SendElement(iq.InternalServerError())
+			return
+		}
+	default:
+		if err := storage.Instance().InsertOrUpdateRosterItem(r.strm.Username(), ri); err != nil {
+			log.Error(err)
+			r.strm.SendElement(iq.InternalServerError())
+			return
+		}
+	}
 }

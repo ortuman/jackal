@@ -24,6 +24,11 @@ type resourceAvailableReq struct {
 	resultCh chan bool
 }
 
+type authenticatedStreamsReq struct {
+	username string
+	resultCh chan []*Stream
+}
+
 type sendRequest struct {
 	stanza   xml.Stanza
 	callback SendCallback
@@ -33,11 +38,12 @@ type StreamManager struct {
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 
-	regCh      chan *Stream
-	unregCh    chan *Stream
-	authCh     chan *Stream
-	resAvailCh chan *resourceAvailableReq
-	sendCh     chan *sendRequest
+	regCh         chan *Stream
+	unregCh       chan *Stream
+	authCh        chan *Stream
+	authedStrmsCh chan *authenticatedStreamsReq
+	resAvailCh    chan *resourceAvailableReq
+	sendCh        chan *sendRequest
 }
 
 // singleton interface
@@ -49,13 +55,14 @@ var (
 func Manager() *StreamManager {
 	once.Do(func() {
 		instance = &StreamManager{
-			strms:       make(map[string]*Stream),
-			authedStrms: make(map[string][]*Stream),
-			regCh:       make(chan *Stream),
-			unregCh:     make(chan *Stream),
-			authCh:      make(chan *Stream),
-			resAvailCh:  make(chan *resourceAvailableReq),
-			sendCh:      make(chan *sendRequest, 1000),
+			strms:         make(map[string]*Stream),
+			authedStrms:   make(map[string][]*Stream),
+			regCh:         make(chan *Stream),
+			unregCh:       make(chan *Stream),
+			authCh:        make(chan *Stream),
+			authedStrmsCh: make(chan *authenticatedStreamsReq),
+			resAvailCh:    make(chan *resourceAvailableReq),
+			sendCh:        make(chan *sendRequest, 1000),
 		}
 		go instance.loop()
 	})
@@ -72,6 +79,15 @@ func (m *StreamManager) UnregisterStream(strm *Stream) {
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
 	m.authCh <- strm
+}
+
+func (m *StreamManager) AuthenticatedStreams(username string) []*Stream {
+	req := &authenticatedStreamsReq{
+		username: username,
+		resultCh: make(chan []*Stream),
+	}
+	m.authedStrmsCh <- req
+	return <-req.resultCh
 }
 
 func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
@@ -102,6 +118,8 @@ func (m *StreamManager) loop() {
 			m.unregisterStream(strm)
 		case strm := <-m.authCh:
 			m.authenticateStream(strm)
+		case req := <-m.authedStrmsCh:
+			req.resultCh <- m.authedStrms[req.username]
 		case req := <-m.resAvailCh:
 			req.resultCh <- m.isResourceAvailable(req.resource, req.strm)
 		}
