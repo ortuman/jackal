@@ -57,6 +57,8 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 			r.sendRoster(iq, q)
 		} else if iq.IsSet() {
 			r.updateRoster(iq, q)
+		} else {
+			r.strm.SendElement(iq.BadRequestError())
 		}
 	})
 }
