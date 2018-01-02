@@ -6,9 +6,8 @@
 package module
 
 import (
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
