@@ -92,7 +92,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 		r.strm.SendElement(iq.InternalServerError())
 		return
 	}
-	if items != nil && len(items) > 0 {
+	if items != nil {
 		for _, item := range items {
 			q.AppendElement(item.Element())
 		}
