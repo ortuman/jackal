@@ -111,7 +111,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 		r.strm.SendElement(iq.BadRequestError())
 		return
 	}
-	ri, err := entity.NewRosterItem(items[0])
+	ri, err := entity.NewRosterItemElement(items[0])
 	if err != nil {
 		r.strm.SendElement(iq.BadRequestError())
 		return

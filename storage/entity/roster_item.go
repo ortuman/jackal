@@ -20,7 +20,7 @@ type RosterItem struct {
 	Groups       []string
 }
 
-func NewRosterItem(item *xml.Element) (*RosterItem, error) {
+func NewRosterItemElement(item *xml.Element) (*RosterItem, error) {
 	ri := &RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
@@ -42,8 +42,6 @@ func NewRosterItem(item *xml.Element) (*RosterItem, error) {
 			return nil, fmt.Errorf("unrecognized 'subscription' enum type: %s", subscription)
 		}
 		ri.Subscription = subscription
-	} else {
-		ri.Subscription = "none"
 	}
 	ask := item.Attribute("ask")
 	if len(ask) > 0 {

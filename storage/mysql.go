@@ -140,6 +140,22 @@ func (s *mySQL) DeleteRosterItem(username, jid string) error {
 	return err
 }
 
+func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error) {
+	stmt := `` +
+		`SELECT jid, name, subscription, groups, ask` +
+		` FROM roster_items WHERE username = ? AND jid = ?`
+	rows, err := s.db.Query(stmt, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		return s.rosterItemFromRows(rows)
+	}
+	return nil, nil
+}
+
 func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	stmt := `` +
 		`SELECT jid, name, subscription, groups, ask` +
@@ -152,23 +168,7 @@ func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	}
 	defer rows.Close()
 
-	var result []entity.RosterItem
-	for rows.Next() {
-		var ri entity.RosterItem
-		var jid, groups string
-
-		rows.Scan(&jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
-
-		j, err := xml.NewJIDString(jid, true)
-		if err != nil {
-			return nil, err
-		}
-		ri.JID = j
-		ri.Groups = strings.Split(groups, ";")
-
-		result = append(result, ri)
-	}
-	return result, nil
+	return s.rosterItemsFromRows(rows)
 }
 
 func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
@@ -296,4 +296,32 @@ func (s *mySQL) inTransaction(f func(tx *sql.Tx) error) error {
 		tx.Commit()
 	}
 	return err
+}
+
+func (s *mySQL) rosterItemsFromRows(rows *sql.Rows) ([]entity.RosterItem, error) {
+	var result []entity.RosterItem
+	for rows.Next() {
+		ri, err := s.rosterItemFromRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, *ri)
+	}
+	return result, nil
+}
+
+func (s *mySQL) rosterItemFromRows(rows *sql.Rows) (*entity.RosterItem, error) {
+	var ri entity.RosterItem
+	var jid, groups string
+
+	rows.Scan(&jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
+
+	j, err := xml.NewJIDString(jid, true)
+	if err != nil {
+		return nil, err
+	}
+	ri.JID = j
+	ri.Groups = strings.Split(groups, ";")
+
+	return &ri, nil
 }
