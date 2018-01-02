@@ -13,7 +13,7 @@ import (
 )
 
 type RosterItem struct {
-	Jid          string
+	JID          *xml.JID
 	Name         string
 	Subscription string
 	Ask          bool
@@ -23,7 +23,11 @@ type RosterItem struct {
 func NewRosterItem(item *xml.Element) (*RosterItem, error) {
 	ri := &RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
-		ri.Jid = jid
+		j, err := xml.NewJIDString(jid, false)
+		if err != nil {
+			return nil, err
+		}
+		ri.JID = j
 	} else {
 		return nil, errors.New("item 'jid' attribute is required")
 	}
@@ -38,6 +42,8 @@ func NewRosterItem(item *xml.Element) (*RosterItem, error) {
 			return nil, fmt.Errorf("unrecognized 'subscription' enum type: %s", subscription)
 		}
 		ri.Subscription = subscription
+	} else {
+		ri.Subscription = "none"
 	}
 	ask := item.Attribute("ask")
 	if len(ask) > 0 {
@@ -58,7 +64,7 @@ func NewRosterItem(item *xml.Element) (*RosterItem, error) {
 
 func (ri *RosterItem) Element() *xml.Element {
 	item := xml.NewMutableElementName("item")
-	item.SetAttribute("jid", ri.Jid)
+	item.SetAttribute("jid", ri.JID.ToBareJID())
 	if len(ri.Name) > 0 {
 		item.SetAttribute("name", ri.Name)
 	}

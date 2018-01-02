@@ -81,6 +81,10 @@ func (s *mySQL) DeleteUser(username string) error {
 		if err != nil {
 			return err
 		}
+		_, err = tx.Exec("DELETE FROM roster_items WHERE username = ?", username)
+		if err != nil {
+			return err
+		}
 		_, err = tx.Exec("DELETE FROM private_storage WHERE username = ?", username)
 		if err != nil {
 			return err
@@ -107,6 +111,31 @@ func (s *mySQL) UserExists(username string) (bool, error) {
 	default:
 		return false, err
 	}
+}
+
+func (s *mySQL) InsertOrUpdateRosterItem(username string, ri *entity.RosterItem) error {
+	groups := strings.Join(ri.Groups, ";")
+	params := []interface{}{
+		username,
+		ri.JID.ToBareJID(),
+		ri.Name,
+		ri.Subscription,
+		groups,
+		ri.Name,
+		ri.Subscription,
+		groups,
+	}
+	stmt := `` +
+		`INSERT INTO roster_items(username, jid, name, subscription, groups, updated_at, created_at)` +
+		`VALUES(?, ?, ?, ?, ?, NOW(), NOW())` +
+		`ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, updated_at = NOW()`
+	_, err := s.db.Exec(stmt, params...)
+	return err
+}
+
+func (s *mySQL) DeleteRosterItem(username, jid string) error {
+	_, err := s.db.Exec("DELETE FROM roster_items WHERE username = ? AND jid = ?", username, jid)
+	return err
 }
 
 func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {

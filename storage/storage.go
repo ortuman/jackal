@@ -23,6 +23,10 @@ type storage interface {
 
 	UserExists(username string) (bool, error)
 
+	// Roster
+	InsertOrUpdateRosterItem(username string, ri *entity.RosterItem) error
+	DeleteRosterItem(username, jid string) error
+
 	// vCard
 	FetchVCard(username string) (*xml.Element, error)
 	InsertOrUpdateVCard(vCard *xml.Element, username string) error
