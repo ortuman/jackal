@@ -5,14 +5,10 @@
 
 package entity
 
-type User struct {
-	Username string
-	Password string
-}
-
-type Roster struct {
+type RosterItem struct {
 	Jid          string
 	Name         string
 	Subscription string
 	Ask          bool
+	Groups       []string
 }
