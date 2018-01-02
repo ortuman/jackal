@@ -116,13 +116,13 @@ func (r *Roster) updateRosterItem(ri *entity.RosterItem) error {
 	jid := ri.JID.String()
 	switch ri.Subscription {
 	case "remove":
-		log.Infof("removing user item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
+		log.Infof("removing roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
 
 		if err := storage.Instance().DeleteRosterItem(r.strm.Username(), ri.JID.ToBareJID()); err != nil {
 			return err
 		}
 	default:
-		log.Infof("inserting/updating user item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
+		log.Infof("inserting/updating roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
 
 		if err := storage.Instance().InsertOrUpdateRosterItem(r.strm.Username(), ri); err != nil {
 			return err
