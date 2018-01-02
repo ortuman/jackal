@@ -150,7 +150,7 @@ func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	}
 	defer rows.Close()
 
-	result := []entity.RosterItem{}
+	var result []entity.RosterItem
 	for rows.Next() {
 		var ri entity.RosterItem
 		var jid, groups string
@@ -163,6 +163,8 @@ func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 		}
 		ri.JID = j
 		ri.Groups = strings.Split(groups, ";")
+
+		result = append(result, ri)
 	}
 	return result, nil
 }
@@ -199,7 +201,8 @@ func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Eleme
 	switch err {
 	case nil:
 		parser := xml.NewParser()
-		rootEl, err := parser.ParseElement(strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML)))
+		reader := strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML))
+		rootEl, err := parser.ParseElement(reader)
 		if err != nil {
 			return nil, err
 		} else if rootEl != nil {
