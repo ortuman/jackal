@@ -26,6 +26,7 @@ type storage interface {
 	// Roster
 	InsertOrUpdateRosterItem(username string, ri *entity.RosterItem) error
 	DeleteRosterItem(username, jid string) error
+	FetchRosterItems(username string) ([]entity.RosterItem, error)
 
 	// vCard
 	FetchVCard(username string) (*xml.Element, error)

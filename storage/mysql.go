@@ -138,6 +138,35 @@ func (s *mySQL) DeleteRosterItem(username, jid string) error {
 	return err
 }
 
+func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
+	stmt := `` +
+		`SELECT username, jid, name, subscription, groups, ask` +
+		` FROM roster_items WHERE username = ?` +
+		` ORDER BY created_at DESC`
+
+	rows, err := s.db.Query(stmt, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := []entity.RosterItem{}
+	for rows.Next() {
+		var ri entity.RosterItem
+		var jid, groups string
+
+		rows.Scan(&jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
+
+		j, err := xml.NewJIDString(jid, true)
+		if err != nil {
+			return nil, err
+		}
+		ri.JID = j
+		ri.Groups = strings.Split(groups, ";")
+	}
+	return result, nil
+}
+
 func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
 	row := s.db.QueryRow("SELECT vcard FROM vcards WHERE username = ?", username)
 	var vCard string
