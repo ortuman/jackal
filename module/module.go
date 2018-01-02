@@ -6,7 +6,6 @@
 package module
 
 import (
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -29,9 +28,12 @@ type Stream interface {
 
 	Secured() bool
 	Authenticated() bool
+	Compressed() bool
+
+	RequestedRoster() bool
 
 	SendElement(element xml.Serializable)
-	PushRosterItem(item *entity.RosterItem)
-
 	Disconnect(err error)
+
+	UserStreams() []Stream
 }

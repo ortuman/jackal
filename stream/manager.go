@@ -9,9 +9,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
-	"github.com/pborman/uuid"
 )
 
 type SendCallback interface {
@@ -26,27 +24,26 @@ type resourceAvailableReq struct {
 	resultCh chan bool
 }
 
+type userStreamsReq struct {
+	username string
+	resultCh chan []*Stream
+}
+
 type sendReq struct {
 	stanza   xml.Stanza
 	callback SendCallback
-}
-
-type rosterPushReq struct {
-	username string
-	item     *entity.RosterItem
-	doneCh   chan struct{}
 }
 
 type StreamManager struct {
 	strms       map[string]*Stream
 	authedStrms map[string][]*Stream
 
-	regCh        chan *Stream
-	unregCh      chan *Stream
-	authCh       chan *Stream
-	rosterPushCh chan *rosterPushReq
-	resAvailCh   chan *resourceAvailableReq
-	sendCh       chan *sendReq
+	regCh       chan *Stream
+	unregCh     chan *Stream
+	authCh      chan *Stream
+	userStrmsCh chan *userStreamsReq
+	resAvailCh  chan *resourceAvailableReq
+	sendCh      chan *sendReq
 }
 
 // singleton interface
@@ -58,14 +55,14 @@ var (
 func Manager() *StreamManager {
 	once.Do(func() {
 		instance = &StreamManager{
-			strms:        make(map[string]*Stream),
-			authedStrms:  make(map[string][]*Stream),
-			regCh:        make(chan *Stream, 32),
-			unregCh:      make(chan *Stream, 32),
-			authCh:       make(chan *Stream, 32),
-			rosterPushCh: make(chan *rosterPushReq, 32),
-			resAvailCh:   make(chan *resourceAvailableReq, 32),
-			sendCh:       make(chan *sendReq, 1000),
+			strms:       make(map[string]*Stream),
+			authedStrms: make(map[string][]*Stream),
+			regCh:       make(chan *Stream, 32),
+			unregCh:     make(chan *Stream, 32),
+			authCh:      make(chan *Stream, 32),
+			userStrmsCh: make(chan *userStreamsReq, 32),
+			resAvailCh:  make(chan *resourceAvailableReq, 32),
+			sendCh:      make(chan *sendReq, 1000),
 		}
 		go instance.loop()
 	})
@@ -82,6 +79,15 @@ func (m *StreamManager) UnregisterStream(strm *Stream) {
 
 func (m *StreamManager) AuthenticateStream(strm *Stream) {
 	m.authCh <- strm
+}
+
+func (m *StreamManager) UserStreams(username string) []*Stream {
+	req := &userStreamsReq{
+		username: username,
+		resultCh: make(chan []*Stream),
+	}
+	m.userStrmsCh <- req
+	return <-req.resultCh
 }
 
 func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
@@ -101,16 +107,6 @@ func (m *StreamManager) Send(stanza xml.Stanza, callback SendCallback) {
 	}
 }
 
-func (m *StreamManager) PushRosterItem(item *entity.RosterItem, username string) {
-	req := &rosterPushReq{
-		username: username,
-		item:     item,
-		doneCh:   make(chan struct{}),
-	}
-	m.rosterPushCh <- req
-	<-req.doneCh
-}
-
 func (m *StreamManager) loop() {
 	for {
 		select {
@@ -122,8 +118,8 @@ func (m *StreamManager) loop() {
 			m.unregisterStream(strm)
 		case strm := <-m.authCh:
 			m.authenticateStream(strm)
-		case req := <-m.rosterPushCh:
-			m.pushRosterItem(req.item, req.username, req.doneCh)
+		case req := <-m.userStrmsCh:
+			req.resultCh <- m.userStreams(req.username)
 		case req := <-m.resAvailCh:
 			req.resultCh <- m.isResourceAvailable(req.resource, req.strm)
 		}
@@ -157,6 +153,13 @@ func (m *StreamManager) authenticateStream(strm *Stream) {
 	} else {
 		m.authedStrms[strm.Username()] = []*Stream{strm}
 	}
+}
+
+func (m *StreamManager) userStreams(username string) []*Stream {
+	if authedStrms := m.authedStrms[username]; authedStrms != nil {
+		return authedStrms
+	}
+	return []*Stream{}
 }
 
 func (m *StreamManager) isResourceAvailable(resource string, strm *Stream) bool {
@@ -210,24 +213,6 @@ done:
 	if sendCallback != nil {
 		sendCallback.Sent(stanza)
 	}
-}
-
-func (m *StreamManager) pushRosterItem(item *entity.RosterItem, username string, doneCh chan struct{}) {
-	authedStrms := m.authedStrms[username]
-	if authedStrms == nil {
-		return
-	}
-	query := xml.NewMutableElementNamespace("query", "jabber:iq:roster")
-	query.AppendElement(item.Element())
-	for _, authedStrm := range authedStrms {
-		if authedStrm.RequestedRoster() {
-			pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
-			pushEl.SetTo(authedStrm.JID().ToFullJID())
-			pushEl.AppendMutableElement(query)
-			authedStrm.SendElement(pushEl)
-		}
-	}
-	close(doneCh)
 }
 
 func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {

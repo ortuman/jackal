@@ -14,6 +14,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
 
 const rosterNamespace = "jabber:iq:roster"
@@ -108,7 +109,9 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 		r.strm.SendElement(iq.InternalServerError())
 		return
 	}
-	r.strm.PushRosterItem(ri)
+	// send 'roster push'
+	r.pushRosterItem(ri)
+
 	r.strm.SendElement(iq.ResultIQ())
 }
 
@@ -129,4 +132,20 @@ func (r *Roster) updateRosterItem(ri *entity.RosterItem) error {
 		}
 	}
 	return nil
+}
+
+func (r *Roster) pushRosterItem(item *entity.RosterItem) {
+	query := xml.NewMutableElementNamespace("query", rosterNamespace)
+	query.AppendElement(item.Element())
+
+	userStreams := r.strm.UserStreams()
+	for _, strm := range userStreams {
+		if !strm.RequestedRoster() {
+			continue
+		}
+		pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
+		pushEl.SetTo(strm.JID().ToFullJID())
+		pushEl.AppendMutableElement(query)
+		strm.SendElement(pushEl)
+	}
 }

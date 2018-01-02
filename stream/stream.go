@@ -18,7 +18,6 @@ import (
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -225,12 +224,17 @@ func (s *Stream) SendElement(elem xml.Serializable) {
 	s.writeCh <- []byte(elem.XML(true))
 }
 
-func (s *Stream) PushRosterItem(item *entity.RosterItem) {
-	Manager().PushRosterItem(item, s.Username())
-}
-
 func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
+}
+
+func (s *Stream) UserStreams() []module.Stream {
+	res := []module.Stream{}
+	strms := Manager().UserStreams(s.Username())
+	for _, strm := range strms {
+		res = append(res, strm)
+	}
+	return res
 }
 
 func (s *Stream) initializeAuthenticators() {
