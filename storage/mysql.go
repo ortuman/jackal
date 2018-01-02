@@ -121,14 +121,16 @@ func (s *mySQL) InsertOrUpdateRosterItem(username string, ri *entity.RosterItem)
 		ri.Name,
 		ri.Subscription,
 		groups,
+		ri.Ask,
 		ri.Name,
 		ri.Subscription,
 		groups,
+		ri.Ask,
 	}
 	stmt := `` +
-		`INSERT INTO roster_items(username, jid, name, subscription, groups, updated_at, created_at)` +
-		`VALUES(?, ?, ?, ?, ?, NOW(), NOW())` +
-		`ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, updated_at = NOW()`
+		`INSERT INTO roster_items(username, jid, name, subscription, groups, ask, updated_at, created_at)` +
+		`VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW())` +
+		`ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, updated_at = NOW()`
 	_, err := s.db.Exec(stmt, params...)
 	return err
 }
@@ -140,7 +142,7 @@ func (s *mySQL) DeleteRosterItem(username, jid string) error {
 
 func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	stmt := `` +
-		`SELECT username, jid, name, subscription, groups, ask` +
+		`SELECT jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ?` +
 		` ORDER BY created_at DESC`
 

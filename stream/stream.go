@@ -224,6 +224,10 @@ func (s *Stream) SendElement(elem xml.Serializable) {
 	s.writeCh <- []byte(elem.XML(true))
 }
 
+func (s *Stream) RosterPush(query *xml.Element) {
+	Manager().RosterPush(query, s.Username())
+}
+
 func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
@@ -722,7 +726,9 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 	}
 
 	// ...IQ not handled...
-	s.writeElement(iq.ServiceUnavailableError())
+	if iq.IsGet() || iq.IsSet() {
+		s.writeElement(iq.ServiceUnavailableError())
+	}
 }
 
 func (s *Stream) processPresence(presence *xml.Presence) {

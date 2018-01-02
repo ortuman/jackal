@@ -27,7 +27,8 @@ type Stream interface {
 	Secured() bool
 	Authenticated() bool
 
-	SendElement(xml.Serializable)
+	SendElement(element xml.Serializable)
+	RosterPush(query *xml.Element)
 
 	Disconnect(err error)
 }
