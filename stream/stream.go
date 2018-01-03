@@ -43,7 +43,7 @@ const (
 )
 
 type streamSendCallback struct {
-	strm *Stream
+	stream *Stream
 }
 
 func (scb *streamSendCallback) Sent(serializable xml.Serializable, to *xml.JID) {
@@ -52,8 +52,8 @@ func (scb *streamSendCallback) Sent(serializable xml.Serializable, to *xml.JID) 
 func (scb *streamSendCallback) NotAuthenticated(serializable xml.Serializable, to *xml.JID) {
 	switch v := serializable.(type) {
 	case *xml.Message:
-		if scb.strm.offline != nil {
-			scb.strm.offline.ArchiveMessage(v)
+		if scb.stream.offline != nil {
+			scb.stream.offline.ArchiveMessage(v)
 		}
 		break
 	}
@@ -72,8 +72,8 @@ func (scb *streamSendCallback) ResourceNotFound(serializable xml.Serializable, t
 		resp = v.MutableCopy()
 	}
 	resp.SetFrom(to.String())
-	resp.SetTo(scb.strm.JID().String())
-	scb.strm.SendElement(resp.ServiceUnavailableError())
+	resp.SetTo(scb.stream.JID().String())
+	scb.stream.SendElement(resp.ServiceUnavailableError())
 }
 
 type moduleStreamManager struct {
@@ -85,9 +85,9 @@ func (msm *moduleStreamManager) SendElement(element xml.Serializable, to *xml.JI
 
 func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
 	res := []module.Stream{}
-	strms := Manager().UserStreams(username)
-	for _, strm := range strms {
-		res = append(res, strm)
+	streams := Manager().UserStreams(username)
+	for _, stream := range streams {
+		res = append(res, stream)
 	}
 	return res
 }
@@ -239,8 +239,8 @@ func (s *Stream) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) [
 	return s.tr.ChannelBindingBytes(mechanism)
 }
 
-func (s *Stream) SendElement(elem xml.Serializable) {
-	s.writeCh <- []byte(elem.XML(true))
+func (s *Stream) SendElement(serializable xml.Serializable) {
+	s.writeCh <- []byte(serializable.XML(true))
 }
 
 func (s *Stream) Disconnect(err error) {
