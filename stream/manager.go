@@ -13,9 +13,9 @@ import (
 )
 
 type SendCallback interface {
-	Sent(xml.Stanza)
-	NotAuthenticated(xml.Stanza)
-	ResourceNotFound(xml.Stanza)
+	Sent(serializable xml.Serializable, to *xml.JID)
+	NotAuthenticated(serializable xml.Serializable, to *xml.JID)
+	ResourceNotFound(serializable xml.Serializable, to *xml.JID)
 }
 
 type resourceAvailableReq struct {
@@ -30,8 +30,9 @@ type userStreamsReq struct {
 }
 
 type sendReq struct {
-	stanza   xml.Stanza
-	callback SendCallback
+	serializable xml.Serializable
+	to           *xml.JID
+	callback     SendCallback
 }
 
 type StreamManager struct {
@@ -100,10 +101,11 @@ func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool 
 	return <-req.resultCh
 }
 
-func (m *StreamManager) Send(stanza xml.Stanza, callback SendCallback) {
+func (m *StreamManager) SendElement(serializable xml.Serializable, to *xml.JID, callback SendCallback) {
 	m.sendCh <- &sendReq{
-		stanza:   stanza,
-		callback: callback,
+		serializable: serializable,
+		to:           to,
+		callback:     callback,
 	}
 }
 
@@ -111,7 +113,7 @@ func (m *StreamManager) loop() {
 	for {
 		select {
 		case req := <-m.sendCh:
-			m.send(req.stanza, req.callback)
+			m.send(req.serializable, req.to, req.callback)
 		case strm := <-m.regCh:
 			m.registerStream(strm)
 		case strm := <-m.unregCh:
@@ -173,45 +175,44 @@ func (m *StreamManager) isResourceAvailable(resource string, username string) bo
 	return true
 }
 
-func (m *StreamManager) send(stanza xml.Stanza, sendCallback SendCallback) {
-	toJid := stanza.ToJID()
-	recipients := m.authedStrms[toJid.Node()]
+func (m *StreamManager) send(serializable xml.Serializable, to *xml.JID, sendCallback SendCallback) {
+	recipients := m.authedStrms[to.Node()]
 	if recipients == nil {
 		if sendCallback != nil {
-			sendCallback.NotAuthenticated(stanza)
+			sendCallback.NotAuthenticated(serializable, to)
 		}
 		return
 	}
-	if toJid.IsFull() {
+	if to.IsFull() {
 		recipients = filterStreams(recipients, func(s *Stream) bool {
-			return s.Resource() == toJid.Resource()
+			return s.Resource() == to.Resource()
 		})
 		if len(recipients) == 0 {
 			if sendCallback != nil {
-				sendCallback.ResourceNotFound(stanza)
+				sendCallback.ResourceNotFound(serializable, to)
 			}
 			return
 		}
-		recipients[0].SendElement(stanza)
+		recipients[0].SendElement(serializable)
 
 	} else {
-		switch stanza.(type) {
+		switch serializable.(type) {
 		case *xml.Message:
 			// send to highest priority stream
 			if strm := highestPriorityStream(recipients); strm != nil {
-				strm.SendElement(stanza)
+				strm.SendElement(serializable)
 				goto done
 			}
 		}
 		// broadcast to all streams
 		for _, strm := range recipients {
-			strm.SendElement(stanza)
+			strm.SendElement(serializable)
 		}
 	}
 
 done:
 	if sendCallback != nil {
-		sendCallback.Sent(stanza)
+		sendCallback.Sent(serializable, to)
 	}
 }
 

@@ -46,11 +46,11 @@ type streamSendCallback struct {
 	strm *Stream
 }
 
-func (scb *streamSendCallback) Sent(stanza xml.Stanza) {
+func (scb *streamSendCallback) Sent(serializable xml.Serializable, to *xml.JID) {
 }
 
-func (scb *streamSendCallback) NotAuthenticated(stanza xml.Stanza) {
-	switch v := stanza.(type) {
+func (scb *streamSendCallback) NotAuthenticated(serializable xml.Serializable, to *xml.JID) {
+	switch v := serializable.(type) {
 	case *xml.Message:
 		if scb.strm.offline != nil {
 			scb.strm.offline.ArchiveMessage(v)
@@ -59,10 +59,10 @@ func (scb *streamSendCallback) NotAuthenticated(stanza xml.Stanza) {
 	}
 }
 
-func (scb *streamSendCallback) ResourceNotFound(stanza xml.Stanza) {
+func (scb *streamSendCallback) ResourceNotFound(serializable xml.Serializable, to *xml.JID) {
 	var resp *xml.MutableElement
 
-	switch v := stanza.(type) {
+	switch v := serializable.(type) {
 	case *xml.Presence:
 		// silently ignore
 		return
@@ -71,7 +71,7 @@ func (scb *streamSendCallback) ResourceNotFound(stanza xml.Stanza) {
 	case *xml.IQ:
 		resp = v.MutableCopy()
 	}
-	resp.SetFrom(stanza.ToJID().String())
+	resp.SetFrom(to.String())
 	resp.SetTo(scb.strm.JID().String())
 	scb.strm.SendElement(resp.ServiceUnavailableError())
 }
@@ -79,8 +79,8 @@ func (scb *streamSendCallback) ResourceNotFound(stanza xml.Stanza) {
 type moduleStreamManager struct {
 }
 
-func (msm *moduleStreamManager) Send(stanza xml.Stanza) {
-	Manager().Send(stanza, nil)
+func (msm *moduleStreamManager) SendElement(element xml.Serializable, to *xml.JID) {
+	Manager().SendElement(element, to, nil)
 }
 
 func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
@@ -532,7 +532,7 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 		s.processComponentStanza(stanza)
 	} else {
 		// S2S
-		Manager().Send(stanza, s.sendCb)
+		Manager().SendElement(stanza, toJid, s.sendCb)
 	}
 }
 
@@ -728,7 +728,7 @@ func (s *Stream) processComponentStanza(stanza xml.Stanza) {
 
 func (s *Stream) processIQ(iq *xml.IQ) {
 	if iq.ToJID().IsFull() {
-		Manager().Send(iq, s.sendCb)
+		Manager().SendElement(iq, iq.ToJID(), s.sendCb)
 		return
 	}
 
@@ -749,7 +749,7 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 func (s *Stream) processPresence(presence *xml.Presence) {
 	toJid := presence.ToJID()
 	if toJid.IsFull() {
-		Manager().Send(presence, s.sendCb)
+		Manager().SendElement(presence, presence.ToJID(), s.sendCb)
 		return
 	}
 	if toJid.IsBare() && toJid.Node() != s.Username() {
@@ -772,7 +772,7 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
-	Manager().Send(message, s.sendCb)
+	Manager().SendElement(message, message.ToJID(), s.sendCb)
 }
 
 func (s *Stream) restart() {

@@ -37,6 +37,6 @@ type Stream interface {
 }
 
 type StreamManager interface {
-	Send(stanza xml.Stanza)
+	SendElement(element xml.Serializable, to *xml.JID)
 	UserStreams(username string) []Stream
 }
