@@ -449,7 +449,7 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 		s.startAuthentication(elem)
 
 	case "iq":
-		stanza, err := s.buildStanza(elem)
+		stanza, _, err := s.buildStanza(elem)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
@@ -495,17 +495,21 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 			return
 		}
 		s.compress(elem)
+
 	case "iq":
-		iq, err := s.buildStanza(elem)
+		stanza, _, err := s.buildStanza(elem)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
 		}
+		iq := stanza.(*xml.IQ)
+
 		if len(s.Resource()) == 0 { // expecting bind
-			s.bindResource(iq.(*xml.IQ))
+			s.bindResource(iq)
 		} else { // expecting session
-			s.startSession(iq.(*xml.IQ))
+			s.startSession(iq)
 		}
+
 	default:
 		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
 	}
@@ -517,21 +521,20 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 		s.ping.ResetDeadline()
 	}
 
-	stanza, err := s.buildStanza(elem)
+	stanza, toJID, err := s.buildStanza(elem)
 	if err != nil {
 		s.handleElementError(elem, err)
 		return
 	}
-	toJid := stanza.ToJID()
-	if s.isValidDomain(toJid.Domain()) {
+	if s.isValidDomain(toJID.Domain()) {
 		// local stanza
 		s.processStanza(stanza)
-	} else if s.isComponentDomain(toJid.Domain()) {
+	} else if s.isComponentDomain(toJID.Domain()) {
 		// component (MUC, pubsub, etc.)
 		s.processComponentStanza(stanza)
 	} else {
 		// S2S
-		Manager().SendElement(stanza, toJid, s.sendCb)
+		Manager().SendElement(stanza, toJID, s.sendCb)
 	}
 }
 
@@ -712,7 +715,7 @@ func (s *Stream) startSession(iq *xml.IQ) {
 	s.active = true
 }
 
-func (s *Stream) processStanza(stanza xml.Stanza) {
+func (s *Stream) processStanza(stanza xml.Serializable) {
 	if iq, ok := stanza.(*xml.IQ); ok {
 		s.processIQ(iq)
 	} else if presence, ok := stanza.(*xml.Presence); ok {
@@ -722,7 +725,7 @@ func (s *Stream) processStanza(stanza xml.Stanza) {
 	}
 }
 
-func (s *Stream) processComponentStanza(stanza xml.Stanza) {
+func (s *Stream) processComponentStanza(stanza xml.Serializable) {
 }
 
 func (s *Stream) processIQ(iq *xml.IQ) {
@@ -846,40 +849,40 @@ func (s *Stream) openStreamElement() {
 	s.writeBytes([]byte(ops.XML(false)))
 }
 
-func (s *Stream) buildStanza(elem *xml.Element) (xml.Stanza, error) {
+func (s *Stream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JID, error) {
 	if err := s.validateNamespace(elem); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fromJID, toJID, err := s.validateAddresses(elem)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	switch elem.Name() {
 	case "iq":
 		iq, err := xml.NewIQ(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, nil, xml.ErrBadRequest
 		}
-		return iq, nil
+		return iq, iq.ToJID(), nil
 
 	case "presence":
 		presence, err := xml.NewPresence(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, nil, xml.ErrBadRequest
 		}
-		return presence, nil
+		return presence, presence.ToJID(), nil
 
 	case "message":
 		message, err := xml.NewMessage(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, nil, xml.ErrBadRequest
 		}
-		return message, nil
+		return message, message.ToJID(), nil
 	}
-	return nil, errors.ErrUnsupportedStanzaType
+	return nil, nil, errors.ErrUnsupportedStanzaType
 }
 
 func (s *Stream) handleElementError(elem *xml.Element, err error) {
