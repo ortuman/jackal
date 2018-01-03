@@ -42,6 +42,7 @@ servers:
     sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 
     modules:
+      # Roster
       - roster
 
       # XEP-0049: Private XML Storage
