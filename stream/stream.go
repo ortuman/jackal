@@ -111,8 +111,6 @@ type Stream struct {
 	available     bool
 	priority      int8
 
-	sendCb *streamSendCallback
-
 	authrs      []authenticator
 	activeAuthr authenticator
 
@@ -123,6 +121,7 @@ type Stream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
+	sendCb           *streamSendCallback
 	modStreamManager *moduleStreamManager
 
 	writeCh chan []byte
