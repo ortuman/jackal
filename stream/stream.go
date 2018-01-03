@@ -756,7 +756,7 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 	s.available = true
 
 	// deliver offline messages
-	if s.offline != nil && s.available && s.priority >= 0 {
+	if s.offline != nil && s.priority >= 0 {
 		s.offline.DeliverOfflineMessages()
 	}
 }

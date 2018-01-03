@@ -144,7 +144,7 @@ func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error
 	stmt := `` +
 		`SELECT jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ? AND jid = ?`
-	rows, err := s.db.Query(stmt, username)
+	rows, err := s.db.Query(stmt, username, jid)
 	if err != nil {
 		return nil, err
 	}

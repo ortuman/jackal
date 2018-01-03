@@ -72,7 +72,10 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 
 func (r *Roster) processPresence(presence *xml.Presence) {
 	if presence.IsSubscribe() {
-		// TODO: Implement subscription logic
+		if err := r.subscribeTo(presence.ToJID()); err != nil {
+			log.Error(err)
+			return
+		}
 	}
 }
 
@@ -116,34 +119,78 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 		r.strm.SendElement(iq.BadRequestError())
 		return
 	}
-	if err := r.updateRosterItem(ri); err != nil {
+	updatedRosterItem, err := r.updateRosterItem(ri)
+	if err != nil {
 		log.Error(err)
 		r.strm.SendElement(iq.InternalServerError())
 		return
 	}
-	// send 'roster push'
-	r.pushRosterItem(ri)
-
+	r.pushRosterItem(updatedRosterItem)
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) updateRosterItem(ri *entity.RosterItem) error {
-	jid := ri.JID.String()
-	switch ri.Subscription {
-	case "remove":
-		log.Infof("removing roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
+func (r *Roster) subscribeTo(to *xml.JID) error {
+	username := r.strm.Username()
+	jid := to.ToBareJID()
 
-		if err := storage.Instance().DeleteRosterItem(r.strm.Username(), ri.JID.ToBareJID()); err != nil {
-			return err
-		}
-	default:
-		log.Infof("inserting/updating roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
-
-		if err := storage.Instance().InsertOrUpdateRosterItem(r.strm.Username(), ri); err != nil {
-			return err
-		}
+	ri, err := storage.Instance().FetchRosterItem(username, jid)
+	if err != nil {
+		return err
 	}
+	if ri == nil {
+		// create roster item if not previously created
+		ri = &entity.RosterItem{
+			JID:          to,
+			Subscription: "none",
+			Ask:          true,
+		}
+	} else {
+		ri.Ask = true
+	}
+	if err := storage.Instance().InsertOrUpdateRosterItem(username, ri); err != nil {
+		return err
+	}
+	r.pushRosterItem(ri)
 	return nil
+}
+
+func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.RosterItem, error) {
+	username := r.strm.Username()
+	resource := r.strm.Resource()
+
+	jid := rosterItem.JID.ToBareJID()
+
+	switch rosterItem.Subscription {
+	case "remove":
+		log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
+		if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
+			return nil, err
+		}
+		return rosterItem, nil
+
+	default:
+		log.Infof("inserting/updating roster item: %s (%s/%s)", jid, username, resource)
+
+		ri, err := storage.Instance().FetchRosterItem(username, jid)
+		if err != nil {
+			return nil, err
+		}
+		if ri != nil {
+			// update roster item
+			if len(rosterItem.Name) > 0 {
+				ri.Name = rosterItem.Name
+			}
+			ri.Groups = rosterItem.Groups
+
+		} else {
+			ri = rosterItem
+			ri.Subscription = "none"
+		}
+		if err := storage.Instance().InsertOrUpdateRosterItem(username, ri); err != nil {
+			return nil, err
+		}
+		return ri, nil
+	}
 }
 
 func (r *Roster) pushRosterItem(item *entity.RosterItem) {
