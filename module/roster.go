@@ -173,7 +173,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	jid := rosterItem.JID.ToBareJID()
 
 	switch rosterItem.Subscription {
-	case "remove":
+	case subscriptionRemove:
 		log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
 		if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
 			return nil, err
