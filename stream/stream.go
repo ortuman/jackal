@@ -76,6 +76,22 @@ func (scb *streamSendCallback) ResourceNotFound(stanza xml.Stanza) {
 	scb.strm.SendElement(resp.ServiceUnavailableError())
 }
 
+type moduleStreamManager struct {
+}
+
+func (msm *moduleStreamManager) Send(stanza xml.Stanza) {
+	Manager().Send(stanza, nil)
+}
+
+func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
+	res := []module.Stream{}
+	strms := Manager().UserStreams(username)
+	for _, strm := range strms {
+		res = append(res, strm)
+	}
+	return res
+}
+
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
@@ -107,6 +123,8 @@ type Stream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
+	modStreamManager *moduleStreamManager
+
 	writeCh chan []byte
 	readCh  chan *xml.Element
 	discCh  chan error
@@ -123,6 +141,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		discCh:  make(chan error),
 	}
 	s.sendCb = &streamSendCallback{s}
+	s.modStreamManager = &moduleStreamManager{}
 
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
@@ -228,15 +247,6 @@ func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
 
-func (s *Stream) UserStreams() []module.Stream {
-	res := []module.Stream{}
-	strms := Manager().UserStreams(s.Username())
-	for _, strm := range strms {
-		res = append(res, strm)
-	}
-	return res
-}
-
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
@@ -257,7 +267,7 @@ func (s *Stream) initializeAuthenticators() {
 
 func (s *Stream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(s)
+	s.roster = module.NewRoster(s, s.modStreamManager)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)

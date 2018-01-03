@@ -28,20 +28,22 @@ const (
 )
 
 type Roster struct {
-	queue concurrent.OperationQueue
-	strm  Stream
+	queue       concurrent.OperationQueue
+	strm        Stream
+	strmManager StreamManager
 
 	requestedRosterMu sync.RWMutex
 	requestedRoster   bool
 }
 
-func NewRoster(strm Stream) *Roster {
+func NewRoster(stream Stream, streamManager StreamManager) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second * 10,
 		},
-		strm: strm,
+		strm:        stream,
+		strmManager: streamManager,
 	}
 }
 
@@ -209,7 +211,7 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem) {
 	query := xml.NewMutableElementNamespace("query", rosterNamespace)
 	query.AppendElement(item.Element())
 
-	userStreams := r.strm.UserStreams()
+	userStreams := r.strmManager.UserStreams(r.strm.Username())
 	for _, strm := range userStreams {
 		if !strm.RequestedRoster() {
 			continue
