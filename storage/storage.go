@@ -24,7 +24,7 @@ type storage interface {
 	UserExists(username string) (bool, error)
 
 	// Roster
-	InsertOrUpdateRosterItem(username string, ri *entity.RosterItem) error
+	InsertOrUpdateRosterItem(ri *entity.RosterItem) error
 	DeleteRosterItem(username, jid string) error
 
 	FetchRosterItem(username, jid string) (*entity.RosterItem, error)

@@ -246,6 +246,15 @@ func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
 
+func (s *Stream) LocalDomain(domain string) bool {
+	for _, localDomain := range s.cfg.Domains {
+		if domain == localDomain {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
@@ -672,7 +681,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		resource = uuid.New()
 	}
 	// try binding...
-	if !Manager().IsResourceAvailable(resource, s) {
+	if !Manager().ResourceAvailable(resource, s) {
 		s.writeElement(iq.ConflictError())
 		return
 	}

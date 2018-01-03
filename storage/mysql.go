@@ -113,10 +113,10 @@ func (s *mySQL) UserExists(username string) (bool, error) {
 	}
 }
 
-func (s *mySQL) InsertOrUpdateRosterItem(username string, ri *entity.RosterItem) error {
+func (s *mySQL) InsertOrUpdateRosterItem(ri *entity.RosterItem) error {
 	groups := strings.Join(ri.Groups, ";")
 	params := []interface{}{
-		username,
+		ri.Username,
 		ri.JID.ToBareJID(),
 		ri.Name,
 		ri.Subscription,
@@ -142,7 +142,7 @@ func (s *mySQL) DeleteRosterItem(username, jid string) error {
 
 func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error) {
 	stmt := `` +
-		`SELECT jid, name, subscription, groups, ask` +
+		`SELECT username, jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ? AND jid = ?`
 	rows, err := s.db.Query(stmt, username, jid)
 	if err != nil {
@@ -158,7 +158,7 @@ func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error
 
 func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	stmt := `` +
-		`SELECT jid, name, subscription, groups, ask` +
+		`SELECT username, jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ?` +
 		` ORDER BY created_at DESC`
 
@@ -314,7 +314,7 @@ func (s *mySQL) rosterItemFromRows(rows *sql.Rows) (*entity.RosterItem, error) {
 	var ri entity.RosterItem
 	var jid, groups string
 
-	rows.Scan(&jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
+	rows.Scan(&ri.Username, &jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
 
 	j, err := xml.NewJIDString(jid, true)
 	if err != nil {

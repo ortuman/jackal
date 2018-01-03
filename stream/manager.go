@@ -58,11 +58,11 @@ func Manager() *StreamManager {
 		instance = &StreamManager{
 			strms:       make(map[string]*Stream),
 			authedStrms: make(map[string][]*Stream),
-			regCh:       make(chan *Stream, 32),
-			unregCh:     make(chan *Stream, 32),
-			authCh:      make(chan *Stream, 32),
-			userStrmsCh: make(chan *userStreamsReq, 32),
-			resAvailCh:  make(chan *resourceAvailableReq, 32),
+			regCh:       make(chan *Stream),
+			unregCh:     make(chan *Stream),
+			authCh:      make(chan *Stream),
+			userStrmsCh: make(chan *userStreamsReq),
+			resAvailCh:  make(chan *resourceAvailableReq),
 			sendCh:      make(chan *sendReq, 1000),
 		}
 		go instance.loop()
@@ -91,7 +91,7 @@ func (m *StreamManager) UserStreams(username string) []*Stream {
 	return <-req.resultCh
 }
 
-func (m *StreamManager) IsResourceAvailable(resource string, strm *Stream) bool {
+func (m *StreamManager) ResourceAvailable(resource string, strm *Stream) bool {
 	req := &resourceAvailableReq{
 		resource: resource,
 		username: strm.Username(),

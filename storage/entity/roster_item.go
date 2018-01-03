@@ -13,6 +13,7 @@ import (
 )
 
 type RosterItem struct {
+	Username     string
 	JID          *xml.JID
 	Name         string
 	Subscription string

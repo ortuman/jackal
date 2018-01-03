@@ -86,6 +86,8 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 			log.Error(err)
 			return
 		}
+	} else if presence.IsSubscribed() {
+		// TODO: Handle 'subscribed' presence
 	}
 }
 
@@ -154,6 +156,7 @@ func (r *Roster) subscribeTo(to *xml.JID) error {
 	if ri == nil {
 		// create roster item if not previously created
 		ri = &entity.RosterItem{
+			Username:     username,
 			JID:          to,
 			Subscription: subscriptionNone,
 			Ask:          true,
@@ -161,7 +164,7 @@ func (r *Roster) subscribeTo(to *xml.JID) error {
 	} else {
 		ri.Ask = true
 	}
-	if err := storage.Instance().InsertOrUpdateRosterItem(username, ri); err != nil {
+	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
 		return err
 	}
 	r.pushRosterItem(ri)
@@ -203,10 +206,16 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 			ri.Groups = rosterItem.Groups
 
 		} else {
-			ri = rosterItem
-			ri.Subscription = subscriptionNone
+			ri = &entity.RosterItem{
+				Username:     username,
+				JID:          ri.JID,
+				Name:         ri.Name,
+				Subscription: subscriptionNone,
+				Groups:       ri.Groups,
+				Ask:          ri.Ask,
+			}
 		}
-		if err := storage.Instance().InsertOrUpdateRosterItem(username, ri); err != nil {
+		if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
 			return nil, err
 		}
 		return ri, nil
