@@ -21,13 +21,13 @@ type XEPVCard struct {
 	strm  Stream
 }
 
-func NewXEPVCard(strm Stream) *XEPVCard {
+func NewXEPVCard(stream Stream) *XEPVCard {
 	v := &XEPVCard{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: strm,
+		strm: stream,
 	}
 	return v
 }

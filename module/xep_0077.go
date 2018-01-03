@@ -21,10 +21,10 @@ type XEPRegister struct {
 	registered bool
 }
 
-func NewXEPRegister(cfg *config.ModRegistration, strm Stream) *XEPRegister {
+func NewXEPRegister(config *config.ModRegistration, stream Stream) *XEPRegister {
 	return &XEPRegister{
-		cfg:  cfg,
-		strm: strm,
+		cfg:  config,
+		strm: stream,
 	}
 }
 

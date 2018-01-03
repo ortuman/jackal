@@ -23,14 +23,14 @@ type Offline struct {
 	once  sync.Once
 }
 
-func NewOffline(cfg *config.ModOffline, strm Stream) *Offline {
+func NewOffline(config *config.ModOffline, stream Stream) *Offline {
 	return &Offline{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		cfg:  cfg,
-		strm: strm,
+		cfg:  config,
+		strm: stream,
 	}
 }
 

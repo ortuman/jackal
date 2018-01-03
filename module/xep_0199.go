@@ -33,10 +33,10 @@ type XEPPing struct {
 	pingOnce    sync.Once
 }
 
-func NewXEPPing(cfg *config.ModPing, strm Stream) *XEPPing {
+func NewXEPPing(config *config.ModPing, stream Stream) *XEPPing {
 	return &XEPPing{
-		cfg:    cfg,
-		strm:   strm,
+		cfg:    config,
+		strm:   stream,
 		pongCh: make(chan struct{}, 1),
 	}
 }

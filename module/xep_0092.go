@@ -32,14 +32,14 @@ type XEPVersion struct {
 	strm  Stream
 }
 
-func NewXEPVersion(config *config.ModVersion, strm Stream) *XEPVersion {
+func NewXEPVersion(config *config.ModVersion, stream Stream) *XEPVersion {
 	x := &XEPVersion{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		cfg:  config,
-		strm: strm,
+		strm: stream,
 	}
 	return x
 }

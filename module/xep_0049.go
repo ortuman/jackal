@@ -22,13 +22,13 @@ type XEPPrivateStorage struct {
 	strm  Stream
 }
 
-func NewXEPPrivateStorage(strm Stream) *XEPPrivateStorage {
+func NewXEPPrivateStorage(stream Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: strm,
+		strm: stream,
 	}
 	return x
 }

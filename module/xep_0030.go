@@ -38,13 +38,13 @@ type XEPDiscoInfo struct {
 	items      []DiscoItem
 }
 
-func NewXEPDiscoInfo(strm Stream) *XEPDiscoInfo {
+func NewXEPDiscoInfo(stream Stream) *XEPDiscoInfo {
 	x := &XEPDiscoInfo{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: strm,
+		strm: stream,
 	}
 	return x
 }
