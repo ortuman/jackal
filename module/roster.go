@@ -19,6 +19,14 @@ import (
 
 const rosterNamespace = "jabber:iq:roster"
 
+const (
+	subscriptionNone   = "none"
+	subscriptionFrom   = "from"
+	subscriptionTo     = "to"
+	subscriptionBoth   = "both"
+	subscriptionRemove = "remove"
+)
+
 type Roster struct {
 	queue concurrent.OperationQueue
 	strm  Stream
@@ -131,7 +139,11 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 
 func (r *Roster) subscribeTo(to *xml.JID) error {
 	username := r.strm.Username()
+	resource := r.strm.Resource()
+
 	jid := to.ToBareJID()
+
+	log.Infof("authorization requested: %s (%s/%s)", jid, username, resource)
 
 	ri, err := storage.Instance().FetchRosterItem(username, jid)
 	if err != nil {
@@ -141,7 +153,7 @@ func (r *Roster) subscribeTo(to *xml.JID) error {
 		// create roster item if not previously created
 		ri = &entity.RosterItem{
 			JID:          to,
-			Subscription: "none",
+			Subscription: subscriptionNone,
 			Ask:          true,
 		}
 	} else {
@@ -184,7 +196,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 
 		} else {
 			ri = rosterItem
-			ri.Subscription = "none"
+			ri.Subscription = subscriptionNone
 		}
 		if err := storage.Instance().InsertOrUpdateRosterItem(username, ri); err != nil {
 			return nil, err
