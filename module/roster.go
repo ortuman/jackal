@@ -32,8 +32,8 @@ type Roster struct {
 	strm        Stream
 	strmManager StreamManager
 
-	requestedRosterMu sync.RWMutex
-	requestedRoster   bool
+	requestedMu sync.RWMutex
+	requested   bool
 }
 
 func NewRoster(stream Stream, streamManager StreamManager) *Roster {
@@ -48,9 +48,9 @@ func NewRoster(stream Stream, streamManager StreamManager) *Roster {
 }
 
 func (r *Roster) RequestedRoster() bool {
-	r.requestedRosterMu.RLock()
-	defer r.requestedRosterMu.RUnlock()
-	return r.requestedRoster
+	r.requestedMu.RLock()
+	defer r.requestedMu.RUnlock()
+	return r.requested
 }
 
 func (r *Roster) AssociatedNamespaces() []string {
@@ -113,9 +113,9 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 	result.AppendMutableElement(q)
 	r.strm.SendElement(result)
 
-	r.requestedRosterMu.Lock()
-	r.requestedRoster = true
-	r.requestedRosterMu.Unlock()
+	r.requestedMu.Lock()
+	r.requested = true
+	r.requestedMu.Unlock()
 }
 
 func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
