@@ -22,10 +22,6 @@ type IQ struct {
 	from *JID
 }
 
-type MutableIQ struct {
-	MutableElement
-}
-
 func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	if e.name != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.name)

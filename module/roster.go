@@ -165,6 +165,12 @@ func (r *Roster) subscribeTo(to *xml.JID) error {
 		return err
 	}
 	r.pushRosterItem(ri)
+
+	// send presence to contact
+	p := xml.NewMutablePresenceType(xml.SubscribeType)
+	p.SetFrom(r.strm.JID().ToBareJID())
+	p.SetTo(to.ToBareJID())
+	r.strmManager.SendElement(p, to)
 	return nil
 }
 

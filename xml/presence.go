@@ -38,10 +38,6 @@ type Presence struct {
 	priority  int8
 }
 
-type MutablePresence struct {
-	MutableElement
-}
-
 func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	if e.name != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.name)
@@ -74,9 +70,10 @@ func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	return p, nil
 }
 
-func NewMutablePresence() *MutableElement {
+func NewMutablePresenceType(presenceType string) *MutableElement {
 	p := &MutableElement{}
 	p.SetName("presence")
+	p.SetType(presenceType)
 	return p
 }
 
