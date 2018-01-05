@@ -17,13 +17,13 @@ import (
 )
 
 type socketTransport struct {
-	conn         net.Conn
-	w            io.Writer
-	r            io.Reader
-	br           *bufio.Reader
-	bw           *bufio.Writer
-	readDeadline time.Duration
-	zLibEnabled  bool
+	conn               net.Conn
+	w                  io.Writer
+	r                  io.Reader
+	br                 *bufio.Reader
+	bw                 *bufio.Writer
+	readDeadline       time.Duration
+	compressionEnabled bool
 }
 
 func NewSocketTransport(conn net.Conn, bufferSize, keepAlive int) Transport {
@@ -61,11 +61,11 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 }
 
 func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
-	if !s.zLibEnabled {
+	if !s.compressionEnabled {
 		zwr := compress.NewZlibCompressor(s.br, s.bw, level)
 		s.w = zwr
 		s.r = zwr
-		s.zLibEnabled = true
+		s.compressionEnabled = true
 	}
 }
 
@@ -79,5 +79,5 @@ func (s *socketTransport) ChannelBindingBytes(mechanism config.ChannelBindingMec
 			break
 		}
 	}
-	return []byte{}
+	return nil
 }

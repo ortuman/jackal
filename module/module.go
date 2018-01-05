@@ -34,8 +34,6 @@ type Stream interface {
 
 	SendElement(element xml.Serializable)
 	Disconnect(err error)
-}
 
-type StreamManager interface {
 	UserStreams(username string) []Stream
 }

@@ -47,20 +47,6 @@ var (
 	errNotAuthenticated = errors.New("user not authenticated")
 )
 
-type moduleStreamManager struct {
-}
-
-func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
-	var res []module.Stream
-	streams := Manager().UserStreams(username)
-	for _, stream := range streams {
-		res = append(res, stream)
-	}
-	return res
-}
-
-var modStreamManager = moduleStreamManager{}
-
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
@@ -211,6 +197,15 @@ func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
 
+func (s *Stream) UserStreams(username string) []module.Stream {
+	var res []module.Stream
+	streams := Manager().UserStreams(username)
+	for _, stream := range streams {
+		res = append(res, stream)
+	}
+	return res
+}
+
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
@@ -231,7 +226,7 @@ func (s *Stream) initializeAuthenticators() {
 
 func (s *Stream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(s, &modStreamManager)
+	s.roster = module.NewRoster(s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
