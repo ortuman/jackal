@@ -153,18 +153,18 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 		r.strm.SendElement(iq.InternalServerError())
 		return
 	}
-	r.pushRosterItem(updatedRosterItem)
+	r.pushRosterItem(updatedRosterItem, r.strm.Username())
 	r.strm.SendElement(iq.ResultIQ())
 }
 
 func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	username := r.strm.Username()
-	resource := r.strm.Resource()
+	res := r.strm.Resource()
 
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
-	log.Infof("authorization requested: %v -> %v (%s/%s)", userJID.ToBareJID(), contactJID, username, resource)
+	log.Infof("authorization requested: %v -> %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
 	if err != nil {
@@ -184,17 +184,17 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
 		return err
 	}
-	r.pushRosterItem(ri)
+	r.pushRosterItem(ri, username)
 
-	// send presence to contact
-	p := xml.NewMutableElementName("presence")
-	p.SetFrom(userJID.ToBareJID())
-	p.SetTo(contactJID.ToBareJID())
-	p.SetType(xml.SubscribeType)
-	p.AppendElements(presence.Elements())
+	// send presence approval notification to contact
+	apprv := xml.NewMutableElementName("presence")
+	apprv.SetFrom(userJID.ToBareJID())
+	apprv.SetTo(contactJID.ToBareJID())
+	apprv.SetType(xml.SubscribeType)
+	apprv.AppendElements(presence.Elements())
 
 	// archive roster approval notification
-	err = storage.Instance().InsertOrUpdateRosterApprovalNotification(username, contactJID.ToBareJID(), p.Copy())
+	err = storage.Instance().InsertOrUpdateRosterApprovalNotification(username, contactJID.ToBareJID(), apprv.Copy())
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	contactStreams := r.strm.UserStreams(contactJID.Node())
 	if len(contactStreams) > 0 {
 		for _, strm := range contactStreams {
-			strm.SendElement(p)
+			strm.SendElement(apprv)
 		}
 	}
 	return nil
@@ -210,37 +210,62 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 
 func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	username := r.strm.Username()
-	resource := r.strm.Resource()
+	res := r.strm.Resource()
 
-	contactJID := presence.FromJID()
 	userJID := r.strm.JID()
+	contactJID := presence.FromJID()
 
-	log.Infof("authorization granted: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, resource)
+	log.Infof("authorization granted: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
+
+	// remove approval notification
+	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+		return err
+	}
 
 	// update contact's roster item...
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
 	if err != nil {
 		return err
 	}
-	if ri == nil {
+	if contactRosterItem == nil {
 		// silently ignore
 		return nil
 	}
-	switch ri.Subscription {
+	switch contactRosterItem.Subscription {
+	case subscriptionFrom:
+		contactRosterItem.Subscription = subscriptionBoth
 	default:
-		ri.Subscription = subscriptionTo
+		contactRosterItem.Subscription = subscriptionFrom
 	}
-	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
+	if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
+		return err
+	}
+	r.pushRosterItem(contactRosterItem, contactJID.Node())
+
+	// update user's roster item...
+	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
+		return err
+	}
+	if userRosterItem == nil {
+		// silently ignore
+		return nil
+	}
+	switch userRosterItem.Subscription {
+	case subscriptionTo:
+		userRosterItem.Subscription = subscriptionBoth
+	default:
+		userRosterItem.Subscription = subscriptionTo
+	}
+	userRosterItem.Ask = false
+	if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
 		return err
 	}
 
-	// update user's roster item...
+	// send 'subscribed' presence to user...
 
 	// send contact's presence...
-
-	// send 'subscribed' presence to user...
-	// remove approval notification
-	return storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID())
+	return nil
 }
 
 func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.RosterItem, error) {
@@ -289,11 +314,11 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	}
 }
 
-func (r *Roster) pushRosterItem(item *entity.RosterItem) {
+func (r *Roster) pushRosterItem(item *entity.RosterItem, username string) {
 	query := xml.NewMutableElementNamespace("query", rosterNamespace)
 	query.AppendElement(item.Element())
 
-	userStreams := r.strm.UserStreams(r.strm.Username())
+	userStreams := r.strm.UserStreams(username)
 	for _, strm := range userStreams {
 		if !strm.RequestedRoster() {
 			continue
