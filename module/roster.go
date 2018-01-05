@@ -212,11 +212,11 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 		} else {
 			ri = &entity.RosterItem{
 				Username:     username,
-				JID:          ri.JID,
-				Name:         ri.Name,
+				JID:          rosterItem.JID,
+				Name:         rosterItem.Name,
 				Subscription: subscriptionNone,
-				Groups:       ri.Groups,
-				Ask:          ri.Ask,
+				Groups:       rosterItem.Groups,
+				Ask:          rosterItem.Ask,
 			}
 		}
 		if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
