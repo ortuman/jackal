@@ -171,6 +171,48 @@ func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 	return s.rosterItemsFromRows(rows)
 }
 
+func (s *mySQL) InsertOrUpdateRosterApprovalNotification(username, jid string, notification *xml.Element) error {
+	stmt := `` +
+		`INSERT INTO roster_approval_notifications(username, contact, notification, updated_at, created_at)` +
+		`VALUES(?, ?, ?, NOW(), NOW())` +
+		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
+
+	notificationXML := notification.XML(true)
+	_, err := s.db.Exec(stmt, username, jid, notificationXML, notificationXML)
+	return err
+}
+
+func (s *mySQL) DeleteRosterApprovalNotifications(jid string) error {
+	_, err := s.db.Exec("DELETE FROM roster_approval_notifications WHERE jid = ?", jid)
+	return err
+}
+
+func (s *mySQL) FetchRosterApprovalNotifications(jid string) ([]*xml.Element, error) {
+	stmt := `SELECT notification FROM roster_approval_notifications WHERE jid = ? ORDER BY created_at`
+	rows, err := s.db.Query(stmt, jid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	buf := bytes.NewBufferString("<root>")
+	for rows.Next() {
+		var notification string
+		rows.Scan(&notification)
+		buf.WriteString(notification)
+	}
+	buf.WriteString("</root>")
+
+	parser := xml.NewParser()
+	rootEl, err := parser.ParseElement(buf)
+	if err != nil {
+		return nil, err
+	} else if rootEl != nil {
+		return rootEl.Elements(), nil
+	}
+	return nil, nil
+}
+
 func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
 	row := s.db.QueryRow("SELECT vcard FROM vcards WHERE username = ?", username)
 	var vCard string

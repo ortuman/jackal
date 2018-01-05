@@ -24,16 +24,16 @@ CREATE TABLE roster_items (
 
 CREATE INDEX i_roster_items_username ON roster_items(username);
 
-CREATE TABLE roster_approvals (
+CREATE TABLE roster_approval_notifications (
     username VARCHAR(256) NOT NULL,
-    contact VARCHAR(256) NOT NULL,
+    jid VARCHAR(256) NOT NULL,
     notification TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (username, contact)
+    PRIMARY KEY (username, jid)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE INDEX i_roster_approvals_contact ON roster_approvals(contact);
+CREATE INDEX i_roster_approval_notifications_jid ON roster_approval_notifications(jid);
 
 CREATE TABLE IF NOT EXISTS private_storage (
     username VARCHAR(256) NOT NULL,

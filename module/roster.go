@@ -176,6 +176,15 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 		p.SetAttribute(attr.Label, attr.Value)
 	}
 	p.AppendElements(presence.Elements())
+
+	// TODO: archive roster approval notification
+
+	contactStreams := r.strm.UserStreams(to.Node())
+	if len(contactStreams) > 0 {
+		for _, strm := range contactStreams {
+			strm.SendElement(p)
+		}
+	}
 	return nil
 }
 

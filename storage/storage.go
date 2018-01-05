@@ -30,6 +30,12 @@ type storage interface {
 	FetchRosterItem(username, jid string) (*entity.RosterItem, error)
 	FetchRosterItems(username string) ([]entity.RosterItem, error)
 
+	// Roster approval notifications
+	InsertOrUpdateRosterApprovalNotification(username, jid string, notification *xml.Element) error
+	DeleteRosterApprovalNotifications(jid string) error
+
+	FetchRosterApprovalNotifications(jid string) ([]*xml.Element, error)
+
 	// vCard
 	FetchVCard(username string) (*xml.Element, error)
 	InsertOrUpdateVCard(vCard *xml.Element, username string) error
