@@ -182,8 +182,8 @@ func (s *mySQL) InsertOrUpdateRosterApprovalNotification(username, jid string, n
 	return err
 }
 
-func (s *mySQL) DeleteRosterApprovalNotifications(jid string) error {
-	_, err := s.db.Exec("DELETE FROM roster_approval_notifications WHERE jid = ?", jid)
+func (s *mySQL) DeleteRosterApprovalNotification(username, jid string) error {
+	_, err := s.db.Exec("DELETE FROM roster_approval_notifications WHERE username = ? AND jid = ?", username, jid)
 	return err
 }
 

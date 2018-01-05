@@ -32,7 +32,7 @@ type storage interface {
 
 	// Roster approval notifications
 	InsertOrUpdateRosterApprovalNotification(username, jid string, notification *xml.Element) error
-	DeleteRosterApprovalNotifications(jid string) error
+	DeleteRosterApprovalNotification(username, jid string) error
 
 	FetchRosterApprovalNotifications(jid string) ([]*xml.Element, error)
 
