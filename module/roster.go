@@ -82,7 +82,7 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 
 func (r *Roster) processPresence(presence *xml.Presence) {
 	if presence.IsSubscribe() {
-		if err := r.subscribeTo(presence.ToJID()); err != nil {
+		if err := r.performSubscribe(presence); err != nil {
 			log.Error(err)
 			return
 		}
@@ -141,7 +141,9 @@ func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) subscribeTo(to *xml.JID) error {
+func (r *Roster) performSubscribe(presence *xml.Presence) error {
+	to := presence.ToJID()
+
 	username := r.strm.Username()
 	resource := r.strm.Resource()
 
@@ -170,10 +172,12 @@ func (r *Roster) subscribeTo(to *xml.JID) error {
 	r.pushRosterItem(ri)
 
 	// send presence to contact
-	p := xml.NewMutablePresenceType(xml.SubscribeType)
+	p := xml.NewMutableElementName("presence")
 	p.SetFrom(r.strm.JID().ToBareJID())
-	p.SetTo(to.ToBareJID())
-	r.strmManager.SendElement(p, to)
+	for _, attr := range presence.Attributes() {
+		p.SetAttribute(attr.Label, attr.Value)
+	}
+	p.AppendElements(presence.Elements())
 	return nil
 }
 

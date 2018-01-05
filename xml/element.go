@@ -24,8 +24,8 @@ var serializeBufs = sync.Pool{
 
 // Attribute represents an XML node attribute (label=value).
 type Attribute struct {
-	label string
-	value string
+	Label string
+	Value string
 }
 
 // Element represents an immutable XML node element.
@@ -78,8 +78,8 @@ func (e *Element) TextLen() int {
 // Attribute returns XML node attribute value.
 func (e *Element) Attribute(label string) string {
 	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].label == label {
-			return e.attrs[i].value
+		if e.attrs[i].Label == label {
+			return e.attrs[i].Value
 		}
 	}
 	return ""
@@ -196,13 +196,13 @@ func (e *Element) XML(includeClosing bool) string {
 
 	// serialize attributes
 	for i := 0; i < len(e.attrs); i++ {
-		if len(e.attrs[i].value) == 0 {
+		if len(e.attrs[i].Value) == 0 {
 			continue
 		}
 		buf.WriteString(" ")
-		buf.WriteString(e.attrs[i].label)
+		buf.WriteString(e.attrs[i].Label)
 		buf.WriteString(`="`)
-		buf.WriteString(e.attrs[i].value)
+		buf.WriteString(e.attrs[i].Value)
 		buf.WriteString(`"`)
 	}
 	textLen := e.TextLen()
@@ -244,8 +244,8 @@ func (e *Element) copyElements(elements []*Element) {
 
 func (e *Element) setAttribute(label, value string) {
 	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].label == label {
-			e.attrs[i].value = value
+		if e.attrs[i].Label == label {
+			e.attrs[i].Value = value
 			return
 		}
 	}
@@ -254,7 +254,7 @@ func (e *Element) setAttribute(label, value string) {
 
 func (e *Element) removeAttribute(label string) {
 	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].label == label {
+		if e.attrs[i].Label == label {
 			e.attrs = append(e.attrs[:i], e.attrs[i+1:]...)
 			return
 		}

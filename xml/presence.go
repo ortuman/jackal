@@ -143,7 +143,7 @@ func (p *Presence) validateStatus() error {
 		case 0:
 			break
 		case 1:
-			if st.Attributes()[0].label == "xml:lang" {
+			if st.Attributes()[0].Label == "xml:lang" {
 				break
 			}
 			fallthrough
