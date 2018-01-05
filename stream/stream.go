@@ -7,13 +7,12 @@ package stream
 
 import (
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"errors"
 
 	"github.com/ortuman/jackal/config"
 	streamerrors "github.com/ortuman/jackal/errors"
@@ -51,17 +50,16 @@ var (
 type moduleStreamManager struct {
 }
 
-func (msm *moduleStreamManager) SendElement(element xml.Serializable, to *xml.JID) {
-}
-
 func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
-	res := []module.Stream{}
+	var res []module.Stream
 	streams := Manager().UserStreams(username)
 	for _, stream := range streams {
 		res = append(res, stream)
 	}
 	return res
 }
+
+var modStreamManager = moduleStreamManager{}
 
 type Stream struct {
 	sync.RWMutex
@@ -92,8 +90,6 @@ type Stream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
-	modStreamManager *moduleStreamManager
-
 	writeCh chan []byte
 	readCh  chan *xml.Element
 	discCh  chan error
@@ -109,7 +105,6 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		readCh:  make(chan *xml.Element),
 		discCh:  make(chan error),
 	}
-	s.modStreamManager = &moduleStreamManager{}
 
 	// assign default domain
 	s.domain = s.cfg.Domains[0]
@@ -129,6 +124,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		s.startConnectTimeoutTimer(config.Transport.ConnectTimeout)
 	}
 	go s.loop()
+
 	return s
 }
 
@@ -215,15 +211,6 @@ func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
 
-func (s *Stream) LocalDomain(domain string) bool {
-	for _, localDomain := range s.cfg.Domains {
-		if domain == localDomain {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
@@ -244,7 +231,7 @@ func (s *Stream) initializeAuthenticators() {
 
 func (s *Stream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(s, s.modStreamManager)
+	s.roster = module.NewRoster(s, &modStreamManager)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
@@ -287,7 +274,7 @@ func (s *Stream) initializeXEPs() {
 	discoInfo.SetIdentities(identities)
 
 	// register disco info features
-	features := []string{}
+	var features []string
 	for _, iqHandler := range s.iqHandlers {
 		features = append(features, iqHandler.AssociatedNamespaces()...)
 	}
