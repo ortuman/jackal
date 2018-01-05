@@ -92,9 +92,13 @@ func (m *StreamManager) unregisterStream(strm *Stream) {
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
 
 	if authedStrms := m.authedStrms[strm.Username()]; authedStrms != nil {
-		authedStrms = filterStreams(authedStrms, func(s *Stream) bool {
-			return s.Resource() != strm.Resource()
-		})
+		res := strm.Resource()
+		for i := 0; i < len(authedStrms); i++ {
+			if res == authedStrms[i].Resource() {
+				authedStrms = append(authedStrms[:i], authedStrms[i+1:]...)
+				break
+			}
+		}
 		if len(authedStrms) == 0 {
 			delete(m.authedStrms, strm.Username())
 		}

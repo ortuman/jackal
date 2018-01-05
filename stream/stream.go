@@ -1022,49 +1022,33 @@ func (s *Stream) sendElement(serializable xml.Serializable, to *xml.JID) error {
 		return errNotAuthenticated
 	}
 	if to.IsFull() {
-		recipients = filterStreams(recipients, func(s *Stream) bool {
-			return s.Resource() == to.Resource()
-		})
-		if len(recipients) == 0 {
-			return errResourceNotFound
+		for _, strm := range recipients {
+			if strm.Resource() == to.Resource() {
+				strm.SendElement(serializable)
+				return nil
+			}
 		}
-		recipients[0].SendElement(serializable)
+		return errResourceNotFound
 
 	} else {
 		switch serializable.(type) {
 		case *xml.Message:
 			// send to highest priority stream
-			if strm := highestPriorityStream(recipients); strm != nil {
-				strm.SendElement(serializable)
-				return nil
+			strm := recipients[0]
+			highestPriority := strm.Priority()
+			for i := 1; i < len(recipients); i++ {
+				if recipients[i].Priority() > highestPriority {
+					strm = recipients[i]
+				}
 			}
-		}
-		// broadcast to all streams
-		for _, strm := range recipients {
 			strm.SendElement(serializable)
+
+		default:
+			// broadcast to all streams
+			for _, strm := range recipients {
+				strm.SendElement(serializable)
+			}
 		}
 	}
 	return nil
-}
-
-func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {
-	length := len(strms)
-	res := make([]*Stream, 0, length)
-	for _, strm := range strms {
-		if include(strm) {
-			res = append(res, strm)
-		}
-	}
-	return res
-}
-
-func highestPriorityStream(strms []*Stream) *Stream {
-	var highestPriority int8 = 0
-	var strm *Stream
-	for _, s := range strms {
-		if s.Priority() > highestPriority {
-			strm = s
-		}
-	}
-	return strm
 }
