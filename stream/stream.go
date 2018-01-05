@@ -7,15 +7,16 @@ package stream
 
 import (
 	"crypto/tls"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"io"
+	"errors"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/errors"
+	streamerrors "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/stream/transport"
@@ -42,45 +43,15 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
-type streamSendCallback struct {
-	stream *Stream
-}
-
-func (scb *streamSendCallback) Sent(serializable xml.Serializable, to *xml.JID) {
-}
-
-func (scb *streamSendCallback) NotAuthenticated(serializable xml.Serializable, to *xml.JID) {
-	switch v := serializable.(type) {
-	case *xml.Message:
-		if scb.stream.offline != nil {
-			scb.stream.offline.ArchiveMessage(v)
-		}
-		break
-	}
-}
-
-func (scb *streamSendCallback) ResourceNotFound(serializable xml.Serializable, to *xml.JID) {
-	var resp *xml.MutableElement
-
-	switch v := serializable.(type) {
-	case *xml.Presence:
-		// silently ignore
-		return
-	case *xml.Message:
-		resp = v.MutableCopy()
-	case *xml.IQ:
-		resp = v.MutableCopy()
-	}
-	resp.SetFrom(to.String())
-	resp.SetTo(scb.stream.JID().String())
-	scb.stream.SendElement(resp.ServiceUnavailableError())
-}
+var (
+	errResourceNotFound = errors.New("resource not found")
+	errNotAuthenticated = errors.New("user not authenticated")
+)
 
 type moduleStreamManager struct {
 }
 
 func (msm *moduleStreamManager) SendElement(element xml.Serializable, to *xml.JID) {
-	Manager().SendElement(element, to, nil)
 }
 
 func (msm *moduleStreamManager) UserStreams(username string) []module.Stream {
@@ -121,7 +92,6 @@ type Stream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
-	sendCb           *streamSendCallback
 	modStreamManager *moduleStreamManager
 
 	writeCh chan []byte
@@ -139,7 +109,6 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 		readCh:  make(chan *xml.Element),
 		discCh:  make(chan error),
 	}
-	s.sendCb = &streamSendCallback{s}
 	s.modStreamManager = &moduleStreamManager{}
 
 	// assign default domain
@@ -337,7 +306,7 @@ func (s *Stream) startConnectTimeoutTimer(timeoutInSeconds int) {
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
-			s.discCh <- errors.ErrConnectionTimeout
+			s.discCh <- streamerrors.ErrConnectionTimeout
 		}
 	}()
 }
@@ -445,14 +414,14 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
-			s.disconnectWithStreamError(errors.ErrInvalidNamespace)
+			s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
 			return
 		}
 		s.proceedStartTLS()
 
 	case "auth":
 		if elem.Namespace() != saslNamespace {
-			s.disconnectWithStreamError(errors.ErrInvalidNamespace)
+			s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
 			return
 		}
 		s.startAuthentication(elem)
@@ -477,16 +446,16 @@ func (s *Stream) handleConnected(elem *xml.Element) {
 		fallthrough
 
 	case "message", "presence":
-		s.disconnectWithStreamError(errors.ErrNotAuthorized)
+		s.disconnectWithStreamError(streamerrors.ErrNotAuthorized)
 
 	default:
-		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
 	}
 }
 
 func (s *Stream) handleAuthenticating(elem *xml.Element) {
 	if elem.Namespace() != saslNamespace {
-		s.disconnectWithStreamError(errors.ErrInvalidNamespace)
+		s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
 		return
 	}
 	authr := s.activeAuthr
@@ -500,7 +469,7 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
-			s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
+			s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
 			return
 		}
 		s.compress(elem)
@@ -520,7 +489,7 @@ func (s *Stream) handleAuthenticated(elem *xml.Element) {
 		}
 
 	default:
-		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
 	}
 }
 
@@ -543,13 +512,12 @@ func (s *Stream) handleSessionStarted(elem *xml.Element) {
 		s.processComponentStanza(stanza)
 	} else {
 		// S2S
-		Manager().SendElement(stanza, toJID, s.sendCb)
 	}
 }
 
 func (s *Stream) proceedStartTLS() {
 	if s.Secured() {
-		s.disconnectWithStreamError(errors.ErrNotAuthorized)
+		s.disconnectWithStreamError(streamerrors.ErrNotAuthorized)
 		return
 	}
 	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
@@ -578,7 +546,7 @@ func (s *Stream) proceedStartTLS() {
 
 func (s *Stream) compress(elem *xml.Element) {
 	if s.Compressed() {
-		s.disconnectWithStreamError(errors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
 		return
 	}
 	method := elem.FindElement("method")
@@ -681,7 +649,7 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 		resource = uuid.New()
 	}
 	// try binding...
-	if !Manager().ResourceAvailable(resource, s) {
+	if !s.isResourceAvailable(resource) {
 		s.writeElement(iq.ConflictError())
 		return
 	}
@@ -738,8 +706,14 @@ func (s *Stream) processComponentStanza(stanza xml.Serializable) {
 }
 
 func (s *Stream) processIQ(iq *xml.IQ) {
-	if iq.ToJID().IsFull() {
-		Manager().SendElement(iq, iq.ToJID(), s.sendCb)
+	toJid := iq.ToJID()
+	if toJid.IsFull() {
+		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
+			resp := iq.MutableCopy()
+			resp.SetFrom(toJid.String())
+			resp.SetTo(s.JID().String())
+			s.SendElement(resp.ServiceUnavailableError())
+		}
 		return
 	}
 
@@ -760,7 +734,7 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 func (s *Stream) processPresence(presence *xml.Presence) {
 	toJid := presence.ToJID()
 	if toJid.IsFull() {
-		Manager().SendElement(presence, presence.ToJID(), s.sendCb)
+		s.sendElement(presence, toJid)
 		return
 	}
 	if toJid.IsBare() && toJid.Node() != s.Username() {
@@ -783,7 +757,18 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 }
 
 func (s *Stream) processMessage(message *xml.Message) {
-	Manager().SendElement(message, message.ToJID(), s.sendCb)
+	err := s.sendElement(message, message.ToJID())
+	switch err {
+	case errNotAuthenticated:
+		if s.offline != nil {
+			s.offline.ArchiveMessage(message)
+		}
+	case errResourceNotFound:
+		resp := message.MutableCopy()
+		resp.SetFrom(message.ToJID().String())
+		resp.SetTo(s.JID().String())
+		s.SendElement(resp.ServiceUnavailableError())
+	}
 }
 
 func (s *Stream) restart() {
@@ -814,7 +799,7 @@ func (s *Stream) loop() {
 			case nil:
 				s.disconnect(false)
 			default:
-				if strmErr, ok := err.(*errors.StreamError); ok {
+				if strmErr, ok := err.(*streamerrors.StreamError); ok {
 					s.disconnectWithStreamError(strmErr)
 				} else {
 					log.Error(err)
@@ -840,7 +825,7 @@ func (s *Stream) doRead() {
 				s.discCh <- nil
 			default:
 				log.Error(err)
-				s.discCh <- errors.ErrInvalidXML
+				s.discCh <- streamerrors.ErrInvalidXML
 			}
 		}
 	}()
@@ -891,11 +876,11 @@ func (s *Stream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JID, err
 		}
 		return message, message.ToJID(), nil
 	}
-	return nil, nil, errors.ErrUnsupportedStanzaType
+	return nil, nil, streamerrors.ErrUnsupportedStanzaType
 }
 
 func (s *Stream) handleElementError(elem *xml.Element, err error) {
-	if streamErr, ok := err.(*errors.StreamError); ok {
+	if streamErr, ok := err.(*streamerrors.StreamError); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
 		s.writeElement(elem.ToError(stanzaErr))
@@ -904,36 +889,36 @@ func (s *Stream) handleElementError(elem *xml.Element, err error) {
 	}
 }
 
-func (s *Stream) validateStreamElement(elem *xml.Element) *errors.StreamError {
+func (s *Stream) validateStreamElement(elem *xml.Element) *streamerrors.StreamError {
 	if elem.Name() != "stream:stream" {
-		return errors.ErrUnsupportedStanzaType
+		return streamerrors.ErrUnsupportedStanzaType
 	}
 	to := elem.To()
 	if len(to) > 0 && !s.isValidDomain(to) {
-		return errors.ErrHostUnknown
+		return streamerrors.ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
-		return errors.ErrInvalidNamespace
+		return streamerrors.ErrInvalidNamespace
 	}
 	if elem.Version() != "1.0" {
-		return errors.ErrUnsupportedVersion
+		return streamerrors.ErrUnsupportedVersion
 	}
 	return nil
 }
 
-func (s *Stream) validateNamespace(elem *xml.Element) *errors.StreamError {
+func (s *Stream) validateNamespace(elem *xml.Element) *streamerrors.StreamError {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
 		return nil
 	}
-	return errors.ErrInvalidNamespace
+	return streamerrors.ErrInvalidNamespace
 }
 
 func (s *Stream) validateAddresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
-		return nil, nil, errors.ErrInvalidFrom
+		return nil, nil, streamerrors.ErrInvalidFrom
 	}
 	fromJID = s.JID()
 
@@ -1002,7 +987,7 @@ func (s *Stream) writeBytes(b []byte) {
 	s.tr.Write(b)
 }
 
-func (s *Stream) disconnectWithStreamError(err *errors.StreamError) {
+func (s *Stream) disconnectWithStreamError(err *streamerrors.StreamError) {
 	if s.state == connecting {
 		s.openStreamElement()
 	}
@@ -1019,4 +1004,67 @@ func (s *Stream) disconnect(closeStream bool) {
 	s.state = disconnected
 
 	Manager().UnregisterStream(s)
+}
+
+func (s *Stream) isResourceAvailable(resource string) bool {
+	strms := Manager().UserStreams(s.Username())
+	for _, strm := range strms {
+		if strm.Resource() == resource {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Stream) sendElement(serializable xml.Serializable, to *xml.JID) error {
+	recipients := Manager().UserStreams(to.Node())
+	if len(recipients) == 0 {
+		return errNotAuthenticated
+	}
+	if to.IsFull() {
+		recipients = filterStreams(recipients, func(s *Stream) bool {
+			return s.Resource() == to.Resource()
+		})
+		if len(recipients) == 0 {
+			return errResourceNotFound
+		}
+		recipients[0].SendElement(serializable)
+
+	} else {
+		switch serializable.(type) {
+		case *xml.Message:
+			// send to highest priority stream
+			if strm := highestPriorityStream(recipients); strm != nil {
+				strm.SendElement(serializable)
+				return nil
+			}
+		}
+		// broadcast to all streams
+		for _, strm := range recipients {
+			strm.SendElement(serializable)
+		}
+	}
+	return nil
+}
+
+func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {
+	length := len(strms)
+	res := make([]*Stream, 0, length)
+	for _, strm := range strms {
+		if include(strm) {
+			res = append(res, strm)
+		}
+	}
+	return res
+}
+
+func highestPriorityStream(strms []*Stream) *Stream {
+	var highestPriority int8 = 0
+	var strm *Stream
+	for _, s := range strms {
+		if s.Priority() > highestPriority {
+			strm = s
+		}
+	}
+	return strm
 }

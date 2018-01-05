@@ -9,30 +9,11 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/xml"
 )
-
-type SendCallback interface {
-	Sent(serializable xml.Serializable, to *xml.JID)
-	NotAuthenticated(serializable xml.Serializable, to *xml.JID)
-	ResourceNotFound(serializable xml.Serializable, to *xml.JID)
-}
-
-type resourceAvailableReq struct {
-	resource string
-	username string
-	resultCh chan bool
-}
 
 type userStreamsReq struct {
 	username string
 	resultCh chan []*Stream
-}
-
-type sendReq struct {
-	serializable xml.Serializable
-	to           *xml.JID
-	callback     SendCallback
 }
 
 type StreamManager struct {
@@ -43,8 +24,6 @@ type StreamManager struct {
 	unregCh     chan *Stream
 	authCh      chan *Stream
 	userStrmsCh chan *userStreamsReq
-	resAvailCh  chan *resourceAvailableReq
-	sendCh      chan *sendReq
 }
 
 // singleton interface
@@ -61,9 +40,7 @@ func Manager() *StreamManager {
 			regCh:       make(chan *Stream),
 			unregCh:     make(chan *Stream),
 			authCh:      make(chan *Stream),
-			userStrmsCh: make(chan *userStreamsReq),
-			resAvailCh:  make(chan *resourceAvailableReq),
-			sendCh:      make(chan *sendReq, 1000),
+			userStrmsCh: make(chan *userStreamsReq, 1024),
 		}
 		go instance.loop()
 	})
@@ -91,29 +68,9 @@ func (m *StreamManager) UserStreams(username string) []*Stream {
 	return <-req.resultCh
 }
 
-func (m *StreamManager) ResourceAvailable(resource string, strm *Stream) bool {
-	req := &resourceAvailableReq{
-		resource: resource,
-		username: strm.Username(),
-		resultCh: make(chan bool),
-	}
-	m.resAvailCh <- req
-	return <-req.resultCh
-}
-
-func (m *StreamManager) SendElement(serializable xml.Serializable, to *xml.JID, callback SendCallback) {
-	m.sendCh <- &sendReq{
-		serializable: serializable,
-		to:           to,
-		callback:     callback,
-	}
-}
-
 func (m *StreamManager) loop() {
 	for {
 		select {
-		case req := <-m.sendCh:
-			m.send(req.serializable, req.to, req.callback)
 		case strm := <-m.regCh:
 			m.registerStream(strm)
 		case strm := <-m.unregCh:
@@ -122,8 +79,6 @@ func (m *StreamManager) loop() {
 			m.authenticateStream(strm)
 		case req := <-m.userStrmsCh:
 			req.resultCh <- m.userStreams(req.username)
-		case req := <-m.resAvailCh:
-			req.resultCh <- m.isResourceAvailable(req.resource, req.username)
 		}
 	}
 }
@@ -162,78 +117,4 @@ func (m *StreamManager) userStreams(username string) []*Stream {
 		return authedStrms
 	}
 	return []*Stream{}
-}
-
-func (m *StreamManager) isResourceAvailable(resource string, username string) bool {
-	if authedStrms := m.authedStrms[username]; authedStrms != nil {
-		for _, authedStrm := range authedStrms {
-			if authedStrm.Resource() == resource {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func (m *StreamManager) send(serializable xml.Serializable, to *xml.JID, sendCallback SendCallback) {
-	recipients := m.authedStrms[to.Node()]
-	if recipients == nil {
-		if sendCallback != nil {
-			sendCallback.NotAuthenticated(serializable, to)
-		}
-		return
-	}
-	if to.IsFull() {
-		recipients = filterStreams(recipients, func(s *Stream) bool {
-			return s.Resource() == to.Resource()
-		})
-		if len(recipients) == 0 {
-			if sendCallback != nil {
-				sendCallback.ResourceNotFound(serializable, to)
-			}
-			return
-		}
-		recipients[0].SendElement(serializable)
-
-	} else {
-		switch serializable.(type) {
-		case *xml.Message:
-			// send to highest priority stream
-			if strm := highestPriorityStream(recipients); strm != nil {
-				strm.SendElement(serializable)
-				goto done
-			}
-		}
-		// broadcast to all streams
-		for _, strm := range recipients {
-			strm.SendElement(serializable)
-		}
-	}
-
-done:
-	if sendCallback != nil {
-		sendCallback.Sent(serializable, to)
-	}
-}
-
-func filterStreams(strms []*Stream, include func(*Stream) bool) []*Stream {
-	length := len(strms)
-	res := make([]*Stream, 0, length)
-	for _, strm := range strms {
-		if include(strm) {
-			res = append(res, strm)
-		}
-	}
-	return res
-}
-
-func highestPriorityStream(strms []*Stream) *Stream {
-	var highestPriority int8 = 0
-	var strm *Stream
-	for _, s := range strms {
-		if s.Priority() > highestPriority {
-			strm = s
-		}
-	}
-	return strm
 }
