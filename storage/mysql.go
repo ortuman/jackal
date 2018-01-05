@@ -173,7 +173,7 @@ func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
 
 func (s *mySQL) InsertOrUpdateRosterApprovalNotification(username, jid string, notification *xml.Element) error {
 	stmt := `` +
-		`INSERT INTO roster_approval_notifications(username, contact, notification, updated_at, created_at)` +
+		`INSERT INTO roster_approval_notifications(username, jid, notification, updated_at, created_at)` +
 		`VALUES(?, ?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
 

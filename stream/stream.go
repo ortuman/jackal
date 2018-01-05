@@ -732,6 +732,11 @@ func (s *Stream) processPresence(presence *xml.Presence) {
 	s.priority = presence.Priority()
 	s.available = true
 
+	// deliver pending approval notifications
+	if s.roster != nil {
+		s.roster.DeliverPendingApprovalNotifications()
+	}
+
 	// deliver offline messages
 	if s.offline != nil && s.priority >= 0 {
 		s.offline.DeliverOfflineMessages()

@@ -30,6 +30,7 @@ const (
 type Roster struct {
 	queue concurrent.OperationQueue
 	strm  Stream
+	once  sync.Once
 
 	requestedMu sync.RWMutex
 	requested   bool
@@ -78,6 +79,12 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 	})
 }
 
+func (r *Roster) DeliverPendingApprovalNotifications() {
+	r.queue.Async(func() {
+		r.once.Do(func() { r.deliverPendingApprovalNotifications() })
+	})
+}
+
 func (r *Roster) processPresence(presence *xml.Presence) {
 	if presence.IsSubscribe() {
 		if err := r.performSubscribe(presence); err != nil {
@@ -86,6 +93,17 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 		}
 	} else if presence.IsSubscribed() {
 		// TODO: Handle 'subscribed' presence
+	}
+}
+
+func (r *Roster) deliverPendingApprovalNotifications() {
+	notifications, err := storage.Instance().FetchRosterApprovalNotifications(r.strm.JID().ToBareJID())
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	for _, notification := range notifications {
+		r.strm.SendElement(notification)
 	}
 }
 
@@ -172,9 +190,8 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	// send presence to contact
 	p := xml.NewMutableElementName("presence")
 	p.SetFrom(r.strm.JID().ToBareJID())
-	for _, attr := range presence.Attributes() {
-		p.SetAttribute(attr.Label, attr.Value)
-	}
+	p.SetTo(jid)
+	p.SetType(xml.SubscribeType)
 	p.AppendElements(presence.Elements())
 
 	// archive roster approval notification
@@ -200,6 +217,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	switch rosterItem.Subscription {
 	case subscriptionRemove:
 		log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
+
 		if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
 			return nil, err
 		}
