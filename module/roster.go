@@ -177,7 +177,10 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	}
 	p.AppendElements(presence.Elements())
 
-	// TODO: archive roster approval notification
+	// archive roster approval notification
+	if err := storage.Instance().InsertOrUpdateRosterApprovalNotification(username, jid, p.Copy()); err != nil {
+		return err
+	}
 
 	contactStreams := r.strm.UserStreams(to.Node())
 	if len(contactStreams) > 0 {
