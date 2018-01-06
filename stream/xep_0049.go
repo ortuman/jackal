@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"strings"
@@ -19,10 +19,10 @@ const privateStorageNamespace = "jabber:iq:private"
 
 type XEPPrivateStorage struct {
 	queue concurrent.OperationQueue
-	strm  Stream
+	strm  *Stream
 }
 
-func NewXEPPrivateStorage(stream Stream) *XEPPrivateStorage {
+func newXEPPrivateStorage(stream *Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,

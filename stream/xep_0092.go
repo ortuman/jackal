@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"os/exec"
@@ -29,10 +29,10 @@ func init() {
 type XEPVersion struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModVersion
-	strm  Stream
+	strm  *Stream
 }
 
-func NewXEPVersion(config *config.ModVersion, stream Stream) *XEPVersion {
+func newXEPVersion(config *config.ModVersion, stream *Stream) *XEPVersion {
 	x := &XEPVersion{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,

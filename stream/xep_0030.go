@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"sort"
@@ -32,13 +32,13 @@ type DiscoIdentity struct {
 
 type XEPDiscoInfo struct {
 	queue      concurrent.OperationQueue
-	strm       Stream
+	strm       *Stream
 	identities []DiscoIdentity
 	features   []string
 	items      []DiscoItem
 }
 
-func NewXEPDiscoInfo(stream Stream) *XEPDiscoInfo {
+func newXEPDiscoInfo(stream *Stream) *XEPDiscoInfo {
 	x := &XEPDiscoInfo{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,

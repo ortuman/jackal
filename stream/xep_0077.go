@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"github.com/ortuman/jackal/config"
@@ -17,11 +17,11 @@ const registerNamespace = "jabber:iq:register"
 
 type XEPRegister struct {
 	cfg        *config.ModRegistration
-	strm       Stream
+	strm       *Stream
 	registered bool
 }
 
-func NewXEPRegister(config *config.ModRegistration, stream Stream) *XEPRegister {
+func newXEPRegister(config *config.ModRegistration, stream *Stream) *XEPRegister {
 	return &XEPRegister{
 		cfg:  config,
 		strm: stream,

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"time"
@@ -18,10 +18,10 @@ const vCardNamespace = "vcard-temp"
 
 type XEPVCard struct {
 	queue concurrent.OperationQueue
-	strm  Stream
+	strm  *Stream
 }
 
-func NewXEPVCard(stream Stream) *XEPVCard {
+func newXEPVCard(stream *Stream) *XEPVCard {
 	v := &XEPVCard{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,

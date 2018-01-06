@@ -17,7 +17,6 @@ import (
 	"github.com/ortuman/jackal/config"
 	streamerrors "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -47,6 +46,10 @@ var (
 	errNotAuthenticated = errors.New("user not authenticated")
 )
 
+type moduleRouter struct {
+	strm *Stream
+}
+
 type Stream struct {
 	sync.RWMutex
 	cfg           *config.Server
@@ -69,12 +72,12 @@ type Stream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 
-	iqHandlers []module.IQHandler
+	iqHandlers []IQHandler
 
-	roster   *module.Roster
-	register *module.XEPRegister
-	ping     *module.XEPPing
-	offline  *module.Offline
+	roster   *Roster
+	register *XEPRegister
+	ping     *XEPPing
+	offline  *Offline
 
 	writeCh chan []byte
 	readCh  chan *xml.Element
@@ -197,15 +200,6 @@ func (s *Stream) Disconnect(err error) {
 	s.discCh <- err
 }
 
-func (s *Stream) UserStreams(username string) []module.Stream {
-	var res []module.Stream
-	streams := Manager().UserStreams(username)
-	for _, stream := range streams {
-		res = append(res, stream)
-	}
-	return res
-}
-
 func (s *Stream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
@@ -226,42 +220,42 @@ func (s *Stream) initializeAuthenticators() {
 
 func (s *Stream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(s)
+	s.roster = newRoster(s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	discoInfo := module.NewXEPDiscoInfo(s)
+	discoInfo := newXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules["private"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPPrivateStorage(s))
+		s.iqHandlers = append(s.iqHandlers, newXEPPrivateStorage(s))
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
+		s.iqHandlers = append(s.iqHandlers, newXEPVCard(s))
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = module.NewXEPRegister(&s.cfg.ModRegistration, s)
+		s.register = newXEPRegister(&s.cfg.ModRegistration, s)
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, newXEPVersion(&s.cfg.ModVersion, s))
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
-		s.ping = module.NewXEPPing(&s.cfg.ModPing, s)
+		s.ping = newXEPPing(&s.cfg.ModPing, s)
 		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
 	// register server disco info identities
-	identities := []module.DiscoIdentity{{
+	identities := []DiscoIdentity{{
 		Category: "server",
 		Type:     "im",
 		Name:     s.cfg.ID,
@@ -276,7 +270,7 @@ func (s *Stream) initializeXEPs() {
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
-		s.offline = module.NewOffline(&s.cfg.ModOffline, s)
+		s.offline = newOffline(&s.cfg.ModOffline, s)
 		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)

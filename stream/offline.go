@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"sync"
@@ -19,11 +19,11 @@ import (
 type Offline struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModOffline
-	strm  Stream
+	strm  *Stream
 	once  sync.Once
 }
 
-func NewOffline(config *config.ModOffline, stream Stream) *Offline {
+func newOffline(config *config.ModOffline, stream *Stream) *Offline {
 	return &Offline{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,

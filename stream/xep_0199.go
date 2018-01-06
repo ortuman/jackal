@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package stream
 
 import (
 	"sync"
@@ -21,7 +21,7 @@ const pingNamespace = "urn:xmpp:ping"
 
 type XEPPing struct {
 	cfg  *config.ModPing
-	strm Stream
+	strm *Stream
 
 	pingTm *time.Timer
 	pongCh chan struct{}
@@ -33,7 +33,7 @@ type XEPPing struct {
 	pingOnce    sync.Once
 }
 
-func NewXEPPing(config *config.ModPing, stream Stream) *XEPPing {
+func newXEPPing(config *config.ModPing, stream *Stream) *XEPPing {
 	return &XEPPing{
 		cfg:    config,
 		strm:   stream,
