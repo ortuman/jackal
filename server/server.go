@@ -19,6 +19,7 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 )
 
 type server struct {
@@ -77,5 +78,5 @@ func (s *server) start() {
 func (s *server) handleConnection(conn net.Conn) {
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
 	strm := stream.NewStreamSocket(id, conn, s.cfg)
-	stream.Manager().RegisterStream(strm)
+	router.C2S().RegisterStream(strm)
 }
