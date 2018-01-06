@@ -36,11 +36,6 @@ type C2SStream interface {
 	Disconnect(err error)
 }
 
-type availableStreamsReq struct {
-	username string
-	resultCh chan []C2SStream
-}
-
 type C2SManager struct {
 	sync.RWMutex
 	strms       map[string]C2SStream
