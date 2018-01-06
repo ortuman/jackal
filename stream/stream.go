@@ -17,7 +17,7 @@ import (
 	"github.com/ortuman/jackal/config"
 	streamerrors "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	router "github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/manager"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -597,7 +597,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.jid, _ = xml.NewJID(s.username, s.domain, "", true)
 	s.Unlock()
 
-	router.C2S().AuthenticateStream(s)
+	manager.C2S().AuthenticateStream(s)
 	s.restart()
 }
 
@@ -985,11 +985,11 @@ func (s *Stream) disconnect(closeStream bool) {
 
 	s.state = disconnected
 
-	router.C2S().UnregisterStream(s)
+	manager.C2S().UnregisterStream(s)
 }
 
 func (s *Stream) isResourceAvailable(resource string) bool {
-	strms := router.C2S().UserStreams(s.Username())
+	strms := manager.C2S().AvailableStreams(s.Username())
 	for _, strm := range strms {
 		if strm.Resource() == resource {
 			return false
@@ -999,7 +999,7 @@ func (s *Stream) isResourceAvailable(resource string) bool {
 }
 
 func (s *Stream) sendElement(serializable xml.Serializable, to *xml.JID) error {
-	recipients := router.C2S().UserStreams(to.Node())
+	recipients := manager.C2S().AvailableStreams(to.Node())
 	if len(recipients) == 0 {
 		return errNotAuthenticated
 	}

@@ -3,11 +3,11 @@
  * See the LICENSE file for more information.
  */
 
-package router
+package manager
 
 import "github.com/ortuman/jackal/xml"
 
-type Stream interface {
+type C2SStream interface {
 	ID() string
 
 	Username() string
@@ -20,11 +20,12 @@ type Stream interface {
 	Authenticated() bool
 	Compressed() bool
 
+	Priority() int8
+
 	Active() bool
 	Available() bool
 
 	RequestedRoster() bool
-	Priority() int8
 
 	SendElement(element xml.Serializable)
 	Disconnect(err error)
