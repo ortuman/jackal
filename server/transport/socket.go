@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/stream/compress"
+	"github.com/ortuman/jackal/server/compress"
 )
 
 type socketTransport struct {

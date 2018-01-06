@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package server
 
 import (
 	"crypto/tls"
@@ -16,9 +16,10 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/manager"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/stream"
 	streamerrors "github.com/ortuman/jackal/stream/errors"
-	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -73,12 +74,12 @@ type Stream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 
-	iqHandlers []IQHandler
+	iqHandlers []module.IQHandler
 
-	roster   *Roster
-	register *XEPRegister
-	ping     *XEPPing
-	offline  *Offline
+	roster   *module.Roster
+	register *module.XEPRegister
+	ping     *module.XEPPing
+	offline  *module.Offline
 
 	writeCh chan []byte
 	readCh  chan *xml.Element
@@ -221,42 +222,42 @@ func (s *Stream) initializeAuthenticators() {
 
 func (s *Stream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = newRoster(s)
+	s.roster = module.NewRoster(s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	discoInfo := newXEPDiscoInfo(s)
+	discoInfo := module.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules["private"]; ok {
-		s.iqHandlers = append(s.iqHandlers, newXEPPrivateStorage(s))
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPPrivateStorage(s))
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, newXEPVCard(s))
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = newXEPRegister(&s.cfg.ModRegistration, s)
+		s.register = module.NewXEPRegister(&s.cfg.ModRegistration, s)
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, newXEPVersion(&s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
-		s.ping = newXEPPing(&s.cfg.ModPing, s)
+		s.ping = module.NewXEPPing(&s.cfg.ModPing, s)
 		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
 	// register server disco info identities
-	identities := []DiscoIdentity{{
+	identities := []module.DiscoIdentity{{
 		Category: "server",
 		Type:     "im",
 		Name:     s.cfg.ID,
@@ -271,7 +272,7 @@ func (s *Stream) initializeXEPs() {
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
-		s.offline = newOffline(&s.cfg.ModOffline, s)
+		s.offline = module.NewOffline(&s.cfg.ModOffline, s)
 		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)
@@ -597,7 +598,7 @@ func (s *Stream) finishAuthentication(username string) {
 	s.jid, _ = xml.NewJID(s.username, s.domain, "", true)
 	s.Unlock()
 
-	manager.C2S().AuthenticateStream(s)
+	stream.C2S().AuthenticateStream(s)
 	s.restart()
 }
 
@@ -985,11 +986,11 @@ func (s *Stream) disconnect(closeStream bool) {
 
 	s.state = disconnected
 
-	manager.C2S().UnregisterStream(s)
+	stream.C2S().UnregisterStream(s)
 }
 
 func (s *Stream) isResourceAvailable(resource string) bool {
-	strms := manager.C2S().AvailableStreams(s.Username())
+	strms := stream.C2S().AvailableStreams(s.Username())
 	for _, strm := range strms {
 		if strm.Resource() == resource {
 			return false
@@ -999,7 +1000,7 @@ func (s *Stream) isResourceAvailable(resource string) bool {
 }
 
 func (s *Stream) sendElement(serializable xml.Serializable, to *xml.JID) error {
-	recipients := manager.C2S().AvailableStreams(to.Node())
+	recipients := stream.C2S().AvailableStreams(to.Node())
 	if len(recipients) == 0 {
 		return errNotAuthenticated
 	}

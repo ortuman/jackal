@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"time"
@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -18,16 +19,16 @@ const vCardNamespace = "vcard-temp"
 
 type XEPVCard struct {
 	queue concurrent.OperationQueue
-	strm  *Stream
+	strm  stream.C2SStream
 }
 
-func newXEPVCard(stream *Stream) *XEPVCard {
+func NewXEPVCard(strm stream.C2SStream) *XEPVCard {
 	v := &XEPVCard{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: stream,
+		strm: strm,
 	}
 	return v
 }

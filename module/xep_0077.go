@@ -3,13 +3,14 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/entity"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -17,14 +18,14 @@ const registerNamespace = "jabber:iq:register"
 
 type XEPRegister struct {
 	cfg        *config.ModRegistration
-	strm       *Stream
+	strm       stream.C2SStream
 	registered bool
 }
 
-func newXEPRegister(config *config.ModRegistration, stream *Stream) *XEPRegister {
+func NewXEPRegister(config *config.ModRegistration, strm stream.C2SStream) *XEPRegister {
 	return &XEPRegister{
 		cfg:  config,
-		strm: stream,
+		strm: strm,
 	}
 }
 

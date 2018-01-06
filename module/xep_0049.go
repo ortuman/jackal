@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"strings"
@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -19,16 +20,16 @@ const privateStorageNamespace = "jabber:iq:private"
 
 type XEPPrivateStorage struct {
 	queue concurrent.OperationQueue
-	strm  *Stream
+	strm  stream.C2SStream
 }
 
-func newXEPPrivateStorage(stream *Stream) *XEPPrivateStorage {
+func NewXEPPrivateStorage(strm stream.C2SStream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: stream,
+		strm: strm,
 	}
 	return x
 }

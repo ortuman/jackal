@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"os/exec"
@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
 )
@@ -29,17 +30,17 @@ func init() {
 type XEPVersion struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModVersion
-	strm  *Stream
+	strm  stream.C2SStream
 }
 
-func newXEPVersion(config *config.ModVersion, stream *Stream) *XEPVersion {
+func NewXEPVersion(config *config.ModVersion, strm stream.C2SStream) *XEPVersion {
 	x := &XEPVersion{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		cfg:  config,
-		strm: stream,
+		strm: strm,
 	}
 	return x
 }

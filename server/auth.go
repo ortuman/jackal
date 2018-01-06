@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package server
 
 import "github.com/ortuman/jackal/xml"
 

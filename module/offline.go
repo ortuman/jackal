@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"sync"
@@ -13,24 +13,25 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 type Offline struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModOffline
-	strm  *Stream
+	strm  stream.C2SStream
 	once  sync.Once
 }
 
-func newOffline(config *config.ModOffline, stream *Stream) *Offline {
+func NewOffline(config *config.ModOffline, strm stream.C2SStream) *Offline {
 	return &Offline{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
 		cfg:  config,
-		strm: stream,
+		strm: strm,
 	}
 }
 

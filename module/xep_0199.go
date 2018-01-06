@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"sync"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -21,7 +22,7 @@ const pingNamespace = "urn:xmpp:ping"
 
 type XEPPing struct {
 	cfg  *config.ModPing
-	strm *Stream
+	strm stream.C2SStream
 
 	pingTm *time.Timer
 	pongCh chan struct{}
@@ -33,10 +34,10 @@ type XEPPing struct {
 	pingOnce    sync.Once
 }
 
-func newXEPPing(config *config.ModPing, stream *Stream) *XEPPing {
+func NewXEPPing(config *config.ModPing, strm stream.C2SStream) *XEPPing {
 	return &XEPPing{
 		cfg:    config,
-		strm:   stream,
+		strm:   strm,
 		pongCh: make(chan struct{}, 1),
 	}
 }

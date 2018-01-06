@@ -3,13 +3,14 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"sort"
 	"time"
 
 	"github.com/ortuman/jackal/concurrent"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -32,19 +33,19 @@ type DiscoIdentity struct {
 
 type XEPDiscoInfo struct {
 	queue      concurrent.OperationQueue
-	strm       *Stream
+	strm       stream.C2SStream
 	identities []DiscoIdentity
 	features   []string
 	items      []DiscoItem
 }
 
-func newXEPDiscoInfo(stream *Stream) *XEPDiscoInfo {
+func NewXEPDiscoInfo(strm stream.C2SStream) *XEPDiscoInfo {
 	x := &XEPDiscoInfo{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
 		},
-		strm: stream,
+		strm: strm,
 	}
 	return x
 }

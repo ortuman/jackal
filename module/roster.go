@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package module
 
 import (
 	"sync"
@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/entity"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -28,20 +29,20 @@ const (
 
 type Roster struct {
 	queue concurrent.OperationQueue
-	strm  *Stream
+	strm  stream.C2SStream
 	once  sync.Once
 
 	requestedMu sync.RWMutex
 	requested   bool
 }
 
-func newRoster(stream *Stream) *Roster {
+func NewRoster(strm stream.C2SStream) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second * 10,
 		},
-		strm: stream,
+		strm: strm,
 	}
 }
 
