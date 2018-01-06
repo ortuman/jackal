@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )

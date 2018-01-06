@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/config"
-	streamerrors "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/manager"
+	streamerrors "github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/stream/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
