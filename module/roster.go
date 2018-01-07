@@ -202,7 +202,7 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	// r.strm.RouteElement(p, contactJID)
+	r.sendElement(p, contactJID)
 	return nil
 }
 
