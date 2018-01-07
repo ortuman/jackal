@@ -202,7 +202,7 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	r.sendElement(p, contactJID)
+	r.routeElement(p, contactJID)
 	return nil
 }
 
@@ -263,7 +263,7 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	p.SetTo(userJID.ToBareJID())
 	p.SetType(xml.SubscribedType)
 	p.AppendElements(presence.Elements())
-	r.sendElement(p, userJID)
+	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
@@ -271,7 +271,7 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 		p := xml.NewMutableElementName("presence")
 		p.SetFrom(contactStream.JID().ToFullJID())
 		p.SetTo(userJID.ToBareJID())
-		r.sendElement(p, userJID)
+		r.routeElement(p, userJID)
 	}
 	return nil
 }
@@ -325,7 +325,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	}
 }
 
-func (r *Roster) sendElement(element xml.Serializable, to *xml.JID) {
+func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
 	streams := stream.C2S().AvailableStreams(to.Node())
 	for _, strm := range streams {
 		strm.SendElement(element)
