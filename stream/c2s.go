@@ -37,7 +37,7 @@ type C2SStream interface {
 }
 
 type C2SManager struct {
-	sync.RWMutex
+	lock        sync.RWMutex
 	strms       map[string]C2SStream
 	authedStrms map[string][]C2SStream
 }
@@ -59,8 +59,8 @@ func C2S() *C2SManager {
 }
 
 func (m *C2SManager) RegisterStream(strm C2SStream) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	log.Infof("registered stream... (id: %s)", strm.ID())
 
@@ -68,8 +68,8 @@ func (m *C2SManager) RegisterStream(strm C2SStream) {
 }
 
 func (m *C2SManager) UnregisterStream(strm C2SStream) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	log.Infof("unregistered stream... (id: %s)", strm.ID())
 
@@ -89,8 +89,8 @@ func (m *C2SManager) UnregisterStream(strm C2SStream) {
 }
 
 func (m *C2SManager) AuthenticateStream(strm C2SStream) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	log.Infof("authenticated stream... (%s)", strm.Username())
 
@@ -102,7 +102,7 @@ func (m *C2SManager) AuthenticateStream(strm C2SStream) {
 }
 
 func (m *C2SManager) AvailableStreams(username string) []C2SStream {
-	m.RLock()
-	defer m.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	return m.authedStrms[username]
 }

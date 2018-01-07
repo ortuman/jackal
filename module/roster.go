@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
 
 const rosterNamespace = "jabber:iq:roster"
@@ -262,16 +263,16 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	p.SetTo(userJID.ToBareJID())
 	p.SetType(xml.SubscribedType)
 	p.AppendElements(presence.Elements())
-	/*r.strm.RouteElement(p, userJID)
+	r.sendElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
-	contactStreams := r.strm.UserStreams(contactJID.Node())
+	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
 	for _, contactStream := range contactStreams {
 		p := xml.NewMutableElementName("presence")
 		p.SetFrom(contactStream.JID().ToFullJID())
 		p.SetTo(userJID.ToBareJID())
-		r.strm.RouteElement(p, userJID)
-	}*/
+		r.sendElement(p, userJID)
+	}
 	return nil
 }
 
@@ -324,18 +325,25 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	}
 }
 
+func (r *Roster) sendElement(element xml.Serializable, to *xml.JID) {
+	streams := stream.C2S().AvailableStreams(to.Node())
+	for _, strm := range streams {
+		strm.SendElement(element)
+	}
+}
+
 func (r *Roster) pushRosterItem(item *entity.RosterItem) {
 	query := xml.NewMutableElementNamespace("query", rosterNamespace)
 	query.AppendElement(item.Element())
-	/*
-		userStreams := r.strm.UserStreams(r.strm.Username())
-		for _, strm := range userStreams {
-			if !strm.RequestedRoster() {
-				continue
-			}
-			pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
-			pushEl.SetTo(strm.JID().ToFullJID())
-			pushEl.AppendMutableElement(query)
-			strm.SendElement(pushEl)
-		} */
+
+	streams := stream.C2S().AvailableStreams(r.strm.Username())
+	for _, strm := range streams {
+		if !strm.RequestedRoster() {
+			continue
+		}
+		pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
+		pushEl.SetTo(strm.JID().ToFullJID())
+		pushEl.AppendMutableElement(query)
+		strm.SendElement(pushEl)
+	}
 }
