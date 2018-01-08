@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/util"
@@ -73,7 +74,8 @@ func (s *scramParameters) String() string {
 }
 
 type scramAuthenticator struct {
-	strm          *c2sStream
+	strm          *serverStream
+	tr            transport.Transport
 	tp            scramType
 	usesCb        bool
 	h             func() hash.Hash
@@ -87,9 +89,10 @@ type scramAuthenticator struct {
 	authenticated bool
 }
 
-func newScram(strm *c2sStream, scramType scramType, usesChannelBinding bool) authenticator {
+func newScram(strm *serverStream, tr transport.Transport, scramType scramType, usesChannelBinding bool) authenticator {
 	s := &scramAuthenticator{
 		strm:   strm,
+		tr:     tr,
 		tp:     scramType,
 		usesCb: usesChannelBinding,
 		state:  startScramState,
@@ -296,7 +299,7 @@ func (s *scramAuthenticator) getCBindInputString() string {
 	if s.usesCb {
 		switch s.params.cbMechanism {
 		case "tls-unique":
-			buf.Write(s.strm.ChannelBindingBytes(config.TLSUnique))
+			buf.Write(s.tr.ChannelBindingBytes(config.TLSUnique))
 		}
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes())

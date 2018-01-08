@@ -24,6 +24,9 @@ type C2SStream interface {
 
 	Priority() int8
 
+	SendElement(element xml.Serializable)
+	Disconnect(err error)
+
 	IsSecured() bool
 	IsAuthenticated() bool
 	IsCompressed() bool
@@ -32,9 +35,6 @@ type C2SStream interface {
 	IsAvailable() bool
 
 	IsRosterRequested() bool
-
-	SendElement(element xml.Serializable)
-	Disconnect(err error)
 }
 
 type C2SManager struct {
