@@ -804,7 +804,7 @@ func (s *Stream) doRead() {
 			switch err {
 			case nil:
 				break
-			case io.EOF, xml.ErrStreamClosedByPeer:
+			case io.EOF, io.ErrUnexpectedEOF, xml.ErrStreamClosedByPeer:
 				s.discCh <- nil
 			default:
 				log.Error(err)

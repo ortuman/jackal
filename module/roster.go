@@ -178,11 +178,6 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 		switch ri.Subscription {
 		case subscriptionTo, subscriptionBoth:
 			// already subscribed
-			p := xml.NewMutableElementName("presence")
-			p.SetFrom(contactJID.ToBareJID())
-			p.SetTo(userJID.ToBareJID())
-			p.SetType(xml.SubscribedType)
-			r.routeElement(p, userJID)
 			return nil
 
 		default:
@@ -247,7 +242,7 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 
 	// update contact's roster item...
 	switch contactRosterItem.Subscription {
-	case subscriptionFrom:
+	case subscriptionTo:
 		contactRosterItem.Subscription = subscriptionBoth
 	case subscriptionNone:
 		contactRosterItem.Subscription = subscriptionFrom
@@ -259,7 +254,7 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 
 	// update user's roster item...
 	switch userRosterItem.Subscription {
-	case subscriptionTo:
+	case subscriptionFrom:
 		userRosterItem.Subscription = subscriptionBoth
 	case subscriptionNone:
 		userRosterItem.Subscription = subscriptionTo
