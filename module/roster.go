@@ -382,7 +382,7 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 			strm.SendElement(pushEl)
 		}
 	} else {
-		// S2S
+		// TODO(ortuman): S2S
 	}
 }
 
@@ -393,6 +393,6 @@ func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
 			strm.SendElement(element)
 		}
 	} else {
-		// S2S
+		// TODO(ortuman): S2S
 	}
 }
