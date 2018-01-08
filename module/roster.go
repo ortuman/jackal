@@ -88,17 +88,17 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 
 func (r *Roster) processPresence(presence *xml.Presence) {
 	if presence.IsSubscribe() {
-		if err := r.performSubscribe(presence); err != nil {
+		if err := r.processSubscribe(presence); err != nil {
 			log.Error(err)
 			return
 		}
 	} else if presence.IsSubscribed() {
-		if err := r.performSubscribed(presence); err != nil {
+		if err := r.processSubscribed(presence); err != nil {
 			log.Error(err)
 			return
 		}
 	} else if presence.IsUnsubscribed() {
-		if err := r.performUnsubscribed(presence); err != nil {
+		if err := r.processUnsubscribed(presence); err != nil {
 			log.Error(err)
 			return
 		}
@@ -216,7 +216,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	}
 }
 
-func (r *Roster) performSubscribe(presence *xml.Presence) error {
+func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	username := r.strm.Username()
 	res := r.strm.Resource()
 
@@ -265,7 +265,7 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) performSubscribed(presence *xml.Presence) error {
+func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	username := r.strm.Username()
 	res := r.strm.Resource()
 
@@ -329,7 +329,7 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) performUnsubscribed(presence *xml.Presence) error {
+func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	username := r.strm.Username()
 	res := r.strm.Resource()
 
