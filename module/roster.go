@@ -106,7 +106,7 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 }
 
 func (r *Roster) deliverPendingApprovalNotifications() {
-	notifications, err := storage.Instance().FetchRosterApprovalNotifications(r.strm.JID().ToBareJID())
+	notifications, err := storage.Instance().FetchApprovalNotifications(r.strm.JID().ToBareJID())
 	if err != nil {
 		log.Error(err)
 		return
@@ -177,7 +177,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 	case subscriptionRemove:
 		log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
 
-		if err := storage.Instance().DeleteRosterApprovalNotification(username, jid); err != nil {
+		if err := storage.Instance().DeleteApprovalNotification(username, jid); err != nil {
 			return nil, err
 		}
 		if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
@@ -257,7 +257,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements())
 
 	// archive roster approval notification
-	err = storage.Instance().InsertOrUpdateRosterApprovalNotification(username, contactJID.ToBareJID(), p.Copy())
+	err = storage.Instance().InsertOrUpdateApprovalNotification(username, contactJID.ToBareJID(), p.Copy())
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	log.Infof("authorization granted: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	// remove approval notification
-	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
 
@@ -347,7 +347,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	log.Infof("authorization denied: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	// remove approval notification
-	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
 
