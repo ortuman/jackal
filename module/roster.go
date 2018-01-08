@@ -47,7 +47,7 @@ func NewRoster(strm stream.C2SStream) *Roster {
 	}
 }
 
-func (r *Roster) RequestedRoster() bool {
+func (r *Roster) IsRosterRequested() bool {
 	r.requestedMu.RLock()
 	defer r.requestedMu.RUnlock()
 	return r.requested
@@ -373,7 +373,7 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 
 		streams := stream.C2S().AvailableStreams(to.Node())
 		for _, strm := range streams {
-			if !strm.RequestedRoster() {
+			if !strm.IsRosterRequested() {
 				continue
 			}
 			pushEl := xml.NewMutableIQ(uuid.New(), xml.SetType)

@@ -142,47 +142,47 @@ func (s *c2sStream) JID() *xml.JID {
 	return s.jid
 }
 
-func (s *c2sStream) Authenticated() bool {
+func (s *c2sStream) Priority() int8 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.priority
+}
+
+func (s *c2sStream) IsAuthenticated() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.authenticated
 }
 
-func (s *c2sStream) Secured() bool {
+func (s *c2sStream) IsSecured() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.secured
 }
 
-func (s *c2sStream) Compressed() bool {
+func (s *c2sStream) IsCompressed() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.compressed
 }
 
-func (s *c2sStream) Active() bool {
+func (s *c2sStream) IsActive() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.active
 }
 
-func (s *c2sStream) Available() bool {
+func (s *c2sStream) IsAvailable() bool {
 	s.RLock()
 	defer s.RUnlock()
 	return s.available
 }
 
-func (s *c2sStream) RequestedRoster() bool {
+func (s *c2sStream) IsRosterRequested() bool {
 	if s.roster != nil {
-		return s.roster.RequestedRoster()
+		return s.roster.IsRosterRequested()
 	}
 	return false
-}
-
-func (s *c2sStream) Priority() int8 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.priority
 }
 
 func (s *c2sStream) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) []byte {
@@ -322,12 +322,12 @@ func (s *c2sStream) handleConnecting(elem *xml.Element) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
-	if !s.Authenticated() {
+	if !s.IsAuthenticated() {
 		// attach TLS feature
 		tlsEnabled := s.cfg.TLS != nil
 		tlsRequired := s.cfg.TLS != nil && s.cfg.TLS.Required
 
-		if !s.Secured() && tlsEnabled {
+		if !s.IsSecured() && tlsEnabled {
 			startTLS := xml.NewMutableElementName("starttls")
 			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
 			if tlsRequired {
@@ -337,14 +337,14 @@ func (s *c2sStream) handleConnecting(elem *xml.Element) {
 		}
 
 		// attach SASL mechanisms
-		shouldOfferSASL := !tlsEnabled || (!tlsRequired || (tlsRequired && s.Secured()))
+		shouldOfferSASL := !tlsEnabled || (!tlsRequired || (tlsRequired && s.IsSecured()))
 
 		if shouldOfferSASL && len(s.authrs) > 0 {
 			mechanisms := xml.NewMutableElementName("mechanisms")
 			mechanisms.SetNamespace(saslNamespace)
 			for _, athr := range s.authrs {
 				// don't offset authenticators with channel binding on an unsecure stream
-				if athr.UsesChannelBinding() && !s.Secured() {
+				if athr.UsesChannelBinding() && !s.IsSecured() {
 					continue
 				}
 				mechanism := xml.NewMutableElementName("mechanism")
@@ -355,7 +355,7 @@ func (s *c2sStream) handleConnecting(elem *xml.Element) {
 		}
 
 		// allow In-band registration over encrypted stream only
-		allowRegistration := !tlsEnabled || (tlsEnabled && s.Secured())
+		allowRegistration := !tlsEnabled || (tlsEnabled && s.IsSecured())
 
 		if _, ok := s.cfg.Modules["offline"]; ok && allowRegistration {
 			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
@@ -365,7 +365,7 @@ func (s *c2sStream) handleConnecting(elem *xml.Element) {
 
 	} else {
 		// attach compression feature
-		if !s.Compressed() && s.cfg.Compression != nil {
+		if !s.IsCompressed() && s.cfg.Compression != nil {
 			compression := xml.NewMutableElementNamespace("compression", "http://jabber.org/features/compress")
 			method := xml.NewMutableElementName("method")
 			method.SetText("zlib")
@@ -489,7 +489,7 @@ func (s *c2sStream) handleSessionStarted(elem *xml.Element) {
 }
 
 func (s *c2sStream) proceedStartTLS() {
-	if s.Secured() {
+	if s.IsSecured() {
 		s.disconnectWithStreamError(streamerrors.ErrNotAuthorized)
 		return
 	}
@@ -518,7 +518,7 @@ func (s *c2sStream) proceedStartTLS() {
 }
 
 func (s *c2sStream) compress(elem *xml.Element) {
-	if s.Compressed() {
+	if s.IsCompressed() {
 		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
 		return
 	}

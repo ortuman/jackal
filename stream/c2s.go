@@ -22,16 +22,16 @@ type C2SStream interface {
 
 	JID() *xml.JID
 
-	Secured() bool
-	Authenticated() bool
-	Compressed() bool
-
 	Priority() int8
 
-	Active() bool
-	Available() bool
+	IsSecured() bool
+	IsAuthenticated() bool
+	IsCompressed() bool
 
-	RequestedRoster() bool
+	IsActive() bool
+	IsAvailable() bool
+
+	IsRosterRequested() bool
 
 	SendElement(element xml.Serializable)
 	Disconnect(err error)

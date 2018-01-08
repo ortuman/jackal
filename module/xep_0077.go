@@ -44,7 +44,7 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 	}
 
 	q := iq.FindElementNamespace("query", registerNamespace)
-	if !x.strm.Authenticated() {
+	if !x.strm.IsAuthenticated() {
 		if iq.IsGet() {
 			// ...send registration fields to requester entity...
 			x.sendRegistrationFields(iq, q)
@@ -147,7 +147,7 @@ func (x *XEPRegister) changePassword(password string, username string, iq *xml.I
 		x.strm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if !x.strm.Secured() {
+	if !x.strm.IsSecured() {
 		// channel isn't safe enough to enable a password change
 		x.strm.SendElement(iq.NotAuthorizedError())
 		return
@@ -173,7 +173,7 @@ func (x *XEPRegister) changePassword(password string, username string, iq *xml.I
 }
 
 func (x *XEPRegister) isValidToJid(jid *xml.JID) bool {
-	if x.strm.Authenticated() {
+	if x.strm.IsAuthenticated() {
 		return jid.IsServer()
 	} else {
 		return jid.IsServer() || (jid.IsBare() && jid.Node() == x.strm.Username())
