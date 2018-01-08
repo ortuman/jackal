@@ -804,7 +804,7 @@ func (s *Stream) doRead() {
 			switch err {
 			case nil:
 				break
-			case io.EOF, io.ErrUnexpectedEOF, xml.ErrStreamClosedByPeer:
+			case io.EOF, xml.ErrStreamClosedByPeer:
 				s.discCh <- nil
 			default:
 				log.Error(err)
@@ -965,7 +965,7 @@ func (s *Stream) writeElement(elem xml.Serializable) {
 
 func (s *Stream) writeBytes(b []byte) {
 	if log.Level() >= config.DebugLevel {
-		// log.Debugf("SEND: %s", string(b))
+		log.Debugf("SEND: %s", string(b))
 	}
 	s.tr.Write(b)
 }
