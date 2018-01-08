@@ -350,6 +350,12 @@ func (r *Roster) performUnsubscribed(presence *xml.Presence) error {
 	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
+
+	// send 'unsubscribed' presence to user...
+	p := xml.NewMutablePresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	p.AppendElements(presence.Elements())
+	r.routeElement(p, userJID)
+
 	// update roster item...
 	userRosterItem.Ask = false
 	userRosterItem.Subscription = subscriptionNone
