@@ -287,11 +287,11 @@ func (r *Roster) performUnsubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
-	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
+	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
 	if err != nil {
 		return err
 	}
-	if contactRosterItem == nil {
+	if userRosterItem == nil {
 		// silently ignore
 		return nil
 	}
@@ -302,12 +302,12 @@ func (r *Roster) performUnsubscribed(presence *xml.Presence) error {
 		return err
 	}
 	// update roster item...
-	contactRosterItem.Ask = false
-	contactRosterItem.Subscription = subscriptionNone
-	if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
+	userRosterItem.Ask = false
+	userRosterItem.Subscription = subscriptionNone
+	if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
 		return err
 	}
-	r.pushRosterItem(contactRosterItem, contactJID)
+	r.pushRosterItem(userRosterItem, userJID)
 	return nil
 }
 
@@ -361,11 +361,11 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 }
 
 func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
-	query := xml.NewMutableElementNamespace("query", rosterNamespace)
-	query.AppendElement(item.Element())
-
 	if stream.C2S().IsLocalDomain(to.Domain()) {
-		streams := stream.C2S().AvailableStreams(r.strm.Username())
+		query := xml.NewMutableElementNamespace("query", rosterNamespace)
+		query.AppendElement(item.Element())
+
+		streams := stream.C2S().AvailableStreams(to.Node())
 		for _, strm := range streams {
 			if !strm.RequestedRoster() {
 				continue
