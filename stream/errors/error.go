@@ -3,14 +3,14 @@
  * See the LICENSE file for more information.
  */
 
-package errors
+package streamerror
 
 import (
 	"github.com/ortuman/jackal/xml"
 )
 
 // Error represents a "stream:error" element.
-type StreamError struct {
+type Error struct {
 	reason string
 }
 
@@ -43,17 +43,17 @@ var (
 	ErrInternalServerError = newStreamError("internal-server-error")
 )
 
-func newStreamError(reason string) *StreamError {
-	return &StreamError{reason: reason}
+func newStreamError(reason string) *Error {
+	return &Error{reason: reason}
 }
 
-func (se *StreamError) Element() *xml.Element {
+func (se *Error) Element() *xml.Element {
 	ret := xml.NewMutableElementName("stream:error")
 	reason := xml.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
 	ret.AppendElement(reason)
 	return ret.Copy()
 }
 
-func (se *StreamError) Error() string {
+func (se *Error) Error() string {
 	return se.reason
 }

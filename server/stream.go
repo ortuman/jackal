@@ -19,7 +19,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/stream"
-	streamerrors "github.com/ortuman/jackal/stream/errors"
+	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -275,7 +275,7 @@ func (s *serverStream) startConnectTimeoutTimer(timeoutInSeconds int) {
 		<-tr.C
 		if atomic.LoadUint32(&s.connected) == 0 {
 			// connection timeout...
-			s.discCh <- streamerrors.ErrConnectionTimeout
+			s.discCh <- streamerror.ErrConnectionTimeout
 		}
 	}()
 }
@@ -383,14 +383,14 @@ func (s *serverStream) handleConnected(elem *xml.Element) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
-			s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
+			s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 			return
 		}
 		s.proceedStartTLS()
 
 	case "auth":
 		if elem.Namespace() != saslNamespace {
-			s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
+			s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 			return
 		}
 		s.startAuthentication(elem)
@@ -415,16 +415,16 @@ func (s *serverStream) handleConnected(elem *xml.Element) {
 		fallthrough
 
 	case "message", "presence":
-		s.disconnectWithStreamError(streamerrors.ErrNotAuthorized)
+		s.disconnectWithStreamError(streamerror.ErrNotAuthorized)
 
 	default:
-		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 	}
 }
 
 func (s *serverStream) handleAuthenticating(elem *xml.Element) {
 	if elem.Namespace() != saslNamespace {
-		s.disconnectWithStreamError(streamerrors.ErrInvalidNamespace)
+		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
 	}
 	authr := s.activeAuthr
@@ -438,7 +438,7 @@ func (s *serverStream) handleAuthenticated(elem *xml.Element) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
-			s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
+			s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 			return
 		}
 		s.compress(elem)
@@ -458,7 +458,7 @@ func (s *serverStream) handleAuthenticated(elem *xml.Element) {
 		}
 
 	default:
-		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 	}
 }
 
@@ -486,7 +486,7 @@ func (s *serverStream) handleSessionStarted(elem *xml.Element) {
 
 func (s *serverStream) proceedStartTLS() {
 	if s.IsSecured() {
-		s.disconnectWithStreamError(streamerrors.ErrNotAuthorized)
+		s.disconnectWithStreamError(streamerror.ErrNotAuthorized)
 		return
 	}
 	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
@@ -515,7 +515,7 @@ func (s *serverStream) proceedStartTLS() {
 
 func (s *serverStream) compress(elem *xml.Element) {
 	if s.IsCompressed() {
-		s.disconnectWithStreamError(streamerrors.ErrUnsupportedStanzaType)
+		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
 	method := elem.FindElement("method")
@@ -773,7 +773,7 @@ func (s *serverStream) loop() {
 			case nil:
 				s.disconnect(false)
 			default:
-				if strmErr, ok := err.(*streamerrors.StreamError); ok {
+				if strmErr, ok := err.(*streamerror.Error); ok {
 					s.disconnectWithStreamError(strmErr)
 				} else {
 					log.Error(err)
@@ -799,7 +799,7 @@ func (s *serverStream) doRead() {
 				s.discCh <- nil
 			default:
 				log.Error(err)
-				s.discCh <- streamerrors.ErrInvalidXML
+				s.discCh <- streamerror.ErrInvalidXML
 			}
 		}
 	}()
@@ -850,11 +850,11 @@ func (s *serverStream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JI
 		}
 		return message, message.ToJID(), nil
 	}
-	return nil, nil, streamerrors.ErrUnsupportedStanzaType
+	return nil, nil, streamerror.ErrUnsupportedStanzaType
 }
 
 func (s *serverStream) handleElementError(elem *xml.Element, err error) {
-	if streamErr, ok := err.(*streamerrors.StreamError); ok {
+	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
 		s.writeElement(elem.ToError(stanzaErr))
@@ -863,36 +863,36 @@ func (s *serverStream) handleElementError(elem *xml.Element, err error) {
 	}
 }
 
-func (s *serverStream) validateStreamElement(elem *xml.Element) *streamerrors.StreamError {
+func (s *serverStream) validateStreamElement(elem *xml.Element) *streamerror.Error {
 	if elem.Name() != "stream:stream" {
-		return streamerrors.ErrUnsupportedStanzaType
+		return streamerror.ErrUnsupportedStanzaType
 	}
 	to := elem.To()
 	if len(to) > 0 && !stream.C2S().IsLocalDomain(to) {
-		return streamerrors.ErrHostUnknown
+		return streamerror.ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
-		return streamerrors.ErrInvalidNamespace
+		return streamerror.ErrInvalidNamespace
 	}
 	if elem.Version() != "1.0" {
-		return streamerrors.ErrUnsupportedVersion
+		return streamerror.ErrUnsupportedVersion
 	}
 	return nil
 }
 
-func (s *serverStream) validateNamespace(elem *xml.Element) *streamerrors.StreamError {
+func (s *serverStream) validateNamespace(elem *xml.Element) *streamerror.Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
 		return nil
 	}
-	return streamerrors.ErrInvalidNamespace
+	return streamerror.ErrInvalidNamespace
 }
 
 func (s *serverStream) validateAddresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
-		return nil, nil, streamerrors.ErrInvalidFrom
+		return nil, nil, streamerror.ErrInvalidFrom
 	}
 	fromJID = s.JID()
 
@@ -952,7 +952,7 @@ func (s *serverStream) writeBytes(b []byte) {
 	s.tr.Write(b)
 }
 
-func (s *serverStream) disconnectWithStreamError(err *streamerrors.StreamError) {
+func (s *serverStream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.state == connecting {
 		s.openStreamElement()
 	}

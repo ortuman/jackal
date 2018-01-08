@@ -123,7 +123,7 @@ func (x *XEPPing) waitForPong() {
 	case <-x.pongCh:
 		return
 	case <-t.C:
-		x.strm.Disconnect(errors.ErrConnectionTimeout)
+		x.strm.Disconnect(streamerror.ErrConnectionTimeout)
 	}
 }
 
