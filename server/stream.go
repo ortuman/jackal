@@ -36,6 +36,11 @@ const (
 )
 
 const (
+	jabberClientNamespace = "jabber:client"
+	jabberServerNamespace = "jabber:server"
+)
+
+const (
 	streamNamespace           = "http://etherx.jabber.org/streams"
 	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
@@ -480,7 +485,7 @@ func (s *serverStream) handleSessionStarted(elem *xml.Element) {
 		// component (MUC, pubsub, etc.)
 		s.processComponentStanza(stanza)
 	} else {
-		// TODO(ortuman): Implement S2S routing
+		// TODO(ortuman): Implement federation
 	}
 }
 
@@ -933,9 +938,9 @@ func (s *serverStream) isComponentDomain(domain string) bool {
 func (s *serverStream) streamDefaultNamespace() string {
 	switch s.cfg.Type {
 	case config.C2SServerType:
-		return "jabber:client"
+		return jabberClientNamespace
 	case config.S2SServerType:
-		return "jabber:server"
+		return jabberServerNamespace
 	}
 	// should not be reached
 	return ""
