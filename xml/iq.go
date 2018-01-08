@@ -53,7 +53,7 @@ func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
 	return iq, nil
 }
 
-func NewMutableIQType(identifier string, iqType string) *MutableElement {
+func NewMutableIQ(identifier string, iqType string) *MutableElement {
 	iq := &MutableElement{}
 	iq.SetName("iq")
 	iq.SetID(identifier)

@@ -198,10 +198,7 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	r.pushRosterItem(ri)
 
 	// send presence approval notification to contact
-	p := xml.NewMutableElementName("presence")
-	p.SetFrom(userJID.ToBareJID())
-	p.SetTo(contactJID.ToBareJID())
-	p.SetType(xml.SubscribeType)
+	p := xml.NewMutablePresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
 
 	// archive roster approval notification
@@ -222,11 +219,6 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 
 	log.Infof("authorization granted: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
-	// remove approval notification
-	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
-		return err
-	}
-
 	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
 	if err != nil {
 		return err
@@ -238,6 +230,11 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	if contactRosterItem == nil || userRosterItem == nil {
 		// silently ignore
 		return nil
+	}
+
+	// remove approval notification
+	if err := storage.Instance().DeleteRosterApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+		return err
 	}
 
 	// update contact's roster item...
@@ -265,19 +262,14 @@ func (r *Roster) performSubscribed(presence *xml.Presence) error {
 	}
 
 	// send 'subscribed' presence to user...
-	p := xml.NewMutableElementName("presence")
-	p.SetFrom(contactJID.ToBareJID())
-	p.SetTo(userJID.ToBareJID())
-	p.SetType(xml.SubscribedType)
+	p := xml.NewMutablePresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
 	p.AppendElements(presence.Elements())
 	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
 	for _, contactStream := range contactStreams {
-		p := xml.NewMutableElementName("presence")
-		p.SetFrom(contactStream.JID().ToFullJID())
-		p.SetTo(userJID.ToBareJID())
+		p := xml.NewMutablePresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.AvailableType)
 		r.routeElement(p, userJID)
 	}
 	return nil
@@ -348,7 +340,7 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem) {
 		if !strm.RequestedRoster() {
 			continue
 		}
-		pushEl := xml.NewMutableIQType(uuid.New(), xml.SetType)
+		pushEl := xml.NewMutableIQ(uuid.New(), xml.SetType)
 		pushEl.SetTo(strm.JID().ToFullJID())
 		pushEl.AppendMutableElement(query)
 		strm.SendElement(pushEl)

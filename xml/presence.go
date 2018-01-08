@@ -70,9 +70,11 @@ func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	return p, nil
 }
 
-func NewMutablePresenceType(presenceType string) *MutableElement {
+func NewMutablePresence(from string, to string, presenceType string) *MutableElement {
 	p := &MutableElement{}
 	p.SetName("presence")
+	p.SetFrom(from)
+	p.SetTo(to)
 	p.SetType(presenceType)
 	return p
 }

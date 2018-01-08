@@ -78,13 +78,13 @@ func (r *digestMD5Parameters) setParameter(p string) {
 }
 
 type digestMD5Authenticator struct {
-	strm          *Stream
+	strm          *c2sStream
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
-func newDigestMD5(strm *Stream) authenticator {
+func newDigestMD5(strm *c2sStream) authenticator {
 	return &digestMD5Authenticator{
 		strm:  strm,
 		state: startDigestMD5State,
