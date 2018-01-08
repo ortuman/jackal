@@ -90,7 +90,6 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	s := &Stream{
 		cfg:     config,
 		id:      id,
-		parser:  xml.NewParser(),
 		state:   connecting,
 		writeCh: make(chan []byte, 32),
 		readCh:  make(chan *xml.Element),
@@ -104,6 +103,7 @@ func NewStreamSocket(id string, conn net.Conn, config *config.Server) *Stream {
 	bufferSize := config.Transport.BufferSize
 	keepAlive := config.Transport.KeepAlive
 	s.tr = transport.NewSocketTransport(conn, bufferSize, keepAlive)
+	s.parser = xml.NewParser(s.tr)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -756,7 +756,7 @@ func (s *Stream) processMessage(message *xml.Message) {
 
 func (s *Stream) restart() {
 	s.state = connecting
-	s.parser = xml.NewParser()
+	s.parser = xml.NewParser(s.tr)
 }
 
 func (s *Stream) loop() {
@@ -795,7 +795,7 @@ func (s *Stream) loop() {
 
 func (s *Stream) doRead() {
 	go func() {
-		if e, err := s.parser.ParseElement(s.tr); e != nil && err == nil {
+		if e, err := s.parser.ParseElement(); e != nil && err == nil {
 			if log.Level() >= config.DebugLevel {
 				log.Debugf("RECV: %s", e.XML(true))
 			}
@@ -965,7 +965,7 @@ func (s *Stream) writeElement(elem xml.Serializable) {
 
 func (s *Stream) writeBytes(b []byte) {
 	if log.Level() >= config.DebugLevel {
-		log.Debugf("SEND: %s", string(b))
+		// log.Debugf("SEND: %s", string(b))
 	}
 	s.tr.Write(b)
 }

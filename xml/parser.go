@@ -20,6 +20,7 @@ var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
+	dec          *xml.Decoder
 	nextElement  *Element
 	parsingIndex int
 	parsingStack []*MutableElement
@@ -27,16 +28,17 @@ type Parser struct {
 }
 
 // NewParser creates an empty Parser instance.
-func NewParser() *Parser {
-	p := &Parser{}
-	p.parsingIndex = rootElementIndex
-	p.parsingStack = make([]*MutableElement, 0)
-	return p
+func NewParser(reader io.Reader) *Parser {
+	return &Parser{
+		dec:          xml.NewDecoder(reader),
+		parsingIndex: rootElementIndex,
+		parsingStack: make([]*MutableElement, 0),
+	}
 }
 
 // ParseElement parses next available XML element from reader.
-func (p *Parser) ParseElement(reader io.Reader) (*Element, error) {
-	d := xml.NewDecoder(reader)
+func (p *Parser) ParseElement() (*Element, error) {
+	d := p.dec
 	t, err := d.RawToken()
 	if err != nil {
 		return nil, err

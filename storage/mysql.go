@@ -203,8 +203,8 @@ func (s *mySQL) FetchRosterApprovalNotifications(jid string) ([]*xml.Element, er
 	}
 	buf.WriteString("</root>")
 
-	parser := xml.NewParser()
-	rootEl, err := parser.ParseElement(buf)
+	parser := xml.NewParser(buf)
+	rootEl, err := parser.ParseElement()
 	if err != nil {
 		return nil, err
 	} else if rootEl != nil {
@@ -219,8 +219,8 @@ func (s *mySQL) FetchVCard(username string) (*xml.Element, error) {
 	err := row.Scan(&vCard)
 	switch err {
 	case nil:
-		parser := xml.NewParser()
-		return parser.ParseElement(strings.NewReader(vCard))
+		parser := xml.NewParser(strings.NewReader(vCard))
+		return parser.ParseElement()
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
@@ -244,9 +244,9 @@ func (s *mySQL) FetchPrivateXML(namespace string, username string) ([]*xml.Eleme
 	err := row.Scan(&privateXML)
 	switch err {
 	case nil:
-		parser := xml.NewParser()
 		reader := strings.NewReader(fmt.Sprintf("<root>%s</root>", privateXML))
-		rootEl, err := parser.ParseElement(reader)
+		parser := xml.NewParser(reader)
+		rootEl, err := parser.ParseElement()
 		if err != nil {
 			return nil, err
 		} else if rootEl != nil {
@@ -308,8 +308,8 @@ func (s *mySQL) FetchOfflineMessages(username string) ([]*xml.Element, error) {
 	}
 	buf.WriteString("</root>")
 
-	parser := xml.NewParser()
-	rootEl, err := parser.ParseElement(bytes.NewReader(buf.Bytes()))
+	parser := xml.NewParser(bytes.NewReader(buf.Bytes()))
+	rootEl, err := parser.ParseElement()
 	if err != nil {
 		return nil, err
 	} else if rootEl == nil {

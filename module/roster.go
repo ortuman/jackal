@@ -174,7 +174,21 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	if ri == nil {
+	if ri != nil {
+		switch ri.Subscription {
+		case subscriptionTo, subscriptionBoth:
+			// already subscribed
+			p := xml.NewMutableElementName("presence")
+			p.SetFrom(contactJID.ToBareJID())
+			p.SetTo(userJID.ToBareJID())
+			p.SetType(xml.SubscribedType)
+			r.routeElement(p, userJID)
+			return nil
+
+		default:
+			ri.Ask = true
+		}
+	} else {
 		// create roster item if not previously created
 		ri = &entity.RosterItem{
 			Username:     username,
@@ -182,8 +196,6 @@ func (r *Roster) performSubscribe(presence *xml.Presence) error {
 			Subscription: subscriptionNone,
 			Ask:          true,
 		}
-	} else {
-		ri.Ask = true
 	}
 	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
 		return err

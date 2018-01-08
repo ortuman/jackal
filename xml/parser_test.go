@@ -16,8 +16,8 @@ import (
 
 func TestDocParse(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal">Hi!</a>\n`
-	p := xml.NewParser()
-	a, err := p.ParseElement(strings.NewReader(docSrc))
+	p := xml.NewParser(strings.NewReader(docSrc))
+	a, err := p.ParseElement()
 	assert.Nil(t, err)
 	assert.NotNil(t, a)
 	assert.Equal(t, a.Name(), "a")
@@ -27,21 +27,36 @@ func TestDocParse(t *testing.T) {
 
 func TestFailedDocParse(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
-	p := xml.NewParser()
-	_, err := p.ParseElement(strings.NewReader(docSrc))
+	p := xml.NewParser(strings.NewReader(docSrc))
+	_, err := p.ParseElement()
 	assert.NotNil(t, err)
 
 	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">\n`
-	p = xml.NewParser()
-	element, err := p.ParseElement(strings.NewReader(docSrc2))
+	p = xml.NewParser(strings.NewReader(docSrc2))
+	element, err := p.ParseElement()
 	assert.Equal(t, err, io.EOF)
 	assert.Nil(t, element)
 }
 
+func TestParseSeveralElements(t *testing.T) {
+	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/>\n<b/>\n<c/>`
+	reader := strings.NewReader(docSrc)
+	p := xml.NewParser(reader)
+	a, err := p.ParseElement()
+	assert.NotNil(t, a)
+	assert.Nil(t, err)
+	b, err := p.ParseElement()
+	assert.NotNil(t, b)
+	assert.Nil(t, err)
+	c, err := p.ParseElement()
+	assert.NotNil(t, c)
+	assert.Nil(t, err)
+}
+
 func TestDocChildElements(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<parent><a/><b/><c/></parent>\n`
-	p := xml.NewParser()
-	parent, err := p.ParseElement(strings.NewReader(docSrc))
+	p := xml.NewParser(strings.NewReader(docSrc))
+	parent, err := p.ParseElement()
 	assert.Nil(t, err)
 	assert.NotNil(t, parent)
 	childs := parent.Elements()
