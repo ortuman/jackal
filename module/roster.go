@@ -381,8 +381,6 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 			pushEl.AppendMutableElement(query)
 			strm.SendElement(pushEl)
 		}
-	} else {
-		// TODO(ortuman): S2S
 	}
 }
 
