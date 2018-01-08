@@ -91,9 +91,8 @@ func newSocketStream(id string, conn net.Conn, config *config.Server) *c2sStream
 		readCh:  make(chan *xml.Element),
 		discCh:  make(chan error),
 	}
-
 	// assign default domain
-	s.domain = s.cfg.Domains[0]
+	s.domain = stream.C2S().DefaultDomain()
 	s.jid, _ = xml.NewJID("", s.domain, "", true)
 
 	bufferSize := config.Transport.BufferSize
@@ -478,7 +477,7 @@ func (s *c2sStream) handleSessionStarted(elem *xml.Element) {
 		s.handleElementError(elem, err)
 		return
 	}
-	if s.isValidDomain(toJID.Domain()) {
+	if stream.C2S().IsLocalDomain(toJID.Domain()) {
 		// local stanza
 		s.processStanza(stanza)
 	} else if s.isComponentDomain(toJID.Domain()) {
@@ -873,7 +872,7 @@ func (s *c2sStream) validateStreamElement(elem *xml.Element) *streamerrors.Strea
 		return streamerrors.ErrUnsupportedStanzaType
 	}
 	to := elem.To()
-	if len(to) > 0 && !s.isValidDomain(to) {
+	if len(to) > 0 && !stream.C2S().IsLocalDomain(to) {
 		return streamerrors.ErrHostUnknown
 	}
 	if elem.Namespace() != s.streamDefaultNamespace() || elem.Attribute("xmlns:stream") != streamNamespace {
@@ -931,24 +930,15 @@ func (s *c2sStream) isValidFrom(from string) bool {
 	return validFrom
 }
 
-func (s *c2sStream) isValidDomain(domain string) bool {
-	for i := 0; i < len(s.cfg.Domains); i++ {
-		if s.cfg.Domains[i] == domain {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *c2sStream) isComponentDomain(domain string) bool {
 	return false
 }
 
 func (s *c2sStream) streamDefaultNamespace() string {
 	switch s.cfg.Type {
-	case config.C2S:
+	case config.C2SServerType:
 		return "jabber:client"
-	case config.S2S:
+	case config.S2SServerType:
 		return "jabber:server"
 	}
 	// should not be reached

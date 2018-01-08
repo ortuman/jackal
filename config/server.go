@@ -6,7 +6,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -22,9 +21,9 @@ type ServerType int
 
 const (
 	// C2S represents a client to client server type.
-	C2S ServerType = iota
+	C2SServerType ServerType = iota
 	// S2S represents a server-to-client server type.
-	S2S
+	S2SServerType
 )
 
 type ChannelBindingMechanism int
@@ -35,9 +34,9 @@ const (
 
 func (st ServerType) String() string {
 	switch st {
-	case C2S:
+	case C2SServerType:
 		return "c2s"
-	case S2S:
+	case S2SServerType:
 		return "s2s"
 	}
 	return ""
@@ -80,7 +79,6 @@ func (cl CompressionLevel) String() string {
 type Server struct {
 	ID              string
 	Type            ServerType
-	Domains         []string
 	Transport       Transport
 	SASL            []string
 	TLS             *TLS
@@ -95,7 +93,6 @@ type Server struct {
 type serverProxyType struct {
 	ID              string          `yaml:"id"`
 	Type            string          `yaml:"type"`
-	Domains         []string        `yaml:"domains"`
 	Transport       Transport       `yaml:"transport"`
 	SASL            []string        `yaml:"sasl"`
 	TLS             *TLS            `yaml:"tls"`
@@ -115,15 +112,11 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// validate server type
 	switch strings.ToLower(p.Type) {
 	case "c2s":
-		s.Type = C2S
+		s.Type = C2SServerType
 	case "s2s":
-		s.Type = S2S
+		s.Type = S2SServerType
 	default:
 		return fmt.Errorf("config.Server: unrecognized server type: %s", p.Type)
-	}
-	// validate server domains
-	if len(p.Domains) == 0 {
-		return errors.New("config.Server: no domain specified")
 	}
 	// validate SASL mechanisms
 	for _, sasl := range p.SASL {
@@ -147,7 +140,6 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	s.ID = p.ID
-	s.Domains = p.Domains
 	s.Transport = p.Transport
 	s.SASL = p.SASL
 	s.TLS = p.TLS

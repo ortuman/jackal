@@ -8,6 +8,7 @@ package stream
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xml"
 )
@@ -56,6 +57,19 @@ func C2S() *C2SManager {
 		}
 	})
 	return instance
+}
+
+func (m *C2SManager) DefaultDomain() string {
+	return config.DefaultConfig.C2S.Domains[0]
+}
+
+func (m *C2SManager) IsLocalDomain(domain string) bool {
+	for _, localDomain := range config.DefaultConfig.C2S.Domains {
+		if localDomain == domain {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *C2SManager) RegisterStream(strm C2SStream) {

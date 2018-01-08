@@ -16,12 +16,11 @@ type Debug struct {
 }
 
 type Config struct {
-	PIDFile string `yaml:"pid_path"`
-
-	Debug *Debug `yaml:"debug"`
-
+	PIDFile string   `yaml:"pid_path"`
+	Debug   *Debug   `yaml:"debug"`
 	Logger  Logger   `yaml:"logger"`
 	Storage Storage  `yaml:"storage"`
+	C2S     C2S      `yaml:"c2s"`
 	Servers []Server `yaml:"servers"`
 }
 

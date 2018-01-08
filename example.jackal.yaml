@@ -18,10 +18,12 @@ storage:
     database: sirius
     pool_size: 8
 
+c2s:
+  domains: [localhost]
+
 servers:
   - id: default
     type: c2s
-    domains: [localhost]
 
     transport:
       type: socket
