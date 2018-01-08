@@ -75,5 +75,6 @@ func (s *server) start() {
 
 func (s *server) handleConnection(conn net.Conn) {
 	id := fmt.Sprintf("%s:%d", s.cfg.ID, atomic.AddInt32(&s.strmCounter, 1))
-	stream.C2S().RegisterStream(newStreamSocket(id, conn, s.cfg))
+	strm := newSocketStream(id, conn, s.cfg)
+	stream.C2S().RegisterStream(strm)
 }

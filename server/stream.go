@@ -82,7 +82,7 @@ type c2sStream struct {
 	discCh  chan error
 }
 
-func newStreamSocket(id string, conn net.Conn, config *config.Server) *c2sStream {
+func newSocketStream(id string, conn net.Conn, config *config.Server) *c2sStream {
 	s := &c2sStream{
 		cfg:     config,
 		id:      id,
