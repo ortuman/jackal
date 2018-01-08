@@ -480,7 +480,7 @@ func (s *serverStream) handleSessionStarted(elem *xml.Element) {
 		// component (MUC, pubsub, etc.)
 		s.processComponentStanza(stanza)
 	} else {
-		// TODO(ortuman): Implement S2S
+		// TODO(ortuman): Implement S2S routing
 	}
 }
 

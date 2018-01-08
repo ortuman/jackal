@@ -391,6 +391,6 @@ func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
 			strm.SendElement(element)
 		}
 	} else {
-		// TODO(ortuman): Implement S2S
+		// TODO(ortuman): Implement S2S routing
 	}
 }
