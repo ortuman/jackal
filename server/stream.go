@@ -862,7 +862,7 @@ func (s *serverStream) handleElementError(elem xml.Element, err error) {
 	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
-		s.writeElement(xml.ToError(elem, stanzaErr))
+		s.writeElement(xml.ToErrorElement(elem, stanzaErr))
 	} else {
 		log.Error(err)
 	}

@@ -96,131 +96,131 @@ var (
 // BadRequestError - the sender has sent XML that is malformed
 // or that cannot be processed.
 func (el *XElement) BadRequestError() *XElement {
-	return ToError(el, ErrBadRequest.(*StanzaError))
+	return ToErrorElement(el, ErrBadRequest.(*StanzaError))
 }
 
 // ConflictError - access cannot be granted because an existing resource
 // or session exists with the same name or address.
 func (el *XElement) ConflictError() *XElement {
-	return ToError(el, ErrConflict.(*StanzaError))
+	return ToErrorElement(el, ErrConflict.(*StanzaError))
 }
 
 // FeatureNotImplementedError - the feature requested is not implemented by the server
 // and therefore cannot be processed.
 func (el *XElement) FeatureNotImplementedError() *XElement {
-	return ToError(el, ErrFeatureNotImplemented.(*StanzaError))
+	return ToErrorElement(el, ErrFeatureNotImplemented.(*StanzaError))
 }
 
 // ForbiddenError - the requesting entity does not possess the required permissions to perform the action.
 func (el *XElement) ForbiddenError() *XElement {
-	return ToError(el, ErrForbidden.(*StanzaError))
+	return ToErrorElement(el, ErrForbidden.(*StanzaError))
 }
 
 // GoneError - the recipient or server can no longer be contacted at this address
 func (el *XElement) GoneError() *XElement {
-	return ToError(el, ErrGone.(*StanzaError))
+	return ToErrorElement(el, ErrGone.(*StanzaError))
 }
 
 // InternalServerError - the server could not process the stanza because of a misconfiguration
 // or an otherwise-undefined internal server error.
 func (el *XElement) InternalServerError() *XElement {
-	return ToError(el, ErrInternalServerError.(*StanzaError))
+	return ToErrorElement(el, ErrInternalServerError.(*StanzaError))
 }
 
 // ItemNotFoundError - the addressed JID or item requested cannot be found.
 func (el *XElement) ItemNotFoundError() *XElement {
-	return ToError(el, ErrItemNotFound.(*StanzaError))
+	return ToErrorElement(el, ErrItemNotFound.(*StanzaError))
 }
 
 // JidMalformedError - the sending entity has provided or communicated an XMPP address or aspect thereof
 // that does not adhere to the syntax defined in https://xmpp.org/rfcs/rfc3920.html#addressing.
 func (el *XElement) JidMalformedError() *XElement {
-	return ToError(el, ErrJidMalformed.(*StanzaError))
+	return ToErrorElement(el, ErrJidMalformed.(*StanzaError))
 }
 
 // NotAcceptableError - the server understands the request but is refusing
 // to process it because it does not meet the defined criteria.
 func (el *XElement) NotAcceptableError() *XElement {
-	return ToError(el, ErrNotAcceptable.(*StanzaError))
+	return ToErrorElement(el, ErrNotAcceptable.(*StanzaError))
 }
 
 // NotAllowedError - the recipient or server does not allow any entity to perform the action.
 func (el *XElement) NotAllowedError() *XElement {
-	return ToError(el, ErrNotAllowed.(*StanzaError))
+	return ToErrorElement(el, ErrNotAllowed.(*StanzaError))
 }
 
 // NotAuthorizedError - the sender must provide proper credentials before being allowed to perform the action,
 // or has provided improper credentials.
 func (el *XElement) NotAuthorizedError() *XElement {
-	return ToError(el, ErrNotAuthorized.(*StanzaError))
+	return ToErrorElement(el, ErrNotAuthorized.(*StanzaError))
 }
 
 // PaymentRequiredError - the requesting entity is not authorized to access
 // the requested service because payment is required.
 func (el *XElement) PaymentRequiredError() *XElement {
-	return ToError(el, ErrPaymentRequired.(*StanzaError))
+	return ToErrorElement(el, ErrPaymentRequired.(*StanzaError))
 }
 
 // RecipientUnavailableError - the intended recipient is temporarily unavailable.
 func (el *XElement) RecipientUnavailableError() *XElement {
-	return ToError(el, ErrRecipientUnavailable.(*StanzaError))
+	return ToErrorElement(el, ErrRecipientUnavailable.(*StanzaError))
 }
 
 // RedirectError - the recipient or server is redirecting requests for this information
 // to another entity, usually temporarily.
 func (el *XElement) RedirectError() *XElement {
-	return ToError(el, ErrRedirect.(*StanzaError))
+	return ToErrorElement(el, ErrRedirect.(*StanzaError))
 }
 
 // RegistrationRequiredError - the requesting entity is not authorized to access
 // the requested service because registration is required.
 func (el *XElement) RegistrationRequiredError() *XElement {
-	return ToError(el, ErrRegistrationRequired.(*StanzaError))
+	return ToErrorElement(el, ErrRegistrationRequired.(*StanzaError))
 }
 
 // RemoteServerNotFoundError - a remote server or service specified as part or all of the JID
 // of the intended recipient does not exist.
 func (el *XElement) RemoteServerNotFoundError() *XElement {
-	return ToError(el, ErrRemoteServerNotFound.(*StanzaError))
+	return ToErrorElement(el, ErrRemoteServerNotFound.(*StanzaError))
 }
 
 // RemoteServerTimeoutError - a remote server or service specified as part or all of the JID
 // of the intended recipient could not be contacted within a reasonable amount of time.
 func (el *XElement) RemoteServerTimeoutError() *XElement {
-	return ToError(el, ErrRemoteServerTimeout.(*StanzaError))
+	return ToErrorElement(el, ErrRemoteServerTimeout.(*StanzaError))
 }
 
 // ResourceConstraintError - the server or recipient lacks the system resources
 // necessary to service the request.
 func (el *XElement) ResourceConstraintError() *XElement {
-	return ToError(el, ErrResourceConstraint.(*StanzaError))
+	return ToErrorElement(el, ErrResourceConstraint.(*StanzaError))
 }
 
 // ServiceUnavailableError - the recipient or server or recipient does not currently
 // provide the requested service.
 func (el *XElement) ServiceUnavailableError() *XElement {
-	return ToError(el, ErrServiceUnavailable.(*StanzaError))
+	return ToErrorElement(el, ErrServiceUnavailable.(*StanzaError))
 }
 
 // SubscriptionRequiredError - the requesting entity is not authorized to
 // access the requested service because a subscription is required.
 func (el *XElement) SubscriptionRequiredError() *XElement {
-	return ToError(el, ErrSubscriptionRequired.(*StanzaError))
+	return ToErrorElement(el, ErrSubscriptionRequired.(*StanzaError))
 }
 
 // UndefinedConditionError - the error condition is not one of those defined
 // by the other conditions in this list.
 func (el *XElement) UndefinedConditionError() *XElement {
-	return ToError(el, ErrUndefinedCondition.(*StanzaError))
+	return ToErrorElement(el, ErrUndefinedCondition.(*StanzaError))
 }
 
 // UnexpectedConditionError - the recipient or server understood the request
 // but was not expecting it at this time.
 func (el *XElement) UnexpectedConditionError() *XElement {
-	return ToError(el, ErrUnexpectedCondition.(*StanzaError))
+	return ToErrorElement(el, ErrUnexpectedCondition.(*StanzaError))
 }
 
-func ToError(elem Element, stanzaError *StanzaError) *XElement {
+func ToErrorElement(elem Element, stanzaError *StanzaError) *XElement {
 	errEl := &XElement{
 		name:     elem.Name(),
 		text:     elem.Text(),
