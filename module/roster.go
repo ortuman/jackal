@@ -16,7 +16,6 @@ import (
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -171,7 +170,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.RosterItem, error) {
+func (r *Roster) updateRosterItem(rosterItem *storage.RosterItem) (*storage.RosterItem, error) {
 	username := r.strm.Username()
 	resource := r.strm.Resource()
 
@@ -204,7 +203,7 @@ func (r *Roster) updateRosterItem(rosterItem *entity.RosterItem) (*entity.Roster
 			ri.Groups = rosterItem.Groups
 
 		} else {
-			ri = &entity.RosterItem{
+			ri = &storage.RosterItem{
 				Username:     username,
 				JID:          rosterItem.JID,
 				Name:         rosterItem.Name,
@@ -242,7 +241,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 		}
 	} else {
 		// create roster item if not previously created
-		ri = &entity.RosterItem{
+		ri = &storage.RosterItem{
 			Username:     username,
 			JID:          contactJID,
 			Subscription: subscriptionNone,
@@ -370,7 +369,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
+func (r *Roster) pushRosterItem(item *storage.RosterItem, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		query := xml.NewElementNamespace("query", rosterNamespace)
 		query.AppendElement(r.elementFromRosterItem(item))
@@ -399,8 +398,8 @@ func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
 	}
 }
 
-func (r *Roster) newRosterItemElement(item xml.Element) (*entity.RosterItem, error) {
-	ri := &entity.RosterItem{}
+func (r *Roster) newRosterItemElement(item xml.Element) (*storage.RosterItem, error) {
+	ri := &storage.RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
 		if err != nil {
@@ -415,7 +414,7 @@ func (r *Roster) newRosterItemElement(item xml.Element) (*entity.RosterItem, err
 	subscription := item.Attribute("subscription")
 	if len(subscription) > 0 {
 		switch subscription {
-		case "both", "from", "none", "remove", "to":
+		case subscriptionBoth, subscriptionFrom, subscriptionTo, subscriptionNone, subscriptionRemove:
 			break
 		default:
 			return nil, fmt.Errorf("unrecognized 'subscription' enum type: %s", subscription)
@@ -439,7 +438,7 @@ func (r *Roster) newRosterItemElement(item xml.Element) (*entity.RosterItem, err
 	return ri, nil
 }
 
-func (r *Roster) elementFromRosterItem(ri *entity.RosterItem) xml.Element {
+func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) xml.Element {
 	item := xml.NewElementName("item")
 	item.SetAttribute("jid", ri.JID.ToBareJID())
 	if len(ri.Name) > 0 {

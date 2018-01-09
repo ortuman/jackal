@@ -16,7 +16,6 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -113,7 +112,7 @@ func (s *mySQL) UserExists(username string) (bool, error) {
 	}
 }
 
-func (s *mySQL) InsertOrUpdateRosterItem(ri *entity.RosterItem) error {
+func (s *mySQL) InsertOrUpdateRosterItem(ri *RosterItem) error {
 	groups := strings.Join(ri.Groups, ";")
 	params := []interface{}{
 		ri.Username,
@@ -140,7 +139,7 @@ func (s *mySQL) DeleteRosterItem(username, jid string) error {
 	return err
 }
 
-func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error) {
+func (s *mySQL) FetchRosterItem(username, jid string) (*RosterItem, error) {
 	stmt := `` +
 		`SELECT username, jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ? AND jid = ?`
@@ -156,7 +155,7 @@ func (s *mySQL) FetchRosterItem(username, jid string) (*entity.RosterItem, error
 	return nil, nil
 }
 
-func (s *mySQL) FetchRosterItems(username string) ([]entity.RosterItem, error) {
+func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
 	stmt := `` +
 		`SELECT username, jid, name, subscription, groups, ask` +
 		` FROM roster_items WHERE username = ?` +
@@ -340,8 +339,8 @@ func (s *mySQL) inTransaction(f func(tx *sql.Tx) error) error {
 	return err
 }
 
-func (s *mySQL) rosterItemsFromRows(rows *sql.Rows) ([]entity.RosterItem, error) {
-	var result []entity.RosterItem
+func (s *mySQL) rosterItemsFromRows(rows *sql.Rows) ([]RosterItem, error) {
+	var result []RosterItem
 	for rows.Next() {
 		ri, err := s.rosterItemFromRows(rows)
 		if err != nil {
@@ -352,8 +351,8 @@ func (s *mySQL) rosterItemsFromRows(rows *sql.Rows) ([]entity.RosterItem, error)
 	return result, nil
 }
 
-func (s *mySQL) rosterItemFromRows(rows *sql.Rows) (*entity.RosterItem, error) {
-	var ri entity.RosterItem
+func (s *mySQL) rosterItemFromRows(rows *sql.Rows) (*RosterItem, error) {
+	var ri RosterItem
 	var jid, groups string
 
 	rows.Scan(&ri.Username, &jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)

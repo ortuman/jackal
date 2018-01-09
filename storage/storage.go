@@ -9,13 +9,21 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
 )
 
 type User struct {
 	Username string
 	Password string
+}
+
+type RosterItem struct {
+	Username     string
+	JID          *xml.JID
+	Name         string
+	Subscription string
+	Ask          bool
+	Groups       []string
 }
 
 type storage interface {
@@ -28,11 +36,11 @@ type storage interface {
 	UserExists(username string) (bool, error)
 
 	// Roster
-	InsertOrUpdateRosterItem(ri *entity.RosterItem) error
+	InsertOrUpdateRosterItem(ri *RosterItem) error
 	DeleteRosterItem(username, jid string) error
 
-	FetchRosterItem(username, jid string) (*entity.RosterItem, error)
-	FetchRosterItems(username string) ([]entity.RosterItem, error)
+	FetchRosterItem(username, jid string) (*RosterItem, error)
+	FetchRosterItems(username string) ([]RosterItem, error)
 
 	// Roster approval notifications
 	InsertOrUpdateApprovalNotification(username, jid string, notification xml.Element) error
