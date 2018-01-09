@@ -338,7 +338,7 @@ func (e *XElement) String() string {
 	return e.ToXML(true)
 }
 
-// XML satisfies Serializable interface.
+// ToXML satisfies Serializable interface.
 func (e *XElement) ToXML(includeClosing bool) string {
 	buf := serializeBufs.Get().(*bytes.Buffer)
 	defer func() {
