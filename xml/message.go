@@ -15,45 +15,28 @@ const (
 )
 
 type Message struct {
-	Element
+	XElement
 	to   *JID
 	from *JID
 }
 
-type MutableMessage struct {
-	MutableElement
-}
-
-func NewMessage(e *Element, from *JID, to *JID) (*Message, error) {
-	if e.name != "message" {
-		return nil, fmt.Errorf("wrong Message element name: %s", e.name)
+func NewMessage(e Element, from *JID, to *JID) (*Message, error) {
+	if e.Name() != "message" {
+		return nil, fmt.Errorf("wrong Message element name: %s", e.Name())
 	}
-	messageType := e.Type()
+	messageType := e.Attribute("type")
 	if !isMessageType(messageType) {
 		return nil, fmt.Errorf(`invalid Message "type" attribute: %s`, messageType)
 	}
 	m := &Message{}
-	m.name = e.name
-	m.copyAttributes(e.attrs)
-	m.copyElements(e.elements)
-	m.setAttribute("to", to.ToFullJID())
-	m.setAttribute("from", from.ToFullJID())
+	m.name = e.Name()
+	m.attrs = e.Attributes()
+	m.elements = e.Elements()
+	m.SetAttribute("to", to.ToFullJID())
+	m.SetAttribute("from", from.ToFullJID())
 	m.to = to
 	m.from = from
 	return m, nil
-}
-
-func NewMutableMessage() *MutableMessage {
-	m := &MutableMessage{}
-	m.SetName("message")
-	return m
-}
-
-func NewMutableMessageType(messageType string) *MutableMessage {
-	m := &MutableMessage{}
-	m.SetName("message")
-	m.SetType(messageType)
-	return m
 }
 
 // IsNormal returns true if this is a 'normal' type Message.

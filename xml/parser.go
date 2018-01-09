@@ -21,9 +21,9 @@ var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
 	dec          *xml.Decoder
-	nextElement  *Element
+	nextElement  Element
 	parsingIndex int
-	parsingStack []*MutableElement
+	parsingStack []*XElement
 	inElement    bool
 }
 
@@ -32,12 +32,11 @@ func NewParser(reader io.Reader) *Parser {
 	return &Parser{
 		dec:          xml.NewDecoder(reader),
 		parsingIndex: rootElementIndex,
-		parsingStack: make([]*MutableElement, 0),
 	}
 }
 
 // ParseElement parses next available XML element from reader.
-func (p *Parser) ParseElement() (*Element, error) {
+func (p *Parser) ParseElement() (Element, error) {
 	d := p.dec
 	t, err := d.RawToken()
 	if err != nil {
@@ -88,7 +87,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 		name := xmlName(a.Name.Space, a.Name.Local)
 		attrs = append(attrs, Attribute{name, a.Value})
 	}
-	element := NewMutableElementAttributes(name, attrs)
+	element := NewElementAttributes(name, attrs)
 	p.parsingStack = append(p.parsingStack, element)
 	p.parsingIndex++
 	p.inElement = true
@@ -116,9 +115,9 @@ func (p *Parser) closeElement() {
 
 	p.parsingIndex--
 	if p.parsingIndex == rootElementIndex {
-		p.nextElement = element.Copy()
+		p.nextElement = element
 	} else {
-		p.parsingStack[p.parsingIndex].AppendElement(element.Copy())
+		p.parsingStack[p.parsingIndex].AppendElement(element)
 	}
 	p.inElement = false
 }

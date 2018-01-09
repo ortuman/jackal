@@ -13,14 +13,8 @@ const (
 	delayNamespace = "urn:xmpp:delay"
 )
 
-func (e *Element) Delayed(from string, text string) *Element {
-	m := NewMutableElement(e)
-	m.Delay(from, text)
-	return m.Copy()
-}
-
-func (m *MutableElement) Delay(from string, text string) {
-	d := NewMutableElementNamespace("delay", delayNamespace)
+func (e *XElement) Delay(from string, text string) {
+	d := NewElementNamespace("delay", delayNamespace)
 	if len(from) > 0 {
 		d.SetAttribute("from", from)
 	}
@@ -30,5 +24,5 @@ func (m *MutableElement) Delay(from string, text string) {
 	if len(text) > 0 {
 		d.SetText(text)
 	}
-	m.AppendElement(d.Copy())
+	e.AppendElement(d)
 }

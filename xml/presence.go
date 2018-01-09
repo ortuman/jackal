@@ -31,25 +31,25 @@ const (
 )
 
 type Presence struct {
-	Element
+	XElement
 	to        *JID
 	from      *JID
 	showState ShowState
 	priority  int8
 }
 
-func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
-	if e.name != "presence" {
-		return nil, fmt.Errorf("wrong Presence element name: %s", e.name)
+func NewPresence(e Element, from *JID, to *JID) (*Presence, error) {
+	if e.Name() != "presence" {
+		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}
-	presenceType := e.Type()
+	presenceType := e.Attribute("type")
 	if !isPresenceType(presenceType) {
 		return nil, fmt.Errorf(`invalid Presence "type" attribute: %s`, presenceType)
 	}
 	p := &Presence{}
-	p.name = e.name
-	p.copyAttributes(e.attrs)
-	p.copyElements(e.elements)
+	p.SetName(e.Name())
+	p.attrs = e.Attributes()
+	p.elements = e.Elements()
 
 	// show
 	if err := p.setShow(); err != nil {
@@ -63,15 +63,15 @@ func NewPresence(e *Element, from *JID, to *JID) (*Presence, error) {
 	if err := p.setPriority(); err != nil {
 		return nil, err
 	}
-	p.setAttribute("to", to.ToFullJID())
-	p.setAttribute("from", from.ToFullJID())
+	p.SetAttribute("to", to.ToFullJID())
+	p.SetAttribute("from", from.ToFullJID())
 	p.to = to
 	p.from = from
 	return p, nil
 }
 
-func NewMutablePresence(from string, to string, presenceType string) *MutableElement {
-	p := &MutableElement{}
+func NewPresenceType(from string, to string, presenceType string) *Presence {
+	p := &Presence{}
 	p.SetName("presence")
 	p.SetFrom(from)
 	p.SetTo(to)

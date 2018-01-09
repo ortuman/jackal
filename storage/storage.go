@@ -31,23 +31,23 @@ type storage interface {
 	FetchRosterItems(username string) ([]entity.RosterItem, error)
 
 	// Roster approval notifications
-	InsertOrUpdateApprovalNotification(username, jid string, notification *xml.Element) error
+	InsertOrUpdateApprovalNotification(username, jid string, notification xml.Element) error
 	DeleteApprovalNotification(username, jid string) error
 
-	FetchApprovalNotifications(jid string) ([]*xml.Element, error)
+	FetchApprovalNotifications(jid string) ([]xml.Element, error)
 
 	// vCard
-	FetchVCard(username string) (*xml.Element, error)
-	InsertOrUpdateVCard(vCard *xml.Element, username string) error
+	FetchVCard(username string) (xml.Element, error)
+	InsertOrUpdateVCard(vCard xml.Element, username string) error
 
 	// Private XML
-	FetchPrivateXML(namespace string, username string) ([]*xml.Element, error)
-	InsertOrUpdatePrivateXML(privateXML []*xml.Element, namespace string, username string) error
+	FetchPrivateXML(namespace string, username string) ([]xml.Element, error)
+	InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error
 
 	// Offline messages
-	InsertOfflineMessage(message *xml.Element, username string) error
+	InsertOfflineMessage(message xml.Element, username string) error
 	CountOfflineMessages(username string) (int, error)
-	FetchOfflineMessages(username string) ([]*xml.Element, error)
+	FetchOfflineMessages(username string) ([]xml.Element, error)
 	DeleteOfflineMessages(username string) error
 }
 

@@ -47,11 +47,11 @@ func newStreamError(reason string) *Error {
 	return &Error{reason: reason}
 }
 
-func (se *Error) Element() *xml.Element {
-	ret := xml.NewMutableElementName("stream:error")
+func (se *Error) Element() xml.Element {
+	ret := xml.NewElementName("stream:error")
 	reason := xml.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
 	ret.AppendElement(reason)
-	return ret.Copy()
+	return ret
 }
 
 func (se *Error) Error() string {

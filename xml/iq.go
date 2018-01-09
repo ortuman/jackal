@@ -17,44 +17,44 @@ const (
 )
 
 type IQ struct {
-	Element
+	XElement
 	to   *JID
 	from *JID
 }
 
-func NewIQ(e *Element, from *JID, to *JID) (*IQ, error) {
-	if e.name != "iq" {
-		return nil, fmt.Errorf("wrong IQ element name: %s", e.name)
+func NewIQ(e Element, from *JID, to *JID) (*IQ, error) {
+	if e.Name() != "iq" {
+		return nil, fmt.Errorf("wrong IQ element name: %s", e.Name())
 	}
-	if len(e.ID()) == 0 {
+	if len(e.Attribute("id")) == 0 {
 		return nil, errors.New(`IQ "id" attribute is required`)
 	}
-	iqType := e.Type()
+	iqType := e.Attribute("type")
 	if len(iqType) == 0 {
 		return nil, errors.New(`IQ "type" attribute is required`)
 	}
 	if !isIQType(iqType) {
 		return nil, fmt.Errorf(`invalid IQ "type" attribute: %s`, iqType)
 	}
-	if (iqType == GetType || iqType == SetType) && len(e.elements) != 1 {
+	if (iqType == GetType || iqType == SetType) && len(e.Elements()) != 1 {
 		return nil, errors.New(`an IQ stanza of type "get" or "set" must contain one and only one child element`)
 	}
-	if iqType == ResultType && len(e.elements) > 1 {
+	if iqType == ResultType && len(e.Elements()) > 1 {
 		return nil, errors.New(`An IQ stanza of type "result" must include zero or one child elements`)
 	}
 	iq := &IQ{}
-	iq.name = e.name
-	iq.copyAttributes(e.attrs)
-	iq.copyElements(e.elements)
-	iq.setAttribute("to", to.ToFullJID())
-	iq.setAttribute("from", from.ToFullJID())
+	iq.name = e.Name()
+	iq.attrs = e.Attributes()
+	iq.elements = e.Elements()
+	iq.SetAttribute("to", to.ToFullJID())
+	iq.SetAttribute("from", from.ToFullJID())
 	iq.to = to
 	iq.from = from
 	return iq, nil
 }
 
-func NewMutableIQ(identifier string, iqType string) *MutableElement {
-	iq := &MutableElement{}
+func NewIQType(identifier string, iqType string) *IQ {
+	iq := &IQ{}
 	iq.SetName("iq")
 	iq.SetID(identifier)
 	iq.SetType(iqType)
@@ -77,13 +77,13 @@ func (iq *IQ) IsResult() bool {
 }
 
 // ResultIQ returns the instance associated result IQ.
-func (iq *IQ) ResultIQ() *MutableElement {
-	rs := &MutableElement{}
-	rs.name = "iq"
-	rs.setAttribute("type", ResultType)
-	rs.setAttribute("id", iq.ID())
-	rs.setAttribute("from", iq.To())
-	rs.setAttribute("to", iq.From())
+func (iq *IQ) ResultIQ() *IQ {
+	rs := &IQ{}
+	rs.SetName("iq")
+	rs.SetAttribute("type", ResultType)
+	rs.SetAttribute("id", iq.ID())
+	rs.SetAttribute("from", iq.To())
+	rs.SetAttribute("to", iq.From())
 	return rs
 }
 

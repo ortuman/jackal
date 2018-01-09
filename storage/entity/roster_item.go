@@ -21,7 +21,7 @@ type RosterItem struct {
 	Groups       []string
 }
 
-func NewRosterItemElement(item *xml.Element) (*RosterItem, error) {
+func NewRosterItemElement(item xml.Element) (*RosterItem, error) {
 	ri := &RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
@@ -61,8 +61,8 @@ func NewRosterItemElement(item *xml.Element) (*RosterItem, error) {
 	return ri, nil
 }
 
-func (ri *RosterItem) Element() *xml.Element {
-	item := xml.NewMutableElementName("item")
+func (ri *RosterItem) Element() xml.Element {
+	item := xml.NewElementName("item")
 	item.SetAttribute("jid", ri.JID.ToBareJID())
 	if len(ri.Name) > 0 {
 		item.SetAttribute("name", ri.Name)
@@ -74,9 +74,9 @@ func (ri *RosterItem) Element() *xml.Element {
 		item.SetAttribute("ask", "subscribe")
 	}
 	for _, group := range ri.Groups {
-		gr := xml.NewMutableElementName("group")
+		gr := xml.NewElementName("group")
 		gr.SetText(group)
-		item.AppendElement(gr.Copy())
+		item.AppendElement(gr)
 	}
-	return item.Copy()
+	return item
 }
