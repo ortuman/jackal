@@ -31,6 +31,9 @@ type Element interface {
 	// Name returns XML node name.
 	Name() string
 
+	// Namespace returns 'xmlns' node attribute.
+	Namespace() string
+
 	// Text returns XML node text value.
 	// Returns an empty string if not set.
 	Text() string
@@ -103,6 +106,10 @@ func NewElementNamespace(name, namespace string) *XElement {
 
 func (e *XElement) Name() string {
 	return e.name
+}
+
+func (e *XElement) Namespace() string {
+	return e.Attribute("xmlns")
 }
 
 func (e *XElement) Text() string {

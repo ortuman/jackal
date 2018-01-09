@@ -116,7 +116,7 @@ func (r *Roster) deliverPendingApprovalNotifications() {
 	}
 }
 
-func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
+func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	if query.ElementsCount() > 0 {
 		r.strm.SendElement(iq.BadRequestError())
 		return
@@ -124,7 +124,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 	log.Infof("retrieving user roster... (%s/%s)", r.strm.Username(), r.strm.Resource())
 
 	result := iq.ResultIQ()
-	q := xml.NewMutableElementNamespace("query", rosterNamespace)
+	q := xml.NewElementNamespace("query", rosterNamespace)
 
 	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
 	if err != nil {
@@ -137,7 +137,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 			q.AppendElement(item.Element())
 		}
 	}
-	result.AppendMutableElement(q)
+	result.AppendElement(q)
 	r.strm.SendElement(result)
 
 	r.requestedMu.Lock()
@@ -145,7 +145,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query *xml.Element) {
 	r.requestedMu.Unlock()
 }
 
-func (r *Roster) updateRoster(iq *xml.IQ, query *xml.Element) {
+func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 	items := query.FindElements("item")
 	if len(items) != 1 {
 		r.strm.SendElement(iq.BadRequestError())
@@ -253,11 +253,11 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	log.Infof("authorization requested: %v -> %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	// send presence approval notification to contact
-	p := xml.NewMutablePresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
-	p.AppendElements(presence.Elements())
+	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
+	p.AppendElements(presence.Elements()...)
 
 	// archive roster approval notification
-	err = storage.Instance().InsertOrUpdateApprovalNotification(username, contactJID.ToBareJID(), p.Copy())
+	err = storage.Instance().InsertOrUpdateApprovalNotification(username, contactJID.ToBareJID(), p)
 	if err != nil {
 		return err
 	}
@@ -316,14 +316,14 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	}
 
 	// send 'subscribed' presence to user...
-	p := xml.NewMutablePresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
-	p.AppendElements(presence.Elements())
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
+	p.AppendElements(presence.Elements()...)
 	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
 	for _, contactStream := range contactStreams {
-		p := xml.NewMutablePresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.AvailableType)
+		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.AvailableType)
 		r.routeElement(p, userJID)
 	}
 	return nil
@@ -352,8 +352,8 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	}
 
 	// send 'unsubscribed' presence to user...
-	p := xml.NewMutablePresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
-	p.AppendElements(presence.Elements())
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	p.AppendElements(presence.Elements()...)
 	r.routeElement(p, userJID)
 
 	// update roster item...
@@ -368,7 +368,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 
 func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
-		query := xml.NewMutableElementNamespace("query", rosterNamespace)
+		query := xml.NewElementNamespace("query", rosterNamespace)
 		query.AppendElement(item.Element())
 
 		streams := stream.C2S().AvailableStreams(to.Node())
@@ -376,9 +376,9 @@ func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 			if !strm.IsRosterRequested() {
 				continue
 			}
-			pushEl := xml.NewMutableIQ(uuid.New(), xml.SetType)
+			pushEl := xml.NewIQType(uuid.New(), xml.SetType)
 			pushEl.SetTo(strm.JID().ToFullJID())
-			pushEl.AppendMutableElement(query)
+			pushEl.AppendElement(query)
 			strm.SendElement(pushEl)
 		}
 	}

@@ -5,6 +5,11 @@
 
 package xml
 
+// SetNamespace sets 'xmlns' node attribute.
+func (e *XElement) SetNamespace(namespace string) {
+	e.SetAttribute("xmlns", namespace)
+}
+
 // SetID sets 'id' node attribute.
 func (e *XElement) SetID(identifier string) {
 	e.SetAttribute("id", identifier)
@@ -13,16 +18,6 @@ func (e *XElement) SetID(identifier string) {
 // ID returns 'id' node attribute.
 func (e *XElement) ID() string {
 	return e.Attribute("id")
-}
-
-// SetNamespace sets 'xmlns' node attribute.
-func (e *XElement) SetNamespace(namespace string) {
-	e.SetAttribute("xmlns", namespace)
-}
-
-// Namespace returns 'xmlns' node attribute.
-func (e *XElement) Namespace() string {
-	return e.Attribute("xmlns")
 }
 
 // SetLanguage sets 'xml:lang' node attribute.

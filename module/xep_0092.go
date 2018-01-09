@@ -70,21 +70,21 @@ func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
 	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
 
 	result := iq.ResultIQ()
-	query := xml.NewMutableElementNamespace("query", versionNamespace)
+	query := xml.NewElementNamespace("query", versionNamespace)
 
-	name := xml.NewMutableElementName("name")
+	name := xml.NewElementName("name")
 	name.SetText("jackal")
-	query.AppendElement(name.Copy())
+	query.AppendElement(name)
 
-	ver := xml.NewMutableElementName("version")
+	ver := xml.NewElementName("version")
 	ver.SetText(version.ApplicationVersion.String())
-	query.AppendElement(ver.Copy())
+	query.AppendElement(ver)
 
 	if x.cfg.ShowOS {
-		os := xml.NewMutableElementName("os")
+		os := xml.NewElementName("os")
 		os.SetText(osString)
-		query.AppendElement(os.Copy())
+		query.AppendElement(os)
 	}
-	result.AppendElement(query.Copy())
+	result.AppendElement(query)
 	x.strm.SendElement(result)
 }

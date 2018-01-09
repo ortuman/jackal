@@ -106,7 +106,7 @@ func (x *XEPPing) sendPing() {
 	pingId := x.pingId
 	x.pingMu.Unlock()
 
-	iq := xml.NewMutableIQ(pingId, xml.GetType)
+	iq := xml.NewIQType(pingId, xml.GetType)
 	iq.SetTo(x.strm.JID().String())
 	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
 

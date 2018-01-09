@@ -118,10 +118,10 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 	sort.Slice(x.features, func(i, j int) bool { return x.features[i] < x.features[j] })
 
 	result := iq.ResultIQ()
-	query := xml.NewMutableElementNamespace("query", discoInfoNamespace)
+	query := xml.NewElementNamespace("query", discoInfoNamespace)
 
 	for _, identity := range x.identities {
-		identityEl := xml.NewMutableElementName("identity")
+		identityEl := xml.NewElementName("identity")
 		identityEl.SetAttribute("category", identity.Category)
 		if len(identity.Type) > 0 {
 			identityEl.SetAttribute("type", identity.Type)
@@ -129,24 +129,24 @@ func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {
 		if len(identity.Name) > 0 {
 			identityEl.SetAttribute("name", identity.Name)
 		}
-		query.AppendElement(identityEl.Copy())
+		query.AppendElement(identityEl)
 	}
 	for _, feature := range x.features {
-		featureEl := xml.NewMutableElementName("feature")
+		featureEl := xml.NewElementName("feature")
 		featureEl.SetAttribute("var", feature)
-		query.AppendElement(featureEl.Copy())
+		query.AppendElement(featureEl)
 	}
 
-	result.AppendElement(query.Copy())
+	result.AppendElement(query)
 	x.strm.SendElement(result)
 }
 
 func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
 	result := iq.ResultIQ()
-	query := xml.NewMutableElementNamespace("query", discoItemsNamespace)
+	query := xml.NewElementNamespace("query", discoItemsNamespace)
 
 	for _, item := range x.items {
-		itemEl := xml.NewMutableElementName("item")
+		itemEl := xml.NewElementName("item")
 		itemEl.SetAttribute("jid", item.Jid)
 		if len(item.Name) > 0 {
 			itemEl.SetAttribute("name", item.Name)
@@ -154,9 +154,9 @@ func (x *XEPDiscoInfo) sendDiscoItems(iq *xml.IQ) {
 		if len(item.Node) > 0 {
 			itemEl.SetAttribute("node", item.Node)
 		}
-		query.AppendElement(itemEl.Copy())
+		query.AppendElement(itemEl)
 	}
 
-	result.AppendElement(query.Copy())
+	result.AppendElement(query)
 	x.strm.SendElement(result)
 }

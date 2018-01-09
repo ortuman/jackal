@@ -62,7 +62,7 @@ func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 	})
 }
 
-func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q *xml.Element) {
+func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.Element) {
 	if q.ElementsCount() != 1 {
 		x.strm.SendElement(iq.NotAcceptableError())
 		return
@@ -84,19 +84,19 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q *xml.Element) {
 		return
 	}
 	res := iq.ResultIQ()
-	query := xml.NewMutableElementNamespace("query", privateStorageNamespace)
+	query := xml.NewElementNamespace("query", privateStorageNamespace)
 	if privElements != nil {
-		query.AppendElements(privElements)
+		query.AppendElements(privElements...)
 	} else {
 		query.AppendElement(xml.NewElementNamespace(privElem.Name(), privElem.Namespace()))
 	}
-	res.AppendElement(query.Copy())
+	res.AppendElement(query)
 
 	x.strm.SendElement(res)
 }
 
-func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q *xml.Element) {
-	nsElements := map[string][]*xml.Element{}
+func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.Element) {
+	nsElements := map[string][]xml.Element{}
 
 	for _, privElement := range q.Elements() {
 		ns := privElement.Namespace()
@@ -110,7 +110,7 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q *xml.Element) {
 		}
 		elems := nsElements[ns]
 		if elems == nil {
-			elems = []*xml.Element{privElement}
+			elems = []xml.Element{privElement}
 		} else {
 			elems = append(elems, privElement)
 		}

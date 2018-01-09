@@ -285,7 +285,7 @@ func (s *serverStream) startConnectTimeoutTimer(timeoutInSeconds int) {
 	}()
 }
 
-func (s *serverStream) handleElement(elem *xml.Element) {
+func (s *serverStream) handleElement(elem xml.Element) {
 	switch s.state {
 	case connecting:
 		s.handleConnecting(elem)
@@ -302,7 +302,7 @@ func (s *serverStream) handleElement(elem *xml.Element) {
 	}
 }
 
-func (s *serverStream) handleConnecting(elem *xml.Element) {
+func (s *serverStream) handleConnecting(elem xml.Element) {
 	// activate 'connected' flag
 	atomic.StoreUint32(&s.connected, 1)
 
@@ -319,7 +319,7 @@ func (s *serverStream) handleConnecting(elem *xml.Element) {
 	// open stream
 	s.openStreamElement()
 
-	features := xml.NewMutableElementName("stream:features")
+	features := xml.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
@@ -329,30 +329,30 @@ func (s *serverStream) handleConnecting(elem *xml.Element) {
 		tlsRequired := s.cfg.TLS != nil && s.cfg.TLS.Required
 
 		if !s.IsSecured() && tlsEnabled {
-			startTLS := xml.NewMutableElementName("starttls")
+			startTLS := xml.NewElementName("starttls")
 			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
 			if tlsRequired {
 				startTLS.AppendElement(xml.NewElementName("required"))
 			}
-			features.AppendElement(startTLS.Copy())
+			features.AppendElement(startTLS)
 		}
 
 		// attach SASL mechanisms
 		shouldOfferSASL := !tlsEnabled || (!tlsRequired || (tlsRequired && s.IsSecured()))
 
 		if shouldOfferSASL && len(s.authrs) > 0 {
-			mechanisms := xml.NewMutableElementName("mechanisms")
+			mechanisms := xml.NewElementName("mechanisms")
 			mechanisms.SetNamespace(saslNamespace)
 			for _, athr := range s.authrs {
 				// don't offset authenticators with channel binding on an unsecure stream
 				if athr.UsesChannelBinding() && !s.IsSecured() {
 					continue
 				}
-				mechanism := xml.NewMutableElementName("mechanism")
+				mechanism := xml.NewElementName("mechanism")
 				mechanism.SetText(athr.Mechanism())
-				mechanisms.AppendElement(mechanism.Copy())
+				mechanisms.AppendElement(mechanism)
 			}
-			features.AppendElement(mechanisms.Copy())
+			features.AppendElement(mechanisms)
 		}
 
 		// allow In-band registration over encrypted stream only
@@ -360,18 +360,18 @@ func (s *serverStream) handleConnecting(elem *xml.Element) {
 
 		if _, ok := s.cfg.Modules["offline"]; ok && allowRegistration {
 			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
-			features.AppendElement(registerFeature.Copy())
+			features.AppendElement(registerFeature)
 		}
 		s.state = connected
 
 	} else {
 		// attach compression feature
 		if !s.IsCompressed() && s.cfg.Compression != nil {
-			compression := xml.NewMutableElementNamespace("compression", "http://jabber.org/features/compress")
-			method := xml.NewMutableElementName("method")
+			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
+			method := xml.NewElementName("method")
 			method.SetText("zlib")
-			compression.AppendElement(method.Copy())
-			features.AppendElement(compression.Copy())
+			compression.AppendElement(method)
+			features.AppendElement(compression)
 		}
 		session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 		features.AppendElement(session)
@@ -381,10 +381,10 @@ func (s *serverStream) handleConnecting(elem *xml.Element) {
 
 		s.state = authenticated
 	}
-	s.writeElement(features.Copy())
+	s.writeElement(features)
 }
 
-func (s *serverStream) handleConnected(elem *xml.Element) {
+func (s *serverStream) handleConnected(elem xml.Element) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
@@ -427,7 +427,7 @@ func (s *serverStream) handleConnected(elem *xml.Element) {
 	}
 }
 
-func (s *serverStream) handleAuthenticating(elem *xml.Element) {
+func (s *serverStream) handleAuthenticating(elem xml.Element) {
 	if elem.Namespace() != saslNamespace {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
@@ -439,7 +439,7 @@ func (s *serverStream) handleAuthenticating(elem *xml.Element) {
 	}
 }
 
-func (s *serverStream) handleAuthenticated(elem *xml.Element) {
+func (s *serverStream) handleAuthenticated(elem xml.Element) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
@@ -467,7 +467,7 @@ func (s *serverStream) handleAuthenticated(elem *xml.Element) {
 	}
 }
 
-func (s *serverStream) handleSessionStarted(elem *xml.Element) {
+func (s *serverStream) handleSessionStarted(elem xml.Element) {
 	// reset ping timer deadline
 	if s.ping != nil {
 		s.ping.ResetDeadline()
@@ -518,22 +518,22 @@ func (s *serverStream) proceedStartTLS() {
 	s.restart()
 }
 
-func (s *serverStream) compress(elem *xml.Element) {
+func (s *serverStream) compress(elem xml.Element) {
 	if s.IsCompressed() {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
 	method := elem.FindElement("method")
 	if method == nil || method.TextLen() == 0 {
-		failure := xml.NewMutableElementNamespace("failure", compressProtocolNamespace)
+		failure := xml.NewElementNamespace("failure", compressProtocolNamespace)
 		failure.AppendElement(xml.NewElementName("setup-failed"))
-		s.writeElement(failure.Copy())
+		s.writeElement(failure)
 		return
 	}
 	if method.Text() != "zlib" {
-		failure := xml.NewMutableElementNamespace("failure", compressProtocolNamespace)
+		failure := xml.NewElementNamespace("failure", compressProtocolNamespace)
 		failure.AppendElement(xml.NewElementName("unsupported-method"))
-		s.writeElement(failure.Copy())
+		s.writeElement(failure)
 		return
 	}
 	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
@@ -549,7 +549,7 @@ func (s *serverStream) compress(elem *xml.Element) {
 	s.restart()
 }
 
-func (s *serverStream) startAuthentication(elem *xml.Element) {
+func (s *serverStream) startAuthentication(elem xml.Element) {
 	mechanism := elem.Attribute("mechanism")
 	for _, authr := range s.authrs {
 		if authr.Mechanism() == mechanism {
@@ -567,12 +567,12 @@ func (s *serverStream) startAuthentication(elem *xml.Element) {
 	}
 
 	// ...mechanism not found...
-	failure := xml.NewMutableElementNamespace("failure", saslNamespace)
+	failure := xml.NewElementNamespace("failure", saslNamespace)
 	failure.AppendElement(xml.NewElementName("invalid-mechanism"))
-	s.writeElement(failure.Copy())
+	s.writeElement(failure)
 }
 
-func (s *serverStream) continueAuthentication(elem *xml.Element, authr authenticator) error {
+func (s *serverStream) continueAuthentication(elem xml.Element, authr authenticator) error {
 	err := authr.ProcessElement(elem)
 	if saslErr, ok := err.(saslError); ok {
 		s.failAuthentication(saslErr.Element())
@@ -598,10 +598,10 @@ func (s *serverStream) finishAuthentication(username string) {
 	s.restart()
 }
 
-func (s *serverStream) failAuthentication(elem *xml.Element) {
-	failure := xml.NewMutableElementNamespace("failure", saslNamespace)
+func (s *serverStream) failAuthentication(elem xml.Element) {
+	failure := xml.NewElementNamespace("failure", saslNamespace)
 	failure.AppendElement(elem)
-	s.writeElement(failure.Copy())
+	s.writeElement(failure)
 
 	if s.activeAuthr != nil {
 		s.activeAuthr.Reset()
@@ -640,15 +640,15 @@ func (s *serverStream) bindResource(iq *xml.IQ) {
 	log.Infof("binded resource %s... (%s)", s.Resource(), s.Username())
 
 	//...notify successful binding
-	result := xml.NewMutableIQ(iq.ID(), xml.ResultType)
+	result := xml.NewIQType(iq.ID(), xml.ResultType)
 
-	binded := xml.NewMutableElementNamespace("bind", bindNamespace)
-	jid := xml.NewMutableElementName("jid")
+	binded := xml.NewElementNamespace("bind", bindNamespace)
+	jid := xml.NewElementName("jid")
 	jid.SetText(s.Username() + "@" + s.Domain() + "/" + s.Resource())
-	binded.AppendElement(jid.Copy())
-	result.AppendElement(binded.Copy())
+	binded.AppendElement(jid)
+	result.AppendElement(binded)
 
-	s.writeElement(result.Copy())
+	s.writeElement(result)
 }
 
 func (s *serverStream) startSession(iq *xml.IQ) {
@@ -811,7 +811,7 @@ func (s *serverStream) doRead() {
 }
 
 func (s *serverStream) openStreamElement() {
-	ops := xml.NewMutableElementName("stream:stream")
+	ops := xml.NewElementName("stream:stream")
 	ops.SetAttribute("xmlns", s.streamDefaultNamespace())
 	ops.SetAttribute("xmlns:stream", streamNamespace)
 	ops.SetAttribute("id", uuid.New())
@@ -822,7 +822,7 @@ func (s *serverStream) openStreamElement() {
 	s.writeBytes([]byte(ops.XML(false)))
 }
 
-func (s *serverStream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JID, error) {
+func (s *serverStream) buildStanza(elem xml.Element) (xml.Serializable, *xml.JID, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, nil, err
 	}
@@ -840,7 +840,7 @@ func (s *serverStream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JI
 		return iq, iq.ToJID(), nil
 
 	case "presence":
-		presence, err := xml.NewPresence(elem, fromJID, toJID)
+		presence, err := xml.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, xml.ErrBadRequest
@@ -858,7 +858,7 @@ func (s *serverStream) buildStanza(elem *xml.Element) (xml.Serializable, *xml.JI
 	return nil, nil, streamerror.ErrUnsupportedStanzaType
 }
 
-func (s *serverStream) handleElementError(elem *xml.Element, err error) {
+func (s *serverStream) handleElementError(elem xml.Element, err error) {
 	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
@@ -868,7 +868,7 @@ func (s *serverStream) handleElementError(elem *xml.Element, err error) {
 	}
 }
 
-func (s *serverStream) validateStreamElement(elem *xml.Element) *streamerror.Error {
+func (s *serverStream) validateStreamElement(elem xml.Element) *streamerror.Error {
 	if elem.Name() != "stream:stream" {
 		return streamerror.ErrUnsupportedStanzaType
 	}
@@ -885,7 +885,7 @@ func (s *serverStream) validateStreamElement(elem *xml.Element) *streamerror.Err
 	return nil
 }
 
-func (s *serverStream) validateNamespace(elem *xml.Element) *streamerror.Error {
+func (s *serverStream) validateNamespace(elem xml.Element) *streamerror.Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.streamDefaultNamespace() {
 		return nil
@@ -893,7 +893,7 @@ func (s *serverStream) validateNamespace(elem *xml.Element) *streamerror.Error {
 	return streamerror.ErrInvalidNamespace
 }
 
-func (s *serverStream) validateAddresses(elem *xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
+func (s *serverStream) validateAddresses(elem xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {

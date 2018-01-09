@@ -38,7 +38,7 @@ type Presence struct {
 	priority  int8
 }
 
-func NewPresence(e Element, from *JID, to *JID) (*Presence, error) {
+func NewPresenceFromElement(e Element, from *JID, to *JID) (*Presence, error) {
 	if e.Name() != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}
@@ -70,7 +70,7 @@ func NewPresence(e Element, from *JID, to *JID) (*Presence, error) {
 	return p, nil
 }
 
-func NewPresenceType(from string, to string, presenceType string) *Presence {
+func NewPresence(from string, to string, presenceType string) *Presence {
 	p := &Presence{}
 	p.SetName("presence")
 	p.SetFrom(from)
