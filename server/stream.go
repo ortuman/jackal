@@ -154,7 +154,7 @@ func (s *serverStream) Priority() int8 {
 }
 
 func (s *serverStream) SendElement(serializable xml.Serializable) {
-	s.writeCh <- []byte(serializable.XML(true))
+	s.writeCh <- []byte(serializable.ToXML(true))
 }
 
 func (s *serverStream) Disconnect(err error) {
@@ -793,7 +793,7 @@ func (s *serverStream) doRead() {
 	go func() {
 		if e, err := s.parser.ParseElement(); e != nil && err == nil {
 			if log.Level() >= config.DebugLevel {
-				log.Debugf("RECV: %s", e.XML(true))
+				log.Debugf("RECV: %s", e.ToXML(true))
 			}
 			s.readCh <- e
 		} else if err != nil {
@@ -819,7 +819,7 @@ func (s *serverStream) openStreamElement() {
 	ops.SetAttribute("version", "1.0")
 
 	s.writeBytes([]byte(`<?xml version="1.0"?>`))
-	s.writeBytes([]byte(ops.XML(false)))
+	s.writeBytes([]byte(ops.ToXML(false)))
 }
 
 func (s *serverStream) buildStanza(elem xml.Element) (xml.Serializable, *xml.JID, error) {
@@ -947,7 +947,7 @@ func (s *serverStream) streamDefaultNamespace() string {
 }
 
 func (s *serverStream) writeElement(elem xml.Serializable) {
-	s.writeBytes([]byte(elem.XML(true)))
+	s.writeBytes([]byte(elem.ToXML(true)))
 }
 
 func (s *serverStream) writeBytes(b []byte) {

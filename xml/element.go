@@ -21,7 +21,7 @@ type Attribute struct {
 // that could be serialized to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
 type Serializable interface {
-	XML(includeClosing bool) string
+	ToXML(includeClosing bool) string
 }
 
 // Element represents an XML node element.
@@ -335,11 +335,11 @@ func (e *XElement) IsError() bool {
 
 // String returns a string representation of the element.
 func (e *XElement) String() string {
-	return e.XML(true)
+	return e.ToXML(true)
 }
 
 // XML satisfies Serializable interface.
-func (e *XElement) XML(includeClosing bool) string {
+func (e *XElement) ToXML(includeClosing bool) string {
 	buf := serializeBufs.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
@@ -370,7 +370,7 @@ func (e *XElement) XML(includeClosing bool) string {
 		}
 		// serialize child elements
 		for j := 0; j < len(e.elements); j++ {
-			buf.WriteString(e.elements[j].XML(true))
+			buf.WriteString(e.elements[j].ToXML(true))
 		}
 		if includeClosing {
 			buf.WriteString("</")
