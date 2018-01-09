@@ -20,7 +20,7 @@ type authenticator interface {
 }
 
 type saslError interface {
-	Element() *xml.Element
+	Element() xml.Element
 }
 
 type saslErrorString struct {

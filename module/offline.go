@@ -62,13 +62,14 @@ func (o *Offline) archiveMessage(message *xml.Message) {
 		return
 	}
 	if !exists || queueSize >= o.cfg.QueueSize {
-		response := message.MutableCopy()
+		response := message.Copy()
 		response.SetFrom(toJid.String())
 		response.SetTo(o.strm.JID().String())
 		o.strm.SendElement(response.ServiceUnavailableError())
 		return
 	}
-	delayed := message.Delayed(o.strm.Domain(), "Offline Storage")
+	delayed := message.Copy()
+	delayed.Delay(o.strm.Domain(), "Offline Storage")
 	if err := storage.Instance().InsertOfflineMessage(delayed, toJid.Node()); err != nil {
 		log.Errorf("%v", err)
 		return

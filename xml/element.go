@@ -34,6 +34,24 @@ type Element interface {
 	// Namespace returns 'xmlns' node attribute.
 	Namespace() string
 
+	// ID returns 'id' node attribute.
+	ID() string
+
+	// Language returns 'xml:lang' node attribute.
+	Language() string
+
+	// Version returns 'version' node attribute.
+	Version() string
+
+	// From returns 'from' node attribute.
+	From() string
+
+	// To returns 'to' node attribute.
+	To() string
+
+	// Type returns 'type' node attribute.
+	Type() string
+
 	// Text returns XML node text value.
 	// Returns an empty string if not set.
 	Text() string
@@ -110,6 +128,65 @@ func (e *XElement) Name() string {
 
 func (e *XElement) Namespace() string {
 	return e.Attribute("xmlns")
+}
+
+// SetNamespace sets 'xmlns' node attribute.
+func (e *XElement) SetNamespace(namespace string) {
+	e.SetAttribute("xmlns", namespace)
+}
+
+func (e *XElement) ID() string {
+	return e.Attribute("id")
+}
+
+// SetID sets 'id' node attribute.
+func (e *XElement) SetID(identifier string) {
+	e.SetAttribute("id", identifier)
+}
+
+func (e *XElement) Language() string {
+	return e.Attribute("xml:lang")
+}
+
+// SetLanguage sets 'xml:lang' node attribute.
+func (e *XElement) SetLanguage(language string) {
+	e.SetAttribute("xml:lang", language)
+}
+
+func (e *XElement) Version() string {
+	return e.Attribute("version")
+}
+
+// SetVersion sets 'version' node attribute.
+func (e *XElement) SetVersion(version string) {
+	e.SetAttribute("version", version)
+}
+
+func (e *XElement) From() string {
+	return e.Attribute("from")
+}
+
+// SetFrom sets 'from' node attribute.
+func (e *XElement) SetFrom(from string) {
+	e.SetAttribute("from", from)
+}
+
+func (e *XElement) To() string {
+	return e.Attribute("to")
+}
+
+// SetTo sets 'to' node attribute.
+func (e *XElement) SetTo(to string) {
+	e.SetAttribute("to", to)
+}
+
+func (e *XElement) Type() string {
+	return e.Attribute("type")
+}
+
+// SetType sets 'type' node attribute.
+func (e *XElement) SetType(tp string) {
+	e.SetAttribute("type", tp)
 }
 
 func (e *XElement) Text() string {

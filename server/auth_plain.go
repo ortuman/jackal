@@ -39,7 +39,7 @@ func (p *plainAuthenticator) UsesChannelBinding() bool {
 	return false
 }
 
-func (p *plainAuthenticator) ProcessElement(elem *xml.Element) error {
+func (p *plainAuthenticator) ProcessElement(elem xml.Element) error {
 	if p.authenticated {
 		return nil
 	}

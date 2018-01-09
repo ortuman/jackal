@@ -82,7 +82,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 		name = t.Name.Local
 	}
 
-	attrs := []Attribute{}
+	var attrs []Attribute
 	for _, a := range t.Attr {
 		name := xmlName(a.Name.Space, a.Name.Local)
 		attrs = append(attrs, Attribute{name, a.Value})

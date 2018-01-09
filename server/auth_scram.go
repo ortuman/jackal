@@ -139,7 +139,7 @@ func (s *scramAuthenticator) UsesChannelBinding() bool {
 	return s.usesCb
 }
 
-func (s *scramAuthenticator) ProcessElement(elem *xml.Element) error {
+func (s *scramAuthenticator) ProcessElement(elem xml.Element) error {
 	if s.Authenticated() {
 		return nil
 	}
@@ -167,7 +167,7 @@ func (s *scramAuthenticator) Reset() {
 	s.firstMessage = ""
 }
 
-func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
+func (s *scramAuthenticator) handleStart(elem xml.Element) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -195,15 +195,15 @@ func (s *scramAuthenticator) handleStart(elem *xml.Element) error {
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
 
-	respElem := xml.NewMutableElementNamespace("challenge", saslNamespace)
+	respElem := xml.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
-	s.strm.SendElement(respElem.Copy())
+	s.strm.SendElement(respElem)
 
 	s.state = challengedScramState
 	return nil
 }
 
-func (s *scramAuthenticator) handleChallenged(elem *xml.Element) error {
+func (s *scramAuthenticator) handleChallenged(elem xml.Element) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -231,15 +231,15 @@ func (s *scramAuthenticator) handleChallenged(elem *xml.Element) error {
 	}
 	v := "v=" + base64.StdEncoding.EncodeToString(serverSignature)
 
-	respElem := xml.NewMutableElementNamespace("success", saslNamespace)
+	respElem := xml.NewElementNamespace("success", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
-	s.strm.SendElement(respElem.Copy())
+	s.strm.SendElement(respElem)
 
 	s.authenticated = true
 	return nil
 }
 
-func (s *scramAuthenticator) getElementPayload(elem *xml.Element) (string, error) {
+func (s *scramAuthenticator) getElementPayload(elem xml.Element) (string, error) {
 	if elem.TextLen() == 0 {
 		return "", errSASLIncorrectEncoding
 	}

@@ -20,11 +20,11 @@ type Message struct {
 	from *JID
 }
 
-func NewMessage(e Element, from *JID, to *JID) (*Message, error) {
+func NewMessageFromElement(e Element, from *JID, to *JID) (*Message, error) {
 	if e.Name() != "message" {
 		return nil, fmt.Errorf("wrong Message element name: %s", e.Name())
 	}
-	messageType := e.Attribute("type")
+	messageType := e.Type()
 	if !isMessageType(messageType) {
 		return nil, fmt.Errorf(`invalid Message "type" attribute: %s`, messageType)
 	}
@@ -67,6 +67,16 @@ func (m *Message) ToJID() *JID {
 // FromJID satisfies stanza interface.
 func (m *Message) FromJID() *JID {
 	return m.from
+}
+
+// Copy returns a deep copy of this message stanza.
+func (m *Message) Copy() *Message {
+	cp := &Message{}
+	cp.name = m.name
+	cp.text = m.text
+	cp.attrs = m.attrs
+	cp.elements = m.elements
+	return cp
 }
 
 func isMessageType(messageType string) bool {

@@ -5,7 +5,9 @@
 
 package xml
 
-import "strconv"
+import (
+	"strconv"
+)
 
 // StanzaError represents a stanza "error" element.
 type StanzaError struct {
@@ -93,133 +95,139 @@ var (
 
 // BadRequestError - the sender has sent XML that is malformed
 // or that cannot be processed.
-func (e *XElement) BadRequestError() *XElement {
-	return e.ToError(ErrBadRequest.(*StanzaError))
+func (el *XElement) BadRequestError() *XElement {
+	return ToError(el, ErrBadRequest.(*StanzaError))
 }
 
 // ConflictError - access cannot be granted because an existing resource
 // or session exists with the same name or address.
-func (e *XElement) ConflictError() *XElement {
-	return e.ToError(ErrConflict.(*StanzaError))
+func (el *XElement) ConflictError() *XElement {
+	return ToError(el, ErrConflict.(*StanzaError))
 }
 
 // FeatureNotImplementedError - the feature requested is not implemented by the server
 // and therefore cannot be processed.
-func (e *XElement) FeatureNotImplementedError() *XElement {
-	return e.ToError(ErrFeatureNotImplemented.(*StanzaError))
+func (el *XElement) FeatureNotImplementedError() *XElement {
+	return ToError(el, ErrFeatureNotImplemented.(*StanzaError))
 }
 
 // ForbiddenError - the requesting entity does not possess the required permissions to perform the action.
-func (e *XElement) ForbiddenError() *XElement {
-	return e.ToError(ErrForbidden.(*StanzaError))
+func (el *XElement) ForbiddenError() *XElement {
+	return ToError(el, ErrForbidden.(*StanzaError))
 }
 
 // GoneError - the recipient or server can no longer be contacted at this address
-func (e *XElement) GoneError() *XElement {
-	return e.ToError(ErrGone.(*StanzaError))
+func (el *XElement) GoneError() *XElement {
+	return ToError(el, ErrGone.(*StanzaError))
 }
 
 // InternalServerError - the server could not process the stanza because of a misconfiguration
 // or an otherwise-undefined internal server error.
-func (e *XElement) InternalServerError() *XElement {
-	return e.ToError(ErrInternalServerError.(*StanzaError))
+func (el *XElement) InternalServerError() *XElement {
+	return ToError(el, ErrInternalServerError.(*StanzaError))
 }
 
 // ItemNotFoundError - the addressed JID or item requested cannot be found.
-func (e *XElement) ItemNotFoundError() *XElement {
-	return e.ToError(ErrItemNotFound.(*StanzaError))
+func (el *XElement) ItemNotFoundError() *XElement {
+	return ToError(el, ErrItemNotFound.(*StanzaError))
 }
 
 // JidMalformedError - the sending entity has provided or communicated an XMPP address or aspect thereof
 // that does not adhere to the syntax defined in https://xmpp.org/rfcs/rfc3920.html#addressing.
-func (e *XElement) JidMalformedError() *XElement {
-	return e.ToError(ErrJidMalformed.(*StanzaError))
+func (el *XElement) JidMalformedError() *XElement {
+	return ToError(el, ErrJidMalformed.(*StanzaError))
 }
 
 // NotAcceptableError - the server understands the request but is refusing
 // to process it because it does not meet the defined criteria.
-func (e *XElement) NotAcceptableError() *XElement {
-	return e.ToError(ErrNotAcceptable.(*StanzaError))
+func (el *XElement) NotAcceptableError() *XElement {
+	return ToError(el, ErrNotAcceptable.(*StanzaError))
 }
 
 // NotAllowedError - the recipient or server does not allow any entity to perform the action.
-func (e *XElement) NotAllowedError() *XElement {
-	return e.ToError(ErrNotAllowed.(*StanzaError))
+func (el *XElement) NotAllowedError() *XElement {
+	return ToError(el, ErrNotAllowed.(*StanzaError))
 }
 
 // NotAuthorizedError - the sender must provide proper credentials before being allowed to perform the action,
 // or has provided improper credentials.
-func (e *XElement) NotAuthorizedError() *XElement {
-	return e.ToError(ErrNotAuthorized.(*StanzaError))
+func (el *XElement) NotAuthorizedError() *XElement {
+	return ToError(el, ErrNotAuthorized.(*StanzaError))
 }
 
 // PaymentRequiredError - the requesting entity is not authorized to access
 // the requested service because payment is required.
-func (e *XElement) PaymentRequiredError() *XElement {
-	return e.ToError(ErrPaymentRequired.(*StanzaError))
+func (el *XElement) PaymentRequiredError() *XElement {
+	return ToError(el, ErrPaymentRequired.(*StanzaError))
 }
 
 // RecipientUnavailableError - the intended recipient is temporarily unavailable.
-func (e *XElement) RecipientUnavailableError() *XElement {
-	return e.ToError(ErrRecipientUnavailable.(*StanzaError))
+func (el *XElement) RecipientUnavailableError() *XElement {
+	return ToError(el, ErrRecipientUnavailable.(*StanzaError))
 }
 
 // RedirectError - the recipient or server is redirecting requests for this information
 // to another entity, usually temporarily.
-func (e *XElement) RedirectError() *XElement {
-	return e.ToError(ErrRedirect.(*StanzaError))
+func (el *XElement) RedirectError() *XElement {
+	return ToError(el, ErrRedirect.(*StanzaError))
 }
 
 // RegistrationRequiredError - the requesting entity is not authorized to access
 // the requested service because registration is required.
-func (e *XElement) RegistrationRequiredError() *XElement {
-	return e.ToError(ErrRegistrationRequired.(*StanzaError))
+func (el *XElement) RegistrationRequiredError() *XElement {
+	return ToError(el, ErrRegistrationRequired.(*StanzaError))
 }
 
 // RemoteServerNotFoundError - a remote server or service specified as part or all of the JID
 // of the intended recipient does not exist.
-func (e *XElement) RemoteServerNotFoundError() *XElement {
-	return e.ToError(ErrRemoteServerNotFound.(*StanzaError))
+func (el *XElement) RemoteServerNotFoundError() *XElement {
+	return ToError(el, ErrRemoteServerNotFound.(*StanzaError))
 }
 
 // RemoteServerTimeoutError - a remote server or service specified as part or all of the JID
 // of the intended recipient could not be contacted within a reasonable amount of time.
-func (e *XElement) RemoteServerTimeoutError() *XElement {
-	return e.ToError(ErrRemoteServerTimeout.(*StanzaError))
+func (el *XElement) RemoteServerTimeoutError() *XElement {
+	return ToError(el, ErrRemoteServerTimeout.(*StanzaError))
 }
 
 // ResourceConstraintError - the server or recipient lacks the system resources
 // necessary to service the request.
-func (e *XElement) ResourceConstraintError() *XElement {
-	return e.ToError(ErrResourceConstraint.(*StanzaError))
+func (el *XElement) ResourceConstraintError() *XElement {
+	return ToError(el, ErrResourceConstraint.(*StanzaError))
 }
 
 // ServiceUnavailableError - the recipient or server or recipient does not currently
 // provide the requested service.
-func (e *XElement) ServiceUnavailableError() *XElement {
-	return e.ToError(ErrServiceUnavailable.(*StanzaError))
+func (el *XElement) ServiceUnavailableError() *XElement {
+	return ToError(el, ErrServiceUnavailable.(*StanzaError))
 }
 
 // SubscriptionRequiredError - the requesting entity is not authorized to
 // access the requested service because a subscription is required.
-func (e *XElement) SubscriptionRequiredError() *XElement {
-	return e.ToError(ErrSubscriptionRequired.(*StanzaError))
+func (el *XElement) SubscriptionRequiredError() *XElement {
+	return ToError(el, ErrSubscriptionRequired.(*StanzaError))
 }
 
 // UndefinedConditionError - the error condition is not one of those defined
 // by the other conditions in this list.
-func (e *XElement) UndefinedConditionError() *XElement {
-	return e.ToError(ErrUndefinedCondition.(*StanzaError))
+func (el *XElement) UndefinedConditionError() *XElement {
+	return ToError(el, ErrUndefinedCondition.(*StanzaError))
 }
 
 // UnexpectedConditionError - the recipient or server understood the request
 // but was not expecting it at this time.
-func (e *XElement) UnexpectedConditionError() *XElement {
-	return e.ToError(ErrUnexpectedCondition.(*StanzaError))
+func (el *XElement) UnexpectedConditionError() *XElement {
+	return ToError(el, ErrUnexpectedCondition.(*StanzaError))
 }
 
-func (e *XElement) ToError(stanzaError *StanzaError) *XElement {
-	e.SetAttribute("type", "error")
-	e.AppendElement(stanzaError.Element())
-	return e
+func ToError(elem Element, stanzaError *StanzaError) *XElement {
+	errEl := &XElement{
+		name:     elem.Name(),
+		text:     elem.Text(),
+		attrs:    elem.Attributes(),
+		elements: elem.Elements(),
+	}
+	errEl.SetAttribute("type", "error")
+	errEl.AppendElement(stanzaError.Element())
+	return errEl
 }

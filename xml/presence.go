@@ -42,7 +42,7 @@ func NewPresenceFromElement(e Element, from *JID, to *JID) (*Presence, error) {
 	if e.Name() != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}
-	presenceType := e.Attribute("type")
+	presenceType := e.Type()
 	if !isPresenceType(presenceType) {
 		return nil, fmt.Errorf(`invalid Presence "type" attribute: %s`, presenceType)
 	}
@@ -127,6 +127,16 @@ func (p *Presence) ToJID() *JID {
 // FromJID satisfies stanza interface.
 func (p *Presence) FromJID() *JID {
 	return p.from
+}
+
+// Copy returns a deep copy of this presence stanza.
+func (p *Presence) Copy() *Presence {
+	cp := &Presence{}
+	cp.name = p.name
+	cp.text = p.text
+	cp.attrs = p.attrs
+	cp.elements = p.elements
+	return cp
 }
 
 func isPresenceType(presenceType string) bool {

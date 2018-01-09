@@ -83,7 +83,7 @@ type serverStream struct {
 	offline  *module.Offline
 
 	writeCh chan []byte
-	readCh  chan *xml.Element
+	readCh  chan xml.Element
 	discCh  chan error
 }
 
@@ -93,7 +93,7 @@ func newSocketStream(id string, conn net.Conn, config *config.Server) *serverStr
 		id:      id,
 		state:   connecting,
 		writeCh: make(chan []byte, 32),
-		readCh:  make(chan *xml.Element),
+		readCh:  make(chan xml.Element),
 		discCh:  make(chan error),
 	}
 	// assign default domain
@@ -683,7 +683,7 @@ func (s *serverStream) processIQ(iq *xml.IQ) {
 	toJid := iq.ToJID()
 	if toJid.IsFull() {
 		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
-			resp := iq.MutableCopy()
+			resp := iq.Copy()
 			resp.SetFrom(toJid.String())
 			resp.SetTo(s.JID().String())
 			s.SendElement(resp.ServiceUnavailableError())
@@ -743,7 +743,7 @@ func (s *serverStream) processMessage(message *xml.Message) {
 			s.offline.ArchiveMessage(message)
 		}
 	case errResourceNotFound:
-		resp := message.MutableCopy()
+		resp := message.Copy()
 		resp.SetFrom(message.ToJID().String())
 		resp.SetTo(s.JID().String())
 		s.SendElement(resp.ServiceUnavailableError())
@@ -832,7 +832,7 @@ func (s *serverStream) buildStanza(elem xml.Element) (xml.Serializable, *xml.JID
 	}
 	switch elem.Name() {
 	case "iq":
-		iq, err := xml.NewIQ(elem, fromJID, toJID)
+		iq, err := xml.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, xml.ErrBadRequest
@@ -848,7 +848,7 @@ func (s *serverStream) buildStanza(elem xml.Element) (xml.Serializable, *xml.JID
 		return presence, presence.ToJID(), nil
 
 	case "message":
-		message, err := xml.NewMessage(elem, fromJID, toJID)
+		message, err := xml.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
 			return nil, nil, xml.ErrBadRequest
@@ -862,7 +862,7 @@ func (s *serverStream) handleElementError(elem xml.Element, err error) {
 	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
-		s.writeElement(elem.ToError(stanzaErr))
+		s.writeElement(xml.ToError(elem, stanzaErr))
 	} else {
 		log.Error(err)
 	}

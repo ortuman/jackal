@@ -22,14 +22,22 @@ type IQ struct {
 	from *JID
 }
 
-func NewIQ(e Element, from *JID, to *JID) (*IQ, error) {
+func NewIQType(identifier string, iqType string) *IQ {
+	iq := &IQ{}
+	iq.SetName("iq")
+	iq.SetID(identifier)
+	iq.SetType(iqType)
+	return iq
+}
+
+func NewIQFromElement(e Element, from *JID, to *JID) (*IQ, error) {
 	if e.Name() != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.Name())
 	}
-	if len(e.Attribute("id")) == 0 {
+	if len(e.ID()) == 0 {
 		return nil, errors.New(`IQ "id" attribute is required`)
 	}
-	iqType := e.Attribute("type")
+	iqType := e.Type()
 	if len(iqType) == 0 {
 		return nil, errors.New(`IQ "type" attribute is required`)
 	}
@@ -51,14 +59,6 @@ func NewIQ(e Element, from *JID, to *JID) (*IQ, error) {
 	iq.to = to
 	iq.from = from
 	return iq, nil
-}
-
-func NewIQType(identifier string, iqType string) *IQ {
-	iq := &IQ{}
-	iq.SetName("iq")
-	iq.SetID(identifier)
-	iq.SetType(iqType)
-	return iq
 }
 
 // IsGet returns true if this is a 'get' type IQ.
@@ -95,6 +95,16 @@ func (iq *IQ) ToJID() *JID {
 // FromJID satisfies stanza interface.
 func (iq *IQ) FromJID() *JID {
 	return iq.from
+}
+
+// Copy returns a deep copy of this message stanza.
+func (iq *IQ) Copy() *IQ {
+	cp := &IQ{}
+	cp.name = iq.name
+	cp.text = iq.text
+	cp.attrs = iq.attrs
+	cp.elements = iq.elements
+	return cp
 }
 
 func isIQType(tp string) bool {
