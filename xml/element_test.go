@@ -8,9 +8,8 @@ package xml_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/ortuman/jackal/xml"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestElementNameAndNamespace(t *testing.T) {
