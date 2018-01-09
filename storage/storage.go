@@ -8,10 +8,9 @@ package storage
 import (
 	"sync"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/xml"
-
-	"github.com/ortuman/jackal/config"
 )
 
 type User struct {
