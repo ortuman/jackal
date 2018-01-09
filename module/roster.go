@@ -9,6 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
+
+	"errors"
+
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
@@ -134,7 +138,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	}
 	if items != nil {
 		for _, item := range items {
-			q.AppendElement(item.Element())
+			q.AppendElement(r.elementFromRosterItem(&item))
 		}
 	}
 	result.AppendElement(q)
@@ -151,7 +155,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 		r.strm.SendElement(iq.BadRequestError())
 		return
 	}
-	ri, err := entity.NewRosterItemElement(items[0])
+	ri, err := r.newRosterItemElement(items[0])
 	if err != nil {
 		r.strm.SendElement(iq.BadRequestError())
 		return
@@ -369,7 +373,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 func (r *Roster) pushRosterItem(item *entity.RosterItem, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		query := xml.NewElementNamespace("query", rosterNamespace)
-		query.AppendElement(item.Element())
+		query.AppendElement(r.elementFromRosterItem(item))
 
 		streams := stream.C2S().AvailableStreams(to.Node())
 		for _, strm := range streams {
@@ -393,4 +397,64 @@ func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
 	} else {
 		// TODO(ortuman): Implement federation
 	}
+}
+
+func (r *Roster) newRosterItemElement(item xml.Element) (*entity.RosterItem, error) {
+	ri := &entity.RosterItem{}
+	if jid := item.Attribute("jid"); len(jid) > 0 {
+		j, err := xml.NewJIDString(jid, false)
+		if err != nil {
+			return nil, err
+		}
+		ri.JID = j
+	} else {
+		return nil, errors.New("item 'jid' attribute is required")
+	}
+	ri.Name = item.Attribute("name")
+
+	subscription := item.Attribute("subscription")
+	if len(subscription) > 0 {
+		switch subscription {
+		case "both", "from", "none", "remove", "to":
+			break
+		default:
+			return nil, fmt.Errorf("unrecognized 'subscription' enum type: %s", subscription)
+		}
+		ri.Subscription = subscription
+	}
+	ask := item.Attribute("ask")
+	if len(ask) > 0 {
+		if ask != "subscribe" {
+			return nil, fmt.Errorf("unrecognized 'ask' enum type: %s", subscription)
+		}
+		ri.Ask = true
+	}
+	groups := item.FindElements("group")
+	for _, group := range groups {
+		if group.AttributesCount() > 0 {
+			return nil, errors.New("group element must not contain any attribute")
+		}
+		ri.Groups = append(ri.Groups, group.Text())
+	}
+	return ri, nil
+}
+
+func (r *Roster) elementFromRosterItem(ri *entity.RosterItem) xml.Element {
+	item := xml.NewElementName("item")
+	item.SetAttribute("jid", ri.JID.ToBareJID())
+	if len(ri.Name) > 0 {
+		item.SetAttribute("name", ri.Name)
+	}
+	if len(ri.Subscription) > 0 {
+		item.SetAttribute("subscription", ri.Subscription)
+	}
+	if ri.Ask {
+		item.SetAttribute("ask", "subscribe")
+	}
+	for _, group := range ri.Groups {
+		gr := xml.NewElementName("group")
+		gr.SetText(group)
+		item.AppendElement(gr)
+	}
+	return item
 }
