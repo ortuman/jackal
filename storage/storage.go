@@ -14,11 +14,16 @@ import (
 	"github.com/ortuman/jackal/config"
 )
 
+type User struct {
+	Username string
+	Password string
+}
+
 type storage interface {
 	// User
-	FetchUser(username string) (*entity.User, error)
+	FetchUser(username string) (*User, error)
 
-	InsertOrUpdateUser(user *entity.User) error
+	InsertOrUpdateUser(user *User) error
 	DeleteUser(username string) error
 
 	UserExists(username string) (bool, error)

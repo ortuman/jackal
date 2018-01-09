@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 )
@@ -222,7 +221,7 @@ func (d *digestMD5Authenticator) parseParameters(str string) *digestMD5Parameter
 	return params
 }
 
-func computeResponse(params *digestMD5Parameters, user *entity.User, asClient bool) string {
+func computeResponse(params *digestMD5Parameters, user *storage.User, asClient bool) string {
 	x := params.username + ":" + params.realm + ":" + user.Password
 	y := md5Hash([]byte(x))
 

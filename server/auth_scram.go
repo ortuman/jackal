@@ -18,7 +18,6 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -82,7 +81,7 @@ type scramAuthenticator struct {
 	hKeyLen       int
 	state         scramState
 	params        *scramParameters
-	user          *entity.User
+	user          *storage.User
 	salt          []byte
 	srvNonce      string
 	firstMessage  string

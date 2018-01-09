@@ -51,9 +51,9 @@ func newMySQLStorage() storage {
 	return s
 }
 
-func (s *mySQL) FetchUser(username string) (*entity.User, error) {
+func (s *mySQL) FetchUser(username string) (*User, error) {
 	row := s.db.QueryRow("SELECT username, password FROM users WHERE username = ?", username)
-	u := entity.User{}
+	u := User{}
 	err := row.Scan(&u.Username, &u.Password)
 	switch err {
 	case nil:
@@ -65,7 +65,7 @@ func (s *mySQL) FetchUser(username string) (*entity.User, error) {
 	}
 }
 
-func (s *mySQL) InsertOrUpdateUser(u *entity.User) error {
+func (s *mySQL) InsertOrUpdateUser(u *User) error {
 	stmt := `` +
 		`INSERT INTO users(username, password, updated_at, created_at)` +
 		`VALUES(?, ?, NOW(), NOW())` +

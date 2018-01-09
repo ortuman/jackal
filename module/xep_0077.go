@@ -9,7 +9,6 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/entity"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
@@ -108,7 +107,7 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.Element) {
 		x.strm.SendElement(iq.ConflictError())
 		return
 	}
-	user := entity.User{
+	user := storage.User{
 		Username: userEl.Text(),
 		Password: passwordEl.Text(),
 	}
