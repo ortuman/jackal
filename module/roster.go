@@ -231,7 +231,6 @@ func (r *Roster) updateRosterItem(rosterItem *storage.RosterItem) error {
 		return err
 	}
 	r.pushRosterItem(ri, r.strm.JID())
-
 	return nil
 }
 
@@ -281,7 +280,6 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 		return err
 	}
 	r.routeElement(p, contactJID)
-
 	return nil
 }
 
