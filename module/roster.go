@@ -107,7 +107,7 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 }
 
 func (r *Roster) deliverPendingApprovalNotifications() {
-	notifications, err := storage.Instance().FetchApprovalNotifications(r.strm.JID().ToBareJID())
+	notifications, err := storage.Instance().FetchRosterNotifications(r.strm.JID().ToBareJID())
 	if err != nil {
 		log.Error(err)
 		return
@@ -174,7 +174,7 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 
 	log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
 
-	if err := storage.Instance().DeleteApprovalNotification(username, jid); err != nil {
+	if err := storage.Instance().DeleteRosterNotification(username, jid); err != nil {
 		return err
 	}
 	if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
@@ -275,7 +275,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements()...)
 
 	// archive roster approval notification
-	err = storage.Instance().InsertOrUpdateApprovalNotification(username, contactJID.ToBareJID(), p)
+	err = storage.Instance().InsertOrUpdateRosterNotification(username, contactJID.ToBareJID(), p)
 	if err != nil {
 		return err
 	}
@@ -305,7 +305,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	log.Infof("authorization granted: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	// remove approval notification
-	if err := storage.Instance().DeleteApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
 
@@ -365,7 +365,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	log.Infof("authorization denied: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
 	// remove approval notification
-	if err := storage.Instance().DeleteApprovalNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
 

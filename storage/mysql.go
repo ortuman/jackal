@@ -170,9 +170,9 @@ func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
 	return s.rosterItemsFromRows(rows)
 }
 
-func (s *mySQL) InsertOrUpdateApprovalNotification(username, jid string, notification xml.Element) error {
+func (s *mySQL) InsertOrUpdateRosterNotification(username, jid string, notification xml.Element) error {
 	stmt := `` +
-		`INSERT INTO approval_notifications(username, jid, notification, updated_at, created_at)` +
+		`INSERT INTO roster_notifications(username, jid, notification, updated_at, created_at)` +
 		`VALUES(?, ?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
 
@@ -181,13 +181,13 @@ func (s *mySQL) InsertOrUpdateApprovalNotification(username, jid string, notific
 	return err
 }
 
-func (s *mySQL) DeleteApprovalNotification(username, jid string) error {
-	_, err := s.db.Exec("DELETE FROM approval_notifications WHERE username = ? AND jid = ?", username, jid)
+func (s *mySQL) DeleteRosterNotification(username, jid string) error {
+	_, err := s.db.Exec("DELETE FROM roster_notifications WHERE username = ? AND jid = ?", username, jid)
 	return err
 }
 
-func (s *mySQL) FetchApprovalNotifications(jid string) ([]xml.Element, error) {
-	stmt := `SELECT notification FROM approval_notifications WHERE jid = ? ORDER BY created_at`
+func (s *mySQL) FetchRosterNotifications(jid string) ([]xml.Element, error) {
+	stmt := `SELECT notification FROM roster_notifications WHERE jid = ? ORDER BY created_at`
 	rows, err := s.db.Query(stmt, jid)
 	if err != nil {
 		return nil, err
