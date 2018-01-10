@@ -88,21 +88,21 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 }
 
 func (r *Roster) processPresence(presence *xml.Presence) {
-	if presence.IsSubscribe() {
-		if err := r.processSubscribe(presence); err != nil {
-			log.Error(err)
-			return
-		}
-	} else if presence.IsSubscribed() {
-		if err := r.processSubscribed(presence); err != nil {
-			log.Error(err)
-			return
-		}
-	} else if presence.IsUnsubscribed() {
-		if err := r.processUnsubscribed(presence); err != nil {
-			log.Error(err)
-			return
-		}
+	var err error
+	switch presence.Type() {
+	case xml.SubscribeType:
+		err = r.processSubscribe(presence)
+	case xml.SubscribedType:
+		err = r.processSubscribed(presence)
+	case xml.UnsubscribedType:
+		err = r.processUnsubscribed(presence)
+	}
+	if err != nil {
+		log.Error(err)
+	}
+	if err := r.processSubscribe(presence); err != nil {
+		log.Error(err)
+		return
 	}
 }
 
@@ -181,6 +181,18 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 		return err
 	}
 	r.pushRosterItem(rosterItem, r.strm.JID())
+
+	// send 'unavailable' presence from contact to user.
+	if stream.C2S().IsLocalDomain(rosterItem.JID.Domain()) {
+		contactStreams := stream.C2S().AvailableStreams(rosterItem.JID.Node())
+		userStreams := stream.C2S().AvailableStreams(r.strm.Username())
+		for _, contactStream := range contactStreams {
+			for _, userStream := range userStreams {
+				p := xml.NewPresence(contactStream.JID().ToFullJID(), userStream.JID().ToFullJID(), xml.UnavailableType)
+				userStream.SendElement(p)
+			}
+		}
+	}
 	return nil
 }
 
