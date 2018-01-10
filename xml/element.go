@@ -9,8 +9,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 	"unicode/utf8"
 )
+
+var strBufs = sync.Pool{
+	New: func() interface{} { return new(bytes.Buffer) },
+}
 
 // Attribute represents an XML node attribute (label=value).
 type Attribute struct {
@@ -329,7 +334,11 @@ func (e *XElement) IsError() bool {
 
 // String returns a string representation of the element.
 func (e *XElement) String() string {
-	buf := bytes.NewBufferString("")
+	buf := strBufs.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		strBufs.Put(buf)
+	}()
 	e.ToXML(buf, true)
 	return buf.String()
 }

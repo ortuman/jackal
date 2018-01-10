@@ -30,14 +30,12 @@ func Initialize() error {
 	return instance().initialize()
 }
 
-// Level returns logger subsystem log level.
-func Level() config.LogLevel {
-	return instance().level
-}
-
 // Debugf logs a 'debug' message to the log file
 // and echoes it to the console.
 func Debugf(format string, args ...interface{}) {
+	if instance().level > config.DebugLevel {
+		return
+	}
 	ci := getCallerInfo()
 	instance().debugf(ci.filename, ci.line, format, args...)
 }
@@ -45,6 +43,9 @@ func Debugf(format string, args ...interface{}) {
 // Infof logs an 'info' message to the log file
 // and echoes it to the console.
 func Infof(format string, args ...interface{}) {
+	if instance().level > config.InfoLevel {
+		return
+	}
 	ci := getCallerInfo()
 	instance().infof(ci.filename, ci.line, format, args...)
 }
@@ -52,6 +53,9 @@ func Infof(format string, args ...interface{}) {
 // Warnf logs a 'warning' message to the log file
 // and echoes it to the console.
 func Warnf(format string, args ...interface{}) {
+	if instance().level > config.WarningLevel {
+		return
+	}
 	ci := getCallerInfo()
 	instance().warnf(ci.filename, ci.line, format, args...)
 }
@@ -59,13 +63,11 @@ func Warnf(format string, args ...interface{}) {
 // Errorf logs an 'error' message to the log file
 // and echoes it to the console.
 func Errorf(format string, args ...interface{}) {
+	if instance().level > config.ErrorLevel {
+		return
+	}
 	ci := getCallerInfo()
 	instance().errorf(ci.filename, ci.line, format, args...)
-}
-
-// Error logs an 'error' value
-func Error(err error) {
-	Errorf("%v", err)
 }
 
 // Fatalf logs a 'fatal' message to the log file
@@ -74,6 +76,11 @@ func Error(err error) {
 func Fatalf(format string, args ...interface{}) {
 	ci := getCallerInfo()
 	instance().fatalf(ci.filename, ci.line, format, args...)
+}
+
+// Error logs an 'error' value
+func Error(err error) {
+	Errorf("%v", err)
 }
 
 // singleton interface

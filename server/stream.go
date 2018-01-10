@@ -793,10 +793,9 @@ func (s *serverStream) loop() {
 func (s *serverStream) doRead() {
 	go func() {
 		if e, err := s.parser.ParseElement(); e != nil && err == nil {
-			if log.Level() >= config.DebugLevel {
-				log.Debugf("RECV: %v", e)
-			}
+			log.Debugf("RECV: %v", e)
 			s.readCh <- e
+
 		} else if err != nil {
 			switch err {
 			case nil:
@@ -948,9 +947,7 @@ func (s *serverStream) streamDefaultNamespace() string {
 }
 
 func (s *serverStream) writeElement(elem xml.Element) {
-	if log.Level() >= config.DebugLevel {
-		log.Debugf("SEND: %v", elem)
-	}
+	log.Debugf("SEND: %v", elem)
 	elem.ToXML(s.tr, true)
 }
 
