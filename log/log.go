@@ -182,10 +182,9 @@ func (l *Logger) loop() {
 
 		line := fmt.Sprintf("%s %s [%s] %s:%d - %s\n", tm, glyph, abbr, rec.file, rec.line, rec.log)
 
-		if rec.level >= l.level {
-			fmt.Print(line)
-			l.f.WriteString(line)
-		}
+		fmt.Print(line)
+		l.f.WriteString(line)
+
 		if rec.level == config.FatalLevel {
 			os.Exit(1)
 		}
