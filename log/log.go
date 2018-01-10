@@ -37,7 +37,7 @@ func Debugf(format string, args ...interface{}) {
 		return
 	}
 	ci := getCallerInfo()
-	instance().debugf(ci.filename, ci.line, format, args...)
+	instance().writeLog(ci.filename, ci.line, format, true, args...)
 }
 
 // Infof logs an 'info' message to the log file
@@ -47,7 +47,7 @@ func Infof(format string, args ...interface{}) {
 		return
 	}
 	ci := getCallerInfo()
-	instance().infof(ci.filename, ci.line, format, args...)
+	instance().writeLog(ci.filename, ci.line, format, true, args...)
 }
 
 // Warnf logs a 'warning' message to the log file
@@ -57,7 +57,7 @@ func Warnf(format string, args ...interface{}) {
 		return
 	}
 	ci := getCallerInfo()
-	instance().warnf(ci.filename, ci.line, format, args...)
+	instance().writeLog(ci.filename, ci.line, format, true, args...)
 }
 
 // Errorf logs an 'error' message to the log file
@@ -67,7 +67,7 @@ func Errorf(format string, args ...interface{}) {
 		return
 	}
 	ci := getCallerInfo()
-	instance().errorf(ci.filename, ci.line, format, args...)
+	instance().writeLog(ci.filename, ci.line, format, true, args...)
 }
 
 // Fatalf logs a 'fatal' message to the log file
@@ -75,7 +75,7 @@ func Errorf(format string, args ...interface{}) {
 // Application will terminate after logging.
 func Fatalf(format string, args ...interface{}) {
 	ci := getCallerInfo()
-	instance().fatalf(ci.filename, ci.line, format, args...)
+	instance().writeLog(ci.filename, ci.line, format, false, args...)
 }
 
 // Error logs an 'error' value
@@ -133,32 +133,11 @@ func (l *Logger) initialize() error {
 	return nil
 }
 
-func (l *Logger) debugf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, config.DebugLevel, true, args...)
-}
-
-func (l *Logger) infof(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, config.InfoLevel, true, args...)
-}
-
-func (l *Logger) warnf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, config.WarningLevel, true, args...)
-}
-
-func (l *Logger) errorf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, config.ErrorLevel, true, args...)
-}
-
-func (l *Logger) fatalf(file string, line int, format string, args ...interface{}) {
-	l.writeLog(file, line, format, config.FatalLevel, false, args...)
-}
-
-func (l *Logger) writeLog(file string, line int, format string, logLevel config.LogLevel, async bool, args ...interface{}) {
+func (l *Logger) writeLog(file string, line int, format string, async bool, args ...interface{}) {
 	if !l.initialized {
 		return
 	}
 	entry := record{
-		level:      logLevel,
 		file:       file,
 		line:       line,
 		log:        fmt.Sprintf(format, args...),
