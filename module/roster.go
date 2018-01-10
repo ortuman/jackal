@@ -381,7 +381,6 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		return err
 	}
 	r.pushRosterItem(userRosterItem, userJID)
-
 	return nil
 }
 
