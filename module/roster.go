@@ -6,12 +6,10 @@
 package module
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"time"
-
-	"fmt"
-
-	"errors"
 
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
