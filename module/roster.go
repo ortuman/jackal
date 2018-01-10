@@ -188,7 +188,9 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 		userStreams := stream.C2S().AvailableStreams(r.strm.Username())
 		for _, contactStream := range contactStreams {
 			for _, userStream := range userStreams {
-				p := xml.NewPresence(contactStream.JID().ToFullJID(), userStream.JID().ToFullJID(), xml.UnavailableType)
+				from := contactStream.JID().ToFullJID()
+				to := userStream.JID().ToFullJID()
+				p := xml.NewPresence(from, to, xml.UnavailableType)
 				userStream.SendElement(p)
 			}
 		}
