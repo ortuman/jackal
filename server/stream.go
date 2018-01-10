@@ -666,17 +666,18 @@ func (s *serverStream) startSession(iq *xml.IQ) {
 	s.active = true
 }
 
-func (s *serverStream) processStanza(stanza xml.Serializable) {
-	if iq, ok := stanza.(*xml.IQ); ok {
-		s.processIQ(iq)
-	} else if presence, ok := stanza.(*xml.Presence); ok {
-		s.processPresence(presence)
-	} else if message, ok := stanza.(*xml.Message); ok {
-		s.processMessage(message)
+func (s *serverStream) processStanza(element xml.Element) {
+	switch stanza := element.(type) {
+	case *xml.IQ:
+		s.processIQ(stanza)
+	case *xml.Presence:
+		s.processPresence(stanza)
+	case *xml.Message:
+		s.processMessage(stanza)
 	}
 }
 
-func (s *serverStream) processComponentStanza(stanza xml.Serializable) {
+func (s *serverStream) processComponentStanza(element xml.Element) {
 }
 
 func (s *serverStream) processIQ(iq *xml.IQ) {
@@ -822,7 +823,7 @@ func (s *serverStream) openStreamElement() {
 	s.writeBytes([]byte(ops.ToXML(false)))
 }
 
-func (s *serverStream) buildStanza(elem xml.Element) (xml.Serializable, *xml.JID, error) {
+func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, nil, err
 	}
