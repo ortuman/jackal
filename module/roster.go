@@ -44,7 +44,7 @@ func NewRoster(strm stream.C2SStream) *Roster {
 	return &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
-			Timeout:   time.Second * 10,
+			Timeout:   time.Second * 5,
 		},
 		strm: strm,
 	}
@@ -387,14 +387,14 @@ func (r *Roster) pushRosterItem(item *storage.RosterItem, to *xml.JID) {
 	}
 }
 
-func (r *Roster) routeElement(element xml.Serializable, to *xml.JID) {
+func (r *Roster) routeElement(element xml.Element, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		streams := stream.C2S().AvailableStreams(to.Node())
 		for _, strm := range streams {
 			strm.SendElement(element)
 		}
 	} else {
-		// TODO(ortuman): Implement federation
+		// TODO(ortuman): Implement XMPP federation
 	}
 }
 

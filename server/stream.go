@@ -82,7 +82,7 @@ type serverStream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
-	writeCh chan []byte
+	writeCh chan xml.Element
 	readCh  chan xml.Element
 	discCh  chan error
 }
@@ -92,7 +92,7 @@ func newSocketStream(id string, conn net.Conn, config *config.Server) *serverStr
 		cfg:     config,
 		id:      id,
 		state:   connecting,
-		writeCh: make(chan []byte, 32),
+		writeCh: make(chan xml.Element, 256),
 		readCh:  make(chan xml.Element),
 		discCh:  make(chan error),
 	}
@@ -153,8 +153,8 @@ func (s *serverStream) Priority() int8 {
 	return s.priority
 }
 
-func (s *serverStream) SendElement(serializable xml.Serializable) {
-	s.writeCh <- []byte(serializable.ToXML(true))
+func (s *serverStream) SendElement(element xml.Element) {
+	s.writeCh <- element
 }
 
 func (s *serverStream) Disconnect(err error) {
@@ -485,7 +485,7 @@ func (s *serverStream) handleSessionStarted(elem xml.Element) {
 		// component (MUC, pubsub, etc.)
 		s.processComponentStanza(stanza)
 	} else {
-		// TODO(ortuman): Implement federation
+		// TODO(ortuman): Implement XMPP federation
 	}
 }
 
@@ -765,8 +765,8 @@ func (s *serverStream) loop() {
 		}
 
 		select {
-		case b := <-s.writeCh:
-			s.writeBytes(b)
+		case e := <-s.writeCh:
+			s.writeElement(e)
 
 		case e := <-s.readCh:
 			s.handleElement(e)
@@ -794,7 +794,7 @@ func (s *serverStream) doRead() {
 	go func() {
 		if e, err := s.parser.ParseElement(); e != nil && err == nil {
 			if log.Level() >= config.DebugLevel {
-				log.Debugf("RECV: %s", e.ToXML(true))
+				log.Debugf("RECV: %v", e)
 			}
 			s.readCh <- e
 		} else if err != nil {
@@ -819,8 +819,8 @@ func (s *serverStream) openStreamElement() {
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
 
-	s.writeBytes([]byte(`<?xml version="1.0"?>`))
-	s.writeBytes([]byte(ops.ToXML(false)))
+	s.tr.Write([]byte(`<?xml version="1.0"?>`))
+	ops.ToXML(s.tr, false)
 }
 
 func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, error) {
@@ -947,15 +947,11 @@ func (s *serverStream) streamDefaultNamespace() string {
 	return ""
 }
 
-func (s *serverStream) writeElement(elem xml.Serializable) {
-	s.writeBytes([]byte(elem.ToXML(true)))
-}
-
-func (s *serverStream) writeBytes(b []byte) {
+func (s *serverStream) writeElement(elem xml.Element) {
 	if log.Level() >= config.DebugLevel {
-		log.Debugf("SEND: %s", string(b))
+		log.Debugf("SEND: %v", elem)
 	}
-	s.tr.Write(b)
+	elem.ToXML(s.tr, true)
 }
 
 func (s *serverStream) disconnectWithStreamError(err *streamerror.Error) {
@@ -987,7 +983,7 @@ func (s *serverStream) isResourceAvailable(resource string) bool {
 	return true
 }
 
-func (s *serverStream) sendElement(serializable xml.Serializable, to *xml.JID) error {
+func (s *serverStream) sendElement(serializable xml.Element, to *xml.JID) error {
 	recipients := stream.C2S().AvailableStreams(to.Node())
 	if len(recipients) == 0 {
 		return errNotAuthenticated

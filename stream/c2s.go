@@ -24,7 +24,7 @@ type C2SStream interface {
 
 	Priority() int8
 
-	SendElement(element xml.Serializable)
+	SendElement(element xml.Element)
 	Disconnect(err error)
 
 	IsSecured() bool

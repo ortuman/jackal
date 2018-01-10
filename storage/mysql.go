@@ -176,7 +176,7 @@ func (s *mySQL) InsertOrUpdateApprovalNotification(username, jid string, notific
 		`VALUES(?, ?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
 
-	notificationXML := notification.ToXML(true)
+	notificationXML := notification.String()
 	_, err := s.db.Exec(stmt, username, jid, notificationXML, notificationXML)
 	return err
 }
@@ -232,7 +232,8 @@ func (s *mySQL) InsertOrUpdateVCard(vCard xml.Element, username string) error {
 		`INSERT INTO vcards(username, vcard, updated_at, created_at)` +
 		`VALUES(?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()`
-	rawXML := vCard.ToXML(true)
+
+	rawXML := vCard.String()
 	_, err := s.db.Exec(stmt, username, rawXML, rawXML)
 	return err
 }
@@ -267,7 +268,7 @@ func (s *mySQL) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace str
 
 	buf := new(bytes.Buffer)
 	for _, elem := range privateXML {
-		buf.WriteString(elem.ToXML(true))
+		elem.ToXML(buf, true)
 	}
 	rawXML := buf.String()
 	_, err := s.db.Exec(stmt, username, namespace, rawXML, rawXML)
@@ -276,7 +277,7 @@ func (s *mySQL) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace str
 
 func (s *mySQL) InsertOfflineMessage(message xml.Element, username string) error {
 	stmt := `INSERT INTO offline_messages(username, data, created_at) VALUES(?, ?, NOW())`
-	_, err := s.db.Exec(stmt, username, message.ToXML(true))
+	_, err := s.db.Exec(stmt, username, message.String())
 	return err
 }
 

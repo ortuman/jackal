@@ -7,7 +7,8 @@ package xml
 
 import (
 	"bytes"
-	"sync"
+	"fmt"
+	"io"
 	"unicode/utf8"
 )
 
@@ -17,16 +18,9 @@ type Attribute struct {
 	Value string
 }
 
-// Serializable is an interface type. A Serializable entity describes a value
-// that could be serialized to a raw XML representation.
-// includeClosing determines if closing tag should be attached.
-type Serializable interface {
-	ToXML(includeClosing bool) string
-}
-
 // Element represents an XML node element.
 type Element interface {
-	Serializable
+	fmt.Stringer
 
 	// Name returns XML node name.
 	Name() string
@@ -89,10 +83,10 @@ type Element interface {
 
 	// ElementsCount returns child elements count.
 	ElementsCount() int
-}
 
-var serializeBufs = sync.Pool{
-	New: func() interface{} { return new(bytes.Buffer) },
+	// ToXML serializes element to a raw XML representation.
+	// includeClosing determines if closing tag should be attached.
+	ToXML(writer io.Writer, includeClosing bool)
 }
 
 type XElement struct {
@@ -335,54 +329,48 @@ func (e *XElement) IsError() bool {
 
 // String returns a string representation of the element.
 func (e *XElement) String() string {
-	return e.ToXML(true)
+	buf := bytes.NewBufferString("")
+	e.ToXML(buf, true)
+	return buf.String()
 }
 
-// ToXML satisfies Serializable interface.
-func (e *XElement) ToXML(includeClosing bool) string {
-	buf := serializeBufs.Get().(*bytes.Buffer)
-	defer func() {
-		buf.Reset()
-		serializeBufs.Put(buf)
-	}()
-
-	buf.WriteString("<")
-	buf.WriteString(e.name)
+func (e *XElement) ToXML(w io.Writer, includeClosing bool) {
+	w.Write([]byte("<"))
+	w.Write([]byte(e.name))
 
 	// serialize attributes
 	for i := 0; i < len(e.attrs); i++ {
 		if len(e.attrs[i].Value) == 0 {
 			continue
 		}
-		buf.WriteString(" ")
-		buf.WriteString(e.attrs[i].Label)
-		buf.WriteString(`="`)
-		buf.WriteString(e.attrs[i].Value)
-		buf.WriteString(`"`)
+		w.Write([]byte(" "))
+		w.Write([]byte(e.attrs[i].Label))
+		w.Write([]byte(`="`))
+		w.Write([]byte(e.attrs[i].Value))
+		w.Write([]byte(`"`))
 	}
 	textLen := e.TextLen()
 	if len(e.elements) > 0 || textLen > 0 {
-		buf.WriteString(">")
+		w.Write([]byte(">"))
 
 		// serialize text
 		if textLen > 0 {
-			buf.WriteString(e.text)
+			w.Write([]byte(e.text))
 		}
 		// serialize child elements
 		for j := 0; j < len(e.elements); j++ {
-			buf.WriteString(e.elements[j].ToXML(true))
+			e.elements[j].ToXML(w, true)
 		}
 		if includeClosing {
-			buf.WriteString("</")
-			buf.WriteString(e.name)
-			buf.WriteString(">")
+			w.Write([]byte("</"))
+			w.Write([]byte(e.name))
+			w.Write([]byte(">"))
 		}
 	} else {
 		if includeClosing {
-			buf.WriteString("/>")
+			w.Write([]byte("/>"))
 		} else {
-			buf.WriteString(">")
+			w.Write([]byte(">"))
 		}
 	}
-	return buf.String()
 }
