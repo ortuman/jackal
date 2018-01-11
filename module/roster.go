@@ -340,39 +340,44 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	username := r.strm.Username()
 	res := r.strm.Resource()
 
-	userJID := r.strm.JID()
-	contactJID := presence.ToJID()
+	userJID := presence.ToJID()
+	contactJID := r.strm.JID()
 
-	// remove approval notification
-	if err := storage.Instance().DeleteRosterNotification(contactJID.Node(), userJID.ToBareJID()); err != nil {
-		return err
-	}
-	log.Infof("authorization denied: %v <- %v (%s/%s)", contactJID.ToBareJID(), userJID, username, res)
+	log.Infof("authorization revoked: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
 
-	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
-	if err != nil {
-		return err
-	}
 	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
 	if err != nil {
 		return err
 	}
+	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
+		return err
+	}
+	if contactRosterItem != nil {
+		contactRosterItem.Subscription = subscriptionTo
+		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
+			return err
+		}
+		r.pushRosterItem(contactRosterItem, contactJID)
+	}
 	if userRosterItem != nil {
-		userRosterItem.Subscription = subscriptionTo
+		userRosterItem.Subscription = subscriptionFrom
 		if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
 			return err
 		}
 		r.pushRosterItem(userRosterItem, userJID)
 	}
-	if contactRosterItem != nil {
-		contactRosterItem.Subscription = subscriptionFrom
-		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
-			return err
-		}
-		r.pushRosterItem(contactRosterItem, contactJID)
 
-		// p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnavailableType)
-		// r.routeElement(p, userJID)
+	// route the presence stanza of type "unsubscribed" to the user,
+	// first stamping the 'from' address as the bare JID
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	r.routeElement(p, userJID)
+
+	// send unavailable presence from all of the contact's available resources to the user
+	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
+	for _, contactStream := range contactStreams {
+		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.UnavailableType)
+		r.routeElement(p, userJID)
 	}
 	return nil
 }
