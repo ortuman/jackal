@@ -176,12 +176,7 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 		return err
 	}
 	if userRosterItem == nil {
-		// silently ignore
 		return nil
-	}
-	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
-	if err != nil {
-		return err
 	}
 	if err := storage.Instance().DeleteRosterNotification(username, contactJID.ToBareJID()); err != nil {
 		return err
@@ -190,50 +185,6 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 		return err
 	}
 	r.pushRosterItem(rosterItem, r.strm.JID())
-
-	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
-	userStreams := stream.C2S().AvailableStreams(userJID.Node())
-
-	// send 'unavailable' presence from contact to user.
-	if userRosterItem.Subscription == subscriptionBoth || userRosterItem.Subscription == subscriptionTo {
-		for _, contactStream := range contactStreams {
-			for _, userStream := range userStreams {
-				from := contactStream.JID().ToFullJID()
-				to := userStream.JID().ToFullJID()
-				p := xml.NewPresence(from, to, xml.UnavailableType)
-				userStream.SendElement(p)
-			}
-		}
-	}
-	// send 'unavailable' presence from user to contact.
-	if contactRosterItem != nil && contactRosterItem.Subscription == subscriptionBoth {
-		for _, userStream := range userStreams {
-			for _, contactStream := range contactStreams {
-				from := userStream.JID().ToFullJID()
-				to := contactStream.JID().ToFullJID()
-				p := xml.NewPresence(from, to, xml.UnavailableType)
-				contactStream.SendElement(p)
-			}
-		}
-	}
-	if contactRosterItem != nil {
-		contactRosterItem.Subscription = subscriptionTo
-		r.pushRosterItem(contactRosterItem, contactJID)
-	}
-	// send 'unsubscribe' presence to user...
-	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribeType)
-	r.routeElement(p, userJID)
-
-	if contactRosterItem != nil {
-		contactRosterItem.Subscription = subscriptionNone
-		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
-			return err
-		}
-		r.pushRosterItem(contactRosterItem, contactJID)
-	}
-	// send 'unsubscribed' presence to user...
-	p = xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
-	r.routeElement(p, userJID)
 	return nil
 }
 

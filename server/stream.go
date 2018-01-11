@@ -157,6 +157,10 @@ func (s *serverStream) SendElement(element xml.Element) {
 	s.writeCh <- element
 }
 
+func (s *serverStream) ReceiveElement(element xml.Element) {
+	s.readCh <- element
+}
+
 func (s *serverStream) Disconnect(err error) {
 	s.discCh <- err
 }
