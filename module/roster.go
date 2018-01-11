@@ -354,14 +354,24 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		return err
 	}
 	if contactRosterItem != nil {
-		contactRosterItem.Subscription = subscriptionTo
+		switch contactRosterItem.Subscription {
+		case subscriptionBoth:
+			contactRosterItem.Subscription = subscriptionTo
+		default:
+			contactRosterItem.Subscription = subscriptionNone
+		}
 		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
 			return err
 		}
 		r.pushRosterItem(contactRosterItem, contactJID)
 	}
 	if userRosterItem != nil {
-		userRosterItem.Subscription = subscriptionFrom
+		switch userRosterItem.Subscription {
+		case subscriptionBoth:
+			userRosterItem.Subscription = subscriptionFrom
+		default:
+			userRosterItem.Subscription = subscriptionNone
+		}
 		if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
 			return err
 		}
@@ -373,7 +383,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
 	r.routeElement(p, userJID)
 
-	// send unavailable presence from all of the contact's available resources to the user
+	// send 'unavailable' presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
 	for _, contactStream := range contactStreams {
 		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.UnavailableType)
