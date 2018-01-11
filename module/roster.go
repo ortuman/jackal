@@ -100,10 +100,6 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 	if err != nil {
 		log.Error(err)
 	}
-	if err := r.processSubscribe(presence); err != nil {
-		log.Error(err)
-		return
-	}
 }
 
 func (r *Roster) deliverPendingApprovalNotifications() {
@@ -170,22 +166,36 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 	username := r.strm.Username()
 	resource := r.strm.Resource()
 
-	jid := rosterItem.JID.ToBareJID()
+	userJID := r.strm.JID()
+	contactJID := rosterItem.JID
 
-	log.Infof("removing roster item: %s (%s/%s)", jid, username, resource)
+	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), username, resource)
 
-	if err := storage.Instance().DeleteRosterNotification(username, jid); err != nil {
+	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
 		return err
 	}
-	if err := storage.Instance().DeleteRosterItem(username, jid); err != nil {
+	if userRosterItem == nil {
+		// silently ignore
+		return nil
+	}
+	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
+	if err != nil {
+		return err
+	}
+	if err := storage.Instance().DeleteRosterNotification(username, contactJID.ToBareJID()); err != nil {
+		return err
+	}
+	if err := storage.Instance().DeleteRosterItem(username, contactJID.ToBareJID()); err != nil {
 		return err
 	}
 	r.pushRosterItem(rosterItem, r.strm.JID())
 
+	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
+	userStreams := stream.C2S().AvailableStreams(userJID.Node())
+
 	// send 'unavailable' presence from contact to user.
-	if stream.C2S().IsLocalDomain(rosterItem.JID.Domain()) {
-		contactStreams := stream.C2S().AvailableStreams(rosterItem.JID.Node())
-		userStreams := stream.C2S().AvailableStreams(r.strm.Username())
+	if userRosterItem.Subscription == subscriptionBoth || userRosterItem.Subscription == subscriptionTo {
 		for _, contactStream := range contactStreams {
 			for _, userStream := range userStreams {
 				from := contactStream.JID().ToFullJID()
@@ -195,6 +205,35 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 			}
 		}
 	}
+	// send 'unavailable' presence from user to contact.
+	if contactRosterItem != nil && contactRosterItem.Subscription == subscriptionBoth {
+		for _, userStream := range userStreams {
+			for _, contactStream := range contactStreams {
+				from := userStream.JID().ToFullJID()
+				to := contactStream.JID().ToFullJID()
+				p := xml.NewPresence(from, to, xml.UnavailableType)
+				contactStream.SendElement(p)
+			}
+		}
+	}
+	if contactRosterItem != nil {
+		contactRosterItem.Subscription = subscriptionTo
+		r.pushRosterItem(contactRosterItem, contactJID)
+	}
+	// send 'unsubscribe' presence to user...
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribeType)
+	r.routeElement(p, userJID)
+
+	if contactRosterItem != nil {
+		contactRosterItem.Subscription = subscriptionNone
+		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
+			return err
+		}
+		r.pushRosterItem(contactRosterItem, contactJID)
+	}
+	// send 'unsubscribed' presence to user...
+	p = xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	r.routeElement(p, userJID)
 	return nil
 }
 
