@@ -340,36 +340,29 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	username := r.strm.Username()
 	res := r.strm.Resource()
 
-	userJID := presence.ToJID()
-	contactJID := r.strm.JID()
-
-	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
-	if err != nil {
-		return err
-	}
-	if userRosterItem == nil {
-		// silently ignore
-		return nil
-	}
-	log.Infof("authorization denied: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
+	userJID := r.strm.JID()
+	contactJID := presence.ToJID()
 
 	// remove approval notification
-	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterNotification(contactJID.Node(), userJID.ToBareJID()); err != nil {
 		return err
 	}
+	log.Infof("authorization denied: %v <- %v (%s/%s)", contactJID.ToBareJID(), userJID, username, res)
 
-	// send 'unsubscribed' presence to user...
-	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
-	p.AppendElements(presence.Elements()...)
-	r.routeElement(p, userJID)
+	/*
+		// send 'unsubscribed' presence to user...
+		p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+		p.AppendElements(presence.Elements()...)
+		r.routeElement(p, userJID)
 
-	// update roster item...
-	userRosterItem.Ask = false
-	userRosterItem.Subscription = subscriptionNone
-	if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
-		return err
-	}
-	r.pushRosterItem(userRosterItem, userJID)
+		// update roster item...
+		userRosterItem.Ask = false
+		userRosterItem.Subscription = subscriptionNone
+		if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
+			return err
+		}
+		r.pushRosterItem(userRosterItem, userJID)
+	*/
 	return nil
 }
 
