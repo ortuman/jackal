@@ -54,7 +54,7 @@ var (
 )
 
 type serverStream struct {
-	sync.RWMutex
+	lock          sync.RWMutex
 	cfg           *config.Server
 	connected     uint32
 	tr            transport.Transport
@@ -124,32 +124,32 @@ func (s *serverStream) ID() string {
 }
 
 func (s *serverStream) Username() string {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.username
 }
 
 func (s *serverStream) Domain() string {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.domain
 }
 
 func (s *serverStream) Resource() string {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.resource
 }
 
 func (s *serverStream) JID() *xml.JID {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.jid
 }
 
 func (s *serverStream) Priority() int8 {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.priority
 }
 
@@ -157,41 +157,37 @@ func (s *serverStream) SendElement(element xml.Element) {
 	s.writeCh <- element
 }
 
-func (s *serverStream) ReceiveElement(element xml.Element) {
-	s.readCh <- element
-}
-
 func (s *serverStream) Disconnect(err error) {
 	s.discCh <- err
 }
 
 func (s *serverStream) IsAuthenticated() bool {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.authenticated
 }
 
 func (s *serverStream) IsSecured() bool {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.secured
 }
 
 func (s *serverStream) IsCompressed() bool {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.compressed
 }
 
 func (s *serverStream) IsActive() bool {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.active
 }
 
 func (s *serverStream) IsAvailable() bool {
-	s.RLock()
-	defer s.RUnlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	return s.available
 }
 
@@ -316,9 +312,9 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 		return
 	}
 	// assign stream domain
-	s.Lock()
+	s.lock.Lock()
 	s.domain = elem.To()
-	s.Unlock()
+	s.lock.Unlock()
 
 	// open stream
 	s.openStreamElement()
@@ -513,9 +509,9 @@ func (s *serverStream) proceedStartTLS() {
 	}
 	s.tr.StartTLS(cfg)
 
-	s.Lock()
+	s.lock.Lock()
 	s.secured = true
-	s.Unlock()
+	s.lock.Unlock()
 
 	log.Infof("secured stream... id: %s", s.id)
 
@@ -544,9 +540,9 @@ func (s *serverStream) compress(elem xml.Element) {
 	s.writeElement(compressed)
 
 	s.tr.EnableCompression(s.cfg.Compression.Level)
-	s.Lock()
+	s.lock.Lock()
 	s.compressed = true
-	s.Unlock()
+	s.lock.Unlock()
 
 	log.Infof("compressed stream... id: %s", s.id)
 
@@ -592,11 +588,11 @@ func (s *serverStream) finishAuthentication(username string) {
 		s.activeAuthr.Reset()
 		s.activeAuthr = nil
 	}
-	s.Lock()
+	s.lock.Lock()
 	s.username = username
 	s.authenticated = true
 	s.jid, _ = xml.NewJID(s.username, s.domain, "", true)
-	s.Unlock()
+	s.lock.Unlock()
 
 	stream.C2S().AuthenticateStream(s)
 	s.restart()
@@ -636,10 +632,10 @@ func (s *serverStream) bindResource(iq *xml.IQ) {
 		s.writeElement(iq.BadRequestError())
 		return
 	}
-	s.Lock()
+	s.lock.Lock()
 	s.resource = resource
 	s.jid = userJID
-	s.Unlock()
+	s.lock.Unlock()
 
 	log.Infof("binded resource %s... (%s)", s.Resource(), s.Username())
 
@@ -723,11 +719,10 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 		return
 	}
 	// set resource priority & availability
-	s.Lock()
-	defer s.Unlock()
-
+	s.lock.Lock()
 	s.priority = presence.Priority()
 	s.available = true
+	s.lock.Unlock()
 
 	// deliver pending approval notifications
 	if s.roster != nil {
