@@ -94,6 +94,8 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 		err = r.processSubscribe(presence)
 	case xml.SubscribedType:
 		err = r.processSubscribed(presence)
+	case xml.UnsubscribeType:
+		err = r.processUnsubscribe(presence)
 	case xml.UnsubscribedType:
 		err = r.processUnsubscribed(presence)
 	}
@@ -163,21 +165,14 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 }
 
 func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
+	// https://xmpp.org/rfcs/rfc3921.html#int-remove
 	username := r.strm.Username()
 	resource := r.strm.Resource()
 
-	userJID := r.strm.JID()
 	contactJID := rosterItem.JID
 
 	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), username, resource)
 
-	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
-	if err != nil {
-		return err
-	}
-	if userRosterItem == nil {
-		return nil
-	}
 	if err := storage.Instance().DeleteRosterNotification(username, contactJID.ToBareJID()); err != nil {
 		return err
 	}
@@ -334,6 +329,10 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.AvailableType)
 		r.routeElement(p, userJID)
 	}
+	return nil
+}
+
+func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	return nil
 }
 
