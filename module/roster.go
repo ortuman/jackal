@@ -333,6 +333,53 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 }
 
 func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
+	username := r.strm.Username()
+	res := r.strm.Resource()
+
+	userJID := r.strm.JID()
+	contactJID := presence.ToJID()
+
+	log.Infof("authorization cancelled: %v <- %v (%s/%s)", userJID.ToBareJID(), contactJID, username, res)
+
+	userRosterItem, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
+		return err
+	}
+	contactRosterItem, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
+	if err != nil {
+		return err
+	}
+	if userRosterItem == nil {
+		// silently ignore
+		return nil
+	}
+	switch userRosterItem.Subscription {
+	case subscriptionBoth:
+		userRosterItem.Subscription = subscriptionFrom
+	default:
+		userRosterItem.Subscription = subscriptionNone
+	}
+	if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
+		return err
+	}
+	r.pushRosterItem(userRosterItem, userJID)
+
+	// route the presence stanza of type "unsubscribe" to the contact
+	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
+	r.routeElement(p, userJID)
+
+	if contactRosterItem != nil {
+		switch contactRosterItem.Subscription {
+		case subscriptionBoth:
+			contactRosterItem.Subscription = subscriptionTo
+		default:
+			contactRosterItem.Subscription = subscriptionNone
+		}
+		if err := storage.Instance().InsertOrUpdateRosterItem(contactRosterItem); err != nil {
+			return err
+		}
+		r.pushRosterItem(contactRosterItem, contactJID)
+	}
 	return nil
 }
 
@@ -378,8 +425,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		r.pushRosterItem(userRosterItem, userJID)
 	}
 
-	// route the presence stanza of type "unsubscribed" to the user,
-	// first stamping the 'from' address as the bare JID
+	// route the presence stanza of type "unsubscribed" to the user
 	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
 	r.routeElement(p, userJID)
 
