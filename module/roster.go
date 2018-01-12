@@ -307,15 +307,17 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	r.pushRosterItem(contactRosterItem, contactJID)
 
 	// update user's roster item...
-	switch userRosterItem.Subscription {
-	case subscriptionFrom:
-		userRosterItem.Subscription = subscriptionBoth
-	case subscriptionNone:
-		userRosterItem.Subscription = subscriptionTo
-	}
-	userRosterItem.Ask = false
-	if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
-		return err
+	if userRosterItem != nil {
+		switch userRosterItem.Subscription {
+		case subscriptionFrom:
+			userRosterItem.Subscription = subscriptionBoth
+		case subscriptionNone:
+			userRosterItem.Subscription = subscriptionTo
+		}
+		userRosterItem.Ask = false
+		if err := storage.Instance().InsertOrUpdateRosterItem(userRosterItem); err != nil {
+			return err
+		}
 	}
 
 	// send 'subscribed' presence to user...
@@ -364,10 +366,6 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	}
 	r.pushRosterItem(userRosterItem, userJID)
 
-	// route the presence stanza of type "unsubscribe" to the contact
-	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
-	r.routeElement(p, userJID)
-
 	if contactRosterItem != nil {
 		switch contactRosterItem.Subscription {
 		case subscriptionBoth:
@@ -380,6 +378,10 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 		}
 		r.pushRosterItem(contactRosterItem, contactJID)
 	}
+	// route the presence stanza of type "unsubscribe" to the contact
+	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
+	r.routeElement(p, userJID)
+
 	return nil
 }
 
