@@ -6,7 +6,6 @@
 package module
 
 import (
-	"sync"
 	"time"
 
 	"github.com/ortuman/jackal/concurrent"
@@ -21,7 +20,6 @@ type Offline struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModOffline
 	strm  stream.C2SStream
-	once  sync.Once
 }
 
 func NewOffline(config *config.ModOffline, strm stream.C2SStream) *Offline {
@@ -40,12 +38,14 @@ func (o *Offline) AssociatedNamespaces() []string {
 }
 
 func (o *Offline) ArchiveMessage(message *xml.Message) {
-	o.queue.Async(func() { o.archiveMessage(message) })
+	o.queue.Async(func() {
+		o.archiveMessage(message)
+	})
 }
 
 func (o *Offline) DeliverOfflineMessages() {
-	o.once.Do(func() {
-		o.queue.Async(func() { o.deliverOfflineMessages() })
+	o.queue.Async(func() {
+		o.deliverOfflineMessages()
 	})
 }
 

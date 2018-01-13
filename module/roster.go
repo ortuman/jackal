@@ -30,10 +30,8 @@ const (
 )
 
 type Roster struct {
-	queue concurrent.OperationQueue
-	strm  stream.C2SStream
-	once  sync.Once
-
+	queue       concurrent.OperationQueue
+	strm        stream.C2SStream
 	requestedMu sync.RWMutex
 	requested   bool
 }
@@ -83,7 +81,7 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 
 func (r *Roster) DeliverPendingApprovalNotifications() {
 	r.queue.Async(func() {
-		r.once.Do(func() { r.deliverPendingApprovalNotifications() })
+		r.deliverPendingApprovalNotifications()
 	})
 }
 

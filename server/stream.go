@@ -82,6 +82,9 @@ type serverStream struct {
 	ping     *module.XEPPing
 	offline  *module.Offline
 
+	rosterOnce  sync.Once
+	offlineOnce sync.Once
+
 	writeCh chan xml.Element
 	readCh  chan xml.Element
 	discCh  chan error
@@ -726,13 +729,17 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 
 	// deliver pending approval notifications
 	if s.roster != nil {
-		s.roster.DeliverPendingApprovalNotifications()
+		s.rosterOnce.Do(func() {
+			s.roster.DeliverPendingApprovalNotifications()
+		})
 		s.roster.BrodcastPresence(presence)
 	}
 
 	// deliver offline messages
 	if s.offline != nil && s.Priority() >= 0 {
-		s.offline.DeliverOfflineMessages()
+		s.offlineOnce.Do(func() {
+			s.offline.DeliverOfflineMessages()
+		})
 	}
 }
 
