@@ -29,9 +29,21 @@ const (
 	subscriptionRemove = "remove"
 )
 
+type userServerUnit struct {
+	cSU *contactServerUnit
+}
+
+type contactServerUnit struct {
+	uSU *userServerUnit
+}
+
 type Roster struct {
-	queue       concurrent.OperationQueue
-	strm        stream.C2SStream
+	queue concurrent.OperationQueue
+	strm  stream.C2SStream
+
+	uUnit *userServerUnit
+	cUnit *contactServerUnit
+
 	requestedMu sync.RWMutex
 	requested   bool
 }
