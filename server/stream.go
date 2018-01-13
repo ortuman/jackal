@@ -727,6 +727,7 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 	// deliver pending approval notifications
 	if s.roster != nil {
 		s.roster.DeliverPendingApprovalNotifications()
+		s.roster.BrodcastPresence(presence)
 	}
 
 	// deliver offline messages
