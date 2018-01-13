@@ -173,24 +173,30 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 	if err != nil {
 		return err
 	}
+	if userRi == nil {
+		return nil
+	}
 	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), r.strm.Username(), r.strm.Resource())
 
-	if userRi != nil {
-		// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
+	// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
+	if userRi.Subscription == subscriptionFrom || userRi.Subscription == subscriptionBoth {
 		r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
-		r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
+		r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType), contactJID)
+	}
 
-		if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
-			return err
-		}
-		if err := storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID()); err != nil {
-			return err
-		}
-		r.pushRosterItem(ri, userJID)
+	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+		return err
+	}
+	if err := storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID()); err != nil {
+		return err
+	}
+	r.pushRosterItem(ri, userJID)
 
-		// send unavailable presence from all of the users's available resources to the contact
+	// send unavailable presence from all of the users's available resources to the contact
+	if userRi.Subscription == subscriptionFrom || userRi.Subscription == subscriptionBoth {
 		r.sendAvailablePresencesFrom(userJID, contactJID, xml.UnavailableType)
 	}
+
 	if contactRi != nil {
 		switch contactRi.Subscription {
 		case subscriptionBoth:
@@ -200,10 +206,15 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 
 		default:
 			contactRi.Subscription = subscriptionNone
+			if err := storage.Instance().InsertOrUpdateRosterItem(contactRi); err != nil {
+				return err
+			}
 			r.pushRosterItem(contactRi, contactJID)
 		}
 		// send unavailable presence from all of the contact's available resources to the user
-		r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
+		if contactRi.Subscription == subscriptionFrom || contactRi.Subscription == subscriptionBoth {
+			r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
+		}
 	}
 	return nil
 }
