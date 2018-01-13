@@ -180,7 +180,7 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 
 	// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
 	r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
-	r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType), contactJID)
+	r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
 
 	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
@@ -190,10 +190,22 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 	}
 	r.pushRosterItem(ri, userJID)
 
-	// send unavailable presence from all of the users's available resources to the conctact
+	// send unavailable presence from all of the users's available resources to the contact
 	r.sendAvailablePresencesFrom(userJID, contactJID, xml.UnavailableType)
 
 	if contactRi != nil {
+		switch contactRi.Subscription {
+		case subscriptionBoth:
+			contactRi.Subscription = subscriptionTo
+			r.pushRosterItem(contactRi, contactJID)
+			fallthrough
+
+		default:
+			contactRi.Subscription = subscriptionNone
+			r.pushRosterItem(contactRi, contactJID)
+		}
+		// send unavailable presence from all of the contact's available resources to the user
+		r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	}
 	return nil
 }
