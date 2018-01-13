@@ -554,6 +554,9 @@ func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) xml.Element {
 		item.SetAttribute("ask", "subscribe")
 	}
 	for _, group := range ri.Groups {
+		if len(group) == 0 {
+			continue
+		}
 		gr := xml.NewElementName("group")
 		gr.SetText(group)
 		item.AppendElement(gr)
