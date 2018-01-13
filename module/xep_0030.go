@@ -7,9 +7,7 @@ package module
 
 import (
 	"sort"
-	"time"
 
-	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
@@ -32,7 +30,6 @@ type DiscoIdentity struct {
 }
 
 type XEPDiscoInfo struct {
-	queue      concurrent.OperationQueue
 	strm       stream.C2SStream
 	identities []DiscoIdentity
 	features   []string
@@ -41,49 +38,33 @@ type XEPDiscoInfo struct {
 
 func NewXEPDiscoInfo(strm stream.C2SStream) *XEPDiscoInfo {
 	x := &XEPDiscoInfo{
-		queue: concurrent.OperationQueue{
-			QueueSize: 32,
-			Timeout:   time.Second,
-		},
 		strm: strm,
 	}
 	return x
 }
 
 func (x *XEPDiscoInfo) Identities() []DiscoIdentity {
-	ch := make(chan []DiscoIdentity)
-	x.queue.Async(func() {
-		ch <- x.identities
-	})
-	return <-ch
+	return x.identities
 }
 
 func (x *XEPDiscoInfo) SetIdentities(identities []DiscoIdentity) {
-	x.queue.Sync(func() { x.identities = identities })
+	x.identities = identities
 }
 
 func (x *XEPDiscoInfo) Features() []string {
-	ch := make(chan []string)
-	x.queue.Async(func() {
-		ch <- x.features
-	})
-	return <-ch
+	return x.features
 }
 
 func (x *XEPDiscoInfo) SetFeatures(features []string) {
-	x.queue.Sync(func() { x.features = features })
+	x.features = features
 }
 
 func (x *XEPDiscoInfo) Items() []DiscoItem {
-	ch := make(chan []DiscoItem)
-	x.queue.Async(func() {
-		ch <- x.items
-	})
-	return <-ch
+	return x.items
 }
 
 func (x *XEPDiscoInfo) SetItems(items []DiscoItem) {
-	x.queue.Sync(func() { x.items = items })
+	x.items = items
 }
 
 func (x *XEPDiscoInfo) AssociatedNamespaces() []string {
@@ -99,19 +80,17 @@ func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
-	x.queue.Async(func() {
-		if !iq.ToJID().IsServer() {
-			x.strm.SendElement(iq.FeatureNotImplementedError())
-			return
-		}
-		q := iq.FindElement("query")
-		switch q.Namespace() {
-		case discoInfoNamespace:
-			x.sendDiscoInfo(iq)
-		case discoItemsNamespace:
-			x.sendDiscoItems(iq)
-		}
-	})
+	if !iq.ToJID().IsServer() {
+		x.strm.SendElement(iq.FeatureNotImplementedError())
+		return
+	}
+	q := iq.FindElement("query")
+	switch q.Namespace() {
+	case discoInfoNamespace:
+		x.sendDiscoInfo(iq)
+	case discoItemsNamespace:
+		x.sendDiscoItems(iq)
+	}
 }
 
 func (x *XEPDiscoInfo) sendDiscoInfo(iq *xml.IQ) {

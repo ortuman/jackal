@@ -8,9 +8,7 @@ package module
 import (
 	"os/exec"
 	"strings"
-	"time"
 
-	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream"
@@ -28,17 +26,12 @@ func init() {
 }
 
 type XEPVersion struct {
-	queue concurrent.OperationQueue
-	cfg   *config.ModVersion
-	strm  stream.C2SStream
+	cfg  *config.ModVersion
+	strm stream.C2SStream
 }
 
 func NewXEPVersion(config *config.ModVersion, strm stream.C2SStream) *XEPVersion {
 	x := &XEPVersion{
-		queue: concurrent.OperationQueue{
-			QueueSize: 32,
-			Timeout:   time.Second,
-		},
 		cfg:  config,
 		strm: strm,
 	}
@@ -54,14 +47,12 @@ func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 }
 
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
-	x.queue.Async(func() {
-		q := iq.FindElementNamespace("query", versionNamespace)
-		if q.ElementsCount() != 0 {
-			x.strm.SendElement(iq.BadRequestError())
-			return
-		}
-		x.sendSoftwareVersion(iq)
-	})
+	q := iq.FindElementNamespace("query", versionNamespace)
+	if q.ElementsCount() != 0 {
+		x.strm.SendElement(iq.BadRequestError())
+		return
+	}
+	x.sendSoftwareVersion(iq)
 }
 
 func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
