@@ -170,7 +170,6 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 }
 
 func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
-	// https://xmpp.org/rfcs/rfc3921.html#int-remove
 	userJID := r.strm.JID()
 	contactJID := ri.JID
 
@@ -199,7 +198,7 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 
 	// send unavailable presence from all of the users's available resources to the contact
 	if userRi.Subscription == subscriptionFrom || userRi.Subscription == subscriptionBoth {
-		r.sendAvailablePresencesFrom(userJID, contactJID, xml.UnavailableType)
+		r.sendPresencesFrom(userJID, contactJID, xml.UnavailableType)
 	}
 
 	if contactRi != nil {
@@ -218,7 +217,7 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 		}
 		// send unavailable presence from all of the contact's available resources to the user
 		if contactRi.Subscription == subscriptionFrom || contactRi.Subscription == subscriptionBoth {
-			r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
+			r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
 		}
 	}
 	return nil
@@ -347,7 +346,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
-	r.sendAvailablePresencesFrom(contactJID, userJID, xml.AvailableType)
+	r.sendPresencesFrom(contactJID, userJID, xml.AvailableType)
 	return nil
 }
 
@@ -391,7 +390,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	r.routeElement(p, contactJID)
 
 	// send 'unavailable' presence from all of the contact's available resources to the user
-	r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
+	r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
 	return nil
 }
 
@@ -435,7 +434,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send unavailable presence from all of the contact's available resources to the user
-	r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
+	r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
 	return nil
 }
 
@@ -458,7 +457,7 @@ func (r *Roster) fetchRosterItems(userJID *xml.JID, contactJID *xml.JID) (*stora
 	return userRi, contactRi, err
 }
 
-func (r *Roster) sendAvailablePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
+func (r *Roster) sendPresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
 	if stream.C2S().IsLocalDomain(from.Domain()) {
 		fromStreams := stream.C2S().AvailableStreams(from.Node())
 		for _, fromStream := range fromStreams {
