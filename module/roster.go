@@ -166,17 +166,22 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 
 func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 	// https://xmpp.org/rfcs/rfc3921.html#int-remove
+	userJID := r.strm.JID()
 	contactJID := rosterItem.JID
 
 	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), r.strm.Username(), r.strm.Resource())
 
-	if err := storage.Instance().DeleteRosterNotification(r.strm.Username(), contactJID.ToBareJID()); err != nil {
+	// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
+	r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
+	r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType), contactJID)
+
+	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
-	if err := storage.Instance().DeleteRosterItem(r.strm.Username(), contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
-	r.pushRosterItem(rosterItem, r.strm.JID())
+	r.pushRosterItem(rosterItem, userJID)
 	return nil
 }
 
