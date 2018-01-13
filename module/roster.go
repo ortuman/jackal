@@ -310,7 +310,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
-	r.sendAvailablePresences(contactJID, userJID, xml.AvailableType)
+	r.sendAvailablePresencesFrom(contactJID, userJID, xml.AvailableType)
 	return nil
 }
 
@@ -358,7 +358,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	r.routeElement(p, contactJID)
 
 	// send 'unavailable' presence from all of the contact's available resources to the user
-	r.sendAvailablePresences(contactJID, userJID, xml.UnavailableType)
+	r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	return nil
 }
 
@@ -406,11 +406,11 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send unavailable presence from all of the contact's available resources to the user
-	r.sendAvailablePresences(contactJID, userJID, xml.UnavailableType)
+	r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	return nil
 }
 
-func (r *Roster) sendAvailablePresences(from *xml.JID, to *xml.JID, presenceType string) {
+func (r *Roster) sendAvailablePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
 	if stream.C2S().IsLocalDomain(from.Domain()) {
 		fromStreams := stream.C2S().AvailableStreams(from.Node())
 		for _, fromStream := range fromStreams {
