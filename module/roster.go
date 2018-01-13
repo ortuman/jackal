@@ -413,6 +413,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		default:
 			contactRi.Subscription = subscriptionNone
 		}
+		contactRi.Ask = false
 		if err := storage.Instance().InsertOrUpdateRosterItem(contactRi); err != nil {
 			return err
 		}
