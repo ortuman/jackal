@@ -226,9 +226,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	if ri != nil {
 		switch ri.Subscription {
 		case subscriptionTo, subscriptionBoth:
-			// already subscribed
-			return nil
-
+			return nil // already subscribed
 		default:
 			ri.Ask = true
 		}
@@ -265,11 +263,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
-	contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
-	if err != nil {
-		return err
-	}
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	userRi, contactRi, err := r.fetchRosterItems(userJID, contactJID)
 	if err != nil {
 		return err
 	}
@@ -279,7 +273,6 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
-
 	if contactRi != nil {
 		switch contactRi.Subscription {
 		case subscriptionTo:
@@ -318,11 +311,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
-	if err != nil {
-		return err
-	}
-	contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
+	userRi, contactRi, err := r.fetchRosterItems(userJID, contactJID)
 	if err != nil {
 		return err
 	}
@@ -366,11 +355,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
-	contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
-	if err != nil {
-		return err
-	}
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	userRi, contactRi, err := r.fetchRosterItems(userJID, contactJID)
 	if err != nil {
 		return err
 	}
@@ -408,6 +393,25 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	// send unavailable presence from all of the contact's available resources to the user
 	r.sendAvailablePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	return nil
+}
+
+func (r *Roster) fetchRosterItems(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, *storage.RosterItem, error) {
+	var userRi, contactRi *storage.RosterItem
+	var err error
+
+	if stream.C2S().IsLocalDomain(userJID.Domain()) {
+		userRi, err = storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	if stream.C2S().IsLocalDomain(contactJID.Domain()) {
+		contactRi, err = storage.Instance().FetchRosterItem(contactJID.Node(), userJID.ToBareJID())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return userRi, contactRi, err
 }
 
 func (r *Roster) sendAvailablePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
