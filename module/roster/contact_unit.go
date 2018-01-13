@@ -36,7 +36,7 @@ func (cu *contactUnit) contactSubscribe(presence *xml.Presence, userJID *xml.JID
 	if err != nil {
 		return err
 	}
-	cu.sendPresence(presence, contactJID)
+	cu.broadcastPresence(presence, contactJID)
 	return nil
 }
 

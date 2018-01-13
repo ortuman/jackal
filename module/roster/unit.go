@@ -15,7 +15,7 @@ import (
 type rosterUnit struct {
 }
 
-func (cu *contactUnit) sendPresence(presence *xml.Presence, to *xml.JID) {
+func (cu *contactUnit) broadcastPresence(presence *xml.Presence, to *xml.JID) {
 	strms := stream.C2S().AvailableStreams(to.Node())
 	for _, strm := range strms {
 		strm.SendElement(presence)
