@@ -404,6 +404,10 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	}
 	log.Infof("processing 'unsubscribed' presence: %s (%s/%s)", userJID, r.strm.Username(), r.strm.Resource())
 
+	// remove approval notification
+	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
+		return err
+	}
 	if contactRi != nil {
 		switch contactRi.Subscription {
 		case subscriptionBoth:
