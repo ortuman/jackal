@@ -166,17 +166,14 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 
 func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 	// https://xmpp.org/rfcs/rfc3921.html#int-remove
-	username := r.strm.Username()
-	resource := r.strm.Resource()
-
 	contactJID := rosterItem.JID
 
-	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), username, resource)
+	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), r.strm.Username(), r.strm.Resource())
 
-	if err := storage.Instance().DeleteRosterNotification(username, contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterNotification(r.strm.Username(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
-	if err := storage.Instance().DeleteRosterItem(username, contactJID.ToBareJID()); err != nil {
+	if err := storage.Instance().DeleteRosterItem(r.strm.Username(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
 	r.pushRosterItem(rosterItem, r.strm.JID())
@@ -184,14 +181,11 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 }
 
 func (r *Roster) updateRosterItem(rosterItem *storage.RosterItem) error {
-	username := r.strm.Username()
-	resource := r.strm.Resource()
-
 	jid := rosterItem.JID.ToBareJID()
 
-	log.Infof("inserting/updating roster item: %s (%s/%s)", jid, username, resource)
+	log.Infof("inserting/updating roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
 
-	ri, err := storage.Instance().FetchRosterItem(username, jid)
+	ri, err := storage.Instance().FetchRosterItem(r.strm.Username(), jid)
 	if err != nil {
 		return err
 	}
@@ -204,7 +198,7 @@ func (r *Roster) updateRosterItem(rosterItem *storage.RosterItem) error {
 
 	} else {
 		ri = &storage.RosterItem{
-			Username:     username,
+			Username:     r.strm.Username(),
 			JID:          rosterItem.JID,
 			Name:         rosterItem.Name,
 			Subscription: subscriptionNone,
@@ -257,7 +251,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements())
 	r.routeElement(p, contactJID)
 
-	// archive roster approval notification if required
+	// archive roster approval notification
 	if stream.C2S().IsLocalDomain(contactJID.Domain()) {
 		err = storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), p)
 		if err != nil {
@@ -316,11 +310,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send available presence from all of the contact's available resources to the user
-	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
-	for _, contactStream := range contactStreams {
-		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.AvailableType)
-		r.routeElement(p, userJID)
-	}
+	r.sendAvailablePresences(contactJID, userJID, xml.AvailableType)
 	return nil
 }
 
@@ -368,11 +358,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	r.routeElement(p, contactJID)
 
 	// send 'unavailable' presence from all of the contact's available resources to the user
-	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
-	for _, contactStream := range contactStreams {
-		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.UnavailableType)
-		r.routeElement(p, userJID)
-	}
+	r.sendAvailablePresences(contactJID, userJID, xml.UnavailableType)
 	return nil
 }
 
@@ -420,12 +406,18 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send unavailable presence from all of the contact's available resources to the user
-	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
-	for _, contactStream := range contactStreams {
-		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.UnavailableType)
-		r.routeElement(p, userJID)
-	}
+	r.sendAvailablePresences(contactJID, userJID, xml.UnavailableType)
 	return nil
+}
+
+func (r *Roster) sendAvailablePresences(from *xml.JID, to *xml.JID, presenceType string) {
+	if stream.C2S().IsLocalDomain(from.Domain()) {
+		fromStreams := stream.C2S().AvailableStreams(from.Node())
+		for _, fromStream := range fromStreams {
+			p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), xml.UnavailableType)
+			r.routeElement(p, to)
+		}
+	}
 }
 
 func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) {
