@@ -86,7 +86,7 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.Element) {
 	res := iq.ResultIQ()
 	query := xml.NewElementNamespace("query", privateStorageNamespace)
 	if privElements != nil {
-		query.AppendElements(privElements...)
+		query.AppendElements(privElements)
 	} else {
 		query.AppendElement(xml.NewElementNamespace(privElem.Name(), privElem.Namespace()))
 	}

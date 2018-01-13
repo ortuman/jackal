@@ -296,7 +296,7 @@ func (e *XElement) AppendElement(element Element) {
 }
 
 // AppendElements appends an array of sub elements.
-func (e *XElement) AppendElements(elements ...Element) {
+func (e *XElement) AppendElements(elements []Element) {
 	e.elements = append(e.elements, elements...)
 }
 
