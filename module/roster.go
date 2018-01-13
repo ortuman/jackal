@@ -150,7 +150,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 		r.strm.SendElement(iq.BadRequestError())
 		return
 	}
-	ri, err := r.newRosterItemElement(items[0])
+	ri, err := r.rosterItemFromElement(items[0])
 	if err != nil {
 		r.strm.SendElement(iq.BadRequestError())
 		return
@@ -449,7 +449,7 @@ func (r *Roster) routeElement(element xml.Element, to *xml.JID) {
 	}
 }
 
-func (r *Roster) newRosterItemElement(item xml.Element) (*storage.RosterItem, error) {
+func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
 	ri := &storage.RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
