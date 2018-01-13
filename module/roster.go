@@ -413,7 +413,6 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		default:
 			contactRi.Subscription = subscriptionNone
 		}
-		contactRi.Ask = false
 		if err := storage.Instance().InsertOrUpdateRosterItem(contactRi); err != nil {
 			return err
 		}
@@ -426,6 +425,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 		default:
 			userRi.Subscription = subscriptionNone
 		}
+		userRi.Ask = false
 		if err := storage.Instance().InsertOrUpdateRosterItem(userRi); err != nil {
 			return err
 		}
@@ -437,7 +437,9 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	r.routeElement(p, userJID)
 
 	// send unavailable presence from all of the contact's available resources to the user
-	r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
+	if contactRi != nil {
+		r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
+	}
 	return nil
 }
 
