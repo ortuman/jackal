@@ -30,11 +30,11 @@ const (
 )
 
 type userServerUnit struct {
-	cSU *contactServerUnit
+	cUnit *contactServerUnit
 }
 
 type contactServerUnit struct {
-	uSU *userServerUnit
+	uUnit *userServerUnit
 }
 
 type Roster struct {
@@ -49,13 +49,17 @@ type Roster struct {
 }
 
 func NewRoster(strm stream.C2SStream) *Roster {
-	return &Roster{
+	r := &Roster{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second * 5,
 		},
 		strm: strm,
 	}
+	r.uUnit = &userServerUnit{}
+	r.cUnit = &contactServerUnit{}
+	r.uUnit.cUnit = r.cUnit
+	r.cUnit.uUnit = r.uUnit
 }
 
 func (r *Roster) IsRosterRequested() bool {
