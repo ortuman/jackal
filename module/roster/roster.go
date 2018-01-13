@@ -3,11 +3,9 @@
  * See the LICENSE file for more information.
  */
 
-package module
+package roster
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -28,26 +26,12 @@ const (
 	subscriptionRemove = "remove"
 )
 
-type userServerUnit struct {
-	contactUnit *contactServerUnit
-}
-
-type contactServerUnit struct {
-	userUnit *userServerUnit
-}
-
-func (u *userServerUnit) updateRosterItem(ri *storage.RosterItem) {
-}
-
-func (u *userServerUnit) processPresence(presence *xml.Presence) {
-}
-
 type Roster struct {
 	queue concurrent.OperationQueue
 	strm  stream.C2SStream
 
-	userUnit    *userServerUnit
-	contactUnit *contactServerUnit
+	userUnit    *userUnit
+	contactUnit *contactUnit
 
 	requestedMu sync.RWMutex
 	requested   bool
@@ -61,8 +45,8 @@ func NewRoster(strm stream.C2SStream) *Roster {
 		},
 		strm: strm,
 	}
-	r.userUnit = &userServerUnit{}
-	r.contactUnit = &contactServerUnit{}
+	r.userUnit = &userUnit{}
+	r.contactUnit = &contactUnit{}
 	r.userUnit.contactUnit = r.contactUnit
 	r.contactUnit.userUnit = r.userUnit
 	return r
@@ -127,13 +111,6 @@ func (r *Roster) deliverPendingApprovalNotifications() {
 	}
 }
 
-func (r *Roster) processPresence(presence *xml.Presence) {
-	// var err error
-	switch presence.Type() {
-	case xml.SubscribeType:
-	}
-}
-
 func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	if query.ElementsCount() > 0 {
 		r.strm.SendElement(iq.BadRequestError())
@@ -152,7 +129,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	}
 	if items != nil {
 		for _, item := range items {
-			q.AppendElement(r.elementFromRosterItem(&item))
+			q.AppendElement(elementFromRosterItem(&item))
 		}
 	}
 	result.AppendElement(q)
@@ -169,7 +146,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 		r.strm.SendElement(iq.BadRequestError())
 		return
 	}
-	ri, err := r.rosterItemFromElement(items[0])
+	ri, err := rosterItemFromElement(items[0])
 	if err != nil {
 		r.strm.SendElement(iq.BadRequestError())
 		return
@@ -178,65 +155,9 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
-	ri := &storage.RosterItem{}
-	if jid := item.Attribute("jid"); len(jid) > 0 {
-		j, err := xml.NewJIDString(jid, false)
-		if err != nil {
-			return nil, err
-		}
-		ri.JID = j
-	} else {
-		return nil, errors.New("item 'jid' attribute is required")
+func (r *Roster) processPresence(presence *xml.Presence) {
+	switch presence.Type() {
+	case xml.SubscribeType:
+		r.userUnit.receiveUserPresence(presence, r.strm.JID(), presence.ToJID())
 	}
-	ri.Name = item.Attribute("name")
-
-	subscription := item.Attribute("subscription")
-	if len(subscription) > 0 {
-		switch subscription {
-		case subscriptionBoth, subscriptionFrom, subscriptionTo, subscriptionNone, subscriptionRemove:
-			break
-		default:
-			return nil, fmt.Errorf("unrecognized 'subscription' enum type: %s", subscription)
-		}
-		ri.Subscription = subscription
-	}
-	ask := item.Attribute("ask")
-	if len(ask) > 0 {
-		if ask != "subscribe" {
-			return nil, fmt.Errorf("unrecognized 'ask' enum type: %s", subscription)
-		}
-		ri.Ask = true
-	}
-	groups := item.FindElements("group")
-	for _, group := range groups {
-		if group.AttributesCount() > 0 {
-			return nil, errors.New("group element must not contain any attribute")
-		}
-		ri.Groups = append(ri.Groups, group.Text())
-	}
-	return ri, nil
-}
-
-func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) xml.Element {
-	item := xml.NewElementName("item")
-	item.SetAttribute("jid", ri.JID.ToBareJID())
-	if len(ri.Name) > 0 {
-		item.SetAttribute("name", ri.Name)
-	}
-	if len(ri.Subscription) > 0 {
-		item.SetAttribute("subscription", ri.Subscription)
-	}
-	if ri.Ask {
-		item.SetAttribute("ask", "subscribe")
-	}
-	for _, group := range ri.Groups {
-		if len(group) == 0 {
-			continue
-		}
-		gr := xml.NewElementName("group")
-		gr.SetText(group)
-		item.AppendElement(gr)
-	}
-	return item
 }
