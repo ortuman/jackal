@@ -87,6 +87,11 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 	})
 }
 
+func (r *Roster) BrodcastPresence(presence *xml.Presence) {
+	r.queue.Async(func() {
+	})
+}
+
 func (r *Roster) processPresence(presence *xml.Presence) {
 	var err error
 	switch presence.Type() {
