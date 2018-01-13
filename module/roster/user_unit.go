@@ -20,7 +20,7 @@ type userUnit struct {
 func (u *userUnit) updateRosterItem(ri *storage.RosterItem) {
 }
 
-func (u *userUnit) receiveUserPresence(presence *xml.Presence, userJID *xml.JID, contactJID *xml.JID) {
+func (u *userUnit) processPresence(presence *xml.Presence, userJID *xml.JID, contactJID *xml.JID) {
 	var err error
 	switch presence.Type() {
 	case xml.SubscribeType:
@@ -29,9 +29,6 @@ func (u *userUnit) receiveUserPresence(presence *xml.Presence, userJID *xml.JID,
 	if err != nil {
 		log.Error(err)
 	}
-}
-
-func (uu *userUnit) receiveContactPresence(presence *xml.Presence) {
 }
 
 func (uu *userUnit) userSubscribe(presence *xml.Presence, userJID *xml.JID, contactJID *xml.JID) error {
@@ -63,13 +60,16 @@ func (uu *userUnit) userSubscribe(presence *xml.Presence, userJID *xml.JID, cont
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
 	uu.routePresence(p, userJID, contactJID)
+	return nil
+}
 
+func (uu *userUnit) userSubscribed(presence *xml.Presence, userJID *xml.JID, contactJID *xml.JID) error {
 	return nil
 }
 
 func (uu *userUnit) routePresence(presence *xml.Presence, userJID *xml.JID, contactJID *xml.JID) {
 	if stream.C2S().IsLocalDomain(contactJID.Domain()) {
-		uu.contactUnit.receiveUserPresence(presence, userJID, contactJID)
+		uu.contactUnit.processPresence(presence, userJID, contactJID)
 	} else {
 		// TODO(ortuman): Implement XMPP federation
 	}

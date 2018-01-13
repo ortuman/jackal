@@ -158,6 +158,8 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 func (r *Roster) processPresence(presence *xml.Presence) {
 	switch presence.Type() {
 	case xml.SubscribeType:
-		r.userUnit.receiveUserPresence(presence, r.strm.JID(), presence.ToJID())
+		r.userUnit.processPresence(presence, r.strm.JID(), presence.ToJID())
+	case xml.SubscribedType:
+		r.contactUnit.processPresence(presence, presence.ToJID(), r.strm.JID())
 	}
 }

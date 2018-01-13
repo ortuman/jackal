@@ -15,6 +15,13 @@ import (
 type rosterUnit struct {
 }
 
+func (cu *contactUnit) sendPresence(presence *xml.Presence, to *xml.JID) {
+	strms := stream.C2S().AvailableStreams(to.Node())
+	for _, strm := range strms {
+		strm.SendElement(presence)
+	}
+}
+
 func (ru *rosterUnit) pushRosterItem(ri *storage.RosterItem, to *xml.JID) {
 	query := xml.NewElementNamespace("query", rosterNamespace)
 	query.AppendElement(elementFromRosterItem(ri))
