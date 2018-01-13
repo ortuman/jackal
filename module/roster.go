@@ -217,7 +217,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
-	log.Infof("processing 'subscribed' - jid: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+	log.Infof("processing 'subscribe' - jid: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
 	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
 	if err != nil {
