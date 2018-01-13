@@ -414,7 +414,7 @@ func (r *Roster) sendAvailablePresencesFrom(from *xml.JID, to *xml.JID, presence
 	if stream.C2S().IsLocalDomain(from.Domain()) {
 		fromStreams := stream.C2S().AvailableStreams(from.Node())
 		for _, fromStream := range fromStreams {
-			p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), xml.UnavailableType)
+			p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
 			r.routeElement(p, to)
 		}
 	}
