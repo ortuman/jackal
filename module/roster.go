@@ -164,11 +164,18 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
+func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 	// https://xmpp.org/rfcs/rfc3921.html#int-remove
 	userJID := r.strm.JID()
-	contactJID := rosterItem.JID
+	contactJID := ri.JID
 
+	userRi, contactRi, err := r.fetchRosterItems(userJID, contactJID)
+	if err != nil {
+		return err
+	}
+	if userRi == nil {
+		return nil
+	}
 	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), r.strm.Username(), r.strm.Resource())
 
 	// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
@@ -181,40 +188,46 @@ func (r *Roster) removeRosterItem(rosterItem *storage.RosterItem) error {
 	if err := storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID()); err != nil {
 		return err
 	}
-	r.pushRosterItem(rosterItem, userJID)
+	r.pushRosterItem(ri, userJID)
+
+	// send unavailable presence from all of the users's available resources to the conctact
+	r.sendAvailablePresencesFrom(userJID, contactJID, xml.UnavailableType)
+
+	if contactRi != nil {
+	}
 	return nil
 }
 
-func (r *Roster) updateRosterItem(rosterItem *storage.RosterItem) error {
-	jid := rosterItem.JID.ToBareJID()
+func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
+	jid := ri.JID.ToBareJID()
 
 	log.Infof("inserting/updating roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
 
-	ri, err := storage.Instance().FetchRosterItem(r.strm.Username(), jid)
+	userRi, err := storage.Instance().FetchRosterItem(r.strm.Username(), jid)
 	if err != nil {
 		return err
 	}
-	if ri != nil {
+	if userRi != nil {
 		// update roster item
-		if len(rosterItem.Name) > 0 {
-			ri.Name = rosterItem.Name
+		if len(ri.Name) > 0 {
+			ri.Name = ri.Name
 		}
-		ri.Groups = rosterItem.Groups
+		ri.Groups = ri.Groups
 
 	} else {
-		ri = &storage.RosterItem{
+		userRi = &storage.RosterItem{
 			Username:     r.strm.Username(),
-			JID:          rosterItem.JID,
-			Name:         rosterItem.Name,
+			JID:          ri.JID,
+			Name:         ri.Name,
 			Subscription: subscriptionNone,
-			Groups:       rosterItem.Groups,
-			Ask:          rosterItem.Ask,
+			Groups:       ri.Groups,
+			Ask:          ri.Ask,
 		}
 	}
-	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
+	if err := storage.Instance().InsertOrUpdateRosterItem(userRi); err != nil {
 		return err
 	}
-	r.pushRosterItem(ri, r.strm.JID())
+	r.pushRosterItem(userRi, r.strm.JID())
 	return nil
 }
 
