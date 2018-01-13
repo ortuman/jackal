@@ -255,12 +255,12 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	}
 	r.pushRosterItem(ri, r.strm.JID())
 
-	// send presence approval notification to contact
+	// route the presence stanza of type "subscribe" to the contact
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
 	r.routeElement(p, contactJID)
 
-	// archive roster approval notification
+	// archive roster approval notification if required
 	if stream.C2S().IsLocalDomain(contactJID.Domain()) {
 		err = storage.Instance().InsertOrUpdateRosterNotification(username, contactJID.ToBareJID(), p)
 		if err != nil {
@@ -322,7 +322,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 		}
 	}
 
-	// send 'subscribed' presence to user...
+	// route the presence stanza of type "subscribed" to the contact
 	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
 	p.AppendElements(presence.Elements())
 	r.routeElement(p, userJID)
@@ -383,7 +383,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	// route the presence stanza of type "unsubscribe" to the contact
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
 	p.AppendElements(presence.Elements())
-	r.routeElement(p, userJID)
+	r.routeElement(p, contactJID)
 
 	// send 'unavailable' presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
@@ -450,10 +450,10 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) pushRosterItem(item *storage.RosterItem, to *xml.JID) {
+func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		query := xml.NewElementNamespace("query", rosterNamespace)
-		query.AppendElement(r.elementFromRosterItem(item))
+		query.AppendElement(r.elementFromRosterItem(ri))
 
 		streams := stream.C2S().AvailableStreams(to.Node())
 		for _, strm := range streams {
