@@ -419,7 +419,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements())
 	r.routeElement(p, userJID)
 
-	// send 'unavailable' presence from all of the contact's available resources to the user
+	// send unavailable presence from all of the contact's available resources to the user
 	contactStreams := stream.C2S().AvailableStreams(contactJID.Node())
 	for _, contactStream := range contactStreams {
 		p := xml.NewPresence(contactStream.JID().ToFullJID(), userJID.ToBareJID(), xml.UnavailableType)
