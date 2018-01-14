@@ -30,10 +30,10 @@ const (
 )
 
 type Roster struct {
-	queue       concurrent.OperationQueue
-	strm        stream.C2SStream
-	requestedMu sync.RWMutex
-	requested   bool
+	queue     concurrent.OperationQueue
+	strm      stream.C2SStream
+	lock      sync.RWMutex
+	requested bool
 }
 
 func NewRoster(strm stream.C2SStream) *Roster {
@@ -47,8 +47,8 @@ func NewRoster(strm stream.C2SStream) *Roster {
 }
 
 func (r *Roster) IsRosterRequested() bool {
-	r.requestedMu.RLock()
-	defer r.requestedMu.RUnlock()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 	return r.requested
 }
 
@@ -142,9 +142,9 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	result.AppendElement(q)
 	r.strm.SendElement(result)
 
-	r.requestedMu.Lock()
+	r.lock.Lock()
 	r.requested = true
-	r.requestedMu.Unlock()
+	r.lock.Unlock()
 }
 
 func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
@@ -423,20 +423,20 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
-	if err != nil {
-		return nil, err
-	}
-	return ri, nil
-}
-
 func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
 	return storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), presence)
 }
 
 func (r *Roster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
 	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID())
+}
+
+func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
+	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
+		return nil, err
+	}
+	return ri, nil
 }
 
 func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
