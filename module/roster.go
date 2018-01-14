@@ -97,6 +97,8 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 		err = r.processSubscribe(presence)
 	case xml.SubscribedType:
 		err = r.processSubscribed(presence)
+	case xml.UnsubscribeType:
+		err = r.processUnsubscribe(presence)
 	case xml.UnsubscribedType:
 		err = r.processUnsubscribed(presence)
 	}
@@ -255,7 +257,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
-	log.Infof("processing 'subscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+	log.Infof("processing 'subscribed' - user: %s (%s/%s)", userJID, r.strm.Username(), r.strm.Resource())
 
 	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
 		return err
@@ -311,11 +313,64 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	return nil
 }
 
+func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
+	userJID := r.strm.JID()
+	contactJID := presence.ToJID()
+
+	log.Infof("processing 'unsubscribe' - contact: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+
+	userRi, err := r.fetchRosterItem(userJID, contactJID)
+	if err != nil {
+		return err
+	}
+	if userRi == nil {
+		switch userRi.Subscription {
+		case subscriptionBoth:
+			userRi.Subscription = subscriptionFrom
+		default:
+			userRi.Subscription = subscriptionNone
+		}
+		if err := r.insertOrUpdateRosterItem(userRi); err != nil {
+			return err
+		}
+		r.pushRosterItem(userRi, userJID)
+	}
+	// stamp the presence stanza of type "subscribe" with the users's bare JID as the 'from' address
+	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
+	p.AppendElements(presence.Elements())
+
+	if r.isLocalJID(contactJID) {
+		contactRi, err := r.fetchRosterItem(contactJID, userJID)
+		if err != nil {
+			return err
+		}
+		if contactRi != nil {
+			switch contactRi.Subscription {
+			case subscriptionBoth:
+				contactRi.Subscription = subscriptionTo
+			default:
+				contactRi.Subscription = subscriptionNone
+			}
+			if err := r.insertOrUpdateRosterItem(contactRi); err != nil {
+				return err
+			}
+			r.pushRosterItem(contactRi, contactJID)
+
+			r.routePresence(p, contactJID)
+			r.routePresencesFrom(userJID, contactJID, xml.UnavailableType)
+		}
+	} else {
+		r.routePresenceRemotely(p, contactJID)
+		r.routeRemotelyPresencesFrom(userJID, contactJID, xml.UnavailableType)
+	}
+	return nil
+}
+
 func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
-	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", userJID, r.strm.Username(), r.strm.Resource())
 
 	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
 		return err
@@ -361,7 +416,6 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 			r.routePresence(p, userJID)
 			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
 		}
-
 	} else {
 		r.routePresenceRemotely(p, userJID)
 		r.routeRemotelyPresencesFrom(contactJID, userJID, xml.UnavailableType)
