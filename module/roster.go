@@ -305,7 +305,6 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 			r.routePresence(p, userJID)
 			r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
 		}
-
 	} else {
 		r.routePresenceRemotely(p, userJID)
 		r.routeRemotelyPresencesFrom(contactJID, userJID, xml.AvailableType)
