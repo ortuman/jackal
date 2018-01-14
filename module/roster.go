@@ -173,9 +173,55 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 
 	log.Infof("removing roster item: %v (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
-	_, err := r.fetchRosterItem(userJID, contactJID)
+	userRi, err := r.fetchRosterItem(userJID, contactJID)
 	if err != nil {
 		return err
+	}
+	userSubscription := subscriptionNone
+	if userRi != nil {
+		userSubscription = userRi.Subscription
+		userRi.Subscription = subscriptionRemove
+		userRi.Ask = false
+		r.pushRosterItem(userRi, userJID)
+
+		if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+			return err
+		}
+		if err := r.deleteRosterItem(userJID, contactJID); err != nil {
+			return err
+		}
+	}
+
+	if r.isLocalJID(contactJID) {
+		contactRi, err := r.fetchRosterItem(contactJID, userJID)
+		if err != nil {
+			return err
+		}
+		if contactRi != nil {
+			if userSubscription != subscriptionNone {
+				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+			}
+			if contactRi.Subscription != subscriptionNone {
+				r.routePresencesFrom(userJID, contactJID, xml.UnavailableType)
+			}
+			switch contactRi.Subscription {
+			case subscriptionBoth:
+				contactRi.Subscription = subscriptionTo
+				if err := r.insertOrUpdateRosterItem(contactRi); err != nil {
+					return err
+				}
+				r.pushRosterItem(contactRi, contactJID)
+				fallthrough
+
+			case subscriptionTo:
+				contactRi.Subscription = subscriptionNone
+				if err := r.insertOrUpdateRosterItem(contactRi); err != nil {
+					return err
+				}
+				r.pushRosterItem(contactRi, contactJID)
+			}
+		}
+	} else {
 	}
 	return nil
 }
