@@ -353,14 +353,10 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 				return err
 			}
 			r.pushRosterItem(userRi, userJID)
-
-			r.routePresence(p, userJID)
-			r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
 		}
-	} else {
-		r.routePresence(p, userJID)
-		r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
 	}
+	r.routePresence(p, userJID)
+	r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
 	return nil
 }
 
@@ -408,17 +404,11 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 				return err
 			}
 			r.pushRosterItem(contactRi, contactJID)
-
-			r.routePresence(p, contactJID)
-			if userSubscription != subscriptionNone {
-				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
-			}
 		}
-	} else {
-		r.routePresence(p, contactJID)
-		if userSubscription != subscriptionNone {
-			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
-		}
+	}
+	r.routePresence(p, contactJID)
+	if userSubscription != subscriptionNone {
+		r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	}
 	return nil
 }
@@ -471,17 +461,11 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 				return err
 			}
 			r.pushRosterItem(userRi, userJID)
-
-			r.routePresence(p, userJID)
-			if contactSubscription != subscriptionNone {
-				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
-			}
 		}
-	} else {
-		r.routePresence(p, userJID)
-		if contactSubscription != subscriptionNone {
-			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
-		}
+	}
+	r.routePresence(p, userJID)
+	if contactSubscription != subscriptionNone {
+		r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
 	}
 	return nil
 }
