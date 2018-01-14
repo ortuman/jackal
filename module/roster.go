@@ -97,6 +97,8 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 		err = r.processSubscribe(presence)
 	case xml.SubscribedType:
 		err = r.processSubscribed(presence)
+	case xml.UnsubscribedType:
+		err = r.processUnsubscribed(presence)
 	}
 	if err != nil {
 		log.Error(err)
@@ -241,10 +243,10 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 		if err := r.insertOrUpdateRosterNotification(userJID, contactJID, p); err != nil {
 			return err
 		}
-		r.routeLocalPresence(p, contactJID)
+		r.routePresence(p, contactJID)
 
 	} else {
-		r.routeRemotePresence(p, contactJID)
+		r.routePresenceRemotely(p, contactJID)
 	}
 	return nil
 }
@@ -255,6 +257,9 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 
 	log.Infof("processing 'subscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
+	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+		return err
+	}
 	contactRi, err := r.fetchRosterItem(contactJID, userJID)
 	if err != nil {
 		return err
@@ -276,11 +281,91 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements())
 
 	if r.isLocalJID(userJID) {
-		r.routeLocalPresence(p, userJID)
+		userRi, err := r.fetchRosterItem(userJID, contactJID)
+		if err != nil {
+			return err
+		}
+		if userRi != nil {
+			switch userRi.Subscription {
+			case subscriptionFrom:
+				userRi.Subscription = subscriptionBoth
+			case subscriptionNone:
+				userRi.Subscription = subscriptionTo
+			default:
+				return nil
+			}
+			userRi.Ask = false
+			if err := r.insertOrUpdateRosterItem(userRi); err != nil {
+				return err
+			}
+			r.pushRosterItem(userRi, userJID)
+
+			r.routePresence(p, userJID)
+			r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
+		}
+
 	} else {
-		r.routeRemotePresence(p, userJID)
+		r.routePresenceRemotely(p, userJID)
+		r.routeRemotelyPresencesFrom(contactJID, userJID, xml.AvailableType)
 	}
-	r.routePresences(contactJID, userJID, xml.AvailableType)
+	return nil
+}
+
+func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
+	userJID := presence.ToJID()
+	contactJID := r.strm.JID()
+
+	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+
+	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+		return err
+	}
+	contactRi, err := r.fetchRosterItem(contactJID, userJID)
+	if err != nil {
+		return err
+	}
+	if contactRi != nil {
+		switch contactRi.Subscription {
+		case subscriptionBoth:
+			contactRi.Subscription = subscriptionTo
+		default:
+			contactRi.Subscription = subscriptionNone
+		}
+		if err := r.insertOrUpdateRosterItem(contactRi); err != nil {
+			return err
+		}
+		r.pushRosterItem(contactRi, contactJID)
+	}
+	// stamp the presence stanza of type "unsubscribed" with the contact's bare JID as the 'from' address
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	p.AppendElements(presence.Elements())
+
+	if r.isLocalJID(userJID) {
+		userRi, err := r.fetchRosterItem(userJID, contactJID)
+		if err != nil {
+			return err
+		}
+		if userRi != nil {
+			switch userRi.Subscription {
+			case subscriptionBoth:
+				userRi.Subscription = subscriptionFrom
+			default:
+				userRi.Subscription = subscriptionNone
+			}
+			userRi.Ask = false
+			if err := r.insertOrUpdateRosterItem(userRi); err != nil {
+				return err
+			}
+			r.pushRosterItem(userRi, userJID)
+
+			r.routePresence(p, userJID)
+			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+		}
+
+	} else {
+		r.routePresenceRemotely(p, userJID)
+		r.routeRemotelyPresencesFrom(contactJID, userJID, xml.UnavailableType)
+	}
 	return nil
 }
 
@@ -293,11 +378,11 @@ func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storag
 }
 
 func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
-	err := storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), presence)
-	if err != nil {
-		return err
-	}
-	return nil
+	return storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), presence)
+}
+
+func (r *Roster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
+	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID())
 }
 
 func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
@@ -327,21 +412,23 @@ func (r *Roster) isLocalJID(jid *xml.JID) bool {
 	return stream.C2S().IsLocalDomain(jid.Domain())
 }
 
-func (r *Roster) routePresences(from *xml.JID, to *xml.JID, presenceType string) {
-	isLocalTo := stream.C2S().IsLocalDomain(to.Domain())
-
-	fromStreams := stream.C2S().AvailableStreams(from.Node())
-	for _, fromStream := range fromStreams {
-		p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
-		if isLocalTo {
-			r.routeLocalPresence(p, to)
-		} else {
-			r.routeRemotePresence(p, to)
-		}
+func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
+	strms := stream.C2S().AvailableStreams(from.Node())
+	for _, strm := range strms {
+		p := xml.NewPresence(strm.JID().ToFullJID(), to.ToBareJID(), presenceType)
+		r.routePresence(p, to)
 	}
 }
 
-func (r *Roster) routeLocalPresence(presence *xml.Presence, to *xml.JID) {
+func (r *Roster) routeRemotelyPresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
+	fromStreams := stream.C2S().AvailableStreams(from.Node())
+	for _, fromStream := range fromStreams {
+		p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
+		r.routePresenceRemotely(p, to)
+	}
+}
+
+func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
 	toStreams := stream.C2S().AvailableStreams(to.Node())
 	for _, toStream := range toStreams {
 		p := xml.NewPresence(presence.From(), toStream.JID().ToFullJID(), presence.Type())
@@ -350,7 +437,7 @@ func (r *Roster) routeLocalPresence(presence *xml.Presence, to *xml.JID) {
 	}
 }
 
-func (r *Roster) routeRemotePresence(presence *xml.Presence, to *xml.JID) {
+func (r *Roster) routePresenceRemotely(presence *xml.Presence, to *xml.JID) {
 	// TODO(ortuman): Implement XMPP federation
 }
 
