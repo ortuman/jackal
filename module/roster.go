@@ -374,8 +374,10 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
+	userSubscription := subscriptionNone
 	if userRi != nil {
-		switch userRi.Subscription {
+		userSubscription = userRi.Subscription
+		switch userSubscription {
 		case subscriptionBoth:
 			userRi.Subscription = subscriptionFrom
 		default:
@@ -395,10 +397,8 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 		if err != nil {
 			return err
 		}
-		contactSubscription := subscriptionNone
 		if contactRi != nil {
-			contactSubscription = contactRi.Subscription
-			switch contactSubscription {
+			switch contactRi.Subscription {
 			case subscriptionBoth:
 				contactRi.Subscription = subscriptionTo
 			default:
@@ -410,12 +410,15 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 			r.pushRosterItem(contactRi, contactJID)
 
 			r.routePresence(p, contactJID)
-			if contactSubscription != subscriptionNone {
+			if userSubscription != subscriptionNone {
 				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
 			}
 		}
 	} else {
 		r.routePresence(p, contactJID)
+		if userSubscription != subscriptionNone {
+			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+		}
 	}
 	return nil
 }
