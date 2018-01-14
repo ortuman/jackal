@@ -241,10 +241,10 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 		if err := r.insertOrUpdateRosterNotification(userJID, contactJID, p); err != nil {
 			return err
 		}
-		r.deliverPresence(p, contactJID)
+		r.routeLocalPresence(p, contactJID)
 
 	} else {
-		r.remoteRoute(p)
+		r.routeRemotePresence(p, contactJID)
 	}
 	return nil
 }
@@ -276,10 +276,11 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	p.AppendElements(presence.Elements())
 
 	if r.isLocalJID(userJID) {
-		r.deliverPresence(p, userJID)
+		r.routeLocalPresence(p, userJID)
 	} else {
-		r.remoteRoute(presence)
+		r.routeRemotePresence(p, userJID)
 	}
+	r.routePresences(contactJID, userJID, xml.AvailableType)
 	return nil
 }
 
@@ -326,7 +327,21 @@ func (r *Roster) isLocalJID(jid *xml.JID) bool {
 	return stream.C2S().IsLocalDomain(jid.Domain())
 }
 
-func (r *Roster) deliverPresence(presence *xml.Presence, to *xml.JID) {
+func (r *Roster) routePresences(from *xml.JID, to *xml.JID, presenceType string) {
+	isLocalTo := stream.C2S().IsLocalDomain(to.Domain())
+
+	fromStreams := stream.C2S().AvailableStreams(from.Node())
+	for _, fromStream := range fromStreams {
+		p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
+		if isLocalTo {
+			r.routeLocalPresence(p, to)
+		} else {
+			r.routeRemotePresence(p, to)
+		}
+	}
+}
+
+func (r *Roster) routeLocalPresence(presence *xml.Presence, to *xml.JID) {
 	toStreams := stream.C2S().AvailableStreams(to.Node())
 	for _, toStream := range toStreams {
 		p := xml.NewPresence(presence.From(), toStream.JID().ToFullJID(), presence.Type())
@@ -335,7 +350,7 @@ func (r *Roster) deliverPresence(presence *xml.Presence, to *xml.JID) {
 	}
 }
 
-func (r *Roster) remoteRoute(presence *xml.Presence) {
+func (r *Roster) routeRemotePresence(presence *xml.Presence, to *xml.JID) {
 	// TODO(ortuman): Implement XMPP federation
 }
 
