@@ -94,9 +94,9 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 	var err error
 	switch presence.Type() {
 	case xml.SubscribeType:
-		err = r.userSubscribe(presence)
+		err = r.processSubscribe(presence)
 	case xml.SubscribedType:
-		err = r.contactSubscribed(presence)
+		err = r.processSubscribed(presence)
 	}
 	if err != nil {
 		log.Error(err)
@@ -168,11 +168,12 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 }
 
 func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
-	jid := ri.JID.ToBareJID()
+	userJID := r.strm.JID()
+	contactJID := ri.JID
 
-	log.Infof("inserting/updating roster item: %s (%s/%s)", jid, r.strm.Username(), r.strm.Resource())
+	log.Infof("updating roster item - contact: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
-	userRi, err := storage.Instance().FetchRosterItem(r.strm.Username(), jid)
+	userRi, err := r.fetchRosterItem(userJID, contactJID)
 	if err != nil {
 		return err
 	}
@@ -193,14 +194,14 @@ func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
 			Ask:          ri.Ask,
 		}
 	}
-	if err := storage.Instance().InsertOrUpdateRosterItem(userRi); err != nil {
+	if err := r.insertOrUpdateRosterItem(userRi); err != nil {
 		return err
 	}
 	r.pushRosterItem(userRi, r.strm.JID())
 	return nil
 }
 
-func (r *Roster) userSubscribe(presence *xml.Presence) error {
+func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
@@ -231,14 +232,13 @@ func (r *Roster) userSubscribe(presence *xml.Presence) error {
 	}
 	r.pushRosterItem(ri, userJID)
 
-	// stamp
+	// stamp the presence stanza of type "subscribe" with the user's bare JID as the 'from' address
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
 
 	if r.isLocalJID(contactJID) {
 		// archive roster approval notification
-		err = storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), p)
-		if err != nil {
+		if err := r.insertOrUpdateRosterNotification(userJID, contactJID, p); err != nil {
 			return err
 		}
 		r.deliverPresence(p, contactJID)
@@ -249,16 +249,36 @@ func (r *Roster) userSubscribe(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) contactSubscribed(presence *xml.Presence) error {
+func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
 	log.Infof("processing 'subscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
+	contactRi, err := r.fetchRosterItem(contactJID, userJID)
+	if err != nil {
+		return err
+	}
+	if contactRi != nil {
+		switch contactRi.Subscription {
+		case subscriptionTo:
+			contactRi.Subscription = subscriptionBoth
+		case subscriptionNone:
+			contactRi.Subscription = subscriptionFrom
+		}
+		if err := r.insertOrUpdateRosterItem(contactRi); err != nil {
+			return err
+		}
+		r.pushRosterItem(contactRi, contactJID)
+	}
+	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
+	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
+	p.AppendElements(presence.Elements())
+
 	if r.isLocalJID(userJID) {
-
+		r.deliverPresence(p, userJID)
 	} else {
-
+		r.remoteRoute(presence)
 	}
 	return nil
 }
@@ -269,6 +289,14 @@ func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storag
 		return nil, err
 	}
 	return ri, nil
+}
+
+func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
+	err := storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), presence)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
