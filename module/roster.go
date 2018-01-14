@@ -328,10 +328,8 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	userSubscription := subscriptionNone
 	if userRi != nil {
-		userSubscription = userRi.Subscription
-		switch userSubscription {
+		switch userRi.Subscription {
 		case subscriptionBoth:
 			userRi.Subscription = subscriptionFrom
 		default:
