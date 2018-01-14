@@ -433,7 +433,7 @@ func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
 	for _, toStream := range toStreams {
 		p := xml.NewPresence(presence.From(), toStream.JID().ToFullJID(), presence.Type())
 		p.AppendElements(presence.Elements())
-		toStream.SendElement(presence)
+		toStream.SendElement(p)
 	}
 }
 
