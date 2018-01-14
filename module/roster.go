@@ -328,8 +328,10 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
+	userSubscription := subscriptionNone
 	if userRi != nil {
-		switch userRi.Subscription {
+		userSubscription = userRi.Subscription
+		switch userSubscription {
 		case subscriptionBoth:
 			userRi.Subscription = subscriptionFrom
 		default:
@@ -362,11 +364,12 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 			r.pushRosterItem(contactRi, contactJID)
 
 			r.routePresence(p, contactJID)
-			r.routePresencesFrom(userJID, contactJID, xml.UnavailableType)
+			if userSubscription != subscriptionNone {
+				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+			}
 		}
 	} else {
 		r.routePresence(p, contactJID)
-		r.routePresencesFrom(userJID, contactJID, xml.UnavailableType)
 	}
 	return nil
 }
@@ -406,7 +409,8 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 			return err
 		}
 		if userRi != nil {
-			switch userRi.Subscription {
+			userSubscription := userRi.Subscription
+			switch userSubscription {
 			case subscriptionBoth:
 				userRi.Subscription = subscriptionFrom
 			default:
@@ -419,7 +423,9 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 			r.pushRosterItem(userRi, userJID)
 
 			r.routePresence(p, userJID)
-			r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+			if userSubscription != subscriptionNone {
+				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+			}
 		}
 	} else {
 		r.routePresence(p, userJID)
