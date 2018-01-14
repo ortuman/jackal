@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
 
 const rosterNamespace = "jabber:iq:roster"
@@ -163,56 +164,6 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 }
 
 func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
-	userJID := r.strm.JID()
-	contactJID := ri.JID
-
-	userRi, contactRi, err := r.fetchRosterItem(userJID, contactJID)
-	if err != nil {
-		return err
-	}
-	if userRi == nil {
-		return nil
-	}
-	log.Infof("removing roster item: %s (%s/%s)", contactJID.ToBareJID(), r.strm.Username(), r.strm.Resource())
-
-	// route the presence stanza of type "unsubscribe" and "unsubscribed" to the contact
-	if userRi.Subscription == subscriptionFrom || userRi.Subscription == subscriptionBoth {
-		r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType), contactJID)
-		r.routeElement(xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType), contactJID)
-	}
-
-	if err := storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID()); err != nil {
-		return err
-	}
-	if err := storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID()); err != nil {
-		return err
-	}
-	r.pushRosterItem(ri, userJID)
-
-	// send unavailable presence from all of the users's available resources to the contact
-	if userRi.Subscription == subscriptionFrom || userRi.Subscription == subscriptionBoth {
-		r.sendPresencesFrom(userJID, contactJID, xml.UnavailableType)
-	}
-
-	if contactRi != nil {
-		switch contactRi.Subscription {
-		case subscriptionBoth:
-			contactRi.Subscription = subscriptionTo
-			r.pushRosterItem(contactRi, contactJID)
-			fallthrough
-
-		default:
-			contactRi.Subscription = subscriptionNone
-			if err := storage.Instance().InsertOrUpdateRosterItem(contactRi); err != nil {
-				return err
-			}
-			r.pushRosterItem(contactRi, contactJID)
-		}
-		// send unavailable presence from all of the contact's available resources to the user
-		if contactRi.Subscription == subscriptionFrom || contactRi.Subscription == subscriptionBoth {
-			r.sendPresencesFrom(contactJID, userJID, xml.UnavailableType)
-		}
-	}
 	return nil
 }
 
@@ -255,7 +206,7 @@ func (r *Roster) userSubscribe(presence *xml.Presence) error {
 
 	log.Infof("processing 'subscribe' - contact: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
 
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	ri, err := r.fetchRosterItem(userJID, contactJID)
 	if err != nil {
 		return err
 	}
@@ -275,28 +226,89 @@ func (r *Roster) userSubscribe(presence *xml.Presence) error {
 			Ask:          true,
 		}
 	}
-	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
+	if err := r.insertOrUpdateRosterItem(ri); err != nil {
 		return err
 	}
 	r.pushRosterItem(ri, userJID)
 
-	// route the presence stanza of type "subscribe" to the contact
+	// stamp
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
-	r.routeElement(p, contactJID)
 
-	// archive roster approval notification
-	if stream.C2S().IsLocalDomain(contactJID.Domain()) {
+	if r.isLocalJID(contactJID) {
+		// archive roster approval notification
 		err = storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), p)
 		if err != nil {
 			return err
 		}
+		r.deliverPresence(p, contactJID)
+
+	} else {
+		r.remoteRoute(p)
 	}
 	return nil
 }
 
 func (r *Roster) contactSubscribed(presence *xml.Presence) error {
+	userJID := presence.ToJID()
+	contactJID := r.strm.JID()
+
+	log.Infof("processing 'subscribed' - user: %s (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+
+	if r.isLocalJID(userJID) {
+
+	} else {
+
+	}
 	return nil
+}
+
+func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
+	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.ToBareJID())
+	if err != nil {
+		return nil, err
+	}
+	return ri, nil
+}
+
+func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
+	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) {
+	query := xml.NewElementNamespace("query", rosterNamespace)
+	query.AppendElement(r.elementFromRosterItem(ri))
+
+	streams := stream.C2S().AvailableStreams(to.Node())
+	for _, strm := range streams {
+		if !strm.IsRosterRequested() {
+			continue
+		}
+		pushEl := xml.NewIQType(uuid.New(), xml.SetType)
+		pushEl.SetTo(strm.JID().ToFullJID())
+		pushEl.AppendElement(query)
+		strm.SendElement(pushEl)
+	}
+}
+
+func (r *Roster) isLocalJID(jid *xml.JID) bool {
+	return stream.C2S().IsLocalDomain(jid.Domain())
+}
+
+func (r *Roster) deliverPresence(presence *xml.Presence, to *xml.JID) {
+	toStreams := stream.C2S().AvailableStreams(to.Node())
+	for _, toStream := range toStreams {
+		p := xml.NewPresence(presence.From(), toStream.JID().ToFullJID(), presence.Type())
+		p.AppendElements(presence.Elements())
+		toStream.SendElement(presence)
+	}
+}
+
+func (r *Roster) remoteRoute(presence *xml.Presence) {
+	// TODO(ortuman): Implement XMPP federation
 }
 
 func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
