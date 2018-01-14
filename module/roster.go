@@ -322,7 +322,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	if userRi == nil {
+	if userRi != nil {
 		switch userRi.Subscription {
 		case subscriptionBoth:
 			userRi.Subscription = subscriptionFrom
@@ -334,7 +334,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 		}
 		r.pushRosterItem(userRi, userJID)
 	}
-	// stamp the presence stanza of type "subscribe" with the users's bare JID as the 'from' address
+	// stamp the presence stanza of type "unsubscribe" with the users's bare JID as the 'from' address
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
 	p.AppendElements(presence.Elements())
 
