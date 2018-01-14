@@ -168,6 +168,15 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 }
 
 func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
+	userJID := r.strm.JID()
+	contactJID := ri.JID
+
+	log.Infof("removing roster item: %v (%s/%s)", contactJID, r.strm.Username(), r.strm.Resource())
+
+	_, err := r.fetchRosterItem(userJID, contactJID)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -443,6 +452,10 @@ func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
 		return err
 	}
 	return nil
+}
+
+func (r *Roster) deleteRosterItem(userJID *xml.JID, contactJID *xml.JID) error {
+	return storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.ToBareJID())
 }
 
 func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) {
