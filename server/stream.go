@@ -17,7 +17,6 @@ import (
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/stream/errors"
@@ -78,7 +77,7 @@ type serverStream struct {
 
 	iqHandlers []module.IQHandler
 
-	roster   *roster.Roster
+	roster   *module.Roster
 	register *module.XEPRegister
 	ping     *module.XEPPing
 	offline  *module.Offline
@@ -222,7 +221,7 @@ func (s *serverStream) initializeAuthenticators() {
 
 func (s *serverStream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = roster.NewRoster(s)
+	s.roster = module.NewRoster(s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
