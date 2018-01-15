@@ -68,8 +68,6 @@ type serverStream struct {
 	secured       bool
 	authenticated bool
 	compressed    bool
-	active        bool
-	available     bool
 	priority      int8
 
 	authrs      []authenticator
@@ -77,12 +75,15 @@ type serverStream struct {
 
 	iqHandlers []module.IQHandler
 
-	roster   *module.Roster
+	roster           *module.Roster
+	rosterOnce       sync.Once
+	available        bool
+	presenceElements []xml.Element
+
 	register *module.XEPRegister
 	ping     *module.XEPPing
-	offline  *module.Offline
 
-	rosterOnce  sync.Once
+	offline     *module.Offline
 	offlineOnce sync.Once
 
 	writeCh chan xml.Element
@@ -182,10 +183,11 @@ func (s *serverStream) IsCompressed() bool {
 	return s.compressed
 }
 
-func (s *serverStream) IsActive() bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.active
+func (s *serverStream) IsRosterRequested() bool {
+	if s.roster != nil {
+		return s.roster.IsRosterRequested()
+	}
+	return false
 }
 
 func (s *serverStream) IsAvailable() bool {
@@ -194,11 +196,10 @@ func (s *serverStream) IsAvailable() bool {
 	return s.available
 }
 
-func (s *serverStream) IsRosterRequested() bool {
-	if s.roster != nil {
-		return s.roster.IsRosterRequested()
-	}
-	return false
+func (s *serverStream) PresenceElements() []xml.Element {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.presenceElements
 }
 
 func (s *serverStream) initializeAuthenticators() {
@@ -666,7 +667,6 @@ func (s *serverStream) startSession(iq *xml.IQ) {
 		s.ping.StartPinging()
 	}
 	s.state = sessionStarted
-	s.active = true
 }
 
 func (s *serverStream) processStanza(element xml.Element) {
@@ -724,7 +724,14 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 	// set resource priority & availability
 	s.lock.Lock()
 	s.priority = presence.Priority()
-	s.available = true
+	switch presence.Type() {
+	case xml.AvailableType:
+		s.available = true
+		s.presenceElements = presence.Elements()
+	case xml.UnavailableType:
+		s.available = false
+		s.presenceElements = nil
+	}
 	s.lock.Unlock()
 
 	// deliver pending approval notifications

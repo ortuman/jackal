@@ -31,7 +31,7 @@ type C2SStream interface {
 	IsAuthenticated() bool
 	IsCompressed() bool
 
-	IsActive() bool
+	PresenceElements() []xml.Element
 	IsAvailable() bool
 
 	IsRosterRequested() bool
