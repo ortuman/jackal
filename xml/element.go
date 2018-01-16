@@ -214,9 +214,9 @@ func (e *XElement) AttributesCount() int {
 }
 
 func (e *XElement) FindElement(name string) Element {
-	for i := 0; i < len(e.elements); i++ {
-		if e.elements[i].Name() == name {
-			return e.elements[i]
+	for _, element := range e.elements {
+		if element.Name() == name {
+			return element
 		}
 	}
 	return nil
@@ -224,18 +224,18 @@ func (e *XElement) FindElement(name string) Element {
 
 func (e *XElement) FindElements(name string) []Element {
 	ret := e.elements[:0]
-	for i := 0; i < len(e.elements); i++ {
-		if e.elements[i].Name() == name {
-			ret = append(ret, e.elements[i])
+	for _, element := range e.elements {
+		if element.Name() == name {
+			ret = append(ret, element)
 		}
 	}
 	return ret
 }
 
 func (e *XElement) FindElementNamespace(name, namespace string) Element {
-	for i := 0; i < len(e.elements); i++ {
-		if e.elements[i].Name() == name && e.elements[i].Attribute("xmlns") == namespace {
-			return e.elements[i]
+	for _, element := range e.elements {
+		if element.Name() == name && element.Namespace() == namespace {
+			return element
 		}
 	}
 	return nil
@@ -243,9 +243,9 @@ func (e *XElement) FindElementNamespace(name, namespace string) Element {
 
 func (e *XElement) FindElementsNamespace(name, namespace string) []Element {
 	ret := e.elements[:0]
-	for i := 0; i < len(e.elements); i++ {
-		if e.elements[i].Name() == name && e.elements[i].Attribute("xmlns") == namespace {
-			ret = append(ret, e.elements[i])
+	for _, element := range e.elements {
+		if element.Name() == name && element.Namespace() == namespace {
+			ret = append(ret, element)
 		}
 	}
 	return ret

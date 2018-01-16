@@ -545,9 +545,7 @@ func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType str
 	for _, fromStream := range fromStreams {
 		p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
 		if presenceType == xml.AvailableType {
-			fmt.Printf("P0: %v\n", p)
 			p.AppendElements(fromStream.PresenceElements())
-			fmt.Printf("P1: %v\n", p)
 		}
 		r.routePresence(p, to)
 	}
