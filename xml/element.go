@@ -197,9 +197,9 @@ func (e *XElement) TextLen() int {
 }
 
 func (e *XElement) Attribute(label string) string {
-	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].Label == label {
-			return e.attrs[i].Value
+	for _, attr := range e.attrs {
+		if attr.Label == label {
+			return attr.Value
 		}
 	}
 	return ""
@@ -223,7 +223,7 @@ func (e *XElement) FindElement(name string) Element {
 }
 
 func (e *XElement) FindElements(name string) []Element {
-	ret := e.elements[:0]
+	var ret []Element
 	for _, element := range e.elements {
 		if element.Name() == name {
 			ret = append(ret, element)
@@ -242,7 +242,7 @@ func (e *XElement) FindElementNamespace(name, namespace string) Element {
 }
 
 func (e *XElement) FindElementsNamespace(name, namespace string) []Element {
-	ret := e.elements[:0]
+	var ret []Element
 	for _, element := range e.elements {
 		if element.Name() == name && element.Namespace() == namespace {
 			ret = append(ret, element)
