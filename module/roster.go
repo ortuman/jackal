@@ -90,6 +90,25 @@ func (r *Roster) BrodcastPresence(presence *xml.Presence) {
 	})
 }
 
+func (r *Roster) ReceiveRosterPresences() {
+	r.queue.Async(func() {
+		items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		userJID := r.strm.JID()
+		for _, item := range items {
+			switch item.Subscription {
+			case subscriptionTo, subscriptionBoth:
+				r.routePresencesFrom(item.JID, userJID, xml.AvailableType)
+			default:
+				break
+			}
+		}
+	})
+}
+
 func (r *Roster) processPresence(presence *xml.Presence) {
 	var err error
 	switch presence.Type() {

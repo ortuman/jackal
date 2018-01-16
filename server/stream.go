@@ -738,6 +738,7 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 	if s.roster != nil {
 		s.rosterOnce.Do(func() {
 			s.roster.DeliverPendingApprovalNotifications()
+			s.roster.ReceiveRosterPresences()
 		})
 		s.roster.BrodcastPresence(presence)
 	}
