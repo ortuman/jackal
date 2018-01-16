@@ -18,8 +18,9 @@ type User struct {
 }
 
 type RosterItem struct {
-	Username     string
-	JID          *xml.JID
+	User         string
+	Contact      string
+	Domain       string
 	Name         string
 	Subscription string
 	Ask          bool
@@ -37,9 +38,9 @@ type storage interface {
 
 	// Roster
 	InsertOrUpdateRosterItem(ri *RosterItem) error
-	DeleteRosterItem(username, jid string) error
+	DeleteRosterItem(username, contact, domain string) error
 
-	FetchRosterItem(username, jid string) (*RosterItem, error)
+	FetchRosterItem(username, contact, domain string) (*RosterItem, error)
 	FetchRosterItems(username string) ([]RosterItem, error)
 
 	// Roster approval notifications

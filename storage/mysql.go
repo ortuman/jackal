@@ -115,8 +115,9 @@ func (s *mySQL) UserExists(username string) (bool, error) {
 func (s *mySQL) InsertOrUpdateRosterItem(ri *RosterItem) error {
 	groups := strings.Join(ri.Groups, ";")
 	params := []interface{}{
-		ri.Username,
-		ri.JID.ToBareJID(),
+		ri.User,
+		ri.Contact,
+		ri.Domain,
 		ri.Name,
 		ri.Subscription,
 		groups,
@@ -127,23 +128,24 @@ func (s *mySQL) InsertOrUpdateRosterItem(ri *RosterItem) error {
 		ri.Ask,
 	}
 	stmt := `` +
-		`INSERT INTO roster_items(username, jid, name, subscription, groups, ask, updated_at, created_at)` +
-		`VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW())` +
+		`INSERT INTO roster_items(user, contact, domain, name, subscription, groups, ask, updated_at, created_at)` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, updated_at = NOW()`
 	_, err := s.db.Exec(stmt, params...)
 	return err
 }
 
-func (s *mySQL) DeleteRosterItem(username, jid string) error {
-	_, err := s.db.Exec("DELETE FROM roster_items WHERE username = ? AND jid = ?", username, jid)
+func (s *mySQL) DeleteRosterItem(user, contact, server string) error {
+	stmt := "DELETE FROM roster_items WHERE user = ? AND contact = ? AND server = ?"
+	_, err := s.db.Exec(stmt, user, contact, server)
 	return err
 }
 
-func (s *mySQL) FetchRosterItem(username, jid string) (*RosterItem, error) {
+func (s *mySQL) FetchRosterItem(user, contact, domain string) (*RosterItem, error) {
 	stmt := `` +
-		`SELECT username, jid, name, subscription, groups, ask` +
-		` FROM roster_items WHERE username = ? AND jid = ?`
-	rows, err := s.db.Query(stmt, username, jid)
+		`SELECT user, contact, domain, name, subscription, groups, ask` +
+		` FROM roster_items WHERE user = ? AND contact = ? AND domain = ?`
+	rows, err := s.db.Query(stmt, user, contact, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +159,8 @@ func (s *mySQL) FetchRosterItem(username, jid string) (*RosterItem, error) {
 
 func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
 	stmt := `` +
-		`SELECT username, jid, name, subscription, groups, ask` +
-		` FROM roster_items WHERE username = ?` +
+		`SELECT user, contact, domain, name, subscription, groups, ask` +
+		` FROM roster_items WHERE  user = ?` +
 		` ORDER BY created_at DESC`
 
 	rows, err := s.db.Query(stmt, username)
@@ -354,16 +356,9 @@ func (s *mySQL) rosterItemsFromRows(rows *sql.Rows) ([]RosterItem, error) {
 
 func (s *mySQL) rosterItemFromRows(rows *sql.Rows) (*RosterItem, error) {
 	var ri RosterItem
-	var jid, groups string
+	var groups string
 
-	rows.Scan(&ri.Username, &jid, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
-
-	j, err := xml.NewJIDString(jid, true)
-	if err != nil {
-		return nil, err
-	}
-	ri.JID = j
+	rows.Scan(&ri.User, &ri.Contact, &ri.Domain, &ri.Name, &ri.Subscription, &groups, &ri.Ask)
 	ri.Groups = strings.Split(groups, ";")
-
 	return &ri, nil
 }
