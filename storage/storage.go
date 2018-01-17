@@ -28,10 +28,10 @@ type RosterItem struct {
 }
 
 type RosterNotification struct {
-	User         string
-	Domain       string
-	Contact      string
-	Notification []xml.Element
+	User     string
+	Domain   string
+	Contact  string
+	Elements []xml.Element
 }
 
 type storage interface {

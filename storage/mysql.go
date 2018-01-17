@@ -179,7 +179,7 @@ func (s *mySQL) InsertOrUpdateRosterNotification(rn *RosterNotification) error {
 		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
 
 	buf := new(bytes.Buffer)
-	for _, elem := range rn.Notification {
+	for _, elem := range rn.Elements {
 		buf.WriteString(elem.String())
 	}
 	notificationXML := buf.String()
@@ -200,11 +200,26 @@ func (s *mySQL) FetchRosterNotifications(contact string) ([]RosterNotification, 
 	}
 	defer rows.Close()
 
+	buf := new(bytes.Buffer)
+
 	var ret []RosterNotification
 	for rows.Next() {
 		var rn RosterNotification
 		var notificationXML string
-		rows.Scan(&rn.User, &rn.Contact, &rn.Domain, &notificationXML)
+		rows.Scan(&rn.User, &rn.Domain, &rn.Contact, &notificationXML)
+		buf.Reset()
+		buf.WriteString("<root>")
+		buf.WriteString(notificationXML)
+		buf.WriteString("</root>")
+
+		parser := xml.NewParser(buf)
+		root, err := parser.ParseElement()
+		if err != nil {
+			return nil, err
+		}
+		rn.Elements = root.Elements()
+
+		ret = append(ret, rn)
 	}
 	return ret, nil
 }
