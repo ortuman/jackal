@@ -134,14 +134,17 @@ func (r *Roster) processPresence(presence *xml.Presence) {
 }
 
 func (r *Roster) deliverPendingApprovalNotifications() {
-	notifications, err := storage.Instance().FetchRosterNotifications(r.strm.JID().ToBareJID())
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	for _, notification := range notifications {
-		r.strm.SendElement(notification)
-	}
+	/*
+		rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+			for _, rosterNotification := range rosterNotifications {
+				r.strm.SendElement(rosterNotification.Notification)
+			}
+	*/
 }
 
 func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
@@ -555,11 +558,16 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 }
 
 func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
-	return storage.Instance().InsertOrUpdateRosterNotification(userJID.Node(), contactJID.ToBareJID(), presence)
+	rn := &storage.RosterNotification{
+		User:         userJID.Node(),
+		Contact:      contactJID.Node(),
+		Notification: presence.Elements(),
+	}
+	return storage.Instance().InsertOrUpdateRosterNotification(rn)
 }
 
 func (r *Roster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
-	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.ToBareJID())
+	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.Node())
 }
 
 func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {

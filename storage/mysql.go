@@ -135,9 +135,9 @@ func (s *mySQL) InsertOrUpdateRosterItem(ri *RosterItem) error {
 	return err
 }
 
-func (s *mySQL) DeleteRosterItem(user, contact, server string) error {
-	stmt := "DELETE FROM roster_items WHERE user = ? AND contact = ? AND server = ?"
-	_, err := s.db.Exec(stmt, user, contact, server)
+func (s *mySQL) DeleteRosterItem(user, contact, domain string) error {
+	stmt := "DELETE FROM roster_items WHERE user = ? AND contact = ? AND domain = ?"
+	_, err := s.db.Exec(stmt, user, contact, domain)
 	return err
 }
 
@@ -172,46 +172,41 @@ func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
 	return s.rosterItemsFromRows(rows)
 }
 
-func (s *mySQL) InsertOrUpdateRosterNotification(username, jid string, notification xml.Element) error {
+func (s *mySQL) InsertOrUpdateRosterNotification(rn *RosterNotification) error {
 	stmt := `` +
-		`INSERT INTO roster_notifications(username, jid, notification, updated_at, created_at)` +
-		`VALUES(?, ?, ?, NOW(), NOW())` +
+		`INSERT INTO roster_notifications(user, domain, contact, notification, updated_at, created_at)` +
+		`VALUES(?, ?, ?, ?, NOW(), NOW())` +
 		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
 
-	notificationXML := notification.String()
-	_, err := s.db.Exec(stmt, username, jid, notificationXML, notificationXML)
+	buf := new(bytes.Buffer)
+	for _, elem := range rn.Notification {
+		buf.WriteString(elem.String())
+	}
+	notificationXML := buf.String()
+	_, err := s.db.Exec(stmt, rn.User, rn.Domain, rn.Contact, notificationXML, notificationXML)
 	return err
 }
 
-func (s *mySQL) DeleteRosterNotification(username, jid string) error {
-	_, err := s.db.Exec("DELETE FROM roster_notifications WHERE username = ? AND jid = ?", username, jid)
+func (s *mySQL) DeleteRosterNotification(user, contact string) error {
+	_, err := s.db.Exec("DELETE FROM roster_notifications WHERE user = ? AND contact = ?", user, contact)
 	return err
 }
 
-func (s *mySQL) FetchRosterNotifications(jid string) ([]xml.Element, error) {
-	stmt := `SELECT notification FROM roster_notifications WHERE jid = ? ORDER BY created_at`
-	rows, err := s.db.Query(stmt, jid)
+func (s *mySQL) FetchRosterNotifications(contact string) ([]RosterNotification, error) {
+	stmt := `SELECT user, domain, contact, notification FROM roster_notifications WHERE contact = ? ORDER BY created_at`
+	rows, err := s.db.Query(stmt, contact)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	buf := bytes.NewBufferString("<root>")
+	var ret []RosterNotification
 	for rows.Next() {
-		var notification string
-		rows.Scan(&notification)
-		buf.WriteString(notification)
+		var rn RosterNotification
+		var notificationXML string
+		rows.Scan(&rn.User, &rn.Contact, &rn.Domain, &notificationXML)
 	}
-	buf.WriteString("</root>")
-
-	parser := xml.NewParser(buf)
-	rootEl, err := parser.ParseElement()
-	if err != nil {
-		return nil, err
-	} else if rootEl != nil {
-		return rootEl.Elements(), nil
-	}
-	return nil, nil
+	return ret, nil
 }
 
 func (s *mySQL) FetchVCard(username string) (xml.Element, error) {

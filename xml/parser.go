@@ -21,7 +21,7 @@ var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
 	dec          *xml.Decoder
-	nextElement  Element
+	nextElement  *XElement
 	parsingIndex int
 	parsingStack []*XElement
 	inElement    bool
@@ -36,7 +36,7 @@ func NewParser(reader io.Reader) *Parser {
 }
 
 // ParseElement parses next available XML element from reader.
-func (p *Parser) ParseElement() (Element, error) {
+func (p *Parser) ParseElement() (*XElement, error) {
 	d := p.dec
 	t, err := d.RawToken()
 	if err != nil {

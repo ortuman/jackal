@@ -27,6 +27,13 @@ type RosterItem struct {
 	Groups       []string
 }
 
+type RosterNotification struct {
+	User         string
+	Domain       string
+	Contact      string
+	Notification []xml.Element
+}
+
 type storage interface {
 	// User
 	FetchUser(username string) (*User, error)
@@ -44,10 +51,10 @@ type storage interface {
 	FetchRosterItems(username string) ([]RosterItem, error)
 
 	// Roster approval notifications
-	InsertOrUpdateRosterNotification(username, jid string, notification xml.Element) error
-	DeleteRosterNotification(username, jid string) error
+	InsertOrUpdateRosterNotification(rn *RosterNotification) error
+	DeleteRosterNotification(user, contact string) error
 
-	FetchRosterNotifications(jid string) ([]xml.Element, error)
+	FetchRosterNotifications(contact string) ([]RosterNotification, error)
 
 	// vCard
 	FetchVCard(username string) (xml.Element, error)
