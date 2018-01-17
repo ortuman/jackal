@@ -6,12 +6,11 @@
 package module
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
-
-	"bytes"
 
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
