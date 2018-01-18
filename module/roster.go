@@ -46,12 +46,6 @@ func NewRoster(strm stream.C2SStream) *Roster {
 	}
 }
 
-func (r *Roster) IsRosterRequested() bool {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	return r.requested
-}
-
 func (r *Roster) AssociatedNamespaces() []string {
 	return []string{}
 }
@@ -71,6 +65,12 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 			r.strm.SendElement(iq.BadRequestError())
 		}
 	})
+}
+
+func (r *Roster) IsRosterRequested() bool {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.requested
 }
 
 func (r *Roster) ProcessPresence(presence *xml.Presence) {
