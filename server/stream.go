@@ -711,15 +711,15 @@ func (s *serverStream) processIQ(iq *xml.IQ) {
 }
 
 func (s *serverStream) processPresence(presence *xml.Presence) {
+	if !stream.C2S().IsLocalDomain(presence.ToJID().Domain()) {
+		// TODO(ortuman): Implement XMPP federation
+		return
+	}
 	toJid := presence.ToJID()
 	if toJid.IsBare() && (toJid.Node() != s.Username() || toJid.Domain() != s.Domain()) {
 		if s.roster != nil {
 			s.roster.ProcessPresence(presence)
 		}
-		return
-	}
-	if !stream.C2S().IsLocalDomain(presence.ToJID().Domain()) {
-		// TODO(ortuman): Implement XMPP federation
 		return
 	}
 	if toJid.IsFull() {

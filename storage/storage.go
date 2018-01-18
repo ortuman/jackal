@@ -20,7 +20,6 @@ type User struct {
 type RosterItem struct {
 	User         string
 	Contact      string
-	Domain       string
 	Name         string
 	Subscription string
 	Ask          bool
@@ -29,7 +28,6 @@ type RosterItem struct {
 
 type RosterNotification struct {
 	User     string
-	Domain   string
 	Contact  string
 	Elements []xml.Element
 }
@@ -45,10 +43,12 @@ type storage interface {
 
 	// Roster
 	InsertOrUpdateRosterItem(ri *RosterItem) error
-	DeleteRosterItem(user, contact, domain string) error
+	DeleteRosterItem(user, contact string) error
 
-	FetchInboundRosterItem(user, contact, domain string) (*RosterItem, error)
-	FetchInboundRosterItems(user string) ([]RosterItem, error)
+	FetchRosterItem(user, contact string) (*RosterItem, error)
+	FetchRosterItems(user string) ([]RosterItem, error)
+
+	FetchOutboundRosterItems(contact string) ([]RosterItem, error)
 
 	// Roster approval notifications
 	InsertOrUpdateRosterNotification(rn *RosterNotification) error

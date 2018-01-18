@@ -13,26 +13,25 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE roster_items (
     user VARCHAR(256) NOT NULL,
     contact VARCHAR(256) NOT NULL,
-    domain VARCHAR(256) NOT NULL,
     name TEXT NOT NULL,
     subscription TEXT NOT NULL,
     groups TEXT NOT NULL,
     ask BOOL NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (user, contact, domain)
+    PRIMARY KEY (user, contact)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_roster_items_user ON roster_items(user);
+CREATE INDEX i_roster_items_contact_domain ON roster_items(contact);
 
 CREATE TABLE roster_notifications (
     user VARCHAR(256) NOT NULL,
-    domain VARCHAR(256) NOT NULL,
     contact VARCHAR(256) NOT NULL,
     elements TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (user, domain, contact)
+    PRIMARY KEY (user, contact)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_approval_notifications_jid ON roster_notifications(contact);

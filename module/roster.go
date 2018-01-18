@@ -6,7 +6,6 @@
 package module
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"sync"
@@ -76,24 +75,67 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 
 func (r *Roster) ProcessPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-		r.processPresence(presence)
+		var err error
+		switch presence.Type() {
+		case xml.SubscribeType:
+			err = r.processSubscribe(presence)
+		case xml.SubscribedType:
+			err = r.processSubscribed(presence)
+		case xml.UnsubscribeType:
+			err = r.processUnsubscribe(presence)
+		case xml.UnsubscribedType:
+			err = r.processUnsubscribed(presence)
+		}
+		if err != nil {
+			log.Error(err)
+		}
 	})
 }
 
 func (r *Roster) DeliverPendingApprovalNotifications() {
 	r.queue.Async(func() {
-		r.deliverPendingApprovalNotifications()
+		rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		for _, rosterNotification := range rosterNotifications {
+			from := fmt.Sprintf("%s@%s", rosterNotification.User, r.strm.Domain())
+			p := xml.NewPresence(from, r.strm.JID().ToBareJID(), xml.SubscribeType)
+			p.AppendElements(rosterNotification.Elements)
+			r.strm.SendElement(p)
+		}
 	})
 }
 
 func (r *Roster) BrodcastPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
+		items, err := storage.Instance().FetchOutboundRosterItems(r.strm.Username())
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		for _, item := range items {
+			switch item.Subscription {
+			case subscriptionTo, subscriptionBoth:
+				break
+			default:
+				continue
+			}
+			contactJID, err := r.rosterItemJID(&item)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			r.routePresence(presence, contactJID)
+		}
 	})
 }
 
 func (r *Roster) ReceiveRosterPresences() {
 	r.queue.Async(func() {
-		items, err := storage.Instance().FetchInboundRosterItems(r.strm.Username())
+		items, err := storage.Instance().FetchRosterItems(r.strm.Username())
 		if err != nil {
 			log.Error(err)
 			return
@@ -115,44 +157,6 @@ func (r *Roster) ReceiveRosterPresences() {
 	})
 }
 
-func (r *Roster) processPresence(presence *xml.Presence) {
-	var err error
-	switch presence.Type() {
-	case xml.SubscribeType:
-		err = r.processSubscribe(presence)
-	case xml.SubscribedType:
-		err = r.processSubscribed(presence)
-	case xml.UnsubscribeType:
-		err = r.processUnsubscribe(presence)
-	case xml.UnsubscribedType:
-		err = r.processUnsubscribed(presence)
-	}
-	if err != nil {
-		log.Error(err)
-	}
-}
-
-func (r *Roster) deliverPendingApprovalNotifications() {
-	rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	for _, rosterNotification := range rosterNotifications {
-		var domain string
-		if len(rosterNotification.Domain) == 0 {
-			domain = r.strm.Domain()
-		} else {
-			domain = rosterNotification.Domain
-		}
-		from := fmt.Sprintf("%s@%s", rosterNotification.User, domain)
-		p := xml.NewPresence(from, r.strm.JID().ToBareJID(), xml.SubscribeType)
-		p.AppendElements(rosterNotification.Elements)
-		r.strm.SendElement(p)
-	}
-}
-
 func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	if query.ElementsCount() > 0 {
 		r.strm.SendElement(iq.BadRequestError())
@@ -163,7 +167,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	result := iq.ResultIQ()
 	q := xml.NewElementNamespace("query", rosterNamespace)
 
-	items, err := storage.Instance().FetchInboundRosterItems(r.strm.Username())
+	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
 	if err != nil {
 		log.Error(err)
 		r.strm.SendElement(iq.InternalServerError())
@@ -321,7 +325,6 @@ func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
 		userRi = &storage.RosterItem{
 			User:         r.strm.Username(),
 			Contact:      ri.Contact,
-			Domain:       ri.Domain,
 			Name:         ri.Name,
 			Subscription: subscriptionNone,
 			Groups:       ri.Groups,
@@ -358,9 +361,6 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 			Contact:      contactJID.Node(),
 			Subscription: subscriptionNone,
 			Ask:          true,
-		}
-		if !stream.C2S().IsLocalDomain(contactJID.Domain()) {
-			ri.Domain = contactJID.Domain()
 		}
 	}
 	if err := r.insertOrUpdateRosterItem(ri); err != nil {
@@ -577,11 +577,7 @@ func (r *Roster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID)
 }
 
 func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
-	var domain string
-	if !stream.C2S().IsLocalDomain(contactJID.Domain()) {
-		domain = contactJID.Domain()
-	}
-	ri, err := storage.Instance().FetchInboundRosterItem(userJID.Node(), contactJID.Node(), domain)
+	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
 	if err != nil {
 		return nil, err
 	}
@@ -596,11 +592,7 @@ func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
 }
 
 func (r *Roster) deleteRosterItem(userJID *xml.JID, contactJID *xml.JID) error {
-	var domain string
-	if !stream.C2S().IsLocalDomain(contactJID.Domain()) {
-		domain = contactJID.Domain()
-	}
-	return storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.Node(), domain)
+	return storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.Node())
 }
 
 func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) error {
@@ -660,9 +652,6 @@ func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, e
 			return nil, err
 		}
 		ri.Contact = j.Node()
-		if !stream.C2S().IsLocalDomain(j.Domain()) {
-			ri.Domain = j.Domain()
-		}
 	} else {
 		return nil, errors.New("item 'jid' attribute is required")
 	}
@@ -723,12 +712,5 @@ func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) (xml.Element, err
 }
 
 func (r *Roster) rosterItemJID(ri *storage.RosterItem) (*xml.JID, error) {
-	jidbuf := bytes.NewBufferString(ri.Contact)
-	jidbuf.WriteString("@")
-	if len(ri.Domain) > 0 {
-		jidbuf.WriteString(ri.Domain)
-	} else {
-		jidbuf.WriteString(r.strm.Domain())
-	}
-	return xml.NewJIDString(jidbuf.String(), true)
+	return xml.NewJIDString(fmt.Sprintf("%s@%s", ri.Contact, r.strm.Domain()), true)
 }
