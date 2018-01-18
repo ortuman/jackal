@@ -746,7 +746,7 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 			s.roster.DeliverPendingApprovalNotifications()
 			s.roster.ReceiveRosterPresences()
 		})
-		s.roster.BrodcastPresence(presence)
+		s.roster.BroadcastPresence(presence)
 	}
 
 	// deliver offline messages
@@ -990,6 +990,12 @@ func (s *serverStream) disconnect(closeStream bool) {
 		s.tr.Write([]byte("</stream:stream>"))
 	}
 	s.tr.Close()
+
+	s.lock.RLock()
+	if s.available && s.roster != nil {
+		s.roster.BroadcastPresence(xml.NewPresence("", "", xml.UnavailableType))
+	}
+	s.lock.RUnlock()
 
 	s.state = disconnected
 

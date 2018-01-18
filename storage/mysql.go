@@ -156,7 +156,7 @@ func (s *mySQL) FetchRosterItem(user, contact string) (*RosterItem, error) {
 	return nil, nil
 }
 
-func (s *mySQL) FetchRosterItems(user string) ([]RosterItem, error) {
+func (s *mySQL) FetchRosterItemsAsUser(user string) ([]RosterItem, error) {
 	stmt := `` +
 		`SELECT user, contact, name, subscription, groups, ask` +
 		` FROM roster_items WHERE  user = ?` +
@@ -171,7 +171,7 @@ func (s *mySQL) FetchRosterItems(user string) ([]RosterItem, error) {
 	return s.rosterItemsFromRows(rows)
 }
 
-func (s *mySQL) FetchOutboundRosterItems(contact string) ([]RosterItem, error) {
+func (s *mySQL) FetchRosterItemsAsContact(contact string) ([]RosterItem, error) {
 	stmt := `` +
 		`SELECT user, contact, name, subscription, groups, ask` +
 		` FROM roster_items WHERE  contact = ?` +

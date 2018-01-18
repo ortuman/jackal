@@ -109,9 +109,10 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 	})
 }
 
-func (r *Roster) BrodcastPresence(presence *xml.Presence) {
+func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-		items, err := storage.Instance().FetchOutboundRosterItems(r.strm.Username())
+
+		items, err := storage.Instance().FetchRosterItemsAsContact(r.strm.Username())
 		if err != nil {
 			log.Error(err)
 			return
@@ -123,19 +124,19 @@ func (r *Roster) BrodcastPresence(presence *xml.Presence) {
 			default:
 				continue
 			}
-			contactJID, err := r.rosterItemJID(&item)
+			userJID, err := xml.NewJIDString(fmt.Sprintf("%s@%s", item.User, r.strm.Domain()), true)
 			if err != nil {
 				log.Error(err)
 				return
 			}
-			r.routePresence(presence, contactJID)
+			r.routePresence(presence, userJID)
 		}
 	})
 }
 
 func (r *Roster) ReceiveRosterPresences() {
 	r.queue.Async(func() {
-		items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+		items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
 		if err != nil {
 			log.Error(err)
 			return
@@ -167,7 +168,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	result := iq.ResultIQ()
 	q := xml.NewElementNamespace("query", rosterNamespace)
 
-	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+	items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
 	if err != nil {
 		log.Error(err)
 		r.strm.SendElement(iq.InternalServerError())

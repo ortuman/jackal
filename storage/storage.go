@@ -46,9 +46,9 @@ type storage interface {
 	DeleteRosterItem(user, contact string) error
 
 	FetchRosterItem(user, contact string) (*RosterItem, error)
-	FetchRosterItems(user string) ([]RosterItem, error)
 
-	FetchOutboundRosterItems(contact string) ([]RosterItem, error)
+	FetchRosterItemsAsUser(user string) ([]RosterItem, error)
+	FetchRosterItemsAsContact(contact string) ([]RosterItem, error)
 
 	// Roster approval notifications
 	InsertOrUpdateRosterNotification(rn *RosterNotification) error
