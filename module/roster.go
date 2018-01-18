@@ -150,8 +150,6 @@ func (r *Roster) receivePresences() error {
 				return err
 			}
 			r.routePresencesFrom(itemJID, userJID, xml.AvailableType)
-		default:
-			break
 		}
 	}
 	return nil
