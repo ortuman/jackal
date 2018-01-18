@@ -124,7 +124,6 @@ func (r *Roster) deliverPendingApprovalNotifications() error {
 	if err != nil {
 		return err
 	}
-
 	for _, rosterNotification := range rosterNotifications {
 		fromJID, err := xml.NewJID(rosterNotification.User, r.strm.Domain(), "", true)
 		if err != nil {
