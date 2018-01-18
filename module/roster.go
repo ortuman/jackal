@@ -91,7 +91,7 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 
 func (r *Roster) ReceivePresences() {
 	r.queue.Async(func() {
-		if err := r.receiveRosterPresences(); err != nil {
+		if err := r.receivePresences(); err != nil {
 			log.Error(err)
 		}
 	})
@@ -136,7 +136,7 @@ func (r *Roster) deliverPendingApprovalNotifications() error {
 	return nil
 }
 
-func (r *Roster) receiveRosterPresences() error {
+func (r *Roster) receivePresences() error {
 	items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
 	if err != nil {
 		return err
