@@ -63,18 +63,18 @@ func NewPresenceFromElement(e Element, from *JID, to *JID) (*Presence, error) {
 	if err := p.setPriority(); err != nil {
 		return nil, err
 	}
-	p.SetAttribute("to", to.ToFullJID())
-	p.SetAttribute("from", from.ToFullJID())
+	p.SetAttribute("to", to.String())
+	p.SetAttribute("from", from.String())
 	p.to = to
 	p.from = from
 	return p, nil
 }
 
-func NewPresence(from string, to string, presenceType string) *Presence {
-	p := &Presence{}
+func NewPresence(from *JID, to *JID, presenceType string) *Presence {
+	p := &Presence{to: to, from: from}
 	p.SetName("presence")
-	p.SetFrom(from)
-	p.SetTo(to)
+	p.SetFrom(from.String())
+	p.SetTo(to.String())
 	p.SetType(presenceType)
 	return p
 }

@@ -101,8 +101,12 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 		}
 
 		for _, rosterNotification := range rosterNotifications {
-			from := fmt.Sprintf("%s@%s", rosterNotification.User, r.strm.Domain())
-			p := xml.NewPresence(from, r.strm.JID().ToBareJID(), xml.SubscribeType)
+			fromJID, err := xml.NewJID(rosterNotification.User, r.strm.Domain(), "", true)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			p := xml.NewPresence(fromJID, r.strm.JID(), xml.SubscribeType)
 			p.AppendElements(rosterNotification.Elements)
 			r.strm.SendElement(p)
 		}
@@ -610,7 +614,7 @@ func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) error {
 			continue
 		}
 		pushEl := xml.NewIQType(uuid.New(), xml.SetType)
-		pushEl.SetTo(strm.JID().ToFullJID())
+		pushEl.SetTo(strm.JID().String())
 		pushEl.AppendElement(query)
 		strm.SendElement(pushEl)
 	}
@@ -624,7 +628,7 @@ func (r *Roster) isLocalJID(jid *xml.JID) bool {
 func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
 	fromStreams := stream.C2S().AvailableStreams(from.Node())
 	for _, fromStream := range fromStreams {
-		p := xml.NewPresence(fromStream.JID().ToFullJID(), to.ToBareJID(), presenceType)
+		p := xml.NewPresence(fromStream.JID(), to.ToBareJID(), presenceType)
 		if presenceType == xml.AvailableType {
 			p.AppendElements(fromStream.PresenceElements())
 		}
@@ -636,7 +640,7 @@ func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		toStreams := stream.C2S().AvailableStreams(to.Node())
 		for _, toStream := range toStreams {
-			p := xml.NewPresence(presence.From(), toStream.JID().ToFullJID(), presence.Type())
+			p := xml.NewPresence(presence.FromJID(), toStream.JID(), presence.Type())
 			p.AppendElements(presence.Elements())
 			toStream.SendElement(p)
 		}
@@ -691,7 +695,7 @@ func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) (xml.Element, err
 		return nil, err
 	}
 	item := xml.NewElementName("item")
-	item.SetAttribute("jid", riJID.ToBareJID())
+	item.SetAttribute("jid", riJID.ToBareJID().String())
 	if len(ri.Name) > 0 {
 		item.SetAttribute("name", ri.Name)
 	}

@@ -57,6 +57,7 @@ char *resourceprep(char *in) {
 */
 import "C"
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -157,23 +158,12 @@ func (j *JID) Resource() string {
 	return j.resource
 }
 
-// ToBareJID returns the string representation of the bare JID, which is the JID with resource information removed.
-func (j *JID) ToBareJID() string {
+// ToBareJID returns the JID equivalent of the bare JID, which is the JID with resource information removed.
+func (j *JID) ToBareJID() *JID {
 	if len(j.node) == 0 {
-		return j.domain
+		return &JID{node: "", domain: j.domain, resource: ""}
 	}
-	return j.node + "@" + j.domain
-}
-
-// ToFullJID returns the String representation of the full JID.
-func (j *JID) ToFullJID() string {
-	if len(j.resource) == 0 {
-		return j.ToBareJID()
-	}
-	if len(j.node) == 0 {
-		return j.domain + "/" + j.resource
-	}
-	return j.node + "@" + j.domain + "/" + j.resource
+	return &JID{node: j.node, domain: j.domain, resource: ""}
 }
 
 // IsServer returns true if instance is a server JID.
@@ -210,7 +200,17 @@ func (j *JID) IsEqual(j2 *JID) bool {
 
 // String returns a string representation of the JID.
 func (j *JID) String() string {
-	return j.ToFullJID()
+	buf := new(bytes.Buffer)
+	if len(j.node) > 0 {
+		buf.WriteString(j.node)
+		buf.WriteString("@")
+	}
+	buf.WriteString(j.domain)
+	if len(j.resource) > 0 {
+		buf.WriteString("/")
+		buf.WriteString(j.resource)
+	}
+	return buf.String()
 }
 
 func nodeprep(in string) (string, error) {

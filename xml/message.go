@@ -32,8 +32,8 @@ func NewMessageFromElement(e Element, from *JID, to *JID) (*Message, error) {
 	m.name = e.Name()
 	m.attrs = e.Attributes()
 	m.elements = e.Elements()
-	m.SetAttribute("to", to.ToFullJID())
-	m.SetAttribute("from", from.ToFullJID())
+	m.SetAttribute("to", to.String())
+	m.SetAttribute("from", from.String())
 	m.to = to
 	m.from = from
 	return m, nil

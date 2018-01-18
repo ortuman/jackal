@@ -54,8 +54,8 @@ func NewIQFromElement(e Element, from *JID, to *JID) (*IQ, error) {
 	iq.name = e.Name()
 	iq.attrs = e.Attributes()
 	iq.elements = e.Elements()
-	iq.SetAttribute("to", to.ToFullJID())
-	iq.SetAttribute("from", from.ToFullJID())
+	iq.SetAttribute("to", to.String())
+	iq.SetAttribute("from", from.String())
 	iq.to = to
 	iq.from = from
 	return iq, nil
