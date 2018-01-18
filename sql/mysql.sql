@@ -29,7 +29,7 @@ CREATE TABLE roster_notifications (
     user VARCHAR(256) NOT NULL,
     domain VARCHAR(256) NOT NULL,
     contact VARCHAR(256) NOT NULL,
-    notification TEXT NOT NULL,
+    elements TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (user, domain, contact)

@@ -174,16 +174,16 @@ func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
 
 func (s *mySQL) InsertOrUpdateRosterNotification(rn *RosterNotification) error {
 	stmt := `` +
-		`INSERT INTO roster_notifications(user, domain, contact, notification, updated_at, created_at)` +
+		`INSERT INTO roster_notifications(user, domain, contact, elements, updated_at, created_at)` +
 		`VALUES(?, ?, ?, ?, NOW(), NOW())` +
-		`ON DUPLICATE KEY UPDATE notification = ?, updated_at = NOW()`
+		`ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()`
 
 	buf := new(bytes.Buffer)
 	for _, elem := range rn.Elements {
 		buf.WriteString(elem.String())
 	}
-	notificationXML := buf.String()
-	_, err := s.db.Exec(stmt, rn.User, rn.Domain, rn.Contact, notificationXML, notificationXML)
+	elementsXML := buf.String()
+	_, err := s.db.Exec(stmt, rn.User, rn.Domain, rn.Contact, elementsXML, elementsXML)
 	return err
 }
 
@@ -193,7 +193,7 @@ func (s *mySQL) DeleteRosterNotification(user, contact string) error {
 }
 
 func (s *mySQL) FetchRosterNotifications(contact string) ([]RosterNotification, error) {
-	stmt := `SELECT user, domain, contact, notification FROM roster_notifications WHERE contact = ? ORDER BY created_at`
+	stmt := `SELECT user, domain, contact, elements FROM roster_notifications WHERE contact = ? ORDER BY created_at`
 	rows, err := s.db.Query(stmt, contact)
 	if err != nil {
 		return nil, err

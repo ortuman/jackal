@@ -482,14 +482,10 @@ func (s *serverStream) handleSessionStarted(elem xml.Element) {
 		s.handleElementError(elem, err)
 		return
 	}
-	if stream.C2S().IsLocalDomain(toJID.Domain()) {
-		// local stanza
-		s.processStanza(stanza)
-	} else if s.isComponentDomain(toJID.Domain()) {
-		// component (MUC, pubsub, etc.)
+	if s.isComponentDomain(toJID.Domain()) {
 		s.processComponentStanza(stanza)
 	} else {
-		// TODO(ortuman): Implement XMPP federation
+		s.processStanza(stanza)
 	}
 }
 
@@ -684,6 +680,11 @@ func (s *serverStream) processComponentStanza(element xml.Element) {
 }
 
 func (s *serverStream) processIQ(iq *xml.IQ) {
+	if !stream.C2S().IsLocalDomain(iq.ToJID().Domain()) {
+		// TODO(ortuman): Implement XMPP federation
+		return
+	}
+
 	toJid := iq.ToJID()
 	if toJid.IsFull() {
 		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
@@ -711,16 +712,21 @@ func (s *serverStream) processIQ(iq *xml.IQ) {
 
 func (s *serverStream) processPresence(presence *xml.Presence) {
 	toJid := presence.ToJID()
-	if toJid.IsFull() {
-		s.sendElement(presence, toJid)
-		return
-	}
-	if toJid.IsBare() && toJid.Node() != s.Username() {
+	if toJid.IsBare() && (toJid.Node() != s.Username() || toJid.Domain() != s.Domain()) {
 		if s.roster != nil {
 			s.roster.ProcessPresence(presence)
 		}
 		return
 	}
+	if !stream.C2S().IsLocalDomain(presence.ToJID().Domain()) {
+		// TODO(ortuman): Implement XMPP federation
+		return
+	}
+	if toJid.IsFull() {
+		s.sendElement(presence, toJid)
+		return
+	}
+
 	// set resource priority & availability
 	s.lock.Lock()
 	s.priority = presence.Priority()
@@ -752,6 +758,11 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 }
 
 func (s *serverStream) processMessage(message *xml.Message) {
+	if !stream.C2S().IsLocalDomain(message.ToJID().Domain()) {
+		// TODO(ortuman): Implement XMPP federation
+		return
+	}
+
 	err := s.sendElement(message, message.ToJID())
 	switch err {
 	case errNotAuthenticated:
