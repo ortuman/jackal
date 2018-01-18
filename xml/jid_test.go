@@ -50,6 +50,7 @@ func TestNewJIDString(t *testing.T) {
 	assert.Equal(t, j.Node(), testNode)
 	assert.Equal(t, j.Domain(), testDomain)
 	assert.Equal(t, j.Resource(), testResource)
+	assert.Equal(t, j.ToBareJID().String(), testBareJid)
 	assert.Equal(t, j.String(), testFullJid)
 }
 
