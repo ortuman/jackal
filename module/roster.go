@@ -94,73 +94,88 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 
 func (r *Roster) DeliverPendingApprovalNotifications() {
 	r.queue.Async(func() {
-		rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
-		if err != nil {
+		if err := r.deliverPendingApprovalNotifications(); err != nil {
 			log.Error(err)
-			return
-		}
-
-		for _, rosterNotification := range rosterNotifications {
-			fromJID, err := xml.NewJID(rosterNotification.User, r.strm.Domain(), "", true)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			p := xml.NewPresence(fromJID, r.strm.JID(), xml.SubscribeType)
-			p.AppendElements(rosterNotification.Elements)
-			r.strm.SendElement(p)
 		}
 	})
 }
 
-func (r *Roster) ReceiveRosterPresences() {
+func (r *Roster) ReceivePresences() {
 	r.queue.Async(func() {
-		items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
-		if err != nil {
+		if err := r.receiveRosterPresences(); err != nil {
 			log.Error(err)
-			return
-		}
-		userJID := r.strm.JID()
-		for _, item := range items {
-			switch item.Subscription {
-			case subscriptionTo, subscriptionBoth:
-				itemJID, err := r.rosterItemJID(&item)
-				if err != nil {
-					log.Error(err)
-					return
-				}
-				r.routePresencesFrom(itemJID, userJID, xml.AvailableType)
-			default:
-				break
-			}
 		}
 	})
 }
 
 func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-		contactJID := presence.FromJID()
-		items, err := storage.Instance().FetchRosterItemsAsContact(contactJID.Node())
-		if err != nil {
+		if err := r.broadcastPresence(presence); err != nil {
 			log.Error(err)
-			return
-		}
-		for _, item := range items {
-			switch item.Subscription {
-			case subscriptionTo, subscriptionBoth:
-				break
-			default:
-				continue
-			}
-			jidStr := fmt.Sprintf("%s@%s", item.User, contactJID.Domain())
-			userJID, err := xml.NewJIDString(jidStr, true)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			r.routePresence(presence, userJID)
 		}
 	})
+}
+
+func (r *Roster) deliverPendingApprovalNotifications() error {
+	rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
+	if err != nil {
+		return err
+	}
+
+	for _, rosterNotification := range rosterNotifications {
+		fromJID, err := xml.NewJID(rosterNotification.User, r.strm.Domain(), "", true)
+		if err != nil {
+			return err
+		}
+		p := xml.NewPresence(fromJID, r.strm.JID(), xml.SubscribeType)
+		p.AppendElements(rosterNotification.Elements)
+		r.strm.SendElement(p)
+	}
+	return nil
+}
+
+func (r *Roster) receiveRosterPresences() error {
+	items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
+	if err != nil {
+		return err
+	}
+	userJID := r.strm.JID()
+	for _, item := range items {
+		switch item.Subscription {
+		case subscriptionTo, subscriptionBoth:
+			itemJID, err := r.rosterItemJID(&item)
+			if err != nil {
+				return err
+			}
+			r.routePresencesFrom(itemJID, userJID, xml.AvailableType)
+		default:
+			break
+		}
+	}
+	return nil
+}
+
+func (r *Roster) broadcastPresence(presence *xml.Presence) error {
+	contactJID := presence.FromJID()
+	items, err := storage.Instance().FetchRosterItemsAsContact(contactJID.Node())
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		switch item.Subscription {
+		case subscriptionTo, subscriptionBoth:
+			break
+		default:
+			continue
+		}
+		jidStr := fmt.Sprintf("%s@%s", item.User, contactJID.Domain())
+		userJID, err := xml.NewJIDString(jidStr, true)
+		if err != nil {
+			return err
+		}
+		r.routePresence(presence, userJID)
+	}
+	return nil
 }
 
 func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
