@@ -993,7 +993,7 @@ func (s *serverStream) disconnect(closeStream bool) {
 
 	s.lock.RLock()
 	if s.available && s.roster != nil {
-		s.roster.BroadcastPresence(xml.NewPresence("", "", xml.UnavailableType))
+		s.roster.BroadcastPresence(xml.NewPresence(s.jid.ToBareJID(), "", xml.UnavailableType))
 	}
 	s.lock.RUnlock()
 
