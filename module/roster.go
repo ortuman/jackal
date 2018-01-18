@@ -75,18 +75,7 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 
 func (r *Roster) ProcessPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-		var err error
-		switch presence.Type() {
-		case xml.SubscribeType:
-			err = r.processSubscribe(presence)
-		case xml.SubscribedType:
-			err = r.processSubscribed(presence)
-		case xml.UnsubscribeType:
-			err = r.processUnsubscribe(presence)
-		case xml.UnsubscribedType:
-			err = r.processUnsubscribed(presence)
-		}
-		if err != nil {
+		if err := r.processPresence(presence); err != nil {
 			log.Error(err)
 		}
 	})
@@ -114,6 +103,20 @@ func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 			log.Error(err)
 		}
 	})
+}
+
+func (r *Roster) processPresence(presence *xml.Presence) error {
+	switch presence.Type() {
+	case xml.SubscribeType:
+		return r.processSubscribe(presence)
+	case xml.SubscribedType:
+		return r.processSubscribed(presence)
+	case xml.UnsubscribeType:
+		return r.processUnsubscribe(presence)
+	case xml.UnsubscribedType:
+		return r.processUnsubscribed(presence)
+	}
+	return nil
 }
 
 func (r *Roster) deliverPendingApprovalNotifications() error {
