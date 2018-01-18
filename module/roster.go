@@ -93,7 +93,7 @@ func (r *Roster) BrodcastPresence(presence *xml.Presence) {
 
 func (r *Roster) ReceiveRosterPresences() {
 	r.queue.Async(func() {
-		items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+		items, err := storage.Instance().FetchInboundRosterItems(r.strm.Username())
 		if err != nil {
 			log.Error(err)
 			return
@@ -163,7 +163,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	result := iq.ResultIQ()
 	q := xml.NewElementNamespace("query", rosterNamespace)
 
-	items, err := storage.Instance().FetchRosterItems(r.strm.Username())
+	items, err := storage.Instance().FetchInboundRosterItems(r.strm.Username())
 	if err != nil {
 		log.Error(err)
 		r.strm.SendElement(iq.InternalServerError())
@@ -581,7 +581,7 @@ func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storag
 	if !stream.C2S().IsLocalDomain(contactJID.Domain()) {
 		domain = contactJID.Domain()
 	}
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node(), domain)
+	ri, err := storage.Instance().FetchInboundRosterItem(userJID.Node(), contactJID.Node(), domain)
 	if err != nil {
 		return nil, err
 	}

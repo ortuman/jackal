@@ -141,7 +141,7 @@ func (s *mySQL) DeleteRosterItem(user, contact, domain string) error {
 	return err
 }
 
-func (s *mySQL) FetchRosterItem(user, contact, domain string) (*RosterItem, error) {
+func (s *mySQL) FetchInboundRosterItem(user, contact, domain string) (*RosterItem, error) {
 	stmt := `` +
 		`SELECT user, contact, domain, name, subscription, groups, ask` +
 		` FROM roster_items WHERE user = ? AND contact = ? AND domain = ?`
@@ -157,13 +157,13 @@ func (s *mySQL) FetchRosterItem(user, contact, domain string) (*RosterItem, erro
 	return nil, nil
 }
 
-func (s *mySQL) FetchRosterItems(username string) ([]RosterItem, error) {
+func (s *mySQL) FetchInboundRosterItems(user string) ([]RosterItem, error) {
 	stmt := `` +
 		`SELECT user, contact, domain, name, subscription, groups, ask` +
 		` FROM roster_items WHERE  user = ?` +
 		` ORDER BY created_at DESC`
 
-	rows, err := s.db.Query(stmt, username)
+	rows, err := s.db.Query(stmt, user)
 	if err != nil {
 		return nil, err
 	}

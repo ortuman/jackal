@@ -45,10 +45,10 @@ type storage interface {
 
 	// Roster
 	InsertOrUpdateRosterItem(ri *RosterItem) error
-	DeleteRosterItem(username, contact, domain string) error
+	DeleteRosterItem(user, contact, domain string) error
 
-	FetchRosterItem(username, contact, domain string) (*RosterItem, error)
-	FetchRosterItems(username string) ([]RosterItem, error)
+	FetchInboundRosterItem(user, contact, domain string) (*RosterItem, error)
+	FetchInboundRosterItems(user string) ([]RosterItem, error)
 
 	// Roster approval notifications
 	InsertOrUpdateRosterNotification(rn *RosterNotification) error
