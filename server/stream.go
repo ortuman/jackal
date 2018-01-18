@@ -190,12 +190,6 @@ func (s *serverStream) IsRosterRequested() bool {
 	return false
 }
 
-func (s *serverStream) IsAvailable() bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.available
-}
-
 func (s *serverStream) PresenceElements() []xml.Element {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -986,16 +980,17 @@ func (s *serverStream) disconnectWithStreamError(err *streamerror.Error) {
 }
 
 func (s *serverStream) disconnect(closeStream bool) {
+	s.lock.RLock()
+	available := s.available
+	s.lock.RUnlock()
+
+	if available && s.roster != nil {
+		s.roster.BroadcastUnavailablePresence()
+	}
 	if closeStream {
 		s.tr.Write([]byte("</stream:stream>"))
 	}
 	s.tr.Close()
-
-	s.lock.RLock()
-	if s.available && s.roster != nil {
-		s.roster.BroadcastPresence(xml.NewPresence(s.jid.ToBareJID(), s.jid.ToBareJID(), xml.UnavailableType))
-	}
-	s.lock.RUnlock()
 
 	s.state = disconnected
 
