@@ -115,8 +115,8 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 
 func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
-
-		items, err := storage.Instance().FetchRosterItemsAsContact(r.strm.Username())
+		contactJID := presence.FromJID()
+		items, err := storage.Instance().FetchRosterItemsAsContact(contactJID.Node())
 		if err != nil {
 			log.Error(err)
 			return
@@ -128,7 +128,8 @@ func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 			default:
 				continue
 			}
-			userJID, err := xml.NewJIDString(fmt.Sprintf("%s@%s", item.User, r.strm.Domain()), true)
+			jidStr := fmt.Sprintf("%s@%s", item.User, contactJID.Domain())
+			userJID, err := xml.NewJIDString(jidStr, true)
 			if err != nil {
 				log.Error(err)
 				return
