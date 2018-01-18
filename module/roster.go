@@ -393,7 +393,6 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	if err := r.pushRosterItem(ri, userJID); err != nil {
 		return err
 	}
-
 	// stamp the presence stanza of type "subscribe" with the user's bare JID as the 'from' address
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements())
@@ -668,6 +667,10 @@ func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
 	}
 }
 
+func (r *Roster) rosterItemJID(ri *storage.RosterItem) (*xml.JID, error) {
+	return xml.NewJIDString(fmt.Sprintf("%s@%s", ri.Contact, r.strm.Domain()), true)
+}
+
 func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
 	ri := &storage.RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
@@ -733,8 +736,4 @@ func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) (xml.Element, err
 		item.AppendElement(gr)
 	}
 	return item, nil
-}
-
-func (r *Roster) rosterItemJID(ri *storage.RosterItem) (*xml.JID, error) {
-	return xml.NewJIDString(fmt.Sprintf("%s@%s", ri.Contact, r.strm.Domain()), true)
 }
