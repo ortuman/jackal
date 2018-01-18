@@ -105,13 +105,6 @@ func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 	})
 }
 
-func (r *Roster) BroadcastUnavailablePresence() {
-	p := xml.NewPresence(r.strm.JID(), r.strm.JID(), xml.UnavailableType)
-	if err := r.broadcastPresence(p); err != nil {
-		log.Error(err)
-	}
-}
-
 func (r *Roster) processPresence(presence *xml.Presence) error {
 	switch presence.Type() {
 	case xml.SubscribeType:

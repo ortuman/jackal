@@ -985,7 +985,7 @@ func (s *serverStream) disconnect(closeStream bool) {
 	s.lock.RUnlock()
 
 	if available && s.roster != nil {
-		s.roster.BroadcastUnavailablePresence()
+		s.roster.BroadcastPresence(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
 	}
 	if closeStream {
 		s.tr.Write([]byte("</stream:stream>"))
