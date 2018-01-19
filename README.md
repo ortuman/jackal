@@ -6,3 +6,7 @@ An XMPP server written in Go.
         <img src="./doc/gopher.png">
     </a>
 </div>
+
+<div align="center">
+[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
+</div>
