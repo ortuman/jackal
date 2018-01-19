@@ -15,4 +15,6 @@ An XMPP server written in Go.
 
 </div>
 
+jackal is a modern XMPP communication server. It aims to be easy to set up and configure, and efficient with system resources. Additionally, for developers it aims to be easy to extend and give a flexible system on which to rapidly develop added functionality, or prototype new protocols.
+
 ## Features
