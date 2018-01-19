@@ -8,5 +8,7 @@ An XMPP server written in Go.
 </div>
 
 <div align="center">
+    
 [![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
+
 </div>
