@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/ortuman/jackal/concurrent"
 	"github.com/ortuman/jackal/log"
@@ -38,11 +37,8 @@ type Roster struct {
 
 func NewRoster(strm stream.C2SStream) *Roster {
 	return &Roster{
-		queue: concurrent.OperationQueue{
-			QueueSize: 32,
-			Timeout:   time.Second * 5,
-		},
-		strm: strm,
+		queue: concurrent.OperationQueue{QueueSize: 32},
+		strm:  strm,
 	}
 }
 
