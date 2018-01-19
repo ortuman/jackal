@@ -1,3 +1,3 @@
 # jackal
 An XMPP server written in Go.
-![jackal.go Logo](https://github.com/ortuman/jackal/blob/master/logo.png)
+![jackal.go Logo](https://raw.githubusercontent.com/ortuman/jackal/master/jackal.png)
