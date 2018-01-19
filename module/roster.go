@@ -67,7 +67,7 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 	})
 }
 
-func (r *Roster) IsRosterRequested() bool {
+func (r *Roster) IsRequested() bool {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.requested

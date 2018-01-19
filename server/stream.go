@@ -185,7 +185,7 @@ func (s *serverStream) IsCompressed() bool {
 
 func (s *serverStream) IsRosterRequested() bool {
 	if s.roster != nil {
-		return s.roster.IsRosterRequested()
+		return s.roster.IsRequested()
 	}
 	return false
 }
