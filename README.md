@@ -1,4 +1,8 @@
 # jackal
 An XMPP server written in Go.
 
-![jackal image](doc/gopher.png)
+<div align="center">
+    <a href="#">
+        <img src="./doc/gopher.png">
+    </a>
+</div>
