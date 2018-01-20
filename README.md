@@ -10,10 +10,20 @@ A XMPP server written in Go.
     </a>
 </div>
 
-# About
+## About
 Jackal is a modern XMPP communication server. It aims to be easy to set up and configure, and efficient with system resources. Additionally, for developers it aims to be easy to extend and give a flexible system on which to rapidly develop added functionality, or prototype new protocols.
 
 ## Features
+
+## XMPP Extension Protocol
+
+- XEP-0030 Service Discovery
+- XEP-0049 Private XML Storage
+- XEP-0054 vcard-temp
+- XEP-0077 In-Band Registration
+- XEP-0092 Software Version
+- XEP-0138 Stream Compression
+- XEP-0199 XMPP Ping
 
 ## Licensing
 
