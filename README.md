@@ -24,7 +24,7 @@ Jackal is a modern XMPP communication server. It aims to be easy to set up and c
 - [XEP-0138 Stream Compression](https://xmpp.org/extensions/xep-0138.html)
 - [XEP-0199 XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 
-# Licensing
+## Licensing
 
 Jackal is licensed under the GNU General Public License, Version 3.0. See
 [LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
