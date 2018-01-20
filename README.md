@@ -22,6 +22,7 @@ Jackal is a modern XMPP communication server. It aims to be easy to set up and c
 - [XEP-0077 In-Band Registration](https://xmpp.org/extensions/xep-0077.html)
 - [XEP-0092 Software Version](https://xmpp.org/extensions/xep-0092.html)
 - [XEP-0138 Stream Compression](https://xmpp.org/extensions/xep-0138.html)
+- [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html)
 - [XEP-0199 XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 
 ## Licensing
