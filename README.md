@@ -17,6 +17,6 @@ Jackal is a modern XMPP communication server. It aims to be easy to set up and c
 
 ## Licensing
 
-Jackal is licensed under the General Public License, Version 3.0. See
+Jackal is licensed under the GNU General Public License, Version 3.0. See
 [LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
 license text.
