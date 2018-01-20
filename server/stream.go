@@ -75,7 +75,7 @@ type serverStream struct {
 
 	iqHandlers []module.IQHandler
 
-	roster           *module.Roster
+	roster           *module.ModRoster
 	rosterOnce       sync.Once
 	available        bool
 	presenceElements []xml.Element
@@ -83,7 +83,7 @@ type serverStream struct {
 	register *module.XEPRegister
 	ping     *module.XEPPing
 
-	offline     *module.Offline
+	offline     *module.ModOffline
 	offlineOnce sync.Once
 
 	writeCh chan xml.Element

@@ -28,29 +28,34 @@ const (
 	subscriptionRemove = "remove"
 )
 
-type Roster struct {
+type roster struct {
+	inboundItems  []storage.RosterItem
+	outboundItems []storage.RosterItem
+}
+
+type ModRoster struct {
 	queue     concurrent.OperationQueue
 	strm      stream.C2SStream
 	lock      sync.RWMutex
 	requested bool
 }
 
-func NewRoster(strm stream.C2SStream) *Roster {
-	return &Roster{
+func NewRoster(strm stream.C2SStream) *ModRoster {
+	return &ModRoster{
 		queue: concurrent.OperationQueue{QueueSize: 32},
 		strm:  strm,
 	}
 }
 
-func (r *Roster) AssociatedNamespaces() []string {
+func (r *ModRoster) AssociatedNamespaces() []string {
 	return []string{}
 }
 
-func (r *Roster) MatchesIQ(iq *xml.IQ) bool {
+func (r *ModRoster) MatchesIQ(iq *xml.IQ) bool {
 	return iq.FindElementNamespace("query", rosterNamespace) != nil
 }
 
-func (r *Roster) ProcessIQ(iq *xml.IQ) {
+func (r *ModRoster) ProcessIQ(iq *xml.IQ) {
 	r.queue.Async(func() {
 		q := iq.FindElementNamespace("query", rosterNamespace)
 		if iq.IsGet() {
@@ -63,13 +68,13 @@ func (r *Roster) ProcessIQ(iq *xml.IQ) {
 	})
 }
 
-func (r *Roster) IsRequested() bool {
+func (r *ModRoster) IsRequested() bool {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.requested
 }
 
-func (r *Roster) ProcessPresence(presence *xml.Presence) {
+func (r *ModRoster) ProcessPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
 		if err := r.processPresence(presence); err != nil {
 			log.Error(err)
@@ -77,7 +82,7 @@ func (r *Roster) ProcessPresence(presence *xml.Presence) {
 	})
 }
 
-func (r *Roster) DeliverPendingApprovalNotifications() {
+func (r *ModRoster) DeliverPendingApprovalNotifications() {
 	r.queue.Async(func() {
 		if err := r.deliverPendingApprovalNotifications(); err != nil {
 			log.Error(err)
@@ -85,7 +90,7 @@ func (r *Roster) DeliverPendingApprovalNotifications() {
 	})
 }
 
-func (r *Roster) ReceivePresences() {
+func (r *ModRoster) ReceivePresences() {
 	r.queue.Async(func() {
 		if err := r.receivePresences(); err != nil {
 			log.Error(err)
@@ -93,7 +98,7 @@ func (r *Roster) ReceivePresences() {
 	})
 }
 
-func (r *Roster) BroadcastPresence(presence *xml.Presence) {
+func (r *ModRoster) BroadcastPresence(presence *xml.Presence) {
 	r.queue.Async(func() {
 		if err := r.broadcastPresence(presence); err != nil {
 			log.Error(err)
@@ -101,7 +106,7 @@ func (r *Roster) BroadcastPresence(presence *xml.Presence) {
 	})
 }
 
-func (r *Roster) processPresence(presence *xml.Presence) error {
+func (r *ModRoster) processPresence(presence *xml.Presence) error {
 	switch presence.Type() {
 	case xml.SubscribeType:
 		return r.processSubscribe(presence)
@@ -115,7 +120,7 @@ func (r *Roster) processPresence(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) deliverPendingApprovalNotifications() error {
+func (r *ModRoster) deliverPendingApprovalNotifications() error {
 	rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.strm.Username())
 	if err != nil {
 		return err
@@ -132,7 +137,7 @@ func (r *Roster) deliverPendingApprovalNotifications() error {
 	return nil
 }
 
-func (r *Roster) receivePresences() error {
+func (r *ModRoster) receivePresences() error {
 	items, err := storage.Instance().FetchRosterItemsAsUser(r.strm.Username())
 	if err != nil {
 		return err
@@ -151,7 +156,7 @@ func (r *Roster) receivePresences() error {
 	return nil
 }
 
-func (r *Roster) broadcastPresence(presence *xml.Presence) error {
+func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
 	contactJID := presence.FromJID()
 	items, err := storage.Instance().FetchRosterItemsAsContact(contactJID.Node())
 	if err != nil {
@@ -174,7 +179,7 @@ func (r *Roster) broadcastPresence(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
+func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.Element) {
 	if query.ElementsCount() > 0 {
 		r.strm.SendElement(iq.BadRequestError())
 		return
@@ -209,7 +214,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.Element) {
 	r.lock.Unlock()
 }
 
-func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
+func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.Element) {
 	items := query.FindElements("item")
 	if len(items) != 1 {
 		r.strm.SendElement(iq.BadRequestError())
@@ -237,7 +242,7 @@ func (r *Roster) updateRoster(iq *xml.IQ, query xml.Element) {
 	r.strm.SendElement(iq.ResultIQ())
 }
 
-func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
+func (r *ModRoster) removeRosterItem(ri *storage.RosterItem) error {
 	userJID := r.strm.JID()
 	contactJID, err := r.rosterItemJID(ri)
 	if err != nil {
@@ -318,7 +323,7 @@ func (r *Roster) removeRosterItem(ri *storage.RosterItem) error {
 	return nil
 }
 
-func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
+func (r *ModRoster) updateRosterItem(ri *storage.RosterItem) error {
 	userJID := r.strm.JID()
 	contactJID, err := r.rosterItemJID(ri)
 	if err != nil {
@@ -354,7 +359,7 @@ func (r *Roster) updateRosterItem(ri *storage.RosterItem) error {
 	return r.pushRosterItem(userRi, r.strm.JID())
 }
 
-func (r *Roster) processSubscribe(presence *xml.Presence) error {
+func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
@@ -400,7 +405,7 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) processSubscribed(presence *xml.Presence) error {
+func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
@@ -459,7 +464,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
+func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 	userJID := r.strm.JID()
 	contactJID := presence.ToJID()
 
@@ -517,7 +522,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
+func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 	userJID := presence.ToJID()
 	contactJID := r.strm.JID()
 
@@ -579,7 +584,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
+func (r *ModRoster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
 	rn := &storage.RosterNotification{
 		User:     userJID.Node(),
 		Contact:  contactJID.Node(),
@@ -588,11 +593,11 @@ func (r *Roster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *
 	return storage.Instance().InsertOrUpdateRosterNotification(rn)
 }
 
-func (r *Roster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
+func (r *ModRoster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
 	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.Node())
 }
 
-func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
+func (r *ModRoster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storage.RosterItem, error) {
 	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
 	if err != nil {
 		return nil, err
@@ -600,18 +605,18 @@ func (r *Roster) fetchRosterItem(userJID *xml.JID, contactJID *xml.JID) (*storag
 	return ri, nil
 }
 
-func (r *Roster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
+func (r *ModRoster) insertOrUpdateRosterItem(ri *storage.RosterItem) error {
 	if err := storage.Instance().InsertOrUpdateRosterItem(ri); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *Roster) deleteRosterItem(userJID *xml.JID, contactJID *xml.JID) error {
+func (r *ModRoster) deleteRosterItem(userJID *xml.JID, contactJID *xml.JID) error {
 	return storage.Instance().DeleteRosterItem(userJID.Node(), contactJID.Node())
 }
 
-func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) error {
+func (r *ModRoster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) error {
 	elem, err := r.elementFromRosterItem(ri)
 	if err != nil {
 		return err
@@ -632,11 +637,11 @@ func (r *Roster) pushRosterItem(ri *storage.RosterItem, to *xml.JID) error {
 	return nil
 }
 
-func (r *Roster) isLocalJID(jid *xml.JID) bool {
+func (r *ModRoster) isLocalJID(jid *xml.JID) bool {
 	return stream.C2S().IsLocalDomain(jid.Domain())
 }
 
-func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
+func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
 	fromStreams := stream.C2S().AvailableStreams(from.Node())
 	for _, fromStream := range fromStreams {
 		p := xml.NewPresence(fromStream.JID(), to.ToBareJID(), presenceType)
@@ -647,7 +652,7 @@ func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType str
 	}
 }
 
-func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
+func (r *ModRoster) routePresence(presence *xml.Presence, to *xml.JID) {
 	if stream.C2S().IsLocalDomain(to.Domain()) {
 		toStreams := stream.C2S().AvailableStreams(to.Node())
 		for _, toStream := range toStreams {
@@ -660,11 +665,11 @@ func (r *Roster) routePresence(presence *xml.Presence, to *xml.JID) {
 	}
 }
 
-func (r *Roster) rosterItemJID(ri *storage.RosterItem) (*xml.JID, error) {
+func (r *ModRoster) rosterItemJID(ri *storage.RosterItem) (*xml.JID, error) {
 	return xml.NewJIDString(fmt.Sprintf("%s@%s", ri.Contact, r.strm.Domain()), true)
 }
 
-func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
+func (r *ModRoster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, error) {
 	ri := &storage.RosterItem{}
 	if jid := item.Attribute("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
@@ -704,7 +709,7 @@ func (r *Roster) rosterItemFromElement(item xml.Element) (*storage.RosterItem, e
 	return ri, nil
 }
 
-func (r *Roster) elementFromRosterItem(ri *storage.RosterItem) (xml.Element, error) {
+func (r *ModRoster) elementFromRosterItem(ri *storage.RosterItem) (xml.Element, error) {
 	riJID, err := r.rosterItemJID(ri)
 	if err != nil {
 		return nil, err

@@ -16,14 +16,14 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-type Offline struct {
+type ModOffline struct {
 	queue concurrent.OperationQueue
 	cfg   *config.ModOffline
 	strm  stream.C2SStream
 }
 
-func NewOffline(config *config.ModOffline, strm stream.C2SStream) *Offline {
-	return &Offline{
+func NewOffline(config *config.ModOffline, strm stream.C2SStream) *ModOffline {
+	return &ModOffline{
 		queue: concurrent.OperationQueue{
 			QueueSize: 32,
 			Timeout:   time.Second,
@@ -33,11 +33,11 @@ func NewOffline(config *config.ModOffline, strm stream.C2SStream) *Offline {
 	}
 }
 
-func (o *Offline) AssociatedNamespaces() []string {
+func (o *ModOffline) AssociatedNamespaces() []string {
 	return []string{"msgoffline"}
 }
 
-func (o *Offline) ArchiveMessage(message *xml.Message) {
+func (o *ModOffline) ArchiveMessage(message *xml.Message) {
 	switch message.Type() {
 	case xml.ChatType, xml.NormalType:
 		break
@@ -49,13 +49,13 @@ func (o *Offline) ArchiveMessage(message *xml.Message) {
 	})
 }
 
-func (o *Offline) DeliverOfflineMessages() {
+func (o *ModOffline) DeliverOfflineMessages() {
 	o.queue.Async(func() {
 		o.deliverOfflineMessages()
 	})
 }
 
-func (o *Offline) archiveMessage(message *xml.Message) {
+func (o *ModOffline) archiveMessage(message *xml.Message) {
 	toJid := message.ToJID()
 	queueSize, err := storage.Instance().CountOfflineMessages(toJid.Node())
 	if err != nil {
@@ -83,7 +83,7 @@ func (o *Offline) archiveMessage(message *xml.Message) {
 	log.Infof("archived offline message... id: %s", message.ID())
 }
 
-func (o *Offline) deliverOfflineMessages() {
+func (o *ModOffline) deliverOfflineMessages() {
 	messages, err := storage.Instance().FetchOfflineMessages(o.strm.Username())
 	if err != nil {
 		log.Error(err)
