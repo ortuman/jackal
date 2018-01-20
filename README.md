@@ -15,17 +15,16 @@ Jackal is a modern XMPP communication server. It aims to be easy to set up and c
 
 ## Features
 
-## XMPP Extension Protocol
+## XMPP Extension Protocol
+- [XEP-0030 Service Discovery](https://xmpp.org/extensions/xep-0030.html)
+- [XEP-0049 Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
+- [XEP-0054 vcard-temp](https://xmpp.org/extensions/xep-0054.html)
+- [XEP-0077 In-Band Registration](https://xmpp.org/extensions/xep-0077.html)
+- [XEP-0092 Software Version](https://xmpp.org/extensions/xep-0092.html)
+- [XEP-0138 Stream Compression](https://xmpp.org/extensions/xep-0138.html)
+- [XEP-0199 XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 
-- XEP-0030 Service Discovery
-- XEP-0049 Private XML Storage
-- XEP-0054 vcard-temp
-- XEP-0077 In-Band Registration
-- XEP-0092 Software Version
-- XEP-0138 Stream Compression
-- XEP-0199 XMPP Ping
-
-## Licensing
+# Licensing
 
 Jackal is licensed under the GNU General Public License, Version 3.0. See
 [LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
