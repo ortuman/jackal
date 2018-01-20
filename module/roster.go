@@ -28,11 +28,6 @@ const (
 	subscriptionRemove = "remove"
 )
 
-type roster struct {
-	inboundItems  []storage.RosterItem
-	outboundItems []storage.RosterItem
-}
-
 type ModRoster struct {
 	queue     concurrent.OperationQueue
 	strm      stream.C2SStream
