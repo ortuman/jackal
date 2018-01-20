@@ -13,6 +13,22 @@ A XMPP server written in Go.
 ## About
 Jackal is a modern XMPP communication server. It aims to be easy to set up and configure, and efficient with system resources. Additionally, for developers it aims to be easy to extend and give a flexible system on which to rapidly develop added functionality, or prototype new protocols.
 
+## Installing
+
+To start using jackal, install Go and run `go get`:
+
+```sh
+$ go get github.com/ortuman/jackal
+```
+
+This will retrieve the code and install the `jackal` server application into your `$GOBIN` path.
+
+By default the application will try to read server configuration from `/etc/jackal/jackal.yaml` file, but alternatively you can specify a custom configuration path from command line.
+
+```sh
+$ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
+```
+
 ## Features
 
 ## XMPP Extension Protocol
@@ -22,6 +38,7 @@ Jackal is a modern XMPP communication server. It aims to be easy to set up and c
 - [XEP-0077 In-Band Registration](https://xmpp.org/extensions/xep-0077.html)
 - [XEP-0092 Software Version](https://xmpp.org/extensions/xep-0092.html)
 - [XEP-0138 Stream Compression](https://xmpp.org/extensions/xep-0138.html)
+- [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html)
 - [XEP-0199 XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 
 ## Licensing
