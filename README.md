@@ -11,6 +11,12 @@ A XMPP server written in Go.
 </div>
 
 # About
-jackal is a modern XMPP communication server. It aims to be easy to set up and configure, and efficient with system resources. Additionally, for developers it aims to be easy to extend and give a flexible system on which to rapidly develop added functionality, or prototype new protocols.
+Jackal is a modern XMPP communication server. It aims to be easy to set up and configure, and efficient with system resources. Additionally, for developers it aims to be easy to extend and give a flexible system on which to rapidly develop added functionality, or prototype new protocols.
 
 ## Features
+
+## Licensing
+
+Jackal is licensed under the General Public License, Version 3.0. See
+[LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
+license text.
