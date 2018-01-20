@@ -38,6 +38,12 @@ func (o *Offline) AssociatedNamespaces() []string {
 }
 
 func (o *Offline) ArchiveMessage(message *xml.Message) {
+	switch message.Type() {
+	case xml.ChatType, xml.NormalType:
+		break
+	default:
+		return
+	}
 	o.queue.Async(func() {
 		o.archiveMessage(message)
 	})
