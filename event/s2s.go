@@ -1,0 +1,65 @@
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package event
+
+import "github.com/jackal-xmpp/stravaganza"
+
+const (
+	// S2SOutStreamRegistered event is posted when an outgoing S2S connection is registered.
+	S2SOutStreamRegistered = "s2s.out.stream.registered"
+
+	// S2SOutStreamUnregistered event is posted when an outgoing S2S connection is unregistered.
+	S2SOutStreamUnregistered = "s2s.out.stream.unregistered"
+
+	// S2SOutStreamStanzaSent event is posted whenever a stanza is sent over an outgoing S2S stream.
+	S2SOutStreamStanzaSent = "s2s.out.stream.stanza_sent"
+
+	// S2SInStreamRegistered event is posted when an incoming S2S connection is registered.
+	S2SInStreamRegistered = "s2s.in.stream.registered"
+
+	// S2SInStreamUnregistered event is posted when an incoming S2S connection is unregistered.
+	S2SInStreamUnregistered = "s2s.in.stream.unregistered"
+
+	// S2SInStreamStanzaReceived event is posted whenever a stanza is received over an incoming S2S stream.
+	S2SInStreamStanzaReceived = "s2s.in.stream.stanza_received"
+
+	// S2SInStreamIQReceived event is posted whenever an iq stanza is received over an incoming S2S stream.
+	S2SInStreamIQReceived = "s2s.in.stream.iq_received"
+
+	// S2SInStreamPresenceReceived event is posted whenever a presence stanza is received over an incoming S2S stream.
+	S2SInStreamPresenceReceived = "s2s.in.stream.presence_received"
+
+	// S2SInStreamMessageReceived event is posted whenever a message stanza is received over an incoming S2S stream.
+	S2SInStreamMessageReceived = "s2s.in.stream.message_received"
+
+	// S2SStreamMessageUnrouted event is posted whenever a previously received message stanza could not be routed
+	// because no destination available resource was found.
+	S2SStreamMessageUnrouted = "s2s.in.stream.message_unrouted"
+)
+
+// S2SStreamEventInfo contains all info associated to a S2S event.
+type S2SStreamEventInfo struct {
+	// ID is the event stream identifier.
+	ID string
+
+	// Sender is the S2S sender domain.
+	Sender string
+
+	// Target is the S2S target domain.
+	Target string
+
+	// Stanza represents the event associated stanza.
+	Stanza stravaganza.Stanza
+}

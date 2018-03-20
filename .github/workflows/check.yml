@@ -1,0 +1,27 @@
+name: "Check"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.15.1'
+
+      - name: Setup Go linter
+        run: go get -u -v golang.org/x/tools/cmd/goimports golang.org/x/lint/golint
+
+      - name: Setup moq
+        run: go get github.com/matryer/moq
+
+      - name: Run checks
+        run: make check

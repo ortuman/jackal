@@ -1,0 +1,94 @@
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto3";
+
+import "github.com/jackal-xmpp/stravaganza/stravaganza.proto";
+
+package cluster.v1;
+
+option go_package = "./;pb";
+
+service LocalRouter {
+  // Route method routes a stanza to a local available resource.
+  rpc Route(LocalRouteRequest) returns (LocalRouteResponse);
+
+  // Disconnect performs disconnection over a local available resource.
+  rpc Disconnect(LocalDisconnectRequest) returns (LocalDisconnectResponse);
+}
+
+service ComponentRouter {
+  // Route method routes a stanza to a local registered component.
+  rpc Route(ComponentRouteRequest) returns (ComponentRouteResponse);
+}
+
+// LocalRouteRequest is the parameter message for LocalRouter Route rpc.
+message LocalRouteRequest {
+  // username name of the user to which the stanza is routed to.
+  string username = 1;
+
+  // resource is the registered resource to which the stanza is routed to.
+  string resource = 2;
+
+  // stanza contains the routed XMPP stanza.
+  stravaganza.PBElement stanza = 3;
+}
+
+// LocalRouteResponse is the response returned by LocalRouter Route rpc.
+message LocalRouteResponse {}
+
+// LocalDisconnectRequest is the parameter message for LocalRouter Disconnect rpc.
+message LocalDisconnectRequest {
+  string username = 1;
+  string resource = 2;
+  StreamError stream_error = 3;
+}
+
+// LocalDisconnectResponse is the response returned by LocalRouter Disconnect rpc.
+message LocalDisconnectResponse {}
+
+message ComponentRouteRequest {
+  // stanza contains the routed XMPP stanza.
+  stravaganza.PBElement stanza = 1;
+}
+
+// ComponentRouteResponse is the response returned by ComponentRouter Route rpc.
+message ComponentRouteResponse {}
+
+// StreamError represents a stream disconnection error reason.
+message StreamError {
+  StreamErrorReason reason = 1;
+  string lang = 2;
+  string text = 3;
+  stravaganza.PBElement applicationElement = 4;
+}
+
+// StreamErrorReason is an enumerated type that describes stream error reason.
+enum StreamErrorReason {
+  STREAM_ERROR_REASON_INVALID_XML              = 0;  // Invalid XML.
+  STREAM_ERROR_REASON_INVALID_NAMESPACE        = 1;  // Invalid namespace.
+  STREAM_ERROR_REASON_HOST_UNKNOWN             = 2;  // Host unknown.
+  STREAM_ERROR_REASON_CONFLICT                 = 3;  // Conflict.
+  STREAM_ERROR_REASON_INVALID_FROM             = 4;  // Invalid from.
+  STREAM_ERROR_REASON_POLICY_VIOLATION         = 5;  // Policy violation.
+  STREAM_ERROR_REASON_REMOTE_CONNECTION_FAILED = 6;  // Remote connection failed.
+  STREAM_ERROR_REASON_CONNECTION_TIMEOUT       = 7;  // Connection timeout.
+  STREAM_ERROR_REASON_UNSUPPORTED_STANZA_TYPE  = 8;  // Unsupported stanza type.
+  STREAM_ERROR_REASON_UNSUPPORTED_VERSION      = 9;  // Unsupported version.
+  STREAM_ERROR_REASON_NOT_AUTHORIZED           = 10; // Not authorized.
+  STREAM_ERROR_REASON_RESOURCE_CONSTRAINT      = 11; // Resource constraint.
+  STREAM_ERROR_REASON_SYSTEM_SHUTDOWN          = 12; // System shutdown.
+  STREAM_ERROR_REASON_UNDEFINED_CONDITION      = 13; // Undefined condition.
+  STREAM_ERROR_REASON_INTERNAL_SERVER_ERROR    = 14; // Server error.
+}
