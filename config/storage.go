@@ -42,7 +42,7 @@ type MySQLDb struct {
 	PoolSize int    `yaml:"pool_size"`
 }
 
-// BadgerDB represents BadgerDB storage configuration.
+// BadgerDb represents BadgerDB storage configuration.
 type BadgerDb struct {
 	DataDir string `yaml:"data_dir"`
 }
