@@ -1,0 +1,14 @@
+# Test basic configuration
+
+storage:
+  type: mock
+
+c2s:
+  domains: [jackal.im]
+
+servers:
+  - id: default
+    type: c2s
+
+    transport:
+      port: 5222

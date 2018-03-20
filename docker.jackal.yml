@@ -1,0 +1,75 @@
+# jackal configuration file
+
+pid_path: /var/run/jackal.pid
+
+logger:
+  level: info
+  log_path: /var/log/jackal/jackal.log
+
+storage:
+  type: badgerdb
+  badgerdb:
+    data_dir: ./.data
+
+c2s:
+  domains: [localhost]
+
+servers:
+  - id: default
+    type: c2s
+
+    resource_conflict: replace  # [override, replace, reject]
+
+    transport:
+      type: socket
+      bind_addr: 0.0.0.0
+      port: 5222
+      connect_timeout: 5
+      keep_alive: 120
+      buf_size: 8192
+
+    tls:
+      privkey_path: ./cert/key.pem
+      cert_path: ./cert/cert.pem
+
+    compression:
+      level: default
+
+    sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
+
+    modules:
+      # Roster
+      - roster
+
+      # XEP-0049: Private XML Storage
+      - private
+
+      # XEP-0054: vcard-temp
+      - vcard
+
+      # XEP-0077: In-Band Registration
+      - registration
+
+      # XEP-0092: Software Version
+      - version
+
+      # XEP-0199: XMPP Ping
+      - ping
+
+      # Offline storage
+      - offline
+
+    mod_offline:
+      queue_size: 2500
+
+    mod_registration:
+      allow_registration: yes
+      allow_change: yes
+      allow_cancel: yes
+
+    mod_version:
+      show_os: true
+
+    mod_ping:
+      send: no
+      send_interval: 5

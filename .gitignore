@@ -1,0 +1,31 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+debug
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# System folders
+.DS_Store
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# PID files
+*.pid
+
+# Log files
+*.log
+
+# Storage folder
+.data/
+
+# Project folders
+.idea/
+.vscode/

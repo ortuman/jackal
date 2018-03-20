@@ -1,0 +1,33 @@
+language: go
+
+os:
+  - linux
+  - osx
+
+go:
+  - 1.10.x
+  - 1.9.x
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update        ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libidn; fi
+
+script:
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+  - go test -race -coverprofile=bufferpool.coverage.txt -covermode=atomic ./bufferpool
+  - go test -race -coverprofile=config.coverage.txt -covermode=atomic ./config
+  - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
+  - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
+  - go test -race -coverprofile=server.coverage.txt -covermode=atomic ./server
+  - go test -race -coverprofile=server.compress.coverage.txt -covermode=atomic ./server/compress  
+  - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport
+  - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage
+  - go test -race -coverprofile=storage.model.coverage.txt -covermode=atomic ./storage/model
+  - go test -race -coverprofile=stream.c2s.coverage.txt -covermode=atomic ./stream/c2s
+  - go test -race -coverprofile=stream.errors.coverage.txt -covermode=atomic ./stream/errors
+  - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
+  - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
+  - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xml
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
