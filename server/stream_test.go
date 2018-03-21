@@ -45,12 +45,12 @@ func TestStream_Features(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	time.Sleep(time.Millisecond * 50) // wait for write...
 
-	elems := conn.ReadElements()
-	require.Equal(t, 2, len(elems))
-	require.Equal(t, "stream:stream", elems[0].Name())
-	require.Equal(t, "stream:features", elems[1].Name())
+	elem := conn.ClientReadElement()
+	require.Equal(t, "stream:stream", elem.Name())
+
+	elem = conn.ClientReadElement()
+	require.Equal(t, "stream:features", elem.Name())
 
 	require.Equal(t, connected, stm.getState())
 }
@@ -66,15 +66,15 @@ func TestStream_TLS(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	elems := conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
-	conn.SendBytes([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
-	time.Sleep(time.Millisecond * 50)
+	conn.ClientWriteBytes([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
 
-	elems = conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "proceed", elems[0].Name())
-	require.Equal(t, "urn:ietf:params:xml:ns:xmpp-tls", elems[0].Namespace())
+	elem := conn.ClientReadElement()
+
+	require.Equal(t, "proceed", elem.Name())
+	require.Equal(t, "urn:ietf:params:xml:ns:xmpp-tls", elem.Namespace())
 
 	require.True(t, stm.IsSecured())
 }
@@ -90,22 +90,22 @@ func TestStream_Compression(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
-	conn.SendBytes([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
+	conn.ClientWriteBytes([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
 <method>zlib</method>
 </compress>`))
-	time.Sleep(time.Millisecond * 50)
 
-	elems := conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "compressed", elems[0].Name())
-	require.Equal(t, "http://jabber.org/protocol/compress", elems[0].Namespace())
+	elem := conn.ClientReadElement()
+	require.Equal(t, "compressed", elem.Name())
+	require.Equal(t, "http://jabber.org/protocol/compress", elem.Namespace())
 
 	require.True(t, stm.IsCompressed())
 }
@@ -121,14 +121,17 @@ func TestStream_StartSession(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
+	time.Sleep(time.Millisecond * 100) // wait until processed...
 
 	require.Equal(t, sessionStarted, stm.getState())
 }
@@ -144,14 +147,18 @@ func TestStream_SendIQ(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
+	time.Sleep(time.Millisecond * 100)
+
 	require.Equal(t, sessionStarted, stm.getState())
 
 	// request roster...
@@ -159,14 +166,12 @@ func TestStream_SendIQ(t *testing.T) {
 	iq := xml.NewIQType(iqID, xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", "jabber:iq:roster"))
 
-	conn.SendBytes([]byte(iq.String()))
-	time.Sleep(time.Millisecond * 50)
+	conn.ClientWriteBytes([]byte(iq.String()))
 
-	elems := conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "iq", elems[0].Name())
-	require.Equal(t, iqID, elems[0].ID())
-	require.NotNil(t, elems[0].FindElementsNamespace("query", "jabber:iq:roster"))
+	elem := conn.ClientReadElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, iqID, elem.ID())
+	require.NotNil(t, elem.FindElementsNamespace("query", "jabber:iq:roster"))
 
 	require.True(t, stm.IsRosterRequested())
 }
@@ -182,17 +187,19 @@ func TestStream_SendPresence(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
 	require.Equal(t, sessionStarted, stm.getState())
 
-	conn.SendBytes([]byte(`
+	conn.ClientWriteBytes([]byte(`
 <presence>
 <show>away</show>
 <status>away!</status>
@@ -202,7 +209,7 @@ func TestStream_SendPresence(t *testing.T) {
 </x>
 </presence>
 	`))
-	time.Sleep(time.Millisecond * 50)
+	time.Sleep(time.Millisecond * 100) // wait until processed...
 
 	require.Equal(t, int8(5), stm.Priority())
 	x := xml.NewElementName("x")
@@ -224,14 +231,18 @@ func TestStream_SendMessage(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ReadElements()
+	_ = conn.ClientReadElement() // read stream opening...
+	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
+	time.Sleep(time.Millisecond * 100)
+
 	require.Equal(t, sessionStarted, stm.getState())
 
 	// define a second stream...
@@ -250,7 +261,7 @@ func TestStream_SendMessage(t *testing.T) {
 	body.SetText("Hi buddy!")
 	msg.AppendElement(body)
 
-	conn.SendBytes([]byte(msg.String()))
+	conn.ClientWriteBytes([]byte(msg.String()))
 
 	// to full jid...
 	elem := stm2.FetchElement()
@@ -259,7 +270,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 	// to bare jid...
 	msg.SetToJID(jTo.ToBareJID())
-	conn.SendBytes([]byte(msg.String()))
+	conn.ClientWriteBytes([]byte(msg.String()))
 	elem = stm2.FetchElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
@@ -270,56 +281,45 @@ func tUtilStreamOpen(conn *transport.MockConn) {
 	<stream:stream xmlns:stream="http://etherx.jabber.org/streams" 
 	version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 `
-	conn.SendBytes([]byte(s))
-	time.Sleep(time.Millisecond * 50)
+	conn.ClientWriteBytes([]byte(s))
 }
 
 func tUtilStreamAuthenticate(conn *transport.MockConn, t *testing.T) {
-	conn.SendBytes([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
-	time.Sleep(time.Millisecond * 50) // wait for write...
+	conn.ClientWriteBytes([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
 
-	elems := conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "challenge", elems[0].Name())
+	elem := conn.ClientReadElement()
+	require.Equal(t, "challenge", elem.Name())
 
-	conn.SendBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
-	time.Sleep(time.Millisecond * 50) // wait for write...
+	conn.ClientWriteBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
 
-	elems = conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "challenge", elems[0].Name())
+	elem = conn.ClientReadElement()
+	require.Equal(t, "challenge", elem.Name())
 
-	conn.SendBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
-	time.Sleep(time.Millisecond * 50)
+	conn.ClientWriteBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
 
-	elems = conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "success", elems[0].Name())
+	elem = conn.ClientReadElement()
+	require.Equal(t, "success", elem.Name())
 }
 
 func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
-	conn.SendBytes([]byte(`<iq type="set" id="bind_1">
+	conn.ClientWriteBytes([]byte(`<iq type="set" id="bind_1">
 <bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
 <resource>balcony</resource>
 </bind>
 </iq>`))
-	time.Sleep(time.Millisecond * 50)
 
-	elems := conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "iq", elems[0].Name())
-	require.NotNil(t, elems[0].FindElement("bind"))
+	elem := conn.ClientReadElement()
+	require.Equal(t, "iq", elem.Name())
+	require.NotNil(t, elem.FindElement("bind"))
 
 	// open session
-	conn.SendBytes([]byte(`<iq type="set" id="aab8a">
+	conn.ClientWriteBytes([]byte(`<iq type="set" id="aab8a">
 <session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
 </iq>`))
-	time.Sleep(time.Millisecond * 50)
 
-	elems = conn.ReadElements()
-	require.Equal(t, 1, len(elems))
-	require.Equal(t, "iq", elems[0].Name())
-	require.NotNil(t, xml.ResultType, elems[0].Type())
+	elem = conn.ClientReadElement()
+	require.Equal(t, "iq", elem.Name())
+	require.NotNil(t, xml.ResultType, elem.Type())
 }
 
 func tUtilStreamInit() (*serverStream, *transport.MockConn) {

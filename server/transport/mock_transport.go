@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/xml"
 )
 
 // MockTransport represents a mocked transport type.
@@ -25,6 +26,7 @@ type MockTransport struct {
 	closed        bool
 	secured       bool
 	compressed    bool
+	parser        *xml.Parser
 }
 
 // NewMockTransport returns a new MockTransport instance.
@@ -34,14 +36,15 @@ func NewMockTransport() *MockTransport {
 	tr.rb = new(bytes.Buffer)
 	tr.br = bufio.NewReader(tr.rb)
 	tr.bw = bufio.NewWriter(tr.wb)
+	tr.parser = xml.NewParser(tr.br)
 	return tr
 }
 
-// Read reads a byte array from the mocked transport.
-func (mt *MockTransport) Read(p []byte) (n int, err error) {
+// ReadElement reads next available XML element from the mocked transport.
+func (mt *MockTransport) ReadElement() (xml.Element, error) {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
-	return mt.br.Read(p)
+	return mt.parser.ParseElement()
 }
 
 // SetReadBytes sets transport next read operation result.
@@ -52,12 +55,20 @@ func (mt *MockTransport) SetReadBytes(p []byte) {
 	mt.rb.Write(p)
 }
 
-// Write writes a byte array to the mocked transport internal buffer.
-func (mt *MockTransport) Write(p []byte) (n int, err error) {
+// WriteString writes a raw string to the mocked transport.
+func (mt *MockTransport) WriteString(str string) error {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
 	defer mt.bw.Flush()
-	return mt.bw.Write(p)
+	_, err := mt.bw.WriteString(str)
+	return err
+}
+
+// WriteElement writes an XML element the mocked transport.
+func (mt *MockTransport) WriteElement(elem xml.Element, includeClosing bool) error {
+	defer mt.bw.Flush()
+	elem.ToXML(mt.bw, includeClosing)
+	return nil
 }
 
 // GetWrittenBytes returns transport previously written bytes.

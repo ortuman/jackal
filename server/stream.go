@@ -61,7 +61,6 @@ type serverStream struct {
 	cfg              *config.Server
 	connected        uint32
 	tr               transport.Transport
-	parser           *xml.Parser
 	state            uint32
 	id               string
 	username         string
@@ -100,7 +99,6 @@ func newSocketStream(id string, conn net.Conn, config *config.Server) *serverStr
 	bufferSize := config.Transport.BufferSize
 	keepAlive := config.Transport.KeepAlive
 	s.tr = transport.NewSocketTransport(conn, bufferSize, keepAlive)
-	s.parser = xml.NewParser(s.tr)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -509,6 +507,10 @@ func (s *serverStream) proceedStartTLS() {
 		s.disconnectClosingStream(true)
 		return
 	}
+	s.lock.Lock()
+	s.secured = true
+	s.lock.Unlock()
+
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
 	cfg := &tls.Config{
@@ -516,10 +518,6 @@ func (s *serverStream) proceedStartTLS() {
 		Certificates: []tls.Certificate{cer},
 	}
 	s.tr.StartTLS(cfg)
-
-	s.lock.Lock()
-	s.secured = true
-	s.lock.Unlock()
 
 	log.Infof("secured stream... id: %s", s.id)
 
@@ -544,13 +542,13 @@ func (s *serverStream) compress(elem xml.Element) {
 		s.writeElement(failure)
 		return
 	}
-	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
-	s.writeElement(compressed)
-
-	s.tr.EnableCompression(s.cfg.Compression.Level)
 	s.lock.Lock()
 	s.compressed = true
 	s.lock.Unlock()
+
+	s.writeElement(xml.NewElementNamespace("compressed", compressProtocolNamespace))
+
+	s.tr.EnableCompression(s.cfg.Compression.Level)
 
 	log.Infof("compressed stream... id: %s", s.id)
 
@@ -815,7 +813,6 @@ sendMessage:
 
 func (s *serverStream) restart() {
 	s.setState(connecting)
-	s.parser = xml.NewParser(s.tr)
 }
 
 func (s *serverStream) actorLoop() {
@@ -829,7 +826,7 @@ func (s *serverStream) actorLoop() {
 }
 
 func (s *serverStream) doRead() {
-	if e, err := s.parser.ParseElement(); e != nil && err == nil {
+	if e, err := s.tr.ReadElement(); e != nil && err == nil {
 		s.actorCh <- func() {
 			s.readElement(e)
 		}
@@ -864,7 +861,7 @@ func (s *serverStream) doRead() {
 
 func (s *serverStream) writeElement(element xml.Element) {
 	log.Debugf("SEND: %v", element)
-	element.ToXML(s.tr, true)
+	s.tr.WriteElement(element, true)
 }
 
 func (s *serverStream) readElement(elem xml.Element) {
@@ -897,8 +894,8 @@ func (s *serverStream) openStreamElement() {
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
 
-	s.tr.Write([]byte(`<?xml version="1.0"?>`))
-	ops.ToXML(s.tr, false)
+	s.tr.WriteString(`<?xml version="1.0"?>`)
+	s.tr.WriteElement(ops, false)
 }
 
 func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, error) {
@@ -1031,7 +1028,7 @@ func (s *serverStream) disconnectClosingStream(closeStream bool) {
 		s.roster.BroadcastPresenceAndWait(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
 	}
 	if closeStream {
-		s.tr.Write([]byte("</stream:stream>"))
+		s.tr.WriteString("</stream:stream>")
 	}
 	// stop modules
 	for _, iqHandler := range s.iqHandlers {
