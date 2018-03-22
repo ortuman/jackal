@@ -338,10 +338,9 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
+	isSocketTransport := s.cfg.Transport.Type == config.SocketTransportType
 	if !s.IsAuthenticated() {
-		tlsRequired := s.cfg.Transport.Type == config.SocketTransportType
-
-		if tlsRequired && !s.IsSecured() {
+		if isSocketTransport && !s.IsSecured() {
 			startTLS := xml.NewElementName("starttls")
 			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
 			startTLS.AppendElement(xml.NewElementName("required"))
@@ -349,7 +348,7 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 		}
 
 		// attach SASL mechanisms
-		shouldOfferSASL := (!tlsRequired || (tlsRequired && s.IsSecured()))
+		shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
 
 		if shouldOfferSASL && len(s.authrs) > 0 {
 			mechanisms := xml.NewElementName("mechanisms")
@@ -373,7 +372,7 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 
 	} else {
 		// attach compression feature
-		compressionAvailable := s.cfg.Transport.Type != config.WebSocketTransportType && s.cfg.Compression.Level != config.NoCompression
+		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != config.NoCompression
 
 		if !s.IsCompressed() && compressionAvailable {
 			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
