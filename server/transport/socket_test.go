@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/config"
-	"github.com/ortuman/jackal/util"
+	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,16 +20,16 @@ func TestSocket(t *testing.T) {
 	st := NewSocketTransport(mc, 4096, 120)
 	st2 := st.(*socketTransport)
 
-	bt := util.RandomBytes(256)
-	st.Write(bt)
-	require.Equal(t, 0, bytes.Compare(bt, mc.ReadBytes()))
+	el1 := xml.NewElementNamespace("elem", "exodus:ns")
+	st.WriteElement(el1, true)
+	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), mc.ClientReadBytes()))
 
-	bt = util.RandomBytes(256)
-	mc.SendBytes(bt)
-	b2 := make([]byte, 256)
-
-	st.Read(b2)
-	require.Equal(t, 0, bytes.Compare(bt, b2))
+	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")
+	mc.ClientWriteBytes([]byte(el2.String()))
+	el3, err := st.ReadElement()
+	require.Nil(t, err)
+	require.NotNil(t, el3)
+	require.Equal(t, el2.String(), el3.String())
 
 	st.EnableCompression(config.BestCompression)
 	require.True(t, st2.compressionEnabled)

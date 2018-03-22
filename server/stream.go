@@ -10,12 +10,14 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -41,6 +43,10 @@ const (
 )
 
 const (
+	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
+)
+
+const (
 	streamNamespace           = "http://etherx.jabber.org/streams"
 	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
@@ -61,7 +67,6 @@ type serverStream struct {
 	cfg              *config.Server
 	connected        uint32
 	tr               transport.Transport
-	parser           *xml.Parser
 	state            uint32
 	id               string
 	username         string
@@ -86,21 +91,18 @@ type serverStream struct {
 	actorCh          chan func()
 }
 
-func newSocketStream(id string, conn net.Conn, config *config.Server) *serverStream {
+func newStream(id string, tr transport.Transport, cfg *config.Server) *serverStream {
 	s := &serverStream{
-		cfg:     config,
+		cfg:     cfg,
 		id:      id,
+		tr:      tr,
 		state:   connecting,
+		secured: cfg.Transport.Type == config.WebSocketTransportType,
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// assign default domain
 	s.domain = c2s.Instance().DefaultLocalDomain()
 	s.jid, _ = xml.NewJID("", s.domain, "", true)
-
-	bufferSize := config.Transport.BufferSize
-	keepAlive := config.Transport.KeepAlive
-	s.tr = transport.NewSocketTransport(conn, bufferSize, keepAlive)
-	s.parser = xml.NewParser(s.tr)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -108,8 +110,8 @@ func newSocketStream(id string, conn net.Conn, config *config.Server) *serverStr
 	// initialize XEPs
 	s.initializeXEPs()
 
-	if config.Transport.ConnectTimeout > 0 {
-		go s.startConnectTimeoutTimer(config.Transport.ConnectTimeout)
+	if cfg.Transport.ConnectTimeout > 0 {
+		go s.startConnectTimeoutTimer(cfg.Transport.ConnectTimeout)
 	}
 	go s.actorLoop()
 	go s.doRead() // start reading transport...
@@ -336,30 +338,23 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
-	if !s.IsAuthenticated() {
-		// attach TLS feature
-		tlsRequired := true
+	isSocketTransport := s.cfg.Transport.Type == config.SocketTransportType
 
-		if !s.IsSecured() {
+	if !s.IsAuthenticated() {
+		if isSocketTransport && !s.IsSecured() {
 			startTLS := xml.NewElementName("starttls")
 			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
-			if tlsRequired {
-				startTLS.AppendElement(xml.NewElementName("required"))
-			}
+			startTLS.AppendElement(xml.NewElementName("required"))
 			features.AppendElement(startTLS)
 		}
 
 		// attach SASL mechanisms
-		shouldOfferSASL := (!tlsRequired || (tlsRequired && s.IsSecured()))
+		shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
 
 		if shouldOfferSASL && len(s.authrs) > 0 {
 			mechanisms := xml.NewElementName("mechanisms")
 			mechanisms.SetNamespace(saslNamespace)
 			for _, athr := range s.authrs {
-				// don't offset authenticators with channel binding on an unsecure stream
-				if athr.UsesChannelBinding() && !s.IsSecured() {
-					continue
-				}
 				mechanism := xml.NewElementName("mechanism")
 				mechanism.SetText(athr.Mechanism())
 				mechanisms.AppendElement(mechanism)
@@ -378,7 +373,9 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 
 	} else {
 		// attach compression feature
-		if !s.IsCompressed() && s.cfg.Compression.Level != config.NoCompression {
+		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != config.NoCompression
+
+		if !s.IsCompressed() && compressionAvailable {
 			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
 			method := xml.NewElementName("method")
 			method.SetText("zlib")
@@ -509,6 +506,10 @@ func (s *serverStream) proceedStartTLS() {
 		s.disconnectClosingStream(true)
 		return
 	}
+	s.lock.Lock()
+	s.secured = true
+	s.lock.Unlock()
+
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
 	cfg := &tls.Config{
@@ -516,10 +517,6 @@ func (s *serverStream) proceedStartTLS() {
 		Certificates: []tls.Certificate{cer},
 	}
 	s.tr.StartTLS(cfg)
-
-	s.lock.Lock()
-	s.secured = true
-	s.lock.Unlock()
 
 	log.Infof("secured stream... id: %s", s.id)
 
@@ -544,13 +541,13 @@ func (s *serverStream) compress(elem xml.Element) {
 		s.writeElement(failure)
 		return
 	}
-	compressed := xml.NewElementNamespace("compressed", compressProtocolNamespace)
-	s.writeElement(compressed)
-
-	s.tr.EnableCompression(s.cfg.Compression.Level)
 	s.lock.Lock()
 	s.compressed = true
 	s.lock.Unlock()
+
+	s.writeElement(xml.NewElementNamespace("compressed", compressProtocolNamespace))
+
+	s.tr.EnableCompression(s.cfg.Compression.Level)
 
 	log.Infof("compressed stream... id: %s", s.id)
 
@@ -660,6 +657,7 @@ func (s *serverStream) bindResource(iq *xml.IQ) {
 
 	//...notify successful binding
 	result := xml.NewIQType(iq.ID(), xml.ResultType)
+	result.SetNamespace(iq.Namespace())
 
 	binded := xml.NewElementNamespace("bind", bindNamespace)
 	jid := xml.NewElementName("jid")
@@ -815,7 +813,6 @@ sendMessage:
 
 func (s *serverStream) restart() {
 	s.setState(connecting)
-	s.parser = xml.NewParser(s.tr)
 }
 
 func (s *serverStream) actorLoop() {
@@ -829,30 +826,34 @@ func (s *serverStream) actorLoop() {
 }
 
 func (s *serverStream) doRead() {
-	if e, err := s.parser.ParseElement(); e != nil && err == nil {
+	if e, err := s.tr.ReadElement(); e != nil && err == nil {
 		s.actorCh <- func() {
 			s.readElement(e)
 		}
 	} else if err != nil {
 		if s.getState() == disconnected {
-			// already disconnected...
-			return
+			return // already disconnected...
 		}
+
 		var discErr error
 		switch err {
 		case nil, io.EOF, io.ErrUnexpectedEOF, xml.ErrStreamClosedByPeer:
 			break
-		default:
-			log.Error(err)
 
-			switch opErr := err.(type) {
-			case *net.OpError:
-				if opErr.Timeout() {
+		default:
+			switch e := err.(type) {
+			case net.Error:
+				if e.Timeout() {
 					discErr = streamerror.ErrConnectionTimeout
 				} else {
 					discErr = streamerror.ErrInvalidXML
 				}
+
+			case *websocket.CloseError:
+				break // connection closed by peer...
+
 			default:
+				log.Error(err)
 				discErr = streamerror.ErrInvalidXML
 			}
 		}
@@ -864,7 +865,7 @@ func (s *serverStream) doRead() {
 
 func (s *serverStream) writeElement(element xml.Element) {
 	log.Debugf("SEND: %v", element)
-	element.ToXML(s.tr, true)
+	s.tr.WriteElement(element, true)
 }
 
 func (s *serverStream) readElement(elem xml.Element) {
@@ -890,15 +891,29 @@ func (s *serverStream) disconnect(err error) {
 }
 
 func (s *serverStream) openStreamElement() {
-	ops := xml.NewElementName("stream:stream")
-	ops.SetAttribute("xmlns", jabberClientNamespace)
-	ops.SetAttribute("xmlns:stream", streamNamespace)
+	var ops *xml.MutableElement
+	var includeClosing bool
+
+	switch s.cfg.Transport.Type {
+	case config.SocketTransportType:
+		ops = xml.NewElementName("stream:stream")
+		ops.SetAttribute("xmlns", jabberClientNamespace)
+		ops.SetAttribute("xmlns:stream", streamNamespace)
+		s.tr.WriteString(`<?xml version="1.0"?>`)
+
+	case config.WebSocketTransportType:
+		ops = xml.NewElementName("open")
+		ops.SetAttribute("xmlns", framedStreamNamespace)
+		includeClosing = true
+
+	default:
+		return
+	}
 	ops.SetAttribute("id", uuid.New())
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
 
-	s.tr.Write([]byte(`<?xml version="1.0"?>`))
-	ops.ToXML(s.tr, false)
+	s.tr.WriteElement(ops, includeClosing)
 }
 
 func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, error) {
@@ -948,15 +963,26 @@ func (s *serverStream) handleElementError(elem xml.Element, err error) {
 }
 
 func (s *serverStream) validateStreamElement(elem xml.Element) *streamerror.Error {
-	if elem.Name() != "stream:stream" {
-		return streamerror.ErrUnsupportedStanzaType
+	switch s.cfg.Transport.Type {
+	case config.SocketTransportType:
+		if elem.Name() != "stream:stream" {
+			return streamerror.ErrUnsupportedStanzaType
+		}
+		if elem.Namespace() != jabberClientNamespace || elem.Attribute("xmlns:stream") != streamNamespace {
+			return streamerror.ErrInvalidNamespace
+		}
+
+	case config.WebSocketTransportType:
+		if elem.Name() != "open" {
+			return streamerror.ErrUnsupportedStanzaType
+		}
+		if elem.Namespace() != framedStreamNamespace {
+			return streamerror.ErrInvalidNamespace
+		}
 	}
 	to := elem.To()
 	if len(to) > 0 && !c2s.Instance().IsLocalDomain(to) {
 		return streamerror.ErrHostUnknown
-	}
-	if elem.Namespace() != jabberClientNamespace || elem.Attribute("xmlns:stream") != streamNamespace {
-		return streamerror.ErrInvalidNamespace
 	}
 	if elem.Version() != "1.0" {
 		return streamerror.ErrUnsupportedVersion
@@ -1031,7 +1057,12 @@ func (s *serverStream) disconnectClosingStream(closeStream bool) {
 		s.roster.BroadcastPresenceAndWait(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
 	}
 	if closeStream {
-		s.tr.Write([]byte("</stream:stream>"))
+		switch s.cfg.Transport.Type {
+		case config.SocketTransportType:
+			s.tr.WriteString("</stream:stream>")
+		case config.WebSocketTransportType:
+			s.tr.WriteString(fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
+		}
 	}
 	// stop modules
 	for _, iqHandler := range s.iqHandlers {

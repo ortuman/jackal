@@ -9,117 +9,115 @@ import (
 	"bytes"
 	"io"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/bufferpool"
+	"github.com/ortuman/jackal/config"
+
 	"github.com/ortuman/jackal/xml"
 )
 
 const mockConnNetwork = "tcp"
-
-var pool = bufferpool.New()
 
 const (
 	mockConnLocalAddr  = "10.188.17.228"
 	mockConnRemoteAddr = "77.230.105.223"
 )
 
-type readReq struct {
-	p   []byte
-	err error
+type mockConnPipe struct {
+	w *io.PipeWriter
+	r *io.PipeReader
 }
 
-type mockAddress struct {
+func newMockConnPipe() *mockConnPipe {
+	r, w := io.Pipe()
+	return &mockConnPipe{w: w, r: r}
+}
+
+type mockConnAddress struct {
 	network string
 	str     string
 }
 
-func (ma *mockAddress) Network() string {
+func (ma *mockConnAddress) Network() string {
 	return ma.network
 }
 
-func (ma *mockAddress) String() string {
+func (ma *mockConnAddress) String() string {
 	return ma.str
 }
 
 // MockConn represents a net.Conn mocked implementation.
 type MockConn struct {
-	closed uint32
-	wb     *bytes.Buffer
-	wbMu   sync.Mutex
-	readCh chan readReq
-	discCh chan bool
+	clPipe  *mockConnPipe
+	srvPipe *mockConnPipe
+	closed  uint32
+	discCh  chan bool
+	writeCh chan []byte
+	readCh  chan []byte
 }
 
 // NewMockConn returns a new initialized MockConn instance.
 func NewMockConn() *MockConn {
-	return &MockConn{
-		wb:     new(bytes.Buffer),
-		readCh: make(chan readReq, 1),
-		discCh: make(chan bool, 1),
+	mc := &MockConn{
+		clPipe:  newMockConnPipe(),
+		srvPipe: newMockConnPipe(),
+		discCh:  make(chan bool, 1),
+		writeCh: make(chan []byte, 1),
+		readCh:  make(chan []byte, 32),
 	}
+	go mc.clientWriter()
+	go mc.clientReader()
+	return mc
+}
+
+// ClientWriteBytes sets next read operation content.
+func (mc *MockConn) ClientWriteBytes(b []byte) {
+	mc.writeCh <- b
+}
+
+// ClientWriteElement sets next read operation content from
+// a serialized XML element.
+func (mc *MockConn) ClientWriteElement(elem xml.Element) {
+	buf := new(bytes.Buffer)
+	elem.ToXML(buf, true)
+	mc.ClientWriteBytes(buf.Bytes())
+}
+
+// ClientReadBytes retrieves previous write operation written bytes.
+func (mc *MockConn) ClientReadBytes() []byte {
+	return <-mc.readCh
+}
+
+// ClientReadElement deserializes previous write operation content
+// into an XML elements array.
+func (mc *MockConn) ClientReadElement() xml.Element {
+retryRead:
+	b := <-mc.readCh
+	parser := xml.NewParserTransportType(bytes.NewReader(b), config.SocketTransportType)
+	el, _ := parser.ParseElement()
+	if el == nil {
+		goto retryRead
+	}
+	return el
 }
 
 // Read performs a read operation on the mocked connection.
 func (mc *MockConn) Read(b []byte) (n int, err error) {
-	r := <-mc.readCh
-	if len(r.p) > 0 {
-		copy(b, r.p)
-	}
-	return len(r.p), r.err
-}
-
-// SendBytes sets next read operation content.
-func (mc *MockConn) SendBytes(b []byte) {
-	mc.readCh <- readReq{p: b, err: nil}
-}
-
-// SendElement sets next read operation content from
-// a serialized XML element.
-func (mc *MockConn) SendElement(elem xml.Element) {
-	buf := pool.Get()
-	defer pool.Put(buf)
-	elem.ToXML(buf, true)
-	mc.SendBytes(buf.Bytes())
+	return mc.srvPipe.r.Read(b)
 }
 
 // Write performs a write operation on the mocked connection.
 func (mc *MockConn) Write(b []byte) (n int, err error) {
-	mc.wbMu.Lock()
-	mc.wb.Write(b)
-	mc.wbMu.Unlock()
-	return len(b), nil
-}
-
-// ReadBytes retrieves previous write operation written bytes.
-func (mc *MockConn) ReadBytes() []byte {
-	mc.wbMu.Lock()
-	b := mc.wb.Bytes()
-	mc.wb.Reset()
-	mc.wbMu.Unlock()
-	return b
-}
-
-// ReadElements deserializes previous write operation content
-// into an XML elements array.
-func (mc *MockConn) ReadElements() []xml.Element {
-	p := xml.NewParser(bytes.NewBuffer(mc.ReadBytes()))
-	var elems []xml.Element
-	el, err := p.ParseElement()
-	for err != io.EOF {
-		elems = append(elems, el)
-		el, err = p.ParseElement()
-	}
-	return elems
+	return mc.clPipe.w.Write(b)
 }
 
 // Close marks mocked connection as closed.
 func (mc *MockConn) Close() error {
 	atomic.StoreUint32(&mc.closed, 1)
+	mc.clPipe.r.Close()
+	close(mc.writeCh)
 	mc.discCh <- true
-	mc.readCh <- readReq{p: nil, err: io.EOF}
 	return nil
 }
 
@@ -147,7 +145,7 @@ func (mc *MockConn) IsClosed() bool {
 
 // LocalAddr returns a mocked remote address.
 func (mc *MockConn) LocalAddr() net.Addr {
-	return &mockAddress{
+	return &mockConnAddress{
 		network: mockConnNetwork,
 		str:     mockConnLocalAddr,
 	}
@@ -155,7 +153,7 @@ func (mc *MockConn) LocalAddr() net.Addr {
 
 // RemoteAddr returns a mocked remote address.
 func (mc *MockConn) RemoteAddr() net.Addr {
-	return &mockAddress{
+	return &mockConnAddress{
 		network: mockConnNetwork,
 		str:     mockConnRemoteAddr,
 	}
@@ -174,4 +172,29 @@ func (mc *MockConn) SetReadDeadline(t time.Time) error {
 // SetWriteDeadline satisfies net.Conn interface.
 func (mc *MockConn) SetWriteDeadline(t time.Time) error {
 	return nil
+}
+
+func (mc *MockConn) clientWriter() {
+	for b := range mc.writeCh {
+		mc.srvPipe.w.Write(b)
+	}
+}
+
+func (mc *MockConn) clientReader() {
+	for {
+		bt := make([]byte, 8192)
+		n, err := mc.clPipe.r.Read(bt)
+		switch err {
+		case nil:
+			break
+		case io.EOF:
+			if n > 0 {
+				mc.readCh <- bt[:n]
+				return
+			}
+		default:
+			return
+		}
+		mc.readCh <- bt[:n]
+	}
 }

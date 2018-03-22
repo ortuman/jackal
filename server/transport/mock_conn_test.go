@@ -19,10 +19,10 @@ func TestMockConn(t *testing.T) {
 
 	bt := util.RandomBytes(256)
 	mc.Write(bt)
-	require.Equal(t, 0, bytes.Compare(bt, mc.ReadBytes()))
+	require.Equal(t, 0, bytes.Compare(bt, mc.ClientReadBytes()))
 
 	bt = util.RandomBytes(256)
-	mc.SendBytes(bt)
+	mc.ClientWriteBytes(bt)
 	bt2 := make([]byte, 256)
 	mc.Read(bt2)
 	require.Equal(t, 0, bytes.Compare(bt, bt2))
