@@ -87,7 +87,10 @@ $ docker pull ortuman/jackal
 $ docker run --name jackal -p 5222:5222 ortuman/jackal
 ```
 
-## XMPP Extension Protocol
+## Supported Specifications
+- [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
+- [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
+- [RFC 7395: XMPP Subprotocol for WebSocket](https://tools.ietf.org/html/rfc7395)
 - [XEP-0030 Service Discovery](https://xmpp.org/extensions/xep-0030.html)
 - [XEP-0049 Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
 - [XEP-0054 vcard-temp](https://xmpp.org/extensions/xep-0054.html)
