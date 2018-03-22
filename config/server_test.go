@@ -17,7 +17,7 @@ func TestTypeStrings(t *testing.T) {
 	require.Equal(t, "s2s", S2SServerType.String())
 	require.Equal(t, "", ServerType(99).String())
 
-	require.Equal(t, "socket", Socket.String())
+	require.Equal(t, "socket", SocketTransportType.String())
 	require.Equal(t, "", TransportType(99).String())
 
 	require.Equal(t, "default", DefaultCompression.String())
@@ -59,7 +59,7 @@ buf_size: 4096
 	tr := Transport{}
 	err := yaml.Unmarshal([]byte(cfg), &tr)
 	require.Nil(t, err)
-	require.Equal(t, Socket, tr.Type)
+	require.Equal(t, SocketTransportType, tr.Type)
 	require.Equal(t, "192.168.0.1", tr.BindAddress)
 	require.Equal(t, 6666, tr.Port)
 	require.Equal(t, 10, tr.ConnectTimeout)
@@ -69,7 +69,7 @@ buf_size: 4096
 	// test defaults
 	err = yaml.Unmarshal([]byte("{type: socket}"), &tr)
 	require.Nil(t, err)
-	require.Equal(t, Socket, tr.Type)
+	require.Equal(t, SocketTransportType, tr.Type)
 	require.Equal(t, "", tr.BindAddress)
 	require.Equal(t, defaultTransportPort, tr.Port)
 	require.Equal(t, defaultTransportConnectTimeout, tr.ConnectTimeout)

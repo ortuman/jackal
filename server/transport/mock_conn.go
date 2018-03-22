@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/config"
+
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -92,7 +94,7 @@ func (mc *MockConn) ClientReadBytes() []byte {
 func (mc *MockConn) ClientReadElement() xml.Element {
 retryRead:
 	b := <-mc.readCh
-	parser := xml.NewParser(bytes.NewReader(b))
+	parser := xml.NewParserTransportType(bytes.NewReader(b), config.MockTransportType)
 	el, _ := parser.ParseElement()
 	if el == nil {
 		goto retryRead

@@ -44,7 +44,7 @@ func TestServer(t *testing.T) {
 	cfg := config.Server{
 		ID: "srv-1234",
 		Transport: config.Transport{
-			Type: config.Socket,
+			Type: config.SocketTransportType,
 			Port: 5123,
 		},
 	}

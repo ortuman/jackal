@@ -39,7 +39,7 @@ func NewSocketTransport(conn net.Conn, bufferSize, keepAlive int) Transport {
 	}
 	s.w = s.bw
 	s.r = s.br
-	s.parser = xml.NewParser(s.r)
+	s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 	return s
 }
 
@@ -69,7 +69,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 		s.conn = tls.Server(s.conn, cfg)
 		s.bw.Reset(s.conn)
 		s.br.Reset(s.conn)
-		s.parser = xml.NewParser(s.r)
+		s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 	}
 }
 
@@ -78,7 +78,7 @@ func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 		zwr := compress.NewZlibCompressor(s.br, s.bw, level)
 		s.w = zwr
 		s.r = zwr
-		s.parser = xml.NewParser(s.r)
+		s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 		s.compressionEnabled = true
 	}
 }

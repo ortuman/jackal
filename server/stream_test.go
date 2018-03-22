@@ -326,7 +326,8 @@ func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
 
 func tUtilStreamInit() (*serverStream, *transport.MockConn) {
 	conn := transport.NewMockConn()
-	stm := newSocketStream("abcd1234", conn, tUtilStreamDefaultConfig())
+	tr := transport.NewSocketTransport(conn, 4096, 4096)
+	stm := newStream("abcd1234", tr, tUtilStreamDefaultConfig())
 	c2s.Instance().RegisterStream(stm)
 	return stm, conn
 }
@@ -346,7 +347,7 @@ func tUtilStreamDefaultConfig() *config.Server {
 		ResourceConflict: config.Reject,
 		Type:             config.C2SServerType,
 		Transport: config.Transport{
-			Type:           config.Socket,
+			Type:           config.SocketTransportType,
 			ConnectTimeout: 1,
 			KeepAlive:      5,
 		},
