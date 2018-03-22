@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// WebSocketConn represents a websocket connection interface.
 type WebSocketConn interface {
 	NextReader() (messageType int, r io.Reader, err error)
 	NextWriter(int) (io.WriteCloser, error)
