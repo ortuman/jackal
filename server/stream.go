@@ -339,6 +339,7 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 	features.SetAttribute("version", "1.0")
 
 	isSocketTransport := s.cfg.Transport.Type == config.SocketTransportType
+
 	if !s.IsAuthenticated() {
 		if isSocketTransport && !s.IsSecured() {
 			startTLS := xml.NewElementName("starttls")

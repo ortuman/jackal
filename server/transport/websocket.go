@@ -8,6 +8,7 @@ package transport
 import (
 	"crypto/tls"
 	"io"
+	"net"
 	"strings"
 	"time"
 
@@ -16,13 +17,21 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+type WebSocketConn interface {
+	NextReader() (messageType int, r io.Reader, err error)
+	NextWriter(int) (io.WriteCloser, error)
+	Close() error
+	UnderlyingConn() net.Conn
+	SetReadDeadline(t time.Time) error
+}
+
 type websocketTransport struct {
-	conn        *websocket.Conn
+	conn        WebSocketConn
 	readTimeout int
 }
 
 // NewSocketTransport creates a socket class stream transport.
-func NewWebSocketTransport(conn *websocket.Conn, keepAlive int) Transport {
+func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
 	wst := &websocketTransport{conn: conn, readTimeout: keepAlive}
 	return wst
 }
