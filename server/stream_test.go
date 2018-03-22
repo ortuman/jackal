@@ -131,7 +131,6 @@ func TestStream_StartSession(t *testing.T) {
 	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
-	time.Sleep(time.Millisecond * 100) // wait until processed...
 
 	require.Equal(t, sessionStarted, stm.getState())
 }
@@ -157,7 +156,6 @@ func TestStream_SendIQ(t *testing.T) {
 	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
-	time.Sleep(time.Millisecond * 100) // wait until processed...
 
 	require.Equal(t, sessionStarted, stm.getState())
 
@@ -197,7 +195,6 @@ func TestStream_SendPresence(t *testing.T) {
 	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
-	time.Sleep(time.Millisecond * 100)
 
 	require.Equal(t, sessionStarted, stm.getState())
 
@@ -243,7 +240,6 @@ func TestStream_SendMessage(t *testing.T) {
 	_ = conn.ClientReadElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
-	time.Sleep(time.Millisecond * 100)
 
 	require.Equal(t, sessionStarted, stm.getState())
 
@@ -322,6 +318,8 @@ func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
 	elem = conn.ClientReadElement()
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, xml.ResultType, elem.Type())
+
+	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
 func tUtilStreamInit() (*serverStream, *transport.MockConn) {

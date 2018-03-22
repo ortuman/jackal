@@ -36,7 +36,7 @@ func NewMockTransport() *MockTransport {
 	tr.rb = new(bytes.Buffer)
 	tr.br = bufio.NewReader(tr.rb)
 	tr.bw = bufio.NewWriter(tr.wb)
-	tr.parser = xml.NewParserTransportType(tr.br, config.MockTransportType)
+	tr.parser = xml.NewParserTransportType(tr.br, config.SocketTransportType)
 	return tr
 }
 

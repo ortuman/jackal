@@ -70,9 +70,6 @@ const (
 
 	// WebSocketTransportType represents a websocket transport type.
 	WebSocketTransportType
-
-	// MockTransportType represents a mocked transport type.
-	MockTransportType
 )
 
 // String returns TransportType string representation.
@@ -82,8 +79,6 @@ func (tt TransportType) String() string {
 		return "socket"
 	case WebSocketTransportType:
 		return "websocket"
-	case MockTransportType:
-		return "mock"
 	}
 	return ""
 }

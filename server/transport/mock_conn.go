@@ -94,7 +94,7 @@ func (mc *MockConn) ClientReadBytes() []byte {
 func (mc *MockConn) ClientReadElement() xml.Element {
 retryRead:
 	b := <-mc.readCh
-	parser := xml.NewParserTransportType(bytes.NewReader(b), config.MockTransportType)
+	parser := xml.NewParserTransportType(bytes.NewReader(b), config.SocketTransportType)
 	el, _ := parser.ParseElement()
 	if el == nil {
 		goto retryRead

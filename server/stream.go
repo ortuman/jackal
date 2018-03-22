@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
