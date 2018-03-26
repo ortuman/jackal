@@ -1,4 +1,4 @@
-# jackal configuration file
+# jackal default configuration file
 
 pid_path: jackal.pid
 
@@ -45,26 +45,13 @@ servers:
     sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 
     modules:
-      # Roster
-      - roster
-
-      # XEP-0049: Private XML Storage
-      - private
-
-      # XEP-0054: vcard-temp
-      - vcard
-
-      # XEP-0077: In-Band Registration
-      - registration
-
-      # XEP-0092: Software Version
-      - version
-
-      # XEP-0199: XMPP Ping
-      - ping
-
-      # Offline storage
-      - offline
+      - roster       # Roster
+      - private      # XEP-0049: Private XML Storage
+      - vcard        # XEP-0054: vcard-temp
+      - registration # XEP-0077: In-Band Registration
+      - version      # XEP-0092: Software Version
+      - ping         # XEP-0199: XMPP Ping
+      - offline      # Offline storage
 
     mod_offline:
       queue_size: 2500
