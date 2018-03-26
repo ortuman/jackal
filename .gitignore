@@ -26,6 +26,10 @@ debug
 # Storage folder
 .data/
 
+# Certificate files
+server.key
+server.crt
+
 # Project folders
 .idea/
 .vscode/
