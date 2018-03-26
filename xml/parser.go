@@ -10,18 +10,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/ortuman/jackal/config"
 )
 
 const rootElementIndex = -1
 
-const streamName = "stream"
+const (
+	closeName  = "close"
+	streamName = "stream"
+)
 
-// ErrStreamClosedByPeer is returned by Parse when peer closes the stream
-// by sending '</stream:stream>' closing tag.
+const framedStreamNS = "urn:ietf:params:xml:ns:xmpp-framing"
+
+// ErrStreamClosedByPeer is returned by Parse when peer closes the stream.
 var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
+	tt           config.TransportType
 	dec          *xml.Decoder
 	nextElement  *xElement
 	parsingIndex int
@@ -31,10 +38,12 @@ type Parser struct {
 
 // NewParser creates an empty Parser instance.
 func NewParser(reader io.Reader) *Parser {
-	return &Parser{
-		dec:          xml.NewDecoder(reader),
-		parsingIndex: rootElementIndex,
-	}
+	return &Parser{dec: xml.NewDecoder(reader), parsingIndex: rootElementIndex}
+}
+
+// NewParserTransportType creates an empty Parser instance associated to a transport type.
+func NewParserTransportType(reader io.Reader, tt config.TransportType) *Parser {
+	return &Parser{tt: tt, dec: xml.NewDecoder(reader), parsingIndex: rootElementIndex}
 }
 
 // ParseElement parses next available XML element from reader.
@@ -48,7 +57,7 @@ func (p *Parser) ParseElement() (Element, error) {
 		switch t1 := t.(type) {
 		case xml.StartElement:
 			p.startElement(t1)
-			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+			if p.tt == config.SocketTransportType && t1.Name.Local == streamName && t1.Name.Space == streamName {
 				p.closeElement()
 				goto done
 			}
@@ -57,7 +66,7 @@ func (p *Parser) ParseElement() (Element, error) {
 			p.setElementText(t1)
 
 		case xml.EndElement:
-			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+			if p.tt == config.SocketTransportType && t1.Name.Local == streamName && t1.Name.Space == streamName {
 				return nil, ErrStreamClosedByPeer
 			}
 			p.endElement(t1)
@@ -73,6 +82,9 @@ func (p *Parser) ParseElement() (Element, error) {
 done:
 	ret := p.nextElement
 	p.nextElement = nil
+	if p.tt == config.WebSocketTransportType && ret.Name() == closeName && ret.Namespace() == framedStreamNS {
+		return nil, ErrStreamClosedByPeer
+	}
 	return ret, nil
 }
 

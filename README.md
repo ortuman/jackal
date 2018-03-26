@@ -50,6 +50,23 @@ By default the application will try to read server configuration from `/etc/jack
 $ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
 ```
 
+### Generate self-signed certificate
+
+`jackal` server enforces the use of a secured connection, so you'll have to provide at least a private key and a self signed certificate.
+
+In order to generate them run the following commands.
+
+```sh
+openssl genrsa -out server.key 2048m
+``` 
+Generates private key.
+
+```sh
+openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/C=CN/ST=Madrid/L=Madrid/O=Me/OU=Me/CN=localhost"
+```
+Generates self signed certificate associated to *localhost* domain.
+
+
 ### MySQL database creation
 
 Grant right to a dedicated 'jackal' user (replace `password` with your desired password).
@@ -87,15 +104,18 @@ $ docker pull ortuman/jackal
 $ docker run --name jackal -p 5222:5222 ortuman/jackal
 ```
 
-## XMPP Extension Protocol
-- [XEP-0030 Service Discovery](https://xmpp.org/extensions/xep-0030.html)
-- [XEP-0049 Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
-- [XEP-0054 vcard-temp](https://xmpp.org/extensions/xep-0054.html)
-- [XEP-0077 In-Band Registration](https://xmpp.org/extensions/xep-0077.html)
-- [XEP-0092 Software Version](https://xmpp.org/extensions/xep-0092.html)
-- [XEP-0138 Stream Compression](https://xmpp.org/extensions/xep-0138.html)
+## Supported Specifications
+- [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
+- [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
+- [RFC 7395: XMPP Subprotocol for WebSocket](https://tools.ietf.org/html/rfc7395)
+- [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html)
+- [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html)
+- [XEP-0054: vcard-temp](https://xmpp.org/extensions/xep-0054.html)
+- [XEP-0077: In-Band Registration](https://xmpp.org/extensions/xep-0077.html)
+- [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html)
+- [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html)
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html)
-- [XEP-0199 XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+- [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 
 ## Join and Contribute
 

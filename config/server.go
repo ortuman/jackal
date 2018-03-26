@@ -65,15 +65,20 @@ const (
 )
 
 const (
-	// Socket represents a socket transport.
-	Socket TransportType = iota
+	// SocketTransportType represents a socket transport type.
+	SocketTransportType TransportType = iota + 1
+
+	// WebSocketTransportType represents a websocket transport type.
+	WebSocketTransportType
 )
 
 // String returns TransportType string representation.
 func (tt TransportType) String() string {
 	switch tt {
-	case Socket:
+	case SocketTransportType:
 		return "socket"
+	case WebSocketTransportType:
+		return "websocket"
 	}
 	return ""
 }
@@ -227,7 +232,11 @@ func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// validate transport type
 	switch p.Type {
 	case "", "socket":
-		t.Type = Socket
+		t.Type = SocketTransportType
+
+	case "websocket":
+		t.Type = WebSocketTransportType
+
 	default:
 		return fmt.Errorf("config.Transport: unrecognized transport type: %s", p.Type)
 	}

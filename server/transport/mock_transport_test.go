@@ -12,25 +12,27 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/util"
+	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockTransport(t *testing.T) {
 	tr := NewMockTransport()
 
+	el1 := xml.NewElementNamespace("elem", "exodus:ns")
+	tr.WriteElement(el1, true)
+	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), tr.GetWrittenBytes()))
+
+	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")
+	tr.SetReadBytes([]byte(el2.String()))
+	el3, err := tr.ReadElement()
+	require.Nil(t, err)
+	require.NotNil(t, el3)
+	require.Equal(t, el2.String(), el3.String())
+
 	bt := util.RandomBytes(256)
-	tr.Write(bt)
-	require.Equal(t, 0, bytes.Compare(bt, tr.GetWrittenBytes()))
-
-	bt = util.RandomBytes(256)
-	tr.SetReadBytes(bt)
-	bt2 := make([]byte, 256)
-	tr.Read(bt2)
-	require.Equal(t, 0, bytes.Compare(bt, bt2))
-
-	bt3 := util.RandomBytes(256)
-	tr.SetChannelBindingBytes(bt3)
-	require.Equal(t, 0, bytes.Compare(tr.ChannelBindingBytes(config.TLSUnique), bt3))
+	tr.SetChannelBindingBytes(bt)
+	require.Equal(t, 0, bytes.Compare(tr.ChannelBindingBytes(config.TLSUnique), bt))
 
 	tr.StartTLS(&tls.Config{})
 	require.True(t, tr.IsSecured())

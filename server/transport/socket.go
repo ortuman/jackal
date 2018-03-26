@@ -10,10 +10,12 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/xml"
 )
 
 type socketTransport struct {
@@ -24,6 +26,7 @@ type socketTransport struct {
 	bw                 *bufio.Writer
 	readTimeout        int
 	compressionEnabled bool
+	parser             *xml.Parser
 }
 
 // NewSocketTransport creates a socket class stream transport.
@@ -36,17 +39,25 @@ func NewSocketTransport(conn net.Conn, bufferSize, keepAlive int) Transport {
 	}
 	s.w = s.bw
 	s.r = s.br
+	s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 	return s
 }
 
-func (s *socketTransport) Write(p []byte) (n int, err error) {
-	defer s.bw.Flush()
-	return s.w.Write(p)
+func (s *socketTransport) ReadElement() (xml.Element, error) {
+	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.readTimeout)))
+	return s.parser.ParseElement()
 }
 
-func (s *socketTransport) Read(p []byte) (n int, err error) {
-	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.readTimeout)))
-	return s.r.Read(p)
+func (s *socketTransport) WriteString(str string) error {
+	defer s.bw.Flush()
+	_, err := io.Copy(s.w, strings.NewReader(str))
+	return err
+}
+
+func (s *socketTransport) WriteElement(elem xml.Element, includeClosing bool) error {
+	defer s.bw.Flush()
+	elem.ToXML(s.w, includeClosing)
+	return nil
 }
 
 func (s *socketTransport) Close() error {
@@ -58,6 +69,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 		s.conn = tls.Server(s.conn, cfg)
 		s.bw.Reset(s.conn)
 		s.br.Reset(s.conn)
+		s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 	}
 }
 
@@ -66,6 +78,7 @@ func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 		zwr := compress.NewZlibCompressor(s.br, s.bw, level)
 		s.w = zwr
 		s.r = zwr
+		s.parser = xml.NewParserTransportType(s.r, config.SocketTransportType)
 		s.compressionEnabled = true
 	}
 }
