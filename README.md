@@ -54,10 +54,10 @@ $ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
 
 `jackal` server enforces the use of a secured connection, so you'll have to provide at least a private key and a self signed certificate.
 
-In order to generate them run the following commands.
+In order to generate them run the following commands:
 
 ```sh
-openssl genrsa -out server.key 2048m
+openssl genrsa -out server.key 2048
 ``` 
 Generates private key.
 
