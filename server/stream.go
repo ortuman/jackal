@@ -382,11 +382,12 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 			compression.AppendElement(method)
 			features.AppendElement(compression)
 		}
+		bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
+		bind.AppendElement(xml.NewElementName("required"))
+		features.AppendElement(bind)
+
 		session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 		features.AppendElement(session)
-
-		bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
-		features.AppendElement(bind)
 
 		s.setState(authenticated)
 	}
@@ -673,6 +674,11 @@ func (s *serverStream) bindResource(iq *xml.IQ) {
 }
 
 func (s *serverStream) startSession(iq *xml.IQ) {
+	if len(s.Resource()) == 0 {
+		// not binded yet...
+		s.Disconnect(streamerror.ErrNotAuthorized)
+		return
+	}
 	sess := iq.FindElementNamespace("session", sessionNamespace)
 	if sess == nil {
 		s.writeElement(iq.NotAllowedError())
