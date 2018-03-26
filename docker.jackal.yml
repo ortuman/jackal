@@ -29,13 +29,17 @@ servers:
       buf_size: 8192
 
     tls:
-      privkey_path: server.key
-      cert_path: server.crt
+      privkey_path: ""
+      cert_path: ""
 
     compression:
       level: default
 
-    sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
+    sasl: 
+      - plain
+      - digest_md5
+      - scram_sha_1 
+      - scram_sha_256
 
     modules:
       - roster       # Roster
