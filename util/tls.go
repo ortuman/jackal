@@ -28,7 +28,7 @@ const (
 )
 
 // LoadCertificate loads a certificate given a private key and certificate PEM files.
-// Only in case the associated domain is localhost and the files cannot be processed
+// Only in case the associated domain is localhost and no files are specified
 // a self signed certificate will be automatically generated.
 func LoadCertificate(keyFile, certFile, domain string) (*tls.Config, error) {
 	if len(certFile) == 0 || len(keyFile) == 0 {
