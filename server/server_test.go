@@ -24,6 +24,7 @@ func TestSocketServer(t *testing.T) {
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
+
 		// test XMPP port...
 		conn, err := net.Dial("tcp", "localhost:5123")
 		require.Nil(t, err)
@@ -46,8 +47,8 @@ func TestSocketServer(t *testing.T) {
 	cfg := config.Server{
 		ID: "srv-1234",
 		TLS: config.TLS{
-			PrivKeyFile: "../cert/key.pem",
-			CertFile:    "../cert/cert.pem",
+			PrivKeyFile: "../testdata/cert/test.server.key",
+			CertFile:    "../testdata/cert/test.server.crt",
 		},
 		Transport: config.Transport{
 			Type: config.SocketTransportType,
@@ -66,7 +67,7 @@ func TestWebSocketServer(t *testing.T) {
 
 		d := &websocket.Dialer{
 			Proxy:            http.ProxyFromEnvironment,
-			HandshakeTimeout: 45 * time.Second,
+			HandshakeTimeout: 15 * time.Second,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -85,8 +86,8 @@ func TestWebSocketServer(t *testing.T) {
 	cfg := config.Server{
 		ID: "srv-1234",
 		TLS: config.TLS{
-			PrivKeyFile: "../cert/key.pem",
-			CertFile:    "../cert/cert.pem",
+			PrivKeyFile: "../testdata/cert/test.server.key",
+			CertFile:    "../testdata/cert/test.server.crt",
 		},
 		Transport: config.Transport{
 			Type: config.WebSocketTransportType,

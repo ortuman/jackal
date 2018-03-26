@@ -350,8 +350,8 @@ func tUtilStreamDefaultConfig() *config.Server {
 			KeepAlive:      5,
 		},
 		TLS: config.TLS{
-			PrivKeyFile: "../cert/key.pem",
-			CertFile:    "../cert/cert.pem",
+			PrivKeyFile: "../testdata/test.server.key",
+			CertFile:    "../testdata/test.server.crt",
 		},
 		Compression:     config.Compression{Level: config.DefaultCompression},
 		SASL:            []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256"},
