@@ -42,7 +42,11 @@ servers:
     compression:
       level: default
 
-    sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
+    sasl: 
+      - plain
+      - digest_md5
+      - scram_sha_1 
+      - scram_sha_256
 
     modules:
       - roster       # Roster
