@@ -22,13 +22,14 @@ const localhostDomain = "localhost"
 
 const (
 	selfSignedCertKeyRSABits = 2048
-
-	selfSignedCertFolder = "./.cert/"
-
+	selfSignedCertFolder     = "./.cert/"
 	selfSignedCertPrivateKey = selfSignedCertFolder + "key.pem"
 	selfSignedCertFile       = selfSignedCertFolder + "cert.pem"
 )
 
+// LoadCertificate loads a certificate given a private key and certificate PEM files.
+// Only in case the associated domain is localhost and the files cannot be processed
+// a self signed certificate will be automatically generated.
 func LoadCertificate(keyFile, certFile, domain string) (*tls.Config, error) {
 	if len(certFile) == 0 || len(keyFile) == 0 {
 		switch domain {

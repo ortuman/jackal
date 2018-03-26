@@ -6,7 +6,6 @@
 package server
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/util"
 )
 
 type server struct {
@@ -125,19 +125,13 @@ func (s *server) listenWebSocketConn(address string) {
 			log.Fatalf("%v", err)
 		}
 	}()
-
-	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
+	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, c2s.Instance().DefaultLocalDomain())
 	if err != nil {
 		log.Fatalf("%v", err)
-		return
-	}
-	cfg := &tls.Config{
-		ServerName:   c2s.Instance().DefaultLocalDomain(),
-		Certificates: []tls.Certificate{cer},
 	}
 	wsSrv := &http.Server{
 		Addr:      address,
-		TLSConfig: cfg,
+		TLSConfig: tlsCfg,
 	}
 	s.wsUpgrader = &websocket.Upgrader{
 		ReadBufferSize:  s.cfg.Transport.BufferSize,
