@@ -50,21 +50,6 @@ By default the application will try to read server configuration from `/etc/jack
 $ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
 ```
 
-### Generate self-signed certificate
-
-jackal server enforces the use of an encrypted connection, so you'll have to provide at least a private key and a self signed certificate. In order to generate them run the following commands:
-
-Generate private key.
-```sh
-openssl genrsa -out server.key 2048
-``` 
-
-Generate self signed certificate associated to *localhost* domain.
-```sh
-openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/C=CN/ST=Madrid/L=Madrid/O=Me/OU=Me/CN=localhost"
-```
-
-
 ### MySQL database creation
 
 Grant right to a dedicated 'jackal' user (replace `password` with your desired password).
