@@ -79,7 +79,7 @@ func generateSelfSignedCertificate(keyFile, certFile, domain string) error {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Acme Co"},
+			Organization: []string{domain},
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
