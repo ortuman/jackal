@@ -7,7 +7,6 @@ package server
 
 import (
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ortuman/jackal/util"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/config"
@@ -500,7 +501,7 @@ func (s *serverStream) proceedStartTLS() {
 		s.disconnectWithStreamError(streamerror.ErrNotAuthorized)
 		return
 	}
-	cer, err := tls.LoadX509KeyPair(s.cfg.TLS.CertFile, s.cfg.TLS.PrivKeyFile)
+	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, s.Domain())
 	if err != nil {
 		log.Error(err)
 		s.writeElement(xml.NewElementNamespace("failure", tlsNamespace))
@@ -513,11 +514,7 @@ func (s *serverStream) proceedStartTLS() {
 
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
-	cfg := &tls.Config{
-		ServerName:   s.Domain(),
-		Certificates: []tls.Certificate{cer},
-	}
-	s.tr.StartTLS(cfg)
+	s.tr.StartTLS(tlsCfg)
 
 	log.Infof("secured stream... id: %s", s.id)
 

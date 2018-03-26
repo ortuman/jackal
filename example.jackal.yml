@@ -35,9 +35,9 @@ servers:
       keep_alive: 120
       buf_size: 8192
 
-    tls:
-      privkey_path: server.key
-      cert_path: server.crt
+    # tls:
+    #  privkey_path: server.key
+    #  cert_path: server.crt
 
     compression:
       level: default

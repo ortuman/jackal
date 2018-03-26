@@ -27,6 +27,7 @@ debug
 .data/
 
 # Certificate files
+.cert/
 server.key
 server.crt
 
