@@ -29,8 +29,8 @@ servers:
       buf_size: 8192
 
     tls:
-      privkey_path: server.key
-      cert_path: server.crt
+      privkey_path: ""
+      cert_path: ""
 
     compression:
       level: default
