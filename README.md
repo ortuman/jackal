@@ -56,15 +56,15 @@ $ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
 
 In order to generate them run the following commands:
 
+Generate private key.
 ```sh
 openssl genrsa -out server.key 2048
 ``` 
-Generates private key.
 
+Generate self signed certificate associated to *localhost* domain.
 ```sh
 openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/C=CN/ST=Madrid/L=Madrid/O=Me/OU=Me/CN=localhost"
 ```
-Generates self signed certificate associated to *localhost* domain.
 
 
 ### MySQL database creation
