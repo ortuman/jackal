@@ -6,6 +6,7 @@
 package util
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,9 @@ func TestLoadCertificate(t *testing.T) {
 		require.Nil(t, err)
 		require.NotNil(t, tlsCfg)
 	})
-	t.Run("Self-Signed", func(t *testing.T) {
+	t.Run("SelfSigned", func(t *testing.T) {
+		defer os.RemoveAll(".cert/")
+
 		tlsCfg, err := LoadCertificate("", "", "localhost")
 		require.Nil(t, err)
 		require.NotNil(t, tlsCfg)
