@@ -41,7 +41,7 @@ func NewMockTransport() *MockTransport {
 }
 
 // ReadElement reads next available XML element from the mocked transport.
-func (mt *MockTransport) ReadElement() (xml.ElementNode, error) {
+func (mt *MockTransport) ReadElement() (xml.Element, error) {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
 	return mt.parser.ParseElement()
@@ -65,7 +65,7 @@ func (mt *MockTransport) WriteString(str string) error {
 }
 
 // WriteElement writes an XML element the mocked transport.
-func (mt *MockTransport) WriteElement(elem xml.ElementNode, includeClosing bool) error {
+func (mt *MockTransport) WriteElement(elem xml.Element, includeClosing bool) error {
 	defer mt.bw.Flush()
 	elem.ToXML(mt.bw, includeClosing)
 	return nil

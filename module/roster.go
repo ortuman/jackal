@@ -338,7 +338,7 @@ func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.ElementNode) {
+func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.Element) {
 	if query.Elements().Count() > 0 {
 		r.stm.SendElement(iq.BadRequestError())
 		return
@@ -370,7 +370,7 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.ElementNode) {
 	r.lock.Unlock()
 }
 
-func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.ElementNode) {
+func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.Element) {
 	items := query.Elements().Children("item")
 	if len(items) != 1 {
 		r.stm.SendElement(iq.BadRequestError())
@@ -809,7 +809,7 @@ func (r *ModRoster) rosterItemJID(ri *model.RosterItem) *xml.JID {
 	return j
 }
 
-func (r *ModRoster) rosterItemFromElement(item xml.ElementNode) (*model.RosterItem, error) {
+func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, error) {
 	ri := &model.RosterItem{}
 	if jid := item.Attributes().Get("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
@@ -849,7 +849,7 @@ func (r *ModRoster) rosterItemFromElement(item xml.ElementNode) (*model.RosterIt
 	return ri, nil
 }
 
-func (r *ModRoster) elementFromRosterItem(ri *model.RosterItem) xml.ElementNode {
+func (r *ModRoster) elementFromRosterItem(ri *model.RosterItem) xml.Element {
 	riJID := r.rosterItemJID(ri)
 	item := xml.NewElementName("item")
 	item.SetAttribute("jid", riJID.ToBareJID().String())

@@ -189,7 +189,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func testVCard() xml.ElementNode {
+func testVCard() xml.Element {
 	vCard := xml.NewElementNamespace("vCard", vCardNamespace)
 	fn := xml.NewElementName("FN")
 	fn.SetText("Forrest Gump")

@@ -18,14 +18,14 @@ type Transport interface {
 	io.Closer
 
 	// ReadElement reads next available XML element.
-	ReadElement() (xml.ElementNode, error)
+	ReadElement() (xml.Element, error)
 
 	// WriteString writes a raw string to the transport.
 	WriteString(string) error
 
 	// WriteElement writes an element to the transport
 	// serializing it to it's XML representation.
-	WriteElement(elem xml.ElementNode, includeClosing bool) error
+	WriteElement(elem xml.Element, includeClosing bool) error
 
 	// StartTLS secures the transport using SSL/TLS
 	StartTLS(*tls.Config)

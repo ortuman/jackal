@@ -146,7 +146,7 @@ func NewJIDString(str string, skipStringPrep bool) (*JID, error) {
 	return NewJID(node, domain, resource, skipStringPrep)
 }
 
-// ElementNode returns the node, or empty string if this JID does not contain node information.
+// Node returns the node, or empty string if this JID does not contain node information.
 func (j *JID) Node() string {
 	return j.node
 }

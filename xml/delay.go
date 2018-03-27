@@ -14,7 +14,7 @@ const (
 )
 
 // Delay attaches element's Delayed Delivery information.
-func (e *Element) Delay(from string, text string) {
+func (e *XElement) Delay(from string, text string) {
 	d := NewElementNamespace("delay", delayNamespace)
 	if len(from) > 0 {
 		d.SetAttribute("from", from)

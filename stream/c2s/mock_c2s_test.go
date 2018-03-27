@@ -48,7 +48,7 @@ func TestMockC2Stream(t *testing.T) {
 	require.True(t, strm.IsRosterRequested())
 
 	status := xml.NewElementName("status")
-	strm.SetPresenceElements([]xml.ElementNode{status})
+	strm.SetPresenceElements([]xml.Element{status})
 	presenceElements := strm.PresenceElements()
 	require.Equal(t, 1, len(presenceElements))
 

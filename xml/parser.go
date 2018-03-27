@@ -30,9 +30,9 @@ var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 type Parser struct {
 	tt           config.TransportType
 	dec          *xml.Decoder
-	nextElement  *Element
+	nextElement  *XElement
 	parsingIndex int
-	parsingStack []*Element
+	parsingStack []*XElement
 	inElement    bool
 }
 
@@ -47,7 +47,7 @@ func NewParserTransportType(reader io.Reader, tt config.TransportType) *Parser {
 }
 
 // ParseElement parses next available XML element from reader.
-func (p *Parser) ParseElement() (ElementNode, error) {
+func (p *Parser) ParseElement() (Element, error) {
 	d := p.dec
 	t, err := d.RawToken()
 	if err != nil {
@@ -101,7 +101,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 		name := xmlName(a.Name.Space, a.Name.Local)
 		attrs = append(attrs, Attribute{name, a.Value})
 	}
-	element := &Element{name: name, attrs: attributeSet{attrs: attrs}}
+	element := &XElement{name: name, attrs: attributeSet{attrs: attrs}}
 	p.parsingStack = append(p.parsingStack, element)
 	p.parsingIndex++
 	p.inElement = true

@@ -37,13 +37,13 @@ func TestIQBuild(t *testing.T) {
 	require.NotNil(t, err)
 
 	elem.SetType(xml.ResultType)
-	elem.AppendElements([]xml.ElementNode{xml.NewElementName("a"), xml.NewElementName("b")})
+	elem.AppendElements([]xml.Element{xml.NewElementName("a"), xml.NewElementName("b")})
 	_, err = xml.NewIQFromElement(elem, j, j) // 'result' with more than one child...
 	require.NotNil(t, err)
 
 	elem.SetType(xml.ResultType)
 	elem.ClearElements()
-	elem.AppendElements([]xml.ElementNode{xml.NewElementName("a")})
+	elem.AppendElements([]xml.Element{xml.NewElementName("a")})
 	iq, err := xml.NewIQFromElement(elem, j, j) // valid IQ...
 	require.Nil(t, err)
 	require.NotNil(t, iq)

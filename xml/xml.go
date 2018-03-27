@@ -18,8 +18,8 @@ var pool = bufferpool.New()
 // ErrorType represents an 'error' stanza type.
 const ErrorType = "error"
 
-// ElementNode represents an XML node element.
-type ElementNode interface {
+// Element represents an XML node element.
+type Element interface {
 	fmt.Stringer
 
 	Name() string
@@ -36,7 +36,7 @@ type ElementNode interface {
 	To() string
 	Type() string
 
-	Error() ElementNode
+	Error() Element
 
 	ToXML(w io.Writer, includeClosing bool)
 	ToGob(enc *gob.Encoder)

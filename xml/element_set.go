@@ -13,33 +13,33 @@ import (
 type ElementSet interface {
 	// Children returns all elements identified by name.
 	// Returns an empty array if no elements are found.
-	Children(name string) []ElementNode
+	Children(name string) []Element
 
 	// Child returns first element identified by name.
 	// Returns nil if no element is found.
-	Child(name string) ElementNode
+	Child(name string) Element
 
 	// ChildrenNamespace returns all elements identified by name and namespace.
 	// Returns an empty array if no elements are found.
-	ChildrenNamespace(name, namespace string) []ElementNode
+	ChildrenNamespace(name, namespace string) []Element
 
 	// ChildNamespace returns first element identified by name and namespace.
 	// Returns nil if no element is found.
-	ChildNamespace(name, namespace string) ElementNode
+	ChildNamespace(name, namespace string) Element
 
 	// All returns a list of all child nodes.
-	All() []ElementNode
+	All() []Element
 
 	// Count returns child elements count.
 	Count() int
 }
 
 type elementSet struct {
-	nodes []ElementNode
+	nodes []Element
 }
 
-func (es *elementSet) Children(name string) []ElementNode {
-	var ret []ElementNode
+func (es *elementSet) Children(name string) []Element {
+	var ret []Element
 	for _, node := range es.nodes {
 		if node.Name() == name {
 			ret = append(ret, node)
@@ -48,7 +48,7 @@ func (es *elementSet) Children(name string) []ElementNode {
 	return ret
 }
 
-func (es *elementSet) Child(name string) ElementNode {
+func (es *elementSet) Child(name string) Element {
 	for _, node := range es.nodes {
 		if node.Name() == name {
 			return node
@@ -57,8 +57,8 @@ func (es *elementSet) Child(name string) ElementNode {
 	return nil
 }
 
-func (es *elementSet) ChildrenNamespace(name string, namespace string) []ElementNode {
-	var ret []ElementNode
+func (es *elementSet) ChildrenNamespace(name string, namespace string) []Element {
+	var ret []Element
 	for _, node := range es.nodes {
 		if node.Name() == name && node.Namespace() == namespace {
 			ret = append(ret, node)
@@ -67,7 +67,7 @@ func (es *elementSet) ChildrenNamespace(name string, namespace string) []Element
 	return ret
 }
 
-func (es *elementSet) ChildNamespace(name string, namespace string) ElementNode {
+func (es *elementSet) ChildNamespace(name string, namespace string) Element {
 	for _, node := range es.nodes {
 		if node.Name() == name && node.Namespace() == namespace {
 			return node
@@ -76,7 +76,7 @@ func (es *elementSet) ChildNamespace(name string, namespace string) ElementNode 
 	return nil
 }
 
-func (es *elementSet) All() []ElementNode {
+func (es *elementSet) All() []Element {
 	return es.nodes
 }
 
@@ -84,7 +84,7 @@ func (es *elementSet) Count() int {
 	return len(es.nodes)
 }
 
-func (es *elementSet) append(nodes ...ElementNode) {
+func (es *elementSet) append(nodes ...Element) {
 	es.nodes = append(es.nodes, nodes...)
 }
 
@@ -113,7 +113,7 @@ func (es *elementSet) clear() {
 }
 
 func (es *elementSet) copyFrom(from *elementSet) {
-	es.nodes = make([]ElementNode, from.Count())
+	es.nodes = make([]Element, from.Count())
 	copy(es.nodes, from.nodes)
 }
 

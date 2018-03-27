@@ -29,9 +29,9 @@ func (se *StanzaError) Error() string {
 	return se.reason
 }
 
-// ElementNode returns StanzaError equivalent XML element.
-func (se *StanzaError) Element() ElementNode {
-	err := &Element{}
+// Element returns StanzaError equivalent XML element.
+func (se *StanzaError) Element() Element {
+	err := &XElement{}
 	err.SetName("error")
 	err.SetAttribute("code", strconv.Itoa(se.code))
 	err.SetAttribute("type", se.errorType)
@@ -169,132 +169,132 @@ var (
 
 // BadRequestError returns an error copy of the element
 // attaching 'bad-request' error sub element.
-func (el *Element) BadRequestError() ElementNode {
+func (el *XElement) BadRequestError() Element {
 	return NewErrorElementFromElement(el, ErrBadRequest.(*StanzaError))
 }
 
 // ConflictError returns an error copy of the element
 // attaching 'conflict' error sub element.
-func (el *Element) ConflictError() ElementNode {
+func (el *XElement) ConflictError() Element {
 	return NewErrorElementFromElement(el, ErrConflict.(*StanzaError))
 }
 
 // FeatureNotImplementedError returns an error copy of the element
 // attaching 'feature-not-implemented' error sub element.
-func (el *Element) FeatureNotImplementedError() ElementNode {
+func (el *XElement) FeatureNotImplementedError() Element {
 	return NewErrorElementFromElement(el, ErrFeatureNotImplemented.(*StanzaError))
 }
 
 // ForbiddenError returns an error copy of the element
 // attaching 'forbidden' error sub element.
-func (el *Element) ForbiddenError() ElementNode {
+func (el *XElement) ForbiddenError() Element {
 	return NewErrorElementFromElement(el, ErrForbidden.(*StanzaError))
 }
 
 // GoneError returns an error copy of the element
 // attaching 'gone' error sub element.
-func (el *Element) GoneError() ElementNode {
+func (el *XElement) GoneError() Element {
 	return NewErrorElementFromElement(el, ErrGone.(*StanzaError))
 }
 
 // InternalServerError returns an error copy of the element
 // attaching 'internal-server-error' error sub element.
-func (el *Element) InternalServerError() ElementNode {
+func (el *XElement) InternalServerError() Element {
 	return NewErrorElementFromElement(el, ErrInternalServerError.(*StanzaError))
 }
 
 // ItemNotFoundError returns an error copy of the element
 // attaching 'item-not-found' error sub element.
-func (el *Element) ItemNotFoundError() ElementNode {
+func (el *XElement) ItemNotFoundError() Element {
 	return NewErrorElementFromElement(el, ErrItemNotFound.(*StanzaError))
 }
 
 // JidMalformedError returns an error copy of the element
 // attaching 'jid-malformed' error sub element.
-func (el *Element) JidMalformedError() ElementNode {
+func (el *XElement) JidMalformedError() Element {
 	return NewErrorElementFromElement(el, ErrJidMalformed.(*StanzaError))
 }
 
 // NotAcceptableError returns an error copy of the element
 // attaching 'not-acceptable' error sub element.
-func (el *Element) NotAcceptableError() ElementNode {
+func (el *XElement) NotAcceptableError() Element {
 	return NewErrorElementFromElement(el, ErrNotAcceptable.(*StanzaError))
 }
 
 // NotAllowedError returns an error copy of the element
 // attaching 'not-allowed' error sub element.
-func (el *Element) NotAllowedError() ElementNode {
+func (el *XElement) NotAllowedError() Element {
 	return NewErrorElementFromElement(el, ErrNotAllowed.(*StanzaError))
 }
 
 // NotAuthorizedError returns an error copy of the element
 // attaching 'not-authorized' error sub element.
-func (el *Element) NotAuthorizedError() ElementNode {
+func (el *XElement) NotAuthorizedError() Element {
 	return NewErrorElementFromElement(el, ErrNotAuthorized.(*StanzaError))
 }
 
 // PaymentRequiredError returns an error copy of the element
 // attaching 'payment-required' error sub element.
-func (el *Element) PaymentRequiredError() ElementNode {
+func (el *XElement) PaymentRequiredError() Element {
 	return NewErrorElementFromElement(el, ErrPaymentRequired.(*StanzaError))
 }
 
 // RecipientUnavailableError returns an error copy of the element
 // attaching 'recipient-unavailable' error sub element.
-func (el *Element) RecipientUnavailableError() ElementNode {
+func (el *XElement) RecipientUnavailableError() Element {
 	return NewErrorElementFromElement(el, ErrRecipientUnavailable.(*StanzaError))
 }
 
 // RedirectError returns an error copy of the element
 // attaching 'redirect' error sub element.
-func (el *Element) RedirectError() ElementNode {
+func (el *XElement) RedirectError() Element {
 	return NewErrorElementFromElement(el, ErrRedirect.(*StanzaError))
 }
 
 // RegistrationRequiredError returns an error copy of the element
 // attaching 'registration-required' error sub element.
-func (el *Element) RegistrationRequiredError() ElementNode {
+func (el *XElement) RegistrationRequiredError() Element {
 	return NewErrorElementFromElement(el, ErrRegistrationRequired.(*StanzaError))
 }
 
 // RemoteServerNotFoundError returns an error copy of the element
 // attaching 'remote-server-not-found' error sub element.
-func (el *Element) RemoteServerNotFoundError() ElementNode {
+func (el *XElement) RemoteServerNotFoundError() Element {
 	return NewErrorElementFromElement(el, ErrRemoteServerNotFound.(*StanzaError))
 }
 
 // RemoteServerNotFoundError returns an error copy of the element
 // attaching 'remote-server-timeout' error sub element.
-func (el *Element) RemoteServerTimeoutError() ElementNode {
+func (el *XElement) RemoteServerTimeoutError() Element {
 	return NewErrorElementFromElement(el, ErrRemoteServerTimeout.(*StanzaError))
 }
 
 // ResourceConstraintError returns an error copy of the element
 // attaching 'resource-constraint' error sub element.
-func (el *Element) ResourceConstraintError() ElementNode {
+func (el *XElement) ResourceConstraintError() Element {
 	return NewErrorElementFromElement(el, ErrResourceConstraint.(*StanzaError))
 }
 
 // ServiceUnavailableError returns an error copy of the element
 // attaching 'service-unavailable' error sub element.
-func (el *Element) ServiceUnavailableError() ElementNode {
+func (el *XElement) ServiceUnavailableError() Element {
 	return NewErrorElementFromElement(el, ErrServiceUnavailable.(*StanzaError))
 }
 
 // SubscriptionRequiredError returns an error copy of the element
 // attaching 'subscription-required' error sub element.
-func (el *Element) SubscriptionRequiredError() ElementNode {
+func (el *XElement) SubscriptionRequiredError() Element {
 	return NewErrorElementFromElement(el, ErrSubscriptionRequired.(*StanzaError))
 }
 
 // UndefinedConditionError returns an error copy of the element
 // attaching 'undefined-condition' error sub element.
-func (el *Element) UndefinedConditionError() ElementNode {
+func (el *XElement) UndefinedConditionError() Element {
 	return NewErrorElementFromElement(el, ErrUndefinedCondition.(*StanzaError))
 }
 
 // UnexpectedConditionError returns an error copy of the element
 // attaching 'unexpected-condition' error sub element.
-func (el *Element) UnexpectedConditionError() ElementNode {
+func (el *XElement) UnexpectedConditionError() Element {
 	return NewErrorElementFromElement(el, ErrUnexpectedCondition.(*StanzaError))
 }

@@ -22,11 +22,11 @@ type mockStorage struct {
 	rosterNotificationsMu sync.RWMutex
 	rosterNotifications   map[string][]model.RosterNotification
 	vCardsMu              sync.RWMutex
-	vCards                map[string]xml.ElementNode
+	vCards                map[string]xml.Element
 	privateXMLMu          sync.RWMutex
-	privateXML            map[string][]xml.ElementNode
+	privateXML            map[string][]xml.Element
 	offlineMessagesMu     sync.RWMutex
-	offlineMessages       map[string][]xml.ElementNode
+	offlineMessages       map[string][]xml.Element
 }
 
 func newMockStorage() *mockStorage {
@@ -34,9 +34,9 @@ func newMockStorage() *mockStorage {
 		users:               make(map[string]*model.User),
 		rosterItems:         make(map[string][]model.RosterItem),
 		rosterNotifications: make(map[string][]model.RosterNotification),
-		vCards:              make(map[string]xml.ElementNode),
-		privateXML:          make(map[string][]xml.ElementNode),
-		offlineMessages:     make(map[string][]xml.ElementNode),
+		vCards:              make(map[string]xml.Element),
+		privateXML:          make(map[string][]xml.Element),
+		offlineMessages:     make(map[string][]xml.Element),
 	}
 }
 
@@ -203,7 +203,7 @@ func (m *mockStorage) DeleteRosterNotification(user, contact string) error {
 	return nil
 }
 
-func (m *mockStorage) InsertOrUpdateVCard(vCard xml.ElementNode, username string) error {
+func (m *mockStorage) InsertOrUpdateVCard(vCard xml.Element, username string) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
@@ -214,7 +214,7 @@ func (m *mockStorage) InsertOrUpdateVCard(vCard xml.ElementNode, username string
 	return nil
 }
 
-func (m *mockStorage) FetchVCard(username string) (xml.ElementNode, error) {
+func (m *mockStorage) FetchVCard(username string) (xml.Element, error) {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return nil, ErrMockedError
 	}
@@ -223,7 +223,7 @@ func (m *mockStorage) FetchVCard(username string) (xml.ElementNode, error) {
 	return m.vCards[username], nil
 }
 
-func (m *mockStorage) InsertOrUpdatePrivateXML(privateXML []xml.ElementNode, namespace string, username string) error {
+func (m *mockStorage) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
@@ -231,7 +231,7 @@ func (m *mockStorage) InsertOrUpdatePrivateXML(privateXML []xml.ElementNode, nam
 	defer m.privateXMLMu.Unlock()
 
 	// copy elements
-	var prvXML []xml.ElementNode
+	var prvXML []xml.Element
 	for _, prv := range privateXML {
 		prvXML = append(prvXML, xml.NewElementFromElement(prv))
 	}
@@ -239,7 +239,7 @@ func (m *mockStorage) InsertOrUpdatePrivateXML(privateXML []xml.ElementNode, nam
 	return nil
 }
 
-func (m *mockStorage) FetchPrivateXML(namespace string, username string) ([]xml.ElementNode, error) {
+func (m *mockStorage) FetchPrivateXML(namespace string, username string) ([]xml.Element, error) {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return nil, ErrMockedError
 	}
@@ -248,7 +248,7 @@ func (m *mockStorage) FetchPrivateXML(namespace string, username string) ([]xml.
 	return m.privateXML[username+":"+namespace], nil
 }
 
-func (m *mockStorage) InsertOfflineMessage(message xml.ElementNode, username string) error {
+func (m *mockStorage) InsertOfflineMessage(message xml.Element, username string) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
@@ -269,7 +269,7 @@ func (m *mockStorage) CountOfflineMessages(username string) (int, error) {
 	return len(m.offlineMessages[username]), nil
 }
 
-func (m *mockStorage) FetchOfflineMessages(username string) ([]xml.ElementNode, error) {
+func (m *mockStorage) FetchOfflineMessages(username string) ([]xml.Element, error) {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return nil, ErrMockedError
 	}

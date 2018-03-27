@@ -48,7 +48,7 @@ func TestModelRosterNotification(t *testing.T) {
 	rn1 = RosterNotification{
 		User:     "ortuman",
 		Contact:  "noelia",
-		Elements: []xml.ElementNode{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
+		Elements: []xml.Element{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))

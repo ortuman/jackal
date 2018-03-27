@@ -94,7 +94,7 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.ElementNode) {
+func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.Element) {
 	if query.Elements().Count() > 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
@@ -107,7 +107,7 @@ func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.ElementNode) 
 	x.strm.SendElement(result)
 }
 
-func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.ElementNode) {
+func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.Element) {
 	userEl := query.Elements().Child("username")
 	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
@@ -137,7 +137,7 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.ElementNode) {
 	x.registered = true
 }
 
-func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.ElementNode) {
+func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.Element) {
 	if !x.cfg.AllowCancel {
 		x.strm.SendElement(iq.NotAllowedError())
 		return

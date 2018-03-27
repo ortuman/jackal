@@ -136,7 +136,7 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 	rn := model.RosterNotification{
 		"ortuman",
 		"romeo",
-		[]xml.ElementNode{xml.NewElementName("priority")},
+		[]xml.Element{xml.NewElementName("priority")},
 	}
 	s := newMockStorage()
 	s.activateMockedError()
@@ -149,18 +149,18 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rn1 := model.RosterNotification{
 		"ortuman",
 		"romeo",
-		[]xml.ElementNode{xml.NewElementName("priority")},
+		[]xml.Element{xml.NewElementName("priority")},
 	}
 	rn2 := model.RosterNotification{
 		"ortuman2",
 		"romeo",
-		[]xml.ElementNode{xml.NewElementName("priority")},
+		[]xml.Element{xml.NewElementName("priority")},
 	}
 	s := newMockStorage()
 	s.InsertOrUpdateRosterNotification(&rn1)
 	s.InsertOrUpdateRosterNotification(&rn2)
 
-	rn2.Elements = []xml.ElementNode{xml.NewElementName("status")}
+	rn2.Elements = []xml.Element{xml.NewElementName("status")}
 	s.InsertOrUpdateRosterNotification(&rn2)
 
 	s.activateMockedError()
@@ -178,7 +178,7 @@ func TestMockStorageDeleteRosterNotification(t *testing.T) {
 	rn1 := model.RosterNotification{
 		"ortuman",
 		"romeo",
-		[]xml.ElementNode{xml.NewElementName("priority")},
+		[]xml.Element{xml.NewElementName("priority")},
 	}
 	s := newMockStorage()
 	s.InsertOrUpdateRosterNotification(&rn1)
@@ -230,10 +230,10 @@ func TestMockStorageInsertPrivateXML(t *testing.T) {
 
 	s := newMockStorage()
 	s.activateMockedError()
-	err := s.InsertOrUpdatePrivateXML([]xml.ElementNode{private}, "exodus:ns", "ortuman")
+	err := s.InsertOrUpdatePrivateXML([]xml.Element{private}, "exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.deactivateMockedError()
-	err = s.InsertOrUpdatePrivateXML([]xml.ElementNode{private}, "exodus:ns", "ortuman")
+	err = s.InsertOrUpdatePrivateXML([]xml.Element{private}, "exodus:ns", "ortuman")
 	require.Nil(t, err)
 }
 
@@ -241,7 +241,7 @@ func TestMockStorageFetchPrivateXML(t *testing.T) {
 	private := xml.NewElementNamespace("exodus", "exodus:ns")
 
 	s := newMockStorage()
-	s.InsertOrUpdatePrivateXML([]xml.ElementNode{private}, "exodus:ns", "ortuman")
+	s.InsertOrUpdatePrivateXML([]xml.Element{private}, "exodus:ns", "ortuman")
 
 	s.activateMockedError()
 	_, err := s.FetchPrivateXML("exodus:ns", "ortuman")

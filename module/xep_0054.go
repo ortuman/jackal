@@ -73,7 +73,7 @@ func (x *XEPVCard) actorLoop() {
 	}
 }
 
-func (x *XEPVCard) getVCard(vCard xml.ElementNode, iq *xml.IQ) {
+func (x *XEPVCard) getVCard(vCard xml.Element, iq *xml.IQ) {
 	if vCard.Elements().Count() > 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
@@ -105,7 +105,7 @@ func (x *XEPVCard) getVCard(vCard xml.ElementNode, iq *xml.IQ) {
 	x.strm.SendElement(resultIQ)
 }
 
-func (x *XEPVCard) setVCard(vCard xml.ElementNode, iq *xml.IQ) {
+func (x *XEPVCard) setVCard(vCard xml.Element, iq *xml.IQ) {
 	toJid := iq.ToJID()
 	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.strm.Username()) {
 		log.Infof("saving vcard... (%s/%s)", x.strm.Username(), x.strm.Resource())

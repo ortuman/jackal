@@ -140,7 +140,7 @@ func (s *scramAuthenticator) UsesChannelBinding() bool {
 	return s.usesCb
 }
 
-func (s *scramAuthenticator) ProcessElement(elem xml.ElementNode) error {
+func (s *scramAuthenticator) ProcessElement(elem xml.Element) error {
 	if s.Authenticated() {
 		return nil
 	}
@@ -168,7 +168,7 @@ func (s *scramAuthenticator) Reset() {
 	s.firstMessage = ""
 }
 
-func (s *scramAuthenticator) handleStart(elem xml.ElementNode) error {
+func (s *scramAuthenticator) handleStart(elem xml.Element) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func (s *scramAuthenticator) handleStart(elem xml.ElementNode) error {
 	return nil
 }
 
-func (s *scramAuthenticator) handleChallenged(elem xml.ElementNode) error {
+func (s *scramAuthenticator) handleChallenged(elem xml.Element) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -240,7 +240,7 @@ func (s *scramAuthenticator) handleChallenged(elem xml.ElementNode) error {
 	return nil
 }
 
-func (s *scramAuthenticator) getElementPayload(elem xml.ElementNode) (string, error) {
+func (s *scramAuthenticator) getElementPayload(elem xml.Element) (string, error) {
 	if len(elem.Text()) == 0 {
 		return "", errSASLIncorrectEncoding
 	}

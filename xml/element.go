@@ -10,36 +10,36 @@ import (
 	"io"
 )
 
-type Element struct {
+type XElement struct {
 	name     string
 	text     string
 	attrs    attributeSet
 	elements elementSet
 }
 
-// NewElementName creates a mutable XML ElementNode instance with a given name.
-func NewElementName(name string) *Element {
-	return &Element{name: name}
+// NewElementName creates a mutable XML Element instance with a given name.
+func NewElementName(name string) *XElement {
+	return &XElement{name: name}
 }
 
-// NewElementNamespace creates a mutable XML ElementNode instance with a given name and namespace.
-func NewElementNamespace(name, namespace string) *Element {
-	return &Element{
+// NewElementNamespace creates a mutable XML Element instance with a given name and namespace.
+func NewElementNamespace(name, namespace string) *XElement {
+	return &XElement{
 		name:  name,
 		attrs: attributeSet{attrs: []Attribute{{"xmlns", namespace}}},
 	}
 }
 
-// NewElementFromElement creates a mutable XML ElementNode by copying an element.
-func NewElementFromElement(elem ElementNode) *Element {
-	e := &Element{}
+// NewElementFromElement creates a mutable XML Element by copying an element.
+func NewElementFromElement(elem Element) *XElement {
+	e := &XElement{}
 	e.copyFrom(elem)
 	return e
 }
 
 // NewElementFromGob deserializes an element node from it's gob binary representation.
-func NewElementFromGob(dec *gob.Decoder) *Element {
-	e := &Element{}
+func NewElementFromGob(dec *gob.Decoder) *XElement {
+	e := &XElement{}
 	dec.Decode(&e.name)
 	dec.Decode(&e.text)
 	e.attrs.fromGob(dec)
@@ -48,8 +48,8 @@ func NewElementFromGob(dec *gob.Decoder) *Element {
 }
 
 // NewErrorElementFromElement returns a copy of an element of stanza error class.
-func NewErrorElementFromElement(elem ElementNode, stanzaErr *StanzaError) *Element {
-	e := &Element{}
+func NewErrorElementFromElement(elem Element, stanzaErr *StanzaError) *XElement {
+	e := &XElement{}
 	e.copyFrom(elem)
 	e.SetAttribute("type", "error")
 	e.AppendElement(stanzaErr.Element())
@@ -57,78 +57,78 @@ func NewErrorElementFromElement(elem ElementNode, stanzaErr *StanzaError) *Eleme
 }
 
 // Name returns XML node name.
-func (e *Element) Name() string {
+func (e *XElement) Name() string {
 	return e.name
 }
 
 // Attributes returns XML node attribute value.
-func (e *Element) Attributes() AttributeSet {
+func (e *XElement) Attributes() AttributeSet {
 	return &e.attrs
 }
 
 // Elements returns all instance's child elements.
-func (e *Element) Elements() ElementSet {
+func (e *XElement) Elements() ElementSet {
 	return &e.elements
 }
 
 // Text returns XML node text value.
 // Returns an empty string if not set.
-func (e *Element) Text() string {
+func (e *XElement) Text() string {
 	return e.text
 }
 
 // Namespace returns 'xmlns' node attribute.
-func (e *Element) Namespace() string {
+func (e *XElement) Namespace() string {
 	return e.attrs.Get("xmlns")
 }
 
 // ID returns 'id' node attribute.
-func (e *Element) ID() string {
+func (e *XElement) ID() string {
 	return e.attrs.Get("id")
 }
 
 // Language returns 'xml:lang' node attribute.
-func (e *Element) Language() string {
+func (e *XElement) Language() string {
 	return e.attrs.Get("xml:lang")
 }
 
 // SetVersion sets 'version' node attribute.
-func (e *Element) SetVersion(version string) {
+func (e *XElement) SetVersion(version string) {
 	e.attrs.setAttribute("version", version)
 }
 
 // Version returns 'version' node attribute.
-func (e *Element) Version() string {
+func (e *XElement) Version() string {
 	return e.attrs.Get("version")
 }
 
 // From returns 'from' node attribute.
-func (e *Element) From() string {
+func (e *XElement) From() string {
 	return e.attrs.Get("from")
 }
 
 // To returns 'to' node attribute.
-func (e *Element) To() string {
+func (e *XElement) To() string {
 	return e.attrs.Get("to")
 }
 
 // Type returns 'type' node attribute.
-func (e *Element) Type() string {
+func (e *XElement) Type() string {
 	return e.attrs.Get("type")
 }
 
 // IsError returns true if element has a 'type' attribute of value 'error'.
-func (e *Element) IsError() bool {
+func (e *XElement) IsError() bool {
 	return e.Type() == ErrorType
 }
 
 // Error returns element error sub element.
-func (e *Element) Error() ElementNode {
+func (e *XElement) Error() Element {
 	return e.elements.Child("error")
 }
 
 // String returns a string representation of the element.
-func (e *Element) String() string {
+func (e *XElement) String() string {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
@@ -138,7 +138,7 @@ func (e *Element) String() string {
 
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
-func (e *Element) ToXML(w io.Writer, includeClosing bool) {
+func (e *XElement) ToXML(w io.Writer, includeClosing bool) {
 	w.Write([]byte("<"))
 	w.Write([]byte(e.name))
 
@@ -171,14 +171,14 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 }
 
 // ToGob serializes an element node to it's gob binary representation.
-func (e *Element) ToGob(enc *gob.Encoder) {
+func (e *XElement) ToGob(enc *gob.Encoder) {
 	enc.Encode(&e.name)
 	enc.Encode(&e.text)
 	e.attrs.toGob(enc)
 	e.elements.toGob(enc)
 }
 
-func (e *Element) copyFrom(el ElementNode) {
+func (e *XElement) copyFrom(el Element) {
 	e.name = el.Name()
 	e.text = el.Text()
 	e.attrs.copyFrom(el.Attributes().(*attributeSet))

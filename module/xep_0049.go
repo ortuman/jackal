@@ -84,7 +84,7 @@ func (x *XEPPrivateStorage) actorLoop() {
 	}
 }
 
-func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.ElementNode) {
+func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.Element) {
 	if q.Elements().Count() != 1 {
 		x.strm.SendElement(iq.NotAcceptableError())
 		return
@@ -117,8 +117,8 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.ElementNode) {
 	x.strm.SendElement(res)
 }
 
-func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.ElementNode) {
-	nsElements := map[string][]xml.ElementNode{}
+func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.Element) {
+	nsElements := map[string][]xml.Element{}
 
 	for _, privElement := range q.Elements().All() {
 		ns := privElement.Namespace()
@@ -132,7 +132,7 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.ElementNode) {
 		}
 		elems := nsElements[ns]
 		if elems == nil {
-			elems = []xml.ElementNode{privElement}
+			elems = []xml.Element{privElement}
 		} else {
 			elems = append(elems, privElement)
 		}
