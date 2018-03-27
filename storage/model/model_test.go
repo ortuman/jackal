@@ -7,6 +7,7 @@ package model
 
 import (
 	"bytes"
+	"encoding/gob"
 	"testing"
 
 	"github.com/ortuman/jackal/xml"
@@ -20,8 +21,8 @@ func TestModelUser(t *testing.T) {
 	usr1.Password = "1234"
 
 	buf := new(bytes.Buffer)
-	usr1.ToBytes(buf)
-	usr2.FromBytes(buf)
+	usr1.ToGob(gob.NewEncoder(buf))
+	usr2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, usr1, usr2)
 }
 
@@ -36,8 +37,8 @@ func TestModelRosterItem(t *testing.T) {
 		Groups:       []string{"friends", "family"},
 	}
 	buf := new(bytes.Buffer)
-	ri1.ToBytes(buf)
-	ri2.FromBytes(buf)
+	ri1.ToGob(gob.NewEncoder(buf))
+	ri2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, ri1, ri2)
 }
 
@@ -47,10 +48,10 @@ func TestModelRosterNotification(t *testing.T) {
 	rn1 = RosterNotification{
 		User:     "ortuman",
 		Contact:  "noelia",
-		Elements: []xml.Element{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
+		Elements: []xml.ElementNode{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
 	}
 	buf := new(bytes.Buffer)
-	rn1.ToBytes(buf)
-	rn2.FromBytes(buf)
+	rn1.ToGob(gob.NewEncoder(buf))
+	rn2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, rn1, rn2)
 }

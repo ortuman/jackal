@@ -49,37 +49,37 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.ResultType)
 	stm.SetUsername("ortuman")
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.GetType)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements().All()[0].Name())
 
 	exodus := xml.NewElementNamespace("exodus", "exodus:ns")
 	exodus.AppendElement(xml.NewElementName("exodus2"))
 	q.AppendElement(exodus)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements().All()[0].Name())
 
 	exodus.ClearElements()
 	exodus.SetNamespace("jabber:client")
 	iq.SetType(xml.SetType)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements().All()[0].Name())
 
 	exodus.SetNamespace("")
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0049_SetAndGetPrivate(t *testing.T) {
@@ -108,7 +108,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
 	// set success
@@ -124,7 +124,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
 	// get success
@@ -133,9 +133,9 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	require.Equal(t, xml.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
-	q2 := elem.FindElementNamespace("query", privateStorageNamespace)
-	require.Equal(t, 2, q2.ElementsCount())
-	require.Equal(t, "exodus:ns", q2.Elements()[0].Namespace())
+	q2 := elem.Elements().ChildNamespace("query", privateStorageNamespace)
+	require.Equal(t, 2, q2.Elements().Count())
+	require.Equal(t, "exodus:ns", q2.Elements().All()[0].Namespace())
 
 	// get non existing
 	exodus1.SetNamespace("exodus:ns:2")
@@ -143,7 +143,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	elem = stm.FetchElement()
 	require.Equal(t, xml.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
-	q3 := elem.FindElementNamespace("query", privateStorageNamespace)
-	require.Equal(t, 1, q3.ElementsCount())
-	require.Equal(t, "exodus:ns:2", q3.Elements()[0].Namespace())
+	q3 := elem.Elements().ChildNamespace("query", privateStorageNamespace)
+	require.Equal(t, 1, q3.Elements().Count())
+	require.Equal(t, "exodus:ns:2", q3.Elements().All()[0].Namespace())
 }

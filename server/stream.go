@@ -84,7 +84,7 @@ type serverStream struct {
 	iqHandlers       []module.IQHandler
 	rosterOnce       sync.Once
 	roster           *module.ModRoster
-	presenceElements []xml.Element
+	presenceElements []xml.ElementNode
 	register         *module.XEPRegister
 	ping             *module.XEPPing
 	offlineOnce      sync.Once
@@ -193,14 +193,14 @@ func (s *serverStream) IsRosterRequested() bool {
 }
 
 // PresenceElements returns last available sent presence sub elements.
-func (s *serverStream) PresenceElements() []xml.Element {
+func (s *serverStream) PresenceElements() []xml.ElementNode {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	return s.presenceElements
 }
 
 // SendElement sends the given XML element.
-func (s *serverStream) SendElement(element xml.Element) {
+func (s *serverStream) SendElement(element xml.ElementNode) {
 	s.actorCh <- func() {
 		s.writeElement(element)
 	}
@@ -301,7 +301,7 @@ func (s *serverStream) startConnectTimeoutTimer(timeoutInSeconds int) {
 	}
 }
 
-func (s *serverStream) handleElement(elem xml.Element) {
+func (s *serverStream) handleElement(elem xml.ElementNode) {
 	switch s.getState() {
 	case connecting:
 		s.handleConnecting(elem)
@@ -318,7 +318,7 @@ func (s *serverStream) handleElement(elem xml.Element) {
 	}
 }
 
-func (s *serverStream) handleConnecting(elem xml.Element) {
+func (s *serverStream) handleConnecting(elem xml.ElementNode) {
 	// activate 'connected' flag
 	atomic.StoreUint32(&s.connected, 1)
 
@@ -395,7 +395,7 @@ func (s *serverStream) handleConnecting(elem xml.Element) {
 	s.writeElement(features)
 }
 
-func (s *serverStream) handleConnected(elem xml.Element) {
+func (s *serverStream) handleConnected(elem xml.ElementNode) {
 	switch elem.Name() {
 	case "starttls":
 		if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
@@ -423,7 +423,7 @@ func (s *serverStream) handleConnected(elem xml.Element) {
 			s.register.ProcessIQ(iq)
 			return
 
-		} else if iq.FindElementNamespace("query", "jabber:iq:auth") != nil {
+		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
 			// don't allow non-SASL authentication
 			s.writeElement(iq.ServiceUnavailableError())
 			return
@@ -438,7 +438,7 @@ func (s *serverStream) handleConnected(elem xml.Element) {
 	}
 }
 
-func (s *serverStream) handleAuthenticating(elem xml.Element) {
+func (s *serverStream) handleAuthenticating(elem xml.ElementNode) {
 	if elem.Namespace() != saslNamespace {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
@@ -450,7 +450,7 @@ func (s *serverStream) handleAuthenticating(elem xml.Element) {
 	}
 }
 
-func (s *serverStream) handleAuthenticated(elem xml.Element) {
+func (s *serverStream) handleAuthenticated(elem xml.ElementNode) {
 	switch elem.Name() {
 	case "compress":
 		if elem.Namespace() != compressProtocolNamespace {
@@ -478,7 +478,7 @@ func (s *serverStream) handleAuthenticated(elem xml.Element) {
 	}
 }
 
-func (s *serverStream) handleSessionStarted(elem xml.Element) {
+func (s *serverStream) handleSessionStarted(elem xml.ElementNode) {
 	// reset ping timer deadline
 	if s.ping != nil {
 		s.ping.ResetDeadline()
@@ -521,12 +521,12 @@ func (s *serverStream) proceedStartTLS() {
 	s.restart()
 }
 
-func (s *serverStream) compress(elem xml.Element) {
+func (s *serverStream) compress(elem xml.ElementNode) {
 	if s.IsCompressed() {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
-	method := elem.FindElement("method")
+	method := elem.Elements().Child("method")
 	if method == nil || len(method.Text()) == 0 {
 		failure := xml.NewElementNamespace("failure", compressProtocolNamespace)
 		failure.AppendElement(xml.NewElementName("setup-failed"))
@@ -552,7 +552,7 @@ func (s *serverStream) compress(elem xml.Element) {
 	s.restart()
 }
 
-func (s *serverStream) startAuthentication(elem xml.Element) {
+func (s *serverStream) startAuthentication(elem xml.ElementNode) {
 	mechanism := elem.Attributes().Get("mechanism")
 	for _, authr := range s.authrs {
 		if authr.Mechanism() == mechanism {
@@ -575,7 +575,7 @@ func (s *serverStream) startAuthentication(elem xml.Element) {
 	s.writeElement(failure)
 }
 
-func (s *serverStream) continueAuthentication(elem xml.Element, authr authenticator) error {
+func (s *serverStream) continueAuthentication(elem xml.ElementNode, authr authenticator) error {
 	err := authr.ProcessElement(elem)
 	if saslErr, ok := err.(saslError); ok {
 		s.failAuthentication(saslErr.Element())
@@ -600,7 +600,7 @@ func (s *serverStream) finishAuthentication(username string) {
 	s.restart()
 }
 
-func (s *serverStream) failAuthentication(elem xml.Element) {
+func (s *serverStream) failAuthentication(elem xml.ElementNode) {
 	failure := xml.NewElementNamespace("failure", saslNamespace)
 	failure.AppendElement(elem)
 	s.writeElement(failure)
@@ -613,13 +613,13 @@ func (s *serverStream) failAuthentication(elem xml.Element) {
 }
 
 func (s *serverStream) bindResource(iq *xml.IQ) {
-	bind := iq.FindElementNamespace("bind", bindNamespace)
+	bind := iq.Elements().ChildNamespace("bind", bindNamespace)
 	if bind == nil {
 		s.writeElement(iq.NotAllowedError())
 		return
 	}
 	var resource string
-	if resourceElem := bind.FindElement("resource"); resourceElem != nil {
+	if resourceElem := bind.Elements().Child("resource"); resourceElem != nil {
 		resource = resourceElem.Text()
 	} else {
 		resource = uuid.New()
@@ -676,7 +676,7 @@ func (s *serverStream) startSession(iq *xml.IQ) {
 		s.Disconnect(streamerror.ErrNotAuthorized)
 		return
 	}
-	sess := iq.FindElementNamespace("session", sessionNamespace)
+	sess := iq.Elements().ChildNamespace("session", sessionNamespace)
 	if sess == nil {
 		s.writeElement(iq.NotAllowedError())
 		return
@@ -689,7 +689,7 @@ func (s *serverStream) startSession(iq *xml.IQ) {
 	s.setState(sessionStarted)
 }
 
-func (s *serverStream) processStanza(element xml.Element) {
+func (s *serverStream) processStanza(element xml.ElementNode) {
 	switch stanza := element.(type) {
 	case *xml.IQ:
 		s.processIQ(stanza)
@@ -700,7 +700,7 @@ func (s *serverStream) processStanza(element xml.Element) {
 	}
 }
 
-func (s *serverStream) processComponentStanza(element xml.Element) {
+func (s *serverStream) processComponentStanza(element xml.ElementNode) {
 }
 
 func (s *serverStream) processIQ(iq *xml.IQ) {
@@ -712,7 +712,7 @@ func (s *serverStream) processIQ(iq *xml.IQ) {
 	toJid := iq.ToJID()
 	if toJid.IsFull() {
 		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
-			resp := iq.Copy()
+			resp := xml.NewElementFromElement(iq)
 			resp.SetFrom(toJid.String())
 			resp.SetTo(s.JID().String())
 			s.SendElement(resp.ServiceUnavailableError())
@@ -756,7 +756,7 @@ func (s *serverStream) processPresence(presence *xml.Presence) {
 	s.priority = presence.Priority()
 	if presence.IsAvailable() {
 		s.available = true
-		s.presenceElements = presence.Elements()
+		s.presenceElements = presence.Elements().All()
 	} else if presence.IsUnavailable() {
 		s.available = false
 		s.presenceElements = nil
@@ -804,7 +804,7 @@ sendMessage:
 		toJid = toJid.ToBareJID()
 		goto sendMessage
 	case errNotExistingAccount:
-		response := message.Copy()
+		response := xml.NewElementFromElement(message)
 		response.SetFrom(toJid.String())
 		response.SetTo(s.JID().String())
 		s.writeElement(response.ServiceUnavailableError())
@@ -866,12 +866,12 @@ func (s *serverStream) doRead() {
 	}
 }
 
-func (s *serverStream) writeElement(element xml.Element) {
+func (s *serverStream) writeElement(element xml.ElementNode) {
 	log.Debugf("SEND: %v", element)
 	s.tr.WriteElement(element, true)
 }
 
-func (s *serverStream) readElement(elem xml.Element) {
+func (s *serverStream) readElement(elem xml.ElementNode) {
 	log.Debugf("RECV: %v", elem)
 	s.handleElement(elem)
 	if s.getState() != disconnected {
@@ -894,7 +894,7 @@ func (s *serverStream) disconnect(err error) {
 }
 
 func (s *serverStream) openStreamElement() {
-	var ops *xml.MutableElement
+	var ops *xml.Element
 	var includeClosing bool
 
 	switch s.cfg.Transport.Type {
@@ -919,7 +919,7 @@ func (s *serverStream) openStreamElement() {
 	s.tr.WriteElement(ops, includeClosing)
 }
 
-func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, error) {
+func (s *serverStream) buildStanza(elem xml.ElementNode) (xml.ElementNode, *xml.JID, error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, nil, err
 	}
@@ -955,17 +955,17 @@ func (s *serverStream) buildStanza(elem xml.Element) (xml.Element, *xml.JID, err
 	return nil, nil, streamerror.ErrUnsupportedStanzaType
 }
 
-func (s *serverStream) handleElementError(elem xml.Element, err error) {
+func (s *serverStream) handleElementError(elem xml.ElementNode, err error) {
 	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
-		s.writeElement(elem.ToError(stanzaErr))
+		s.writeElement(xml.NewErrorElementFromElement(elem, stanzaErr))
 	} else {
 		log.Error(err)
 	}
 }
 
-func (s *serverStream) validateStreamElement(elem xml.Element) *streamerror.Error {
+func (s *serverStream) validateStreamElement(elem xml.ElementNode) *streamerror.Error {
 	switch s.cfg.Transport.Type {
 	case config.SocketTransportType:
 		if elem.Name() != "stream:stream" {
@@ -993,7 +993,7 @@ func (s *serverStream) validateStreamElement(elem xml.Element) *streamerror.Erro
 	return nil
 }
 
-func (s *serverStream) validateNamespace(elem xml.Element) *streamerror.Error {
+func (s *serverStream) validateNamespace(elem xml.ElementNode) *streamerror.Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == jabberClientNamespace {
 		return nil
@@ -1001,7 +1001,7 @@ func (s *serverStream) validateNamespace(elem xml.Element) *streamerror.Error {
 	return streamerror.ErrInvalidNamespace
 }
 
-func (s *serverStream) validateAddresses(elem xml.Element) (fromJID *xml.JID, toJID *xml.JID, err error) {
+func (s *serverStream) validateAddresses(elem xml.ElementNode) (fromJID *xml.JID, toJID *xml.JID, err error) {
 	// validate from JID
 	from := elem.From()
 	if len(from) > 0 && !s.isValidFrom(from) {
@@ -1100,7 +1100,7 @@ func (s *serverStream) userResourceStream(resource string) c2s.Stream {
 	return nil
 }
 
-func (s *serverStream) sendElement(element xml.Element, to *xml.JID) error {
+func (s *serverStream) sendElement(element xml.ElementNode, to *xml.JID) error {
 	recipients := c2s.Instance().AvailableStreams(to.Node())
 	if len(recipients) == 0 {
 		exists, err := storage.Instance().UserExists(to.Node())

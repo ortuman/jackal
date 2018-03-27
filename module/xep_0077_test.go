@@ -48,7 +48,7 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq2 := xml.NewIQType(uuid.New(), xml.SetType)
 	iq2.SetFromJID(j)
@@ -59,7 +59,7 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 	x.ProcessIQ(iq2)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
@@ -75,12 +75,12 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.GetType)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	// allow registration...
 	x = NewXEPRegister(&config.ModRegistration{AllowRegistration: true}, stm)
@@ -92,7 +92,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	iq.SetType(xml.SetType)
@@ -100,7 +100,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAcceptable.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0077_AuthenticatedErrors(t *testing.T) {
@@ -120,13 +120,13 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.SetType)
 	iq.AppendElement(xml.NewElementNamespace("query", registerNamespace))
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0077_RegisterUser(t *testing.T) {
@@ -146,9 +146,9 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	iq.AppendElement(q)
 
 	x.ProcessIQ(iq)
-	q2 := stm.FetchElement().FindElementNamespace("query", registerNamespace)
-	require.NotNil(t, q2.FindElement("username"))
-	require.NotNil(t, q2.FindElement("password"))
+	q2 := stm.FetchElement().Elements().ChildNamespace("query", registerNamespace)
+	require.NotNil(t, q2.Elements().Child("username"))
+	require.NotNil(t, q2.Elements().Child("password"))
 
 	username := xml.NewElementName("username")
 	password := xml.NewElementName("password")
@@ -159,7 +159,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	iq.SetType(xml.SetType)
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// already existing user...
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
@@ -167,13 +167,13 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	password.SetText("5678")
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrConflict.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrConflict.Error(), elem.Error().Elements().All()[0].Name())
 
 	// storage error
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 
 	storage.DeactivateMockedError()
 	username.SetText("juliet")
@@ -207,7 +207,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	iq.AppendElement(q)
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	x = NewXEPRegister(&config.ModRegistration{AllowCancel: true}, stm)
 	defer x.Done()
@@ -215,7 +215,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	q.AppendElement(xml.NewElementName("remove2"))
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 	q.AppendElement(xml.NewElementName("remove"))
 
@@ -223,7 +223,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
 	x.ProcessIQ(iq)
@@ -261,19 +261,19 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	x = NewXEPRegister(&config.ModRegistration{AllowChange: true}, stm)
 	defer x.Done()
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	username.SetText("ortuman")
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrNotAuthorized.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrNotAuthorized.Error(), elem.Error().Elements().All()[0].Name())
 
 	// secure channel...
 	stm.SetSecured(true)
@@ -282,7 +282,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
 	x.ProcessIQ(iq)

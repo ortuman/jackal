@@ -7,6 +7,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/gob"
 	"os"
 	"path/filepath"
 	"time"
@@ -51,7 +52,7 @@ func (b *badgerDB) InsertOrUpdateUser(user *model.User) error {
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
-		user.ToBytes(buf)
+		user.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.userKey(user.Username), buf.Bytes())
 	})
 }
@@ -70,7 +71,7 @@ func (b *badgerDB) FetchUser(username string) (*model.User, error) {
 			return err
 		}
 		if val != nil {
-			usr.FromBytes(bytes.NewReader(val))
+			usr.FromGob(gob.NewDecoder(bytes.NewReader(val)))
 		}
 		return nil
 	}); err != nil {
@@ -99,7 +100,7 @@ func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) error {
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
-		ri.ToBytes(buf)
+		ri.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.rosterItemKey(ri.User, ri.Contact), buf.Bytes())
 	})
 }
@@ -116,7 +117,7 @@ func (b *badgerDB) FetchRosterItems(user string) ([]model.RosterItem, error) {
 	prefix := []byte("rosterItems:" + user)
 	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
 		var ri model.RosterItem
-		ri.FromBytes(bytes.NewReader(val))
+		ri.FromGob(gob.NewDecoder(bytes.NewReader(val)))
 		ris = append(ris, ri)
 		return nil
 	})
@@ -134,7 +135,7 @@ func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, err
 			return err
 		}
 		if val != nil {
-			ri.FromBytes(bytes.NewReader(val))
+			ri.FromGob(gob.NewDecoder(bytes.NewReader(val)))
 		}
 		return nil
 	}); err != nil {
@@ -148,7 +149,7 @@ func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
-		rn.ToBytes(buf)
+		rn.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.rosterNotificationKey(rn.User, rn.Contact), buf.Bytes())
 	})
 }
@@ -165,7 +166,7 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 	prefix := []byte("rosterNotifications:" + contact)
 	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
 		var rn model.RosterNotification
-		rn.FromBytes(bytes.NewReader(val))
+		rn.FromGob(gob.NewDecoder(bytes.NewReader(val)))
 		rns = append(rns, rn)
 		return nil
 	})
@@ -175,27 +176,25 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 	return rns, nil
 }
 
-func (b *badgerDB) InsertOrUpdateVCard(vCard xml.Element, username string) error {
+func (b *badgerDB) InsertOrUpdateVCard(vCard xml.ElementNode, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
-		vCard.ToBytes(buf)
+		vCard.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.vCardKey(username), buf.Bytes())
 	})
 }
 
-func (b *badgerDB) FetchVCard(username string) (xml.Element, error) {
-	var vCard xml.Element
+func (b *badgerDB) FetchVCard(username string) (xml.ElementNode, error) {
+	var vCard xml.ElementNode
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.vCardKey(username), tx)
 		if err != nil {
 			return err
 		}
 		if val != nil {
-			var vc xml.MutableElement
-			vc.FromBytes(bytes.NewReader(val))
-			vCard = &vc
+			vCard = xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
 		}
 		return err
 	}); err != nil {
@@ -204,29 +203,28 @@ func (b *badgerDB) FetchVCard(username string) (xml.Element, error) {
 	return vCard, nil
 }
 
-func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error {
+func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.ElementNode, namespace string, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
 		root := xml.NewElementName("r")
 		root.AppendElements(privateXML)
-		root.ToBytes(buf)
+		root.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.privateStorageKey(username, namespace), buf.Bytes())
 	})
 }
 
-func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.Element, error) {
-	var privateXML []xml.Element
+func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.ElementNode, error) {
+	var privateXML []xml.ElementNode
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.privateStorageKey(username, namespace), tx)
 		if err != nil {
 			return err
 		}
 		if val != nil {
-			var root xml.MutableElement
-			root.FromBytes(bytes.NewReader(val))
-			privateXML = root.Elements()
+			root := xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
+			privateXML = root.Elements().All()
 		}
 		return nil
 	}); err != nil {
@@ -235,12 +233,12 @@ func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.Ele
 	return privateXML, nil
 }
 
-func (b *badgerDB) InsertOfflineMessage(message xml.Element, username string) error {
+func (b *badgerDB) InsertOfflineMessage(message xml.ElementNode, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
 	return b.db.Update(func(tx *badger.Txn) error {
-		message.ToBytes(buf)
+		message.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.offlineMessageKey(username, message.ID()), buf.Bytes())
 	})
 }
@@ -258,14 +256,13 @@ func (b *badgerDB) CountOfflineMessages(username string) (int, error) {
 	return cnt, nil
 }
 
-func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.Element, error) {
-	var msgs []xml.Element
+func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.ElementNode, error) {
+	var msgs []xml.ElementNode
 
 	prefix := []byte("offlineMessages:" + username)
 	err := b.forEachKeyAndValue(prefix, func(_, val []byte) error {
-		var msg xml.MutableElement
-		msg.FromBytes(bytes.NewReader(val))
-		msgs = append(msgs, &msg)
+		msg := xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
+		msgs = append(msgs, msg)
 		return nil
 	})
 	if err != nil {

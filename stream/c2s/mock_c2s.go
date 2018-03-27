@@ -25,8 +25,8 @@ type MockStream struct {
 	authenticated    bool
 	compressed       bool
 	rosterRequested  bool
-	presenceElements []xml.Element
-	elemCh           chan xml.Element
+	presenceElements []xml.ElementNode
+	elemCh           chan xml.ElementNode
 	discCh           chan error
 }
 
@@ -38,7 +38,7 @@ func NewMockStream(id string, jid *xml.JID) *MockStream {
 	strm.username = jid.Node()
 	strm.domain = jid.Domain()
 	strm.resource = jid.Resource()
-	strm.elemCh = make(chan xml.Element, 16)
+	strm.elemCh = make(chan xml.ElementNode, 16)
 	strm.discCh = make(chan error, 1)
 	return strm
 }
@@ -212,7 +212,7 @@ func (m *MockStream) IsRosterRequested() bool {
 }
 
 // PresenceElements returns last available sent presence sub elements.
-func (m *MockStream) PresenceElements() []xml.Element {
+func (m *MockStream) PresenceElements() []xml.ElementNode {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.presenceElements
@@ -220,19 +220,19 @@ func (m *MockStream) PresenceElements() []xml.Element {
 
 // SetPresenceElements sets the mocked stream last received
 // presence elements.
-func (m *MockStream) SetPresenceElements(presenceElements []xml.Element) {
+func (m *MockStream) SetPresenceElements(presenceElements []xml.ElementNode) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.presenceElements = presenceElements
 }
 
 // SendElement sends the given XML element.
-func (m *MockStream) SendElement(element xml.Element) {
+func (m *MockStream) SendElement(element xml.ElementNode) {
 	m.elemCh <- element
 }
 
 // FetchElement waits until a new XML element is sent to
 // the mocked stream and returns it.
-func (m *MockStream) FetchElement() xml.Element {
+func (m *MockStream) FetchElement() xml.ElementNode {
 	return <-m.elemCh
 }

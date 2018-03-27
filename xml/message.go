@@ -27,13 +27,13 @@ const (
 // All incoming <message> elements providing from the
 // stream will automatically be converted to Message objects.
 type Message struct {
-	MutableElement
+	Element
 	to   *JID
 	from *JID
 }
 
-// NewMessageFromElement creates a Message object from Element.
-func NewMessageFromElement(e Element, from *JID, to *JID) (*Message, error) {
+// NewMessageFromElement creates a Message object from ElementNode.
+func NewMessageFromElement(e ElementNode, from *JID, to *JID) (*Message, error) {
 	if e.Name() != "message" {
 		return nil, fmt.Errorf("wrong Message element name: %s", e.Name())
 	}
@@ -80,7 +80,7 @@ func (m *Message) IsGroupChat() bool {
 // IsMessageWithBody returns true if the message
 // has a body sub element.
 func (m *Message) IsMessageWithBody() bool {
-	return m.FindElement("body") != nil
+	return m.elements.Child("body") != nil
 }
 
 // ToJID returns message 'to' JID value.

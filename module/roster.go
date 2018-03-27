@@ -191,14 +191,14 @@ func (r *ModRoster) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the roster module.
 func (r *ModRoster) MatchesIQ(iq *xml.IQ) bool {
-	return iq.FindElementNamespace("query", rosterNamespace) != nil
+	return iq.Elements().ChildNamespace("query", rosterNamespace) != nil
 }
 
 // ProcessIQ processes a roster IQ taking according actions
 // over the associated stream.
 func (r *ModRoster) ProcessIQ(iq *xml.IQ) {
 	r.actorCh <- func() {
-		q := iq.FindElementNamespace("query", rosterNamespace)
+		q := iq.Elements().ChildNamespace("query", rosterNamespace)
 		if iq.IsGet() {
 			r.sendRoster(iq, q)
 		} else if iq.IsSet() {
@@ -338,8 +338,8 @@ func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.Element) {
-	if query.ElementsCount() > 0 {
+func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.ElementNode) {
+	if query.Elements().Count() > 0 {
 		r.stm.SendElement(iq.BadRequestError())
 		return
 	}
@@ -370,8 +370,8 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.Element) {
 	r.lock.Unlock()
 }
 
-func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.Element) {
-	items := query.FindElements("item")
+func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.ElementNode) {
+	items := query.Elements().Children("item")
 	if len(items) != 1 {
 		r.stm.SendElement(iq.BadRequestError())
 		return
@@ -547,7 +547,7 @@ func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 	}
 	// stamp the presence stanza of type "subscribe" with the user's bare JID as the 'from' address
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
-	p.AppendElements(presence.Elements())
+	p.AppendElements(presence.Elements().All())
 
 	if r.isLocalJID(contactJID) {
 		// archive roster approval notification
@@ -596,7 +596,7 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
 	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
-	p.AppendElements(presence.Elements())
+	p.AppendElements(presence.Elements().All())
 
 	if r.isLocalJID(userJID) {
 		userRi, err := rosterTable.fetchRosterItem(userJID.Node(), contactJID.Node())
@@ -654,7 +654,7 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 	}
 	// stamp the presence stanza of type "unsubscribe" with the users's bare JID as the 'from' address
 	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
-	p.AppendElements(presence.Elements())
+	p.AppendElements(presence.Elements().All())
 
 	if r.isLocalJID(contactJID) {
 		contactRi, err := rosterTable.fetchRosterItem(contactJID.Node(), userJID.Node())
@@ -715,7 +715,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 	}
 	// stamp the presence stanza of type "unsubscribed" with the contact's bare JID as the 'from' address
 	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
-	p.AppendElements(presence.Elements())
+	p.AppendElements(presence.Elements().All())
 
 	if r.isLocalJID(userJID) {
 		userRi, err := rosterTable.fetchRosterItem(userJID.Node(), contactJID.Node())
@@ -750,7 +750,7 @@ func (r *ModRoster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJI
 	rn := &model.RosterNotification{
 		User:     userJID.Node(),
 		Contact:  contactJID.Node(),
-		Elements: presence.Elements(),
+		Elements: presence.Elements().All(),
 	}
 	return storage.Instance().InsertOrUpdateRosterNotification(rn)
 }
@@ -796,7 +796,7 @@ func (r *ModRoster) routePresence(presence *xml.Presence, to *xml.JID) {
 		toStreams := c2s.Instance().AvailableStreams(to.Node())
 		for _, toStream := range toStreams {
 			p := xml.NewPresence(presence.FromJID(), toStream.JID(), presence.Type())
-			p.AppendElements(presence.Elements())
+			p.AppendElements(presence.Elements().All())
 			toStream.SendElement(p)
 		}
 	} else {
@@ -809,7 +809,7 @@ func (r *ModRoster) rosterItemJID(ri *model.RosterItem) *xml.JID {
 	return j
 }
 
-func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, error) {
+func (r *ModRoster) rosterItemFromElement(item xml.ElementNode) (*model.RosterItem, error) {
 	ri := &model.RosterItem{}
 	if jid := item.Attributes().Get("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
@@ -839,9 +839,9 @@ func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, 
 		}
 		ri.Ask = true
 	}
-	groups := item.FindElements("group")
+	groups := item.Elements().Children("group")
 	for _, group := range groups {
-		if group.Attributes().Len() > 0 {
+		if group.Attributes().Count() > 0 {
 			return nil, errors.New("group element must not contain any attribute")
 		}
 		ri.Groups = append(ri.Groups, group.Text())
@@ -849,7 +849,7 @@ func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, 
 	return ri, nil
 }
 
-func (r *ModRoster) elementFromRosterItem(ri *model.RosterItem) xml.Element {
+func (r *ModRoster) elementFromRosterItem(ri *model.RosterItem) xml.ElementNode {
 	riJID := r.rosterItemJID(ri)
 	item := xml.NewElementName("item")
 	item.SetAttribute("jid", riJID.ToBareJID().String())

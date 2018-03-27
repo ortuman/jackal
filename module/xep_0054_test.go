@@ -91,7 +91,7 @@ func TestXEP0054_SetError(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	// storage error
 	storage.ActivateMockedError()
@@ -104,7 +104,7 @@ func TestXEP0054_SetError(t *testing.T) {
 
 	x.ProcessIQ(iq2)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0054_Get(t *testing.T) {
@@ -131,8 +131,8 @@ func TestXEP0054_Get(t *testing.T) {
 	x.ProcessIQ(iqGet)
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
-	vCard := elem.FindElementNamespace("vCard", vCardNamespace)
-	fn := vCard.FindElement("FN")
+	vCard := elem.Elements().ChildNamespace("vCard", vCardNamespace)
+	fn := vCard.Elements().Child("FN")
 	require.Equal(t, "Forrest Gump", fn.Text())
 
 	// non existing vCard...
@@ -145,8 +145,8 @@ func TestXEP0054_Get(t *testing.T) {
 	x.ProcessIQ(iqGet2)
 	elem = stm.FetchElement()
 	require.NotNil(t, elem)
-	vCard = elem.FindElementNamespace("vCard", vCardNamespace)
-	require.Equal(t, 0, vCard.ElementsCount())
+	vCard = elem.Elements().ChildNamespace("vCard", vCardNamespace)
+	require.Equal(t, 0, vCard.Elements().Count())
 }
 
 func TestXEP0054_GetError(t *testing.T) {
@@ -173,7 +173,7 @@ func TestXEP0054_GetError(t *testing.T) {
 
 	x.ProcessIQ(iqGet)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iqGet2ID := uuid.New()
 	iqGet2 := xml.NewIQType(iqGet2ID, xml.GetType)
@@ -186,10 +186,10 @@ func TestXEP0054_GetError(t *testing.T) {
 
 	x.ProcessIQ(iqGet2)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func testVCard() xml.Element {
+func testVCard() xml.ElementNode {
 	vCard := xml.NewElementNamespace("vCard", vCardNamespace)
 	fn := xml.NewElementName("FN")
 	fn.SetText("Forrest Gump")

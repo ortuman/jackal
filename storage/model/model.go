@@ -7,7 +7,6 @@ package model
 
 import (
 	"encoding/gob"
-	"io"
 
 	"github.com/ortuman/jackal/xml"
 )
@@ -20,16 +19,14 @@ type User struct {
 
 // FromBytes deserializes a User entity
 // from it's gob binary representation.
-func (u *User) FromBytes(r io.Reader) {
-	dec := gob.NewDecoder(r)
+func (u *User) FromGob(dec *gob.Decoder) {
 	dec.Decode(&u.Username)
 	dec.Decode(&u.Password)
 }
 
 // ToBytes converts a User entity
 // to it's gob binary representation.
-func (u *User) ToBytes(w io.Writer) {
-	enc := gob.NewEncoder(w)
+func (u *User) ToGob(enc *gob.Encoder) {
 	enc.Encode(&u.Username)
 	enc.Encode(&u.Password)
 }
@@ -46,8 +43,7 @@ type RosterItem struct {
 
 // FromBytes deserializes a RosterItem entity
 // from it's gob binary representation.
-func (ri *RosterItem) FromBytes(r io.Reader) {
-	dec := gob.NewDecoder(r)
+func (ri *RosterItem) FromGob(dec *gob.Decoder) {
 	dec.Decode(&ri.User)
 	dec.Decode(&ri.Contact)
 	dec.Decode(&ri.Name)
@@ -58,8 +54,7 @@ func (ri *RosterItem) FromBytes(r io.Reader) {
 
 // ToBytes converts a RosterItem entity
 // to it's gob binary representation.
-func (ri *RosterItem) ToBytes(w io.Writer) {
-	enc := gob.NewEncoder(w)
+func (ri *RosterItem) ToGob(enc *gob.Encoder) {
 	enc.Encode(&ri.User)
 	enc.Encode(&ri.Contact)
 	enc.Encode(&ri.Name)
@@ -73,32 +68,28 @@ func (ri *RosterItem) ToBytes(w io.Writer) {
 type RosterNotification struct {
 	User     string
 	Contact  string
-	Elements []xml.Element
+	Elements []xml.ElementNode
 }
 
-// FromBytes deserializes a RosterNotification entity
+// FromGob deserializes a RosterNotification entity
 // from it's gob binary representation.
-func (rn *RosterNotification) FromBytes(r io.Reader) {
-	dec := gob.NewDecoder(r)
+func (rn *RosterNotification) FromGob(dec *gob.Decoder) {
 	dec.Decode(&rn.User)
 	dec.Decode(&rn.Contact)
 	var ln int
 	dec.Decode(&ln)
 	for i := 0; i < ln; i++ {
-		el := &xml.MutableElement{}
-		el.FromBytes(r)
-		rn.Elements = append(rn.Elements, el)
+		rn.Elements = append(rn.Elements, xml.NewElementFromGob(dec))
 	}
 }
 
-// ToBytes converts a RosterNotification entity
+// ToGob converts a RosterNotification entity
 // to it's gob binary representation.
-func (rn *RosterNotification) ToBytes(w io.Writer) {
-	enc := gob.NewEncoder(w)
+func (rn *RosterNotification) ToGob(enc *gob.Encoder) {
 	enc.Encode(&rn.User)
 	enc.Encode(&rn.Contact)
 	enc.Encode(len(rn.Elements))
 	for _, el := range rn.Elements {
-		el.ToBytes(w)
+		el.ToGob(enc)
 	}
 }

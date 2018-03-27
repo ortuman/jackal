@@ -103,7 +103,7 @@ func TestXEP0030_BadToJID(t *testing.T) {
 
 	x.ProcessIQ(iq1)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrFeatureNotImplemented.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrFeatureNotImplemented.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0030_GetFeatures(t *testing.T) {
@@ -136,10 +136,10 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	x.ProcessIQ(iq1)
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
-	q := elem.FindElementNamespace("query", discoInfoNamespace)
-	require.Equal(t, 3, q.ElementsCount())
-	require.Equal(t, "identity", q.Elements()[0].Name())
-	require.Equal(t, "feature", q.Elements()[1].Name())
+	q := elem.Elements().ChildNamespace("query", discoInfoNamespace)
+	require.Equal(t, 3, q.Elements().Count())
+	require.Equal(t, "identity", q.Elements().All()[0].Name())
+	require.Equal(t, "feature", q.Elements().All()[1].Name())
 }
 
 func TestXEP0030_GetItems(t *testing.T) {
@@ -165,7 +165,7 @@ func TestXEP0030_GetItems(t *testing.T) {
 	x.ProcessIQ(iq1)
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
-	q := elem.FindElementNamespace("query", discoItemsNamespace)
-	require.Equal(t, 2, q.ElementsCount())
-	require.Equal(t, "item", q.Elements()[0].Name())
+	q := elem.Elements().ChildNamespace("query", discoItemsNamespace)
+	require.Equal(t, 2, q.Elements().Count())
+	require.Equal(t, "item", q.Elements().All()[0].Name())
 }

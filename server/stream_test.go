@@ -169,7 +169,7 @@ func TestStream_SendIQ(t *testing.T) {
 	elem := conn.ClientReadElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
-	require.NotNil(t, elem.FindElementsNamespace("query", "jabber:iq:roster"))
+	require.NotNil(t, elem.Elements().ChildNamespace("query", "jabber:iq:roster"))
 
 	require.True(t, stm.IsRosterRequested())
 }
@@ -213,10 +213,10 @@ func TestStream_SendPresence(t *testing.T) {
 	require.Equal(t, int8(5), stm.Priority())
 	x := xml.NewElementName("x")
 	x.AppendElements(stm.PresenceElements())
-	require.NotNil(t, x.FindElement("show"))
-	require.NotNil(t, x.FindElement("status"))
-	require.NotNil(t, x.FindElement("priority"))
-	require.NotNil(t, x.FindElement("x"))
+	require.NotNil(t, x.Elements().Child("show"))
+	require.NotNil(t, x.Elements().Child("status"))
+	require.NotNil(t, x.Elements().Child("priority"))
+	require.NotNil(t, x.Elements().Child("x"))
 }
 
 func TestStream_SendMessage(t *testing.T) {
@@ -308,7 +308,7 @@ func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
 
 	elem := conn.ClientReadElement()
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, elem.FindElement("bind"))
+	require.NotNil(t, elem.Elements().Child("bind"))
 
 	// open session
 	conn.ClientWriteBytes([]byte(`<iq type="set" id="aab8a">

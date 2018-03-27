@@ -16,11 +16,16 @@ type Attribute struct {
 	Value string
 }
 
-type AttributeSet struct {
+type AttributeSet interface {
+	Get(string) string
+	Count() int
+}
+
+type attributeSet struct {
 	attrs []Attribute
 }
 
-func (as *AttributeSet) Get(label string) string {
+func (as *attributeSet) Get(label string) string {
 	for _, attr := range as.attrs {
 		if attr.Label == label {
 			return attr.Value
@@ -29,11 +34,11 @@ func (as *AttributeSet) Get(label string) string {
 	return ""
 }
 
-func (as *AttributeSet) Len() int {
+func (as *attributeSet) Count() int {
 	return len(as.attrs)
 }
 
-func (as *AttributeSet) setAttribute(label, value string) {
+func (as *attributeSet) setAttribute(label, value string) {
 	for i := 0; i < len(as.attrs); i++ {
 		if as.attrs[i].Label == label {
 			as.attrs[i].Value = value
@@ -43,7 +48,7 @@ func (as *AttributeSet) setAttribute(label, value string) {
 	as.attrs = append(as.attrs, Attribute{label, value})
 }
 
-func (as *AttributeSet) removeAttribute(label string) {
+func (as *attributeSet) removeAttribute(label string) {
 	for i := 0; i < len(as.attrs); i++ {
 		if as.attrs[i].Label == label {
 			as.attrs = append(as.attrs[:i], as.attrs[i+1:]...)
@@ -52,12 +57,12 @@ func (as *AttributeSet) removeAttribute(label string) {
 	}
 }
 
-func (as *AttributeSet) copyFrom(from *AttributeSet) {
-	as.attrs = make([]Attribute, from.Len())
+func (as *attributeSet) copyFrom(from *attributeSet) {
+	as.attrs = make([]Attribute, from.Count())
 	copy(as.attrs, from.attrs)
 }
 
-func (as *AttributeSet) toXML(w io.Writer) {
+func (as *attributeSet) toXML(w io.Writer) {
 	for i := 0; i < len(as.attrs); i++ {
 		if len(as.attrs[i].Value) == 0 {
 			continue
@@ -70,7 +75,7 @@ func (as *AttributeSet) toXML(w io.Writer) {
 	}
 }
 
-func (as *AttributeSet) fromGob(dec *gob.Decoder) {
+func (as *attributeSet) fromGob(dec *gob.Decoder) {
 	var c int
 	dec.Decode(&c)
 	for i := 0; i < c; i++ {
@@ -81,7 +86,7 @@ func (as *AttributeSet) fromGob(dec *gob.Decoder) {
 	}
 }
 
-func (as *AttributeSet) toGob(enc *gob.Encoder) {
+func (as *attributeSet) toGob(enc *gob.Encoder) {
 	enc.Encode(len(as.attrs))
 	for _, attr := range as.attrs {
 		enc.Encode(&attr.Label)

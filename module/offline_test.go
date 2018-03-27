@@ -58,7 +58,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
-	require.Equal(t, xml.ErrServiceUnavailable.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrServiceUnavailable.Error(), elem.Error().Elements().All()[0].Name())
 
 	// deliver offline messages...
 	stm2 := c2s.NewMockStream("abcd", j2)

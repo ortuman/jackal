@@ -57,7 +57,7 @@ func (x *XEPPing) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the ping module.
 func (x *XEPPing) MatchesIQ(iq *xml.IQ) bool {
-	return x.isPongIQ(iq) || iq.FindElementNamespace("ping", pingNamespace) != nil
+	return x.isPongIQ(iq) || iq.Elements().ChildNamespace("ping", pingNamespace) != nil
 }
 
 // ProcessIQ processes a ping IQ taking according actions
@@ -72,8 +72,8 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 		x.strm.SendElement(iq.ForbiddenError())
 		return
 	}
-	p := iq.FindElementNamespace("ping", pingNamespace)
-	if p == nil || p.ElementsCount() > 0 {
+	p := iq.Elements().ChildNamespace("ping", pingNamespace)
+	if p == nil || p.Elements().Count() > 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}
@@ -106,7 +106,7 @@ func (x *XEPPing) ResetDeadline() {
 func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
 	x.pingMu.RLock()
 	defer x.pingMu.RUnlock()
-	return x.pingId == iq.ID() && (iq.IsResult() || iq.IsError())
+	return x.pingId == iq.ID() && (iq.IsResult() || iq.Type() == xml.ErrorType)
 }
 
 func (x *XEPPing) sendPing() {

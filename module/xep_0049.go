@@ -48,14 +48,14 @@ func (x *XEPPrivateStorage) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the private storage module.
 func (x *XEPPrivateStorage) MatchesIQ(iq *xml.IQ) bool {
-	return iq.FindElementNamespace("query", privateStorageNamespace) != nil
+	return iq.Elements().ChildNamespace("query", privateStorageNamespace) != nil
 }
 
 // ProcessIQ processes a private storage IQ taking according actions
 // over the associated stream.
 func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 	x.actorCh <- func() {
-		q := iq.FindElementNamespace("query", privateStorageNamespace)
+		q := iq.Elements().ChildNamespace("query", privateStorageNamespace)
 		toJid := iq.ToJID()
 		validTo := toJid.IsServer() || toJid.Node() == x.strm.Username()
 		if !validTo {
@@ -84,16 +84,16 @@ func (x *XEPPrivateStorage) actorLoop() {
 	}
 }
 
-func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.Element) {
-	if q.ElementsCount() != 1 {
+func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.ElementNode) {
+	if q.Elements().Count() != 1 {
 		x.strm.SendElement(iq.NotAcceptableError())
 		return
 	}
-	privElem := q.Elements()[0]
+	privElem := q.Elements().All()[0]
 	privNS := privElem.Namespace()
 	isValidNS := x.isValidNamespace(privNS)
 
-	if privElem.ElementsCount() > 0 || !isValidNS {
+	if privElem.Elements().Count() > 0 || !isValidNS {
 		x.strm.SendElement(iq.NotAcceptableError())
 		return
 	}
@@ -117,10 +117,10 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.Element) {
 	x.strm.SendElement(res)
 }
 
-func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.Element) {
-	nsElements := map[string][]xml.Element{}
+func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.ElementNode) {
+	nsElements := map[string][]xml.ElementNode{}
 
-	for _, privElement := range q.Elements() {
+	for _, privElement := range q.Elements().All() {
 		ns := privElement.Namespace()
 		if len(ns) == 0 {
 			x.strm.SendElement(iq.BadRequestError())
@@ -132,7 +132,7 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.Element) {
 		}
 		elems := nsElements[ns]
 		if elems == nil {
-			elems = []xml.Element{privElement}
+			elems = []xml.ElementNode{privElement}
 		} else {
 			elems = append(elems, privElement)
 		}

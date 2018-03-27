@@ -25,13 +25,13 @@ const (
 // All incoming <iq> elements providing from the
 // stream will automatically be converted to IQ objects.
 type IQ struct {
-	MutableElement
+	Element
 	to   *JID
 	from *JID
 }
 
-// NewIQFromElement creates an IQ object from Element.
-func NewIQFromElement(e Element, from *JID, to *JID) (*IQ, error) {
+// NewIQFromElement creates an IQ object from ElementNode.
+func NewIQFromElement(e ElementNode, from *JID, to *JID) (*IQ, error) {
 	if e.Name() != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.Name())
 	}
@@ -45,10 +45,10 @@ func NewIQFromElement(e Element, from *JID, to *JID) (*IQ, error) {
 	if !isIQType(iqType) {
 		return nil, fmt.Errorf(`invalid IQ "type" attribute: %s`, iqType)
 	}
-	if (iqType == GetType || iqType == SetType) && len(e.Elements()) != 1 {
+	if (iqType == GetType || iqType == SetType) && e.Elements().Count() != 1 {
 		return nil, errors.New(`an IQ stanza of type "get" or "set" must contain one and only one child element`)
 	}
-	if iqType == ResultType && len(e.Elements()) > 1 {
+	if iqType == ResultType && e.Elements().Count() > 1 {
 		return nil, errors.New(`an IQ stanza of type "result" must include zero or one child elements`)
 	}
 	iq := &IQ{}

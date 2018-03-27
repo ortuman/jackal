@@ -93,7 +93,7 @@ func (x *XEPDiscoInfo) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the disco info module.
 func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {
-	q := iq.FindElement("query")
+	q := iq.Elements().Child("query")
 	if q == nil {
 		return false
 	}
@@ -107,7 +107,7 @@ func (x *XEPDiscoInfo) ProcessIQ(iq *xml.IQ) {
 		x.stm.SendElement(iq.FeatureNotImplementedError())
 		return
 	}
-	q := iq.FindElement("query")
+	q := iq.Elements().Child("query")
 	switch q.Namespace() {
 	case discoInfoNamespace:
 		x.sendDiscoInfo(iq)

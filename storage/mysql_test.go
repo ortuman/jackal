@@ -221,7 +221,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 	rn := model.RosterNotification{
 		"ortuman",
 		"romeo",
-		[]xml.Element{xml.NewElementName("priority")},
+		[]xml.ElementNode{xml.NewElementName("priority")},
 	}
 	pool := bufferpool.New()
 
@@ -383,7 +383,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdatePrivateXML([]xml.Element{private}, "exodus:ns", "ortuman")
+	err := s.InsertOrUpdatePrivateXML([]xml.ElementNode{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -392,7 +392,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertOrUpdatePrivateXML([]xml.Element{private}, "exodus:ns", "ortuman")
+	err = s.InsertOrUpdatePrivateXML([]xml.ElementNode{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

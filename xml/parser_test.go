@@ -68,7 +68,7 @@ func TestDocChildElements(t *testing.T) {
 	parent, err := p.ParseElement()
 	require.Nil(t, err)
 	require.NotNil(t, parent)
-	childs := parent.Elements()
+	childs := parent.Elements().All()
 	require.Equal(t, 3, len(childs))
 	require.Equal(t, "a", childs[0].Name())
 	require.Equal(t, "b", childs[1].Name())

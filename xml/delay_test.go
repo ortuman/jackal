@@ -15,7 +15,7 @@ import (
 func TestDelay(t *testing.T) {
 	e := xml.NewElementName("element")
 	e.Delay("example.org", "any text")
-	delay := e.FindElement("delay")
+	delay := e.Elements().Child("delay")
 	require.NotNil(t, delay)
 	require.Equal(t, "example.org", delay.Attributes().Get("from"))
 	require.Equal(t, "any text", delay.Text())

@@ -6,177 +6,129 @@
 package xml
 
 import (
-	"fmt"
+	"encoding/gob"
 	"io"
-
-	"github.com/ortuman/jackal/bufferpool"
 )
 
-// ErrorType represents an 'error' stanza type.
-const ErrorType = "error"
-
-var pool = bufferpool.New()
-
-// Element represents an XML node element.
-type Element interface {
-	fmt.Stringer
-
-	Name() string
-
-	Attributes() *AttributeSet
-	Text() string
-
-	ID() string
-	Namespace() string
-	Language() string
-	Version() string
-	From() string
-	To() string
-	Type() string
-
-	FindElement(name string) Element
-	FindElements(name string) []Element
-	FindElementNamespace(name, namespace string) Element
-	FindElementsNamespace(name, namespace string) []Element
-
-	Elements() []Element
-	ElementsCount() int
-
-	ToError(stanzaError *StanzaError) Element
-	Error() Element
-
-	ToXML(writer io.Writer, includeClosing bool)
-
-	FromBytes(r io.Reader)
-	ToBytes(w io.Writer)
-}
-
-type xElement struct {
+type Element struct {
 	name     string
 	text     string
-	attrs    AttributeSet
-	elements []Element
+	attrs    attributeSet
+	elements elementSet
+}
+
+// NewElementName creates a mutable XML ElementNode instance with a given name.
+func NewElementName(name string) *Element {
+	return &Element{name: name}
+}
+
+// NewElementNamespace creates a mutable XML ElementNode instance with a given name and namespace.
+func NewElementNamespace(name, namespace string) *Element {
+	return &Element{
+		name:  name,
+		attrs: attributeSet{attrs: []Attribute{{"xmlns", namespace}}},
+	}
+}
+
+// NewElementFromElement creates a mutable XML ElementNode by copying an element.
+func NewElementFromElement(elem ElementNode) *Element {
+	e := &Element{}
+	e.copyFrom(elem)
+	return e
+}
+
+// NewElementFromGob deserializes an element node from it's gob binary representation.
+func NewElementFromGob(dec *gob.Decoder) *Element {
+	e := &Element{}
+	dec.Decode(&e.name)
+	dec.Decode(&e.text)
+	e.attrs.fromGob(dec)
+	e.elements.fromGob(dec)
+	return e
+}
+
+// NewErrorElementFromElement returns a copy of an element of stanza error class.
+func NewErrorElementFromElement(elem ElementNode, stanzaErr *StanzaError) *Element {
+	e := &Element{}
+	e.copyFrom(elem)
+	e.SetAttribute("type", "error")
+	e.AppendElement(stanzaErr.Element())
+	return e
 }
 
 // Name returns XML node name.
-func (e *xElement) Name() string {
+func (e *Element) Name() string {
 	return e.name
 }
 
-// Namespace returns 'xmlns' node attribute.
-func (e *xElement) Namespace() string {
-	return e.attrs.Get("xmlns")
-}
-
-// ID returns 'id' node attribute.
-func (e *xElement) ID() string {
-	return e.attrs.Get("id")
-}
-
-// Language returns 'xml:lang' node attribute.
-func (e *xElement) Language() string {
-	return e.attrs.Get("xml:lang")
-}
-
-// Version returns 'version' node attribute.
-func (e *xElement) Version() string {
-	return e.attrs.Get("version")
-}
-
-// From returns 'from' node attribute.
-func (e *xElement) From() string {
-	return e.attrs.Get("from")
-}
-
-// To returns 'to' node attribute.
-func (e *xElement) To() string {
-	return e.attrs.Get("to")
-}
-
-// Type returns 'type' node attribute.
-func (e *xElement) Type() string {
-	return e.attrs.Get("type")
-}
-
 // Attributes returns XML node attribute value.
-func (e *xElement) Attributes() *AttributeSet {
+func (e *Element) Attributes() AttributeSet {
 	return &e.attrs
+}
+
+// Elements returns all instance's child elements.
+func (e *Element) Elements() ElementSet {
+	return &e.elements
 }
 
 // Text returns XML node text value.
 // Returns an empty string if not set.
-func (e *xElement) Text() string {
+func (e *Element) Text() string {
 	return e.text
 }
 
-// FindElement returns first element identified by name.
-// Returns nil if no element is found.
-func (e *xElement) FindElement(name string) Element {
-	for _, element := range e.elements {
-		if element.Name() == name {
-			return element
-		}
-	}
-	return nil
+// Namespace returns 'xmlns' node attribute.
+func (e *Element) Namespace() string {
+	return e.attrs.Get("xmlns")
 }
 
-// FindElements returns all elements identified by name.
-// Returns an empty array if no elements are found.
-func (e *xElement) FindElements(name string) []Element {
-	var ret []Element
-	for _, element := range e.elements {
-		if element.Name() == name {
-			ret = append(ret, element)
-		}
-	}
-	return ret
+// ID returns 'id' node attribute.
+func (e *Element) ID() string {
+	return e.attrs.Get("id")
 }
 
-// FindElementNamespace returns first element identified by name and namespace.
-// Returns nil if no element is found.
-func (e *xElement) FindElementNamespace(name, namespace string) Element {
-	for _, element := range e.elements {
-		if element.Name() == name && element.Namespace() == namespace {
-			return element
-		}
-	}
-	return nil
+// Language returns 'xml:lang' node attribute.
+func (e *Element) Language() string {
+	return e.attrs.Get("xml:lang")
 }
 
-// FindElementsNamespace returns all elements identified by name and namespace.
-// Returns an empty array if no elements are found.
-func (e *xElement) FindElementsNamespace(name, namespace string) []Element {
-	var ret []Element
-	for _, element := range e.elements {
-		if element.Name() == name && element.Namespace() == namespace {
-			ret = append(ret, element)
-		}
-	}
-	return ret
+// SetVersion sets 'version' node attribute.
+func (e *Element) SetVersion(version string) {
+	e.attrs.setAttribute("version", version)
 }
 
-// Elements returns all instance's child elements.
-func (e *xElement) Elements() []Element {
-	return e.elements
+// Version returns 'version' node attribute.
+func (e *Element) Version() string {
+	return e.attrs.Get("version")
 }
 
-// ElementsCount returns child elements count.
-func (e *xElement) ElementsCount() int {
-	return len(e.elements)
+// From returns 'from' node attribute.
+func (e *Element) From() string {
+	return e.attrs.Get("from")
+}
+
+// To returns 'to' node attribute.
+func (e *Element) To() string {
+	return e.attrs.Get("to")
+}
+
+// Type returns 'type' node attribute.
+func (e *Element) Type() string {
+	return e.attrs.Get("type")
 }
 
 // IsError returns true if element has a 'type' attribute of value 'error'.
-func (e *xElement) IsError() bool {
+func (e *Element) IsError() bool {
 	return e.Type() == ErrorType
 }
 
 // Error returns element error sub element.
-func (e *xElement) Error() Element {
-	return e.FindElement("error")
+func (e *Element) Error() ElementNode {
+	return e.elements.Child("error")
 }
 
 // String returns a string representation of the element.
-func (e *xElement) String() string {
+func (e *Element) String() string {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
@@ -186,7 +138,7 @@ func (e *xElement) String() string {
 
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
-func (e *xElement) ToXML(w io.Writer, includeClosing bool) {
+func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 	w.Write([]byte("<"))
 	w.Write([]byte(e.name))
 
@@ -194,7 +146,7 @@ func (e *xElement) ToXML(w io.Writer, includeClosing bool) {
 	e.attrs.toXML(w)
 
 	textLen := len(e.text)
-	if len(e.elements) > 0 || textLen > 0 {
+	if e.elements.Count() > 0 || textLen > 0 {
 		w.Write([]byte(">"))
 
 		// serialize text
@@ -202,9 +154,8 @@ func (e *xElement) ToXML(w io.Writer, includeClosing bool) {
 			escapeText(w, []byte(e.text), false)
 		}
 		// serialize child elements
-		for j := 0; j < len(e.elements); j++ {
-			e.elements[j].ToXML(w, true)
-		}
+		e.elements.toXML(w)
+
 		if includeClosing {
 			w.Write([]byte("</"))
 			w.Write([]byte(e.name))
@@ -219,51 +170,17 @@ func (e *xElement) ToXML(w io.Writer, includeClosing bool) {
 	}
 }
 
-// Copy returns a deep copy of this message stanza.
-func (e *xElement) Copy() *MutableElement {
-	cp := &MutableElement{}
-	cp.copyFrom(e)
-	return cp
+// ToGob serializes an element node to it's gob binary representation.
+func (e *Element) ToGob(enc *gob.Encoder) {
+	enc.Encode(&e.name)
+	enc.Encode(&e.text)
+	e.attrs.toGob(enc)
+	e.elements.toGob(enc)
 }
 
-func (e *xElement) copyFrom(el Element) {
+func (e *Element) copyFrom(el ElementNode) {
 	e.name = el.Name()
 	e.text = el.Text()
-	e.attrs.copyFrom(el.Attributes())
-
-	els := el.Elements()
-	e.elements = make([]Element, len(els))
-	for i := 0; i < len(els); i++ {
-		el := &xElement{}
-		el.copyFrom(els[i])
-		e.elements[i] = el
-	}
-}
-
-func (e *xElement) appendElement(element Element) {
-	e.elements = append(e.elements, element)
-}
-
-func (e *xElement) appendElements(elements []Element) {
-	e.elements = append(e.elements, elements...)
-}
-
-func (e *xElement) removeElements(name string) {
-	filtered := e.elements[:0]
-	for _, elem := range e.elements {
-		if elem.Name() != name {
-			filtered = append(filtered, elem)
-		}
-	}
-	e.elements = filtered
-}
-
-func (e *xElement) removeElementsNamespace(name, namespace string) {
-	filtered := e.elements[:0]
-	for _, elem := range e.elements {
-		if elem.Name() != name || elem.Attributes().Get("xmlns") != namespace {
-			filtered = append(filtered, elem)
-		}
-	}
-	e.elements = filtered
+	e.attrs.copyFrom(el.Attributes().(*attributeSet))
+	e.elements.copyFrom(el.Elements().(*elementSet))
 }

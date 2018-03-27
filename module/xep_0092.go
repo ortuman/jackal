@@ -53,14 +53,14 @@ func (x *XEPVersion) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the version module.
 func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
-	return iq.IsGet() && iq.FindElementNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
+	return iq.IsGet() && iq.Elements().ChildNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
-	q := iq.FindElementNamespace("query", versionNamespace)
-	if q.ElementsCount() != 0 {
+	q := iq.Elements().ChildNamespace("query", versionNamespace)
+	if q.Elements().Count() != 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}

@@ -43,16 +43,16 @@ func TestXEP0092(t *testing.T) {
 	qVer.AppendElement(xml.NewElementName("version"))
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// get version
 	qVer.ClearElements()
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	ver := elem.FindElementNamespace("query", versionNamespace)
-	require.Equal(t, "jackal", ver.FindElement("name").Text())
-	require.Equal(t, version.ApplicationVersion.String(), ver.FindElement("version").Text())
-	require.Nil(t, ver.FindElement("os"))
+	ver := elem.Elements().ChildNamespace("query", versionNamespace)
+	require.Equal(t, "jackal", ver.Elements().Child("name").Text())
+	require.Equal(t, version.ApplicationVersion.String(), ver.Elements().Child("version").Text())
+	require.Nil(t, ver.Elements().Child("os"))
 
 	// show OS
 	cfg.ShowOS = true
@@ -61,7 +61,7 @@ func TestXEP0092(t *testing.T) {
 	x = NewXEPVersion(&cfg, stm)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	ver = elem.FindElementNamespace("query", versionNamespace)
-	require.Equal(t, osString, ver.FindElement("os").Text())
+	ver = elem.Elements().ChildNamespace("query", versionNamespace)
+	require.Equal(t, osString, ver.Elements().Child("os").Text())
 	x.Done()
 }

@@ -55,15 +55,15 @@ const (
 // All incoming <presence> elements providing from the
 // stream will automatically be converted to Presence objects.
 type Presence struct {
-	MutableElement
+	Element
 	to        *JID
 	from      *JID
 	showState ShowState
 	priority  int8
 }
 
-// NewPresenceFromElement creates a Presence object from Element.
-func NewPresenceFromElement(e Element, from *JID, to *JID) (*Presence, error) {
+// NewPresenceFromElement creates a Presence object from ElementNode.
+func NewPresenceFromElement(e ElementNode, from *JID, to *JID) (*Presence, error) {
 	if e.Name() != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}
@@ -173,13 +173,14 @@ func isPresenceType(presenceType string) bool {
 }
 
 func (p *Presence) validateStatus() error {
-	sts := p.FindElements("status")
+	sts := p.elements.Children("status")
 	for _, st := range sts {
-		switch st.Attributes().Len() {
+		switch st.Attributes().Count() {
 		case 0:
 			break
 		case 1:
-			if st.Attributes().attrs[0].Label == "xml:lang" {
+			as := st.Attributes()
+			if as.(*attributeSet).attrs[0].Label == "xml:lang" {
 				break
 			}
 			fallthrough
@@ -191,12 +192,12 @@ func (p *Presence) validateStatus() error {
 }
 
 func (p *Presence) setShow() error {
-	shs := p.FindElements("show")
+	shs := p.elements.Children("show")
 	switch len(shs) {
 	case 0:
 		p.showState = AvailableShowState
 	case 1:
-		if shs[0].Attributes().Len() > 0 {
+		if shs[0].Attributes().Count() > 0 {
 			return errors.New(" the <show/> element MUST NOT possess any attributes")
 		}
 		switch shs[0].Text() {
@@ -219,7 +220,7 @@ func (p *Presence) setShow() error {
 }
 
 func (p *Presence) setPriority() error {
-	ps := p.FindElements("priority")
+	ps := p.elements.Children("priority")
 	switch len(ps) {
 	case 0:
 		break

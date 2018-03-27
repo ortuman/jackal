@@ -44,7 +44,7 @@ func (x *XEPRegister) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the in-band registration module.
 func (x *XEPRegister) MatchesIQ(iq *xml.IQ) bool {
-	return iq.FindElementNamespace("query", registerNamespace) != nil
+	return iq.Elements().ChildNamespace("query", registerNamespace) != nil
 }
 
 // ProcessIQ processes an in-band registration IQ
@@ -55,7 +55,7 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 		return
 	}
 
-	q := iq.FindElementNamespace("query", registerNamespace)
+	q := iq.Elements().ChildNamespace("query", registerNamespace)
 	if !x.strm.IsAuthenticated() {
 		if iq.IsGet() {
 			if !x.cfg.AllowRegistration {
@@ -76,12 +76,12 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 			x.strm.SendElement(iq.BadRequestError())
 		}
 	} else if iq.IsSet() {
-		if q.FindElement("remove") != nil {
+		if q.Elements().Child("remove") != nil {
 			// remove user
 			x.cancelRegistration(iq, q)
 		} else {
-			user := q.FindElement("username")
-			password := q.FindElement("password")
+			user := q.Elements().Child("username")
+			password := q.Elements().Child("password")
 			if user != nil && password != nil {
 				// change password
 				x.changePassword(password.Text(), user.Text(), iq)
@@ -94,8 +94,8 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.Element) {
-	if query.ElementsCount() > 0 {
+func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.ElementNode) {
+	if query.Elements().Count() > 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}
@@ -107,9 +107,9 @@ func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.Element) {
 	x.strm.SendElement(result)
 }
 
-func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.Element) {
-	userEl := query.FindElement("username")
-	passwordEl := query.FindElement("password")
+func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.ElementNode) {
+	userEl := query.Elements().Child("username")
+	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
@@ -137,12 +137,12 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.Element) {
 	x.registered = true
 }
 
-func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.Element) {
+func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.ElementNode) {
 	if !x.cfg.AllowCancel {
 		x.strm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if query.ElementsCount() > 1 {
+	if query.Elements().Count() > 1 {
 		x.strm.SendElement(iq.BadRequestError())
 		return
 	}

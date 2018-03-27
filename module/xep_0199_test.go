@@ -53,19 +53,19 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 
 	x.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetToJID(j1)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	ping := xml.NewElementNamespace("ping", pingNamespace)
 	iq.AppendElement(ping)
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.GetType)
 	x.ProcessIQ(iq)
@@ -89,7 +89,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, elem.FindElementNamespace("ping", pingNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))
 
 	// send pong...
 	x.ProcessIQ(xml.NewIQType(elem.ID(), xml.ResultType))
@@ -99,7 +99,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	elem = stm.FetchElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, elem.FindElementNamespace("ping", pingNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))
 
 	// expect disconnection...
 	err := stm.WaitDisconnection()
@@ -122,7 +122,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, elem.FindElementNamespace("ping", pingNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))
 
 	// expect disconnection...
 	err := stm.WaitDisconnection()

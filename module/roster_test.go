@@ -54,12 +54,12 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	r.ProcessIQ(iq)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xml.GetType)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 
 	r.ProcessIQ(iq)
@@ -67,8 +67,8 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.ResultType, elem.Type())
 
-	query := elem.FindElementNamespace("query", rosterNamespace)
-	require.Equal(t, 0, query.ElementsCount())
+	query := elem.Elements().ChildNamespace("query", rosterNamespace)
+	require.Equal(t, 0, query.Elements().Count())
 	r.Done()
 
 	ri := &model.RosterItem{
@@ -87,8 +87,8 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.ResultType, elem.Type())
 
-	query2 := elem.FindElementNamespace("query", rosterNamespace)
-	require.Equal(t, 1, query2.ElementsCount())
+	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
+	require.Equal(t, 1, query2.Elements().Count())
 	require.True(t, r.IsRequested())
 	r.Done()
 
@@ -96,7 +96,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r = NewRoster(stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	r.Done()
 	storage.DeactivateMockedError()
 }
@@ -111,7 +111,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	rn := model.RosterNotification{
 		User:     "noelia",
 		Contact:  "ortuman",
-		Elements: []xml.Element{xml.NewElementName("group")},
+		Elements: []xml.ElementNode{xml.NewElementName("group")},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(&rn)
 
@@ -134,7 +134,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xml.SubscribeType, elem.Type())
 	require.Equal(t, "noelia@jackal.im", elem.From())
-	require.NotNil(t, elem.FindElement("group"))
+	require.NotNil(t, elem.Elements().Child("group"))
 }
 
 func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
@@ -236,7 +236,7 @@ func TestRoster_Update(t *testing.T) {
 
 	r.ProcessIQ(iq)
 	elem := stm1.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements()[0].Name())
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	q.AppendElement(item)
@@ -298,7 +298,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	rn := &model.RosterNotification{
 		User:     "ortuman",
 		Contact:  "noelia",
-		Elements: []xml.Element{},
+		Elements: []xml.ElementNode{},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(rn)
 
@@ -319,7 +319,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	elem := stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	require.NotNil(t, elem.FindElementsNamespace("query", rosterNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("query", rosterNamespace))
 
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
@@ -328,9 +328,9 @@ func TestRoster_Subscribed(t *testing.T) {
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes := elem.FindElementNamespace("query", rosterNamespace)
+	qRes := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes := qRes.FindElement("item")
+	iRes := qRes.Elements().Child("item")
 	require.Equal(t, subscriptionFrom, iRes.Attributes().Get("subscription"))
 
 	rns, err := storage.Instance().FetchRosterNotifications("noelia")
@@ -366,7 +366,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	r1.ProcessPresence(presence)
 	elem := stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, elem.FindElementsNamespace("query", rosterNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("query", rosterNamespace))
 
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
@@ -375,9 +375,9 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes := elem.FindElementNamespace("query", rosterNamespace)
+	qRes := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes := qRes.FindElement("item")
+	iRes := qRes.Elements().Child("item")
 	require.Equal(t, subscriptionTo, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()
@@ -410,9 +410,9 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	elem := stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes := elem.FindElementNamespace("query", rosterNamespace)
+	qRes := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes := qRes.FindElement("item")
+	iRes := qRes.Elements().Child("item")
 	require.Equal(t, subscriptionFrom, iRes.Attributes().Get("subscription"))
 
 	elem = stm1.FetchElement()
@@ -427,7 +427,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	require.NotNil(t, elem.FindElementsNamespace("query", rosterNamespace))
+	require.NotNil(t, elem.Elements().ChildNamespace("query", rosterNamespace))
 }
 
 func TestRoster_DeleteItem(t *testing.T) {
@@ -462,9 +462,9 @@ func TestRoster_DeleteItem(t *testing.T) {
 	elem := stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes := elem.FindElementNamespace("query", rosterNamespace)
+	qRes := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes := qRes.FindElement("item")
+	iRes := qRes.Elements().Child("item")
 	require.Equal(t, subscriptionRemove, iRes.Attributes().Get("subscription"))
 
 	elem = stm1.FetchElement()
@@ -480,17 +480,17 @@ func TestRoster_DeleteItem(t *testing.T) {
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes = elem.FindElementNamespace("query", rosterNamespace)
+	qRes = elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes = qRes.FindElement("item")
+	iRes = qRes.Elements().Child("item")
 	require.Equal(t, subscriptionTo, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.SetType, elem.Type())
-	qRes = elem.FindElementNamespace("query", rosterNamespace)
+	qRes = elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
-	iRes = qRes.FindElement("item")
+	iRes = qRes.Elements().Child("item")
 	require.Equal(t, subscriptionNone, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()

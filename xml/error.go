@@ -16,7 +16,7 @@ type StanzaError struct {
 	reason    string
 }
 
-func newErrorElement(code int, errorType string, reason string) error {
+func newStanzaError(code int, errorType string, reason string) error {
 	return &StanzaError{
 		code:      code,
 		errorType: errorType,
@@ -29,12 +29,13 @@ func (se *StanzaError) Error() string {
 	return se.reason
 }
 
-// Element returns StanzaError equivalent XML element.
-func (se *StanzaError) Element() Element {
-	err := &xElement{name: "error"}
-	err.Attributes().setAttribute("code", strconv.Itoa(se.code))
-	err.Attributes().setAttribute("type", se.errorType)
-	err.appendElement(NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-stanzas"))
+// ElementNode returns StanzaError equivalent XML element.
+func (se *StanzaError) Element() ElementNode {
+	err := &Element{}
+	err.SetName("error")
+	err.SetAttribute("code", strconv.Itoa(se.code))
+	err.SetAttribute("type", se.errorType)
+	err.AppendElement(NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-stanzas"))
 	return err
 }
 
@@ -73,237 +74,227 @@ const (
 var (
 	// ErrBadRequest is returned by the stream when the  sender
 	// has sent XML that is malformed or that cannot be processed.
-	ErrBadRequest = newErrorElement(400, modifyErrorType, badRequestErrorReason)
+	ErrBadRequest = newStanzaError(400, modifyErrorType, badRequestErrorReason)
 
 	// ErrConflict is returned by the stream when access cannot be
 	// granted because an existing resource or session exists with
 	// the same name or address.
-	ErrConflict = newErrorElement(409, cancelErrorType, conflictErrorReason)
+	ErrConflict = newStanzaError(409, cancelErrorType, conflictErrorReason)
 
 	// ErrFeatureNotImplemented is returned by the stream when the feature
 	// requested is not implemented by the server and therefore cannot be processed.
-	ErrFeatureNotImplemented = newErrorElement(501, cancelErrorType, featureNotImplementedErrorReason)
+	ErrFeatureNotImplemented = newStanzaError(501, cancelErrorType, featureNotImplementedErrorReason)
 
 	// ErrForbidden is returned by the stream when the requesting
 	// entity does not possess the required permissions to perform the action.
-	ErrForbidden = newErrorElement(403, authErrorType, forbiddenErrorReason)
+	ErrForbidden = newStanzaError(403, authErrorType, forbiddenErrorReason)
 
 	// ErrGone is returned by the stream when the recipient or server
 	// can no longer be contacted at this address.
-	ErrGone = newErrorElement(302, modifyErrorType, goneErrorReason)
+	ErrGone = newStanzaError(302, modifyErrorType, goneErrorReason)
 
 	// ErrInternalServerError is returned by the stream when the server
 	// could not process the stanza because of a misconfiguration
 	// or an otherwise-undefined internal server error.
-	ErrInternalServerError = newErrorElement(500, waitErrorType, internalServerErrorErrorReason)
+	ErrInternalServerError = newStanzaError(500, waitErrorType, internalServerErrorErrorReason)
 
 	// ErrItemNotFound is returned by the stream when the addressed
 	// JID or item requested cannot be found.
-	ErrItemNotFound = newErrorElement(404, cancelErrorType, itemNotFoundErrorReason)
+	ErrItemNotFound = newStanzaError(404, cancelErrorType, itemNotFoundErrorReason)
 
 	// ErrJidMalformed is returned by the stream when the sending entity
 	// has provided or communicated an XMPP address or aspect thereof that
 	// does not adhere to the syntax defined in https://xmpp.org/rfcs/rfc3920.html#addressing.
-	ErrJidMalformed = newErrorElement(400, modifyErrorType, jidMalformedErrorReason)
+	ErrJidMalformed = newStanzaError(400, modifyErrorType, jidMalformedErrorReason)
 
 	// ErrNotAcceptable is returned by the stream when the server
 	// understands the request but is refusing to process it because
 	// it does not meet the defined criteria.
-	ErrNotAcceptable = newErrorElement(406, modifyErrorType, notAcceptableErrorReason)
+	ErrNotAcceptable = newStanzaError(406, modifyErrorType, notAcceptableErrorReason)
 
 	// ErrNotAllowed is returned by the stream when the recipient
 	// or server does not allow any entity to perform the action.
-	ErrNotAllowed = newErrorElement(405, cancelErrorType, notAllowedErrorReason)
+	ErrNotAllowed = newStanzaError(405, cancelErrorType, notAllowedErrorReason)
 
 	// ErrNotAuthorized is returned by the stream when the sender
 	// must provide proper credentials before being allowed to perform the action,
 	// or has provided improper credentials.
-	ErrNotAuthorized = newErrorElement(405, authErrorType, notAuthroizedErrorReason)
+	ErrNotAuthorized = newStanzaError(405, authErrorType, notAuthroizedErrorReason)
 
 	// ErrPaymentRequired is returned by the stream when the requesting entity
 	// is not authorized to access the requested service because payment is required.
-	ErrPaymentRequired = newErrorElement(402, authErrorType, paymentRequiredErrorReason)
+	ErrPaymentRequired = newStanzaError(402, authErrorType, paymentRequiredErrorReason)
 
 	// ErrRecipientUnavailable is returned by the stream when the intended
 	// recipient is temporarily unavailable.
-	ErrRecipientUnavailable = newErrorElement(404, waitErrorType, recipientUnavailableErrorReason)
+	ErrRecipientUnavailable = newStanzaError(404, waitErrorType, recipientUnavailableErrorReason)
 
 	// ErrRedirect is returned by the stream when the recipient or server
 	// is redirecting requests for this information to another entity, usually temporarily.
-	ErrRedirect = newErrorElement(302, modifyErrorType, redirectErrorReason)
+	ErrRedirect = newStanzaError(302, modifyErrorType, redirectErrorReason)
 
 	// ErrRegistrationRequired is returned by the stream when the requesting entity
 	// is not authorized to access the requested service because registration is required.
-	ErrRegistrationRequired = newErrorElement(407, authErrorType, registrationRequiredErrorReason)
+	ErrRegistrationRequired = newStanzaError(407, authErrorType, registrationRequiredErrorReason)
 
 	// ErrRemoteServerNotFound is returned by the stream when a remote server
 	// or service specified as part or all of the JID of the intended recipient does not exist.
-	ErrRemoteServerNotFound = newErrorElement(404, cancelErrorType, remoteServerNotFoundErrorReason)
+	ErrRemoteServerNotFound = newStanzaError(404, cancelErrorType, remoteServerNotFoundErrorReason)
 
 	// ErrRemoteServerTimeout is returned by the stream when a remote server
 	// or service specified as part or all of the JID of the intended recipient
 	// could not be contacted within a reasonable amount of time.
-	ErrRemoteServerTimeout = newErrorElement(504, waitErrorType, remoteServerTimeoutErrorReason)
+	ErrRemoteServerTimeout = newStanzaError(504, waitErrorType, remoteServerTimeoutErrorReason)
 
 	// ErrResourceConstraint is returned by the stream when the server or recipient
 	// lacks the system resources necessary to service the request.
-	ErrResourceConstraint = newErrorElement(500, waitErrorType, resourceConstraintErrorReason)
+	ErrResourceConstraint = newStanzaError(500, waitErrorType, resourceConstraintErrorReason)
 
 	// ErrServiceUnavailable is returned by the stream when the server or recipient
 	// does not currently provide the requested service.
-	ErrServiceUnavailable = newErrorElement(503, cancelErrorType, serviceUnavailableErrorReason)
+	ErrServiceUnavailable = newStanzaError(503, cancelErrorType, serviceUnavailableErrorReason)
 
 	// ErrSubscriptionRequired is returned by the stream when the requesting entity
 	// is not authorized to access the requested service because a subscription is required.
-	ErrSubscriptionRequired = newErrorElement(407, authErrorType, subscriptionRequiredErrorReason)
+	ErrSubscriptionRequired = newStanzaError(407, authErrorType, subscriptionRequiredErrorReason)
 
 	// ErrUndefinedCondition is returned by the stream when the error condition
 	// is not one of those defined by the other conditions in this list.
-	ErrUndefinedCondition = newErrorElement(500, waitErrorType, undefinedConditionErrorReason)
+	ErrUndefinedCondition = newStanzaError(500, waitErrorType, undefinedConditionErrorReason)
 
 	// ErrUnexpectedCondition is returned by the stream when the recipient or server
 	// understood the request but was not expecting it at this time.
-	ErrUnexpectedCondition = newErrorElement(400, waitErrorType, unexpectedConditionErrorReason)
+	ErrUnexpectedCondition = newStanzaError(400, waitErrorType, unexpectedConditionErrorReason)
 )
-
-// ToError returns an error copy element attaching
-// stanza error sub element.
-func (el *xElement) ToError(stanzaError *StanzaError) Element {
-	errEl := &xElement{}
-	errEl.copyFrom(el)
-	errEl.Attributes().setAttribute("type", "error")
-	errEl.appendElement(stanzaError.Element())
-	return errEl
-}
 
 // BadRequestError returns an error copy of the element
 // attaching 'bad-request' error sub element.
-func (el *xElement) BadRequestError() Element {
-	return el.ToError(ErrBadRequest.(*StanzaError))
+func (el *Element) BadRequestError() ElementNode {
+	return NewErrorElementFromElement(el, ErrBadRequest.(*StanzaError))
 }
 
 // ConflictError returns an error copy of the element
 // attaching 'conflict' error sub element.
-func (el *xElement) ConflictError() Element {
-	return el.ToError(ErrConflict.(*StanzaError))
+func (el *Element) ConflictError() ElementNode {
+	return NewErrorElementFromElement(el, ErrConflict.(*StanzaError))
 }
 
 // FeatureNotImplementedError returns an error copy of the element
 // attaching 'feature-not-implemented' error sub element.
-func (el *xElement) FeatureNotImplementedError() Element {
-	return el.ToError(ErrFeatureNotImplemented.(*StanzaError))
+func (el *Element) FeatureNotImplementedError() ElementNode {
+	return NewErrorElementFromElement(el, ErrFeatureNotImplemented.(*StanzaError))
 }
 
 // ForbiddenError returns an error copy of the element
 // attaching 'forbidden' error sub element.
-func (el *xElement) ForbiddenError() Element {
-	return el.ToError(ErrForbidden.(*StanzaError))
+func (el *Element) ForbiddenError() ElementNode {
+	return NewErrorElementFromElement(el, ErrForbidden.(*StanzaError))
 }
 
 // GoneError returns an error copy of the element
 // attaching 'gone' error sub element.
-func (el *xElement) GoneError() Element {
-	return el.ToError(ErrGone.(*StanzaError))
+func (el *Element) GoneError() ElementNode {
+	return NewErrorElementFromElement(el, ErrGone.(*StanzaError))
 }
 
 // InternalServerError returns an error copy of the element
 // attaching 'internal-server-error' error sub element.
-func (el *xElement) InternalServerError() Element {
-	return el.ToError(ErrInternalServerError.(*StanzaError))
+func (el *Element) InternalServerError() ElementNode {
+	return NewErrorElementFromElement(el, ErrInternalServerError.(*StanzaError))
 }
 
 // ItemNotFoundError returns an error copy of the element
 // attaching 'item-not-found' error sub element.
-func (el *xElement) ItemNotFoundError() Element {
-	return el.ToError(ErrItemNotFound.(*StanzaError))
+func (el *Element) ItemNotFoundError() ElementNode {
+	return NewErrorElementFromElement(el, ErrItemNotFound.(*StanzaError))
 }
 
 // JidMalformedError returns an error copy of the element
 // attaching 'jid-malformed' error sub element.
-func (el *xElement) JidMalformedError() Element {
-	return el.ToError(ErrJidMalformed.(*StanzaError))
+func (el *Element) JidMalformedError() ElementNode {
+	return NewErrorElementFromElement(el, ErrJidMalformed.(*StanzaError))
 }
 
 // NotAcceptableError returns an error copy of the element
 // attaching 'not-acceptable' error sub element.
-func (el *xElement) NotAcceptableError() Element {
-	return el.ToError(ErrNotAcceptable.(*StanzaError))
+func (el *Element) NotAcceptableError() ElementNode {
+	return NewErrorElementFromElement(el, ErrNotAcceptable.(*StanzaError))
 }
 
 // NotAllowedError returns an error copy of the element
 // attaching 'not-allowed' error sub element.
-func (el *xElement) NotAllowedError() Element {
-	return el.ToError(ErrNotAllowed.(*StanzaError))
+func (el *Element) NotAllowedError() ElementNode {
+	return NewErrorElementFromElement(el, ErrNotAllowed.(*StanzaError))
 }
 
 // NotAuthorizedError returns an error copy of the element
 // attaching 'not-authorized' error sub element.
-func (el *xElement) NotAuthorizedError() Element {
-	return el.ToError(ErrNotAuthorized.(*StanzaError))
+func (el *Element) NotAuthorizedError() ElementNode {
+	return NewErrorElementFromElement(el, ErrNotAuthorized.(*StanzaError))
 }
 
 // PaymentRequiredError returns an error copy of the element
 // attaching 'payment-required' error sub element.
-func (el *xElement) PaymentRequiredError() Element {
-	return el.ToError(ErrPaymentRequired.(*StanzaError))
+func (el *Element) PaymentRequiredError() ElementNode {
+	return NewErrorElementFromElement(el, ErrPaymentRequired.(*StanzaError))
 }
 
 // RecipientUnavailableError returns an error copy of the element
 // attaching 'recipient-unavailable' error sub element.
-func (el *xElement) RecipientUnavailableError() Element {
-	return el.ToError(ErrRecipientUnavailable.(*StanzaError))
+func (el *Element) RecipientUnavailableError() ElementNode {
+	return NewErrorElementFromElement(el, ErrRecipientUnavailable.(*StanzaError))
 }
 
 // RedirectError returns an error copy of the element
 // attaching 'redirect' error sub element.
-func (el *xElement) RedirectError() Element {
-	return el.ToError(ErrRedirect.(*StanzaError))
+func (el *Element) RedirectError() ElementNode {
+	return NewErrorElementFromElement(el, ErrRedirect.(*StanzaError))
 }
 
 // RegistrationRequiredError returns an error copy of the element
 // attaching 'registration-required' error sub element.
-func (el *xElement) RegistrationRequiredError() Element {
-	return el.ToError(ErrRegistrationRequired.(*StanzaError))
+func (el *Element) RegistrationRequiredError() ElementNode {
+	return NewErrorElementFromElement(el, ErrRegistrationRequired.(*StanzaError))
 }
 
 // RemoteServerNotFoundError returns an error copy of the element
 // attaching 'remote-server-not-found' error sub element.
-func (el *xElement) RemoteServerNotFoundError() Element {
-	return el.ToError(ErrRemoteServerNotFound.(*StanzaError))
+func (el *Element) RemoteServerNotFoundError() ElementNode {
+	return NewErrorElementFromElement(el, ErrRemoteServerNotFound.(*StanzaError))
 }
 
 // RemoteServerNotFoundError returns an error copy of the element
 // attaching 'remote-server-timeout' error sub element.
-func (el *xElement) RemoteServerTimeoutError() Element {
-	return el.ToError(ErrRemoteServerTimeout.(*StanzaError))
+func (el *Element) RemoteServerTimeoutError() ElementNode {
+	return NewErrorElementFromElement(el, ErrRemoteServerTimeout.(*StanzaError))
 }
 
 // ResourceConstraintError returns an error copy of the element
 // attaching 'resource-constraint' error sub element.
-func (el *xElement) ResourceConstraintError() Element {
-	return el.ToError(ErrResourceConstraint.(*StanzaError))
+func (el *Element) ResourceConstraintError() ElementNode {
+	return NewErrorElementFromElement(el, ErrResourceConstraint.(*StanzaError))
 }
 
 // ServiceUnavailableError returns an error copy of the element
 // attaching 'service-unavailable' error sub element.
-func (el *xElement) ServiceUnavailableError() Element {
-	return el.ToError(ErrServiceUnavailable.(*StanzaError))
+func (el *Element) ServiceUnavailableError() ElementNode {
+	return NewErrorElementFromElement(el, ErrServiceUnavailable.(*StanzaError))
 }
 
 // SubscriptionRequiredError returns an error copy of the element
 // attaching 'subscription-required' error sub element.
-func (el *xElement) SubscriptionRequiredError() Element {
-	return el.ToError(ErrSubscriptionRequired.(*StanzaError))
+func (el *Element) SubscriptionRequiredError() ElementNode {
+	return NewErrorElementFromElement(el, ErrSubscriptionRequired.(*StanzaError))
 }
 
 // UndefinedConditionError returns an error copy of the element
 // attaching 'undefined-condition' error sub element.
-func (el *xElement) UndefinedConditionError() Element {
-	return el.ToError(ErrUndefinedCondition.(*StanzaError))
+func (el *Element) UndefinedConditionError() ElementNode {
+	return NewErrorElementFromElement(el, ErrUndefinedCondition.(*StanzaError))
 }
 
 // UnexpectedConditionError returns an error copy of the element
 // attaching 'unexpected-condition' error sub element.
-func (el *xElement) UnexpectedConditionError() Element {
-	return el.ToError(ErrUnexpectedCondition.(*StanzaError))
+func (el *Element) UnexpectedConditionError() ElementNode {
+	return NewErrorElementFromElement(el, ErrUnexpectedCondition.(*StanzaError))
 }

@@ -229,14 +229,14 @@ func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterN
 		if err != nil {
 			return nil, err
 		}
-		rn.Elements = root.Elements()
+		rn.Elements = root.Elements().All()
 
 		ret = append(ret, rn)
 	}
 	return ret, nil
 }
 
-func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.Element, username string) error {
+func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.ElementNode, username string) error {
 	stmt := `` +
 		`INSERT INTO vcards (username, vcard, updated_at, created_at)` +
 		` VALUES(?, ?, NOW(), NOW())` +
@@ -247,7 +247,7 @@ func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.Element, username string) e
 	return err
 }
 
-func (s *mySQLStorage) FetchVCard(username string) (xml.Element, error) {
+func (s *mySQLStorage) FetchVCard(username string) (xml.ElementNode, error) {
 	row := s.db.QueryRow("SELECT vcard FROM vcards WHERE username = ?", username)
 	var vCard string
 	err := row.Scan(&vCard)
@@ -262,7 +262,7 @@ func (s *mySQLStorage) FetchVCard(username string) (xml.Element, error) {
 	}
 }
 
-func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error {
+func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.ElementNode, namespace string, username string) error {
 	stmt := `` +
 		`INSERT INTO private_storage (username, namespace, data, updated_at, created_at)` +
 		` VALUES(?, ?, ?, NOW(), NOW())` +
@@ -278,7 +278,7 @@ func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.Element, namesp
 	return err
 }
 
-func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml.Element, error) {
+func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml.ElementNode, error) {
 	row := s.db.QueryRow("SELECT data FROM private_storage WHERE username = ? AND namespace = ?", username, namespace)
 	var privateXML string
 	err := row.Scan(&privateXML)
@@ -295,7 +295,7 @@ func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml
 		if err != nil {
 			return nil, err
 		}
-		return rootEl.Elements(), nil
+		return rootEl.Elements().All(), nil
 
 	case sql.ErrNoRows:
 		return nil, nil
@@ -304,7 +304,7 @@ func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml
 	}
 }
 
-func (s *mySQLStorage) InsertOfflineMessage(message xml.Element, username string) error {
+func (s *mySQLStorage) InsertOfflineMessage(message xml.ElementNode, username string) error {
 	stmt := `INSERT INTO offline_messages (username, data, created_at) VALUES(?, ?, NOW())`
 	_, err := s.db.Exec(stmt, username, message.String())
 	return err
@@ -322,7 +322,7 @@ func (s *mySQLStorage) CountOfflineMessages(username string) (int, error) {
 	}
 }
 
-func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.Element, error) {
+func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.ElementNode, error) {
 	rows, err := s.db.Query("SELECT data FROM offline_messages WHERE username = ? ORDER BY created_at", username)
 	if err != nil {
 		return nil, err
@@ -345,7 +345,7 @@ func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.Element, err
 	if err != nil {
 		return nil, err
 	}
-	return rootEl.Elements(), nil
+	return rootEl.Elements().All(), nil
 }
 
 func (s *mySQLStorage) DeleteOfflineMessages(username string) error {
