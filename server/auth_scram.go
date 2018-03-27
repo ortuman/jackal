@@ -241,7 +241,7 @@ func (s *scramAuthenticator) handleChallenged(elem xml.Element) error {
 }
 
 func (s *scramAuthenticator) getElementPayload(elem xml.Element) (string, error) {
-	if elem.TextLen() == 0 {
+	if len(elem.Text()) == 0 {
 		return "", errSASLIncorrectEncoding
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())

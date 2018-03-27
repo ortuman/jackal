@@ -8,7 +8,6 @@ package xml
 import (
 	"fmt"
 	"io"
-	"unicode/utf8"
 
 	"github.com/ortuman/jackal/bufferpool"
 )
@@ -18,32 +17,22 @@ const ErrorType = "error"
 
 var pool = bufferpool.New()
 
-// Attribute represents an XML node attribute (label=value).
-type Attribute struct {
-	Label string
-	Value string
-}
-
 // Element represents an XML node element.
 type Element interface {
 	fmt.Stringer
 
 	Name() string
-	Namespace() string
+
+	Attributes() *AttributeSet
+	Text() string
 
 	ID() string
+	Namespace() string
 	Language() string
 	Version() string
 	From() string
 	To() string
 	Type() string
-
-	Text() string
-	TextLen() int
-
-	Attribute(label string) string
-	Attributes() []Attribute
-	AttributesCount() int
 
 	FindElement(name string) Element
 	FindElements(name string) []Element
@@ -65,7 +54,7 @@ type Element interface {
 type xElement struct {
 	name     string
 	text     string
-	attrs    []Attribute
+	attrs    AttributeSet
 	elements []Element
 }
 
@@ -76,68 +65,48 @@ func (e *xElement) Name() string {
 
 // Namespace returns 'xmlns' node attribute.
 func (e *xElement) Namespace() string {
-	return e.Attribute("xmlns")
+	return e.attrs.Get("xmlns")
 }
 
 // ID returns 'id' node attribute.
 func (e *xElement) ID() string {
-	return e.Attribute("id")
+	return e.attrs.Get("id")
 }
 
 // Language returns 'xml:lang' node attribute.
 func (e *xElement) Language() string {
-	return e.Attribute("xml:lang")
+	return e.attrs.Get("xml:lang")
 }
 
 // Version returns 'version' node attribute.
 func (e *xElement) Version() string {
-	return e.Attribute("version")
+	return e.attrs.Get("version")
 }
 
 // From returns 'from' node attribute.
 func (e *xElement) From() string {
-	return e.Attribute("from")
+	return e.attrs.Get("from")
 }
 
 // To returns 'to' node attribute.
 func (e *xElement) To() string {
-	return e.Attribute("to")
+	return e.attrs.Get("to")
 }
 
 // Type returns 'type' node attribute.
 func (e *xElement) Type() string {
-	return e.Attribute("type")
+	return e.attrs.Get("type")
+}
+
+// Attributes returns XML node attribute value.
+func (e *xElement) Attributes() *AttributeSet {
+	return &e.attrs
 }
 
 // Text returns XML node text value.
 // Returns an empty string if not set.
 func (e *xElement) Text() string {
 	return e.text
-}
-
-// TextLen returns XML node text value length.
-func (e *xElement) TextLen() int {
-	return utf8.RuneCountInString(e.text)
-}
-
-// Attribute returns XML node attribute value.
-func (e *xElement) Attribute(label string) string {
-	for _, attr := range e.attrs {
-		if attr.Label == label {
-			return attr.Value
-		}
-	}
-	return ""
-}
-
-// Attributes returns all XML node attributes.
-func (e *xElement) Attributes() []Attribute {
-	return e.attrs
-}
-
-// AttributesCount XML attributes count.
-func (e *xElement) AttributesCount() int {
-	return len(e.attrs)
 }
 
 // FindElement returns first element identified by name.
@@ -222,17 +191,9 @@ func (e *xElement) ToXML(w io.Writer, includeClosing bool) {
 	w.Write([]byte(e.name))
 
 	// serialize attributes
-	for i := 0; i < len(e.attrs); i++ {
-		if len(e.attrs[i].Value) == 0 {
-			continue
-		}
-		w.Write([]byte(" "))
-		w.Write([]byte(e.attrs[i].Label))
-		w.Write([]byte(`="`))
-		w.Write([]byte(e.attrs[i].Value))
-		w.Write([]byte(`"`))
-	}
-	textLen := e.TextLen()
+	e.attrs.toXML(w)
+
+	textLen := len(e.text)
 	if len(e.elements) > 0 || textLen > 0 {
 		w.Write([]byte(">"))
 
@@ -268,8 +229,7 @@ func (e *xElement) Copy() *MutableElement {
 func (e *xElement) copyFrom(el Element) {
 	e.name = el.Name()
 	e.text = el.Text()
-	e.attrs = make([]Attribute, el.AttributesCount())
-	copy(e.attrs, el.Attributes())
+	e.attrs.copyFrom(el.Attributes())
 
 	els := el.Elements()
 	e.elements = make([]Element, len(els))
@@ -277,25 +237,6 @@ func (e *xElement) copyFrom(el Element) {
 		el := &xElement{}
 		el.copyFrom(els[i])
 		e.elements[i] = el
-	}
-}
-
-func (e *xElement) setAttribute(label, value string) {
-	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].Label == label {
-			e.attrs[i].Value = value
-			return
-		}
-	}
-	e.attrs = append(e.attrs, Attribute{label, value})
-}
-
-func (e *xElement) removeAttribute(label string) {
-	for i := 0; i < len(e.attrs); i++ {
-		if e.attrs[i].Label == label {
-			e.attrs = append(e.attrs[:i], e.attrs[i+1:]...)
-			return
-		}
 	}
 }
 
@@ -320,7 +261,7 @@ func (e *xElement) removeElements(name string) {
 func (e *xElement) removeElementsNamespace(name, namespace string) {
 	filtered := e.elements[:0]
 	for _, elem := range e.elements {
-		if elem.Name() != name || elem.Attribute("xmlns") != namespace {
+		if elem.Name() != name || elem.Attributes().Get("xmlns") != namespace {
 			filtered = append(filtered, elem)
 		}
 	}

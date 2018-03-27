@@ -44,7 +44,7 @@ func (p *plainAuthenticator) ProcessElement(elem xml.Element) error {
 	if p.authenticated {
 		return nil
 	}
-	if elem.TextLen() == 0 {
+	if len(elem.Text()) == 0 {
 		return errSASLMalformedRequest
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())

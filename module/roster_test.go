@@ -331,7 +331,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	qRes := elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes := qRes.FindElement("item")
-	require.Equal(t, subscriptionFrom, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionFrom, iRes.Attributes().Get("subscription"))
 
 	rns, err := storage.Instance().FetchRosterNotifications("noelia")
 	require.Nil(t, err)
@@ -378,7 +378,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	qRes := elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes := qRes.FindElement("item")
-	require.Equal(t, subscriptionTo, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionTo, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()
 	require.Equal(t, "presence", elem.Name())
@@ -413,7 +413,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	qRes := elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes := qRes.FindElement("item")
-	require.Equal(t, subscriptionFrom, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionFrom, iRes.Attributes().Get("subscription"))
 
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
@@ -465,7 +465,7 @@ func TestRoster_DeleteItem(t *testing.T) {
 	qRes := elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes := qRes.FindElement("item")
-	require.Equal(t, subscriptionRemove, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionRemove, iRes.Attributes().Get("subscription"))
 
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
@@ -483,7 +483,7 @@ func TestRoster_DeleteItem(t *testing.T) {
 	qRes = elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes = qRes.FindElement("item")
-	require.Equal(t, subscriptionTo, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionTo, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
@@ -491,7 +491,7 @@ func TestRoster_DeleteItem(t *testing.T) {
 	qRes = elem.FindElementNamespace("query", rosterNamespace)
 	require.NotNil(t, qRes)
 	iRes = qRes.FindElement("item")
-	require.Equal(t, subscriptionNone, iRes.Attribute("subscription"))
+	require.Equal(t, subscriptionNone, iRes.Attributes().Get("subscription"))
 
 	elem = stm2.FetchElement()
 	require.Equal(t, "presence", elem.Name())

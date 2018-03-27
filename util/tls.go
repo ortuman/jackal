@@ -57,12 +57,6 @@ func LoadCertificate(keyFile, certFile, domain string) (*tls.Config, error) {
 	}, nil
 }
 
-func selfSignedCertificateExists() bool {
-	keySt, _ := os.Stat(selfSignedCertPrivateKey)
-	certSt, _ := os.Stat(selfSignedCertPrivateKey)
-	return keySt != nil && certSt != nil
-}
-
 func generateSelfSignedCertificate(keyFile, certFile, domain string) error {
 	if err := os.MkdirAll(selfSignedCertFolder, os.ModePerm); err != nil {
 		return err
@@ -88,7 +82,6 @@ func generateSelfSignedCertificate(keyFile, certFile, domain string) error {
 		BasicConstraintsValid: true,
 		DNSNames:              []string{domain},
 	}
-
 	// obtain private key
 	priv, err := rsa.GenerateKey(rand.Reader, selfSignedCertKeyRSABits)
 	if err != nil {
@@ -114,4 +107,10 @@ func generateSelfSignedCertificate(keyFile, certFile, domain string) error {
 	defer keyOut.Close()
 	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
 	return nil
+}
+
+func selfSignedCertificateExists() bool {
+	keySt, _ := os.Stat(selfSignedCertPrivateKey)
+	certSt, _ := os.Stat(selfSignedCertPrivateKey)
+	return keySt != nil && certSt != nil
 }

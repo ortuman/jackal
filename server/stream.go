@@ -527,7 +527,7 @@ func (s *serverStream) compress(elem xml.Element) {
 		return
 	}
 	method := elem.FindElement("method")
-	if method == nil || method.TextLen() == 0 {
+	if method == nil || len(method.Text()) == 0 {
 		failure := xml.NewElementNamespace("failure", compressProtocolNamespace)
 		failure.AppendElement(xml.NewElementName("setup-failed"))
 		s.writeElement(failure)
@@ -553,7 +553,7 @@ func (s *serverStream) compress(elem xml.Element) {
 }
 
 func (s *serverStream) startAuthentication(elem xml.Element) {
-	mechanism := elem.Attribute("mechanism")
+	mechanism := elem.Attributes().Get("mechanism")
 	for _, authr := range s.authrs {
 		if authr.Mechanism() == mechanism {
 			if err := s.continueAuthentication(elem, authr); err != nil {
@@ -971,7 +971,7 @@ func (s *serverStream) validateStreamElement(elem xml.Element) *streamerror.Erro
 		if elem.Name() != "stream:stream" {
 			return streamerror.ErrUnsupportedStanzaType
 		}
-		if elem.Namespace() != jabberClientNamespace || elem.Attribute("xmlns:stream") != streamNamespace {
+		if elem.Namespace() != jabberClientNamespace || elem.Attributes().Get("xmlns:stream") != streamNamespace {
 			return streamerror.ErrInvalidNamespace
 		}
 

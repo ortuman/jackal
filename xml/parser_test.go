@@ -24,7 +24,7 @@ func TestDocParse(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, a)
 	require.Equal(t, "a", a.Name())
-	require.Equal(t, "im.jackal", a.Attribute("xmlns"))
+	require.Equal(t, "im.jackal", a.Attributes().Get("xmlns"))
 	require.Equal(t, "Hi!", a.Text())
 }
 

@@ -32,8 +32,8 @@ func (se *StanzaError) Error() string {
 // Element returns StanzaError equivalent XML element.
 func (se *StanzaError) Element() Element {
 	err := &xElement{name: "error"}
-	err.setAttribute("code", strconv.Itoa(se.code))
-	err.setAttribute("type", se.errorType)
+	err.Attributes().setAttribute("code", strconv.Itoa(se.code))
+	err.Attributes().setAttribute("type", se.errorType)
 	err.appendElement(NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-stanzas"))
 	return err
 }
@@ -171,7 +171,7 @@ var (
 func (el *xElement) ToError(stanzaError *StanzaError) Element {
 	errEl := &xElement{}
 	errEl.copyFrom(el)
-	errEl.setAttribute("type", "error")
+	errEl.Attributes().setAttribute("type", "error")
 	errEl.appendElement(stanzaError.Element())
 	return errEl
 }

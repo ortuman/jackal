@@ -811,7 +811,7 @@ func (r *ModRoster) rosterItemJID(ri *model.RosterItem) *xml.JID {
 
 func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, error) {
 	ri := &model.RosterItem{}
-	if jid := item.Attribute("jid"); len(jid) > 0 {
+	if jid := item.Attributes().Get("jid"); len(jid) > 0 {
 		j, err := xml.NewJIDString(jid, false)
 		if err != nil {
 			return nil, err
@@ -820,9 +820,9 @@ func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, 
 	} else {
 		return nil, errors.New("item 'jid' attribute is required")
 	}
-	ri.Name = item.Attribute("name")
+	ri.Name = item.Attributes().Get("name")
 
-	subscription := item.Attribute("subscription")
+	subscription := item.Attributes().Get("subscription")
 	if len(subscription) > 0 {
 		switch subscription {
 		case subscriptionBoth, subscriptionFrom, subscriptionTo, subscriptionNone, subscriptionRemove:
@@ -832,7 +832,7 @@ func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, 
 		}
 		ri.Subscription = subscription
 	}
-	ask := item.Attribute("ask")
+	ask := item.Attributes().Get("ask")
 	if len(ask) > 0 {
 		if ask != "subscribe" {
 			return nil, fmt.Errorf("unrecognized 'ask' enum type: %s", subscription)
@@ -841,7 +841,7 @@ func (r *ModRoster) rosterItemFromElement(item xml.Element) (*model.RosterItem, 
 	}
 	groups := item.FindElements("group")
 	for _, group := range groups {
-		if group.AttributesCount() > 0 {
+		if group.Attributes().Len() > 0 {
 			return nil, errors.New("group element must not contain any attribute")
 		}
 		ri.Groups = append(ri.Groups, group.Text())

@@ -47,10 +47,10 @@ func TestAttributes(t *testing.T) {
 	e.SetType("chat")
 	require.Equal(t, "chat", e.Type())
 
-	require.Equal(t, "", e.Attribute("not_existing"))
+	require.Equal(t, "", e.Attributes().Get("not_existing"))
 
-	require.Equal(t, 7, len(e.Attributes()))
-	require.Equal(t, 7, e.AttributesCount())
+	require.Equal(t, 7, e.Attributes().Len())
+	require.Equal(t, 7, e.Attributes().Len())
 
 	// replace attribute
 	e.SetType("error")
@@ -65,7 +65,7 @@ func TestText(t *testing.T) {
 	e := xml.NewElementName("elem")
 	e.SetText("This is a sample text Ñ")
 	require.Equal(t, "This is a sample text Ñ", e.Text())
-	require.Equal(t, 23, e.TextLen())
+	require.Equal(t, 24, len(e.Text()))
 }
 
 func TestChildElement(t *testing.T) {

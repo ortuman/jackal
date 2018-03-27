@@ -17,6 +17,6 @@ func TestDelay(t *testing.T) {
 	e.Delay("example.org", "any text")
 	delay := e.FindElement("delay")
 	require.NotNil(t, delay)
-	require.Equal(t, "example.org", delay.Attribute("from"))
+	require.Equal(t, "example.org", delay.Attributes().Get("from"))
 	require.Equal(t, "any text", delay.Text())
 }

@@ -175,11 +175,11 @@ func isPresenceType(presenceType string) bool {
 func (p *Presence) validateStatus() error {
 	sts := p.FindElements("status")
 	for _, st := range sts {
-		switch st.AttributesCount() {
+		switch st.Attributes().Len() {
 		case 0:
 			break
 		case 1:
-			if st.Attributes()[0].Label == "xml:lang" {
+			if st.Attributes().attrs[0].Label == "xml:lang" {
 				break
 			}
 			fallthrough
@@ -196,7 +196,7 @@ func (p *Presence) setShow() error {
 	case 0:
 		p.showState = AvailableShowState
 	case 1:
-		if shs[0].AttributesCount() > 0 {
+		if shs[0].Attributes().Len() > 0 {
 			return errors.New(" the <show/> element MUST NOT possess any attributes")
 		}
 		switch shs[0].Text() {

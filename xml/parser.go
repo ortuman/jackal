@@ -101,7 +101,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 		name := xmlName(a.Name.Space, a.Name.Local)
 		attrs = append(attrs, Attribute{name, a.Value})
 	}
-	element := &xElement{name: name, attrs: attrs}
+	element := &xElement{name: name, attrs: AttributeSet{attrs: attrs}}
 	p.parsingStack = append(p.parsingStack, element)
 	p.parsingIndex++
 	p.inElement = true

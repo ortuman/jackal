@@ -146,7 +146,7 @@ func (d *digestMD5Authenticator) handleStart(elem xml.Element) error {
 }
 
 func (d *digestMD5Authenticator) handleChallenged(elem xml.Element) error {
-	if elem.TextLen() == 0 {
+	if len(elem.Text()) == 0 {
 		return errSASLMalformedRequest
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())

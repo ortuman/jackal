@@ -16,14 +16,8 @@ func (e *xElement) FromBytes(r io.Reader) {
 	dec := gob.NewDecoder(r)
 	dec.Decode(&e.name)
 	dec.Decode(&e.text)
-	var attrc int
-	dec.Decode(&attrc)
-	for i := 0; i < attrc; i++ {
-		var attr Attribute
-		dec.Decode(&attr.Label)
-		dec.Decode(&attr.Value)
-		e.attrs = append(e.attrs, attr)
-	}
+	e.attrs.fromGob(dec)
+
 	var elemc int
 	dec.Decode(&elemc)
 	for i := 0; i < elemc; i++ {
@@ -39,11 +33,8 @@ func (e *xElement) ToBytes(w io.Writer) {
 	enc := gob.NewEncoder(w)
 	enc.Encode(&e.name)
 	enc.Encode(&e.text)
-	enc.Encode(len(e.attrs))
-	for _, attr := range e.attrs {
-		enc.Encode(&attr.Label)
-		enc.Encode(&attr.Value)
-	}
+	e.attrs.toGob(enc)
+
 	enc.Encode(len(e.elements))
 	for _, elem := range e.elements {
 		elem.ToBytes(w)

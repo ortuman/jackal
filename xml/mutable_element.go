@@ -21,7 +21,7 @@ func NewElementName(name string) *MutableElement {
 func NewElementNamespace(name, namespace string) *MutableElement {
 	m := &MutableElement{}
 	m.name = name
-	m.attrs = []Attribute{{"xmlns", namespace}}
+	m.attrs = AttributeSet{attrs: []Attribute{{"xmlns", namespace}}}
 	return m
 }
 
@@ -79,12 +79,12 @@ func (m *MutableElement) SetText(text string) {
 
 // SetAttribute sets an XML node attribute (label=value)
 func (m *MutableElement) SetAttribute(label, value string) {
-	m.setAttribute(label, value)
+	m.attrs.setAttribute(label, value)
 }
 
 // RemoveAttribute removes an XML node attribute.
 func (m *MutableElement) RemoveAttribute(label string) {
-	m.removeAttribute(label)
+	m.attrs.removeAttribute(label)
 }
 
 // AppendElement appends a new sub element.
