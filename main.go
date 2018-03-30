@@ -49,7 +49,7 @@ func main() {
 	flag.BoolVar(&showUsage, "h", false, "Show this message")
 	flag.BoolVar(&showVersion, "version", false, "Print version information.")
 	flag.BoolVar(&showVersion, "v", false, "Print version information.")
-	flag.StringVar(&configFile, "config", "/etc/jackal/jackal.yaml", "Configuration file path.")
+	flag.StringVar(&configFile, "config", "/etc/jackal/jackal.yml", "Configuration file path.")
 	flag.StringVar(&configFile, "c", "/etc/jackal/jackal.yml", "Configuration file path.")
 	flag.Usage = func() {
 		for i := range logoStr {
