@@ -43,10 +43,10 @@ $ go get github.com/ortuman/jackal
 
 This will retrieve the code and install the `jackal` server application into your `$GOBIN` path.
 
-By default the application will try to read server configuration from `/etc/jackal/jackal.yaml` file, but alternatively you can specify a custom configuration path from command line.
+By default the application will try to read server configuration from `/etc/jackal/jackal.yml` file, but alternatively you can specify a custom configuration path from command line.
 
 ```sh
-$ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yaml
+$ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yml
 ```
 
 ### MySQL database creation
