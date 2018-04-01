@@ -40,15 +40,15 @@ type Storage interface {
 	DeleteRosterNotification(user, contact string) error
 	FetchRosterNotifications(contact string) ([]model.RosterNotification, error)
 
-	InsertOrUpdateVCard(vCard xml.Element, username string) error
-	FetchVCard(username string) (xml.Element, error)
+	InsertOrUpdateVCard(vCard xml.XElement, username string) error
+	FetchVCard(username string) (xml.XElement, error)
 
-	FetchPrivateXML(namespace string, username string) ([]xml.Element, error)
-	InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error
+	FetchPrivateXML(namespace string, username string) ([]xml.XElement, error)
+	InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error
 
-	InsertOfflineMessage(message xml.Element, username string) error
+	InsertOfflineMessage(message xml.XElement, username string) error
 	CountOfflineMessages(username string) (int, error)
-	FetchOfflineMessages(username string) ([]xml.Element, error)
+	FetchOfflineMessages(username string) ([]xml.XElement, error)
 	DeleteOfflineMessages(username string) error
 }
 

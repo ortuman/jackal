@@ -176,7 +176,7 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 	return rns, nil
 }
 
-func (b *badgerDB) InsertOrUpdateVCard(vCard xml.Element, username string) error {
+func (b *badgerDB) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
@@ -186,8 +186,8 @@ func (b *badgerDB) InsertOrUpdateVCard(vCard xml.Element, username string) error
 	})
 }
 
-func (b *badgerDB) FetchVCard(username string) (xml.Element, error) {
-	var vCard xml.Element
+func (b *badgerDB) FetchVCard(username string) (xml.XElement, error) {
+	var vCard xml.XElement
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.vCardKey(username), tx)
 		if err != nil {
@@ -203,7 +203,7 @@ func (b *badgerDB) FetchVCard(username string) (xml.Element, error) {
 	return vCard, nil
 }
 
-func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace string, username string) error {
+func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
@@ -215,8 +215,8 @@ func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.Element, namespace 
 	})
 }
 
-func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.Element, error) {
-	var privateXML []xml.Element
+func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
+	var privateXML []xml.XElement
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.privateStorageKey(username, namespace), tx)
 		if err != nil {
@@ -233,7 +233,7 @@ func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.Ele
 	return privateXML, nil
 }
 
-func (b *badgerDB) InsertOfflineMessage(message xml.Element, username string) error {
+func (b *badgerDB) InsertOfflineMessage(message xml.XElement, username string) error {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
@@ -256,8 +256,8 @@ func (b *badgerDB) CountOfflineMessages(username string) (int, error) {
 	return cnt, nil
 }
 
-func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.Element, error) {
-	var msgs []xml.Element
+func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.XElement, error) {
+	var msgs []xml.XElement
 
 	prefix := []byte("offlineMessages:" + username)
 	err := b.forEachKeyAndValue(prefix, func(_, val []byte) error {

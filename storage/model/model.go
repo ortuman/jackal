@@ -68,7 +68,7 @@ func (ri *RosterItem) ToGob(enc *gob.Encoder) {
 type RosterNotification struct {
 	User     string
 	Contact  string
-	Elements []xml.Element
+	Elements []xml.XElement
 }
 
 // FromGob deserializes a RosterNotification entity

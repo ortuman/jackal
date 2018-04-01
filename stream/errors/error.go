@@ -51,7 +51,7 @@ func newStreamError(reason string) *Error {
 }
 
 // Element returns stream error XML node.
-func (se *Error) Element() xml.Element {
+func (se *Error) Element() xml.XElement {
 	ret := xml.NewElementName("stream:error")
 	reason := xml.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
 	ret.AppendElement(reason)

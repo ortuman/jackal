@@ -78,7 +78,7 @@ func (mc *MockConn) ClientWriteBytes(b []byte) {
 
 // ClientWriteElement sets next read operation content from
 // a serialized XML element.
-func (mc *MockConn) ClientWriteElement(elem xml.Element) {
+func (mc *MockConn) ClientWriteElement(elem xml.XElement) {
 	buf := new(bytes.Buffer)
 	elem.ToXML(buf, true)
 	mc.ClientWriteBytes(buf.Bytes())
@@ -91,7 +91,7 @@ func (mc *MockConn) ClientReadBytes() []byte {
 
 // ClientReadElement deserializes previous write operation content
 // into an XML elements array.
-func (mc *MockConn) ClientReadElement() xml.Element {
+func (mc *MockConn) ClientReadElement() xml.XElement {
 retryRead:
 	b := <-mc.readCh
 	parser := xml.NewParserTransportType(bytes.NewReader(b), config.SocketTransportType)

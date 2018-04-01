@@ -25,13 +25,13 @@ const (
 // All incoming <iq> elements providing from the
 // stream will automatically be converted to IQ objects.
 type IQ struct {
-	XElement
+	Element
 	to   *JID
 	from *JID
 }
 
-// NewIQFromElement creates an IQ object from Element.
-func NewIQFromElement(e Element, from *JID, to *JID) (*IQ, error) {
+// NewIQFromElement creates an IQ object from XElement.
+func NewIQFromElement(e XElement, from *JID, to *JID) (*IQ, error) {
 	if e.Name() != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.Name())
 	}

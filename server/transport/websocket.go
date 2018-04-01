@@ -37,7 +37,7 @@ func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
 	return wst
 }
 
-func (wst *websocketTransport) ReadElement() (xml.Element, error) {
+func (wst *websocketTransport) ReadElement() (xml.XElement, error) {
 	wst.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(wst.readTimeout)))
 	_, r, err := wst.conn.NextReader()
 	if err != nil {
@@ -57,7 +57,7 @@ func (wst *websocketTransport) WriteString(str string) error {
 	return err
 }
 
-func (wst *websocketTransport) WriteElement(elem xml.Element, includeClosing bool) error {
+func (wst *websocketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
 	w, err := wst.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return err

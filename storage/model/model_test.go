@@ -48,10 +48,14 @@ func TestModelRosterNotification(t *testing.T) {
 	rn1 = RosterNotification{
 		User:     "ortuman",
 		Contact:  "noelia",
-		Elements: []xml.Element{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
+		Elements: []xml.XElement{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))
 	rn2.FromGob(gob.NewDecoder(buf))
-	require.Equal(t, rn1, rn2)
+	require.Equal(t, "ortuman", rn2.User)
+	require.Equal(t, "noelia", rn2.Contact)
+	require.Equal(t, 1, len(rn1.Elements))
+	require.Equal(t, 1, len(rn2.Elements))
+	require.Equal(t, rn1.Elements[0].String(), rn2.Elements[0].String())
 }

@@ -111,7 +111,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	rn := model.RosterNotification{
 		User:     "noelia",
 		Contact:  "ortuman",
-		Elements: []xml.Element{xml.NewElementName("group")},
+		Elements: []xml.XElement{xml.NewElementName("group")},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(&rn)
 
@@ -298,7 +298,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	rn := &model.RosterNotification{
 		User:     "ortuman",
 		Contact:  "noelia",
-		Elements: []xml.Element{},
+		Elements: []xml.XElement{},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(rn)
 

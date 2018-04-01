@@ -79,7 +79,7 @@ func TestBadgerDB_PrivateXML(t *testing.T) {
 	pv1 := xml.NewElementNamespace("ex1", "exodus:ns")
 	pv2 := xml.NewElementNamespace("ex2", "exodus:ns")
 
-	require.NoError(t, h.db.InsertOrUpdatePrivateXML([]xml.Element{pv1, pv2}, "exodus:ns", "ortuman"))
+	require.NoError(t, h.db.InsertOrUpdatePrivateXML([]xml.XElement{pv1, pv2}, "exodus:ns", "ortuman"))
 
 	prvs, err := h.db.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Nil(t, err)
@@ -130,12 +130,12 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	rn1 := model.RosterNotification{
 		User:     "juliet",
 		Contact:  "ortuman",
-		Elements: []xml.Element{},
+		Elements: []xml.XElement{},
 	}
 	rn2 := model.RosterNotification{
 		User:     "romeo",
 		Contact:  "ortuman",
-		Elements: []xml.Element{},
+		Elements: []xml.XElement{},
 	}
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn2))

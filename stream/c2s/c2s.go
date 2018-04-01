@@ -27,14 +27,14 @@ type Stream interface {
 
 	Priority() int8
 
-	SendElement(element xml.Element)
+	SendElement(element xml.XElement)
 	Disconnect(err error)
 
 	IsSecured() bool
 	IsAuthenticated() bool
 	IsCompressed() bool
 
-	PresenceElements() []xml.Element
+	PresenceElements() []xml.XElement
 
 	IsRosterRequested() bool
 }

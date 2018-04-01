@@ -105,7 +105,7 @@ func (d *digestMD5Authenticator) UsesChannelBinding() bool {
 	return false
 }
 
-func (d *digestMD5Authenticator) ProcessElement(elem xml.Element) error {
+func (d *digestMD5Authenticator) ProcessElement(elem xml.XElement) error {
 	if d.Authenticated() {
 		return nil
 	}
@@ -132,7 +132,7 @@ func (d *digestMD5Authenticator) Reset() {
 	d.authenticated = false
 }
 
-func (d *digestMD5Authenticator) handleStart(elem xml.Element) error {
+func (d *digestMD5Authenticator) handleStart(elem xml.XElement) error {
 	domain := d.strm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
 	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
@@ -145,7 +145,7 @@ func (d *digestMD5Authenticator) handleStart(elem xml.Element) error {
 	return nil
 }
 
-func (d *digestMD5Authenticator) handleChallenged(elem xml.Element) error {
+func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 	if len(elem.Text()) == 0 {
 		return errSASLMalformedRequest
 	}
@@ -202,7 +202,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.Element) error {
 	return nil
 }
 
-func (d *digestMD5Authenticator) handleAuthenticated(elem xml.Element) error {
+func (d *digestMD5Authenticator) handleAuthenticated(elem xml.XElement) error {
 	d.authenticated = true
 	d.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil

@@ -31,6 +31,10 @@ func TestMessageBuild(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, message)
 	require.True(t, message.IsMessageWithBody())
+
+	msg2 := xml.NewMessageType("an-id123", xml.GroupChatType)
+	require.Equal(t, "an-id123", msg2.ID())
+	require.Equal(t, xml.GroupChatType, msg2.Type())
 }
 
 func TestMessageType(t *testing.T) {

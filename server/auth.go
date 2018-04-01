@@ -15,12 +15,12 @@ type authenticator interface {
 	Authenticated() bool
 	UsesChannelBinding() bool
 
-	ProcessElement(xml.Element) error
+	ProcessElement(xml.XElement) error
 	Reset()
 }
 
 type saslError interface {
-	Element() xml.Element
+	Element() xml.XElement
 }
 
 type saslErrorString struct {
@@ -31,7 +31,7 @@ func newSASLError(reason string) error {
 	return &saslErrorString{reason}
 }
 
-func (se *saslErrorString) Element() xml.Element {
+func (se *saslErrorString) Element() xml.XElement {
 	return xml.NewElementName(se.reason)
 }
 

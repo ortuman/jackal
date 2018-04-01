@@ -27,13 +27,13 @@ const (
 // All incoming <message> elements providing from the
 // stream will automatically be converted to Message objects.
 type Message struct {
-	XElement
+	Element
 	to   *JID
 	from *JID
 }
 
-// NewMessageFromElement creates a Message object from Element.
-func NewMessageFromElement(e Element, from *JID, to *JID) (*Message, error) {
+// NewMessageFromElement creates a Message object from XElement.
+func NewMessageFromElement(e XElement, from *JID, to *JID) (*Message, error) {
 	if e.Name() != "message" {
 		return nil, fmt.Errorf("wrong Message element name: %s", e.Name())
 	}

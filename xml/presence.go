@@ -55,15 +55,15 @@ const (
 // All incoming <presence> elements providing from the
 // stream will automatically be converted to Presence objects.
 type Presence struct {
-	XElement
+	Element
 	to        *JID
 	from      *JID
 	showState ShowState
 	priority  int8
 }
 
-// NewPresenceFromElement creates a Presence object from Element.
-func NewPresenceFromElement(e Element, from *JID, to *JID) (*Presence, error) {
+// NewPresenceFromElement creates a Presence object from XElement.
+func NewPresenceFromElement(e XElement, from *JID, to *JID) (*Presence, error) {
 	if e.Name() != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}

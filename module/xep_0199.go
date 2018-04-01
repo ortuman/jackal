@@ -68,7 +68,7 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 		return
 	}
 	toJid := iq.ToJID()
-	if toJid.Node() != x.strm.Username() {
+	if !toJid.IsServer() && toJid.Node() != x.strm.Username() {
 		x.strm.SendElement(iq.ForbiddenError())
 		return
 	}

@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/config"
-
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
@@ -28,26 +27,40 @@ func TestDocParse(t *testing.T) {
 	require.Equal(t, "Hi!", a.Text())
 }
 
-func TestEmptyDocParse(t *testing.T) {
+func TestParser_EmptyDocParse(t *testing.T) {
 	p := xml.NewParserTransportType(new(bytes.Buffer), config.SocketTransportType)
 	_, err := p.ParseElement()
 	require.NotNil(t, err)
 }
 
-func TestFailedDocParse(t *testing.T) {
+func TestParser_FailedDocParse(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
-	p := xml.NewParserTransportType(strings.NewReader(docSrc), config.SocketTransportType)
+	p := xml.NewParser(strings.NewReader(docSrc))
 	_, err := p.ParseElement()
 	require.NotNil(t, err)
 
 	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">\n`
-	p = xml.NewParserTransportType(strings.NewReader(docSrc2), config.SocketTransportType)
+	p = xml.NewParser(strings.NewReader(docSrc2))
 	element, err := p.ParseElement()
 	require.Equal(t, io.EOF, err)
 	require.Nil(t, element)
 }
 
-func TestParseSeveralElements(t *testing.T) {
+func TestParser_Close(t *testing.T) {
+	src := `<?xml version="1.0" encoding="UTF-8"?>\n</stream:stream>\n`
+	p := xml.NewParserTransportType(strings.NewReader(src), config.SocketTransportType)
+
+	_, err := p.ParseElement()
+	require.Equal(t, xml.ErrStreamClosedByPeer, err)
+
+	src2 := `<?xml version="1.0" encoding="UTF-8"?>\n<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />\n`
+	p2 := xml.NewParserTransportType(strings.NewReader(src2), config.WebSocketTransportType)
+
+	_, err = p2.ParseElement()
+	require.Equal(t, xml.ErrStreamClosedByPeer, err)
+}
+
+func TestParser_ParseSeveralElements(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/>\n<b/>\n<c/>`
 	reader := strings.NewReader(docSrc)
 	p := xml.NewParserTransportType(reader, config.SocketTransportType)
@@ -62,7 +75,7 @@ func TestParseSeveralElements(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestDocChildElements(t *testing.T) {
+func TestParser_DocChildElements(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<parent><a/><b/><c/></parent>\n`
 	p := xml.NewParserTransportType(strings.NewReader(docSrc), config.SocketTransportType)
 	parent, err := p.ParseElement()

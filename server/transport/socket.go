@@ -43,7 +43,7 @@ func NewSocketTransport(conn net.Conn, bufferSize, keepAlive int) Transport {
 	return s
 }
 
-func (s *socketTransport) ReadElement() (xml.Element, error) {
+func (s *socketTransport) ReadElement() (xml.XElement, error) {
 	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.readTimeout)))
 	return s.parser.ParseElement()
 }
@@ -54,7 +54,7 @@ func (s *socketTransport) WriteString(str string) error {
 	return err
 }
 
-func (s *socketTransport) WriteElement(elem xml.Element, includeClosing bool) error {
+func (s *socketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
 	defer s.bw.Flush()
 	elem.ToXML(s.w, includeClosing)
 	return nil
