@@ -64,20 +64,20 @@ func (b *badgerDB) DeleteUser(username string) error {
 }
 
 func (b *badgerDB) FetchUser(username string) (*model.User, error) {
-	var usr model.User
+	var usr *model.User
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.userKey(username), tx)
 		if err != nil {
 			return err
 		}
 		if val != nil {
-			usr.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+			usr = model.NewUserFromGob(gob.NewDecoder(bytes.NewReader(val)))
 		}
 		return nil
 	}); err != nil {
 		return nil, err
 	}
-	return &usr, nil
+	return usr, nil
 }
 
 func (b *badgerDB) UserExists(username string) (bool, error) {
@@ -116,9 +116,8 @@ func (b *badgerDB) FetchRosterItems(user string) ([]model.RosterItem, error) {
 
 	prefix := []byte("rosterItems:" + user)
 	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
-		var ri model.RosterItem
-		ri.FromGob(gob.NewDecoder(bytes.NewReader(val)))
-		ris = append(ris, ri)
+		ri := model.NewRosterItemFromGob(gob.NewDecoder(bytes.NewReader(val)))
+		ris = append(ris, *ri)
 		return nil
 	})
 	if err != nil {
@@ -128,20 +127,20 @@ func (b *badgerDB) FetchRosterItems(user string) ([]model.RosterItem, error) {
 }
 
 func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	var ri model.RosterItem
+	var ri *model.RosterItem
 	if err := b.db.View(func(tx *badger.Txn) error {
 		val, err := b.getVal(b.rosterItemKey(user, contact), tx)
 		if err != nil {
 			return err
 		}
 		if val != nil {
-			ri.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+			ri = model.NewRosterItemFromGob(gob.NewDecoder(bytes.NewReader(val)))
 		}
 		return nil
 	}); err != nil {
 		return nil, err
 	}
-	return &ri, nil
+	return ri, nil
 }
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
@@ -165,9 +164,8 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 
 	prefix := []byte("rosterNotifications:" + contact)
 	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
-		var rn model.RosterNotification
-		rn.FromGob(gob.NewDecoder(bytes.NewReader(val)))
-		rns = append(rns, rn)
+		rn := model.NewRosterNotificationFromGob(gob.NewDecoder(bytes.NewReader(val)))
+		rns = append(rns, *rn)
 		return nil
 	})
 	if err != nil {

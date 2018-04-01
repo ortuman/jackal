@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -192,7 +193,8 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 
 func tUtilBadgerDBSetup() *testBadgerDBHelper {
 	h := &testBadgerDBHelper{}
-	h.dataDir = "./com.jackal.tests.badgerdb." + uuid.New()
+	dir, _ := ioutil.TempDir("", "")
+	h.dataDir = dir + "/com.jackal.tests.badgerdb." + uuid.New()
 	cfg := config.BadgerDb{DataDir: h.dataDir}
 	h.db = newBadgerDB(&cfg)
 	return h

@@ -17,11 +17,13 @@ type User struct {
 	Password string
 }
 
-// FromBytes deserializes a User entity
+// NewUserFromGob deserializes a User entity
 // from it's gob binary representation.
-func (u *User) FromGob(dec *gob.Decoder) {
+func NewUserFromGob(dec *gob.Decoder) *User {
+	u := &User{}
 	dec.Decode(&u.Username)
 	dec.Decode(&u.Password)
+	return u
 }
 
 // ToBytes converts a User entity
@@ -41,18 +43,20 @@ type RosterItem struct {
 	Groups       []string
 }
 
-// FromBytes deserializes a RosterItem entity
+// NewRosterItemFromGob deserializes a RosterItem entity
 // from it's gob binary representation.
-func (ri *RosterItem) FromGob(dec *gob.Decoder) {
+func NewRosterItemFromGob(dec *gob.Decoder) *RosterItem {
+	ri := &RosterItem{}
 	dec.Decode(&ri.User)
 	dec.Decode(&ri.Contact)
 	dec.Decode(&ri.Name)
 	dec.Decode(&ri.Subscription)
 	dec.Decode(&ri.Ask)
 	dec.Decode(&ri.Groups)
+	return ri
 }
 
-// ToBytes converts a RosterItem entity
+// ToGob converts a RosterItem entity
 // to it's gob binary representation.
 func (ri *RosterItem) ToGob(enc *gob.Encoder) {
 	enc.Encode(&ri.User)
@@ -71,9 +75,10 @@ type RosterNotification struct {
 	Elements []xml.XElement
 }
 
-// FromGob deserializes a RosterNotification entity
+// NewRosterNotificationFromGob deserializes a RosterNotification entity
 // from it's gob binary representation.
-func (rn *RosterNotification) FromGob(dec *gob.Decoder) {
+func NewRosterNotificationFromGob(dec *gob.Decoder) *RosterNotification {
+	rn := &RosterNotification{}
 	dec.Decode(&rn.User)
 	dec.Decode(&rn.Contact)
 	var ln int
@@ -81,6 +86,7 @@ func (rn *RosterNotification) FromGob(dec *gob.Decoder) {
 	for i := 0; i < ln; i++ {
 		rn.Elements = append(rn.Elements, xml.NewElementFromGob(dec))
 	}
+	return rn
 }
 
 // ToGob converts a RosterNotification entity

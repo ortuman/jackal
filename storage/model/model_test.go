@@ -15,19 +15,19 @@ import (
 )
 
 func TestModelUser(t *testing.T) {
-	var usr1, usr2 User
+	var usr1 User
 
 	usr1.Username = "ortuman"
 	usr1.Password = "1234"
 
 	buf := new(bytes.Buffer)
 	usr1.ToGob(gob.NewEncoder(buf))
-	usr2.FromGob(gob.NewDecoder(buf))
-	require.Equal(t, usr1, usr2)
+	usr2 := NewUserFromGob(gob.NewDecoder(buf))
+	require.Equal(t, usr1, *usr2)
 }
 
 func TestModelRosterItem(t *testing.T) {
-	var ri1, ri2 RosterItem
+	var ri1 RosterItem
 
 	ri1 = RosterItem{
 		User:         "ortuman",
@@ -38,12 +38,12 @@ func TestModelRosterItem(t *testing.T) {
 	}
 	buf := new(bytes.Buffer)
 	ri1.ToGob(gob.NewEncoder(buf))
-	ri2.FromGob(gob.NewDecoder(buf))
-	require.Equal(t, ri1, ri2)
+	ri2 := NewRosterItemFromGob(gob.NewDecoder(buf))
+	require.Equal(t, ri1, *ri2)
 }
 
 func TestModelRosterNotification(t *testing.T) {
-	var rn1, rn2 RosterNotification
+	var rn1 RosterNotification
 
 	rn1 = RosterNotification{
 		User:     "ortuman",
@@ -52,7 +52,7 @@ func TestModelRosterNotification(t *testing.T) {
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))
-	rn2.FromGob(gob.NewDecoder(buf))
+	rn2 := NewRosterNotificationFromGob(gob.NewDecoder(buf))
 	require.Equal(t, "ortuman", rn2.User)
 	require.Equal(t, "noelia", rn2.Contact)
 	require.Equal(t, 1, len(rn1.Elements))
