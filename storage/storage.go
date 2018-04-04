@@ -31,9 +31,9 @@ type Storage interface {
 	FetchUser(username string) (*model.User, error)
 	UserExists(username string) (bool, error)
 
-	InsertOrUpdateRosterItem(ri *model.RosterItem) error
-	DeleteRosterItem(user, contact string) error
-	FetchRosterItems(user string) ([]model.RosterItem, error)
+	InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error)
+	DeleteRosterItem(user, contact string) (model.RosterVersion, error)
+	FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error)
 	FetchRosterItem(user, contact string) (*model.RosterItem, error)
 
 	InsertOrUpdateRosterNotification(rn *model.RosterNotification) error

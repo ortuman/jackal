@@ -40,6 +40,7 @@ type RosterItem struct {
 	Name         string
 	Subscription string
 	Ask          bool
+	Ver          int
 	Groups       []string
 }
 
@@ -52,6 +53,7 @@ func NewRosterItemFromGob(dec *gob.Decoder) *RosterItem {
 	dec.Decode(&ri.Name)
 	dec.Decode(&ri.Subscription)
 	dec.Decode(&ri.Ask)
+	dec.Decode(&ri.Ver)
 	dec.Decode(&ri.Groups)
 	return ri
 }
@@ -64,7 +66,30 @@ func (ri *RosterItem) ToGob(enc *gob.Encoder) {
 	enc.Encode(&ri.Name)
 	enc.Encode(&ri.Subscription)
 	enc.Encode(&ri.Ask)
+	enc.Encode(&ri.Ver)
 	enc.Encode(&ri.Groups)
+}
+
+// RosterVersion represents a roster version info.
+type RosterVersion struct {
+	Ver         int
+	DeletionVer int
+}
+
+// NewRosterVersionFromGob deserializes a RosterVersion entity
+// from it's gob binary representation.
+func NewRosterVersionFromGob(dec *gob.Decoder) RosterVersion {
+	rv := RosterVersion{}
+	dec.Decode(&rv.Ver)
+	dec.Decode(&rv.DeletionVer)
+	return rv
+}
+
+// ToGob converts a RosterVersion entity
+// to it's gob binary representation.
+func (rv RosterVersion) ToGob(enc *gob.Encoder) {
+	enc.Encode(&rv.Ver)
+	enc.Encode(&rv.DeletionVer)
 }
 
 // RosterNotification represents a roster subscription

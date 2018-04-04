@@ -103,10 +103,12 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 		Contact:      "romeo",
 		Subscription: "both",
 	}
-	require.NoError(t, h.db.InsertOrUpdateRosterItem(ri1))
-	require.NoError(t, h.db.InsertOrUpdateRosterItem(ri2))
+	_, err := h.db.InsertOrUpdateRosterItem(ri1)
+	require.NoError(t, err)
+	_, err = h.db.InsertOrUpdateRosterItem(ri2)
+	require.NoError(t, err)
 
-	ris, err := h.db.FetchRosterItems("ortuman")
+	ris, _, err := h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(ris))
 
@@ -114,10 +116,12 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, ri1, ri3)
 
-	require.NoError(t, h.db.DeleteRosterItem("ortuman", "juliet"))
-	require.NoError(t, h.db.DeleteRosterItem("ortuman", "romeo"))
+	_, err = h.db.DeleteRosterItem("ortuman", "juliet")
+	require.NoError(t, err)
+	_, err = h.db.DeleteRosterItem("ortuman", "romeo")
+	require.NoError(t, err)
 
-	ris, err = h.db.FetchRosterItems("ortuman")
+	ris, _, err = h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(ris))
 }

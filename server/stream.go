@@ -234,7 +234,7 @@ func (s *serverStream) initializeAuthenticators() {
 
 func (s *serverStream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(s)
+	s.roster = module.NewRoster(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
@@ -390,6 +390,10 @@ func (s *serverStream) handleConnecting(elem xml.XElement) {
 		session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 		features.AppendElement(session)
 
+		if s.roster != nil && s.cfg.ModRoster.Versioning {
+			ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
+			features.AppendElement(ver)
+		}
 		s.setState(authenticated)
 	}
 	s.writeElement(features)

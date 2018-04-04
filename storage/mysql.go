@@ -19,6 +19,11 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+type queryable interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 type mySQLStorage struct {
 	db     *sql.DB
 	doneCh chan chan bool
@@ -95,6 +100,7 @@ func (s *mySQLStorage) DeleteUser(username string) error {
 	stmts := []string{
 		"DELETE FROM offline_messages WHERE username = ?",
 		"DELETE FROM roster_items WHERE username = ?",
+		"DELETE FROM roster_versions WHERE username = ?",
 		"DELETE FROM private_storage WHERE username = ?",
 		"DELETE FROM vcards WHERE username = ?",
 		"DELETE FROM users WHERE username = ?",
@@ -121,7 +127,7 @@ func (s *mySQLStorage) UserExists(username string) (bool, error) {
 	}
 }
 
-func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) error {
+func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	groups := strings.Join(ri.Groups, ";")
 	params := []interface{}{
 		ri.User,
@@ -130,43 +136,79 @@ func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) error {
 		ri.Subscription,
 		groups,
 		ri.Ask,
+		ri.User,
 		ri.Name,
 		ri.Subscription,
 		groups,
 		ri.Ask,
 	}
-	stmt := `` +
-		`INSERT INTO roster_items (user, contact, name, subscription, groups, ask, updated_at, created_at)` +
-		` VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW())` +
-		` ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, updated_at = NOW()`
-	_, err := s.db.Exec(stmt, params...)
-	return err
+	var ver model.RosterVersion
+	err := s.inTransaction(func(tx *sql.Tx) error {
+		stmt := `` +
+			`INSERT INTO roster_versions (username, created_at, updated_at) VALUES(?, NOW(), NOW())` +
+			` ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()`
+		if _, err := s.db.Exec(stmt, ri.User); err != nil {
+			return err
+		}
+
+		stmt = `` +
+			`INSERT INTO roster_items (user, contact, name, subscription, groups, ask, ver, updated_at, created_at)` +
+			` VALUES(?, ?, ?, ?, ?, ?, (SELECT ver FROM roster_versions WHERE username = ?), NOW(), NOW())` +
+			` ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, ver = ver + 1, updated_at = NOW()`
+		_, err := s.db.Exec(stmt, params...)
+		return err
+	})
+	if err != nil {
+		return ver, err
+	}
+	ver, err = s.fetchRosterVer(ri.User)
+	return ver, err
 }
 
-func (s *mySQLStorage) DeleteRosterItem(user, contact string) error {
-	stmt := "DELETE FROM roster_items WHERE user = ? AND contact = ?"
-	_, err := s.db.Exec(stmt, user, contact)
-	return err
+func (s *mySQLStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
+	var ver model.RosterVersion
+	err := s.inTransaction(func(tx *sql.Tx) error {
+		stmt := `` +
+			`INSERT INTO roster_versions (username, created_at, updated_at) VALUES(?, NOW(), NOW())` +
+			` ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()`
+		if _, err := tx.Exec(stmt, user); err != nil {
+			return err
+		}
+
+		stmt = `DELETE FROM roster_items WHERE user = ? AND contact = ?`
+		_, err := tx.Exec(stmt, user, contact)
+		return err
+	})
+	if err != nil {
+		return ver, err
+	}
+	ver, err = s.fetchRosterVer(user)
+	return ver, err
 }
 
-func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, error) {
+func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
 	stmt := `` +
-		`SELECT user, contact, name, subscription, groups, ask` +
+		`SELECT user, contact, name, subscription, groups, ask, ver` +
 		` FROM roster_items WHERE  user = ?` +
 		` ORDER BY created_at DESC`
 
 	rows, err := s.db.Query(stmt, user)
 	if err != nil {
-		return nil, err
+		return nil, model.RosterVersion{}, err
 	}
 	defer rows.Close()
 
-	return scanRosterItemEntities(rows)
+	items, err := scanRosterItemEntities(rows)
+	if err != nil {
+		return nil, model.RosterVersion{}, err
+	}
+	ver, err := s.fetchRosterVer(user)
+	return items, ver, nil
 }
 
 func (s *mySQLStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
 	stmt := `` +
-		`SELECT user, contact, name, subscription, groups, ask` +
+		`SELECT user, contact, name, subscription, groups, ask, ver` +
 		` FROM roster_items WHERE user = ? AND contact = ?`
 	row := s.db.QueryRow(stmt, user, contact)
 
@@ -353,6 +395,19 @@ func (s *mySQLStorage) DeleteOfflineMessages(username string) error {
 	return err
 }
 
+func (s *mySQLStorage) fetchRosterVer(username string) (model.RosterVersion, error) {
+	var ver model.RosterVersion
+	stmt := `SELECT IFNULL(MAX(ver), 0), IFNULL(MAX(last_deletion_ver), 0) FROM roster_versions WHERE username = ?`
+	row := s.db.QueryRow(stmt, username)
+	err := row.Scan(&ver.Ver, &ver.DeletionVer)
+	switch err {
+	case nil:
+		return ver, nil
+	default:
+		return model.RosterVersion{}, err
+	}
+}
+
 func (s *mySQLStorage) loop() {
 	tc := time.NewTicker(time.Second * 15)
 	defer tc.Stop()
@@ -376,8 +431,7 @@ func (s *mySQLStorage) inTransaction(f func(tx *sql.Tx) error) error {
 	if txErr != nil {
 		return txErr
 	}
-	err := f(tx)
-	if err != nil {
+	if err := f(tx); err != nil {
 		tx.Rollback()
 		return err
 	}

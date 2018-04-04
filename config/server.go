@@ -123,6 +123,7 @@ type Server struct {
 	TLS              TLS
 	Modules          map[string]struct{}
 	Compression      Compression
+	ModRoster        ModRoster
 	ModOffline       ModOffline
 	ModRegistration  ModRegistration
 	ModVersion       ModVersion
@@ -138,6 +139,7 @@ type serverProxyType struct {
 	TLS              TLS             `yaml:"tls"`
 	Modules          []string        `yaml:"modules"`
 	Compression      Compression     `yaml:"compression"`
+	ModRoster        ModRoster       `yaml:"mod_roster"`
 	ModOffline       ModOffline      `yaml:"mod_offline"`
 	ModRegistration  ModRegistration `yaml:"mod_registration"`
 	ModVersion       ModVersion      `yaml:"mod_version"`
@@ -196,6 +198,7 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.SASL = p.SASL
 	s.TLS = p.TLS
 	s.Compression = p.Compression
+	s.ModRoster = p.ModRoster
 	s.ModOffline = p.ModOffline
 	s.ModRegistration = p.ModRegistration
 	s.ModVersion = p.ModVersion
@@ -296,6 +299,11 @@ func (c *Compression) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("config.Compress: unrecognized compression level: %s", p.Level)
 	}
 	return nil
+}
+
+// ModRoster represents roster module configuration.
+type ModRoster struct {
+	Versioning bool `yaml:"versioning"`
 }
 
 // ModOffline represents Offline Storage module configuration.
