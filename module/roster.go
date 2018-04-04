@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/config"
-
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"

@@ -80,6 +80,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 		Groups:       []string{"people", "friends"},
 	}
 	storage.Instance().InsertOrUpdateRosterItem(ri1)
+
 	ri2 := &model.RosterItem{
 		User:         "ortuman",
 		Contact:      "romeo",
