@@ -71,25 +71,54 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, 0, query.Elements().Count())
 	r.Done()
 
-	ri := &model.RosterItem{
+	ri1 := &model.RosterItem{
 		User:         "ortuman",
 		Contact:      "noelia",
 		Name:         "My Juliet",
-		Subscription: subscriptionBoth,
+		Subscription: subscriptionNone,
 		Ask:          true,
 		Groups:       []string{"people", "friends"},
 	}
-	storage.Instance().InsertOrUpdateRosterItem(ri)
+	storage.Instance().InsertOrUpdateRosterItem(ri1)
+	ri2 := &model.RosterItem{
+		User:         "ortuman",
+		Contact:      "romeo",
+		Name:         "Rome",
+		Subscription: subscriptionNone,
+		Ask:          true,
+		Groups:       []string{"others"},
+	}
+	storage.Instance().InsertOrUpdateRosterItem(ri2)
 
-	r = NewRoster(&config.ModRoster{}, stm)
+	r = NewRoster(&config.ModRoster{Versioning: true}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.ResultType, elem.Type())
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
-	require.Equal(t, 1, query2.Elements().Count())
+	require.Equal(t, 2, query2.Elements().Count())
 	require.True(t, r.IsRequested())
+
+	// test versioning
+	iq = xml.NewIQType(uuid.New(), xml.GetType)
+	q = xml.NewElementNamespace("query", rosterNamespace)
+	q.SetAttribute("ver", "v1")
+	iq.AppendElement(q)
+
+	r.ProcessIQ(iq)
+	elem = stm.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.ResultType, elem.Type())
+
+	// expect set item...
+	elem = stm.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.SetType, elem.Type())
+	query2 = elem.Elements().ChildNamespace("query", rosterNamespace)
+	require.Equal(t, "v2", query2.Attributes().Get("ver"))
+	item := query2.Elements().Child("item")
+	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 	r.Done()
 
 	storage.ActivateMockedError()

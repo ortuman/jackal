@@ -138,6 +138,7 @@ updateRosterItems:
 	ver := m.rosterVersions[ri.User]
 	ver.Ver++
 	m.rosterVersions[ri.User] = ver
+	rosterItems[len(rosterItems)-1].Ver = ver.Ver
 	m.rosterItems[ri.User] = rosterItems
 	return ver, nil
 }
