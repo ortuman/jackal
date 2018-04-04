@@ -67,20 +67,23 @@ func TestMockStorageDeleteUser(t *testing.T) {
 
 func TestMockStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, g}
+	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
 
 	s := newMockStorage()
 	s.activateMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOrUpdateRosterItem(&ri))
+	_, err := s.InsertOrUpdateRosterItem(&ri)
+	require.Equal(t, ErrMockedError, err)
 	s.deactivateMockedError()
-	require.Nil(t, s.InsertOrUpdateRosterItem(&ri))
+	_, err = s.InsertOrUpdateRosterItem(&ri)
+	require.Nil(t, err)
 	ri.Subscription = "to"
-	require.Nil(t, s.InsertOrUpdateRosterItem(&ri))
+	_, err = s.InsertOrUpdateRosterItem(&ri)
+	require.Nil(t, err)
 }
 
 func TestMockStorageFetchRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, g}
+	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
 
 	s := newMockStorage()
 	s.InsertOrUpdateRosterItem(&ri)
@@ -101,32 +104,35 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 
 func TestMockStorageFetchRosterItems(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, g}
-	ri2 := model.RosterItem{"user", "contact2", "a name 2", "both", false, g}
+	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
+	ri2 := model.RosterItem{"user", "contact2", "a name 2", "both", false, 2, g}
 
 	s := newMockStorage()
 	s.InsertOrUpdateRosterItem(&ri)
 	s.InsertOrUpdateRosterItem(&ri2)
 
 	s.activateMockedError()
-	_, err := s.FetchRosterItems("user")
+	_, _, err := s.FetchRosterItems("user")
 	require.Equal(t, ErrMockedError, err)
 	s.deactivateMockedError()
-	ris, _ := s.FetchRosterItems("user")
+	ris, _, _ := s.FetchRosterItems("user")
 	require.Equal(t, 2, len(ris))
 }
 
 func TestMockStorageDeleteRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, g}
+	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
 	s := newMockStorage()
 	s.InsertOrUpdateRosterItem(&ri)
 
 	s.activateMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteRosterItem("user", "contact"))
+	_, err := s.DeleteRosterItem("user", "contact")
+	require.Equal(t, ErrMockedError, err)
 	s.deactivateMockedError()
-	require.Nil(t, s.DeleteRosterItem("user", "contact"))
-	require.Nil(t, s.DeleteRosterItem("user2", "contact")) // delete not existing roster item...
+	_, err = s.DeleteRosterItem("user", "contact")
+	require.Nil(t, err)
+	_, err = s.DeleteRosterItem("user2", "contact")
+	require.Nil(t, err) // delete not existing roster item...
 
 	ri2, _ := s.FetchRosterItem("user", "contact")
 	require.Nil(t, ri2)

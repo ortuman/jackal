@@ -42,6 +42,16 @@ func TestModelRosterItem(t *testing.T) {
 	require.Equal(t, ri1, *ri2)
 }
 
+func TestModelRosterVersion(t *testing.T) {
+	var rv1 RosterVersion
+
+	rv1 = RosterVersion{Ver: 2, DeletionVer: 1}
+	buf := new(bytes.Buffer)
+	rv1.ToGob(gob.NewEncoder(buf))
+	rv2 := NewRosterVersionFromGob(gob.NewDecoder(buf))
+	require.Equal(t, rv1, rv2)
+}
+
 func TestModelRosterNotification(t *testing.T) {
 	var rn1 RosterNotification
 

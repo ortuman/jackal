@@ -50,6 +50,8 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM roster_items (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM roster_versions (.+)").
+		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM private_storage (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM vcards (.+)").
@@ -125,7 +127,7 @@ func TestMySQLStorageUserExists(t *testing.T) {
 
 func TestMySQLStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, g}
+	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
 
 	args := []driver.Value{
 		ri.User,
@@ -134,48 +136,69 @@ func TestMySQLStorageInsertRosterItem(t *testing.T) {
 		ri.Subscription,
 		"general;friends",
 		ri.Ask,
+		ri.User,
 		ri.Name,
 		ri.Subscription,
 		"general;friends",
 		ri.Ask,
 	}
+
 	s, mock := newMockMySQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
+		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO roster_items (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectCommit()
+	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
+		WithArgs("user").
+		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
 
-	err := s.InsertOrUpdateRosterItem(&ri)
+	_, err := s.InsertOrUpdateRosterItem(&ri)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
 
 func TestMySQLStorageDeleteRosterItem(t *testing.T) {
 	s, mock := newMockMySQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
+		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM roster_items (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
+		WithArgs("user").
+		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
 
-	err := s.DeleteRosterItem("user", "contact")
+	_, err := s.DeleteRosterItem("user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
 	s, mock = newMockMySQLStorage()
-	mock.ExpectExec("DELETE FROM roster_items (.+)").
-		WithArgs("user", "contact").WillReturnError(errMySQLStorage)
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO roster_versions (.+)").
+		WithArgs("user").WillReturnError(errMySQLStorage)
+	mock.ExpectRollback()
 
-	err = s.DeleteRosterItem("user", "contact")
+	_, err = s.DeleteRosterItem("user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
 
 func TestMySQLStorageFetchRosterItems(t *testing.T) {
-	var riColumns = []string{"user", "contact", "name", "subscription", "groups", "ask"}
+	var riColumns = []string{"user", "contact", "name", "subscription", "groups", "ask", "ver"}
 
 	s, mock := newMockMySQLStorage()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
-		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false))
+		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
+	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
+		WithArgs("ortuman").
+		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(0, 0))
 
-	rosterItems, err := s.FetchRosterItems("ortuman")
+	rosterItems, _, err := s.FetchRosterItems("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterItems))
@@ -185,14 +208,14 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
 
-	_, err = s.FetchRosterItems("ortuman")
+	_, _, err = s.FetchRosterItems("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 
 	s, mock = newMockMySQLStorage()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
-		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false))
+		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
 
 	ri, err := s.FetchRosterItem("ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())

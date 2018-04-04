@@ -24,7 +24,7 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
-	r := NewRoster(stm)
+	r := NewRoster(&config.ModRoster{}, stm)
 	defer r.Done()
 
 	require.Equal(t, []string{}, r.AssociatedNamespaces())
@@ -45,7 +45,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
-	r := NewRoster(stm)
+	r := NewRoster(&config.ModRoster{}, stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	q := xml.NewElementNamespace("query", rosterNamespace)
@@ -71,29 +71,59 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, 0, query.Elements().Count())
 	r.Done()
 
-	ri := &model.RosterItem{
+	ri1 := &model.RosterItem{
 		User:         "ortuman",
 		Contact:      "noelia",
 		Name:         "My Juliet",
-		Subscription: subscriptionBoth,
+		Subscription: subscriptionNone,
 		Ask:          true,
 		Groups:       []string{"people", "friends"},
 	}
-	storage.Instance().InsertOrUpdateRosterItem(ri)
+	storage.Instance().InsertOrUpdateRosterItem(ri1)
 
-	r = NewRoster(stm)
+	ri2 := &model.RosterItem{
+		User:         "ortuman",
+		Contact:      "romeo",
+		Name:         "Rome",
+		Subscription: subscriptionNone,
+		Ask:          true,
+		Groups:       []string{"others"},
+	}
+	storage.Instance().InsertOrUpdateRosterItem(ri2)
+
+	r = NewRoster(&config.ModRoster{Versioning: true}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xml.ResultType, elem.Type())
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
-	require.Equal(t, 1, query2.Elements().Count())
+	require.Equal(t, 2, query2.Elements().Count())
 	require.True(t, r.IsRequested())
+
+	// test versioning
+	iq = xml.NewIQType(uuid.New(), xml.GetType)
+	q = xml.NewElementNamespace("query", rosterNamespace)
+	q.SetAttribute("ver", "v1")
+	iq.AppendElement(q)
+
+	r.ProcessIQ(iq)
+	elem = stm.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.ResultType, elem.Type())
+
+	// expect set item...
+	elem = stm.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.SetType, elem.Type())
+	query2 = elem.Elements().ChildNamespace("query", rosterNamespace)
+	require.Equal(t, "v2", query2.Attributes().Get("ver"))
+	item := query2.Elements().Child("item")
+	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 	r.Done()
 
 	storage.ActivateMockedError()
-	r = NewRoster(stm)
+	r = NewRoster(&config.ModRoster{}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
@@ -117,7 +147,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 
 	stm, _ := tUtilRosterInitializeRoster()
 
-	r := NewRoster(stm)
+	r := NewRoster(&config.ModRoster{}, stm)
 	defer r.Done()
 
 	storage.ActivateMockedError()
@@ -155,7 +185,7 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 	}
 	storage.Instance().InsertOrUpdateRosterItem(ri)
 
-	r := NewRoster(stm1)
+	r := NewRoster(&config.ModRoster{}, stm1)
 	defer r.Done()
 
 	// test presence receive...
@@ -220,7 +250,7 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetResource("garden")
 	stm1.SetAuthenticated(true)
 
-	r := NewRoster(stm1)
+	r := NewRoster(&config.ModRoster{}, stm1)
 	defer r.Done()
 
 	iqID := uuid.New()
@@ -263,7 +293,7 @@ func TestRoster_Subscribe(t *testing.T) {
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r := NewRoster(stm1)
+	r := NewRoster(&config.ModRoster{}, stm1)
 	defer r.Done()
 
 	tUtilRosterRequestRoster(r, stm1)
@@ -304,8 +334,8 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(stm1)
-	r2 := NewRoster(stm2)
+	r1 := NewRoster(&config.ModRoster{}, stm1)
+	r2 := NewRoster(&config.ModRoster{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -352,8 +382,8 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(stm1)
-	r2 := NewRoster(stm2)
+	r1 := NewRoster(&config.ModRoster{}, stm1)
+	r2 := NewRoster(&config.ModRoster{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -395,8 +425,8 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(stm1)
-	r2 := NewRoster(stm2)
+	r1 := NewRoster(&config.ModRoster{}, stm1)
+	r2 := NewRoster(&config.ModRoster{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -440,8 +470,8 @@ func TestRoster_DeleteItem(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(stm1)
-	r2 := NewRoster(stm2)
+	r1 := NewRoster(&config.ModRoster{}, stm1)
+	r2 := NewRoster(&config.ModRoster{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 

@@ -57,6 +57,9 @@ servers:
       - ping         # XEP-0199: XMPP Ping
       - offline      # Offline storage
 
+    mod_roster:
+      versioning: true
+
     mod_offline:
       queue_size: 2500
 

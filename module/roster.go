@@ -8,8 +8,11 @@ package module
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
 	"sync"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -31,12 +34,14 @@ const (
 type roster struct {
 	mu    sync.RWMutex
 	items []model.RosterItem
+	ver   model.RosterVersion
 }
 
-func (r *roster) fetchItems() []model.RosterItem {
+func (r *roster) fetchItems() ([]model.RosterItem, model.RosterVersion) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.items
+	sort.Slice(r.items, func(i, j int) bool { return r.items[i].Ver < r.items[j].Ver })
+	return r.items, r.ver
 }
 
 func (r *roster) fetchItem(contact string) *model.RosterItem {
@@ -53,15 +58,19 @@ func (r *roster) fetchItem(contact string) *model.RosterItem {
 func (r *roster) insertOrUpdateItem(ri *model.RosterItem) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.ver.Ver++
+
 	var found bool
 	for i := 0; !found && i < len(r.items); i++ {
 		if r.items[i].Contact == ri.Contact {
 			r.items[i] = *ri
+			r.items[i].Ver = r.ver.Ver
 			found = true
 		}
 	}
 	if !found {
 		r.items = append(r.items, *ri)
+		r.items[len(r.items)-1].Ver = r.ver.Ver
 	}
 }
 
@@ -74,6 +83,8 @@ func (r *roster) deleteItem(ri *model.RosterItem) {
 			newItems = append(newItems, r.items[i])
 		}
 	}
+	r.ver.Ver++
+	r.ver.DeletionVer = r.ver.Ver
 	r.items = newItems
 }
 
@@ -89,22 +100,23 @@ func (rm *rosterMap) loadRoster(username string) error {
 	if r != nil {
 		return nil
 	}
-	items, err := storage.Instance().FetchRosterItems(username)
+	items, ver, err := storage.Instance().FetchRosterItems(username)
 	if err != nil {
 		return err
 	}
 	rm.mu.Lock()
-	rm.cache[username] = &roster{items: items}
+	rm.cache[username] = &roster{items: items, ver: ver}
 	rm.mu.Unlock()
 	return nil
 }
 
-func (rm *rosterMap) fetchRosterItems(username string) ([]model.RosterItem, error) {
+func (rm *rosterMap) fetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error) {
 	rm.mu.RLock()
 	r := rm.cache[username]
 	rm.mu.RUnlock()
 	if r != nil {
-		return r.fetchItems(), nil
+		items, ver := r.fetchItems()
+		return items, ver, nil
 	}
 	return storage.Instance().FetchRosterItems(username)
 }
@@ -119,7 +131,7 @@ func (rm *rosterMap) fetchRosterItem(username, contact string) (*model.RosterIte
 	return storage.Instance().FetchRosterItem(username, contact)
 }
 
-func (rm *rosterMap) insertOrUpdateRosterItem(ri *model.RosterItem) error {
+func (rm *rosterMap) insertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	rm.mu.RLock()
 	r := rm.cache[ri.User]
 	rm.mu.RUnlock()
@@ -129,7 +141,7 @@ func (rm *rosterMap) insertOrUpdateRosterItem(ri *model.RosterItem) error {
 	return storage.Instance().InsertOrUpdateRosterItem(ri)
 }
 
-func (rm *rosterMap) deleteRosterItem(ri *model.RosterItem) error {
+func (rm *rosterMap) deleteRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	rm.mu.RLock()
 	r := rm.cache[ri.User]
 	rm.mu.RUnlock()
@@ -149,12 +161,9 @@ var rosterTable = rosterMap{
 	cache: map[string]*roster{},
 }
 
-var defaultRosterErrHandler = func(err error) {
-	log.Error(err)
-}
-
 // ModRoster represents a roster server stream module.
 type ModRoster struct {
+	cfg        *config.ModRoster
 	stm        c2s.Stream
 	lock       sync.RWMutex
 	requested  bool
@@ -164,12 +173,13 @@ type ModRoster struct {
 }
 
 // NewRoster returns a roster server stream module.
-func NewRoster(stm c2s.Stream) *ModRoster {
+func NewRoster(cfg *config.ModRoster, stm c2s.Stream) *ModRoster {
 	r := &ModRoster{
+		cfg:        cfg,
 		stm:        stm,
 		actorCh:    make(chan func(), moduleMailboxSize),
 		doneCh:     make(chan chan bool),
-		errHandler: defaultRosterErrHandler,
+		errHandler: func(err error) { log.Error(err) },
 	}
 	go r.actorLoop()
 	return r
@@ -310,7 +320,7 @@ func (r *ModRoster) deliverPendingApprovalNotifications() error {
 }
 
 func (r *ModRoster) receivePresences() error {
-	items, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
+	items, _, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
 	if err != nil {
 		return err
 	}
@@ -325,7 +335,7 @@ func (r *ModRoster) receivePresences() error {
 }
 
 func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
-	items, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
+	items, _, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
 	if err != nil {
 		return err
 	}
@@ -345,26 +355,45 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.XElement) {
 	}
 	log.Infof("retrieving user roster... (%s/%s)", r.stm.Username(), r.stm.Resource())
 
-	result := iq.ResultIQ()
-	q := xml.NewElementNamespace("query", rosterNamespace)
-
 	if err := rosterTable.loadRoster(r.stm.Username()); err != nil {
 		r.errHandler(err)
 		r.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	items, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
+	items, ver, err := rosterTable.fetchRosterItems(r.stm.JID().Node())
 	if err != nil {
 		r.errHandler(err)
 		r.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	for _, item := range items {
-		q.AppendElement(r.elementFromRosterItem(&item))
-	}
-	result.AppendElement(q)
-	r.stm.SendElement(result)
+	v := r.parseVer(query.Attributes().Get("ver"))
 
+	result := iq.ResultIQ()
+	if !r.cfg.Versioning || v == 0 || v < ver.DeletionVer {
+		// push all roster items
+		q := xml.NewElementNamespace("query", rosterNamespace)
+		if r.cfg.Versioning {
+			q.SetAttribute("ver", fmt.Sprintf("v%d", ver.Ver))
+		}
+		for _, item := range items {
+			q.AppendElement(r.elementFromRosterItem(&item))
+		}
+		result.AppendElement(q)
+		r.stm.SendElement(result)
+	} else {
+		// push roster changes
+		r.stm.SendElement(result)
+		for _, item := range items {
+			if item.Ver > v {
+				iq := xml.NewIQType(uuid.New(), xml.SetType)
+				q := xml.NewElementNamespace("query", rosterNamespace)
+				q.SetAttribute("ver", fmt.Sprintf("v%d", item.Ver))
+				q.AppendElement(r.elementFromRosterItem(&item))
+				iq.AppendElement(q)
+				r.stm.SendElement(iq)
+			}
+		}
+	}
 	r.lock.Lock()
 	r.requested = true
 	r.lock.Unlock()
@@ -429,9 +458,11 @@ func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
 		if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
 			return err
 		}
-		if err := rosterTable.deleteRosterItem(userRi); err != nil {
+		v, err := rosterTable.deleteRosterItem(userRi)
+		if err != nil {
 			return err
 		}
+		userRi.Ver = v.Ver
 		if err := r.pushRosterItem(userRi, userJID); err != nil {
 			return err
 		}
@@ -449,18 +480,26 @@ func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
 			switch contactRi.Subscription {
 			case subscriptionBoth:
 				contactRi.Subscription = subscriptionTo
+				v, err := rosterTable.insertOrUpdateRosterItem(contactRi)
+				if err != nil {
+					return err
+				}
+				contactRi.Ver = v.Ver
 				if err := r.pushRosterItem(contactRi, contactJID); err != nil {
 					return err
 				}
 				fallthrough
+
 			default:
 				contactRi.Subscription = subscriptionNone
+				v, err := rosterTable.insertOrUpdateRosterItem(contactRi)
+				if err != nil {
+					return err
+				}
+				contactRi.Ver = v.Ver
 				if err := r.pushRosterItem(contactRi, contactJID); err != nil {
 					return err
 				}
-			}
-			if err := rosterTable.insertOrUpdateRosterItem(contactRi); err != nil {
-				return err
 			}
 		}
 	}
@@ -503,9 +542,11 @@ func (r *ModRoster) updateRosterItem(ri *model.RosterItem) error {
 			Ask:          ri.Ask,
 		}
 	}
-	if err := rosterTable.insertOrUpdateRosterItem(userRi); err != nil {
+	v, err := rosterTable.insertOrUpdateRosterItem(userRi)
+	if err != nil {
 		return err
 	}
+	userRi.Ver = v.Ver
 	return r.pushRosterItem(userRi, r.stm.JID())
 }
 
@@ -539,9 +580,11 @@ func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 			Ask:          true,
 		}
 	}
-	if err := rosterTable.insertOrUpdateRosterItem(userRi); err != nil {
+	v, err := rosterTable.insertOrUpdateRosterItem(userRi)
+	if err != nil {
 		return err
 	}
+	userRi.Ver = v.Ver
 	if err := r.pushRosterItem(userRi, userJID); err != nil {
 		return err
 	}
@@ -588,9 +631,11 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 			Ask:          false,
 		}
 	}
-	if err := rosterTable.insertOrUpdateRosterItem(contactRi); err != nil {
+	v, err := rosterTable.insertOrUpdateRosterItem(contactRi)
+	if err != nil {
 		return err
 	}
+	contactRi.Ver = v.Ver
 	if err := r.pushRosterItem(contactRi, contactJID); err != nil {
 		return err
 	}
@@ -613,9 +658,11 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 				return nil
 			}
 			userRi.Ask = false
-			if err := rosterTable.insertOrUpdateRosterItem(userRi); err != nil {
+			v, err := rosterTable.insertOrUpdateRosterItem(userRi)
+			if err != nil {
 				return err
 			}
+			userRi.Ver = v.Ver
 			if err := r.pushRosterItem(userRi, userJID); err != nil {
 				return err
 			}
@@ -645,9 +692,11 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 		default:
 			userRi.Subscription = subscriptionNone
 		}
-		if err := rosterTable.insertOrUpdateRosterItem(userRi); err != nil {
+		v, err := rosterTable.insertOrUpdateRosterItem(userRi)
+		if err != nil {
 			return err
 		}
+		userRi.Ver = v.Ver
 		if err := r.pushRosterItem(userRi, userJID); err != nil {
 			return err
 		}
@@ -668,9 +717,11 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 			default:
 				contactRi.Subscription = subscriptionNone
 			}
-			if err := rosterTable.insertOrUpdateRosterItem(contactRi); err != nil {
+			v, err := rosterTable.insertOrUpdateRosterItem(contactRi)
+			if err != nil {
 				return err
 			}
+			contactRi.Ver = v.Ver
 			if err := r.pushRosterItem(contactRi, contactJID); err != nil {
 				return err
 			}
@@ -706,9 +757,11 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 		default:
 			contactRi.Subscription = subscriptionNone
 		}
-		if err := rosterTable.insertOrUpdateRosterItem(contactRi); err != nil {
+		v, err := rosterTable.insertOrUpdateRosterItem(contactRi)
+		if err != nil {
 			return err
 		}
+		contactRi.Ver = v.Ver
 		if err := r.pushRosterItem(contactRi, contactJID); err != nil {
 			return err
 		}
@@ -730,9 +783,11 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 				userRi.Subscription = subscriptionNone
 			}
 			userRi.Ask = false
-			if err := rosterTable.insertOrUpdateRosterItem(userRi); err != nil {
+			v, err := rosterTable.insertOrUpdateRosterItem(userRi)
+			if err != nil {
 				return err
 			}
+			userRi.Ver = v.Ver
 			if err := r.pushRosterItem(userRi, userJID); err != nil {
 				return err
 			}
@@ -761,6 +816,9 @@ func (r *ModRoster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.J
 
 func (r *ModRoster) pushRosterItem(ri *model.RosterItem, to *xml.JID) error {
 	query := xml.NewElementNamespace("query", rosterNamespace)
+	if r.cfg.Versioning {
+		query.SetAttribute("ver", fmt.Sprintf("v%d", ri.Ver))
+	}
 	query.AppendElement(r.elementFromRosterItem(ri))
 
 	streams := c2s.Instance().AvailableStreams(to.Node())
@@ -871,4 +929,12 @@ func (r *ModRoster) elementFromRosterItem(ri *model.RosterItem) xml.XElement {
 		item.AppendElement(gr)
 	}
 	return item
+}
+
+func (r *ModRoster) parseVer(ver string) int {
+	if len(ver) > 0 && ver[0] == 'v' {
+		v, _ := strconv.Atoi(ver[1:])
+		return v
+	}
+	return 0
 }
