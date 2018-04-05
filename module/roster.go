@@ -455,10 +455,10 @@ func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
 		userRi.Subscription = subscriptionRemove
 		userRi.Ask = false
 
-		if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+		if err := r.deleteNotification(userJID, contactJID); err != nil {
 			return err
 		}
-		if err := r.deleteRosterItem(userRi, userJID); err != nil {
+		if err := r.deleteItem(userRi, userJID); err != nil {
 			return err
 		}
 	}
@@ -475,14 +475,14 @@ func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
 			switch contactRi.Subscription {
 			case subscriptionBoth:
 				contactRi.Subscription = subscriptionTo
-				if r.insertOrUpdateRosterItem(contactRi, contactJID); err != nil {
+				if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
 					return err
 				}
 				fallthrough
 
 			default:
 				contactRi.Subscription = subscriptionNone
-				if r.insertOrUpdateRosterItem(contactRi, contactJID); err != nil {
+				if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
 					return err
 				}
 			}
@@ -527,7 +527,7 @@ func (r *ModRoster) updateRosterItem(ri *model.RosterItem) error {
 			Ask:          ri.Ask,
 		}
 	}
-	return r.insertOrUpdateRosterItem(userRi, r.stm.JID())
+	return r.insertOrUpdateItem(userRi, r.stm.JID())
 }
 
 func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
@@ -560,7 +560,7 @@ func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 			Ask:          true,
 		}
 	}
-	if r.insertOrUpdateRosterItem(userRi, userJID); err != nil {
+	if r.insertOrUpdateItem(userRi, userJID); err != nil {
 		return err
 	}
 
@@ -570,7 +570,7 @@ func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 
 	if r.isLocalJID(contactJID) {
 		// archive roster approval notification
-		if err := r.insertOrUpdateRosterNotification(userJID, contactJID, p); err != nil {
+		if err := r.insertOrUpdateNotification(userJID, contactJID, p); err != nil {
 			return err
 		}
 	}
@@ -584,7 +584,7 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 
 	log.Infof("processing 'subscribed' - user: %s (%s/%s)", userJID, r.stm.Username(), r.stm.Resource())
 
-	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+	if err := r.deleteNotification(userJID, contactJID); err != nil {
 		return err
 	}
 	contactRi, err := rosterTable.fetchRosterItem(contactJID.Node(), userJID.Node())
@@ -607,7 +607,7 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 			Ask:          false,
 		}
 	}
-	if r.insertOrUpdateRosterItem(contactRi, contactJID); err != nil {
+	if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
 		return err
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
@@ -629,7 +629,7 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 				return nil
 			}
 			userRi.Ask = false
-			if r.insertOrUpdateRosterItem(userRi, userJID); err != nil {
+			if r.insertOrUpdateItem(userRi, userJID); err != nil {
 				return err
 			}
 		}
@@ -658,7 +658,7 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 		default:
 			userRi.Subscription = subscriptionNone
 		}
-		if r.insertOrUpdateRosterItem(userRi, userJID); err != nil {
+		if r.insertOrUpdateItem(userRi, userJID); err != nil {
 			return err
 		}
 	}
@@ -678,7 +678,7 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 			default:
 				contactRi.Subscription = subscriptionNone
 			}
-			if r.insertOrUpdateRosterItem(contactRi, contactJID); err != nil {
+			if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
 				return err
 			}
 		}
@@ -697,7 +697,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 
 	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", userJID, r.stm.Username(), r.stm.Resource())
 
-	if err := r.deleteRosterNotification(userJID, contactJID); err != nil {
+	if err := r.deleteNotification(userJID, contactJID); err != nil {
 		return err
 	}
 	contactRi, err := rosterTable.fetchRosterItem(contactJID.Node(), userJID.Node())
@@ -713,7 +713,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 		default:
 			contactRi.Subscription = subscriptionNone
 		}
-		if r.insertOrUpdateRosterItem(contactRi, contactJID); err != nil {
+		if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
 			return err
 		}
 	}
@@ -734,7 +734,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 				userRi.Subscription = subscriptionNone
 			}
 			userRi.Ask = false
-			if r.insertOrUpdateRosterItem(userRi, userJID); err != nil {
+			if r.insertOrUpdateItem(userRi, userJID); err != nil {
 				return err
 			}
 		}
@@ -747,7 +747,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 	return nil
 }
 
-func (r *ModRoster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
+func (r *ModRoster) insertOrUpdateNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
 	rn := &model.RosterNotification{
 		User:     userJID.Node(),
 		Contact:  contactJID.Node(),
@@ -756,29 +756,29 @@ func (r *ModRoster) insertOrUpdateRosterNotification(userJID *xml.JID, contactJI
 	return storage.Instance().InsertOrUpdateRosterNotification(rn)
 }
 
-func (r *ModRoster) deleteRosterNotification(userJID *xml.JID, contactJID *xml.JID) error {
+func (r *ModRoster) deleteNotification(userJID *xml.JID, contactJID *xml.JID) error {
 	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.Node())
 }
 
-func (r *ModRoster) insertOrUpdateRosterItem(ri *model.RosterItem, pushTo *xml.JID) error {
+func (r *ModRoster) insertOrUpdateItem(ri *model.RosterItem, pushTo *xml.JID) error {
 	v, err := rosterTable.insertOrUpdateRosterItem(ri)
 	if err != nil {
 		return err
 	}
 	ri.Ver = v.Ver
-	return r.pushRosterItem(ri, pushTo)
+	return r.pushItem(ri, pushTo)
 }
 
-func (r *ModRoster) deleteRosterItem(ri *model.RosterItem, pushTo *xml.JID) error {
+func (r *ModRoster) deleteItem(ri *model.RosterItem, pushTo *xml.JID) error {
 	v, err := rosterTable.deleteRosterItem(ri)
 	if err != nil {
 		return err
 	}
 	ri.Ver = v.Ver
-	return r.pushRosterItem(ri, pushTo)
+	return r.pushItem(ri, pushTo)
 }
 
-func (r *ModRoster) pushRosterItem(ri *model.RosterItem, to *xml.JID) error {
+func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	query := xml.NewElementNamespace("query", rosterNamespace)
 	if r.cfg.Versioning {
 		query.SetAttribute("ver", fmt.Sprintf("v%d", ri.Ver))
