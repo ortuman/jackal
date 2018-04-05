@@ -15,17 +15,22 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 )
 
 type badgerDB struct {
 	db     *badger.DB
+	pool   *pool.BufferPool
 	doneCh chan chan bool
 }
 
 func newBadgerDB(cfg *config.BadgerDb) *badgerDB {
-	b := &badgerDB{doneCh: make(chan chan bool)}
+	b := &badgerDB{
+		pool:   pool.NewBufferPool(),
+		doneCh: make(chan chan bool),
+	}
 	if err := os.MkdirAll(filepath.Dir(cfg.DataDir), os.ModePerm); err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -48,8 +53,8 @@ func (b *badgerDB) Shutdown() {
 }
 
 func (b *badgerDB) InsertOrUpdateUser(user *model.User) error {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	return b.db.Update(func(tx *badger.Txn) error {
 		user.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.userKey(user.Username), buf.Bytes())
@@ -91,8 +96,8 @@ func (b *badgerDB) UserExists(username string) (bool, error) {
 }
 
 func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	err := b.db.Update(func(tx *badger.Txn) error {
 		ri.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.rosterItemKey(ri.User, ri.Contact), buf.Bytes())
@@ -145,8 +150,8 @@ func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, err
 }
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	return b.db.Update(func(tx *badger.Txn) error {
 		rn.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.rosterNotificationKey(rn.User, rn.Contact), buf.Bytes())
@@ -171,8 +176,8 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 }
 
 func (b *badgerDB) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	return b.db.Update(func(tx *badger.Txn) error {
 		vCard.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.vCardKey(username), buf.Bytes())
@@ -195,8 +200,8 @@ func (b *badgerDB) FetchVCard(username string) (xml.XElement, error) {
 }
 
 func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	return b.db.Update(func(tx *badger.Txn) error {
 		root := xml.NewElementName("r")
 		root.AppendElements(privateXML)
@@ -222,8 +227,8 @@ func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.XEl
 }
 
 func (b *badgerDB) InsertOfflineMessage(message xml.XElement, username string) error {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	return b.db.Update(func(tx *badger.Txn) error {
 		message.ToGob(gob.NewEncoder(buf))
 		return tx.Set(b.offlineMessageKey(username, message.ID()), buf.Bytes())
@@ -285,8 +290,8 @@ func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.Rost
 	if isDeletion {
 		v.DeletionVer = v.Ver
 	}
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
 	err = b.db.Update(func(txn *badger.Txn) error {
 		v.ToGob(gob.NewEncoder(buf))
 		return txn.Set(b.rosterVersionKey(username), buf.Bytes())

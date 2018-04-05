@@ -10,14 +10,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/bufferpool"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 )
-
-var pool = bufferpool.New()
 
 // ErrMockedError represents a storage mocked error value.
 var ErrMockedError = errors.New("storage mocked error")

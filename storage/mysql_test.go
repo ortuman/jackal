@@ -10,8 +10,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ortuman/jackal/pool"
+
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/bufferpool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -246,10 +247,10 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 		"romeo",
 		[]xml.XElement{xml.NewElementName("priority")},
 	}
-	pool := bufferpool.New()
+	p := pool.NewBufferPool()
 
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := p.Get()
+	defer p.Put(buf)
 	for _, elem := range rn.Elements {
 		buf.WriteString(elem.String())
 	}

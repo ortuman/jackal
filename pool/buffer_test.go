@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package bufferpool
+package pool
 
 import (
 	"reflect"
@@ -15,8 +15,8 @@ import (
 
 const randomBytesLength = 256
 
-func TestGetAndPut(t *testing.T) {
-	p := New()
+func TestBufferPool_GetAndPut(t *testing.T) {
+	p := NewBufferPool()
 
 	buf := p.Get()
 	require.Equal(t, "*bytes.Buffer", reflect.ValueOf(buf).Type().String())

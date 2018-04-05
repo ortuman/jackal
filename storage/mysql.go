@@ -15,23 +15,21 @@ import (
 	_ "github.com/go-sql-driver/mysql" // SQL driver
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 )
 
-type queryable interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-}
-
 type mySQLStorage struct {
 	db     *sql.DB
+	pool   *pool.BufferPool
 	doneCh chan chan bool
 }
 
 func newMySQLStorage(cfg *config.MySQLDb) *mySQLStorage {
 	var err error
 	s := &mySQLStorage{
+		pool:   pool.NewBufferPool(),
 		doneCh: make(chan chan bool),
 	}
 	host := cfg.Host
@@ -58,7 +56,9 @@ func newMySQLStorage(cfg *config.MySQLDb) *mySQLStorage {
 func newMockMySQLStorage() (*mySQLStorage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
-	s := &mySQLStorage{}
+	s := &mySQLStorage{
+		pool: pool.NewBufferPool(),
+	}
 	s.db, sqlMock, err = sqlmock.New()
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -230,8 +230,8 @@ func (s *mySQLStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotifica
 		` VALUES(?, ?, ?, NOW(), NOW())` +
 		` ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()`
 
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := s.pool.Get()
+	defer s.pool.Put(buf)
 	for _, elem := range rn.Elements {
 		buf.WriteString(elem.String())
 	}
@@ -253,8 +253,8 @@ func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterN
 	}
 	defer rows.Close()
 
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := s.pool.Get()
+	defer s.pool.Put(buf)
 
 	var ret []model.RosterNotification
 	for rows.Next() {
@@ -310,8 +310,8 @@ func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, names
 		` VALUES(?, ?, ?, NOW(), NOW())` +
 		` ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()`
 
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := s.pool.Get()
+	defer s.pool.Put(buf)
 	for _, elem := range privateXML {
 		elem.ToXML(buf, true)
 	}
@@ -326,8 +326,8 @@ func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml
 	err := row.Scan(&privateXML)
 	switch err {
 	case nil:
-		buf := pool.Get()
-		defer pool.Put(buf)
+		buf := s.pool.Get()
+		defer s.pool.Put(buf)
 		buf.WriteString("<root>")
 		buf.WriteString(privateXML)
 		buf.WriteString("</root>")
@@ -371,8 +371,8 @@ func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.XElement, er
 	}
 	defer rows.Close()
 
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := s.pool.Get()
+	defer s.pool.Put(buf)
 
 	buf.WriteString("<root>")
 	for rows.Next() {

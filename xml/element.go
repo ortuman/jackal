@@ -129,8 +129,8 @@ func (e *Element) Error() XElement {
 
 // String returns a string representation of the element.
 func (e *Element) String() string {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := bufPool.Get()
+	defer bufPool.Put(buf)
 
 	e.ToXML(buf, true)
 	return buf.String()

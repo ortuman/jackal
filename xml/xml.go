@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ortuman/jackal/bufferpool"
+	"github.com/ortuman/jackal/pool"
 )
 
-var pool = bufferpool.New()
+var bufPool = pool.NewBufferPool()
 
 // ErrorType represents an 'error' stanza type.
 const ErrorType = "error"

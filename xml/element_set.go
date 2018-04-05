@@ -85,8 +85,8 @@ func (es *elementSet) Count() int {
 }
 
 func (es *elementSet) String() string {
-	buf := pool.Get()
-	defer pool.Put(buf)
+	buf := bufPool.Get()
+	defer bufPool.Put(buf)
 	es.toXML(buf)
 	return buf.String()
 }
