@@ -412,13 +412,13 @@ func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
 	}
 	switch ri.Subscription {
 	case subscriptionRemove:
-		if err := r.removeRosterItem(ri); err != nil {
+		if err := r.removeItem(ri); err != nil {
 			r.errHandler(err)
 			r.stm.SendElement(iq.InternalServerError())
 			return
 		}
 	default:
-		if err := r.updateRosterItem(ri); err != nil {
+		if err := r.updateItem(ri); err != nil {
 			r.errHandler(err)
 			r.stm.SendElement(iq.InternalServerError())
 			return
@@ -427,7 +427,7 @@ func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
 	r.stm.SendElement(iq.ResultIQ())
 }
 
-func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
+func (r *ModRoster) removeItem(ri *model.RosterItem) error {
 	userJID := r.stm.JID()
 	contactJID := r.rosterItemJID(ri)
 
@@ -500,7 +500,7 @@ func (r *ModRoster) removeRosterItem(ri *model.RosterItem) error {
 	return nil
 }
 
-func (r *ModRoster) updateRosterItem(ri *model.RosterItem) error {
+func (r *ModRoster) updateItem(ri *model.RosterItem) error {
 	userJID := r.stm.JID()
 	contactJID := r.rosterItemJID(ri)
 
