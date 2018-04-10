@@ -3,7 +3,7 @@
 pid_path: /var/run/jackal.pid
 
 logger:
-  level: info
+  level: debug
   log_path: /var/log/jackal/jackal.log
 
 storage:
