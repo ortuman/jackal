@@ -14,7 +14,7 @@ before_install:
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
-  - go test -race -coverprofile=bufferpool.coverage.txt -covermode=atomic ./bufferpool
+  - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
   - go test -race -coverprofile=config.coverage.txt -covermode=atomic ./config
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
