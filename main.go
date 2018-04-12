@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/version"
 )
 
