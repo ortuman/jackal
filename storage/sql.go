@@ -254,8 +254,12 @@ func (s *mySQLStorage) DeleteRosterNotification(user, contact string) error {
 }
 
 func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	stmt := `SELECT user, contact, elements FROM roster_notifications WHERE contact = ? ORDER BY created_at`
-	rows, err := s.db.Query(stmt, contact)
+	q := sq.Select("user", "contact", "elements").
+		From("roster_notifications").
+		Where(sq.Eq{"contact": contact}).
+		OrderBy("created_at")
+
+	rows, err := q.RunWith(s.db).Query()
 	if err != nil {
 		return nil, err
 	}
