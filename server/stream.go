@@ -6,6 +6,7 @@
 package server
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -63,6 +64,10 @@ var (
 )
 
 type srvStreamContext struct {
+	username         string
+	domain           string
+	resource         string
+	jid              *xml.JID
 	secured          bool
 	authenticated    bool
 	compressed       bool
@@ -78,10 +83,6 @@ type srvStream struct {
 	id          string
 	connected   uint32
 	state       uint32
-	username    string
-	domain      string
-	resource    string
-	jid         *xml.JID
 	ctx         srvStreamContext
 	authrs      []authenticator
 	activeAuthr authenticator
@@ -107,8 +108,8 @@ func newStream(id string, tr transport.Transport, cfg *config.Server) *srvStream
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// assign default domain
-	s.domain = c2s.Instance().DefaultLocalDomain()
-	s.jid, _ = xml.NewJID("", s.domain, "", true)
+	s.ctx.domain = c2s.Instance().DefaultLocalDomain()
+	s.ctx.jid, _ = xml.NewJID("", s.ctx.domain, "", true)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -134,28 +135,28 @@ func (s *srvStream) ID() string {
 func (s *srvStream) Username() string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.username
+	return s.ctx.username
 }
 
 // Domain returns current stream domain.
 func (s *srvStream) Domain() string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.domain
+	return s.ctx.domain
 }
 
 // Resource returns current stream resource.
 func (s *srvStream) Resource() string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.resource
+	return s.ctx.resource
 }
 
 // JID returns current user JID.
 func (s *srvStream) JID() *xml.JID {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.jid
+	return s.ctx.jid
 }
 
 // Priority returns current presence priority.
@@ -334,11 +335,11 @@ func (s *srvStream) handleConnecting(elem xml.XElement) {
 	}
 	// assign stream domain
 	s.lock.Lock()
-	s.domain = elem.To()
+	s.ctx.domain = elem.To()
 	s.lock.Unlock()
 
 	// open stream
-	s.openStreamElement()
+	s.openStream()
 
 	features := xml.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
@@ -601,9 +602,9 @@ func (s *srvStream) finishAuthentication(username string) {
 		s.activeAuthr = nil
 	}
 	s.lock.Lock()
-	s.username = username
+	s.ctx.username = username
 	s.ctx.authenticated = true
-	s.jid, _ = xml.NewJID(s.username, s.domain, "", true)
+	s.ctx.jid, _ = xml.NewJID(s.ctx.username, s.ctx.domain, "", true)
 	s.lock.Unlock()
 
 	s.restart()
@@ -656,8 +657,8 @@ func (s *srvStream) bindResource(iq *xml.IQ) {
 		return
 	}
 	s.lock.Lock()
-	s.resource = resource
-	s.jid = userJID
+	s.ctx.resource = resource
+	s.ctx.jid = userJID
 	s.lock.Unlock()
 
 	log.Infof("binded resource... (%s/%s)", s.Username(), s.Resource())
@@ -902,16 +903,17 @@ func (s *srvStream) disconnect(err error) {
 	}
 }
 
-func (s *srvStream) openStreamElement() {
+func (s *srvStream) openStream() {
 	var ops *xml.Element
 	var includeClosing bool
 
+	buf := &bytes.Buffer{}
 	switch s.cfg.Transport.Type {
 	case config.SocketTransportType:
 		ops = xml.NewElementName("stream:stream")
 		ops.SetAttribute("xmlns", jabberClientNamespace)
 		ops.SetAttribute("xmlns:stream", streamNamespace)
-		s.tr.WriteString(`<?xml version="1.0"?>`)
+		buf.WriteString(`<?xml version="1.0"?>`)
 
 	case config.WebSocketTransportType:
 		ops = xml.NewElementName("open")
@@ -924,8 +926,11 @@ func (s *srvStream) openStreamElement() {
 	ops.SetAttribute("id", uuid.New())
 	ops.SetAttribute("from", s.Domain())
 	ops.SetAttribute("version", "1.0")
+	ops.ToXML(buf, includeClosing)
 
-	s.tr.WriteElement(ops, includeClosing)
+	openStr := buf.String()
+	log.Debugf("SEND: %s", openStr)
+	s.tr.WriteString(openStr)
 }
 
 func (s *srvStream) buildStanza(elem xml.XElement, validateFrom bool) (xml.XElement, *xml.JID, error) {
@@ -1054,7 +1059,7 @@ func (s *srvStream) isComponentDomain(domain string) bool {
 
 func (s *srvStream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == connecting {
-		s.openStreamElement()
+		s.openStream()
 	}
 	s.writeElement(err.Element())
 	s.disconnectClosingStream(true)

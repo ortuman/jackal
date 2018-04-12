@@ -13,7 +13,6 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/stream/c2s"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server"
