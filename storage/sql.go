@@ -232,18 +232,18 @@ func (s *mySQLStorage) FetchRosterItem(user, contact string) (*model.RosterItem,
 }
 
 func (s *mySQLStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	stmt := `` +
-		`INSERT INTO roster_notifications (user, contact, elements, updated_at, created_at)` +
-		` VALUES(?, ?, ?, NOW(), NOW())` +
-		` ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()`
-
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	for _, elem := range rn.Elements {
 		buf.WriteString(elem.String())
 	}
 	elementsXML := buf.String()
-	_, err := s.db.Exec(stmt, rn.User, rn.Contact, elementsXML, elementsXML)
+
+	q := sq.Insert("roster_notifications").
+		Columns("user", "contact", "elements", "updated_at", "created_at").
+		Values(rn.User, rn.Contact, elementsXML, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", elementsXML)
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
