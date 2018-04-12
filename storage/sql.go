@@ -18,6 +18,11 @@ import (
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
+	sq "gopkg.in/Masterminds/squirrel.v1"
+)
+
+var (
+	nowExpr = sq.Expr("NOW()")
 )
 
 type mySQLStorage struct {
@@ -73,19 +78,20 @@ func (s *mySQLStorage) Shutdown() {
 }
 
 func (s *mySQLStorage) InsertOrUpdateUser(u *model.User) error {
-	stmt := `` +
-		`INSERT INTO users (username, password, updated_at, created_at)` +
-		` VALUES(?, ?, NOW(), NOW())` +
-		` ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()`
-	_, err := s.db.Exec(stmt, u.Username, u.Password, u.Password)
+	q := sq.Insert("users").
+		Columns("username", "password", "updated_at", "created_at").
+		Values(u.Username, u.Password, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE password = ?, updated = NOW()", u.Password)
+
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 func (s *mySQLStorage) FetchUser(username string) (*model.User, error) {
-	row := s.db.QueryRow("SELECT username, password FROM users WHERE username = ?", username)
+	q := sq.Select("username", "password").From("users").Where(sq.Eq{"username": username})
 
 	var usr model.User
-	err := row.Scan(&usr.Username, &usr.Password)
+	err := q.RunWith(s.db).QueryRow().Scan(&usr.Username, &usr.Password)
 	switch err {
 	case nil:
 		return &usr, nil
@@ -97,28 +103,41 @@ func (s *mySQLStorage) FetchUser(username string) (*model.User, error) {
 }
 
 func (s *mySQLStorage) DeleteUser(username string) error {
-	stmts := []string{
-		"DELETE FROM offline_messages WHERE username = ?",
-		"DELETE FROM roster_items WHERE username = ?",
-		"DELETE FROM roster_versions WHERE username = ?",
-		"DELETE FROM private_storage WHERE username = ?",
-		"DELETE FROM vcards WHERE username = ?",
-		"DELETE FROM users WHERE username = ?",
-	}
 	return s.inTransaction(func(tx *sql.Tx) error {
-		for _, stmt := range stmts {
-			if _, err := tx.Exec(stmt, username); err != nil {
-				return err
-			}
+		var err error
+		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		_, err = sq.Delete("roster_items").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		_, err = sq.Delete("roster_versions").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		_, err = sq.Delete("private_storage").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		_, err = sq.Delete("vcards").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		_, err = sq.Delete("users").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
 		}
 		return nil
 	})
 }
 
 func (s *mySQLStorage) UserExists(username string) (bool, error) {
-	row := s.db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username)
+	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})
+
 	var count int
-	err := row.Scan(&count)
+	err := q.RunWith(s.db).QueryRow().Scan(&count)
 	switch err {
 	case nil:
 		return count > 0, nil
@@ -128,71 +147,60 @@ func (s *mySQLStorage) UserExists(username string) (bool, error) {
 }
 
 func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	groups := strings.Join(ri.Groups, ";")
-	params := []interface{}{
-		ri.User,
-		ri.Contact,
-		ri.Name,
-		ri.Subscription,
-		groups,
-		ri.Ask,
-		ri.User,
-		ri.Name,
-		ri.Subscription,
-		groups,
-		ri.Ask,
-	}
-	var ver model.RosterVersion
 	err := s.inTransaction(func(tx *sql.Tx) error {
-		stmt := `` +
-			`INSERT INTO roster_versions (username, created_at, updated_at) VALUES(?, NOW(), NOW())` +
-			` ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()`
-		if _, err := s.db.Exec(stmt, ri.User); err != nil {
+		q := sq.Insert("roster_versions").
+			Columns("username", "created_at", "updated_at").
+			Values(ri.User, nowExpr, nowExpr).
+			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()")
+
+		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
+		groups := strings.Join(ri.Groups, ";")
 
-		stmt = `` +
-			`INSERT INTO roster_items (user, contact, name, subscription, groups, ask, ver, updated_at, created_at)` +
-			` VALUES(?, ?, ?, ?, ?, ?, (SELECT ver FROM roster_versions WHERE username = ?), NOW(), NOW())` +
-			` ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, ver = ver + 1, updated_at = NOW()`
-		_, err := s.db.Exec(stmt, params...)
+		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.User)
+		q = sq.Insert("roster_items").
+			Columns("user", "contact", "name", "subscription", "groups", "ask", "ver", "created_at", "updated_at").
+			Values(ri.User, ri.Contact, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
+			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
+
+		_, err := q.RunWith(tx).Exec()
 		return err
 	})
 	if err != nil {
-		return ver, err
+		return model.RosterVersion{}, err
 	}
-	ver, err = s.fetchRosterVer(ri.User)
-	return ver, err
+	return s.fetchRosterVer(ri.User)
 }
 
 func (s *mySQLStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
-	var ver model.RosterVersion
 	err := s.inTransaction(func(tx *sql.Tx) error {
-		stmt := `` +
-			`INSERT INTO roster_versions (username, created_at, updated_at) VALUES(?, NOW(), NOW())` +
-			` ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()`
-		if _, err := tx.Exec(stmt, user); err != nil {
+		q := sq.Insert("roster_versions").
+			Columns("username", "created_at", "updated_at").
+			Values(user, nowExpr, nowExpr).
+			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()")
+
+		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
-
-		stmt = `DELETE FROM roster_items WHERE user = ? AND contact = ?`
-		_, err := tx.Exec(stmt, user, contact)
+		_, err := sq.Delete("roster_items").
+			Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}}).
+			RunWith(tx).Exec()
 		return err
 	})
 	if err != nil {
-		return ver, err
+		return model.RosterVersion{}, err
 	}
-	ver, err = s.fetchRosterVer(user)
-	return ver, err
+	return s.fetchRosterVer(user)
 }
 
 func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	stmt := `` +
-		`SELECT user, contact, name, subscription, groups, ask, ver` +
-		` FROM roster_items WHERE  user = ?` +
-		` ORDER BY created_at DESC`
+	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
+		From("roster_items").
+		Where(sq.Eq{"user": user}).
+		OrderBy("created_at DESC")
 
-	rows, err := s.db.Query(stmt, user)
+	rows, err := q.RunWith(s.db).Query()
 	if err != nil {
 		return nil, model.RosterVersion{}, err
 	}
@@ -207,13 +215,12 @@ func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, model.
 }
 
 func (s *mySQLStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	stmt := `` +
-		`SELECT user, contact, name, subscription, groups, ask, ver` +
-		` FROM roster_items WHERE user = ? AND contact = ?`
-	row := s.db.QueryRow(stmt, user, contact)
+	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
+		From("roster_items").
+		Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
 
 	var ri model.RosterItem
-	err := scanRosterItemEntity(&ri, row)
+	err := scanRosterItemEntity(&ri, q.RunWith(s.db).QueryRow())
 	switch err {
 	case nil:
 		return &ri, nil
@@ -241,7 +248,8 @@ func (s *mySQLStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotifica
 }
 
 func (s *mySQLStorage) DeleteRosterNotification(user, contact string) error {
-	_, err := s.db.Exec("DELETE FROM roster_notifications WHERE user = ? AND contact = ?", user, contact)
+	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
@@ -279,20 +287,21 @@ func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterN
 }
 
 func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
-	stmt := `` +
-		`INSERT INTO vcards (username, vcard, updated_at, created_at)` +
-		` VALUES(?, ?, NOW(), NOW())` +
-		` ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()`
-
 	rawXML := vCard.String()
-	_, err := s.db.Exec(stmt, username, rawXML, rawXML)
+	q := sq.Insert("vcards").
+		Columns("username", "vcard", "updated_at", "created_at").
+		Values(username, rawXML, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()", rawXML)
+
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 func (s *mySQLStorage) FetchVCard(username string) (xml.XElement, error) {
-	row := s.db.QueryRow("SELECT vcard FROM vcards WHERE username = ?", username)
+	q := sq.Select("vcard").From("vcards").Where(sq.Eq{"username": username})
+
 	var vCard string
-	err := row.Scan(&vCard)
+	err := q.RunWith(s.db).QueryRow().Scan(&vCard)
 	switch err {
 	case nil:
 		parser := xml.NewParser(strings.NewReader(vCard))
@@ -305,25 +314,29 @@ func (s *mySQLStorage) FetchVCard(username string) (xml.XElement, error) {
 }
 
 func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
-	stmt := `` +
-		`INSERT INTO private_storage (username, namespace, data, updated_at, created_at)` +
-		` VALUES(?, ?, ?, NOW(), NOW())` +
-		` ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()`
-
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	for _, elem := range privateXML {
 		elem.ToXML(buf, true)
 	}
 	rawXML := buf.String()
-	_, err := s.db.Exec(stmt, username, namespace, rawXML, rawXML)
+
+	q := sq.Insert("private_storage").
+		Columns("username", "namespace", "data", "updated_at", "created_at").
+		Values(username, namespace, rawXML, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()", rawXML)
+
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
-	row := s.db.QueryRow("SELECT data FROM private_storage WHERE username = ? AND namespace = ?", username, namespace)
+	q := sq.Select("data").
+		From("private_storage").
+		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"namespace": namespace}})
+
 	var privateXML string
-	err := row.Scan(&privateXML)
+	err := q.RunWith(s.db).QueryRow().Scan(&privateXML)
 	switch err {
 	case nil:
 		buf := s.pool.Get()
@@ -347,15 +360,21 @@ func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml
 }
 
 func (s *mySQLStorage) InsertOfflineMessage(message xml.XElement, username string) error {
-	stmt := `INSERT INTO offline_messages (username, data, created_at) VALUES(?, ?, NOW())`
-	_, err := s.db.Exec(stmt, username, message.String())
+	q := sq.Insert("offline_messages").
+		Columns("username", "data", "created_at").
+		Values(username, message.String(), nowExpr)
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 func (s *mySQLStorage) CountOfflineMessages(username string) (int, error) {
-	row := s.db.QueryRow("SELECT COUNT(*) FROM offline_messages WHERE username = ? ORDER BY created_at", username)
+	q := sq.Select("COUNT(*)").
+		From("offline_messages").
+		Where(sq.Eq{"username": username}).
+		OrderBy("created_at")
+
 	var count int
-	err := row.Scan(&count)
+	err := q.RunWith(s.db).Scan(&count)
 	switch err {
 	case nil:
 		return count, nil
@@ -365,7 +384,12 @@ func (s *mySQLStorage) CountOfflineMessages(username string) (int, error) {
 }
 
 func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
-	rows, err := s.db.Query("SELECT data FROM offline_messages WHERE username = ? ORDER BY created_at", username)
+	q := sq.Select("data").
+		From("offline_messages").
+		Where(sq.Eq{"username": username}).
+		OrderBy("created_at")
+
+	rows, err := q.RunWith(s.db).Query()
 	if err != nil {
 		return nil, err
 	}
@@ -391,14 +415,18 @@ func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.XElement, er
 }
 
 func (s *mySQLStorage) DeleteOfflineMessages(username string) error {
-	_, err := s.db.Exec("DELETE FROM offline_messages WHERE username = ?", username)
+	q := sq.Delete("offline_messages").Where(sq.Eq{"username": username})
+	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 func (s *mySQLStorage) fetchRosterVer(username string) (model.RosterVersion, error) {
+	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
+		From("roster_versions").
+		Where(sq.Eq{"username": username})
+
 	var ver model.RosterVersion
-	stmt := `SELECT IFNULL(MAX(ver), 0), IFNULL(MAX(last_deletion_ver), 0) FROM roster_versions WHERE username = ?`
-	row := s.db.QueryRow(stmt, username)
+	row := q.RunWith(s.db).QueryRow()
 	err := row.Scan(&ver.Ver, &ver.DeletionVer)
 	switch err {
 	case nil:
