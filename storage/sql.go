@@ -25,15 +25,15 @@ var (
 	nowExpr = sq.Expr("NOW()")
 )
 
-type mySQLStorage struct {
+type sqlStorage struct {
 	db     *sql.DB
 	pool   *pool.BufferPool
 	doneCh chan chan bool
 }
 
-func newMySQLStorage(cfg *config.MySQLDb) *mySQLStorage {
+func newMySQLStorage(cfg *config.MySQLDb) *sqlStorage {
 	var err error
-	s := &mySQLStorage{
+	s := &sqlStorage{
 		pool:   pool.NewBufferPool(),
 		doneCh: make(chan chan bool),
 	}
@@ -43,7 +43,7 @@ func newMySQLStorage(cfg *config.MySQLDb) *mySQLStorage {
 	db := cfg.Database
 	poolSize := cfg.PoolSize
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, pass, host, db)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", user, pass, host, db)
 	s.db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -58,10 +58,10 @@ func newMySQLStorage(cfg *config.MySQLDb) *mySQLStorage {
 	return s
 }
 
-func newMockMySQLStorage() (*mySQLStorage, sqlmock.Sqlmock) {
+func newMockMySQLStorage() (*sqlStorage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
-	s := &mySQLStorage{
+	s := &sqlStorage{
 		pool: pool.NewBufferPool(),
 	}
 	s.db, sqlMock, err = sqlmock.New()
@@ -71,27 +71,29 @@ func newMockMySQLStorage() (*mySQLStorage, sqlmock.Sqlmock) {
 	return s, sqlMock
 }
 
-func (s *mySQLStorage) Shutdown() {
+func (s *sqlStorage) Shutdown() {
 	ch := make(chan bool)
 	s.doneCh <- ch
 	<-ch
 }
 
-func (s *mySQLStorage) InsertOrUpdateUser(u *model.User) error {
+func (s *sqlStorage) InsertOrUpdateUser(u *model.User) error {
 	q := sq.Insert("users").
-		Columns("username", "password", "updated_at", "created_at").
-		Values(u.Username, u.Password, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE password = ?, updated = NOW()", u.Password)
+		Columns("username", "password", "logged_out_status", "logged_out_at", "updated_at", "created_at").
+		Values(u.Username, u.Password, u.LoggedOutStatus, nowExpr, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE password = ?, logged_out_status = ?, logged_out_at = ?, updated_at = NOW()", u.Password, u.LoggedOutStatus, u.LoggedOutAt)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
-func (s *mySQLStorage) FetchUser(username string) (*model.User, error) {
-	q := sq.Select("username", "password").From("users").Where(sq.Eq{"username": username})
+func (s *sqlStorage) FetchUser(username string) (*model.User, error) {
+	q := sq.Select("username", "password", "logged_out_status", "logged_out_at").
+		From("users").
+		Where(sq.Eq{"username": username})
 
 	var usr model.User
-	err := q.RunWith(s.db).QueryRow().Scan(&usr.Username, &usr.Password)
+	err := q.RunWith(s.db).QueryRow().Scan(&usr.Username, &usr.Password, &usr.LoggedOutStatus, &usr.LoggedOutAt)
 	switch err {
 	case nil:
 		return &usr, nil
@@ -102,7 +104,7 @@ func (s *mySQLStorage) FetchUser(username string) (*model.User, error) {
 	}
 }
 
-func (s *mySQLStorage) DeleteUser(username string) error {
+func (s *sqlStorage) DeleteUser(username string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		var err error
 		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
@@ -133,7 +135,7 @@ func (s *mySQLStorage) DeleteUser(username string) error {
 	})
 }
 
-func (s *mySQLStorage) UserExists(username string) (bool, error) {
+func (s *sqlStorage) UserExists(username string) (bool, error) {
 	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})
 
 	var count int
@@ -146,7 +148,7 @@ func (s *mySQLStorage) UserExists(username string) (bool, error) {
 	}
 }
 
-func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
+func (s *sqlStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
@@ -173,7 +175,7 @@ func (s *mySQLStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Ros
 	return s.fetchRosterVer(ri.User)
 }
 
-func (s *mySQLStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
+func (s *sqlStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
@@ -194,7 +196,7 @@ func (s *mySQLStorage) DeleteRosterItem(user, contact string) (model.RosterVersi
 	return s.fetchRosterVer(user)
 }
 
-func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
+func (s *sqlStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
 	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.Eq{"user": user}).
@@ -214,7 +216,7 @@ func (s *mySQLStorage) FetchRosterItems(user string) ([]model.RosterItem, model.
 	return items, ver, nil
 }
 
-func (s *mySQLStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
+func (s *sqlStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
 	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
@@ -231,7 +233,7 @@ func (s *mySQLStorage) FetchRosterItem(user, contact string) (*model.RosterItem,
 	}
 }
 
-func (s *mySQLStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
+func (s *sqlStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	for _, elem := range rn.Elements {
@@ -247,13 +249,13 @@ func (s *mySQLStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotifica
 	return err
 }
 
-func (s *mySQLStorage) DeleteRosterNotification(user, contact string) error {
+func (s *sqlStorage) DeleteRosterNotification(user, contact string) error {
 	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
-func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
+func (s *sqlStorage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
 	q := sq.Select("user", "contact", "elements").
 		From("roster_notifications").
 		Where(sq.Eq{"contact": contact}).
@@ -290,7 +292,7 @@ func (s *mySQLStorage) FetchRosterNotifications(contact string) ([]model.RosterN
 	return ret, nil
 }
 
-func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
+func (s *sqlStorage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
 	rawXML := vCard.String()
 	q := sq.Insert("vcards").
 		Columns("username", "vcard", "updated_at", "created_at").
@@ -301,7 +303,7 @@ func (s *mySQLStorage) InsertOrUpdateVCard(vCard xml.XElement, username string) 
 	return err
 }
 
-func (s *mySQLStorage) FetchVCard(username string) (xml.XElement, error) {
+func (s *sqlStorage) FetchVCard(username string) (xml.XElement, error) {
 	q := sq.Select("vcard").From("vcards").Where(sq.Eq{"username": username})
 
 	var vCard string
@@ -317,7 +319,7 @@ func (s *mySQLStorage) FetchVCard(username string) (xml.XElement, error) {
 	}
 }
 
-func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
+func (s *sqlStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	for _, elem := range privateXML {
@@ -334,7 +336,7 @@ func (s *mySQLStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, names
 	return err
 }
 
-func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
+func (s *sqlStorage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
 	q := sq.Select("data").
 		From("private_storage").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"namespace": namespace}})
@@ -363,7 +365,7 @@ func (s *mySQLStorage) FetchPrivateXML(namespace string, username string) ([]xml
 	}
 }
 
-func (s *mySQLStorage) InsertOfflineMessage(message xml.XElement, username string) error {
+func (s *sqlStorage) InsertOfflineMessage(message xml.XElement, username string) error {
 	q := sq.Insert("offline_messages").
 		Columns("username", "data", "created_at").
 		Values(username, message.String(), nowExpr)
@@ -371,7 +373,7 @@ func (s *mySQLStorage) InsertOfflineMessage(message xml.XElement, username strin
 	return err
 }
 
-func (s *mySQLStorage) CountOfflineMessages(username string) (int, error) {
+func (s *sqlStorage) CountOfflineMessages(username string) (int, error) {
 	q := sq.Select("COUNT(*)").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -387,7 +389,7 @@ func (s *mySQLStorage) CountOfflineMessages(username string) (int, error) {
 	}
 }
 
-func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
+func (s *sqlStorage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
 	q := sq.Select("data").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -418,13 +420,13 @@ func (s *mySQLStorage) FetchOfflineMessages(username string) ([]xml.XElement, er
 	return rootEl.Elements().All(), nil
 }
 
-func (s *mySQLStorage) DeleteOfflineMessages(username string) error {
+func (s *sqlStorage) DeleteOfflineMessages(username string) error {
 	q := sq.Delete("offline_messages").Where(sq.Eq{"username": username})
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
-func (s *mySQLStorage) fetchRosterVer(username string) (model.RosterVersion, error) {
+func (s *sqlStorage) fetchRosterVer(username string) (model.RosterVersion, error) {
 	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
 		From("roster_versions").
 		Where(sq.Eq{"username": username})
@@ -440,7 +442,7 @@ func (s *mySQLStorage) fetchRosterVer(username string) (model.RosterVersion, err
 	}
 }
 
-func (s *mySQLStorage) loop() {
+func (s *sqlStorage) loop() {
 	tc := time.NewTicker(time.Second * 15)
 	defer tc.Stop()
 	for {
@@ -458,7 +460,7 @@ func (s *mySQLStorage) loop() {
 	}
 }
 
-func (s *mySQLStorage) inTransaction(f func(tx *sql.Tx) error) error {
+func (s *sqlStorage) inTransaction(f func(tx *sql.Tx) error) error {
 	tx, txErr := s.db.Begin()
 	if txErr != nil {
 		return txErr

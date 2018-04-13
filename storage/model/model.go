@@ -8,13 +8,17 @@ package model
 import (
 	"encoding/gob"
 
+	"time"
+
 	"github.com/ortuman/jackal/xml"
 )
 
 // User represents a user storage entity.
 type User struct {
-	Username string
-	Password string
+	Username        string
+	Password        string
+	LoggedOutStatus string
+	LoggedOutAt     time.Time
 }
 
 // NewUserFromGob deserializes a User entity

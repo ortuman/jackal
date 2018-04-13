@@ -212,7 +212,7 @@ func TestStream_SendPresence(t *testing.T) {
 
 	require.Equal(t, int8(5), stm.Priority())
 	x := xml.NewElementName("x")
-	x.AppendElements(stm.PresenceElements())
+	x.AppendElements(stm.Presence().Elements().All())
 	require.NotNil(t, x.Elements().Child("show"))
 	require.NotNil(t, x.Elements().Child("status"))
 	require.NotNil(t, x.Elements().Child("priority"))

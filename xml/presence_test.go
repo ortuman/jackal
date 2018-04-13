@@ -108,14 +108,14 @@ func TestPresenceBuild(t *testing.T) {
 	elem.AppendElement(status)
 	presence, err = xml.NewPresenceFromElement(elem, j, j)
 	require.Nil(t, err)
-	require.Equal(t, "Readable text", presence.Elements().Child("status").Text())
+	require.Equal(t, "Readable text", presence.Status())
 
 	elem.ClearElements()
 	status.RemoveAttribute("xml:lang")
 	elem.AppendElement(status)
 	presence, err = xml.NewPresenceFromElement(elem, j, j)
 	require.Nil(t, err)
-	require.Equal(t, "Readable text", presence.Elements().Child("status").Text())
+	require.Equal(t, "Readable text", presence.Status())
 }
 
 func TestPresenceType(t *testing.T) {

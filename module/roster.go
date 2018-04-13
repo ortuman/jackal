@@ -23,14 +23,6 @@ import (
 
 const rosterNamespace = "jabber:iq:roster"
 
-const (
-	subscriptionNone   = "none"
-	subscriptionFrom   = "from"
-	subscriptionTo     = "to"
-	subscriptionBoth   = "both"
-	subscriptionRemove = "remove"
-)
-
 type roster struct {
 	mu    sync.RWMutex
 	ver   model.RosterVersion
@@ -806,8 +798,8 @@ func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType 
 	fromStreams := c2s.Instance().AvailableStreams(from.Node())
 	for _, fromStream := range fromStreams {
 		p := xml.NewPresence(fromStream.JID(), to.ToBareJID(), presenceType)
-		if presenceType == xml.AvailableType {
-			p.AppendElements(fromStream.PresenceElements())
+		if presence := fromStream.Presence(); presence != nil && presenceType == xml.AvailableType {
+			p.AppendElements(presence.Elements().All())
 		}
 		r.routePresence(p, to)
 	}

@@ -131,6 +131,14 @@ func (p *Presence) IsUnsubscribed() bool {
 	return p.Type() == UnsubscribedType
 }
 
+// Status returns presence stanza default status.
+func (p *Presence) Status() string {
+	if st := p.Elements().Child("status"); st != nil {
+		return st.Text()
+	}
+	return ""
+}
+
 // ShowState returns presence stanza show state.
 func (p *Presence) ShowState() ShowState {
 	return p.showState

@@ -42,13 +42,17 @@ servers:
       - scram_sha_256
 
     modules:
-      - roster       # Roster
-      - private      # XEP-0049: Private XML Storage
-      - vcard        # XEP-0054: vcard-temp
-      - registration # XEP-0077: In-Band Registration
-      - version      # XEP-0092: Software Version
-      - ping         # XEP-0199: XMPP Ping
-      - offline      # Offline storage
+      - roster        # Roster
+      - last_activity # XEP-0012: Last Activity
+      - private       # XEP-0049: Private XML Storage
+      - vcard         # XEP-0054: vcard-temp
+      - registration  # XEP-0077: In-Band Registration
+      - version       # XEP-0092: Software Version
+      - ping          # XEP-0199: XMPP Ping
+      - offline       # Offline storage
+
+    mod_roster:
+      versioning: true
 
     mod_offline:
       queue_size: 2500

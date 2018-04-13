@@ -13,21 +13,21 @@ import (
 
 // MockStream represents a mocked c2s stream.
 type MockStream struct {
-	mu               sync.RWMutex
-	id               string
-	username         string
-	domain           string
-	resource         string
-	jid              *xml.JID
-	priority         int8
-	disconnected     bool
-	secured          bool
-	authenticated    bool
-	compressed       bool
-	rosterRequested  bool
-	presenceElements []xml.XElement
-	elemCh           chan xml.XElement
-	discCh           chan error
+	mu              sync.RWMutex
+	id              string
+	username        string
+	domain          string
+	resource        string
+	jid             *xml.JID
+	priority        int8
+	disconnected    bool
+	secured         bool
+	authenticated   bool
+	compressed      bool
+	rosterRequested bool
+	presence        *xml.Presence
+	elemCh          chan xml.XElement
+	discCh          chan error
 }
 
 // NewMockStream returns a new mocked stream instance.
@@ -211,19 +211,19 @@ func (m *MockStream) IsRosterRequested() bool {
 	return m.rosterRequested
 }
 
-// PresenceElements returns last available sent presence sub elements.
-func (m *MockStream) PresenceElements() []xml.XElement {
+// Presence returns last sent presence element.
+func (m *MockStream) Presence() *xml.Presence {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.presenceElements
+	return m.presence
 }
 
-// SetPresenceElements sets the mocked stream last received
-// presence elements.
-func (m *MockStream) SetPresenceElements(presenceElements []xml.XElement) {
+// SetPresence sets the mocked stream last received
+// presence element.
+func (m *MockStream) SetPresence(presence *xml.Presence) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.presenceElements = presenceElements
+	m.presence = presence
 }
 
 // SendElement sends the given XML element.

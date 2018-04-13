@@ -23,6 +23,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/util"
@@ -64,16 +65,17 @@ var (
 )
 
 type c2sContext struct {
-	username         string
-	domain           string
-	resource         string
-	jid              *xml.JID
-	secured          bool
-	authenticated    bool
-	compressed       bool
-	available        bool
-	priority         int8
-	presenceElements []xml.XElement
+	username      string
+	domain        string
+	resource      string
+	jid           *xml.JID
+	secured       bool
+	authenticated bool
+	compressed    bool
+	priority      int8
+	presence      *xml.Presence
+	rosterOnce    uint32
+	offlineOnce   uint32
 }
 
 type c2sStream struct {
@@ -87,11 +89,9 @@ type c2sStream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
-	rosterOnce  sync.Once
 	roster      *module.ModRoster
 	register    *module.XEPRegister
 	ping        *module.XEPPing
-	offlineOnce sync.Once
 	offline     *module.ModOffline
 	actorCh     chan func()
 }
@@ -197,11 +197,11 @@ func (s *c2sStream) IsRosterRequested() bool {
 	return false
 }
 
-// PresenceElements returns last available sent presence sub elements.
-func (s *c2sStream) PresenceElements() []xml.XElement {
+// Presence returns last sent presence element.
+func (s *c2sStream) Presence() *xml.Presence {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	return s.ctx.presenceElements
+	return s.ctx.presence
 }
 
 // SendElement sends the given XML element.
@@ -241,6 +241,11 @@ func (s *c2sStream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
 	s.roster = module.NewRoster(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
+
+	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
+	if _, ok := s.cfg.Modules["last_activity"]; ok {
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPLastActivity(s))
+	}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	discoInfo := module.NewXEPDiscoInfo(s)
@@ -763,29 +768,23 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 	// set resource priority & availability
 	s.lock.Lock()
 	s.ctx.priority = presence.Priority()
-	if presence.IsAvailable() {
-		s.ctx.available = true
-		s.ctx.presenceElements = presence.Elements().All()
-	} else if presence.IsUnavailable() {
-		s.ctx.available = false
-		s.ctx.presenceElements = nil
-	}
+	s.ctx.presence = presence
 	s.lock.Unlock()
 
 	// deliver pending approval notifications
 	if s.roster != nil {
-		s.rosterOnce.Do(func() {
+		if atomic.CompareAndSwapUint32(&s.ctx.rosterOnce, 0, 1) {
 			s.roster.DeliverPendingApprovalNotifications()
 			s.roster.ReceivePresences()
-		})
+		}
 		s.roster.BroadcastPresence(presence)
 	}
 
 	// deliver offline messages
 	if s.offline != nil && s.Priority() >= 0 {
-		s.offlineOnce.Do(func() {
+		if atomic.CompareAndSwapUint32(&s.ctx.offlineOnce, 0, 1) {
 			s.offline.DeliverOfflineMessages()
-		})
+		}
 	}
 }
 
@@ -927,9 +926,9 @@ func (s *c2sStream) openStream() {
 	ops.SetAttribute("version", "1.0")
 	ops.ToXML(buf, includeClosing)
 
-	openStr := buf.String()
-	log.Debugf("SEND: %s", openStr)
-	s.tr.WriteString(openStr)
+	log.Debugf("SEND: %v", ops)
+
+	s.tr.WriteString(buf.String())
 }
 
 func (s *c2sStream) buildStanza(elem xml.XElement, validateFrom bool) (xml.XElement, *xml.JID, error) {
@@ -1065,11 +1064,10 @@ func (s *c2sStream) disconnectWithStreamError(err *streamerror.Error) {
 }
 
 func (s *c2sStream) disconnectClosingStream(closeStream bool) {
-	s.lock.RLock()
-	available := s.ctx.available
-	s.lock.RUnlock()
-
-	if available && s.roster != nil {
+	if err := s.updateLogoutInfo(); err != nil {
+		log.Error(err)
+	}
+	if presence := s.Presence(); presence != nil && presence.IsAvailable() && s.roster != nil {
 		s.roster.BroadcastPresenceAndWait(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
 	}
 	if closeStream {
@@ -1093,6 +1091,19 @@ func (s *c2sStream) disconnectClosingStream(closeStream bool) {
 	}
 	s.setState(disconnected)
 	s.tr.Close()
+}
+
+func (s *c2sStream) updateLogoutInfo() error {
+	var usr *model.User
+	var err error
+	if usr, err = storage.Instance().FetchUser(s.Username()); usr != nil && err == nil {
+		usr.LoggedOutAt = time.Now()
+		if presence := s.Presence(); presence.IsUnavailable() {
+			usr.LoggedOutStatus = presence.Status()
+		}
+		return storage.Instance().InsertOrUpdateUser(usr)
+	}
+	return err
 }
 
 func (s *c2sStream) setState(state uint32) {
