@@ -28,7 +28,7 @@ jackal supports the following features:
 - Customizable
 - Enforced SSL/TLS
 - Stream compression (zlib)
-- Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7.x)
+- Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+)
 - Cross-platform (OS X, Linux)
 
 ## Installing
