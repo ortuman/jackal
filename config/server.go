@@ -13,7 +13,7 @@ import (
 
 const defaultTransportPort = 5222
 
-const defaultTransportBufferSize = 4096
+const defaultTransportMaxStanzaSize = 32768
 
 const defaultTransportConnectTimeout = 5
 const defaultTransportKeepAlive = 120
@@ -213,7 +213,7 @@ type Transport struct {
 	Port           int
 	ConnectTimeout int
 	KeepAlive      int
-	BufferSize     int
+	MaxStanzaSize  int
 }
 
 type transportProxyType struct {
@@ -223,7 +223,6 @@ type transportProxyType struct {
 	ConnectTimeout int    `yaml:"connect_timeout"`
 	KeepAlive      int    `yaml:"keep_alive"`
 	MaxStanzaSize  int    `yaml:"max_stanza_size"`
-	BufferSize     int    `yaml:"buf_size"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -258,9 +257,9 @@ func (t *Transport) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if t.KeepAlive == 0 {
 		t.KeepAlive = defaultTransportKeepAlive
 	}
-	t.BufferSize = p.BufferSize
-	if t.BufferSize == 0 {
-		t.BufferSize = defaultTransportBufferSize
+	t.MaxStanzaSize = p.MaxStanzaSize
+	if t.MaxStanzaSize == 0 {
+		t.MaxStanzaSize = defaultTransportMaxStanzaSize
 	}
 	return nil
 }

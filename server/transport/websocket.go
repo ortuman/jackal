@@ -6,6 +6,7 @@
 package transport
 
 import (
+	"bytes"
 	"crypto/tls"
 	"io"
 	"net"
@@ -27,24 +28,30 @@ type WebSocketConn interface {
 }
 
 type websocketTransport struct {
-	conn        WebSocketConn
-	readTimeout int
+	conn          WebSocketConn
+	r             *bytes.Reader
+	rbuf          []byte
+	p             *xml.Parser
+	maxStanzaSize int
+	keepAlive     int
 }
 
 // NewSocketTransport creates a socket class stream transport.
-func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
-	wst := &websocketTransport{conn: conn, readTimeout: keepAlive}
+func NewWebSocketTransport(conn WebSocketConn, maxStanzaSize, keepAlive int) Transport {
+	wst := &websocketTransport{
+		conn:          conn,
+		rbuf:          make([]byte, maxStanzaSize+1),
+		maxStanzaSize: maxStanzaSize,
+		keepAlive:     keepAlive,
+	}
 	return wst
 }
 
 func (wst *websocketTransport) ReadElement() (xml.XElement, error) {
-	wst.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(wst.readTimeout)))
-	_, r, err := wst.conn.NextReader()
-	if err != nil {
+	if err := wst.readFromConn(); err != nil {
 		return nil, err
 	}
-	p := xml.NewParserTransportType(r, config.WebSocketTransportType)
-	return p.ParseElement()
+	return wst.p.ParseElement()
 }
 
 func (wst *websocketTransport) WriteString(str string) error {
@@ -87,5 +94,25 @@ func (wst *websocketTransport) ChannelBindingBytes(mechanism config.ChannelBindi
 			break
 		}
 	}
+	return nil
+}
+
+func (wst *websocketTransport) readFromConn() error {
+	if wst.r != nil && wst.r.Len() > 0 {
+		return nil // remaining bytes in buffer...
+	}
+	_, r, err := wst.conn.NextReader()
+	if err != nil {
+		return err
+	}
+	n, err := r.Read(wst.rbuf)
+	if err != nil {
+		return err
+	}
+	if n > wst.maxStanzaSize {
+		return ErrTooLargeStanza
+	}
+	wst.r = bytes.NewReader(wst.rbuf[:n])
+	wst.p = xml.NewParserTransportType(wst.r, config.WebSocketTransportType)
 	return nil
 }

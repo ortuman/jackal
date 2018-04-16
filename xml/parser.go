@@ -55,6 +55,9 @@ func (p *Parser) ParseElement() (XElement, error) {
 	}
 	for {
 		switch t1 := t.(type) {
+		case xml.ProcInst:
+			return nil, nil
+
 		case xml.StartElement:
 			p.startElement(t1)
 			if p.tt == config.SocketTransportType && t1.Name.Local == streamName && t1.Name.Space == streamName {
@@ -63,6 +66,9 @@ func (p *Parser) ParseElement() (XElement, error) {
 			}
 
 		case xml.CharData:
+			if !p.inElement {
+				return nil, nil
+			}
 			p.setElementText(t1)
 
 		case xml.EndElement:
@@ -108,9 +114,6 @@ func (p *Parser) startElement(t xml.StartElement) {
 }
 
 func (p *Parser) setElementText(t xml.CharData) {
-	if !p.inElement {
-		return
-	}
 	elem := p.parsingStack[p.parsingIndex]
 	elem.text = string(t)
 }

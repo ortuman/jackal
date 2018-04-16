@@ -224,8 +224,10 @@ func (s *c2sStream) initializeAuthenticators() {
 		switch a {
 		case "plain":
 			s.authrs = append(s.authrs, newPlainAuthenticator(s))
+
 		case "digest_md5":
 			s.authrs = append(s.authrs, newDigestMD5(s))
+
 		case "scram_sha_1":
 			s.authrs = append(s.authrs, newScram(s, s.tr, sha1ScramType, false))
 			s.authrs = append(s.authrs, newScram(s, s.tr, sha1ScramType, true))
@@ -837,11 +839,11 @@ func (s *c2sStream) actorLoop() {
 }
 
 func (s *c2sStream) doRead() {
-	if e, err := s.tr.ReadElement(); e != nil && err == nil {
+	if elem, err := s.tr.ReadElement(); err == nil {
 		s.actorCh <- func() {
-			s.readElement(e)
+			s.readElement(elem)
 		}
-	} else if err != nil {
+	} else {
 		if s.getState() == disconnected {
 			return // already disconnected...
 		}
@@ -880,8 +882,10 @@ func (s *c2sStream) writeElement(element xml.XElement) {
 }
 
 func (s *c2sStream) readElement(elem xml.XElement) {
-	log.Debugf("RECV: %v", elem)
-	s.handleElement(elem)
+	if elem != nil {
+		log.Debugf("RECV: %v", elem)
+		s.handleElement(elem)
+	}
 	if s.getState() != disconnected {
 		go s.doRead()
 	}
@@ -926,7 +930,8 @@ func (s *c2sStream) openStream() {
 	ops.SetAttribute("version", "1.0")
 	ops.ToXML(buf, includeClosing)
 
-	log.Debugf("SEND: %v", ops)
+	openStr := buf.String()
+	log.Debugf("SEND: %s", openStr)
 
 	s.tr.WriteString(buf.String())
 }
