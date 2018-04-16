@@ -7,7 +7,6 @@ package model
 
 import (
 	"encoding/gob"
-
 	"time"
 
 	"github.com/ortuman/jackal/xml"
@@ -27,6 +26,8 @@ func NewUserFromGob(dec *gob.Decoder) *User {
 	u := &User{}
 	dec.Decode(&u.Username)
 	dec.Decode(&u.Password)
+	dec.Decode(&u.LoggedOutStatus)
+	dec.Decode(&u.LoggedOutAt)
 	return u
 }
 
@@ -35,6 +36,8 @@ func NewUserFromGob(dec *gob.Decoder) *User {
 func (u *User) ToGob(enc *gob.Encoder) {
 	enc.Encode(&u.Username)
 	enc.Encode(&u.Password)
+	enc.Encode(&u.LoggedOutStatus)
+	enc.Encode(&u.LoggedOutAt)
 }
 
 // RosterItem represents a roster item storage entity.

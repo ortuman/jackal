@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
@@ -17,13 +18,18 @@ import (
 func TestModelUser(t *testing.T) {
 	var usr1 User
 
+	now := time.Now()
 	usr1.Username = "ortuman"
 	usr1.Password = "1234"
+	usr1.LoggedOutStatus = "Gone!"
+	usr1.LoggedOutAt = now
 
 	buf := new(bytes.Buffer)
 	usr1.ToGob(gob.NewEncoder(buf))
 	usr2 := NewUserFromGob(gob.NewDecoder(buf))
-	require.Equal(t, usr1, *usr2)
+	require.Equal(t, usr1.Username, usr2.Username)
+	require.Equal(t, usr1.Password, usr2.Password)
+	require.Equal(t, usr1.LoggedOutAt.Format(time.RFC3339), usr2.LoggedOutAt.Format(time.RFC3339))
 }
 
 func TestModelRosterItem(t *testing.T) {
