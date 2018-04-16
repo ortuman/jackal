@@ -179,7 +179,7 @@ func (s *server) handleWebSocketConn(conn *websocket.Conn) {
 }
 
 func (s *server) startStream(tr transport.Transport) {
-	stm := newStream(s.nextID(), tr, s.cfg)
+	stm := newC2SInStream(s.nextID(), tr, s.cfg)
 	if err := c2s.Instance().RegisterStream(stm); err != nil {
 		log.Error(err)
 	}

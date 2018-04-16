@@ -322,10 +322,10 @@ func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit() (*c2sStream, *transport.MockConn) {
+func tUtilStreamInit() (*c2sIn, *transport.MockConn) {
 	conn := transport.NewMockConn()
 	tr := transport.NewSocketTransport(conn, 4096, 4096)
-	stm := newStream("abcd1234", tr, tUtilStreamDefaultConfig())
+	stm := newC2SInStream("abcd1234", tr, tUtilStreamDefaultConfig())
 	c2s.Instance().RegisterStream(stm)
 	return stm, conn
 }

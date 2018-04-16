@@ -130,6 +130,9 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 }
 
 func TestXEP0077_RegisterUser(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -186,6 +189,9 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 }
 
 func TestXEP0077_CancelRegistration(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -235,6 +241,9 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 }
 
 func TestXEP0077_ChangePassword(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)

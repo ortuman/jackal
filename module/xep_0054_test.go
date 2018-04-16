@@ -8,6 +8,7 @@ package module
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
@@ -42,6 +43,9 @@ func TestXEP0054_Matching(t *testing.T) {
 }
 
 func TestXEP0054_Set(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd", j)
 
@@ -75,6 +79,9 @@ func TestXEP0054_Set(t *testing.T) {
 }
 
 func TestXEP0054_SetError(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
 	stm := c2s.NewMockStream("abcd", j)
@@ -108,6 +115,9 @@ func TestXEP0054_SetError(t *testing.T) {
 }
 
 func TestXEP0054_Get(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
 	stm := c2s.NewMockStream("abcd", j)
@@ -150,6 +160,9 @@ func TestXEP0054_Get(t *testing.T) {
 }
 
 func TestXEP0054_GetError(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd", j)
 
