@@ -9,10 +9,10 @@ import (
 	"database/sql/driver"
 	"errors"
 	"testing"
-
-	"github.com/ortuman/jackal/pool"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -24,11 +24,12 @@ var (
 )
 
 func TestMySQLStorageInsertUser(t *testing.T) {
-	user := model.User{Username: "ortuman", Password: "1234"}
+	now := time.Now()
+	user := model.User{Username: "ortuman", Password: "1234", LoggedOutStatus: "Bye!", LoggedOutAt: now}
 
 	s, mock := newMockMySQLStorage()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", "1234").
+		WithArgs("ortuman", "1234", "Bye!", "1234", "Bye!", now).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err := s.InsertOrUpdateUser(&user)
@@ -37,7 +38,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 
 	s, mock = newMockMySQLStorage()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", "1234").
+		WithArgs("ortuman", "1234", "Bye!", "1234", "Bye!", now).
 		WillReturnError(errMySQLStorage)
 	err = s.InsertOrUpdateUser(&user)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -77,7 +78,7 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 }
 
 func TestMySQLStorageFetchUser(t *testing.T) {
-	var userColumns = []string{"username", "password"}
+	var userColumns = []string{"username", "password", "logged_out_status", "logged_out_at"}
 
 	s, mock := newMockMySQLStorage()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
@@ -91,7 +92,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	s, mock = newMockMySQLStorage()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
-		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234"))
+		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", "Bye!", time.Now()))
 	_, err = s.FetchUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)

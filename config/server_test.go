@@ -54,7 +54,7 @@ bind_addr: 192.168.0.1
 port: 6666
 connect_timeout: 10
 keep_alive: 240
-buf_size: 4096
+max_stanza_size: 8192
 `
 	tr := Transport{}
 	err := yaml.Unmarshal([]byte(cfg), &tr)
@@ -64,7 +64,7 @@ buf_size: 4096
 	require.Equal(t, 6666, tr.Port)
 	require.Equal(t, 10, tr.ConnectTimeout)
 	require.Equal(t, 240, tr.KeepAlive)
-	require.Equal(t, 4096, tr.BufferSize)
+	require.Equal(t, 8192, tr.MaxStanzaSize)
 
 	// test defaults
 	err = yaml.Unmarshal([]byte("{type: socket}"), &tr)
@@ -74,7 +74,7 @@ buf_size: 4096
 	require.Equal(t, defaultTransportPort, tr.Port)
 	require.Equal(t, defaultTransportConnectTimeout, tr.ConnectTimeout)
 	require.Equal(t, defaultTransportKeepAlive, tr.KeepAlive)
-	require.Equal(t, defaultTransportBufferSize, tr.BufferSize)
+	require.Equal(t, defaultTransportMaxStanzaSize, tr.MaxStanzaSize)
 
 	// invalid transport type
 	err = yaml.Unmarshal([]byte("{type: invalid}"), &tr)

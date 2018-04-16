@@ -17,7 +17,7 @@ import (
 )
 
 func TestDocParse(t *testing.T) {
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a xmlns="im.jackal">Hi!</a>\n`
+	docSrc := `<a xmlns="im.jackal">Hi!</a>\n`
 	p := xml.NewParserTransportType(strings.NewReader(docSrc), config.SocketTransportType)
 	a, err := p.ParseElement()
 	require.Nil(t, err)
@@ -34,12 +34,12 @@ func TestParser_EmptyDocParse(t *testing.T) {
 }
 
 func TestParser_FailedDocParse(t *testing.T) {
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<a><b><c a="attr1">HI</c><b></a>\n`
+	docSrc := `<a><b><c a="attr1">HI</c><b></a>\n`
 	p := xml.NewParser(strings.NewReader(docSrc))
 	_, err := p.ParseElement()
 	require.NotNil(t, err)
 
-	docSrc2 := `<?xml version="1.0" encoding="UTF-8"?>\n<element a="attr1">\n`
+	docSrc2 := `<element a="attr1">\n`
 	p = xml.NewParser(strings.NewReader(docSrc2))
 	element, err := p.ParseElement()
 	require.Equal(t, io.EOF, err)
@@ -47,13 +47,13 @@ func TestParser_FailedDocParse(t *testing.T) {
 }
 
 func TestParser_Close(t *testing.T) {
-	src := `<?xml version="1.0" encoding="UTF-8"?>\n</stream:stream>\n`
+	src := `</stream:stream>\n`
 	p := xml.NewParserTransportType(strings.NewReader(src), config.SocketTransportType)
 
 	_, err := p.ParseElement()
 	require.Equal(t, xml.ErrStreamClosedByPeer, err)
 
-	src2 := `<?xml version="1.0" encoding="UTF-8"?>\n<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />\n`
+	src2 := `<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />\n`
 	p2 := xml.NewParserTransportType(strings.NewReader(src2), config.WebSocketTransportType)
 
 	_, err = p2.ParseElement()
@@ -61,9 +61,12 @@ func TestParser_Close(t *testing.T) {
 }
 
 func TestParser_ParseSeveralElements(t *testing.T) {
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/>\n<b/>\n<c/>`
+	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/><b/><c/>`
 	reader := strings.NewReader(docSrc)
 	p := xml.NewParserTransportType(reader, config.SocketTransportType)
+	header, err := p.ParseElement()
+	require.Nil(t, header)
+	require.Nil(t, err)
 	a, err := p.ParseElement()
 	require.NotNil(t, a)
 	require.Nil(t, err)
@@ -76,7 +79,7 @@ func TestParser_ParseSeveralElements(t *testing.T) {
 }
 
 func TestParser_DocChildElements(t *testing.T) {
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?>\n<parent><a/><b/><c/></parent>\n`
+	docSrc := `<parent><a/><b/><c/></parent>\n`
 	p := xml.NewParserTransportType(strings.NewReader(docSrc), config.SocketTransportType)
 	parent, err := p.ParseElement()
 	require.Nil(t, err)

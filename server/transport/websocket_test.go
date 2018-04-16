@@ -60,7 +60,7 @@ func TestWebSocketTransport(t *testing.T) {
 	iq.SetFrom("localhost")
 	iq.ToXML(conn.r.buf, true)
 
-	wst := NewWebSocketTransport(conn, 10)
+	wst := NewWebSocketTransport(conn, 16384, 10)
 	el, err := wst.ReadElement()
 	require.Nil(t, err)
 	require.Equal(t, iq.String(), el.String())

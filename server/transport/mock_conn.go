@@ -49,6 +49,8 @@ func (ma *mockConnAddress) String() string {
 
 // MockConn represents a net.Conn mocked implementation.
 type MockConn struct {
+	r       *bytes.Reader
+	p       *xml.Parser
 	clPipe  *mockConnPipe
 	srvPipe *mockConnPipe
 	closed  uint32
@@ -92,12 +94,15 @@ func (mc *MockConn) ClientReadBytes() []byte {
 // ClientReadElement deserializes previous write operation content
 // into an XML elements array.
 func (mc *MockConn) ClientReadElement() xml.XElement {
-retryRead:
-	b := <-mc.readCh
-	parser := xml.NewParserTransportType(bytes.NewReader(b), config.SocketTransportType)
-	el, _ := parser.ParseElement()
+	if mc.r != nil && mc.r.Len() > 0 {
+		goto doRead
+	}
+	mc.r = bytes.NewReader(<-mc.readCh)
+	mc.p = xml.NewParserTransportType(mc.r, config.SocketTransportType)
+doRead:
+	el, _ := mc.p.ParseElement()
 	if el == nil {
-		goto retryRead
+		goto doRead
 	}
 	return el
 }

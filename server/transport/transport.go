@@ -7,11 +7,14 @@ package transport
 
 import (
 	"crypto/tls"
+	"errors"
 	"io"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/xml"
 )
+
+var ErrTooLargeStanza = errors.New("too large stanza")
 
 // Transport represents a stream transport mechanism.
 type Transport interface {

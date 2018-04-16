@@ -47,9 +47,10 @@ func TestMockC2Stream(t *testing.T) {
 	strm.SetRosterRequested(true)
 	require.True(t, strm.IsRosterRequested())
 
-	status := xml.NewElementName("status")
-	strm.SetPresenceElements([]xml.XElement{status})
-	presenceElements := strm.PresenceElements()
+	presence := xml.NewPresence(j1, j2, xml.AvailableType)
+	presence.AppendElement(xml.NewElementName("status"))
+	strm.SetPresence(presence)
+	presenceElements := strm.Presence().Elements().All()
 	require.Equal(t, 1, len(presenceElements))
 
 	elem := xml.NewElementName("elem1234")

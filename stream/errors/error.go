@@ -27,6 +27,9 @@ var (
 	// ErrInvalidFrom represents 'invalid-from' stream error.
 	ErrInvalidFrom = newStreamError("invalid-from")
 
+	// ErrPolicyViolation represents 'connection-timeout' stream error.
+	ErrPolicyViolation = newStreamError("policy-violation")
+
 	// ErrConnectionTimeout represents 'connection-timeout' stream error.
 	ErrConnectionTimeout = newStreamError("connection-timeout")
 

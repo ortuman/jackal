@@ -134,9 +134,7 @@ func (s *server) listenWebSocketConn(address string) {
 		TLSConfig: tlsCfg,
 	}
 	s.wsUpgrader = &websocket.Upgrader{
-		ReadBufferSize:  s.cfg.Transport.BufferSize,
-		WriteBufferSize: s.cfg.Transport.BufferSize,
-		Subprotocols:    []string{"xmpp"},
+		Subprotocols: []string{"xmpp"},
 		CheckOrigin: func(r *http.Request) bool {
 			return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp"
 		},
@@ -173,15 +171,15 @@ func (s *server) shutdown() error {
 }
 
 func (s *server) handleSocketConn(conn net.Conn) {
-	s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.BufferSize, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.MaxStanzaSize, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) handleWebSocketConn(conn *websocket.Conn) {
-	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.MaxStanzaSize, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) startStream(tr transport.Transport) {
-	stm := newStream(s.nextID(), tr, s.cfg)
+	stm := newC2SInStream(s.nextID(), tr, s.cfg)
 	if err := c2s.Instance().RegisterStream(stm); err != nil {
 		log.Error(err)
 	}

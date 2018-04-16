@@ -34,7 +34,7 @@ type Stream interface {
 	IsAuthenticated() bool
 	IsCompressed() bool
 
-	PresenceElements() []xml.XElement
+	Presence() *xml.Presence
 
 	IsRosterRequested() bool
 }

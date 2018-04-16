@@ -31,13 +31,13 @@ type MockTransport struct {
 
 // NewMockTransport returns a new MockTransport instance.
 func NewMockTransport() *MockTransport {
-	tr := &MockTransport{}
-	tr.wb = new(bytes.Buffer)
-	tr.rb = new(bytes.Buffer)
-	tr.br = bufio.NewReader(tr.rb)
-	tr.bw = bufio.NewWriter(tr.wb)
-	tr.parser = xml.NewParserTransportType(tr.br, config.SocketTransportType)
-	return tr
+	mt := &MockTransport{}
+	mt.wb = new(bytes.Buffer)
+	mt.rb = new(bytes.Buffer)
+	mt.br = bufio.NewReader(mt.rb)
+	mt.bw = bufio.NewWriter(mt.wb)
+	mt.parser = xml.NewParserTransportType(mt.br, config.SocketTransportType)
+	return mt
 }
 
 // ReadElement reads next available XML element from the mocked transport.

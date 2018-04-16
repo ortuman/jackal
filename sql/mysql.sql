@@ -6,6 +6,8 @@
 CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(256) PRIMARY KEY,
     password TEXT NOT NULL,
+    logged_out_status TEXT NOT NULL,
+    logged_out_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
