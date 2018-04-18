@@ -65,7 +65,7 @@ func Initialize(storageConfig *config.Storage) {
 		case config.BadgerDB:
 			inst = newBadgerDB(storageConfig.BadgerDB)
 		case config.MySQL:
-			inst = newMySQLStorage(storageConfig.MySQL)
+			inst = newSQLStorage(storageConfig.MySQL)
 		case config.Mock:
 			inst = newMockStorage()
 		default:

@@ -14,11 +14,15 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSocketServer(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 
@@ -59,6 +63,9 @@ func TestSocketServer(t *testing.T) {
 }
 
 func TestWebSocketServer(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 

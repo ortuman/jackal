@@ -31,7 +31,7 @@ type sqlStorage struct {
 	doneCh chan chan bool
 }
 
-func newMySQLStorage(cfg *config.MySQLDb) *sqlStorage {
+func newSQLStorage(cfg *config.MySQLDb) *sqlStorage {
 	var err error
 	s := &sqlStorage{
 		pool:   pool.NewBufferPool(),
@@ -58,7 +58,7 @@ func newMySQLStorage(cfg *config.MySQLDb) *sqlStorage {
 	return s
 }
 
-func newMockMySQLStorage() (*sqlStorage, sqlmock.Sqlmock) {
+func newMockSQLStorage() (*sqlStorage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
 	s := &sqlStorage{
