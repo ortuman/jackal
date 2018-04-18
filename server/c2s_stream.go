@@ -1104,12 +1104,14 @@ func (s *c2sStream) disconnectClosingStream(closeStream bool) {
 func (s *c2sStream) updateLogoutInfo() error {
 	var usr *model.User
 	var err error
-	if usr, err = storage.Instance().FetchUser(s.Username()); usr != nil && err == nil {
-		usr.LoggedOutAt = time.Now()
-		if presence := s.Presence(); presence.IsUnavailable() {
-			usr.LoggedOutStatus = presence.Status()
+	if presence := s.Presence(); presence != nil {
+		if usr, err = storage.Instance().FetchUser(s.Username()); usr != nil && err == nil {
+			usr.LoggedOutAt = time.Now()
+			if presence.IsUnavailable() {
+				usr.LoggedOutStatus = presence.Status()
+			}
+			return storage.Instance().InsertOrUpdateUser(usr)
 		}
-		return storage.Instance().InsertOrUpdateUser(usr)
 	}
 	return err
 }

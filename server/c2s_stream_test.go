@@ -285,7 +285,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 func tUtilStreamOpen(conn *transport.MockConn) {
 	s := `<?xml version="1.0"?>
-	<stream:stream xmlns:stream="http://etherx.jabber.org/streams" 
+	<stream:stream xmlns:stream="http://etherx.jabber.org/streams"
 	version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 `
 	conn.ClientWriteBytes([]byte(s))

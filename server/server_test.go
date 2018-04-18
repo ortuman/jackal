@@ -24,7 +24,7 @@ func TestSocketServer(t *testing.T) {
 	defer storage.Shutdown()
 
 	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
-	defer Shutdown()
+	defer c2s.Shutdown()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -39,6 +39,8 @@ func TestSocketServer(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, len(xmlHdr), n)
 		conn.Close()
+
+		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
 		// test debug port...
 		req, err := http.NewRequest("GET", "http://localhost:9123/debug/pprof", nil)
@@ -67,11 +69,10 @@ func TestWebSocketServer(t *testing.T) {
 	defer storage.Shutdown()
 
 	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
-	defer Shutdown()
+	defer c2s.Shutdown()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
-
 		d := &websocket.Dialer{
 			Proxy:            http.ProxyFromEnvironment,
 			HandshakeTimeout: 15 * time.Second,
@@ -87,6 +88,8 @@ func TestWebSocketServer(t *testing.T) {
 		err = conn.WriteMessage(websocket.TextMessage, open)
 		require.Nil(t, err)
 		conn.Close()
+
+		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
 		Shutdown()
 	}()
