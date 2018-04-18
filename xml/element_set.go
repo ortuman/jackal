@@ -7,7 +7,6 @@ package xml
 
 import (
 	"encoding/gob"
-	"io"
 )
 
 type ElementSet interface {
@@ -84,13 +83,6 @@ func (es *elementSet) Count() int {
 	return len(es.elems)
 }
 
-func (es *elementSet) String() string {
-	buf := bufPool.Get()
-	defer bufPool.Put(buf)
-	es.toXML(buf)
-	return buf.String()
-}
-
 func (es *elementSet) append(nodes ...XElement) {
 	es.elems = append(es.elems, nodes...)
 }
@@ -123,12 +115,6 @@ func (es *elementSet) copyFrom(from *elementSet) {
 	es.elems = make([]XElement, from.Count())
 	for i := 0; i < len(from.elems); i++ {
 		es.elems[i] = NewElementFromElement(from.elems[i])
-	}
-}
-
-func (es *elementSet) toXML(w io.Writer) {
-	for j := 0; j < len(es.elems); j++ {
-		es.elems[j].ToXML(w, true)
 	}
 }
 

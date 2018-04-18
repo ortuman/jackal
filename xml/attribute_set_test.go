@@ -28,16 +28,6 @@ func TestAttributeSet_Remove(t *testing.T) {
 	require.Equal(t, "", as.Get("id"))
 }
 
-func TestAttributeSet_ToXML(t *testing.T) {
-	as := attributeSet{}
-	as.setAttribute("id", "1234")
-	as.setAttribute("type", "normal")
-	as.setAttribute("empty", "")
-	buf := new(bytes.Buffer)
-	as.toXML(buf)
-	require.Equal(t, ` id="1234" type="normal"`, buf.String())
-}
-
 func TestAttributeSet_Gob(t *testing.T) {
 	as := attributeSet{}
 	as.setAttribute("a", "1234")

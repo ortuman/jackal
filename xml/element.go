@@ -7,8 +7,11 @@ package xml
 
 import (
 	"encoding/gob"
+	"fmt"
 	"io"
 )
+
+const ()
 
 type Element struct {
 	name     string
@@ -139,27 +142,34 @@ func (e *Element) String() string {
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
 func (e *Element) ToXML(w io.Writer, includeClosing bool) {
-	w.Write([]byte("<"))
-	w.Write([]byte(e.name))
+	fmt.Fprintf(w, "<%s", e.name)
 
 	// serialize attributes
-	e.attrs.toXML(w)
+	for _, attr := range e.attrs.attrs {
+		if len(attr.Value) == 0 {
+			continue
+		}
+		fmt.Fprintf(w, ` %s="%s"`, attr.Label, attr.Value)
+	}
 
 	if e.elements.Count() > 0 || len(e.text) > 0 {
-		w.Write([]byte(">"))
-		escapeText(w, []byte(e.text), false)
-		e.elements.toXML(w)
+		fmt.Fprintf(w, ">")
+
+		if len(e.text) > 0 {
+			escapeText(w, []byte(e.text), false)
+		}
+		for _, elem := range e.elements.elems {
+			elem.ToXML(w, true)
+		}
 
 		if includeClosing {
-			w.Write([]byte("</"))
-			w.Write([]byte(e.name))
-			w.Write([]byte(">"))
+			fmt.Fprintf(w, "</%s>", e.name)
 		}
 	} else {
 		if includeClosing {
-			w.Write([]byte("/>"))
+			fmt.Fprintf(w, "/>")
 		} else {
-			w.Write([]byte(">"))
+			fmt.Fprintf(w, ">")
 		}
 	}
 }

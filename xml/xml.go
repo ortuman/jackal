@@ -8,9 +8,8 @@ package xml
 import (
 	"encoding/gob"
 	"fmt"
-	"io"
-
 	"github.com/ortuman/jackal/pool"
+	"io"
 )
 
 var bufPool = pool.NewBufferPool()

@@ -7,7 +7,6 @@ package xml
 
 import (
 	"encoding/gob"
-	"io"
 )
 
 // Attribute represents an XML node attribute (label=value).
@@ -60,19 +59,6 @@ func (as *attributeSet) removeAttribute(label string) {
 func (as *attributeSet) copyFrom(from *attributeSet) {
 	as.attrs = make([]Attribute, from.Count())
 	copy(as.attrs, from.attrs)
-}
-
-func (as *attributeSet) toXML(w io.Writer) {
-	for i := 0; i < len(as.attrs); i++ {
-		if len(as.attrs[i].Value) == 0 {
-			continue
-		}
-		w.Write([]byte(" "))
-		w.Write([]byte(as.attrs[i].Label))
-		w.Write([]byte(`="`))
-		w.Write([]byte(as.attrs[i].Value))
-		w.Write([]byte(`"`))
-	}
 }
 
 func (as *attributeSet) fromGob(dec *gob.Decoder) {
