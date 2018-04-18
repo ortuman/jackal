@@ -7,7 +7,6 @@ package xml
 
 import (
 	"encoding/gob"
-	"fmt"
 	"io"
 )
 
@@ -142,18 +141,23 @@ func (e *Element) String() string {
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
 func (e *Element) ToXML(w io.Writer, includeClosing bool) {
-	fmt.Fprintf(w, "<%s", e.name)
+	io.WriteString(w, "<")
+	io.WriteString(w, e.name)
 
 	// serialize attributes
 	for _, attr := range e.attrs.attrs {
 		if len(attr.Value) == 0 {
 			continue
 		}
-		fmt.Fprintf(w, ` %s="%s"`, attr.Label, attr.Value)
+		io.WriteString(w, " ")
+		io.WriteString(w, attr.Label)
+		io.WriteString(w, `="`)
+		io.WriteString(w, attr.Value)
+		io.WriteString(w, `"`)
 	}
 
 	if e.elements.Count() > 0 || len(e.text) > 0 {
-		fmt.Fprintf(w, ">")
+		io.WriteString(w, ">")
 
 		if len(e.text) > 0 {
 			escapeText(w, []byte(e.text), false)
@@ -163,13 +167,15 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 		}
 
 		if includeClosing {
-			fmt.Fprintf(w, "</%s>", e.name)
+			io.WriteString(w, "</")
+			io.WriteString(w, e.name)
+			io.WriteString(w, ">")
 		}
 	} else {
 		if includeClosing {
-			fmt.Fprintf(w, "/>")
+			io.WriteString(w, "/>")
 		} else {
-			fmt.Fprintf(w, ">")
+			io.WriteString(w, ">")
 		}
 	}
 }
