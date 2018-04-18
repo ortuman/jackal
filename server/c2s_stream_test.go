@@ -20,6 +20,9 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	c2s.Initialize(&config.C2S{Domains: []string{"localhost"}})
 	defer c2s.Shutdown()
 
@@ -29,6 +32,9 @@ func TestStream_ConnectTimeout(t *testing.T) {
 }
 
 func TestStream_Disconnect(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	c2s.Initialize(&config.C2S{Domains: []string{"localhost"}})
 	defer c2s.Shutdown()
 
@@ -40,6 +46,9 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
 	c2s.Initialize(&config.C2S{Domains: []string{"localhost"}})
 	defer c2s.Shutdown()
 
