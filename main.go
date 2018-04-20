@@ -12,13 +12,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"reflect"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/version"
 )
@@ -42,26 +39,7 @@ Common Options:
     -v, --version          Show version
 `
 
-func doStuff(v interface{}) {
-	t := reflect.TypeOf(v).Elem()
-	if t.Kind() != reflect.Slice {
-		return
-	}
-	s := reflect.ValueOf(v).Elem()
-	e := reflect.New(t.Elem()).Elem()
-	i := e.Addr().Interface()
-	if usr, ok := i.(*model.User); ok {
-		usr.Username = "ortuman"
-	}
-	s.Set(reflect.Append(s, e))
-}
-
 func main() {
-	var arr []model.User
-	doStuff(&arr)
-
-	fmt.Printf("%d", len(arr))
-
 	var configFile string
 	var showVersion bool
 	var showUsage bool
