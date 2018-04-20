@@ -56,7 +56,7 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
-const streamMailboxSize = 32
+const streamMailboxSize = 64
 
 var (
 	errNotExistingAccount = errors.New("account does not exist")
