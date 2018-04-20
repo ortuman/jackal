@@ -26,7 +26,8 @@ func TestModelUser(t *testing.T) {
 
 	buf := new(bytes.Buffer)
 	usr1.ToGob(gob.NewEncoder(buf))
-	usr2 := NewUserFromGob(gob.NewDecoder(buf))
+	usr2 := User{}
+	usr2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, usr1.Username, usr2.Username)
 	require.Equal(t, usr1.Password, usr2.Password)
 	require.Equal(t, usr1.LoggedOutAt.Format(time.RFC3339), usr2.LoggedOutAt.Format(time.RFC3339))
@@ -44,22 +45,23 @@ func TestModelRosterItem(t *testing.T) {
 	}
 	buf := new(bytes.Buffer)
 	ri1.ToGob(gob.NewEncoder(buf))
-	ri2 := NewRosterItemFromGob(gob.NewDecoder(buf))
+	ri2 := &RosterItem{}
+	ri2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, ri1, *ri2)
 }
 
 func TestModelRosterVersion(t *testing.T) {
-	var rv1 RosterVersion
+	var rv1, rv2 RosterVersion
 
 	rv1 = RosterVersion{Ver: 2, DeletionVer: 1}
 	buf := new(bytes.Buffer)
 	rv1.ToGob(gob.NewEncoder(buf))
-	rv2 := NewRosterVersionFromGob(gob.NewDecoder(buf))
+	rv2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, rv1, rv2)
 }
 
 func TestModelRosterNotification(t *testing.T) {
-	var rn1 RosterNotification
+	var rn1, rn2 RosterNotification
 
 	rn1 = RosterNotification{
 		User:     "ortuman",
@@ -68,7 +70,7 @@ func TestModelRosterNotification(t *testing.T) {
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))
-	rn2 := NewRosterNotificationFromGob(gob.NewDecoder(buf))
+	rn2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, "ortuman", rn2.User)
 	require.Equal(t, "noelia", rn2.Contact)
 	require.Equal(t, 1, len(rn1.Elements))

@@ -34,7 +34,8 @@ func TestElement_Gob(t *testing.T) {
 	e1 := NewElementNamespace("n", "ns")
 	buf := new(bytes.Buffer)
 	e1.ToGob(gob.NewEncoder(buf))
-	e2 := NewElementFromGob(gob.NewDecoder(buf))
+	var e2 Element
+	e2.FromGob(gob.NewDecoder(buf))
 	require.Equal(t, e1.String(), e2.String())
 }
 

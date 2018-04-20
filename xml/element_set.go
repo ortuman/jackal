@@ -123,7 +123,9 @@ func (es *elementSet) fromGob(dec *gob.Decoder) {
 	dec.Decode(&c)
 	es.elems = make([]XElement, c)
 	for i := 0; i < c; i++ {
-		es.elems[i] = NewElementFromGob(dec)
+		var e Element
+		e.FromGob(dec)
+		es.elems[i] = &e
 	}
 }
 

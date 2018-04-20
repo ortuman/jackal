@@ -10,8 +10,6 @@ import (
 	"io"
 )
 
-const ()
-
 type Element struct {
 	name     string
 	text     string
@@ -36,16 +34,6 @@ func NewElementNamespace(name, namespace string) *Element {
 func NewElementFromElement(elem XElement) *Element {
 	e := &Element{}
 	e.copyFrom(elem)
-	return e
-}
-
-// NewElementFromGob deserializes an element node from it's gob binary representation.
-func NewElementFromGob(dec *gob.Decoder) *Element {
-	e := &Element{}
-	dec.Decode(&e.name)
-	dec.Decode(&e.text)
-	e.attrs.fromGob(dec)
-	e.elements.fromGob(dec)
 	return e
 }
 
@@ -178,6 +166,14 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 			io.WriteString(w, ">")
 		}
 	}
+}
+
+// FromGob deserializes an element node from it's gob binary representation.
+func (e *Element) FromGob(dec *gob.Decoder) {
+	dec.Decode(&e.name)
+	dec.Decode(&e.text)
+	e.attrs.fromGob(dec)
+	e.elements.fromGob(dec)
 }
 
 // ToGob serializes an element node to it's gob binary representation.

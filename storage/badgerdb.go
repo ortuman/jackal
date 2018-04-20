@@ -8,8 +8,11 @@ package storage
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -18,6 +21,11 @@ import (
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
+)
+
+var (
+	errBadgerDBWrongEntityType = errors.New("badgerdb: wrong entity type")
+	errBadgerDBEntityNotFound  = errors.New("badgerdb: entity not found")
 )
 
 type badgerDB struct {
@@ -53,66 +61,47 @@ func (b *badgerDB) Shutdown() {
 }
 
 func (b *badgerDB) InsertOrUpdateUser(user *model.User) error {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		user.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.userKey(user.Username), buf.Bytes())
-	})
+	return b.insertOrUpdate(user, b.userKey(user.Username))
 }
 
 func (b *badgerDB) DeleteUser(username string) error {
-	return b.db.Update(func(tx *badger.Txn) error {
-		return tx.Delete(b.userKey(username))
-	})
+	return b.delete(b.userKey(username))
 }
 
 func (b *badgerDB) FetchUser(username string) (*model.User, error) {
-	var usr *model.User
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.userKey(username), tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			usr = model.NewUserFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		}
-		return nil
-	})
-	return usr, err
+	var usr model.User
+	err := b.fetch(&usr, b.userKey(username))
+	switch err {
+	case nil:
+		return &usr, nil
+	case errBadgerDBEntityNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
 }
 
 func (b *badgerDB) UserExists(username string) (bool, error) {
-	var exists bool
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.userKey(username), tx)
-		if err != nil {
-			return err
-		}
-		exists = val != nil
-		return nil
-	})
-	return exists, err
+	err := b.fetch(nil, b.userKey(username))
+	switch err {
+	case nil:
+		return true, nil
+	case errBadgerDBEntityNotFound:
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	err := b.db.Update(func(tx *badger.Txn) error {
-		ri.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.rosterItemKey(ri.User, ri.Contact), buf.Bytes())
-	})
-	if err != nil {
+	if err := b.insertOrUpdate(ri, b.rosterItemKey(ri.User, ri.Contact)); err != nil {
 		return model.RosterVersion{}, err
 	}
 	return b.updateRosterVer(ri.User, false)
 }
 
 func (b *badgerDB) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
-	err := b.db.Update(func(tx *badger.Txn) error {
-		return tx.Delete(b.rosterItemKey(user, contact))
-	})
-	if err != nil {
+	if err := b.delete(b.rosterItemKey(user, contact)); err != nil {
 		return model.RosterVersion{}, err
 	}
 	return b.updateRosterVer(user, true)
@@ -120,14 +109,7 @@ func (b *badgerDB) DeleteRosterItem(user, contact string) (model.RosterVersion, 
 
 func (b *badgerDB) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
 	var ris []model.RosterItem
-
-	prefix := []byte("rosterItems:" + user)
-	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
-		ri := model.NewRosterItemFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		ris = append(ris, *ri)
-		return nil
-	})
-	if err != nil {
+	if err := b.fetchAll(&ris, []byte("rosterItems:"+user)); err != nil {
 		return nil, model.RosterVersion{}, err
 	}
 	ver, err := b.fetchRosterVer(user)
@@ -135,104 +117,72 @@ func (b *badgerDB) FetchRosterItems(user string) ([]model.RosterItem, model.Rost
 }
 
 func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	var ri *model.RosterItem
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.rosterItemKey(user, contact), tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			ri = model.NewRosterItemFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		}
-		return nil
-	})
-	return ri, err
+	var ri model.RosterItem
+	err := b.fetch(&ri, b.rosterItemKey(user, contact))
+	switch err {
+	case nil:
+		return &ri, nil
+	case errBadgerDBEntityNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
 }
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		rn.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.rosterNotificationKey(rn.User, rn.Contact), buf.Bytes())
-	})
+	return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.User, rn.Contact))
 }
 
 func (b *badgerDB) DeleteRosterNotification(user, contact string) error {
-	return b.db.Update(func(tx *badger.Txn) error {
-		return tx.Delete(b.rosterNotificationKey(user, contact))
-	})
+	return b.delete(b.rosterNotificationKey(user, contact))
 }
 
 func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
 	var rns []model.RosterNotification
-	prefix := []byte("rosterNotifications:" + contact)
-	err := b.forEachKeyAndValue(prefix, func(k, val []byte) error {
-		rn := model.NewRosterNotificationFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		rns = append(rns, *rn)
-		return nil
-	})
-	return rns, err
+	if err := b.fetchAll(&rns, []byte("rosterNotifications:"+contact)); err != nil {
+		return nil, err
+	}
+	return rns, nil
 }
 
 func (b *badgerDB) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		vCard.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.vCardKey(username), buf.Bytes())
-	})
+	return b.insertOrUpdate(vCard, b.vCardKey(username))
 }
 
 func (b *badgerDB) FetchVCard(username string) (xml.XElement, error) {
-	var vCard xml.XElement
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.vCardKey(username), tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			vCard = xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		}
-		return err
-	})
-	return vCard, err
+	var vCard xml.Element
+	err := b.fetch(&vCard, b.vCardKey(username))
+	switch err {
+	case nil:
+		return &vCard, nil
+	case errBadgerDBEntityNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
 }
 
 func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		root := xml.NewElementName("r")
-		root.AppendElements(privateXML)
-		root.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.privateStorageKey(username, namespace), buf.Bytes())
-	})
+	r := xml.NewElementName("r")
+	r.AppendElements(privateXML)
+	return b.insertOrUpdate(r, b.privateStorageKey(username, namespace))
 }
 
 func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
-	var privateXML []xml.XElement
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.privateStorageKey(username, namespace), tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			root := xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
-			privateXML = root.Elements().All()
-		}
-		return nil
-	})
-	return privateXML, err
+	var r xml.Element
+	err := b.fetch(&r, b.privateStorageKey(username, namespace))
+	switch err {
+	case nil:
+		return r.Elements().All(), nil
+	case errBadgerDBEntityNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
 }
 
 func (b *badgerDB) InsertOfflineMessage(message xml.XElement, username string) error {
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		message.ToGob(gob.NewEncoder(buf))
-		return tx.Set(b.offlineMessageKey(username, message.ID()), buf.Bytes())
-	})
+	return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()))
 }
 
 func (b *badgerDB) CountOfflineMessages(username string) (int, error) {
@@ -246,72 +196,50 @@ func (b *badgerDB) CountOfflineMessages(username string) (int, error) {
 }
 
 func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.XElement, error) {
-	var msgs []xml.XElement
-
-	prefix := []byte("offlineMessages:" + username)
-	err := b.forEachKeyAndValue(prefix, func(_, val []byte) error {
-		msg := xml.NewElementFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		msgs = append(msgs, msg)
-		return nil
-	})
-	if err != nil {
+	var msgs []xml.Element
+	if err := b.fetchAll(&msgs, []byte("offlineMessages:"+username)); err != nil {
 		return nil, err
 	}
-	return msgs, nil
+	switch len(msgs) {
+	case 0:
+		return nil, nil
+	default:
+		ret := make([]xml.XElement, len(msgs))
+		for i := 0; i < len(msgs); i++ {
+			ret[i] = &msgs[i]
+		}
+		return ret, nil
+	}
 }
 
 func (b *badgerDB) DeleteOfflineMessages(username string) error {
-	var msgKeys [][]byte
-
-	prefix := []byte("offlineMessages:" + username)
-	err := b.forEachKey(prefix, func(key []byte) error {
-		msgKeys = append(msgKeys, key)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return b.db.Update(func(txn *badger.Txn) error {
-		for _, key := range msgKeys {
-			if err := txn.Delete(key); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	return b.deletePrefix([]byte("offlineMessages:" + username))
 }
 
 func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.RosterVersion, error) {
 	v, err := b.fetchRosterVer(username)
 	if err != nil {
-		return model.RosterVersion{}, nil
+		return model.RosterVersion{}, err
 	}
 	v.Ver++
 	if isDeletion {
 		v.DeletionVer = v.Ver
 	}
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-	err = b.db.Update(func(txn *badger.Txn) error {
-		v.ToGob(gob.NewEncoder(buf))
-		return txn.Set(b.rosterVersionKey(username), buf.Bytes())
-	})
-	return v, err
+	if err := b.insertOrUpdate(&v, b.rosterVersionKey(username)); err != nil {
+		return model.RosterVersion{}, err
+	}
+	return v, nil
 }
 
 func (b *badgerDB) fetchRosterVer(username string) (model.RosterVersion, error) {
 	var ver model.RosterVersion
-	err := b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.rosterVersionKey(username), tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			ver = model.NewRosterVersionFromGob(gob.NewDecoder(bytes.NewReader(val)))
-		}
-		return err
-	})
-	return ver, err
+	err := b.fetch(&ver, b.rosterVersionKey(username))
+	switch err {
+	case nil, errBadgerDBEntityNotFound:
+		return ver, nil
+	default:
+		return ver, err
+	}
 }
 
 func (b *badgerDB) loop() {
@@ -328,6 +256,96 @@ func (b *badgerDB) loop() {
 			return
 		}
 	}
+}
+
+func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte) error {
+	gs, ok := entity.(model.GobSerializer)
+	if !ok {
+		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
+	}
+	buf := b.pool.Get()
+	defer b.pool.Put(buf)
+	return b.db.Update(func(tx *badger.Txn) error {
+		gs.ToGob(gob.NewEncoder(buf))
+		return tx.Set(key, buf.Bytes())
+	})
+}
+
+func (b *badgerDB) delete(key []byte) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		return tx.Delete(key)
+	})
+}
+
+func (b *badgerDB) deletePrefix(prefix []byte) error {
+	var keys [][]byte
+	if err := b.forEachKey(prefix, func(key []byte) error {
+		keys = append(keys, key)
+		return nil
+	}); err != nil {
+		return err
+	}
+	return b.db.Update(func(txn *badger.Txn) error {
+		for _, k := range keys {
+			if err := txn.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (b *badgerDB) fetch(entity interface{}, key []byte) error {
+	return b.db.View(func(tx *badger.Txn) error {
+		val, err := b.getVal(key, tx)
+		if err != nil {
+			return err
+		}
+		if val != nil {
+			if entity != nil {
+				gd, ok := entity.(model.GobDeserializer)
+				if !ok {
+					return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
+				}
+				gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+			}
+			return nil
+		}
+		return errBadgerDBEntityNotFound
+	})
+}
+
+func (b *badgerDB) fetchAll(v interface{}, prefix []byte) error {
+	t := reflect.TypeOf(v).Elem()
+	if t.Kind() != reflect.Slice {
+		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, v)
+	}
+	s := reflect.ValueOf(v).Elem()
+	return b.forEachKeyAndValue(prefix, func(k, val []byte) error {
+		e := reflect.New(t.Elem()).Elem()
+		i := e.Addr().Interface()
+		gd, ok := i.(model.GobDeserializer)
+		if !ok {
+			return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, i)
+		}
+		gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+		s.Set(reflect.Append(s, e))
+		return nil
+	})
+	return nil
+}
+
+func (b *badgerDB) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
+	item, err := txn.Get(key)
+	switch err {
+	case nil:
+		break
+	case badger.ErrKeyNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
+	return item.Value()
 }
 
 func (b *badgerDB) forEachKey(prefix []byte, f func(k []byte) error) error {
@@ -393,17 +411,4 @@ func (b *badgerDB) rosterNotificationKey(user, contact string) []byte {
 
 func (b *badgerDB) offlineMessageKey(username, identifier string) []byte {
 	return []byte("offlineMessages:" + username + ":" + identifier)
-}
-
-func (b *badgerDB) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
-	item, err := txn.Get(key)
-	switch err {
-	case nil:
-		break
-	case badger.ErrKeyNotFound:
-		return nil, nil
-	default:
-		return nil, err
-	}
-	return item.Value()
 }

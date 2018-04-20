@@ -42,6 +42,10 @@ func TestBadgerDB_User(t *testing.T) {
 	require.Nil(t, err)
 	require.True(t, exists)
 
+	usr3, err := h.db.FetchUser("ortuman2")
+	require.Nil(t, usr3)
+	require.Nil(t, err)
+
 	err = h.db.DeleteUser("ortuman")
 	require.Nil(t, err)
 
@@ -69,6 +73,10 @@ func TestBadgerDB_VCard(t *testing.T) {
 	require.Equal(t, "vCard", vcard2.Name())
 	require.Equal(t, "vcard-temp", vcard2.Namespace())
 	require.NotNil(t, vcard2.Elements().Child("FN"))
+
+	vcard3, err := h.db.FetchVCard("ortuman2")
+	require.Nil(t, vcard3)
+	require.Nil(t, err)
 }
 
 func TestBadgerDB_PrivateXML(t *testing.T) {
@@ -85,6 +93,10 @@ func TestBadgerDB_PrivateXML(t *testing.T) {
 	prvs, err := h.db.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(prvs))
+
+	prvs2, err := h.db.FetchPrivateXML("exodus:ns", "ortuman2")
+	require.Nil(t, prvs2)
+	require.Nil(t, err)
 }
 
 func TestBadgerDB_RosterItems(t *testing.T) {
@@ -111,6 +123,10 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	ris, _, err := h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(ris))
+
+	ris2, _, err := h.db.FetchRosterItems("ortuman2")
+	require.Nil(t, err)
+	require.Equal(t, 0, len(ris2))
 
 	ri3, err := h.db.FetchRosterItem("ortuman", "juliet")
 	require.Nil(t, err)
@@ -148,6 +164,10 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	rns, err := h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(rns))
+
+	rns2, err := h.db.FetchRosterNotifications("ortuman2")
+	require.Nil(t, err)
+	require.Equal(t, 0, len(rns2))
 
 	require.NoError(t, h.db.DeleteRosterNotification(rn1.User, rn1.Contact))
 
@@ -188,6 +208,10 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	msgs, err := h.db.FetchOfflineMessages("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(msgs))
+
+	msgs2, err := h.db.FetchOfflineMessages("ortuman2")
+	require.Nil(t, err)
+	require.Equal(t, 0, len(msgs2))
 
 	require.NoError(t, h.db.DeleteOfflineMessages("ortuman"))
 	cnt, err = h.db.CountOfflineMessages("ortuman")
