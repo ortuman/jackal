@@ -61,11 +61,15 @@ func (b *badgerDB) Shutdown() {
 }
 
 func (b *badgerDB) InsertOrUpdateUser(user *model.User) error {
-	return b.insertOrUpdate(user, b.userKey(user.Username))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(user, b.userKey(user.Username), tx)
+	})
 }
 
 func (b *badgerDB) DeleteUser(username string) error {
-	return b.delete(b.userKey(username))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.delete(b.userKey(username), tx)
+	})
 }
 
 func (b *badgerDB) FetchUser(username string) (*model.User, error) {
@@ -94,14 +98,18 @@ func (b *badgerDB) UserExists(username string) (bool, error) {
 }
 
 func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	if err := b.insertOrUpdate(ri, b.rosterItemKey(ri.User, ri.Contact)); err != nil {
+	if err := b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(ri, b.rosterItemKey(ri.User, ri.Contact), tx)
+	}); err != nil {
 		return model.RosterVersion{}, err
 	}
 	return b.updateRosterVer(ri.User, false)
 }
 
 func (b *badgerDB) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
-	if err := b.delete(b.rosterItemKey(user, contact)); err != nil {
+	if err := b.db.Update(func(tx *badger.Txn) error {
+		return b.delete(b.rosterItemKey(user, contact), tx)
+	}); err != nil {
 		return model.RosterVersion{}, err
 	}
 	return b.updateRosterVer(user, true)
@@ -130,11 +138,15 @@ func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, err
 }
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.User, rn.Contact))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.User, rn.Contact), tx)
+	})
 }
 
 func (b *badgerDB) DeleteRosterNotification(user, contact string) error {
-	return b.delete(b.rosterNotificationKey(user, contact))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.delete(b.rosterNotificationKey(user, contact), tx)
+	})
 }
 
 func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
@@ -146,7 +158,9 @@ func (b *badgerDB) FetchRosterNotifications(contact string) ([]model.RosterNotif
 }
 
 func (b *badgerDB) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
-	return b.insertOrUpdate(vCard, b.vCardKey(username))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(vCard, b.vCardKey(username), tx)
+	})
 }
 
 func (b *badgerDB) FetchVCard(username string) (xml.XElement, error) {
@@ -165,7 +179,9 @@ func (b *badgerDB) FetchVCard(username string) (xml.XElement, error) {
 func (b *badgerDB) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
 	r := xml.NewElementName("r")
 	r.AppendElements(privateXML)
-	return b.insertOrUpdate(r, b.privateStorageKey(username, namespace))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(r, b.privateStorageKey(username, namespace), tx)
+	})
 }
 
 func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
@@ -182,7 +198,9 @@ func (b *badgerDB) FetchPrivateXML(namespace string, username string) ([]xml.XEl
 }
 
 func (b *badgerDB) InsertOfflineMessage(message xml.XElement, username string) error {
-	return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()), tx)
+	})
 }
 
 func (b *badgerDB) CountOfflineMessages(username string) (int, error) {
@@ -213,7 +231,9 @@ func (b *badgerDB) FetchOfflineMessages(username string) ([]xml.XElement, error)
 }
 
 func (b *badgerDB) DeleteOfflineMessages(username string) error {
-	return b.deletePrefix([]byte("offlineMessages:" + username))
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.deletePrefix([]byte("offlineMessages:"+username), tx)
+	})
 }
 
 func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.RosterVersion, error) {
@@ -225,7 +245,9 @@ func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.Rost
 	if isDeletion {
 		v.DeletionVer = v.Ver
 	}
-	if err := b.insertOrUpdate(&v, b.rosterVersionKey(username)); err != nil {
+	if err := b.db.Update(func(tx *badger.Txn) error {
+		return b.insertOrUpdate(&v, b.rosterVersionKey(username), tx)
+	}); err != nil {
 		return model.RosterVersion{}, err
 	}
 	return v, nil
@@ -258,26 +280,23 @@ func (b *badgerDB) loop() {
 	}
 }
 
-func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte) error {
+func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn) error {
 	gs, ok := entity.(model.GobSerializer)
 	if !ok {
 		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 	}
 	buf := b.pool.Get()
 	defer b.pool.Put(buf)
-	return b.db.Update(func(tx *badger.Txn) error {
-		gs.ToGob(gob.NewEncoder(buf))
-		return tx.Set(key, buf.Bytes())
-	})
+
+	gs.ToGob(gob.NewEncoder(buf))
+	return tx.Set(key, buf.Bytes())
 }
 
-func (b *badgerDB) delete(key []byte) error {
-	return b.db.Update(func(tx *badger.Txn) error {
-		return tx.Delete(key)
-	})
+func (b *badgerDB) delete(key []byte, txn *badger.Txn) error {
+	return txn.Delete(key)
 }
 
-func (b *badgerDB) deletePrefix(prefix []byte) error {
+func (b *badgerDB) deletePrefix(prefix []byte, txn *badger.Txn) error {
 	var keys [][]byte
 	if err := b.forEachKey(prefix, func(key []byte) error {
 		keys = append(keys, key)
@@ -285,14 +304,12 @@ func (b *badgerDB) deletePrefix(prefix []byte) error {
 	}); err != nil {
 		return err
 	}
-	return b.db.Update(func(txn *badger.Txn) error {
-		for _, k := range keys {
-			if err := txn.Delete(k); err != nil {
-				return err
-			}
+	for _, k := range keys {
+		if err := txn.Delete(k); err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func (b *badgerDB) fetch(entity interface{}, key []byte) error {

@@ -48,6 +48,14 @@ CREATE TABLE roster_versions (
     PRIMARY KEY (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS blocklist_items (
+  username VARCHAR(256) NOT NULL,
+  jid TEXT NOT NULL,
+  updated_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS private_storage (
     username VARCHAR(256) NOT NULL,
     namespace VARCHAR(512) NOT NULL,
