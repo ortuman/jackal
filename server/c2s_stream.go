@@ -274,6 +274,11 @@ func (s *c2sStream) initializeXEPs() {
 		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
 	}
 
+	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
+	if _, ok := s.cfg.Modules["blocking_command"]; ok {
+		s.iqHandlers = append(s.iqHandlers, module.NewXEPBlockingCommand(s))
+	}
+
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
 		s.ping = module.NewXEPPing(&s.cfg.ModPing, s)

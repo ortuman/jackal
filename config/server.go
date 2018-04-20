@@ -186,7 +186,8 @@ func (s *Server) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Modules = map[string]struct{}{}
 	for _, module := range p.Modules {
 		switch module {
-		case "roster", "last_activity", "private", "vcard", "registration", "version", "ping", "offline":
+		case "roster", "last_activity", "private", "vcard", "registration", "version", "blocking_command", "ping",
+			"offline":
 			break
 		default:
 			return fmt.Errorf("config.Server: unrecognized module: %s", module)

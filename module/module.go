@@ -9,7 +9,7 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-const moduleMailboxSize = 16
+const moduleMailboxSize = 32
 
 // roster subscription values
 const (

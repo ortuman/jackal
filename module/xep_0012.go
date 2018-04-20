@@ -31,7 +31,7 @@ func NewXEPLastActivity(stm c2s.Stream) *XEPLastActivity {
 }
 
 // AssociatedNamespaces returns namespaces associated
-// with private storage module.
+// with last activity storage module.
 func (x *XEPLastActivity) AssociatedNamespaces() []string {
 	return []string{lastActivityNamespace}
 }
@@ -46,7 +46,7 @@ func (x *XEPLastActivity) MatchesIQ(iq *xml.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", lastActivityNamespace) != nil
 }
 
-// ProcessIQ processes a private storage IQ taking according actions
+// ProcessIQ processes a last activity IQ taking according actions
 // over the associated stream.
 func (x *XEPLastActivity) ProcessIQ(iq *xml.IQ) {
 	toJID := iq.ToJID()
