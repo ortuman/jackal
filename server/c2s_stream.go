@@ -943,7 +943,7 @@ func (s *c2sStream) buildStanza(elem xml.XElement, validateFrom bool) (xml.XElem
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, nil, err
 	}
-	fromJID, toJID, err := s.extractAddresses(elem, true)
+	fromJID, toJID, err := s.extractAddresses(elem, validateFrom)
 	if err != nil {
 		return nil, nil, err
 	}
