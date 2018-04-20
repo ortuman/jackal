@@ -33,13 +33,11 @@ type ElementSet interface {
 	Count() int
 }
 
-type elementSet struct {
-	elems []XElement
-}
+type elementSet []XElement
 
-func (es *elementSet) Children(name string) []XElement {
+func (es elementSet) Children(name string) []XElement {
 	var ret []XElement
-	for _, node := range es.elems {
+	for _, node := range es {
 		if node.Name() == name {
 			ret = append(ret, node)
 		}
@@ -47,8 +45,8 @@ func (es *elementSet) Children(name string) []XElement {
 	return ret
 }
 
-func (es *elementSet) Child(name string) XElement {
-	for _, node := range es.elems {
+func (es elementSet) Child(name string) XElement {
+	for _, node := range es {
 		if node.Name() == name {
 			return node
 		}
@@ -56,9 +54,9 @@ func (es *elementSet) Child(name string) XElement {
 	return nil
 }
 
-func (es *elementSet) ChildrenNamespace(name string, namespace string) []XElement {
+func (es elementSet) ChildrenNamespace(name string, namespace string) []XElement {
 	var ret []XElement
-	for _, node := range es.elems {
+	for _, node := range es {
 		if node.Name() == name && node.Namespace() == namespace {
 			ret = append(ret, node)
 		}
@@ -66,8 +64,8 @@ func (es *elementSet) ChildrenNamespace(name string, namespace string) []XElemen
 	return ret
 }
 
-func (es *elementSet) ChildNamespace(name string, namespace string) XElement {
-	for _, node := range es.elems {
+func (es elementSet) ChildNamespace(name string, namespace string) XElement {
+	for _, node := range es {
 		if node.Name() == name && node.Namespace() == namespace {
 			return node
 		}
@@ -75,63 +73,65 @@ func (es *elementSet) ChildNamespace(name string, namespace string) XElement {
 	return nil
 }
 
-func (es *elementSet) All() []XElement {
-	return es.elems
+func (es elementSet) All() []XElement {
+	return es
 }
 
-func (es *elementSet) Count() int {
-	return len(es.elems)
+func (es elementSet) Count() int {
+	return len(es)
 }
 
 func (es *elementSet) append(nodes ...XElement) {
-	es.elems = append(es.elems, nodes...)
+	*es = append(*es, nodes...)
 }
 
 func (es *elementSet) remove(name string) {
-	filtered := es.elems[:0]
-	for _, node := range es.elems {
+	filtered := (*es)[:0]
+	for _, node := range *es {
 		if node.Name() != name {
 			filtered = append(filtered, node)
 		}
 	}
-	es.elems = filtered
+	*es = filtered
 }
 
 func (es *elementSet) removeNamespace(name string, namespace string) {
-	filtered := es.elems[:0]
-	for _, elem := range es.elems {
+	filtered := (*es)[:0]
+	for _, elem := range *es {
 		if elem.Name() != name || elem.Attributes().Get("xmlns") != namespace {
 			filtered = append(filtered, elem)
 		}
 	}
-	es.elems = filtered
+	*es = filtered
 }
 
 func (es *elementSet) clear() {
-	es.elems = nil
+	*es = nil
 }
 
-func (es *elementSet) copyFrom(from *elementSet) {
-	es.elems = make([]XElement, from.Count())
-	for i := 0; i < len(from.elems); i++ {
-		es.elems[i] = NewElementFromElement(from.elems[i])
+func (es *elementSet) copyFrom(from elementSet) {
+	set := make([]XElement, from.Count())
+	for i := 0; i < len(from); i++ {
+		set[i] = NewElementFromElement(from[i])
 	}
+	*es = set
 }
 
 func (es *elementSet) fromGob(dec *gob.Decoder) {
 	var c int
 	dec.Decode(&c)
-	es.elems = make([]XElement, c)
+	set := make([]XElement, c)
 	for i := 0; i < c; i++ {
 		var e Element
 		e.FromGob(dec)
-		es.elems[i] = &e
+		set[i] = &e
 	}
+	*es = set
 }
 
-func (es *elementSet) toGob(enc *gob.Encoder) {
-	enc.Encode(len(es.elems))
-	for _, el := range es.elems {
+func (es elementSet) toGob(enc *gob.Encoder) {
+	enc.Encode(len(es))
+	for _, el := range es {
 		el.ToGob(enc)
 	}
 }

@@ -26,7 +26,7 @@ func NewElementName(name string) *Element {
 func NewElementNamespace(name, namespace string) *Element {
 	return &Element{
 		name:  name,
-		attrs: attributeSet{attrs: []Attribute{{"xmlns", namespace}}},
+		attrs: attributeSet([]Attribute{{"xmlns", namespace}}),
 	}
 }
 
@@ -53,12 +53,12 @@ func (e *Element) Name() string {
 
 // Attributes returns XML node attribute value.
 func (e *Element) Attributes() AttributeSet {
-	return &e.attrs
+	return e.attrs
 }
 
 // Elements returns all instance's child elements.
 func (e *Element) Elements() ElementSet {
-	return &e.elements
+	return e.elements
 }
 
 // Text returns XML node text value.
@@ -133,7 +133,7 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 	io.WriteString(w, e.name)
 
 	// serialize attributes
-	for _, attr := range e.attrs.attrs {
+	for _, attr := range e.attrs {
 		if len(attr.Value) == 0 {
 			continue
 		}
@@ -150,7 +150,7 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 		if len(e.text) > 0 {
 			escapeText(w, []byte(e.text), false)
 		}
-		for _, elem := range e.elements.elems {
+		for _, elem := range e.elements {
 			elem.ToXML(w, true)
 		}
 
@@ -187,6 +187,6 @@ func (e *Element) ToGob(enc *gob.Encoder) {
 func (e *Element) copyFrom(el XElement) {
 	e.name = el.Name()
 	e.text = el.Text()
-	e.attrs.copyFrom(el.Attributes().(*attributeSet))
-	e.elements.copyFrom(el.Elements().(*elementSet))
+	e.attrs.copyFrom(el.Attributes().(attributeSet))
+	e.elements.copyFrom(el.Elements().(elementSet))
 }
