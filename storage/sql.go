@@ -426,6 +426,37 @@ func (s *sqlStorage) DeleteOfflineMessages(username string) error {
 	return err
 }
 
+func (s *sqlStorage) InsertOrUpdateBlockListItems(username string, items []model.BlockListItem) error {
+	return s.inTransaction(func(tx *sql.Tx) error {
+		_, err := sq.Delete("blocklist_items").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		for _, item := range items {
+
+		}
+		return nil
+	})
+}
+
+func (s *sqlStorage) DeleteBlockListItem(item *model.BlockListItem) error {
+	return s.inTransaction(func(tx *sql.Tx) error {
+		_, err := sq.Delete("blocklist_items").
+			Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
+			RunWith(tx).Exec()
+		return err
+	})
+}
+
+func (s *sqlStorage) DeleteBlockListItems(username string) error {
+	return s.inTransaction(func(tx *sql.Tx) error {
+		_, err := sq.Delete("blocklist_items").
+			Where(sq.Eq{"username": username}).
+			RunWith(tx).Exec()
+		return err
+	})
+}
+
 func (s *sqlStorage) fetchRosterVer(username string) (model.RosterVersion, error) {
 	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
 		From("roster_versions").

@@ -23,6 +23,7 @@ type mockStorage struct {
 	vCards              map[string]xml.XElement
 	privateXML          map[string][]xml.XElement
 	offlineMessages     map[string][]xml.XElement
+	blockListItems      map[string][]model.BlockListItem
 }
 
 func newMockStorage() *mockStorage {
@@ -34,6 +35,7 @@ func newMockStorage() *mockStorage {
 		vCards:              make(map[string]xml.XElement),
 		privateXML:          make(map[string][]xml.XElement),
 		offlineMessages:     make(map[string][]xml.XElement),
+		blockListItems:      make(map[string][]model.BlockListItem),
 	}
 }
 
@@ -297,5 +299,25 @@ func (m *mockStorage) DeleteOfflineMessages(username string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.offlineMessages, username)
+	return nil
+}
+
+func (m *mockStorage) InsertOrUpdateBlockListItems(username string, items []model.BlockListItem) error {
+	if atomic.LoadUint32(&m.mockErr) == 1 {
+		return ErrMockedError
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.blockListItems[username] = items
+	return nil
+}
+
+func (m *mockStorage) DeleteBlockListItems(username string) error {
+	if atomic.LoadUint32(&m.mockErr) == 1 {
+		return ErrMockedError
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.blockListItems, username)
 	return nil
 }
