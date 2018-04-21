@@ -188,7 +188,7 @@ func (p *Presence) validateStatus() error {
 			break
 		case 1:
 			as := st.Attributes()
-			if as.(*attributeSet).attrs[0].Label == "xml:lang" {
+			if as.(attributeSet)[0].Label == "xml:lang" {
 				break
 			}
 			fallthrough
