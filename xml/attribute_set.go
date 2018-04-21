@@ -22,8 +22,6 @@ type AttributeSet interface {
 
 type attributeSet []Attribute
 
-//func (as attributeSet) attr() []Attribute
-
 func (as attributeSet) Get(label string) string {
 	for _, attr := range as {
 		if attr.Label == label {
