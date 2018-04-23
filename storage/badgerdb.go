@@ -289,6 +289,9 @@ func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn
 	defer b.pool.Put(buf)
 
 	gs.ToGob(gob.NewEncoder(buf))
+	bts := buf.Bytes()
+	val := make([]byte, len(bts))
+	copy(val, bts)
 	return tx.Set(key, buf.Bytes())
 }
 
@@ -369,12 +372,12 @@ func (b *badgerDB) forEachKey(prefix []byte, f func(k []byte) error) error {
 	return b.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
-		opts.AllVersions = false
-		it := txn.NewIterator(opts)
-		defer it.Close()
+		iter := txn.NewIterator(opts)
+		defer iter.Close()
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			if err := f(it.Item().Key()); err != nil {
+		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+			it := iter.Item()
+			if err := f(it.Key()); err != nil {
 				return err
 			}
 		}
@@ -384,17 +387,16 @@ func (b *badgerDB) forEachKey(prefix []byte, f func(k []byte) error) error {
 
 func (b *badgerDB) forEachKeyAndValue(prefix []byte, f func(k, v []byte) error) error {
 	return b.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.AllVersions = false
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+		iter := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer iter.Close()
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			val, err := it.Item().Value()
+		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+			it := iter.Item()
+			val, err := it.Value()
 			if err != nil {
 				return err
 			}
-			if err := f(it.Item().Key(), val); err != nil {
+			if err := f(it.Key(), val); err != nil {
 				return err
 			}
 		}
