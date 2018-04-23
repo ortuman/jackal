@@ -292,7 +292,7 @@ func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn
 	bts := buf.Bytes()
 	val := make([]byte, len(bts))
 	copy(val, bts)
-	return tx.Set(key, buf.Bytes())
+	return tx.Set(key, val)
 }
 
 func (b *badgerDB) delete(key []byte, txn *badger.Txn) error {
