@@ -48,9 +48,11 @@ type Storage interface {
 	FetchOfflineMessages(username string) ([]xml.XElement, error)
 	DeleteOfflineMessages(username string) error
 
-	InsertOrUpdateBlockListItems(username string, items []model.BlockListItem) error
+	InsertOrUpdateBlockListItems(items []model.BlockListItem) error
 	DeleteBlockListItem(items *model.BlockListItem) error
 	DeleteBlockListItems(username string) error
+
+	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }
 
 var (

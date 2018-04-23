@@ -236,6 +236,37 @@ func (b *badgerDB) DeleteOfflineMessages(username string) error {
 	})
 }
 
+func (b *badgerDB) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		for _, item := range items {
+			if err := b.insertOrUpdate(&item, b.blockListItemKey(item.Username, item.JID), tx); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (b *badgerDB) DeleteBlockListItem(item *model.BlockListItem) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.delete(b.blockListItemKey(item.Username, item.JID), tx)
+	})
+}
+
+func (b *badgerDB) DeleteBlockListItems(username string) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		return b.deletePrefix([]byte("blockListItems:"+username), tx)
+	})
+}
+
+func (b *badgerDB) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	var blItems []model.BlockListItem
+	if err := b.fetchAll(&blItems, []byte("blockListItems:"+username)); err != nil {
+		return nil, err
+	}
+	return blItems, nil
+}
+
 func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.RosterVersion, error) {
 	v, err := b.fetchRosterVer(username)
 	if err != nil {
@@ -289,7 +320,10 @@ func (b *badgerDB) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn
 	defer b.pool.Put(buf)
 
 	gs.ToGob(gob.NewEncoder(buf))
-	return tx.Set(key, buf.Bytes())
+	bts := buf.Bytes()
+	val := make([]byte, len(bts))
+	copy(val, bts)
+	return tx.Set(key, val)
 }
 
 func (b *badgerDB) delete(key []byte, txn *badger.Txn) error {
@@ -369,12 +403,12 @@ func (b *badgerDB) forEachKey(prefix []byte, f func(k []byte) error) error {
 	return b.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
-		opts.AllVersions = false
-		it := txn.NewIterator(opts)
-		defer it.Close()
+		iter := txn.NewIterator(opts)
+		defer iter.Close()
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			if err := f(it.Item().Key()); err != nil {
+		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+			it := iter.Item()
+			if err := f(it.Key()); err != nil {
 				return err
 			}
 		}
@@ -384,17 +418,16 @@ func (b *badgerDB) forEachKey(prefix []byte, f func(k []byte) error) error {
 
 func (b *badgerDB) forEachKeyAndValue(prefix []byte, f func(k, v []byte) error) error {
 	return b.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.AllVersions = false
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
+		iter := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer iter.Close()
 
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			val, err := it.Item().Value()
+		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+			it := iter.Item()
+			val, err := it.Value()
 			if err != nil {
 				return err
 			}
-			if err := f(it.Item().Key(), val); err != nil {
+			if err := f(it.Key(), val); err != nil {
 				return err
 			}
 		}
@@ -428,4 +461,8 @@ func (b *badgerDB) rosterNotificationKey(user, contact string) []byte {
 
 func (b *badgerDB) offlineMessageKey(username, identifier string) []byte {
 	return []byte("offlineMessages:" + username + ":" + identifier)
+}
+
+func (b *badgerDB) blockListItemKey(username, jid string) []byte {
+	return []byte("blockListItems:" + username + ":" + jid)
 }

@@ -302,13 +302,44 @@ func (m *mockStorage) DeleteOfflineMessages(username string) error {
 	return nil
 }
 
-func (m *mockStorage) InsertOrUpdateBlockListItems(username string, items []model.BlockListItem) error {
+func (m *mockStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.blockListItems[username] = items
+
+	for _, item := range items {
+		bl := m.blockListItems[item.Username]
+		if bl != nil {
+			for _, blItem := range bl {
+				if blItem.JID == item.JID {
+					goto itemInserted
+				}
+			}
+			m.blockListItems[item.Username] = append(bl, item)
+		} else {
+			m.blockListItems[item.Username] = []model.BlockListItem{item}
+		}
+	itemInserted:
+	}
+	return nil
+}
+
+func (m *mockStorage) DeleteBlockListItem(item *model.BlockListItem) error {
+	if atomic.LoadUint32(&m.mockErr) == 1 {
+		return ErrMockedError
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	bl := m.blockListItems[item.Username]
+	for i, blItem := range bl {
+		if blItem.JID == item.JID {
+			m.blockListItems[item.Username] = append(bl[:i], bl[i+1:]...)
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -320,4 +351,13 @@ func (m *mockStorage) DeleteBlockListItems(username string) error {
 	defer m.mu.Unlock()
 	delete(m.blockListItems, username)
 	return nil
+}
+
+func (m *mockStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	if atomic.LoadUint32(&m.mockErr) == 1 {
+		return nil, ErrMockedError
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.blockListItems[username], nil
 }

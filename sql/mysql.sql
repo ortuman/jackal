@@ -50,9 +50,9 @@ CREATE TABLE roster_versions (
 
 CREATE TABLE IF NOT EXISTS blocklist_items (
     username VARCHAR(256) NOT NULL,
-    jid TEXT NOT NULL,
-    updated_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL
+    jid VARCHAR(512) NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY(username, jid)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_blocklist_items_username ON blocklist_items(username);

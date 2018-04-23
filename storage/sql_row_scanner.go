@@ -40,3 +40,13 @@ func scanRosterItemEntities(scanner rowsScanner) ([]model.RosterItem, error) {
 	}
 	return ret, nil
 }
+
+func scanBlockListItemEntities(scanner rowsScanner) ([]model.BlockListItem, error) {
+	var ret []model.BlockListItem
+	for scanner.Next() {
+		var it model.BlockListItem
+		scanner.Scan(&it.Username, &it.JID)
+		ret = append(ret, it)
+	}
+	return ret, nil
+}

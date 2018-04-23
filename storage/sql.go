@@ -426,14 +426,17 @@ func (s *sqlStorage) DeleteOfflineMessages(username string) error {
 	return err
 }
 
-func (s *sqlStorage) InsertOrUpdateBlockListItems(username string, items []model.BlockListItem) error {
+func (s *sqlStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
-		_, err := sq.Delete("blocklist_items").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
-		if err != nil {
-			return err
-		}
 		for _, item := range items {
-
+			_, err := sq.Insert("blocklist_items").
+				Options("IGNORE").
+				Columns("username", "jid", "created_at").
+				Values(item.Username, item.JID, nowExpr).
+				RunWith(tx).Exec()
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -455,6 +458,20 @@ func (s *sqlStorage) DeleteBlockListItems(username string) error {
 			RunWith(tx).Exec()
 		return err
 	})
+}
+
+func (s *sqlStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	q := sq.Select("username", "jid").
+		From("blocklist_items").
+		Where(sq.Eq{"username": username}).
+		OrderBy("created_at")
+
+	rows, err := q.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanBlockListItemEntities(rows)
 }
 
 func (s *sqlStorage) fetchRosterVer(username string) (model.RosterVersion, error) {

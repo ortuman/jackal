@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"sort"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
@@ -217,6 +219,41 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	cnt, err = h.db.CountOfflineMessages("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 0, cnt)
+}
+
+func TestBadgerDB_BlockListItems(t *testing.T) {
+	t.Parallel()
+
+	h := tUtilBadgerDBSetup()
+	defer tUtilBadgerDBTeardown(h)
+
+	items := []model.BlockListItem{
+		{"ortuman", "juliet@jackal.im"},
+		{"ortuman", "user@jackal.im"},
+		{"ortuman", "romeo@jackal.im"},
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
+
+	err := h.db.InsertOrUpdateBlockListItems(items)
+	require.Nil(t, err)
+
+	sItems, err := h.db.FetchBlockListItems("ortuman")
+	sort.Slice(sItems, func(i, j int) bool { return sItems[i].JID < sItems[j].JID })
+	require.Nil(t, err)
+	require.Equal(t, items, sItems)
+
+	items = append(items[:1], items[2:]...)
+	h.db.DeleteBlockListItem(&model.BlockListItem{"ortuman", "romeo@jackal.im"})
+
+	sItems, err = h.db.FetchBlockListItems("ortuman")
+	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
+	require.Nil(t, err)
+	require.Equal(t, items, sItems)
+
+	err = h.db.DeleteBlockListItems("ortuman")
+	require.Nil(t, err)
+	sItems, err = h.db.FetchBlockListItems("ortuman")
+	require.Equal(t, 0, len(sItems))
 }
 
 func tUtilBadgerDBSetup() *testBadgerDBHelper {

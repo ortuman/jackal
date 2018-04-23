@@ -591,3 +591,89 @@ func TestMySQLStorageDeleteOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
+
+func TestMySQLStorageInsertBlockListItems(t *testing.T) {
+	s, mock := newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err := s.InsertOrUpdateBlockListItems([]model.BlockListItem{{"ortuman", "noelia@jackal.im"}})
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	s, mock = newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").WillReturnError(errMySQLStorage)
+	mock.ExpectRollback()
+
+	err = s.InsertOrUpdateBlockListItems([]model.BlockListItem{{"ortuman", "noelia@jackal.im"}})
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Equal(t, errMySQLStorage, err)
+}
+
+func TestMySQLFetchBlockListItems(t *testing.T) {
+	var blockListColumns = []string{"username", "jid"}
+	s, mock := newMockSQLStorage()
+	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
+		WithArgs("ortuman").
+		WillReturnRows(sqlmock.NewRows(blockListColumns).AddRow("ortuman", "noelia@jackal.im"))
+
+	_, err := s.FetchBlockListItems("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	s, mock = newMockSQLStorage()
+	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
+		WithArgs("ortuman").
+		WillReturnError(errMySQLStorage)
+
+	_, err = s.FetchBlockListItems("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Equal(t, errMySQLStorage, err)
+}
+
+func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
+	s, mock := newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
+		WithArgs("ortuman").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err := s.DeleteBlockListItems("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	s, mock = newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
+		WillReturnError(errMySQLStorage)
+	mock.ExpectRollback()
+
+	err = s.DeleteBlockListItems("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Equal(t, errMySQLStorage, err)
+
+	s, mock = newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
+		WithArgs("ortuman", "noelia@jackal.im").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err = s.DeleteBlockListItem(&model.BlockListItem{"ortuman", "noelia@jackal.im"})
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	s, mock = newMockSQLStorage()
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
+		WillReturnError(errMySQLStorage)
+	mock.ExpectRollback()
+
+	err = s.DeleteBlockListItem(&model.BlockListItem{"ortuman", "noelia@jackal.im"})
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Equal(t, errMySQLStorage, err)
+}
