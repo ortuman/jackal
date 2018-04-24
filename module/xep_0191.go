@@ -18,6 +18,7 @@ const (
 	xep191RequestedContextKey = "xep_191:requested"
 )
 
+// XEPBlockingCommand returns a blocking command IQ handler module.
 type XEPBlockingCommand struct {
 	stm c2s.Stream
 }
@@ -40,17 +41,19 @@ func (x *XEPBlockingCommand) Done() {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the blocking command module.
 func (x *XEPBlockingCommand) MatchesIQ(iq *xml.IQ) bool {
-	return iq.Elements().ChildNamespace("blocklist", blockingCommandNamespace) != nil
+	e := iq.Elements()
+	blockList := e.ChildNamespace("blocklist", blockingCommandNamespace)
+	block := e.ChildNamespace("block", blockingCommandNamespace)
+	unblock := e.ChildNamespace("unblock", blockingCommandNamespace)
+	return (iq.IsGet() && blockList != nil) || (iq.IsSet() && (block != nil || unblock != nil))
 }
 
 // ProcessIQ processes a blocking command IQ taking according actions
 // over the associated stream.
 func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
-	blockList := iq.Elements().ChildNamespace("blocklist", blockingCommandNamespace)
 	if iq.IsGet() {
 		x.sendBlockList(iq)
 	} else if iq.IsSet() {
-		x.blockJIDs(iq, blockList)
 	}
 }
 

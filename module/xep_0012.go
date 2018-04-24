@@ -31,7 +31,7 @@ func NewXEPLastActivity(stm c2s.Stream) *XEPLastActivity {
 }
 
 // AssociatedNamespaces returns namespaces associated
-// with last activity storage module.
+// with last activity module.
 func (x *XEPLastActivity) AssociatedNamespaces() []string {
 	return []string{lastActivityNamespace}
 }
