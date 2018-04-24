@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,12 +23,15 @@ import (
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
+
+const streamMailboxSize = 64
 
 const (
 	connecting uint32 = iota
@@ -41,14 +43,8 @@ const (
 )
 
 const (
-	jabberClientNamespace = "jabber:client"
-)
-
-const (
-	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
-)
-
-const (
+	jabberClientNamespace     = "jabber:client"
+	framedStreamNamespace     = "urn:ietf:params:xml:ns:xmpp-framing"
 	streamNamespace           = "http://etherx.jabber.org/streams"
 	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
@@ -56,7 +52,23 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 )
 
-const streamMailboxSize = 64
+// stream context keys
+const (
+	usernameContextKey      = "username"
+	domainContextKey        = "domain"
+	resourceContextKey      = "resource"
+	jidContextKey           = "jid"
+	securedContextKey       = "secured"
+	authenticatedContextKey = "authenticated"
+	compressedContextKey    = "compressed"
+	presenceContextKey      = "presence"
+)
+
+// once dispatch handlers
+const (
+	rosterOnce  = "rosterOnce"
+	offlineOnce = "offlineOnce"
+)
 
 var (
 	errNotExistingAccount = errors.New("account does not exist")
@@ -64,28 +76,13 @@ var (
 	errNotAuthenticated   = errors.New("user not authenticated")
 )
 
-type c2sStreamContext struct {
-	username      string
-	domain        string
-	resource      string
-	jid           *xml.JID
-	secured       bool
-	authenticated bool
-	compressed    bool
-	priority      int8
-	presence      *xml.Presence
-	rosterOnce    uint32
-	offlineOnce   uint32
-}
-
 type c2sStream struct {
-	lock        sync.RWMutex
 	cfg         *config.Server
 	tr          transport.Transport
 	id          string
 	connected   uint32
 	state       uint32
-	ctx         c2sStreamContext
+	ctx         *stream.Context
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
@@ -102,13 +99,18 @@ func newC2SStream(id string, tr transport.Transport, cfg *config.Server) *c2sStr
 		id:      id,
 		tr:      tr,
 		state:   connecting,
+		ctx:     stream.NewContext(),
 		actorCh: make(chan func(), streamMailboxSize),
 	}
-	s.ctx.secured = !(cfg.Transport.Type == config.SocketTransportType)
+	// initialize stream context
+	secured := !(cfg.Transport.Type == config.SocketTransportType)
+	s.ctx.SetBool(secured, securedContextKey)
 
-	// assign default domain
-	s.ctx.domain = c2s.Instance().DefaultLocalDomain()
-	s.ctx.jid, _ = xml.NewJID("", s.ctx.domain, "", true)
+	domain := c2s.Instance().DefaultLocalDomain()
+	s.ctx.SetString(domain, domainContextKey)
+
+	j, _ := xml.NewJID("", domain, "", true)
+	s.ctx.SetObject(j, jidContextKey)
 
 	// initialize authenticators
 	s.initializeAuthenticators()
@@ -130,78 +132,56 @@ func (s *c2sStream) ID() string {
 	return s.id
 }
 
+// Context returns stream associated context.
+func (s *c2sStream) Context() *stream.Context {
+	return s.ctx
+}
+
 // Username returns current stream username.
 func (s *c2sStream) Username() string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.username
+	return s.ctx.String(usernameContextKey)
 }
 
 // Domain returns current stream domain.
 func (s *c2sStream) Domain() string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.domain
+	return s.ctx.String(domainContextKey)
 }
 
 // Resource returns current stream resource.
 func (s *c2sStream) Resource() string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.resource
+	return s.ctx.String(resourceContextKey)
 }
 
 // JID returns current user JID.
 func (s *c2sStream) JID() *xml.JID {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.jid
-}
-
-// Priority returns current presence priority.
-func (s *c2sStream) Priority() int8 {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.priority
+	return s.ctx.Object(jidContextKey).(*xml.JID)
 }
 
 // IsAuthenticated returns whether or not the XMPP stream
 // has successfully authenticated.
 func (s *c2sStream) IsAuthenticated() bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.authenticated
+	return s.ctx.Bool(authenticatedContextKey)
 }
 
 // IsSecured returns whether or not the XMPP stream
 // has been secured using SSL/TLS.
 func (s *c2sStream) IsSecured() bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.secured
+	return s.ctx.Bool(securedContextKey)
 }
 
 // IsCompressed returns whether or not the XMPP stream
 // has enabled a compression method.
 func (s *c2sStream) IsCompressed() bool {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.compressed
-}
-
-// IsRosterRequested returns whether or not user's roster has been requested.
-func (s *c2sStream) IsRosterRequested() bool {
-	if s.roster != nil {
-		return s.roster.IsRequested()
-	}
-	return false
+	return s.ctx.Bool(compressedContextKey)
 }
 
 // Presence returns last sent presence element.
 func (s *c2sStream) Presence() *xml.Presence {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.ctx.presence
+	switch v := s.ctx.Object(presenceContextKey).(type) {
+	case *xml.Presence:
+		return v
+	}
+	return nil
 }
 
 // SendElement sends the given XML element.
@@ -345,9 +325,7 @@ func (s *c2sStream) handleConnecting(elem xml.XElement) {
 		return
 	}
 	// assign stream domain
-	s.lock.Lock()
-	s.ctx.domain = elem.To()
-	s.lock.Unlock()
+	s.ctx.SetString(elem.To(), domainContextKey)
 
 	// open stream
 	s.openStream()
@@ -529,9 +507,7 @@ func (s *c2sStream) proceedStartTLS() {
 		s.disconnectClosingStream(true)
 		return
 	}
-	s.lock.Lock()
-	s.ctx.secured = true
-	s.lock.Unlock()
+	s.ctx.SetBool(true, securedContextKey)
 
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
@@ -560,9 +536,7 @@ func (s *c2sStream) compress(elem xml.XElement) {
 		s.writeElement(failure)
 		return
 	}
-	s.lock.Lock()
-	s.ctx.compressed = true
-	s.lock.Unlock()
+	s.ctx.SetBool(true, compressedContextKey)
 
 	s.writeElement(xml.NewElementNamespace("compressed", compressProtocolNamespace))
 
@@ -612,11 +586,11 @@ func (s *c2sStream) finishAuthentication(username string) {
 		s.activeAuthr.Reset()
 		s.activeAuthr = nil
 	}
-	s.lock.Lock()
-	s.ctx.username = username
-	s.ctx.authenticated = true
-	s.ctx.jid, _ = xml.NewJID(s.ctx.username, s.ctx.domain, "", true)
-	s.lock.Unlock()
+	j, _ := xml.NewJID(username, s.Domain(), "", true)
+
+	s.ctx.SetString(username, usernameContextKey)
+	s.ctx.SetBool(true, authenticatedContextKey)
+	s.ctx.SetObject(j, jidContextKey)
 
 	s.restart()
 }
@@ -667,10 +641,8 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 		s.writeElement(iq.BadRequestError())
 		return
 	}
-	s.lock.Lock()
-	s.ctx.resource = resource
-	s.ctx.jid = userJID
-	s.lock.Unlock()
+	s.ctx.SetString(resource, resourceContextKey)
+	s.ctx.SetObject(userJID, jidContextKey)
 
 	log.Infof("binded resource... (%s/%s)", s.Username(), s.Resource())
 
@@ -771,27 +743,23 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 		s.sendElement(presence, toJid)
 		return
 	}
-
-	// set resource priority & availability
-	s.lock.Lock()
-	s.ctx.priority = presence.Priority()
-	s.ctx.presence = presence
-	s.lock.Unlock()
+	// set context presence
+	s.ctx.SetObject(presence, presenceContextKey)
 
 	// deliver pending approval notifications
 	if s.roster != nil {
-		if atomic.CompareAndSwapUint32(&s.ctx.rosterOnce, 0, 1) {
+		s.ctx.DoOnce(rosterOnce, func() {
 			s.roster.DeliverPendingApprovalNotifications()
 			s.roster.ReceivePresences()
-		}
+		})
 		s.roster.BroadcastPresence(presence)
 	}
 
 	// deliver offline messages
-	if s.offline != nil && s.Priority() >= 0 {
-		if atomic.CompareAndSwapUint32(&s.ctx.offlineOnce, 0, 1) {
+	if p := s.Presence(); s.offline != nil && p != nil && p.Priority() >= 0 {
+		s.ctx.DoOnce(offlineOnce, func() {
 			s.offline.DeliverOfflineMessages()
-		}
+		})
 	}
 }
 
@@ -1163,14 +1131,18 @@ func (s *c2sStream) sendElement(element xml.XElement, to *xml.JID) error {
 	switch element.(type) {
 	case *xml.Message:
 		// send to highest priority stream
-		strm := recipients[0]
-		highestPriority := strm.Priority()
+		stm := recipients[0]
+		var highestPriority int8
+		if p := stm.Presence(); p != nil {
+			highestPriority = p.Priority()
+		}
 		for i := 1; i < len(recipients); i++ {
-			if recipients[i].Priority() > highestPriority {
-				strm = recipients[i]
+			rcp := recipients[i]
+			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
+				stm = rcp
 			}
 		}
-		strm.SendElement(element)
+		stm.SendElement(element)
 
 	default:
 		// broadcast to all streams

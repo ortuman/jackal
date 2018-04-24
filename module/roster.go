@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
@@ -22,12 +21,14 @@ import (
 
 const rosterNamespace = "jabber:iq:roster"
 
+const (
+	rosterRequestedContextKey = "roster:requested"
+)
+
 // ModRoster represents a roster server stream module.
 type ModRoster struct {
 	cfg        *config.ModRoster
 	stm        c2s.Stream
-	lock       sync.RWMutex
-	requested  bool
 	actorCh    chan func()
 	errHandler func(error)
 }
@@ -73,14 +74,6 @@ func (r *ModRoster) ProcessIQ(iq *xml.IQ) {
 			r.stm.SendElement(iq.BadRequestError())
 		}
 	}
-}
-
-// IsRequested returns whether or not the user roster
-// has been requested.
-func (r *ModRoster) IsRequested() bool {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	return r.requested
 }
 
 // ProcessPresence process an incoming roster presence.
@@ -241,9 +234,7 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.XElement) {
 			}
 		}
 	}
-	r.lock.Lock()
-	r.requested = true
-	r.lock.Unlock()
+	r.stm.Context().SetBool(true, rosterRequestedContextKey)
 }
 
 func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
@@ -633,14 +624,14 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	query.AppendElement(r.elementFromRosterItem(ri))
 
 	streams := c2s.Instance().AvailableStreams(to.Node())
-	for _, strm := range streams {
-		if !strm.IsRosterRequested() {
+	for _, stm := range streams {
+		if !stm.Context().Bool(rosterRequestedContextKey) {
 			continue
 		}
 		pushEl := xml.NewIQType(uuid.New(), xml.SetType)
-		pushEl.SetTo(strm.JID().String())
+		pushEl.SetTo(stm.JID().String())
 		pushEl.AppendElement(query)
-		strm.SendElement(pushEl)
+		stm.SendElement(pushEl)
 	}
 	return nil
 }

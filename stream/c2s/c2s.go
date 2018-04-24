@@ -12,6 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -19,16 +20,13 @@ import (
 type Stream interface {
 	ID() string
 
+	Context() *stream.Context
+
 	Username() string
 	Domain() string
 	Resource() string
 
 	JID() *xml.JID
-
-	Priority() int8
-
-	SendElement(element xml.XElement)
-	Disconnect(err error)
 
 	IsSecured() bool
 	IsAuthenticated() bool
@@ -36,7 +34,8 @@ type Stream interface {
 
 	Presence() *xml.Presence
 
-	IsRosterRequested() bool
+	SendElement(element xml.XElement)
+	Disconnect(err error)
 }
 
 // Manager manages the sessions associated with an account.
