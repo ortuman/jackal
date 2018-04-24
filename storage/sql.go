@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	sq "github.com/Masterminds/squirrel"
 	_ "github.com/go-sql-driver/mysql" // SQL driver
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
-	sq "gopkg.in/Masterminds/squirrel.v1"
 )
 
 var (

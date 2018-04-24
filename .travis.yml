@@ -8,9 +8,19 @@ go:
   - 1.10.x
   - 1.9.x
 
+env:
+  - DEP_VERSION="0.4.1"
+
 before_install:
+  - mkdir -p $GOPATH/bin
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update        ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libidn; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libidn curl; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-darwin-amd64 -o $GOPATH/bin/dep; fi
+  - chmod +x $GOPATH/bin/dep
+
+install:
+  - dep ensure
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
