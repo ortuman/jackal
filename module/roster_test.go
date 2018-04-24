@@ -99,7 +99,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
-	require.True(t, r.IsRequested())
+	require.True(t, stm.Context().Bool(rosterRequestedContextKey))
 
 	// test versioning
 	iq = xml.NewIQType(uuid.New(), xml.GetType)
@@ -564,7 +564,7 @@ func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("garden")
 	stm1.SetAuthenticated(true)
-	stm1.SetRosterRequested(true)
+	stm1.Context().SetBool(true, rosterRequestedContextKey)
 	stm1.SetJID(j1)
 
 	stm2 := c2s.NewMockStream("abcd5678", j2)
@@ -572,7 +572,7 @@ func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
 	stm2.SetDomain("jackal.im")
 	stm2.SetResource("garden")
 	stm2.SetAuthenticated(true)
-	stm2.SetRosterRequested(true)
+	stm2.Context().SetBool(true, rosterRequestedContextKey)
 	stm2.SetJID(j2)
 
 	// register streams...

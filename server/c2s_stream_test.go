@@ -180,7 +180,7 @@ func TestStream_SendIQ(t *testing.T) {
 	require.Equal(t, iqID, elem.ID())
 	require.NotNil(t, elem.Elements().ChildNamespace("query", "jabber:iq:roster"))
 
-	require.True(t, stm.IsRosterRequested())
+	require.True(t, stm.Context().Bool("roster:requested"))
 }
 
 func TestStream_SendPresence(t *testing.T) {
@@ -219,7 +219,9 @@ func TestStream_SendPresence(t *testing.T) {
 	`))
 	time.Sleep(time.Millisecond * 100) // wait until processed...
 
-	require.Equal(t, int8(5), stm.Priority())
+	p := stm.Presence()
+	require.NotNil(t, p)
+	require.Equal(t, int8(5), p.Priority())
 	x := xml.NewElementName("x")
 	x.AppendElements(stm.Presence().Elements().All())
 	require.NotNil(t, x.Elements().Child("show"))
