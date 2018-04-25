@@ -486,10 +486,10 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	usrSubscription := subscriptionNone
+	usrSub := subscriptionNone
 	if usrRi != nil {
-		usrSubscription = usrRi.Subscription
-		switch usrSubscription {
+		usrSub = usrRi.Subscription
+		switch usrSub {
 		case subscriptionBoth:
 			usrRi.Subscription = subscriptionFrom
 		default:
@@ -522,7 +522,7 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 	}
 	r.routePresence(p, cntJID)
 
-	if usrSubscription == subscriptionTo || usrSubscription == subscriptionBoth {
+	if usrSub == subscriptionTo || usrSub == subscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
 	}
 	return nil
@@ -541,10 +541,10 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 	if err != nil {
 		return err
 	}
-	cntSubscription := subscriptionNone
+	cntSub := subscriptionNone
 	if cntRi != nil {
-		cntSubscription = cntRi.Subscription
-		switch cntSubscription {
+		cntSub = cntRi.Subscription
+		switch cntSub {
 		case subscriptionBoth:
 			cntRi.Subscription = subscriptionTo
 		default:
@@ -578,7 +578,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 	}
 	r.routePresence(p, usrJID)
 
-	if cntSubscription == subscriptionFrom || cntSubscription == subscriptionBoth {
+	if cntSub == subscriptionFrom || cntSub == subscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
 	}
 	return nil
