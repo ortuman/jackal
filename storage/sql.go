@@ -442,16 +442,21 @@ func (s *sqlStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) e
 	})
 }
 
-func (s *sqlStorage) DeleteBlockListItem(item *model.BlockListItem) error {
+func (s *sqlStorage) DeleteBlockListItems(items []model.BlockListItem) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
-		_, err := sq.Delete("blocklist_items").
-			Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
-			RunWith(tx).Exec()
-		return err
+		for _, item := range items {
+			_, err := sq.Delete("blocklist_items").
+				Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
+				RunWith(tx).Exec()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
-func (s *sqlStorage) DeleteBlockListItems(username string) error {
+func (s *sqlStorage) DeleteBlockList(username string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		_, err := sq.Delete("blocklist_items").
 			Where(sq.Eq{"username": username}).

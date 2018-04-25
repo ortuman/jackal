@@ -49,8 +49,8 @@ type Storage interface {
 	DeleteOfflineMessages(username string) error
 
 	InsertOrUpdateBlockListItems(items []model.BlockListItem) error
-	DeleteBlockListItem(items *model.BlockListItem) error
-	DeleteBlockListItems(username string) error
+	DeleteBlockListItems(items []model.BlockListItem) error
+	DeleteBlockList(username string) error
 
 	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }

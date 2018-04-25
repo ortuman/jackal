@@ -243,14 +243,14 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 	require.Equal(t, items, sItems)
 
 	items = append(items[:1], items[2:]...)
-	h.db.DeleteBlockListItem(&model.BlockListItem{"ortuman", "romeo@jackal.im"})
+	h.db.DeleteBlockListItems([]model.BlockListItem{{"ortuman", "romeo@jackal.im"}})
 
 	sItems, err = h.db.FetchBlockListItems("ortuman")
 	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
 	require.Nil(t, err)
 	require.Equal(t, items, sItems)
 
-	err = h.db.DeleteBlockListItems("ortuman")
+	err = h.db.DeleteBlockList("ortuman")
 	require.Nil(t, err)
 	sItems, err = h.db.FetchBlockListItems("ortuman")
 	require.Equal(t, 0, len(sItems))

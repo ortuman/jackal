@@ -326,24 +326,26 @@ func (m *mockStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) 
 	return nil
 }
 
-func (m *mockStorage) DeleteBlockListItem(item *model.BlockListItem) error {
+func (m *mockStorage) DeleteBlockListItems(items []model.BlockListItem) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	bl := m.blockListItems[item.Username]
-	for i, blItem := range bl {
-		if blItem.JID == item.JID {
-			m.blockListItems[item.Username] = append(bl[:i], bl[i+1:]...)
-			return nil
+	for _, item := range items {
+		bl := m.blockListItems[item.Username]
+		for i, blItem := range bl {
+			if blItem.JID == item.JID {
+				m.blockListItems[item.Username] = append(bl[:i], bl[i+1:]...)
+				break
+			}
 		}
 	}
 	return nil
 }
 
-func (m *mockStorage) DeleteBlockListItems(username string) error {
+func (m *mockStorage) DeleteBlockList(username string) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}

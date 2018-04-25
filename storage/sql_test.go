@@ -642,7 +642,7 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.DeleteBlockListItems("ortuman")
+	err := s.DeleteBlockList("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -652,7 +652,7 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 		WillReturnError(errMySQLStorage)
 	mock.ExpectRollback()
 
-	err = s.DeleteBlockListItems("ortuman")
+	err = s.DeleteBlockList("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 
@@ -663,7 +663,8 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err = s.DeleteBlockListItem(&model.BlockListItem{"ortuman", "noelia@jackal.im"})
+	delItems := []model.BlockListItem{{"ortuman", "noelia@jackal.im"}}
+	err = s.DeleteBlockListItems(delItems)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -673,7 +674,7 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 		WillReturnError(errMySQLStorage)
 	mock.ExpectRollback()
 
-	err = s.DeleteBlockListItem(&model.BlockListItem{"ortuman", "noelia@jackal.im"})
+	err = s.DeleteBlockListItems(delItems)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

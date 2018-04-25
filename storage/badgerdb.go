@@ -247,13 +247,18 @@ func (b *badgerDB) InsertOrUpdateBlockListItems(items []model.BlockListItem) err
 	})
 }
 
-func (b *badgerDB) DeleteBlockListItem(item *model.BlockListItem) error {
+func (b *badgerDB) DeleteBlockListItems(items []model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.delete(b.blockListItemKey(item.Username, item.JID), tx)
+		for _, item := range items {
+			if err := b.delete(b.blockListItemKey(item.Username, item.JID), tx); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
-func (b *badgerDB) DeleteBlockListItems(username string) error {
+func (b *badgerDB) DeleteBlockList(username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.deletePrefix([]byte("blockListItems:"+username), tx)
 	})

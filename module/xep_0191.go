@@ -8,8 +8,10 @@ package module
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pborman/uuid"
 )
 
 const blockingCommandNamespace = "urn:xmpp:blocking"
@@ -20,7 +22,9 @@ const (
 
 // XEPBlockingCommand returns a blocking command IQ handler module.
 type XEPBlockingCommand struct {
-	stm c2s.Stream
+	stm           c2s.Stream
+	loadedInMemBl bool
+	inMemBl       []*xml.JID
 }
 
 // NewXEPBlockingCommand returns a blocking command IQ handler module.
@@ -51,23 +55,28 @@ func (x *XEPBlockingCommand) MatchesIQ(iq *xml.IQ) bool {
 // ProcessIQ processes a blocking command IQ taking according actions
 // over the associated stream.
 func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
-	if iq.IsGet() {
-		x.sendBlockList(iq)
-	} else if iq.IsSet() {
-	}
-}
-
-func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
-	items, err := storage.Instance().FetchBlockListItems(x.stm.Username())
-	if err != nil {
+	if err := x.loadInMemBlockList(); err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
+	if iq.IsGet() {
+		x.sendBlockList(iq)
+	} else if iq.IsSet() {
+		e := iq.Elements()
+		if block := e.ChildNamespace("block", blockingCommandNamespace); block != nil {
+			x.block(iq, block)
+		} else if unblock := e.ChildNamespace("unblock", blockingCommandNamespace); unblock != nil {
+			x.unblock(iq, unblock)
+		}
+	}
+}
+
+func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 	bl := xml.NewElementNamespace("blocklist", blockingCommandNamespace)
-	for _, item := range items {
+	for _, j := range x.inMemBl {
 		itElem := xml.NewElementName("item")
-		itElem.SetAttribute("jid", item.JID)
+		itElem.SetAttribute("jid", j.String())
 		bl.AppendElement(itElem)
 	}
 	reply := iq.ResultIQ()
@@ -77,5 +86,128 @@ func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 	x.stm.Context().SetBool(true, xep191RequestedContextKey)
 }
 
-func (x *XEPBlockingCommand) blockJIDs(iq *xml.IQ, blockList xml.XElement) {
+func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
+	items := block.Elements().Children("item")
+	if len(items) == 0 {
+		x.stm.SendElement(iq.BadRequestError())
+		return
+	}
+	jids, err := x.extractItemJIDs(items)
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.JidMalformedError())
+		return
+	}
+	var bl []model.BlockListItem
+	for _, j := range jids {
+		if !x.insertBlockListJID(j) {
+			continue
+		}
+		bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
+	}
+	if len(bl) > 0 {
+		if err := storage.Instance().InsertOrUpdateBlockListItems(bl); err != nil {
+			log.Error(err)
+			x.stm.SendElement(iq.InternalServerError())
+			return
+		}
+	}
+	x.stm.SendElement(iq.ResultIQ())
+	x.pushIQ(block)
+}
+
+func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
+	items := unblock.Elements().Children("item")
+	if len(items) == 0 {
+		if err := storage.Instance().DeleteBlockList(x.stm.Username()); err != nil {
+			log.Error(err)
+			x.stm.SendElement(iq.InternalServerError())
+			return
+		}
+		x.inMemBl = nil
+
+	} else {
+		jids, err := x.extractItemJIDs(items)
+		if err != nil {
+			log.Error(err)
+			x.stm.SendElement(iq.JidMalformedError())
+			return
+		}
+		var bl []model.BlockListItem
+		for _, j := range jids {
+			if !x.deleteBlockListJID(j) {
+				continue
+			}
+			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
+		}
+		if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
+			log.Error(err)
+			x.stm.SendElement(iq.InternalServerError())
+			return
+		}
+	}
+	x.stm.SendElement(iq.ResultIQ())
+	x.pushIQ(unblock)
+}
+
+func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
+	stms := c2s.Instance().AvailableStreams(x.stm.Username())
+	for _, stm := range stms {
+		if !stm.Context().Bool(xep191RequestedContextKey) {
+			continue
+		}
+		iq := xml.NewIQType(uuid.New(), xml.SetType)
+		iq.AppendElement(elem)
+		stm.SendElement(iq)
+	}
+}
+
+func (x *XEPBlockingCommand) loadInMemBlockList() error {
+	if x.loadedInMemBl {
+		return nil
+	}
+	bl, err := storage.Instance().FetchBlockListItems(x.stm.Username())
+	if err != nil {
+		return err
+	}
+	var blockedJIDs []*xml.JID
+	for _, bli := range bl {
+		j, _ := xml.NewJIDString(bli.JID, true)
+		blockedJIDs = append(blockedJIDs, j)
+	}
+	x.inMemBl = blockedJIDs
+	x.loadedInMemBl = true
+	return nil
+}
+
+func (x *XEPBlockingCommand) insertBlockListJID(jid *xml.JID) bool {
+	for _, j := range x.inMemBl {
+		if j.String() == jid.String() {
+			return false
+		}
+	}
+	x.inMemBl = append(x.inMemBl, jid)
+	return true
+}
+
+func (x *XEPBlockingCommand) deleteBlockListJID(jid *xml.JID) bool {
+	for i, j := range x.inMemBl {
+		if j.String() == jid.String() {
+			x.inMemBl = append(x.inMemBl[:i], x.inMemBl[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {
+	var ret []*xml.JID
+	for _, item := range items {
+		j, err := xml.NewJIDString(item.Attributes().Get("jid"), false)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, j)
+	}
+	return ret, nil
 }

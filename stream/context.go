@@ -15,6 +15,7 @@ type Context struct {
 	onceHandlers map[string]struct{}
 }
 
+// NewContext returns an initialized stream context.
 func NewContext() *Context {
 	return &Context{
 		m:            make(map[string]interface{}),
