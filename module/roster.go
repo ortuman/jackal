@@ -151,14 +151,14 @@ func (r *ModRoster) processPresence(presence *xml.Presence) error {
 }
 
 func (r *ModRoster) deliverPendingApprovalNotifications() error {
-	rosterNotifications, err := storage.Instance().FetchRosterNotifications(r.stm.Username())
+	rns, err := storage.Instance().FetchRosterNotifications(r.stm.Username())
 	if err != nil {
 		return err
 	}
-	for _, rosterNotification := range rosterNotifications {
-		fromJID, _ := xml.NewJID(rosterNotification.User, r.stm.Domain(), "", true)
+	for _, rn := range rns {
+		fromJID, _ := xml.NewJID(rn.User, r.stm.Domain(), "", true)
 		p := xml.NewPresence(fromJID, r.stm.JID(), xml.SubscribeType)
-		p.AppendElements(rosterNotification.Elements)
+		p.AppendElements(rn.Elements)
 		r.stm.SendElement(p)
 	}
 	return nil
@@ -169,25 +169,25 @@ func (r *ModRoster) receivePresences() error {
 	if err != nil {
 		return err
 	}
-	userJID := r.stm.JID()
+	usrJID := r.stm.JID()
 	for _, item := range items {
 		switch item.Subscription {
 		case subscriptionTo, subscriptionBoth:
-			r.routePresencesFrom(r.rosterItemJID(&item), userJID, xml.AvailableType)
+			r.routePresencesFrom(r.rosterItemJID(&item), usrJID, xml.AvailableType)
 		}
 	}
 	return nil
 }
 
 func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
-	items, _, err := storage.Instance().FetchRosterItems(r.stm.JID().Node())
+	itms, _, err := storage.Instance().FetchRosterItems(r.stm.JID().Node())
 	if err != nil {
 		return err
 	}
-	for _, item := range items {
-		switch item.Subscription {
+	for _, itm := range itms {
+		switch itm.Subscription {
 		case subscriptionFrom, subscriptionBoth:
-			r.routePresence(presence, r.rosterItemJID(&item))
+			r.routePresence(presence, r.rosterItemJID(&itm))
 		}
 	}
 	return nil
@@ -200,7 +200,7 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.XElement) {
 	}
 	log.Infof("retrieving user roster... (%s/%s)", r.stm.Username(), r.stm.Resource())
 
-	items, ver, err := storage.Instance().FetchRosterItems(r.stm.JID().Node())
+	itms, ver, err := storage.Instance().FetchRosterItems(r.stm.JID().Node())
 	if err != nil {
 		r.errHandler(err)
 		r.stm.SendElement(iq.InternalServerError())
@@ -208,27 +208,27 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.XElement) {
 	}
 	v := r.parseVer(query.Attributes().Get("ver"))
 
-	result := iq.ResultIQ()
+	res := iq.ResultIQ()
 	if !r.cfg.Versioning || v == 0 || v < ver.DeletionVer {
 		// push all roster items
 		q := xml.NewElementNamespace("query", rosterNamespace)
 		if r.cfg.Versioning {
 			q.SetAttribute("ver", fmt.Sprintf("v%d", ver.Ver))
 		}
-		for _, item := range items {
-			q.AppendElement(r.elementFromRosterItem(&item))
+		for _, itm := range itms {
+			q.AppendElement(r.elementFromRosterItem(&itm))
 		}
-		result.AppendElement(q)
-		r.stm.SendElement(result)
+		res.AppendElement(q)
+		r.stm.SendElement(res)
 	} else {
 		// push roster changes
-		r.stm.SendElement(result)
-		for _, item := range items {
-			if item.Ver > v {
+		r.stm.SendElement(res)
+		for _, itm := range itms {
+			if itm.Ver > v {
 				iq := xml.NewIQType(uuid.New(), xml.SetType)
 				q := xml.NewElementNamespace("query", rosterNamespace)
-				q.SetAttribute("ver", fmt.Sprintf("v%d", item.Ver))
-				q.AppendElement(r.elementFromRosterItem(&item))
+				q.SetAttribute("ver", fmt.Sprintf("v%d", itm.Ver))
+				q.AppendElement(r.elementFromRosterItem(&itm))
 				iq.AppendElement(q)
 				r.stm.SendElement(iq)
 			}
@@ -238,12 +238,12 @@ func (r *ModRoster) sendRoster(iq *xml.IQ, query xml.XElement) {
 }
 
 func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
-	items := query.Elements().Children("item")
-	if len(items) != 1 {
+	itms := query.Elements().Children("item")
+	if len(itms) != 1 {
 		r.stm.SendElement(iq.BadRequestError())
 		return
 	}
-	ri, err := r.rosterItemFromElement(items[0])
+	ri, err := r.rosterItemFromElement(itms[0])
 	if err != nil {
 		r.stm.SendElement(iq.BadRequestError())
 		return
@@ -278,10 +278,10 @@ func (r *ModRoster) removeItem(ri *model.RosterItem) error {
 	if err != nil {
 		return err
 	}
-	userSubscription := subscriptionNone
+	usrSub := subscriptionNone
 	if usrRi != nil {
-		userSubscription = usrRi.Subscription
-		switch userSubscription {
+		usrSub = usrRi.Subscription
+		switch usrSub {
 		case subscriptionTo:
 			unsubscribe = xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribeType)
 		case subscriptionFrom:
@@ -332,7 +332,7 @@ func (r *ModRoster) removeItem(ri *model.RosterItem) error {
 	if unsubscribed != nil {
 		r.routePresence(unsubscribed, cntJID)
 	}
-	if userSubscription == subscriptionFrom || userSubscription == subscriptionBoth {
+	if usrSub == subscriptionFrom || usrSub == subscriptionBoth {
 		r.routePresencesFrom(usrJID, cntJID, xml.UnavailableType)
 	}
 	return nil
