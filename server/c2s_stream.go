@@ -703,7 +703,7 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 	}
 
 	toJid := iq.ToJID()
-	if toJid.IsFull() {
+	if toJid.IsFullWithUser() {
 		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
 			resp := xml.NewElementFromElement(iq)
 			resp.SetFrom(toJid.String())
@@ -739,7 +739,7 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 		}
 		return
 	}
-	if toJid.IsFull() {
+	if toJid.IsFullWithUser() {
 		s.sendElement(presence, toJid)
 		return
 	}
@@ -1119,7 +1119,7 @@ func (s *c2sStream) sendElement(element xml.XElement, to *xml.JID) error {
 		}
 		return errNotExistingAccount
 	}
-	if to.IsFull() {
+	if to.IsFullWithUser() {
 		for _, strm := range recipients {
 			if strm.Resource() == to.Resource() {
 				strm.SendElement(element)

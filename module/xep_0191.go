@@ -100,7 +100,7 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 	}
 	var bl []model.BlockListItem
 	for _, j := range jids {
-		if !x.insertBlockListJID(j) {
+		if !x.insertInMemBlockListJID(j) {
 			continue
 		}
 		bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
@@ -135,7 +135,7 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 		}
 		var bl []model.BlockListItem
 		for _, j := range jids {
-			if !x.deleteBlockListJID(j) {
+			if !x.deleteInMemBlockListJID(j) {
 				continue
 			}
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
@@ -180,7 +180,7 @@ func (x *XEPBlockingCommand) loadInMemBlockList() error {
 	return nil
 }
 
-func (x *XEPBlockingCommand) insertBlockListJID(jid *xml.JID) bool {
+func (x *XEPBlockingCommand) insertInMemBlockListJID(jid *xml.JID) bool {
 	for _, j := range x.inMemBl {
 		if j.String() == jid.String() {
 			return false
@@ -190,7 +190,7 @@ func (x *XEPBlockingCommand) insertBlockListJID(jid *xml.JID) bool {
 	return true
 }
 
-func (x *XEPBlockingCommand) deleteBlockListJID(jid *xml.JID) bool {
+func (x *XEPBlockingCommand) deleteInMemBlockListJID(jid *xml.JID) bool {
 	for i, j := range x.inMemBl {
 		if j.String() == jid.String() {
 			x.inMemBl = append(x.inMemBl[:i], x.inMemBl[i+1:]...)

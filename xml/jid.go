@@ -67,6 +67,26 @@ import (
 	"unsafe"
 )
 
+// JIDCompareOptions represents a comparation jid mask.
+type JIDCompareOptions int8
+
+const (
+	// JIDCompareNode indicates that the left operand has same node value.
+	JIDCompareNode = JIDCompareOptions(1)
+
+	// JIDCompareDomain indicates that the left operand has same domain value.
+	JIDCompareDomain = JIDCompareOptions(2)
+
+	// JIDCompareResource indicates that the left operand has same resource value.
+	JIDCompareResource = JIDCompareOptions(4)
+
+	// JIDCompareResource indicates that the left operand has same node and domain value.
+	JIDCompareBare = JIDCompareOptions(3)
+
+	// JIDCompareResource indicates that the left operand has same node, domain and resource value.
+	JIDCompareFull = JIDCompareOptions(7)
+)
+
 // JID represents an XMPP address (JID).
 // A JID is made up of a node (generally a username), a domain, and a resource.
 // The node and resource are optional; domain is required.
@@ -181,21 +201,23 @@ func (j *JID) IsBare() bool {
 
 // IsFull returns true if instance is a full JID.
 func (j *JID) IsFull() bool {
+	return len(j.resource) > 0
+}
+
+// IsFullWithUser returns true if instance is a full client JID.
+func (j *JID) IsFullWithUser() bool {
 	return len(j.node) > 0 && len(j.resource) > 0
 }
 
 // IsEqual returns true if two JID's are equivalent.
-func (j *JID) IsEqual(j2 *JID) bool {
-	if j == j2 {
-		return true
-	}
-	if j.node != j2.node {
+func (j *JID) IsEqual(j2 *JID, options JIDCompareOptions) bool {
+	if (options&JIDCompareNode) > 0 && j.node != j2.node {
 		return false
 	}
-	if j.domain != j2.domain {
+	if (options&JIDCompareDomain) > 0 && j.domain != j2.domain {
 		return false
 	}
-	if j.resource != j2.resource {
+	if (options&JIDCompareResource) > 0 && j.resource != j2.resource {
 		return false
 	}
 	return true
