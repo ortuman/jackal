@@ -266,13 +266,12 @@ func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
 }
 
 func (r *ModRoster) removeItem(ri *model.RosterItem) error {
+	var unsubscribe, unsubscribed *xml.Presence
+
 	usrJID := r.stm.JID()
 	cntJID := r.rosterItemJID(ri)
 
 	log.Infof("removing roster item: %v (%s/%s)", cntJID, r.stm.Username(), r.stm.Resource())
-
-	var unsubscribe *xml.Presence
-	var unsubscribed *xml.Presence
 
 	usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 	if err != nil {
