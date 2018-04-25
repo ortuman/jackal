@@ -266,97 +266,97 @@ func (r *ModRoster) updateRoster(iq *xml.IQ, query xml.XElement) {
 }
 
 func (r *ModRoster) removeItem(ri *model.RosterItem) error {
-	userJID := r.stm.JID()
-	contactJID := r.rosterItemJID(ri)
+	usrJID := r.stm.JID()
+	cntJID := r.rosterItemJID(ri)
 
-	log.Infof("removing roster item: %v (%s/%s)", contactJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("removing roster item: %v (%s/%s)", cntJID, r.stm.Username(), r.stm.Resource())
 
 	var unsubscribe *xml.Presence
 	var unsubscribed *xml.Presence
 
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 	if err != nil {
 		return err
 	}
 	userSubscription := subscriptionNone
-	if userRi != nil {
-		userSubscription = userRi.Subscription
+	if usrRi != nil {
+		userSubscription = usrRi.Subscription
 		switch userSubscription {
 		case subscriptionTo:
-			unsubscribe = xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
+			unsubscribe = xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribeType)
 		case subscriptionFrom:
-			unsubscribed = xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType)
+			unsubscribed = xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribedType)
 		case subscriptionBoth:
-			unsubscribe = xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
-			unsubscribed = xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribedType)
+			unsubscribe = xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribeType)
+			unsubscribed = xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribedType)
 		}
-		userRi.Subscription = subscriptionRemove
-		userRi.Ask = false
+		usrRi.Subscription = subscriptionRemove
+		usrRi.Ask = false
 
-		if err := r.deleteNotification(userJID, contactJID); err != nil {
+		if err := r.deleteNotification(usrJID, cntJID); err != nil {
 			return err
 		}
-		if err := r.deleteItem(userRi, userJID); err != nil {
+		if err := r.deleteItem(usrRi, usrJID); err != nil {
 			return err
 		}
 	}
 
-	if r.isLocalJID(contactJID) {
-		contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.Node())
+	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
+		cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.Node())
 		if err != nil {
 			return err
 		}
-		if contactRi != nil {
-			if contactRi.Subscription == subscriptionFrom || contactRi.Subscription == subscriptionBoth {
-				r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+		if cntRi != nil {
+			if cntRi.Subscription == subscriptionFrom || cntRi.Subscription == subscriptionBoth {
+				r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
 			}
-			switch contactRi.Subscription {
+			switch cntRi.Subscription {
 			case subscriptionBoth:
-				contactRi.Subscription = subscriptionTo
-				if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
+				cntRi.Subscription = subscriptionTo
+				if r.insertOrUpdateItem(cntRi, cntJID); err != nil {
 					return err
 				}
 				fallthrough
 
 			default:
-				contactRi.Subscription = subscriptionNone
-				if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
+				cntRi.Subscription = subscriptionNone
+				if r.insertOrUpdateItem(cntRi, cntJID); err != nil {
 					return err
 				}
 			}
 		}
 	}
 	if unsubscribe != nil {
-		r.routePresence(unsubscribe, contactJID)
+		r.routePresence(unsubscribe, cntJID)
 	}
 	if unsubscribed != nil {
-		r.routePresence(unsubscribed, contactJID)
+		r.routePresence(unsubscribed, cntJID)
 	}
 	if userSubscription == subscriptionFrom || userSubscription == subscriptionBoth {
-		r.routePresencesFrom(userJID, contactJID, xml.UnavailableType)
+		r.routePresencesFrom(usrJID, cntJID, xml.UnavailableType)
 	}
 	return nil
 }
 
 func (r *ModRoster) updateItem(ri *model.RosterItem) error {
-	userJID := r.stm.JID()
-	contactJID := r.rosterItemJID(ri)
+	usrJID := r.stm.JID()
+	cntJID := r.rosterItemJID(ri)
 
-	log.Infof("updating roster item - contact: %s (%s/%s)", contactJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("updating roster item - contact: %s (%s/%s)", cntJID, r.stm.Username(), r.stm.Resource())
 
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 	if err != nil {
 		return err
 	}
-	if userRi != nil {
+	if usrRi != nil {
 		// update roster item
 		if len(ri.Name) > 0 {
-			userRi.Name = ri.Name
+			usrRi.Name = ri.Name
 		}
-		userRi.Groups = ri.Groups
+		usrRi.Groups = ri.Groups
 
 	} else {
-		userRi = &model.RosterItem{
+		usrRi = &model.RosterItem{
 			User:         r.stm.Username(),
 			Contact:      ri.Contact,
 			Name:         ri.Name,
@@ -365,237 +365,236 @@ func (r *ModRoster) updateItem(ri *model.RosterItem) error {
 			Ask:          ri.Ask,
 		}
 	}
-	return r.insertOrUpdateItem(userRi, r.stm.JID())
+	return r.insertOrUpdateItem(usrRi, r.stm.JID())
 }
 
 func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
-	userJID := r.stm.JID()
-	contactJID := presence.ToJID()
+	usrJID := r.stm.JID()
+	cntJID := presence.ToJID()
 
-	log.Infof("processing 'subscribe' - contact: %s (%s/%s)", contactJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("processing 'subscribe' - contact: %s (%s/%s)", cntJID, r.stm.Username(), r.stm.Resource())
 
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 	if err != nil {
 		return err
 	}
-	if userRi != nil {
-		switch userRi.Subscription {
+	if usrRi != nil {
+		switch usrRi.Subscription {
 		case subscriptionTo, subscriptionBoth:
 			return nil // already subscribed...
 		default:
-			if !userRi.Ask {
-				userRi.Ask = true
+			if !usrRi.Ask {
+				usrRi.Ask = true
 			} else {
 				return nil // notification already sent...
 			}
 		}
 	} else {
 		// create roster item if not previously created
-		userRi = &model.RosterItem{
-			User:         userJID.Node(),
-			Contact:      contactJID.Node(),
+		usrRi = &model.RosterItem{
+			User:         usrJID.Node(),
+			Contact:      cntJID.Node(),
 			Subscription: subscriptionNone,
 			Ask:          true,
 		}
 	}
-	if r.insertOrUpdateItem(userRi, userJID); err != nil {
+	if r.insertOrUpdateItem(usrRi, usrJID); err != nil {
 		return err
 	}
-
 	// stamp the presence stanza of type "subscribe" with the user's bare JID as the 'from' address
-	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.SubscribeType)
+	p := xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.SubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if r.isLocalJID(contactJID) {
+	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
 		// archive roster approval notification
-		if err := r.insertOrUpdateNotification(userJID, contactJID, p); err != nil {
+		if err := r.insertOrUpdateNotification(usrJID, cntJID, p); err != nil {
 			return err
 		}
 	}
-	r.routePresence(p, contactJID)
+	r.routePresence(p, cntJID)
 	return nil
 }
 
 func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
-	userJID := presence.ToJID()
-	contactJID := r.stm.JID()
+	usrJID := presence.ToJID()
+	cntJID := r.stm.JID()
 
-	log.Infof("processing 'subscribed' - user: %s (%s/%s)", userJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("processing 'subscribed' - user: %s (%s/%s)", usrJID, r.stm.Username(), r.stm.Resource())
 
-	if err := r.deleteNotification(userJID, contactJID); err != nil {
+	if err := r.deleteNotification(usrJID, cntJID); err != nil {
 		return err
 	}
-	contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.Node())
+	cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.Node())
 	if err != nil {
 		return err
 	}
-	if contactRi != nil {
-		switch contactRi.Subscription {
+	if cntRi != nil {
+		switch cntRi.Subscription {
 		case subscriptionTo:
-			contactRi.Subscription = subscriptionBoth
+			cntRi.Subscription = subscriptionBoth
 		case subscriptionNone:
-			contactRi.Subscription = subscriptionFrom
+			cntRi.Subscription = subscriptionFrom
 		}
 	} else {
 		// create roster item if not previously created
-		contactRi = &model.RosterItem{
-			User:         contactJID.Node(),
-			Contact:      userJID.Node(),
+		cntRi = &model.RosterItem{
+			User:         cntJID.Node(),
+			Contact:      usrJID.Node(),
 			Subscription: subscriptionFrom,
 			Ask:          false,
 		}
 	}
-	if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
+	if r.insertOrUpdateItem(cntRi, cntJID); err != nil {
 		return err
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
-	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.SubscribedType)
+	p := xml.NewPresence(cntJID.ToBareJID(), usrJID.ToBareJID(), xml.SubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if r.isLocalJID(userJID) {
-		userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	if c2s.Instance().IsLocalDomain(usrJID.Domain()) {
+		usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 		if err != nil {
 			return err
 		}
-		if userRi != nil {
-			switch userRi.Subscription {
+		if usrRi != nil {
+			switch usrRi.Subscription {
 			case subscriptionFrom:
-				userRi.Subscription = subscriptionBoth
+				usrRi.Subscription = subscriptionBoth
 			case subscriptionNone:
-				userRi.Subscription = subscriptionTo
+				usrRi.Subscription = subscriptionTo
 			default:
 				return nil
 			}
-			userRi.Ask = false
-			if r.insertOrUpdateItem(userRi, userJID); err != nil {
+			usrRi.Ask = false
+			if r.insertOrUpdateItem(usrRi, usrJID); err != nil {
 				return err
 			}
 		}
 	}
-	r.routePresence(p, userJID)
-	r.routePresencesFrom(contactJID, userJID, xml.AvailableType)
+	r.routePresence(p, usrJID)
+	r.routePresencesFrom(cntJID, usrJID, xml.AvailableType)
 	return nil
 }
 
 func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
-	userJID := r.stm.JID()
-	contactJID := presence.ToJID()
+	usrJID := r.stm.JID()
+	cntJID := presence.ToJID()
 
-	log.Infof("processing 'unsubscribe' - contact: %s (%s/%s)", contactJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("processing 'unsubscribe' - contact: %s (%s/%s)", cntJID, r.stm.Username(), r.stm.Resource())
 
-	userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 	if err != nil {
 		return err
 	}
-	userSubscription := subscriptionNone
-	if userRi != nil {
-		userSubscription = userRi.Subscription
-		switch userSubscription {
+	usrSubscription := subscriptionNone
+	if usrRi != nil {
+		usrSubscription = usrRi.Subscription
+		switch usrSubscription {
 		case subscriptionBoth:
-			userRi.Subscription = subscriptionFrom
+			usrRi.Subscription = subscriptionFrom
 		default:
-			userRi.Subscription = subscriptionNone
+			usrRi.Subscription = subscriptionNone
 		}
-		if r.insertOrUpdateItem(userRi, userJID); err != nil {
+		if r.insertOrUpdateItem(usrRi, usrJID); err != nil {
 			return err
 		}
 	}
 	// stamp the presence stanza of type "unsubscribe" with the users's bare JID as the 'from' address
-	p := xml.NewPresence(userJID.ToBareJID(), contactJID.ToBareJID(), xml.UnsubscribeType)
+	p := xml.NewPresence(usrJID.ToBareJID(), cntJID.ToBareJID(), xml.UnsubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if r.isLocalJID(contactJID) {
-		contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.Node())
+	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
+		cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.Node())
 		if err != nil {
 			return err
 		}
-		if contactRi != nil {
-			switch contactRi.Subscription {
+		if cntRi != nil {
+			switch cntRi.Subscription {
 			case subscriptionBoth:
-				contactRi.Subscription = subscriptionTo
+				cntRi.Subscription = subscriptionTo
 			default:
-				contactRi.Subscription = subscriptionNone
+				cntRi.Subscription = subscriptionNone
 			}
-			if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
+			if r.insertOrUpdateItem(cntRi, cntJID); err != nil {
 				return err
 			}
 		}
 	}
-	r.routePresence(p, contactJID)
+	r.routePresence(p, cntJID)
 
-	if userSubscription == subscriptionTo || userSubscription == subscriptionBoth {
-		r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+	if usrSubscription == subscriptionTo || usrSubscription == subscriptionBoth {
+		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
 	}
 	return nil
 }
 
 func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
-	userJID := presence.ToJID()
-	contactJID := r.stm.JID()
+	usrJID := presence.ToJID()
+	cntJID := r.stm.JID()
 
-	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", userJID, r.stm.Username(), r.stm.Resource())
+	log.Infof("processing 'unsubscribed' - user: %s (%s/%s)", usrJID, r.stm.Username(), r.stm.Resource())
 
-	if err := r.deleteNotification(userJID, contactJID); err != nil {
+	if err := r.deleteNotification(usrJID, cntJID); err != nil {
 		return err
 	}
-	contactRi, err := storage.Instance().FetchRosterItem(contactJID.Node(), userJID.Node())
+	cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.Node())
 	if err != nil {
 		return err
 	}
-	contactSubscription := subscriptionNone
-	if contactRi != nil {
-		contactSubscription = contactRi.Subscription
-		switch contactSubscription {
+	cntSubscription := subscriptionNone
+	if cntRi != nil {
+		cntSubscription = cntRi.Subscription
+		switch cntSubscription {
 		case subscriptionBoth:
-			contactRi.Subscription = subscriptionTo
+			cntRi.Subscription = subscriptionTo
 		default:
-			contactRi.Subscription = subscriptionNone
+			cntRi.Subscription = subscriptionNone
 		}
-		if r.insertOrUpdateItem(contactRi, contactJID); err != nil {
+		if r.insertOrUpdateItem(cntRi, cntJID); err != nil {
 			return err
 		}
 	}
 	// stamp the presence stanza of type "unsubscribed" with the contact's bare JID as the 'from' address
-	p := xml.NewPresence(contactJID.ToBareJID(), userJID.ToBareJID(), xml.UnsubscribedType)
+	p := xml.NewPresence(cntJID.ToBareJID(), usrJID.ToBareJID(), xml.UnsubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if r.isLocalJID(userJID) {
-		userRi, err := storage.Instance().FetchRosterItem(userJID.Node(), contactJID.Node())
+	if c2s.Instance().IsLocalDomain(usrJID.Domain()) {
+		usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.Node())
 		if err != nil {
 			return err
 		}
-		if userRi != nil {
-			switch userRi.Subscription {
+		if usrRi != nil {
+			switch usrRi.Subscription {
 			case subscriptionBoth:
-				userRi.Subscription = subscriptionFrom
+				usrRi.Subscription = subscriptionFrom
 			default:
-				userRi.Subscription = subscriptionNone
+				usrRi.Subscription = subscriptionNone
 			}
-			userRi.Ask = false
-			if r.insertOrUpdateItem(userRi, userJID); err != nil {
+			usrRi.Ask = false
+			if r.insertOrUpdateItem(usrRi, usrJID); err != nil {
 				return err
 			}
 		}
 	}
-	r.routePresence(p, userJID)
+	r.routePresence(p, usrJID)
 
-	if contactSubscription == subscriptionFrom || contactSubscription == subscriptionBoth {
-		r.routePresencesFrom(contactJID, userJID, xml.UnavailableType)
+	if cntSubscription == subscriptionFrom || cntSubscription == subscriptionBoth {
+		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
 	}
 	return nil
 }
 
-func (r *ModRoster) insertOrUpdateNotification(userJID *xml.JID, contactJID *xml.JID, presence *xml.Presence) error {
+func (r *ModRoster) insertOrUpdateNotification(usrJID *xml.JID, cntJID *xml.JID, presence *xml.Presence) error {
 	rn := &model.RosterNotification{
-		User:     userJID.Node(),
-		Contact:  contactJID.Node(),
+		User:     usrJID.Node(),
+		Contact:  cntJID.Node(),
 		Elements: presence.Elements().All(),
 	}
 	return storage.Instance().InsertOrUpdateRosterNotification(rn)
 }
 
-func (r *ModRoster) deleteNotification(userJID *xml.JID, contactJID *xml.JID) error {
-	return storage.Instance().DeleteRosterNotification(userJID.Node(), contactJID.Node())
+func (r *ModRoster) deleteNotification(usrJID *xml.JID, cntJID *xml.JID) error {
+	return storage.Instance().DeleteRosterNotification(usrJID.Node(), cntJID.Node())
 }
 
 func (r *ModRoster) insertOrUpdateItem(ri *model.RosterItem, pushTo *xml.JID) error {
@@ -623,8 +622,8 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	}
 	query.AppendElement(r.elementFromRosterItem(ri))
 
-	streams := c2s.Instance().AvailableStreams(to.Node())
-	for _, stm := range streams {
+	stms := c2s.Instance().AvailableStreams(to.Node())
+	for _, stm := range stms {
 		if !stm.Context().Bool(rosterRequestedContextKey) {
 			continue
 		}
@@ -634,10 +633,6 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 		stm.SendElement(pushEl)
 	}
 	return nil
-}
-
-func (r *ModRoster) isLocalJID(jid *xml.JID) bool {
-	return c2s.Instance().IsLocalDomain(jid.Domain())
 }
 
 func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
