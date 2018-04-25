@@ -72,6 +72,18 @@ func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
+// IsBlockedJID returns whether or not the passed jid matches any
+// of the blocking list JIDs.
+func (x *XEPBlockingCommand) IsBlockedJID(jid *xml.JID) bool {
+	for _, blockedJID := range x.inMemBl {
+		if !x.matchesJID(jid, blockedJID) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 	bl := xml.NewElementNamespace("blocklist", blockingCommandNamespace)
 	for _, j := range x.inMemBl {
@@ -210,4 +222,15 @@ func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, 
 		ret = append(ret, j)
 	}
 	return ret, nil
+}
+
+func (x *XEPBlockingCommand) matchesJID(j1, j2 *xml.JID) bool {
+	if j2.IsFullWithUser() {
+		return j1.IsEqual(j2, xml.JIDCompareNode&xml.JIDCompareDomain&xml.JIDCompareResource)
+	} else if j2.IsBare() {
+		return j1.IsEqual(j2, xml.JIDCompareNode&xml.JIDCompareDomain)
+	} else if j2.IsServer() && j2.IsFull() {
+		return j1.IsEqual(j2, xml.JIDCompareDomain&xml.JIDCompareResource)
+	}
+	return j1.IsEqual(j2, xml.JIDCompareDomain)
 }

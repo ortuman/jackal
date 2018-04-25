@@ -79,12 +79,6 @@ const (
 
 	// JIDCompareResource indicates that left and right operand has same resource value.
 	JIDCompareResource = JIDCompareOptions(4)
-
-	// JIDCompareBare indicates that left and right operand has same node and domain value.
-	JIDCompareBare = JIDCompareOptions(3)
-
-	// JIDCompareFull indicates that left and right operand has same node, domain and resource value.
-	JIDCompareFull = JIDCompareOptions(7)
 )
 
 // JID represents an XMPP address (JID).
