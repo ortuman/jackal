@@ -326,12 +326,9 @@ func (r *ModRoster) removeItem(ri *model.RosterItem) error {
 			}
 		}
 	}
-	if unsubscribe != nil {
-		r.routePresence(unsubscribe, cntJID)
-	}
-	if unsubscribed != nil {
-		r.routePresence(unsubscribed, cntJID)
-	}
+	r.routePresence(unsubscribe, cntJID)
+	r.routePresence(unsubscribed, cntJID)
+
 	if usrSub == subscriptionFrom || usrSub == subscriptionBoth {
 		r.routePresencesFrom(usrJID, cntJID, xml.UnavailableType)
 	}
@@ -647,6 +644,9 @@ func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType 
 }
 
 func (r *ModRoster) routePresence(presence *xml.Presence, to *xml.JID) {
+	if presence == nil {
+		return
+	}
 	if c2s.Instance().IsLocalDomain(to.Domain()) {
 		toStreams := c2s.Instance().AvailableStreams(to.Node())
 		for _, toStream := range toStreams {
