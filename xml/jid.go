@@ -71,19 +71,19 @@ import (
 type JIDCompareOptions int8
 
 const (
-	// JIDCompareNode indicates that the left operand has same node value.
+	// JIDCompareNode indicates that left and right operand has same node value.
 	JIDCompareNode = JIDCompareOptions(1)
 
-	// JIDCompareDomain indicates that the left operand has same domain value.
+	// JIDCompareDomain indicates that left and right operand has same domain value.
 	JIDCompareDomain = JIDCompareOptions(2)
 
-	// JIDCompareResource indicates that the left operand has same resource value.
+	// JIDCompareResource indicates that left and right operand has same resource value.
 	JIDCompareResource = JIDCompareOptions(4)
 
-	// JIDCompareResource indicates that the left operand has same node and domain value.
+	// JIDCompareBare indicates that left and right operand has same node and domain value.
 	JIDCompareBare = JIDCompareOptions(3)
 
-	// JIDCompareResource indicates that the left operand has same node, domain and resource value.
+	// JIDCompareFull indicates that left and right operand has same node, domain and resource value.
 	JIDCompareFull = JIDCompareOptions(7)
 )
 
