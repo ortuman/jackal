@@ -226,11 +226,11 @@ func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, 
 
 func (x *XEPBlockingCommand) matchesJID(j1, j2 *xml.JID) bool {
 	if j2.IsFullWithUser() {
-		return j1.IsEqual(j2, xml.JIDCompareNode&xml.JIDCompareDomain&xml.JIDCompareResource)
+		return j1.IsEqual(j2, xml.JIDCompareNode|xml.JIDCompareDomain|xml.JIDCompareResource)
 	} else if j2.IsBare() {
-		return j1.IsEqual(j2, xml.JIDCompareNode&xml.JIDCompareDomain)
+		return j1.IsEqual(j2, xml.JIDCompareNode|xml.JIDCompareDomain)
 	} else if j2.IsServer() && j2.IsFull() {
-		return j1.IsEqual(j2, xml.JIDCompareDomain&xml.JIDCompareResource)
+		return j1.IsEqual(j2, xml.JIDCompareDomain|xml.JIDCompareResource)
 	}
 	return j1.IsEqual(j2, xml.JIDCompareDomain)
 }

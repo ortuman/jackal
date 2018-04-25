@@ -85,14 +85,15 @@ func TestEqualJID(t *testing.T) {
 	j3, _ := xml.NewJIDString("example.org", false)
 	j4, _ := xml.NewJIDString("example.org/res1", false)
 	j6, _ := xml.NewJIDString("ortuman@example2.org/res2", false)
-	require.True(t, j1.IsEqual(j1, xml.JIDCompareFull))
-	require.True(t, j1.IsEqual(j2, xml.JIDCompareBare))
+	require.True(t, j1.IsEqual(j1, xml.JIDCompareNode|xml.JIDCompareDomain|xml.JIDCompareResource))
+	require.True(t, j1.IsEqual(j2, xml.JIDCompareNode|xml.JIDCompareDomain))
 	require.True(t, j1.IsEqual(j3, xml.JIDCompareDomain))
-	require.True(t, j1.IsEqual(j4, xml.JIDCompareDomain&xml.JIDCompareFull))
+	require.True(t, j1.IsEqual(j4, xml.JIDCompareDomain|xml.JIDCompareResource))
 
-	require.False(t, j6.IsEqual(j2, xml.JIDCompareBare))
+	require.False(t, j1.IsEqual(j2, xml.JIDCompareNode|xml.JIDCompareDomain|xml.JIDCompareResource))
+	require.False(t, j6.IsEqual(j2, xml.JIDCompareNode|xml.JIDCompareDomain))
 	require.False(t, j6.IsEqual(j3, xml.JIDCompareDomain))
-	require.False(t, j6.IsEqual(j4, xml.JIDCompareDomain&xml.JIDCompareFull))
+	require.False(t, j6.IsEqual(j4, xml.JIDCompareDomain|xml.JIDCompareResource))
 }
 
 func TestBadPrep(t *testing.T) {
