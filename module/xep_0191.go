@@ -76,7 +76,7 @@ func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
 // of the blocking list JIDs.
 func (x *XEPBlockingCommand) IsBlockedJID(jid *xml.JID) bool {
 	for _, blockedJID := range x.inMemBl {
-		if !x.matchesJID(jid, blockedJID) {
+		if !x.jidMatchesBlockedJID(jid, blockedJID) {
 			continue
 		}
 		return true
