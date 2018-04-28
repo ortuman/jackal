@@ -67,18 +67,18 @@ import (
 	"unsafe"
 )
 
-// JIDCompareOptions represents a comparation jid mask.
-type JIDCompareOptions int8
+// JIDMatchingOptions represents a matching jid mask.
+type JIDMatchingOptions int8
 
 const (
-	// JIDCompareNode indicates that left and right operand has same node value.
-	JIDCompareNode = JIDCompareOptions(1)
+	// JIDMatchesNode indicates that left and right operand has same node value.
+	JIDMatchesNode = JIDMatchingOptions(1)
 
-	// JIDCompareDomain indicates that left and right operand has same domain value.
-	JIDCompareDomain = JIDCompareOptions(2)
+	// JIDMatchesDomain indicates that left and right operand has same domain value.
+	JIDMatchesDomain = JIDMatchingOptions(2)
 
-	// JIDCompareResource indicates that left and right operand has same resource value.
-	JIDCompareResource = JIDCompareOptions(4)
+	// JIDMatchesResource indicates that left and right operand has same resource value.
+	JIDMatchesResource = JIDMatchingOptions(4)
 )
 
 // JID represents an XMPP address (JID).
@@ -198,20 +198,25 @@ func (j *JID) IsFull() bool {
 	return len(j.resource) > 0
 }
 
+// IsFullWithServer returns true if instance is a full server JID.
+func (j *JID) IsFullWithServer() bool {
+	return len(j.node) == 0 && len(j.resource) > 0
+}
+
 // IsFullWithUser returns true if instance is a full client JID.
 func (j *JID) IsFullWithUser() bool {
 	return len(j.node) > 0 && len(j.resource) > 0
 }
 
 // IsEqual returns true if two JID's are equivalent.
-func (j *JID) IsEqual(j2 *JID, options JIDCompareOptions) bool {
-	if (options&JIDCompareNode) > 0 && j.node != j2.node {
+func (j *JID) Matches(j2 *JID, options JIDMatchingOptions) bool {
+	if (options&JIDMatchesNode) > 0 && j.node != j2.node {
 		return false
 	}
-	if (options&JIDCompareDomain) > 0 && j.domain != j2.domain {
+	if (options&JIDMatchesDomain) > 0 && j.domain != j2.domain {
 		return false
 	}
-	if (options&JIDCompareResource) > 0 && j.resource != j2.resource {
+	if (options&JIDMatchesResource) > 0 && j.resource != j2.resource {
 		return false
 	}
 	return true
