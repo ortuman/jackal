@@ -42,14 +42,6 @@ func newMockStorage() *mockStorage {
 func (m *mockStorage) Shutdown() {
 }
 
-func (m *mockStorage) activateMockedError() {
-	atomic.StoreUint32(&m.mockErr, 1)
-}
-
-func (m *mockStorage) deactivateMockedError() {
-	atomic.StoreUint32(&m.mockErr, 0)
-}
-
 func (m *mockStorage) FetchUser(username string) (*model.User, error) {
 	var ret *model.User
 	err := m.inReadLock(func() error {
@@ -116,7 +108,7 @@ func (m *mockStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Rost
 			for i, r := range ris {
 				if r.JID == ri.JID {
 					ris[i] = *ri
-					goto updateRosterItems
+					goto done
 				}
 			}
 			ris = append(ris, *ri)
@@ -124,7 +116,7 @@ func (m *mockStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Rost
 			ris = []model.RosterItem{*ri}
 		}
 
-	updateRosterItems:
+	done:
 		ver := m.rosterVersions[ri.Username]
 		ver.Ver++
 		m.rosterVersions[ri.Username] = ver
@@ -142,10 +134,10 @@ func (m *mockStorage) DeleteRosterItem(user, contact string) (model.RosterVersio
 		for i, ri := range ris {
 			if ri.JID == contact {
 				m.rosterItems[user] = append(ris[:i], ris[i+1:]...)
-				goto deletionDone
+				goto done
 			}
 		}
-	deletionDone:
+	done:
 		v = m.rosterVersions[user]
 		v.Ver++
 		v.DeletionVer = v.Ver
@@ -171,14 +163,14 @@ func (m *mockStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotificat
 			for i, r := range rns {
 				if r.JID == rn.JID {
 					rns[i] = *rn
-					goto updateRosterNotifications
+					goto done
 				}
 			}
 			rns = append(rns, *rn)
 		} else {
 			rns = []model.RosterNotification{*rn}
 		}
-	updateRosterNotifications:
+	done:
 		m.rosterNotifications[rn.Contact] = rns
 		return nil
 	})
@@ -274,14 +266,14 @@ func (m *mockStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) 
 			if bl != nil {
 				for _, blItem := range bl {
 					if blItem.JID == item.JID {
-						goto itemInserted
+						goto done
 					}
 				}
 				m.blockListItems[item.Username] = append(bl, item)
 			} else {
 				m.blockListItems[item.Username] = []model.BlockListItem{item}
 			}
-		itemInserted:
+		done:
 		}
 		return nil
 	})
@@ -316,6 +308,14 @@ func (m *mockStorage) FetchBlockListItems(username string) ([]model.BlockListIte
 		return nil
 	})
 	return ret, err
+}
+
+func (m *mockStorage) activateMockedError() {
+	atomic.StoreUint32(&m.mockErr, 1)
+}
+
+func (m *mockStorage) deactivateMockedError() {
+	atomic.StoreUint32(&m.mockErr, 0)
 }
 
 func (m *mockStorage) inWriteLock(f func() error) error {
