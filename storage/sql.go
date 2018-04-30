@@ -256,7 +256,7 @@ func (s *sqlStorage) DeleteRosterNotification(contact, jid string) error {
 }
 
 func (s *sqlStorage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	q := sq.Select("user", "contact", "elements").
+	q := sq.Select("contact", "jid", "elements").
 		From("roster_notifications").
 		Where(sq.Eq{"contact": contact}).
 		OrderBy("created_at")
