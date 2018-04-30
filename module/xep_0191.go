@@ -236,6 +236,7 @@ func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model
 		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
+		c2s.Instance().Route(p)
 	}
 }
 

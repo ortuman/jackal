@@ -187,7 +187,9 @@ func (r *ModRoster) broadcastPresence(presence *xml.Presence) error {
 	for _, itm := range itms {
 		switch itm.Subscription {
 		case subscriptionFrom, subscriptionBoth:
-			r.routePresence(presence, r.rosterItemJID(&itm))
+			p := xml.NewPresence(r.stm.JID(), r.rosterItemJID(&itm), presence.Type())
+			p.AppendElements(p.Elements().All())
+			c2s.Instance().Route(p)
 		}
 	}
 	return nil
@@ -326,10 +328,10 @@ func (r *ModRoster) removeItem(ri *model.RosterItem) error {
 		}
 	}
 	if unsubscribe != nil {
-		r.routePresence(unsubscribe, cntJID)
+		c2s.Instance().Route(unsubscribe)
 	}
 	if unsubscribed != nil {
-		r.routePresence(unsubscribed, cntJID)
+		c2s.Instance().Route(unsubscribed)
 	}
 
 	if usrSub == subscriptionFrom || usrSub == subscriptionBoth {
@@ -411,7 +413,7 @@ func (r *ModRoster) processSubscribe(presence *xml.Presence) error {
 			return err
 		}
 	}
-	r.routePresence(p, cntJID)
+	c2s.Instance().Route(p)
 	return nil
 }
 
@@ -471,7 +473,7 @@ func (r *ModRoster) processSubscribed(presence *xml.Presence) error {
 			}
 		}
 	}
-	r.routePresence(p, usrJID)
+	c2s.Instance().Route(p)
 	r.routePresencesFrom(cntJID, usrJID, xml.AvailableType)
 	return nil
 }
@@ -520,7 +522,7 @@ func (r *ModRoster) processUnsubscribe(presence *xml.Presence) error {
 			}
 		}
 	}
-	r.routePresence(p, cntJID)
+	c2s.Instance().Route(p)
 
 	if usrSub == subscriptionTo || usrSub == subscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
@@ -576,7 +578,7 @@ func (r *ModRoster) processUnsubscribed(presence *xml.Presence) error {
 			}
 		}
 	}
-	r.routePresence(p, usrJID)
+	c2s.Instance().Route(p)
 
 	if cntSub == subscriptionFrom || cntSub == subscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
@@ -642,20 +644,7 @@ func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType 
 		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		r.routePresence(p, to)
-	}
-}
-
-func (r *ModRoster) routePresence(presence *xml.Presence, to *xml.JID) {
-	if c2s.Instance().IsLocalDomain(to.Domain()) {
-		toStreams := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
-		for _, toStream := range toStreams {
-			p := xml.NewPresence(presence.FromJID(), toStream.JID(), presence.Type())
-			p.AppendElements(presence.Elements().All())
-			toStream.SendElement(p)
-		}
-	} else {
-		// TODO(ortuman): Implement XMPP federation
+		c2s.Instance().Route(p)
 	}
 }
 
