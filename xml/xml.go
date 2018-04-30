@@ -41,3 +41,9 @@ type XElement interface {
 	ToXML(w io.Writer, includeClosing bool)
 	ToGob(enc *gob.Encoder)
 }
+
+type RoutableElement interface {
+	XElement
+	FromJID() *JID
+	ToJID() *JID
+}

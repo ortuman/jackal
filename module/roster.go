@@ -636,10 +636,10 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 }
 
 func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
-	fromStreams := c2s.Instance().StreamsMatchingJID(from.ToBareJID())
-	for _, fromStream := range fromStreams {
-		p := xml.NewPresence(fromStream.JID(), to.ToBareJID(), presenceType)
-		if presence := fromStream.Presence(); presence != nil && presenceType == xml.AvailableType {
+	stms := c2s.Instance().StreamsMatchingJID(from.ToBareJID())
+	for _, stm := range stms {
+		p := xml.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
+		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
 		r.routePresence(p, to)

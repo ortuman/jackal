@@ -6,14 +6,22 @@
 package c2s
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+)
+
+var (
+	ErrNotExistingAccount = errors.New("c2s: account does not exist")
+	ErrResourceNotFound   = errors.New("c2s: resource not found")
+	ErrNotAuthenticated   = errors.New("c2s: user not authenticated")
 )
 
 // Stream represents a client-to-server XMPP stream.
@@ -165,6 +173,53 @@ func (m *Manager) AuthenticateStream(strm Stream) error {
 	}
 	m.lock.Unlock()
 	log.Infof("authenticated stream... (%s/%s)", strm.Username(), strm.Resource())
+	return nil
+}
+
+func (m *Manager) Route(elem xml.RoutableElement) error {
+	to := elem.ToJID()
+	rcps := m.StreamsMatchingJID(to.ToBareJID())
+	if len(rcps) == 0 {
+		exists, err := storage.Instance().UserExists(to.Node())
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ErrNotAuthenticated
+		}
+		return ErrNotExistingAccount
+	}
+	if to.IsFullWithUser() {
+		for _, stm := range rcps {
+			if stm.Resource() == to.Resource() {
+				stm.SendElement(elem)
+				return nil
+			}
+		}
+		return ErrResourceNotFound
+	}
+	switch elem.(type) {
+	case *xml.Message:
+		// send to highest priority stream
+		stm := rcps[0]
+		var highestPriority int8
+		if p := stm.Presence(); p != nil {
+			highestPriority = p.Priority()
+		}
+		for i := 1; i < len(rcps); i++ {
+			rcp := rcps[i]
+			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
+				stm = rcp
+			}
+		}
+		stm.SendElement(elem)
+
+	default:
+		// broadcast to all streams
+		for _, stm := range rcps {
+			stm.SendElement(elem)
+		}
+	}
 	return nil
 }
 

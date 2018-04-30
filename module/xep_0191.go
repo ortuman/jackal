@@ -98,21 +98,27 @@ func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 }
 
 func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
+	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
+	}
 	items := block.Elements().Children("item")
 	if len(items) == 0 {
 		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
-	jids, err := x.extractItemJIDs(items)
+	jds, err := x.extractItemJIDs(items)
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.JidMalformedError())
 		return
 	}
 	var bl []model.BlockListItem
-	for _, j := range jids {
+	for _, j := range jds {
 		if x.insertInMemBlockListJID(j) {
-			x.sendAvailablePresence(j)
+			x.broadcastPresenceMatching(j, ris, xml.UnavailableType)
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
 	}
@@ -128,6 +134,12 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 }
 
 func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
+	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
+	}
 	items := unblock.Elements().Children("item")
 	if len(items) == 0 {
 		if err := storage.Instance().DeleteBlockList(x.stm.Username()); err != nil {
@@ -135,19 +147,22 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 			x.stm.SendElement(iq.InternalServerError())
 			return
 		}
+		for _, j := range x.inMemBl {
+			x.broadcastPresenceMatching(j, ris, xml.AvailableType)
+		}
 		x.inMemBl = nil
 
 	} else {
-		jids, err := x.extractItemJIDs(items)
+		jds, err := x.extractItemJIDs(items)
 		if err != nil {
 			log.Error(err)
 			x.stm.SendElement(iq.JidMalformedError())
 			return
 		}
 		var bl []model.BlockListItem
-		for _, j := range jids {
+		for _, j := range jds {
 			if x.deleteInMemBlockListJID(j) {
-				x.sendUnavailablePresence(j)
+				x.broadcastPresenceMatching(j, ris, xml.AvailableType)
 				bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 			}
 		}
@@ -211,11 +226,21 @@ func (x *XEPBlockingCommand) deleteInMemBlockListJID(jid *xml.JID) bool {
 	return false
 }
 
-func (x *XEPBlockingCommand) sendUnavailablePresence(jid *xml.JID) {
-
+func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model.RosterItem, presenceType string) {
+	stms := c2s.Instance().StreamsMatchingJID(jid)
+	for _, stm := range stms {
+		if !x.isSubscribedFrom(jid, ris) {
+			continue
+		}
+		p := xml.NewPresence(stm.JID(), x.stm.JID().ToBareJID(), presenceType)
+		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
+			p.AppendElements(presence.Elements().All())
+		}
+	}
 }
 
-func (x *XEPBlockingCommand) sendAvailablePresence(jid *xml.JID) {
+func (x *XEPBlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterItem) bool {
+	return false
 }
 
 func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {
@@ -233,10 +258,10 @@ func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, 
 func (x *XEPBlockingCommand) jidMatchesBlockedJID(jid, blockedJID *xml.JID) bool {
 	if blockedJID.IsFullWithUser() {
 		return jid.Matches(blockedJID, xml.JIDMatchesNode|xml.JIDMatchesDomain|xml.JIDMatchesResource)
+	} else if blockedJID.IsFullWithServer() {
+		return jid.Matches(blockedJID, xml.JIDMatchesDomain|xml.JIDMatchesResource)
 	} else if blockedJID.IsBare() {
 		return jid.Matches(blockedJID, xml.JIDMatchesNode|xml.JIDMatchesDomain)
-	} else if blockedJID.IsServer() && blockedJID.IsFull() {
-		return jid.Matches(blockedJID, xml.JIDMatchesDomain|xml.JIDMatchesResource)
 	}
 	return jid.Matches(blockedJID, xml.JIDMatchesDomain)
 }

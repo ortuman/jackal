@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -68,12 +67,6 @@ const (
 const (
 	rosterOnce  = "rosterOnce"
 	offlineOnce = "offlineOnce"
-)
-
-var (
-	errNotExistingAccount = errors.New("account does not exist")
-	errResourceNotFound   = errors.New("resource not found")
-	errNotAuthenticated   = errors.New("user not authenticated")
 )
 
 type c2sStream struct {
@@ -704,7 +697,7 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 
 	toJid := iq.ToJID()
 	if toJid.IsFullWithUser() {
-		if err := s.sendElement(iq, toJid); err == errResourceNotFound {
+		if err := c2s.Instance().Route(iq); err == c2s.ErrResourceNotFound {
 			resp := xml.NewElementFromElement(iq)
 			resp.SetFrom(toJid.String())
 			resp.SetTo(s.JID().String())
@@ -740,7 +733,7 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 		return
 	}
 	if toJid.IsFullWithUser() {
-		s.sendElement(presence, toJid)
+		c2s.Instance().Route(presence)
 		return
 	}
 	// set context presence
@@ -771,22 +764,22 @@ func (s *c2sStream) processMessage(message *xml.Message) {
 	toJid := message.ToJID()
 
 sendMessage:
-	err := s.sendElement(message, toJid)
+	err := c2s.Instance().Route(message)
 	switch err {
 	case nil:
 		break
-	case errNotAuthenticated:
+	case c2s.ErrNotAuthenticated:
 		if s.offline != nil {
 			if (message.IsChat() || message.IsGroupChat()) && message.IsMessageWithBody() {
 				return
 			}
 			s.offline.ArchiveMessage(message)
 		}
-	case errResourceNotFound:
+	case c2s.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
 		toJid = toJid.ToBareJID()
 		goto sendMessage
-	case errNotExistingAccount:
+	case c2s.ErrNotExistingAccount:
 		response := xml.NewElementFromElement(message)
 		response.SetFrom(toJid.String())
 		response.SetTo(s.JID().String())
@@ -1102,52 +1095,6 @@ func (s *c2sStream) userResourceStream(resource string) c2s.Stream {
 	for _, strm := range strms {
 		if strm.Resource() == resource {
 			return strm
-		}
-	}
-	return nil
-}
-
-func (s *c2sStream) sendElement(element xml.XElement, to *xml.JID) error {
-	recipients := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
-	if len(recipients) == 0 {
-		exists, err := storage.Instance().UserExists(to.Node())
-		if err != nil {
-			return err
-		}
-		if exists {
-			return errNotAuthenticated
-		}
-		return errNotExistingAccount
-	}
-	if to.IsFullWithUser() {
-		for _, strm := range recipients {
-			if strm.Resource() == to.Resource() {
-				strm.SendElement(element)
-				return nil
-			}
-		}
-		return errResourceNotFound
-	}
-	switch element.(type) {
-	case *xml.Message:
-		// send to highest priority stream
-		stm := recipients[0]
-		var highestPriority int8
-		if p := stm.Presence(); p != nil {
-			highestPriority = p.Priority()
-		}
-		for i := 1; i < len(recipients); i++ {
-			rcp := recipients[i]
-			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
-				stm = rcp
-			}
-		}
-		stm.SendElement(element)
-
-	default:
-		// broadcast to all streams
-		for _, strm := range recipients {
-			strm.SendElement(element)
 		}
 	}
 	return nil
