@@ -1098,7 +1098,7 @@ func (s *c2sStream) getState() uint32 {
 }
 
 func (s *c2sStream) userResourceStream(resource string) c2s.Stream {
-	strms := c2s.Instance().AvailableStreams(s.Username())
+	strms := c2s.Instance().StreamsMatchingJID(s.JID().ToBareJID())
 	for _, strm := range strms {
 		if strm.Resource() == resource {
 			return strm
@@ -1108,7 +1108,7 @@ func (s *c2sStream) userResourceStream(resource string) c2s.Stream {
 }
 
 func (s *c2sStream) sendElement(element xml.XElement, to *xml.JID) error {
-	recipients := c2s.Instance().AvailableStreams(to.Node())
+	recipients := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
 	if len(recipients) == 0 {
 		exists, err := storage.Instance().UserExists(to.Node())
 		if err != nil {

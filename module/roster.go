@@ -622,7 +622,7 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	}
 	query.AppendElement(r.elementFromRosterItem(ri))
 
-	stms := c2s.Instance().AvailableStreams(to.Node())
+	stms := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
 	for _, stm := range stms {
 		if !stm.Context().Bool(rosterRequestedContextKey) {
 			continue
@@ -636,7 +636,7 @@ func (r *ModRoster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 }
 
 func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
-	fromStreams := c2s.Instance().AvailableStreams(from.Node())
+	fromStreams := c2s.Instance().StreamsMatchingJID(from.ToBareJID())
 	for _, fromStream := range fromStreams {
 		p := xml.NewPresence(fromStream.JID(), to.ToBareJID(), presenceType)
 		if presence := fromStream.Presence(); presence != nil && presenceType == xml.AvailableType {
@@ -648,7 +648,7 @@ func (r *ModRoster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType 
 
 func (r *ModRoster) routePresence(presence *xml.Presence, to *xml.JID) {
 	if c2s.Instance().IsLocalDomain(to.Domain()) {
-		toStreams := c2s.Instance().AvailableStreams(to.Node())
+		toStreams := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
 		for _, toStream := range toStreams {
 			p := xml.NewPresence(presence.FromJID(), toStream.JID(), presence.Type())
 			p.AppendElements(presence.Elements().All())

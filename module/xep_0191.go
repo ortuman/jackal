@@ -111,10 +111,10 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 	}
 	var bl []model.BlockListItem
 	for _, j := range jids {
-		if !x.insertInMemBlockListJID(j) {
-			continue
+		if x.insertInMemBlockListJID(j) {
+			x.sendAvailablePresence(j)
+			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
-		bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 	}
 	if len(bl) > 0 {
 		if err := storage.Instance().InsertOrUpdateBlockListItems(bl); err != nil {
@@ -146,10 +146,10 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 		}
 		var bl []model.BlockListItem
 		for _, j := range jids {
-			if !x.deleteInMemBlockListJID(j) {
-				continue
+			if x.deleteInMemBlockListJID(j) {
+				x.sendUnavailablePresence(j)
+				bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 			}
-			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
 		if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
 			log.Error(err)
@@ -162,7 +162,7 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 }
 
 func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
-	stms := c2s.Instance().AvailableStreams(x.stm.Username())
+	stms := c2s.Instance().StreamsMatchingJID(x.stm.JID().ToBareJID())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
 			continue
@@ -209,6 +209,13 @@ func (x *XEPBlockingCommand) deleteInMemBlockListJID(jid *xml.JID) bool {
 		}
 	}
 	return false
+}
+
+func (x *XEPBlockingCommand) sendUnavailablePresence(jid *xml.JID) {
+
+}
+
+func (x *XEPBlockingCommand) sendAvailablePresence(jid *xml.JID) {
 }
 
 func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {

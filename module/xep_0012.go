@@ -53,7 +53,7 @@ func (x *XEPLastActivity) ProcessIQ(iq *xml.IQ) {
 	if toJID.IsServer() {
 		x.sendServerUptime(iq)
 	} else if toJID.IsBare() {
-		ri, err := storage.Instance().FetchRosterItem(x.stm.Username(), toJID.Node())
+		ri, err := storage.Instance().FetchRosterItem(x.stm.Username(), toJID.ToBareJID().String())
 		if err != nil {
 			log.Error(err)
 			x.stm.SendElement(iq.InternalServerError())
@@ -62,7 +62,7 @@ func (x *XEPLastActivity) ProcessIQ(iq *xml.IQ) {
 		if ri != nil {
 			switch ri.Subscription {
 			case subscriptionTo, subscriptionBoth:
-				x.sendUserLastActivity(iq, toJID.Node())
+				x.sendUserLastActivity(iq, toJID)
 			default:
 				x.stm.SendElement(iq.ForbiddenError())
 			}
@@ -77,12 +77,12 @@ func (x *XEPLastActivity) sendServerUptime(iq *xml.IQ) {
 	x.sendReply(iq, secs, "")
 }
 
-func (x *XEPLastActivity) sendUserLastActivity(iq *xml.IQ, username string) {
-	if len(c2s.Instance().AvailableStreams(username)) > 0 { // user online
+func (x *XEPLastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
+	if len(c2s.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
 		x.sendReply(iq, 0, "")
 		return
 	}
-	usr, err := storage.Instance().FetchUser(username)
+	usr, err := storage.Instance().FetchUser(to.Node())
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())

@@ -168,10 +168,34 @@ func (m *Manager) AuthenticateStream(strm Stream) error {
 	return nil
 }
 
-// AvailableStreams returns every authenticated stream associated with an account.
-func (m *Manager) AvailableStreams(username string) []Stream {
+func (m *Manager) StreamsMatchingJID(jid *xml.JID) []Stream {
+	if !m.IsLocalDomain(jid.Domain()) {
+		return nil
+	}
+	var ret []Stream
+	opts := xml.JIDMatchesDomain
+	if jid.IsFull() {
+		opts |= xml.JIDMatchesResource
+	}
+
 	m.lock.RLock()
-	res := m.authedStrms[username]
+	if len(jid.Node()) > 0 {
+		opts |= xml.JIDMatchesNode
+		stms := m.authedStrms[jid.Node()]
+		for _, stm := range stms {
+			if stm.JID().Matches(jid, opts) {
+				ret = append(ret, stm)
+			}
+		}
+	} else {
+		for _, stms := range m.authedStrms {
+			for _, stm := range stms {
+				if stm.JID().Matches(jid, opts) {
+					ret = append(ret, stm)
+				}
+			}
+		}
+	}
 	m.lock.RUnlock()
-	return res
+	return ret
 }

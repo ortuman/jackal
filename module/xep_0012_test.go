@@ -73,7 +73,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	storage.Initialize(&config.Storage{Type: config.Mock})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&config.C2S{})
+	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
 	defer c2s.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -101,7 +101,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	})
 	storage.Instance().InsertOrUpdateRosterItem(&model.RosterItem{
 		Username:     "ortuman",
-		JID:          "noelia",
+		JID:          "noelia@jackal.im",
 		Subscription: subscriptionBoth,
 	})
 	x.ProcessIQ(iq)
