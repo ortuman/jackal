@@ -100,8 +100,8 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 		LoggedOutAt:     time.Now().AddDate(0, 0, -1),
 	})
 	storage.Instance().InsertOrUpdateRosterItem(&model.RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia",
 		Subscription: subscriptionBoth,
 	})
 	x.ProcessIQ(iq)

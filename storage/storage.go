@@ -29,12 +29,12 @@ type Storage interface {
 	UserExists(username string) (bool, error)
 
 	InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error)
-	DeleteRosterItem(user, contact string) (model.RosterVersion, error)
-	FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error)
-	FetchRosterItem(user, contact string) (*model.RosterItem, error)
+	DeleteRosterItem(username, jid string) (model.RosterVersion, error)
+	FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error)
+	FetchRosterItem(username, jid string) (*model.RosterItem, error)
 
 	InsertOrUpdateRosterNotification(rn *model.RosterNotification) error
-	DeleteRosterNotification(user, contact string) error
+	DeleteRosterNotification(contact, jid string) error
 	FetchRosterNotifications(contact string) ([]model.RosterNotification, error)
 
 	InsertOrUpdateVCard(vCard xml.XElement, username string) error

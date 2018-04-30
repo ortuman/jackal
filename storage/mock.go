@@ -109,7 +109,7 @@ func (m *mockStorage) FetchRosterItem(user, contact string) (*model.RosterItem, 
 
 	rosterItems := m.rosterItems[user]
 	for _, rosterItem := range rosterItems {
-		if rosterItem.Contact == contact {
+		if rosterItem.JID == contact {
 			return &rosterItem, nil
 		}
 	}
@@ -123,10 +123,10 @@ func (m *mockStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Rost
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rosterItems := m.rosterItems[ri.User]
+	rosterItems := m.rosterItems[ri.Username]
 	if rosterItems != nil {
 		for i, rosterItem := range rosterItems {
-			if rosterItem.Contact == ri.Contact {
+			if rosterItem.JID == ri.JID {
 				rosterItems[i] = *ri
 				goto updateRosterItems
 			}
@@ -137,11 +137,11 @@ func (m *mockStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Rost
 	}
 
 updateRosterItems:
-	ver := m.rosterVersions[ri.User]
+	ver := m.rosterVersions[ri.Username]
 	ver.Ver++
-	m.rosterVersions[ri.User] = ver
+	m.rosterVersions[ri.Username] = ver
 	rosterItems[len(rosterItems)-1].Ver = ver.Ver
-	m.rosterItems[ri.User] = rosterItems
+	m.rosterItems[ri.Username] = rosterItems
 	return ver, nil
 }
 
@@ -154,7 +154,7 @@ func (m *mockStorage) DeleteRosterItem(user, contact string) (model.RosterVersio
 
 	rosterItems := m.rosterItems[user]
 	for i, rosterItem := range rosterItems {
-		if rosterItem.Contact == contact {
+		if rosterItem.JID == contact {
 			m.rosterItems[user] = append(rosterItems[:i], rosterItems[i+1:]...)
 			goto deletionDone
 		}
@@ -187,7 +187,7 @@ func (m *mockStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotificat
 	rosterNotifications := m.rosterNotifications[rn.Contact]
 	if rosterNotifications != nil {
 		for i, rosterNotification := range rosterNotifications {
-			if rosterNotification.User == rn.User {
+			if rosterNotification.JID == rn.JID {
 				rosterNotifications[i] = *rn
 				goto updateRosterNotifications
 			}
@@ -201,7 +201,7 @@ updateRosterNotifications:
 	return nil
 }
 
-func (m *mockStorage) DeleteRosterNotification(user, contact string) error {
+func (m *mockStorage) DeleteRosterNotification(contact, jid string) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
@@ -210,7 +210,7 @@ func (m *mockStorage) DeleteRosterNotification(user, contact string) error {
 
 	rosterNotifications := m.rosterNotifications[contact]
 	for i, rosterNotification := range rosterNotifications {
-		if rosterNotification.User == user {
+		if rosterNotification.JID == jid {
 			m.rosterNotifications[contact] = append(rosterNotifications[:i], rosterNotifications[i+1:]...)
 			return nil
 		}

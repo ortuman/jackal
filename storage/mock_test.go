@@ -98,8 +98,8 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 
 	ri4, _ := s.FetchRosterItem("user", "contact")
 	require.NotNil(t, ri4)
-	require.Equal(t, "user", ri4.User)
-	require.Equal(t, "contact", ri4.Contact)
+	require.Equal(t, "user", ri4.Username)
+	require.Equal(t, "contact", ri4.JID)
 }
 
 func TestMockStorageFetchRosterItems(t *testing.T) {
@@ -153,13 +153,13 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 
 func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rn1 := model.RosterNotification{
-		"ortuman",
 		"romeo",
+		"ortuman@jackal.im",
 		[]xml.XElement{xml.NewElementName("priority")},
 	}
 	rn2 := model.RosterNotification{
-		"ortuman2",
 		"romeo",
+		"ortuman2@jackal.im",
 		[]xml.XElement{xml.NewElementName("priority")},
 	}
 	s := newMockStorage()
@@ -176,8 +176,8 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rns, err := s.FetchRosterNotifications("romeo")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(rns))
-	require.Equal(t, "ortuman", rns[0].User)
-	require.Equal(t, "ortuman2", rns[1].User)
+	require.Equal(t, "ortuman@jackal.im", rns[0].JID)
+	require.Equal(t, "ortuman2@jackal.im", rns[1].JID)
 }
 
 func TestMockStorageDeleteRosterNotification(t *testing.T) {

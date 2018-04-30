@@ -99,11 +99,11 @@ func (b *badgerDB) UserExists(username string) (bool, error) {
 
 func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(ri, b.rosterItemKey(ri.User, ri.Contact), tx)
+		return b.insertOrUpdate(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
 	}); err != nil {
 		return model.RosterVersion{}, err
 	}
-	return b.updateRosterVer(ri.User, false)
+	return b.updateRosterVer(ri.Username, false)
 }
 
 func (b *badgerDB) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
@@ -139,13 +139,13 @@ func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, err
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.User, rn.Contact), tx)
+		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
 	})
 }
 
-func (b *badgerDB) DeleteRosterNotification(user, contact string) error {
+func (b *badgerDB) DeleteRosterNotification(contact, jid string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.delete(b.rosterNotificationKey(user, contact), tx)
+		return b.delete(b.rosterNotificationKey(contact, jid), tx)
 	})
 }
 
@@ -460,8 +460,8 @@ func (b *badgerDB) rosterVersionKey(username string) []byte {
 	return []byte("rosterVersions:" + username)
 }
 
-func (b *badgerDB) rosterNotificationKey(user, contact string) []byte {
-	return []byte("rosterNotifications:" + contact + ":" + user)
+func (b *badgerDB) rosterNotificationKey(contact, jid string) []byte {
+	return []byte("rosterNotifications:" + contact + ":" + jid)
 }
 
 func (b *badgerDB) offlineMessageKey(username, identifier string) []byte {

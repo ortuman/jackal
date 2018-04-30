@@ -48,8 +48,8 @@ func (u *User) ToGob(enc *gob.Encoder) {
 
 // RosterItem represents a roster item storage entity.
 type RosterItem struct {
-	User         string
-	Contact      string
+	Username     string
+	JID          string
 	Name         string
 	Subscription string
 	Ask          bool
@@ -60,8 +60,8 @@ type RosterItem struct {
 // FromGob deserializes a RosterItem entity
 // from it's gob binary representation.
 func (ri *RosterItem) FromGob(dec *gob.Decoder) {
-	dec.Decode(&ri.User)
-	dec.Decode(&ri.Contact)
+	dec.Decode(&ri.Username)
+	dec.Decode(&ri.JID)
 	dec.Decode(&ri.Name)
 	dec.Decode(&ri.Subscription)
 	dec.Decode(&ri.Ask)
@@ -72,8 +72,8 @@ func (ri *RosterItem) FromGob(dec *gob.Decoder) {
 // ToGob converts a RosterItem entity
 // to it's gob binary representation.
 func (ri *RosterItem) ToGob(enc *gob.Encoder) {
-	enc.Encode(&ri.User)
-	enc.Encode(&ri.Contact)
+	enc.Encode(&ri.Username)
+	enc.Encode(&ri.JID)
 	enc.Encode(&ri.Name)
 	enc.Encode(&ri.Subscription)
 	enc.Encode(&ri.Ask)
@@ -104,16 +104,16 @@ func (rv *RosterVersion) ToGob(enc *gob.Encoder) {
 // RosterNotification represents a roster subscription
 // pending notification.
 type RosterNotification struct {
-	User     string
 	Contact  string
+	JID      string
 	Elements []xml.XElement
 }
 
 // FromGob deserializes a RosterNotification entity
 // from it's gob binary representation.
 func (rn *RosterNotification) FromGob(dec *gob.Decoder) {
-	dec.Decode(&rn.User)
 	dec.Decode(&rn.Contact)
+	dec.Decode(&rn.JID)
 	var ln int
 	dec.Decode(&ln)
 	for i := 0; i < ln; i++ {
@@ -126,8 +126,8 @@ func (rn *RosterNotification) FromGob(dec *gob.Decoder) {
 // ToGob converts a RosterNotification entity
 // to it's gob binary representation.
 func (rn *RosterNotification) ToGob(enc *gob.Encoder) {
-	enc.Encode(&rn.User)
 	enc.Encode(&rn.Contact)
+	enc.Encode(&rn.JID)
 	enc.Encode(len(rn.Elements))
 	for _, el := range rn.Elements {
 		el.ToGob(enc)

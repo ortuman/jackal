@@ -37,8 +37,8 @@ func TestModelRosterItem(t *testing.T) {
 	var ri1 RosterItem
 
 	ri1 = RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia",
 		Ask:          true,
 		Subscription: "none",
 		Groups:       []string{"friends", "family"},
@@ -64,14 +64,14 @@ func TestModelRosterNotification(t *testing.T) {
 	var rn1, rn2 RosterNotification
 
 	rn1 = RosterNotification{
-		User:     "ortuman",
 		Contact:  "noelia",
+		JID:      "ortuman@jackal.im",
 		Elements: []xml.XElement{xml.NewElementNamespace("c", "http://jabber.org/protocol/caps")},
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))
 	rn2.FromGob(gob.NewDecoder(buf))
-	require.Equal(t, "ortuman", rn2.User)
+	require.Equal(t, "ortuman@jackal.im", rn2.JID)
 	require.Equal(t, "noelia", rn2.Contact)
 	require.Equal(t, 1, len(rn1.Elements))
 	require.Equal(t, 1, len(rn2.Elements))

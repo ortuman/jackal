@@ -108,13 +108,13 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	defer tUtilBadgerDBTeardown(h)
 
 	ri1 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "juliet",
+		Username:     "ortuman",
+		JID:          "juliet",
 		Subscription: "both",
 	}
 	ri2 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "romeo",
+		Username:     "ortuman",
+		JID:          "romeo",
 		Subscription: "both",
 	}
 	_, err := h.db.InsertOrUpdateRosterItem(ri1)
@@ -151,13 +151,13 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	defer tUtilBadgerDBTeardown(h)
 
 	rn1 := model.RosterNotification{
-		User:     "juliet",
 		Contact:  "ortuman",
+		JID:      "juliet@jackal.im",
 		Elements: []xml.XElement{},
 	}
 	rn2 := model.RosterNotification{
-		User:     "romeo",
 		Contact:  "ortuman",
+		JID:      "romeo@jackal.im",
 		Elements: []xml.XElement{},
 	}
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
@@ -171,13 +171,13 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rns2))
 
-	require.NoError(t, h.db.DeleteRosterNotification(rn1.User, rn1.Contact))
+	require.NoError(t, h.db.DeleteRosterNotification(rn1.Contact, rn1.JID))
 
 	rns, err = h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rns))
 
-	require.NoError(t, h.db.DeleteRosterNotification(rn2.User, rn2.Contact))
+	require.NoError(t, h.db.DeleteRosterNotification(rn2.Contact, rn2.JID))
 
 	rns, err = h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)

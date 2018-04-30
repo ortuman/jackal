@@ -152,7 +152,7 @@ func (s *sqlStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Roste
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
-			Values(ri.User, nowExpr, nowExpr).
+			Values(ri.Username, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()")
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
@@ -160,10 +160,10 @@ func (s *sqlStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Roste
 		}
 		groups := strings.Join(ri.Groups, ";")
 
-		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.User)
+		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.Username)
 		q = sq.Insert("roster_items").
-			Columns("user", "contact", "name", "subscription", "groups", "ask", "ver", "created_at", "updated_at").
-			Values(ri.User, ri.Contact, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
+			Columns("username", "jid", "name", "subscription", "groups", "ask", "ver", "created_at", "updated_at").
+			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
 
 		_, err := q.RunWith(tx).Exec()
@@ -172,34 +172,34 @@ func (s *sqlStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.Roste
 	if err != nil {
 		return model.RosterVersion{}, err
 	}
-	return s.fetchRosterVer(ri.User)
+	return s.fetchRosterVer(ri.Username)
 }
 
-func (s *sqlStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
+func (s *sqlStorage) DeleteRosterItem(username, jid string) (model.RosterVersion, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
-			Values(user, nowExpr, nowExpr).
+			Values(username, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()")
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
 		_, err := sq.Delete("roster_items").
-			Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}}).
+			Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}}).
 			RunWith(tx).Exec()
 		return err
 	})
 	if err != nil {
 		return model.RosterVersion{}, err
 	}
-	return s.fetchRosterVer(user)
+	return s.fetchRosterVer(username)
 }
 
-func (s *sqlStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
+func (s *sqlStorage) FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error) {
+	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
-		Where(sq.Eq{"user": user}).
+		Where(sq.Eq{"username": username}).
 		OrderBy("created_at DESC")
 
 	rows, err := q.RunWith(s.db).Query()
@@ -212,14 +212,14 @@ func (s *sqlStorage) FetchRosterItems(user string) ([]model.RosterItem, model.Ro
 	if err != nil {
 		return nil, model.RosterVersion{}, err
 	}
-	ver, err := s.fetchRosterVer(user)
+	ver, err := s.fetchRosterVer(username)
 	return items, ver, nil
 }
 
-func (s *sqlStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	q := sq.Select("user", "contact", "name", "subscription", "groups", "ask", "ver").
+func (s *sqlStorage) FetchRosterItem(username, jid string) (*model.RosterItem, error) {
+	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
-		Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
+		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}})
 
 	var ri model.RosterItem
 	err := scanRosterItemEntity(&ri, q.RunWith(s.db).QueryRow())
@@ -242,15 +242,15 @@ func (s *sqlStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotificati
 	elementsXML := buf.String()
 
 	q := sq.Insert("roster_notifications").
-		Columns("user", "contact", "elements", "updated_at", "created_at").
-		Values(rn.User, rn.Contact, elementsXML, nowExpr, nowExpr).
+		Columns("contact", "jid", "elements", "updated_at", "created_at").
+		Values(rn.Contact, rn.JID, elementsXML, nowExpr, nowExpr).
 		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", elementsXML)
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
-func (s *sqlStorage) DeleteRosterNotification(user, contact string) error {
-	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"user": user}, sq.Eq{"contact": contact}})
+func (s *sqlStorage) DeleteRosterNotification(contact, jid string) error {
+	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
@@ -274,7 +274,7 @@ func (s *sqlStorage) FetchRosterNotifications(contact string) ([]model.RosterNot
 	for rows.Next() {
 		var rn model.RosterNotification
 		var notificationXML string
-		rows.Scan(&rn.User, &rn.Contact, &notificationXML)
+		rows.Scan(&rn.Contact, &rn.JID, &notificationXML)
 		buf.Reset()
 		buf.WriteString("<root>")
 		buf.WriteString(notificationXML)

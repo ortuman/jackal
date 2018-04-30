@@ -72,8 +72,8 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r.Done()
 
 	ri1 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
 		Name:         "My Juliet",
 		Subscription: subscriptionNone,
 		Ask:          true,
@@ -82,8 +82,8 @@ func TestRoster_FetchRoster(t *testing.T) {
 	storage.Instance().InsertOrUpdateRosterItem(ri1)
 
 	ri2 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "romeo",
+		Username:     "ortuman",
+		JID:          "romeo@jackal.im",
 		Name:         "Rome",
 		Subscription: subscriptionNone,
 		Ask:          true,
@@ -139,8 +139,8 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	defer c2s.Shutdown()
 
 	rn := model.RosterNotification{
-		User:     "noelia",
 		Contact:  "ortuman",
+		JID:      "noelia@jackal.im",
 		Elements: []xml.XElement{xml.NewElementName("group")},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(&rn)
@@ -178,8 +178,8 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 
 	// insert roster item...
 	ri := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
 		Name:         "My Juliet",
 		Subscription: subscriptionBoth,
 	}
@@ -277,11 +277,11 @@ func TestRoster_Update(t *testing.T) {
 	require.Equal(t, xml.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
-	ri, err := storage.Instance().FetchRosterItem("ortuman", "noelia")
+	ri, err := storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
 	require.Nil(t, err)
 	require.NotNil(t, ri)
-	require.Equal(t, "ortuman", ri.User)
-	require.Equal(t, "noelia", ri.Contact)
+	require.Equal(t, "ortuman", ri.Username)
+	require.Equal(t, "noelia@jackal.im", ri.JID)
 }
 
 func TestRoster_Subscribe(t *testing.T) {
@@ -317,8 +317,8 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	// insert roster item...
 	ri := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
 		Name:         "My Juliet",
 		Subscription: subscriptionNone,
 	}
@@ -326,8 +326,8 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	// insert roster approval notification...
 	rn := &model.RosterNotification{
-		User:     "ortuman",
 		Contact:  "noelia",
+		JID:      "ortuman@jackal.im",
 		Elements: []xml.XElement{},
 	}
 	storage.Instance().InsertOrUpdateRosterNotification(rn)
@@ -367,7 +367,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rns))
 
-	ri, err = storage.Instance().FetchRosterItem("ortuman", "noelia")
+	ri, err = storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
 	require.Nil(t, err)
 	require.Equal(t, subscriptionTo, ri.Subscription)
 }
@@ -532,14 +532,14 @@ func TestRoster_DeleteItem(t *testing.T) {
 func tUtilRosterInsertRosterItems() {
 	// insert roster item...
 	ri1 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "noelia",
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
 		Name:         "My Juliet",
 		Subscription: subscriptionBoth,
 	}
 	ri2 := &model.RosterItem{
-		User:         "noelia",
-		Contact:      "ortuman",
+		Username:     "noelia",
+		JID:          "ortuman@jackal.im",
 		Name:         "My Romeo",
 		Subscription: subscriptionBoth,
 	}
@@ -562,7 +562,7 @@ func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
 	stm1 := c2s.NewMockStream("abcd1234", j1)
 	stm1.SetUsername("ortuman")
 	stm1.SetDomain("jackal.im")
-	stm1.SetResource("garden")
+	stm1.SetResource("balcony")
 	stm1.SetAuthenticated(true)
 	stm1.Context().SetBool(true, rosterRequestedContextKey)
 	stm1.SetJID(j1)

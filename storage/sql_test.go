@@ -132,13 +132,13 @@ func TestMySQLStorageInsertRosterItem(t *testing.T) {
 	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
 
 	args := []driver.Value{
-		ri.User,
-		ri.Contact,
+		ri.Username,
+		ri.JID,
 		ri.Name,
 		ri.Subscription,
 		"general;friends",
 		ri.Ask,
-		ri.User,
+		ri.Username,
 		ri.Name,
 		ri.Subscription,
 		"general;friends",
@@ -258,8 +258,8 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 	elementsXML := buf.String()
 
 	args := []driver.Value{
-		rn.User,
 		rn.Contact,
+		rn.JID,
 		elementsXML,
 		elementsXML,
 	}
