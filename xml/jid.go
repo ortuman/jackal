@@ -60,7 +60,6 @@ char *resourceprep(char *in) {
 */
 import "C"
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -224,7 +223,8 @@ func (j *JID) Matches(j2 *JID, options JIDMatchingOptions) bool {
 
 // String returns a string representation of the JID.
 func (j *JID) String() string {
-	buf := new(bytes.Buffer)
+	buf := bufPool.Get()
+	defer bufPool.Put(buf)
 	if len(j.node) > 0 {
 		buf.WriteString(j.node)
 		buf.WriteString("@")

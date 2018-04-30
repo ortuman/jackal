@@ -241,6 +241,12 @@ func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model
 }
 
 func (x *XEPBlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterItem) bool {
+	str := jid.String()
+	for _, ri := range ris {
+		if ri.JID == str && (ri.Subscription == subscriptionFrom || ri.Subscription == subscriptionBoth) {
+			return true
+		}
+	}
 	return false
 }
 
