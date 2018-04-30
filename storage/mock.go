@@ -51,315 +51,289 @@ func (m *mockStorage) deactivateMockedError() {
 }
 
 func (m *mockStorage) FetchUser(username string) (*model.User, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	if u, ok := m.users[username]; ok {
-		return u, nil
-	}
-	return nil, nil
+	var ret *model.User
+	err := m.inReadLock(func() error {
+		ret = m.users[username]
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) InsertOrUpdateUser(user *model.User) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.users[user.Username] = user
-	return nil
+	return m.inWriteLock(func() error {
+		m.users[user.Username] = user
+		return nil
+	})
 }
 
 func (m *mockStorage) DeleteUser(username string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.users, username)
-	return nil
+	return m.inWriteLock(func() error {
+		delete(m.users, username)
+		return nil
+	})
 }
 
 func (m *mockStorage) UserExists(username string) (bool, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return false, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.users[username] != nil, nil
+	var ret bool
+	err := m.inReadLock(func() error {
+		ret = m.users[username] != nil
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, model.RosterVersion{}, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.rosterItems[user], m.rosterVersions[user], nil
+	var ris []model.RosterItem
+	var v model.RosterVersion
+	err := m.inReadLock(func() error {
+		ris = m.rosterItems[user]
+		v = m.rosterVersions[user]
+		return nil
+	})
+	return ris, v, err
 }
 
 func (m *mockStorage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	rosterItems := m.rosterItems[user]
-	for _, rosterItem := range rosterItems {
-		if rosterItem.JID == contact {
-			return &rosterItem, nil
+	var ret *model.RosterItem
+	err := m.inReadLock(func() error {
+		ris := m.rosterItems[user]
+		for _, ri := range ris {
+			if ri.JID == contact {
+				ret = &ri
+				return nil
+			}
 		}
-	}
-	return nil, nil
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return model.RosterVersion{}, ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	rosterItems := m.rosterItems[ri.Username]
-	if rosterItems != nil {
-		for i, rosterItem := range rosterItems {
-			if rosterItem.JID == ri.JID {
-				rosterItems[i] = *ri
-				goto updateRosterItems
+	var v model.RosterVersion
+	err := m.inWriteLock(func() error {
+		ris := m.rosterItems[ri.Username]
+		if ris != nil {
+			for i, r := range ris {
+				if r.JID == ri.JID {
+					ris[i] = *ri
+					goto updateRosterItems
+				}
 			}
+			ris = append(ris, *ri)
+		} else {
+			ris = []model.RosterItem{*ri}
 		}
-		rosterItems = append(rosterItems, *ri)
-	} else {
-		rosterItems = []model.RosterItem{*ri}
-	}
 
-updateRosterItems:
-	ver := m.rosterVersions[ri.Username]
-	ver.Ver++
-	m.rosterVersions[ri.Username] = ver
-	rosterItems[len(rosterItems)-1].Ver = ver.Ver
-	m.rosterItems[ri.Username] = rosterItems
-	return ver, nil
+	updateRosterItems:
+		ver := m.rosterVersions[ri.Username]
+		ver.Ver++
+		m.rosterVersions[ri.Username] = ver
+		ris[len(ris)-1].Ver = ver.Ver
+		m.rosterItems[ri.Username] = ris
+		return nil
+	})
+	return v, err
 }
 
 func (m *mockStorage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return model.RosterVersion{}, ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	rosterItems := m.rosterItems[user]
-	for i, rosterItem := range rosterItems {
-		if rosterItem.JID == contact {
-			m.rosterItems[user] = append(rosterItems[:i], rosterItems[i+1:]...)
-			goto deletionDone
+	var v model.RosterVersion
+	err := m.inWriteLock(func() error {
+		ris := m.rosterItems[user]
+		for i, ri := range ris {
+			if ri.JID == contact {
+				m.rosterItems[user] = append(ris[:i], ris[i+1:]...)
+				goto deletionDone
+			}
 		}
-	}
-
-deletionDone:
-	v := m.rosterVersions[user]
-	v.Ver++
-	v.DeletionVer = v.Ver
-	m.rosterVersions[user] = v
-	return v, nil
+	deletionDone:
+		v = m.rosterVersions[user]
+		v.Ver++
+		v.DeletionVer = v.Ver
+		m.rosterVersions[user] = v
+		return nil
+	})
+	return v, err
 }
 
 func (m *mockStorage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.rosterNotifications[contact], nil
+	var ret []model.RosterNotification
+	err := m.inReadLock(func() error {
+		ret = m.rosterNotifications[contact]
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	rosterNotifications := m.rosterNotifications[rn.Contact]
-	if rosterNotifications != nil {
-		for i, rosterNotification := range rosterNotifications {
-			if rosterNotification.JID == rn.JID {
-				rosterNotifications[i] = *rn
-				goto updateRosterNotifications
+	return m.inWriteLock(func() error {
+		rns := m.rosterNotifications[rn.Contact]
+		if rns != nil {
+			for i, r := range rns {
+				if r.JID == rn.JID {
+					rns[i] = *rn
+					goto updateRosterNotifications
+				}
 			}
+			rns = append(rns, *rn)
+		} else {
+			rns = []model.RosterNotification{*rn}
 		}
-		rosterNotifications = append(rosterNotifications, *rn)
-	} else {
-		rosterNotifications = []model.RosterNotification{*rn}
-	}
-updateRosterNotifications:
-	m.rosterNotifications[rn.Contact] = rosterNotifications
-	return nil
+	updateRosterNotifications:
+		m.rosterNotifications[rn.Contact] = rns
+		return nil
+	})
 }
 
 func (m *mockStorage) DeleteRosterNotification(contact, jid string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	rosterNotifications := m.rosterNotifications[contact]
-	for i, rosterNotification := range rosterNotifications {
-		if rosterNotification.JID == jid {
-			m.rosterNotifications[contact] = append(rosterNotifications[:i], rosterNotifications[i+1:]...)
-			return nil
+	return m.inWriteLock(func() error {
+		rns := m.rosterNotifications[contact]
+		for i, rn := range rns {
+			if rn.JID == jid {
+				m.rosterNotifications[contact] = append(rns[:i], rns[i+1:]...)
+				return nil
+			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (m *mockStorage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.vCards[username] = xml.NewElementFromElement(vCard)
-	return nil
+	return m.inWriteLock(func() error {
+		m.vCards[username] = xml.NewElementFromElement(vCard)
+		return nil
+	})
 }
 
 func (m *mockStorage) FetchVCard(username string) (xml.XElement, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.vCards[username], nil
+	var ret xml.XElement
+	err := m.inReadLock(func() error {
+		ret = m.vCards[username]
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// copy elements
-	var prvXML []xml.XElement
-	for _, prv := range privateXML {
-		prvXML = append(prvXML, xml.NewElementFromElement(prv))
-	}
-	m.privateXML[username+":"+namespace] = prvXML
-	return nil
+	return m.inWriteLock(func() error {
+		var elems []xml.XElement
+		for _, prv := range privateXML {
+			elems = append(elems, xml.NewElementFromElement(prv))
+		}
+		m.privateXML[username+":"+namespace] = elems
+		return nil
+	})
 }
 
 func (m *mockStorage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.privateXML[username+":"+namespace], nil
+	var ret []xml.XElement
+	err := m.inReadLock(func() error {
+		ret = m.privateXML[username+":"+namespace]
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) InsertOfflineMessage(message xml.XElement, username string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	offlineMessages := m.offlineMessages[username]
-	offlineMessages = append(offlineMessages, xml.NewElementFromElement(message))
-	m.offlineMessages[username] = offlineMessages
-	return nil
+	return m.inWriteLock(func() error {
+		msgs := m.offlineMessages[username]
+		msgs = append(msgs, xml.NewElementFromElement(message))
+		m.offlineMessages[username] = msgs
+		return nil
+	})
 }
 
 func (m *mockStorage) CountOfflineMessages(username string) (int, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return 0, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.offlineMessages[username]), nil
+	var ret int
+	err := m.inReadLock(func() error {
+		ret = len(m.offlineMessages[username])
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
-	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.offlineMessages[username], nil
+	var ret []xml.XElement
+	err := m.inReadLock(func() error {
+		ret = m.offlineMessages[username]
+		return nil
+	})
+	return ret, err
 }
 
 func (m *mockStorage) DeleteOfflineMessages(username string) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.offlineMessages, username)
-	return nil
+	return m.inWriteLock(func() error {
+		delete(m.offlineMessages, username)
+		return nil
+	})
 }
 
 func (m *mockStorage) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, item := range items {
-		bl := m.blockListItems[item.Username]
-		if bl != nil {
-			for _, blItem := range bl {
-				if blItem.JID == item.JID {
-					goto itemInserted
+	return m.inWriteLock(func() error {
+		for _, item := range items {
+			bl := m.blockListItems[item.Username]
+			if bl != nil {
+				for _, blItem := range bl {
+					if blItem.JID == item.JID {
+						goto itemInserted
+					}
 				}
+				m.blockListItems[item.Username] = append(bl, item)
+			} else {
+				m.blockListItems[item.Username] = []model.BlockListItem{item}
 			}
-			m.blockListItems[item.Username] = append(bl, item)
-		} else {
-			m.blockListItems[item.Username] = []model.BlockListItem{item}
+		itemInserted:
 		}
-	itemInserted:
-	}
-	return nil
+		return nil
+	})
 }
 
 func (m *mockStorage) DeleteBlockListItems(items []model.BlockListItem) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return ErrMockedError
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, item := range items {
-		bl := m.blockListItems[item.Username]
-		for i, blItem := range bl {
-			if blItem.JID == item.JID {
-				m.blockListItems[item.Username] = append(bl[:i], bl[i+1:]...)
-				break
+	return m.inWriteLock(func() error {
+		for _, itm := range items {
+			bl := m.blockListItems[itm.Username]
+			for i, blItem := range bl {
+				if blItem.JID == itm.JID {
+					m.blockListItems[itm.Username] = append(bl[:i], bl[i+1:]...)
+					break
+				}
 			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (m *mockStorage) DeleteBlockList(username string) error {
+	return m.inWriteLock(func() error {
+		delete(m.blockListItems, username)
+		return nil
+	})
+}
+
+func (m *mockStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	var ret []model.BlockListItem
+	err := m.inReadLock(func() error {
+		ret = m.blockListItems[username]
+		return nil
+	})
+	return ret, err
+}
+
+func (m *mockStorage) inWriteLock(f func() error) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
 		return ErrMockedError
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.blockListItems, username)
-	return nil
+	err := f()
+	m.mu.Unlock()
+	return err
 }
 
-func (m *mockStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+func (m *mockStorage) inReadLock(f func() error) error {
 	if atomic.LoadUint32(&m.mockErr) == 1 {
-		return nil, ErrMockedError
+		return ErrMockedError
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.blockListItems[username], nil
+	m.mu.RLock()
+	err := f()
+	m.mu.RUnlock()
+	return err
 }
