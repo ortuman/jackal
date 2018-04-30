@@ -176,7 +176,7 @@ func (m *Manager) AuthenticateStream(strm Stream) error {
 	return nil
 }
 
-func (m *Manager) Route(elem xml.RoutableElement) error {
+func (m *Manager) Route(elem xml.Stanza) error {
 	to := elem.ToJID()
 	rcps := m.StreamsMatchingJID(to.ToBareJID())
 	if len(rcps) == 0 {

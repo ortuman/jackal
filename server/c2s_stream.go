@@ -82,6 +82,7 @@ type c2sStream struct {
 	roster      *module.ModRoster
 	register    *module.XEPRegister
 	ping        *module.XEPPing
+	blockCmd    *module.XEPBlockingCommand
 	offline     *module.ModOffline
 	actorCh     chan func()
 }
@@ -249,7 +250,8 @@ func (s *c2sStream) initializeXEPs() {
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := s.cfg.Modules["blocking_command"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPBlockingCommand(s))
+		s.blockCmd = module.NewXEPBlockingCommand(s)
+		s.iqHandlers = append(s.iqHandlers, s.blockCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
@@ -404,7 +406,7 @@ func (s *c2sStream) handleConnected(elem xml.XElement) {
 		s.startAuthentication(elem)
 
 	case "iq":
-		stanza, _, err := s.buildStanza(elem, false)
+		stanza, err := s.buildStanza(elem, false)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
@@ -452,7 +454,7 @@ func (s *c2sStream) handleAuthenticated(elem xml.XElement) {
 		s.compress(elem)
 
 	case "iq":
-		stanza, _, err := s.buildStanza(elem, true)
+		stanza, err := s.buildStanza(elem, true)
 		if err != nil {
 			s.handleElementError(elem, err)
 			return
@@ -476,12 +478,12 @@ func (s *c2sStream) handleSessionStarted(elem xml.XElement) {
 		s.ping.ResetDeadline()
 	}
 
-	stanza, toJID, err := s.buildStanza(elem, true)
+	stanza, err := s.buildStanza(elem, true)
 	if err != nil {
 		s.handleElementError(elem, err)
 		return
 	}
-	if s.isComponentDomain(toJID.Domain()) {
+	if s.isComponentDomain(stanza.ToJID().Domain()) {
 		s.processComponentStanza(stanza)
 	} else {
 		s.processStanza(stanza)
@@ -613,7 +615,15 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 		resource = uuid.New()
 	}
 	// try binding...
-	if strm := s.userResourceStream(resource); strm != nil {
+	var stm c2s.Stream
+	stms := c2s.Instance().StreamsMatchingJID(s.JID().ToBareJID())
+	for _, s := range stms {
+		if s.Resource() == resource {
+			stm = s
+		}
+	}
+
+	if stm != nil {
 		switch s.cfg.ResourceConflict {
 		case config.Override:
 			// override the resource with a server-generated resourcepart...
@@ -622,7 +632,7 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 			resource = hex.EncodeToString(h.Sum(nil))
 		case config.Replace:
 			// terminate the session of the currently connected client...
-			strm.Disconnect(streamerror.ErrResourceConstraint)
+			stm.Disconnect(streamerror.ErrResourceConstraint)
 		default:
 			// disallow resource binding attempt...
 			s.writeElement(iq.ConflictError())
@@ -675,8 +685,8 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 	s.setState(sessionStarted)
 }
 
-func (s *c2sStream) processStanza(element xml.XElement) {
-	switch stanza := element.(type) {
+func (s *c2sStream) processStanza(stanza xml.Stanza) {
+	switch stanza := stanza.(type) {
 	case *xml.IQ:
 		s.processIQ(stanza)
 	case *xml.Presence:
@@ -686,7 +696,7 @@ func (s *c2sStream) processStanza(element xml.XElement) {
 	}
 }
 
-func (s *c2sStream) processComponentStanza(element xml.XElement) {
+func (s *c2sStream) processComponentStanza(stanza xml.Stanza) {
 }
 
 func (s *c2sStream) processIQ(iq *xml.IQ) {
@@ -905,40 +915,40 @@ func (s *c2sStream) openStream() {
 	s.tr.WriteString(buf.String())
 }
 
-func (s *c2sStream) buildStanza(elem xml.XElement, validateFrom bool) (xml.XElement, *xml.JID, error) {
+func (s *c2sStream) buildStanza(elem xml.XElement, validateFrom bool) (xml.Stanza, error) {
 	if err := s.validateNamespace(elem); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	fromJID, toJID, err := s.extractAddresses(elem, validateFrom)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	switch elem.Name() {
 	case "iq":
 		iq, err := xml.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, xml.ErrBadRequest
+			return nil, xml.ErrBadRequest
 		}
-		return iq, iq.ToJID(), nil
+		return iq, nil
 
 	case "presence":
 		presence, err := xml.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, xml.ErrBadRequest
+			return nil, xml.ErrBadRequest
 		}
-		return presence, presence.ToJID(), nil
+		return presence, nil
 
 	case "message":
 		message, err := xml.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, nil, xml.ErrBadRequest
+			return nil, xml.ErrBadRequest
 		}
-		return message, message.ToJID(), nil
+		return message, nil
 	}
-	return nil, nil, streamerror.ErrUnsupportedStanzaType
+	return nil, streamerror.ErrUnsupportedStanzaType
 }
 
 func (s *c2sStream) handleElementError(elem xml.XElement, err error) {
@@ -1088,14 +1098,4 @@ func (s *c2sStream) setState(state uint32) {
 
 func (s *c2sStream) getState() uint32 {
 	return atomic.LoadUint32(&s.state)
-}
-
-func (s *c2sStream) userResourceStream(resource string) c2s.Stream {
-	strms := c2s.Instance().StreamsMatchingJID(s.JID().ToBareJID())
-	for _, strm := range strms {
-		if strm.Resource() == resource {
-			return strm
-		}
-	}
-	return nil
 }

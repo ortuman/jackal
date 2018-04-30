@@ -42,7 +42,7 @@ type XElement interface {
 	ToGob(enc *gob.Encoder)
 }
 
-type RoutableElement interface {
+type Stanza interface {
 	XElement
 	FromJID() *JID
 	ToJID() *JID
