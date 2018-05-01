@@ -49,7 +49,7 @@ const (
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
 	bindNamespace             = "urn:ietf:params:xml:ns:xmpp-bind"
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
-	blockedNamespace          = "urn:xmpp:blocking:errors"
+	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
 )
 
 // stream context keys
@@ -688,14 +688,9 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 
 func (s *c2sStream) processStanza(stanza xml.Stanza) {
 	toJID := stanza.ToJID()
-	if s.blockCmd != nil && s.blockCmd.IsBlockedJID(toJID) { // blocked JID?
-		resp := xml.NewElementFromElement(stanza)
-		resp.SetType(xml.ErrorType)
-		resp.SetFrom(toJID.String())
-		resp.SetTo(s.JID().String())
-		errEl := xml.ErrNotAcceptable.(*xml.StanzaError).Element()
-		errEl.AppendElement(xml.NewElementNamespace("blocked", blockedNamespace))
-		resp.AppendElement(errEl)
+	if c2s.Instance().IsBlockedJID(toJID, s.Username()) { // blocked JID?
+		errElems := []xml.XElement{xml.NewElementNamespace("blocked", blockedErrorNamespace)}
+		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), errElems)
 		s.writeElement(resp)
 		return
 	}
@@ -713,16 +708,15 @@ func (s *c2sStream) processComponentStanza(stanza xml.Stanza) {
 }
 
 func (s *c2sStream) processIQ(iq *xml.IQ) {
-	if !c2s.Instance().IsLocalDomain(iq.ToJID().Domain()) {
+	toJID := iq.ToJID()
+	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
-
-	toJid := iq.ToJID()
-	if toJid.IsFullWithUser() {
+	if toJID.IsFullWithUser() {
 		if err := c2s.Instance().Route(iq); err == c2s.ErrResourceNotFound {
 			resp := xml.NewElementFromElement(iq)
-			resp.SetFrom(toJid.String())
+			resp.SetFrom(toJID.String())
 			resp.SetTo(s.JID().String())
 			s.SendElement(resp.ServiceUnavailableError())
 		}
@@ -744,18 +738,18 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 }
 
 func (s *c2sStream) processPresence(presence *xml.Presence) {
-	if !c2s.Instance().IsLocalDomain(presence.ToJID().Domain()) {
+	toJID := presence.ToJID()
+	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
-	toJid := presence.ToJID()
-	if toJid.IsBare() && (toJid.Node() != s.Username() || toJid.Domain() != s.Domain()) {
+	if toJID.IsBare() && (toJID.Node() != s.Username() || toJID.Domain() != s.Domain()) {
 		if s.roster != nil {
 			s.roster.ProcessPresence(presence)
 		}
 		return
 	}
-	if toJid.IsFullWithUser() {
+	if toJID.IsFullWithUser() {
 		c2s.Instance().Route(presence)
 		return
 	}
@@ -780,11 +774,11 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 }
 
 func (s *c2sStream) processMessage(message *xml.Message) {
-	if !c2s.Instance().IsLocalDomain(message.ToJID().Domain()) {
+	toJID := message.ToJID()
+	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
-	toJid := message.ToJID()
 
 sendMessage:
 	err := c2s.Instance().Route(message)
@@ -800,11 +794,11 @@ sendMessage:
 		}
 	case c2s.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
-		toJid = toJid.ToBareJID()
+		toJID = toJID.ToBareJID()
 		goto sendMessage
 	case c2s.ErrNotExistingAccount:
 		response := xml.NewElementFromElement(message)
-		response.SetFrom(toJid.String())
+		response.SetFrom(toJID.String())
 		response.SetTo(s.JID().String())
 		s.writeElement(response.ServiceUnavailableError())
 		return
@@ -964,7 +958,7 @@ func (s *c2sStream) handleElementError(elem xml.XElement, err error) {
 	if streamErr, ok := err.(*streamerror.Error); ok {
 		s.disconnectWithStreamError(streamErr)
 	} else if stanzaErr, ok := err.(*xml.StanzaError); ok {
-		s.writeElement(xml.NewErrorElementFromElement(elem, stanzaErr))
+		s.writeElement(xml.NewErrorElementFromElement(elem, stanzaErr, nil))
 	} else {
 		log.Error(err)
 	}
