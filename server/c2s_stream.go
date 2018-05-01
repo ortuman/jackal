@@ -49,6 +49,7 @@ const (
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
 	bindNamespace             = "urn:ietf:params:xml:ns:xmpp-bind"
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
+	blockedNamespace          = "urn:xmpp:blocking:errors"
 )
 
 // stream context keys
@@ -686,6 +687,18 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 }
 
 func (s *c2sStream) processStanza(stanza xml.Stanza) {
+	toJID := stanza.ToJID()
+	if s.blockCmd != nil && s.blockCmd.IsBlockedJID(toJID) { // blocked JID?
+		resp := xml.NewElementFromElement(stanza)
+		resp.SetType(xml.ErrorType)
+		resp.SetFrom(toJID.String())
+		resp.SetTo(s.JID().String())
+		errEl := xml.ErrNotAcceptable.(*xml.StanzaError).Element()
+		errEl.AppendElement(xml.NewElementNamespace("blocked", blockedNamespace))
+		resp.AppendElement(errEl)
+		s.writeElement(resp)
+		return
+	}
 	switch stanza := stanza.(type) {
 	case *xml.IQ:
 		s.processIQ(stanza)
@@ -798,10 +811,6 @@ sendMessage:
 	default:
 		log.Error(err)
 	}
-}
-
-func (s *c2sStream) restart() {
-	s.setState(connecting)
 }
 
 func (s *c2sStream) actorLoop() {
@@ -1090,6 +1099,10 @@ func (s *c2sStream) updateLogoutInfo() error {
 		}
 	}
 	return err
+}
+
+func (s *c2sStream) restart() {
+	s.setState(connecting)
 }
 
 func (s *c2sStream) setState(state uint32) {

@@ -30,7 +30,7 @@ func (se *StanzaError) Error() string {
 }
 
 // XElement returns StanzaError equivalent XML element.
-func (se *StanzaError) Element() XElement {
+func (se *StanzaError) Element() *Element {
 	err := &Element{}
 	err.SetName("error")
 	err.SetAttribute("code", strconv.Itoa(se.code))

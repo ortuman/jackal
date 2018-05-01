@@ -42,6 +42,7 @@ type XElement interface {
 	ToGob(enc *gob.Encoder)
 }
 
+// Stanza represents an XMPP stanza.
 type Stanza interface {
 	XElement
 	FromJID() *JID
