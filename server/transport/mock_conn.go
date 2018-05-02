@@ -88,7 +88,12 @@ func (mc *MockConn) ClientWriteElement(elem xml.XElement) {
 
 // ClientReadBytes retrieves previous write operation written bytes.
 func (mc *MockConn) ClientReadBytes() []byte {
-	return <-mc.readCh
+	select {
+	case b := <-mc.readCh:
+		return b
+	case <-time.After(time.Second * 3):
+		return nil
+	}
 }
 
 // ClientReadElement deserializes previous write operation content
@@ -127,18 +132,18 @@ func (mc *MockConn) Close() error {
 }
 
 // WaitClose expects until the mocked connection closes.
-func (mc *MockConn) WaitClose() {
-	<-mc.discCh
+func (mc *MockConn) WaitClose() bool {
+	return mc.WaitCloseWithTimeout(time.Second)
 }
 
 // WaitCloseWithTimeout expects until the mocked connection closes
 // or until a timeout fires.
-func (mc *MockConn) WaitCloseWithTimeout(timeout time.Duration) {
+func (mc *MockConn) WaitCloseWithTimeout(timeout time.Duration) bool {
 	select {
 	case <-mc.discCh:
-		break
+		return true
 	case <-time.After(timeout):
-		break
+		return false
 	}
 }
 

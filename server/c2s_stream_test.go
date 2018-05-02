@@ -40,7 +40,7 @@ func TestStream_Disconnect(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	stm.Disconnect(nil)
-	conn.WaitClose()
+	require.True(t, conn.WaitClose())
 
 	require.Equal(t, disconnected, stm.getState())
 }
