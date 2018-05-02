@@ -22,6 +22,7 @@ var (
 	ErrNotExistingAccount = errors.New("c2s: account does not exist")
 	ErrResourceNotFound   = errors.New("c2s: resource not found")
 	ErrNotAuthenticated   = errors.New("c2s: user not authenticated")
+	ErrJIDBlocked         = errors.New("c2s: destination jid is blocked")
 )
 
 // Stream represents a client-to-server XMPP stream.
@@ -198,13 +199,18 @@ func (m *Manager) ReloadBlockList(username string) {
 }
 
 func (m *Manager) Route(elem xml.Stanza) error {
-	to := elem.ToJID()
-	if !m.IsLocalDomain(to.Domain()) {
+	toJID := elem.ToJID()
+	if !m.IsLocalDomain(toJID.Domain()) {
 		return nil
 	}
-	rcps := m.StreamsMatchingJID(to.ToBareJID())
+	if toUser := toJID.Node(); len(toUser) > 0 {
+		if m.IsBlockedJID(elem.FromJID(), toJID.Node()) {
+			return ErrJIDBlocked
+		}
+	}
+	rcps := m.StreamsMatchingJID(toJID.ToBareJID())
 	if len(rcps) == 0 {
-		exists, err := storage.Instance().UserExists(to.Node())
+		exists, err := storage.Instance().UserExists(toJID.Node())
 		if err != nil {
 			return err
 		}
@@ -213,9 +219,9 @@ func (m *Manager) Route(elem xml.Stanza) error {
 		}
 		return ErrNotExistingAccount
 	}
-	if to.IsFullWithUser() {
+	if toJID.IsFullWithUser() {
 		for _, stm := range rcps {
-			if stm.Resource() == to.Resource() {
+			if stm.Resource() == toJID.Resource() {
 				stm.SendElement(elem)
 				return nil
 			}
@@ -224,7 +230,7 @@ func (m *Manager) Route(elem xml.Stanza) error {
 	}
 	switch elem.(type) {
 	case *xml.Message:
-		// send to highest priority stream
+		// send toJID highest priority stream
 		stm := rcps[0]
 		var highestPriority int8
 		if p := stm.Presence(); p != nil {
@@ -240,7 +246,7 @@ func (m *Manager) Route(elem xml.Stanza) error {
 		stm.SendElement(elem)
 
 	default:
-		// broadcast to all streams
+		// broadcast toJID all streams
 		for _, stm := range rcps {
 			stm.SendElement(elem)
 		}

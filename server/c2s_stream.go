@@ -694,27 +694,12 @@ func (s *c2sStream) processStanza(stanza xml.Stanza) {
 		s.writeElement(resp)
 		return
 	}
-	var blocked bool
-	if len(toJID.Node()) > 0 {
-		blocked = c2s.Instance().IsBlockedJID(stanza.FromJID(), toJID.Node())
-	}
 	switch stanza := stanza.(type) {
 	case *xml.Presence:
-		if blocked {
-			return
-		}
 		s.processPresence(stanza)
 	case *xml.IQ:
-		if blocked {
-			s.writeElement(stanza.ServiceUnavailableError())
-			return
-		}
 		s.processIQ(stanza)
 	case *xml.Message:
-		if blocked {
-			s.writeElement(stanza.ServiceUnavailableError())
-			return
-		}
 		s.processMessage(stanza)
 	}
 }
@@ -729,13 +714,19 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 		return
 	}
 	if toJID.IsFullWithUser() {
-		if err := c2s.Instance().Route(iq); err == c2s.ErrResourceNotFound {
-			resp := xml.NewElementFromElement(iq)
-			resp.SetFrom(toJID.String())
-			resp.SetTo(s.JID().String())
-			s.SendElement(resp.ServiceUnavailableError())
+		switch c2s.Instance().Route(iq) {
+		case c2s.ErrResourceNotFound, c2s.ErrJIDBlocked:
+			s.writeElement(iq.ServiceUnavailableError())
 		}
 		return
+	}
+	if toUser := toJID.Node(); len(toUser) > 0 {
+		if c2s.Instance().IsBlockedJID(s.JID(), toJID.Node()) {
+			if iq.IsGet() || iq.IsSet() {
+				s.writeElement(iq.ServiceUnavailableError())
+			}
+			return
+		}
 	}
 
 	for _, handler := range s.iqHandlers {
@@ -811,7 +802,7 @@ sendMessage:
 		// treat the stanza as if it were addressed to <node@domain>
 		toJID = toJID.ToBareJID()
 		goto sendMessage
-	case c2s.ErrNotExistingAccount:
+	case c2s.ErrNotExistingAccount, c2s.ErrJIDBlocked:
 		s.writeElement(message.ServiceUnavailableError())
 	default:
 		log.Error(err)

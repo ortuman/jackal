@@ -38,14 +38,15 @@ func NewElementFromElement(elem XElement) *Element {
 }
 
 // NewErrorElementFromElement returns a copy of an element of stanza error class.
-func NewErrorElementFromElement(elem XElement, stanzaErr *StanzaError, children []XElement) *Element {
+func NewErrorElementFromElement(elem XElement, stanzaErr *StanzaError, errorElements []XElement) *Element {
 	e := &Element{}
 	e.copyFrom(elem)
 	e.SetType("error")
 	e.SetFrom(elem.To())
 	e.SetTo(elem.From())
-	e.AppendElement(stanzaErr.Element())
-	e.AppendElements(children)
+	errEl := stanzaErr.Element()
+	errEl.AppendElements(errorElements)
+	e.AppendElement(errEl)
 	return e
 }
 
