@@ -689,17 +689,32 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 func (s *c2sStream) processStanza(stanza xml.Stanza) {
 	toJID := stanza.ToJID()
 	if c2s.Instance().IsBlockedJID(toJID, s.Username()) { // blocked JID?
-		errElems := []xml.XElement{xml.NewElementNamespace("blocked", blockedErrorNamespace)}
-		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), errElems)
+		elems := []xml.XElement{xml.NewElementNamespace("blocked", blockedErrorNamespace)}
+		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), elems)
 		s.writeElement(resp)
 		return
 	}
+	var blocked bool
+	if len(toJID.Node()) > 0 {
+		blocked = c2s.Instance().IsBlockedJID(stanza.FromJID(), toJID.Node())
+	}
 	switch stanza := stanza.(type) {
-	case *xml.IQ:
-		s.processIQ(stanza)
 	case *xml.Presence:
+		if blocked {
+			return
+		}
 		s.processPresence(stanza)
+	case *xml.IQ:
+		if blocked {
+			s.writeElement(stanza.ServiceUnavailableError())
+			return
+		}
+		s.processIQ(stanza)
 	case *xml.Message:
+		if blocked {
+			s.writeElement(stanza.ServiceUnavailableError())
+			return
+		}
 		s.processMessage(stanza)
 	}
 }
@@ -797,11 +812,7 @@ sendMessage:
 		toJID = toJID.ToBareJID()
 		goto sendMessage
 	case c2s.ErrNotExistingAccount:
-		response := xml.NewElementFromElement(message)
-		response.SetFrom(toJID.String())
-		response.SetTo(s.JID().String())
-		s.writeElement(response.ServiceUnavailableError())
-		return
+		s.writeElement(message.ServiceUnavailableError())
 	default:
 		log.Error(err)
 	}

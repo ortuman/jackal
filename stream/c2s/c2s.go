@@ -22,7 +22,6 @@ var (
 	ErrNotExistingAccount = errors.New("c2s: account does not exist")
 	ErrResourceNotFound   = errors.New("c2s: resource not found")
 	ErrNotAuthenticated   = errors.New("c2s: user not authenticated")
-	ErrBlockedJID         = errors.New("c2s: destination jid blocked")
 )
 
 // Stream represents a client-to-server XMPP stream.
@@ -192,6 +191,7 @@ func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
 }
 
 func (m *Manager) ReloadBlockList(username string) {
+	log.Infof("block list reloaded... (username: %s)", username)
 	m.lock.Lock()
 	delete(m.blockLists, username)
 	m.lock.Unlock()
@@ -201,9 +201,6 @@ func (m *Manager) Route(elem xml.Stanza) error {
 	to := elem.ToJID()
 	if !m.IsLocalDomain(to.Domain()) {
 		return nil
-	}
-	if m.IsBlockedJID(to, elem.FromJID().Node()) {
-		return ErrBlockedJID
 	}
 	rcps := m.StreamsMatchingJID(to.ToBareJID())
 	if len(rcps) == 0 {
