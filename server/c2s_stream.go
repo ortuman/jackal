@@ -720,7 +720,7 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 		}
 		return
 	}
-	if toUser := toJID.Node(); len(toUser) > 0 {
+	if !toJID.IsServer() {
 		if c2s.Instance().IsBlockedJID(s.JID(), toJID.Node()) {
 			if iq.IsGet() || iq.IsSet() {
 				s.writeElement(iq.ServiceUnavailableError())

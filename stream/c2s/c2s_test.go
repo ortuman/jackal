@@ -181,5 +181,104 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
+func TestC2SManager_StreamsMatching(t *testing.T) {
+	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	defer Shutdown()
+
+	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j2, _ := xml.NewJIDString("ortuman@jackal.im/garden", false)
+	j3, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
+	j4, _ := xml.NewJIDString("juliet@jackal.im/garden", false)
+	stm1 := NewMockStream(uuid.New(), j1)
+	stm2 := NewMockStream(uuid.New(), j2)
+	stm3 := NewMockStream(uuid.New(), j3)
+	stm4 := NewMockStream(uuid.New(), j4)
+
+	Instance().RegisterStream(stm1)
+	Instance().RegisterStream(stm2)
+	Instance().RegisterStream(stm3)
+	Instance().RegisterStream(stm4)
+	Instance().AuthenticateStream(stm1)
+	Instance().AuthenticateStream(stm2)
+	Instance().AuthenticateStream(stm3)
+	Instance().AuthenticateStream(stm4)
+
+	j, _ := xml.NewJIDString("ortuman@jackal.im/garden", true)
+	require.Equal(t, 1, len(Instance().StreamsMatchingJID(j)))
+
+	j, _ = xml.NewJIDString("ortuman@jackal.im", true)
+	require.Equal(t, 2, len(Instance().StreamsMatchingJID(j)))
+
+	j, _ = xml.NewJIDString("jackal.im/garden", true)
+	require.Equal(t, 3, len(Instance().StreamsMatchingJID(j)))
+}
+
 func TestC2SManager_BlockedJID(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
+	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	defer Shutdown()
+
+	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j2, _ := xml.NewJIDString("hamlet@jackal.im/balcony", false)
+	j3, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
+	j4, _ := xml.NewJIDString("juliet@jackal.im/garden", false)
+	stm1 := NewMockStream(uuid.New(), j1)
+	stm2 := NewMockStream(uuid.New(), j2)
+
+	Instance().RegisterStream(stm1)
+	Instance().RegisterStream(stm2)
+	Instance().AuthenticateStream(stm1)
+	Instance().AuthenticateStream(stm2)
+
+	// node + domain + resource
+	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+		Username: "ortuman",
+		JID:      "hamlet@jackal.im/garden",
+	}})
+	require.False(t, Instance().IsBlockedJID(j2, "ortuman"))
+	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
+
+	// node + domain
+	storage.Instance().DeleteBlockList("ortuman")
+	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+		Username: "ortuman",
+		JID:      "hamlet@jackal.im",
+	}})
+	Instance().ReloadBlockList("ortuman")
+
+	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
+	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
+	require.False(t, Instance().IsBlockedJID(j4, "ortuman"))
+
+	// domain + resource
+	storage.Instance().DeleteBlockList("ortuman")
+	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+		Username: "ortuman",
+		JID:      "jackal.im/balcony",
+	}})
+	Instance().ReloadBlockList("ortuman")
+
+	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
+	require.False(t, Instance().IsBlockedJID(j3, "ortuman"))
+	require.False(t, Instance().IsBlockedJID(j4, "ortuman"))
+
+	// domain
+	storage.Instance().DeleteBlockList("ortuman")
+	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+		Username: "ortuman",
+		JID:      "jackal.im",
+	}})
+	Instance().ReloadBlockList("ortuman")
+
+	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
+	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
+	require.True(t, Instance().IsBlockedJID(j4, "ortuman"))
+
+	// test blocked routing
+	iq := xml.NewIQType(uuid.New(), xml.GetType)
+	iq.SetFromJID(j2)
+	iq.SetToJID(j1)
+	require.Equal(t, ErrJIDBlocked, Instance().Route(iq))
 }

@@ -203,7 +203,7 @@ func (m *Manager) Route(elem xml.Stanza) error {
 	if !m.IsLocalDomain(toJID.Domain()) {
 		return nil
 	}
-	if toUser := toJID.Node(); len(toUser) > 0 {
+	if !toJID.IsServer() {
 		if m.IsBlockedJID(elem.FromJID(), toJID.Node()) {
 			return ErrJIDBlocked
 		}
