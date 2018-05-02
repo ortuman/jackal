@@ -6,6 +6,8 @@
 package c2s
 
 import (
+	"time"
+
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
@@ -142,7 +144,12 @@ func (m *MockStream) SendElement(element xml.XElement) {
 // FetchElement waits until a new XML element is sent to
 // the mocked stream and returns it.
 func (m *MockStream) FetchElement() xml.XElement {
-	return <-m.elemCh
+	select {
+	case e := <-m.elemCh:
+		return e
+	case <-time.After(time.Second * 3):
+		return &xml.Element{}
+	}
 }
 
 // Disconnect disconnects mocked stream.

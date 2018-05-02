@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -91,4 +93,93 @@ func TestC2SManager(t *testing.T) {
 
 	strms = Instance().StreamsMatchingJID(j1.ToBareJID())
 	require.Equal(t, 0, len(strms))
+}
+
+func TestC2SManager_Routing(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
+	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	defer Shutdown()
+
+	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j2, _ := xml.NewJIDString("ortuman@jackal.im/garden", false)
+	j3, _ := xml.NewJIDString("hamlet@jackal.im/balcony", false)
+	j4, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
+	j5, _ := xml.NewJIDString("hamlet@jackal.im", false)
+	j6, _ := xml.NewJIDString("juliet@example.org/garden", false)
+	stm1 := NewMockStream(uuid.New(), j1)
+	stm2 := NewMockStream(uuid.New(), j2)
+	stm3 := NewMockStream(uuid.New(), j3)
+
+	Instance().RegisterStream(stm1)
+	Instance().RegisterStream(stm2)
+	Instance().AuthenticateStream(stm1)
+	Instance().AuthenticateStream(stm2)
+
+	iqID := uuid.New()
+	iq := xml.NewIQType(iqID, xml.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j6)
+	require.Nil(t, Instance().Route(iq))
+
+	iq.SetToJID(j3)
+	require.Equal(t, ErrNotExistingAccount, Instance().Route(iq))
+
+	storage.ActivateMockedError()
+	require.Equal(t, storage.ErrMockedError, Instance().Route(iq))
+	storage.DeactivateMockedError()
+
+	storage.Instance().InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
+	require.Equal(t, ErrNotAuthenticated, Instance().Route(iq))
+
+	stm4 := NewMockStream(uuid.New(), j4)
+	Instance().RegisterStream(stm4)
+	Instance().AuthenticateStream(stm4)
+	require.Equal(t, ErrResourceNotFound, Instance().Route(iq))
+
+	Instance().RegisterStream(stm3)
+	Instance().AuthenticateStream(stm3)
+	require.Nil(t, Instance().Route(iq))
+	elem := stm3.FetchElement()
+	require.Equal(t, iqID, elem.ID())
+
+	// broadcast stanza
+	iq.SetToJID(j5)
+	require.Nil(t, Instance().Route(iq))
+	elem = stm3.FetchElement()
+	require.Equal(t, iqID, elem.ID())
+	elem = stm4.FetchElement()
+	require.Equal(t, iqID, elem.ID())
+
+	// send message to highest priority
+	p1 := xml.NewElementName("presence")
+	p1.SetFrom(j3.String())
+	p1.SetTo(j3.String())
+	p1.SetType(xml.AvailableType)
+	pr1 := xml.NewElementName("priority")
+	pr1.SetText("2")
+	p1.AppendElement(pr1)
+	presence1, _ := xml.NewPresenceFromElement(p1, j3, j3)
+	stm3.SetPresence(presence1)
+
+	p2 := xml.NewElementName("presence")
+	p2.SetFrom(j4.String())
+	p2.SetTo(j4.String())
+	p2.SetType(xml.AvailableType)
+	pr2 := xml.NewElementName("priority")
+	pr2.SetText("1")
+	p2.AppendElement(pr2)
+	presence2, _ := xml.NewPresenceFromElement(p2, j4, j4)
+	stm4.SetPresence(presence2)
+
+	msgID := uuid.New()
+	msg := xml.NewMessageType(msgID, xml.ChatType)
+	msg.SetToJID(j5)
+	require.Nil(t, Instance().Route(msg))
+	elem = stm3.FetchElement()
+	require.Equal(t, msgID, elem.ID())
+}
+
+func TestC2SManager_BlockedJID(t *testing.T) {
 }

@@ -689,8 +689,8 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 func (s *c2sStream) processStanza(stanza xml.Stanza) {
 	toJID := stanza.ToJID()
 	if c2s.Instance().IsBlockedJID(toJID, s.Username()) { // blocked JID?
-		elems := []xml.XElement{xml.NewElementNamespace("blocked", blockedErrorNamespace)}
-		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), elems)
+		blocked := xml.NewElementNamespace("blocked", blockedErrorNamespace)
+		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), []xml.XElement{blocked})
 		s.writeElement(resp)
 		return
 	}

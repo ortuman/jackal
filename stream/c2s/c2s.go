@@ -191,10 +191,10 @@ func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
 }
 
 func (m *Manager) ReloadBlockList(username string) {
-	log.Infof("block list reloaded... (username: %s)", username)
 	m.lock.Lock()
 	delete(m.blockLists, username)
 	m.lock.Unlock()
+	log.Infof("block list reloaded... (username: %s)", username)
 }
 
 func (m *Manager) Route(elem xml.Stanza) error {
@@ -234,6 +234,7 @@ func (m *Manager) Route(elem xml.Stanza) error {
 			rcp := rcps[i]
 			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
 				stm = rcp
+				highestPriority = p.Priority()
 			}
 		}
 		stm.SendElement(elem)
