@@ -8,6 +8,8 @@ package module
 import (
 	"testing"
 
+	"fmt"
+
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -83,7 +85,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	storage.DeactivateMockedError()
 }
 
-func TestXEP191_Block(t *testing.T) {
+func TestXEP191_BlockAndUnblock(t *testing.T) {
 	storage.Initialize(&config.Storage{Type: config.Mock})
 	defer storage.Shutdown()
 
@@ -145,6 +147,13 @@ func TestXEP191_Block(t *testing.T) {
 	iq.ClearElements()
 	iq.AppendElement(block)
 
+	// TEST BLOCK
+	storage.ActivateMockedError()
+	x.ProcessIQ(iq)
+	elem = stm1.FetchElement()
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	storage.DeactivateMockedError()
+
 	x.ProcessIQ(iq)
 
 	// unavailable presence from *@jackal.im/jail
@@ -183,4 +192,33 @@ func TestXEP191_Block(t *testing.T) {
 	require.NotNil(t, bl)
 	require.Equal(t, 1, len(bl))
 	require.Equal(t, "jackal.im/jail", bl[0].JID)
+
+	// TEST UNBLOCK
+	iqID = uuid.New()
+	iq = xml.NewIQType(iqID, xml.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1)
+	unblock := xml.NewElementNamespace("unblock", blockingCommandNamespace)
+	item = xml.NewElementName("item")
+	item.SetAttribute("jid", "jackal.im/jail")
+	unblock.AppendElement(item)
+	iq.AppendElement(unblock)
+
+	storage.ActivateMockedError()
+	x.ProcessIQ(iq)
+	elem = stm1.FetchElement()
+	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	storage.DeactivateMockedError()
+
+	x.ProcessIQ(iq)
+
+	// receive available presence from *@jackal.im/jail
+	elem = stm1.FetchElement()
+	fmt.Println(elem)
+	elem = stm1.FetchElement()
+	fmt.Println(elem)
+
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, xml.AvailableType, elem.Type())
+	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 }
