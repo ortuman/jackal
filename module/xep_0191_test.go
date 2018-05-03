@@ -74,9 +74,113 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	require.NotNil(t, bl)
 	require.Equal(t, 2, len(bl.Elements().Children("item")))
 
+	require.True(t, stm.Context().Bool(xep191RequestedContextKey))
+
 	storage.ActivateMockedError()
 	x.ProcessIQ(iq1)
 	elem = stm.FetchElement()
 	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
+}
+
+func TestXEP191_Block(t *testing.T) {
+	storage.Initialize(&config.Storage{Type: config.Mock})
+	defer storage.Shutdown()
+
+	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	defer c2s.Shutdown()
+
+	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	stm1 := c2s.NewMockStream(uuid.New(), j1)
+
+	x := NewXEPBlockingCommand(stm1)
+	defer x.Done()
+
+	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
+	stm2 := c2s.NewMockStream(uuid.New(), j2)
+
+	j3, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+	stm3 := c2s.NewMockStream(uuid.New(), j3)
+
+	j4, _ := xml.NewJID("romeo", "jackal.im", "jail", true)
+	stm4 := c2s.NewMockStream(uuid.New(), j4)
+
+	c2s.Instance().RegisterStream(stm1)
+	c2s.Instance().RegisterStream(stm2)
+	c2s.Instance().RegisterStream(stm3)
+	c2s.Instance().RegisterStream(stm4)
+	c2s.Instance().AuthenticateStream(stm1)
+	c2s.Instance().AuthenticateStream(stm2)
+	c2s.Instance().AuthenticateStream(stm3)
+	c2s.Instance().AuthenticateStream(stm4)
+
+	stm1.SetAuthenticated(true)
+	stm2.SetAuthenticated(true)
+	stm3.SetAuthenticated(true)
+	stm4.SetAuthenticated(true)
+
+	stm1.Context().SetBool(true, xep191RequestedContextKey)
+	stm2.Context().SetBool(true, xep191RequestedContextKey)
+
+	storage.Instance().InsertOrUpdateRosterItem(&model.RosterItem{
+		Username:     "ortuman",
+		JID:          "romeo@jackal.im",
+		Subscription: subscriptionBoth,
+	})
+
+	iqID := uuid.New()
+	iq := xml.NewIQType(iqID, xml.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1)
+	block := xml.NewElementNamespace("block", blockingCommandNamespace)
+	iq.AppendElement(block)
+
+	x.ProcessIQ(iq)
+	elem := stm1.FetchElement()
+	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+
+	item := xml.NewElementName("item")
+	item.SetAttribute("jid", "jackal.im/jail")
+	block.AppendElement(item)
+	iq.ClearElements()
+	iq.AppendElement(block)
+
+	x.ProcessIQ(iq)
+
+	// unavailable presence from *@jackal.im/jail
+	elem = stm1.FetchElement()
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, xml.UnavailableType, elem.Type())
+	require.Equal(t, "romeo@jackal.im/jail", elem.From())
+
+	// result IQ
+	elem = stm1.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, iqID, elem.ID())
+	require.Equal(t, xml.ResultType, elem.Type())
+
+	// block IQ push
+	elem = stm1.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.SetType, elem.Type())
+	block2 := elem.Elements().ChildNamespace("block", blockingCommandNamespace)
+	require.NotNil(t, block2)
+	item2 := block.Elements().Child("item")
+	require.NotNil(t, item2)
+
+	// ortuman@jackal.im/yard
+	elem = stm2.FetchElement()
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, xml.UnavailableType, elem.Type())
+	require.Equal(t, "romeo@jackal.im/jail", elem.From())
+
+	elem = stm2.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.SetType, elem.Type())
+
+	// check storage
+	bl, _ := storage.Instance().FetchBlockListItems("ortuman")
+	require.NotNil(t, bl)
+	require.Equal(t, 1, len(bl))
+	require.Equal(t, "jackal.im/jail", bl[0].JID)
 }

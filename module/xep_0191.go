@@ -195,7 +195,7 @@ func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
 func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model.RosterItem, presenceType string) {
 	stms := c2s.Instance().StreamsMatchingJID(jid)
 	for _, stm := range stms {
-		if !x.isSubscribedFrom(jid, ris) {
+		if !x.isSubscribedFrom(stm.JID().ToBareJID(), ris) {
 			continue
 		}
 		p := xml.NewPresence(stm.JID(), x.stm.JID().ToBareJID(), presenceType)
