@@ -230,4 +230,25 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, block2)
 	item2 = unblock2.Elements().Child("item")
 	require.NotNil(t, item2)
+
+	// test full unblock
+	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+		Username: "ortuman",
+		JID:      "hamlet@jackal.im/garden",
+	}, {
+		Username: "ortuman",
+		JID:      "jabber.org",
+	}})
+
+	iqID = uuid.New()
+	iq = xml.NewIQType(iqID, xml.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1)
+	unblock = xml.NewElementNamespace("unblock", blockingCommandNamespace)
+	iq.AppendElement(unblock)
+
+	x.ProcessIQ(iq)
+
+	blItms, _ := storage.Instance().FetchBlockListItems("ortuman")
+	require.Equal(t, 0, len(blItms))
 }
