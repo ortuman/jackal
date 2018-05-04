@@ -199,11 +199,19 @@ func (m *Manager) ReloadBlockList(username string) {
 }
 
 func (m *Manager) Route(elem xml.Stanza) error {
+	return m.route(elem, false)
+}
+
+func (m *Manager) MustRoute(elem xml.Stanza) error {
+	return m.route(elem, true)
+}
+
+func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
 	toJID := elem.ToJID()
 	if !m.IsLocalDomain(toJID.Domain()) {
 		return nil
 	}
-	if !toJID.IsServer() {
+	if !ignoreBlocking && !toJID.IsServer() {
 		if m.IsBlockedJID(elem.FromJID(), toJID.Node()) {
 			return ErrJIDBlocked
 		}

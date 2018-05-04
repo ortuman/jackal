@@ -8,8 +8,6 @@ package module
 import (
 	"testing"
 
-	"fmt"
-
 	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -214,11 +212,22 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	// receive available presence from *@jackal.im/jail
 	elem = stm1.FetchElement()
-	fmt.Println(elem)
-	elem = stm1.FetchElement()
-	fmt.Println(elem)
-
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xml.AvailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
+
+	// result IQ
+	elem = stm1.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, iqID, elem.ID())
+	require.Equal(t, xml.ResultType, elem.Type())
+
+	// unblock IQ push
+	elem = stm1.FetchElement()
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, xml.SetType, elem.Type())
+	unblock2 := elem.Elements().ChildNamespace("unblock", blockingCommandNamespace)
+	require.NotNil(t, block2)
+	item2 = unblock2.Elements().Child("item")
+	require.NotNil(t, item2)
 }

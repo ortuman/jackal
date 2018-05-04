@@ -688,7 +688,7 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 
 func (s *c2sStream) processStanza(stanza xml.Stanza) {
 	toJID := stanza.ToJID()
-	if c2s.Instance().IsBlockedJID(toJID, s.Username()) { // blocked JID?
+	if s.isBlockedJID(toJID) { // blocked JID?
 		blocked := xml.NewElementNamespace("blocked", blockedErrorNamespace)
 		resp := xml.NewErrorElementFromElement(stanza, xml.ErrNotAcceptable.(*xml.StanzaError), []xml.XElement{blocked})
 		s.writeElement(resp)
@@ -713,20 +713,19 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
-	if toJID.IsFullWithUser() {
-		switch c2s.Instance().Route(iq) {
-		case c2s.ErrResourceNotFound, c2s.ErrJIDBlocked:
+	if node := toJID.Node(); len(node) > 0 && c2s.Instance().IsBlockedJID(s.JID(), node) {
+		// destination user blocked stream JID
+		if iq.IsGet() || iq.IsSet() {
 			s.writeElement(iq.ServiceUnavailableError())
 		}
 		return
 	}
-	if !toJID.IsServer() {
-		if c2s.Instance().IsBlockedJID(s.JID(), toJID.Node()) {
-			if iq.IsGet() || iq.IsSet() {
-				s.writeElement(iq.ServiceUnavailableError())
-			}
-			return
+	if toJID.IsFullWithUser() {
+		switch c2s.Instance().Route(iq) {
+		case c2s.ErrResourceNotFound:
+			s.writeElement(iq.ServiceUnavailableError())
 		}
+		return
 	}
 
 	for _, handler := range s.iqHandlers {
@@ -1095,6 +1094,13 @@ func (s *c2sStream) updateLogoutInfo() error {
 		}
 	}
 	return err
+}
+
+func (s *c2sStream) isBlockedJID(jid *xml.JID) bool {
+	if jid.IsServer() && c2s.Instance().IsLocalDomain(jid.Domain()) {
+		return false
+	}
+	return c2s.Instance().IsBlockedJID(jid, s.Username())
 }
 
 func (s *c2sStream) restart() {

@@ -86,6 +86,8 @@ func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 }
 
 func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
+	var bl []model.BlockListItem
+
 	items := block.Elements().Children("item")
 	if len(items) == 0 {
 		x.stm.SendElement(iq.BadRequestError())
@@ -97,46 +99,45 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 		x.stm.SendElement(iq.JidMalformedError())
 		return
 	}
-	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
-	if err != nil {
-		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
-		return
-	}
 	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	var bl []model.BlockListItem
+	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
+	}
 	for _, j := range jds {
 		if !x.isJIDInBlockList(j, blItms) {
 			x.broadcastPresenceMatching(j, ris, xml.UnavailableType)
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
 	}
-	if len(bl) > 0 {
-		if err := storage.Instance().InsertOrUpdateBlockListItems(bl); err != nil {
-			log.Error(err)
-			x.stm.SendElement(iq.InternalServerError())
-			return
-		}
+	if err := storage.Instance().InsertOrUpdateBlockListItems(bl); err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
 	}
+	c2s.Instance().ReloadBlockList(x.stm.Username())
+
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(block)
-
-	c2s.Instance().ReloadBlockList(x.stm.Username())
 }
 
 func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
-	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	var bl []model.BlockListItem
+
+	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
+	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
@@ -161,7 +162,6 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 			x.stm.SendElement(iq.JidMalformedError())
 			return
 		}
-		var bl []model.BlockListItem
 		for _, j := range jds {
 			if x.isJIDInBlockList(j, blItms) {
 				x.broadcastPresenceMatching(j, ris, xml.AvailableType)
@@ -174,10 +174,10 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 			return
 		}
 	}
+	c2s.Instance().ReloadBlockList(x.stm.Username())
+
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(unblock)
-
-	c2s.Instance().ReloadBlockList(x.stm.Username())
 }
 
 func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
@@ -202,7 +202,7 @@ func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model
 		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		c2s.Instance().Route(p)
+		c2s.Instance().MustRoute(p)
 	}
 }
 
