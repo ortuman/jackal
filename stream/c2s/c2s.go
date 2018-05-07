@@ -18,10 +18,21 @@ import (
 )
 
 var (
+	// ErrNotExistingAccount will be returned by Route method
+	// if destination user does not exist.
 	ErrNotExistingAccount = errors.New("c2s: account does not exist")
-	ErrResourceNotFound   = errors.New("c2s: resource not found")
-	ErrNotAuthenticated   = errors.New("c2s: user not authenticated")
-	ErrBlockedJID         = errors.New("c2s: destination jid is blocked")
+
+	// ErrResourceNotFound will be returned by Route method
+	// if destination resource does not match any of user's available resources.
+	ErrResourceNotFound = errors.New("c2s: resource not found")
+
+	// ErrNotAuthenticated will be returned by Route method if
+	// destination user is not available at this moment.
+	ErrNotAuthenticated = errors.New("c2s: user not authenticated")
+
+	// ErrBlockedJID will be returned by Route method if
+	// destination JID matches any of the user's blocked JID.
+	ErrBlockedJID = errors.New("c2s: destination jid is blocked")
 )
 
 // Stream represents a client-to-server XMPP stream.
@@ -190,6 +201,8 @@ func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
 	return false
 }
 
+// ReloadBlockList reloads in-memory block list for a given user and starts
+// applying it for future stanza routing.
 func (m *Manager) ReloadBlockList(username string) {
 	m.lock.Lock()
 	delete(m.blockLists, username)
@@ -197,10 +210,14 @@ func (m *Manager) ReloadBlockList(username string) {
 	log.Infof("block list reloaded... (username: %s)", username)
 }
 
+// Route routes a stanza applying server rules for handling XML stanzas.
+// (https://xmpp.org/rfcs/rfc3921.html#rules)
 func (m *Manager) Route(elem xml.Stanza) error {
 	return m.route(elem, false)
 }
 
+// MustRoute routes a stanza applying server rules for handling XML stanzas
+// and ignoring blocking lists.
 func (m *Manager) MustRoute(elem xml.Stanza) error {
 	return m.route(elem, true)
 }
