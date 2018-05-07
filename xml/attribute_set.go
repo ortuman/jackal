@@ -15,6 +15,7 @@ type Attribute struct {
 	Value string
 }
 
+// AttributeSet interface represents a read-only set of XML attributes.
 type AttributeSet interface {
 	Get(string) string
 	Count() int

@@ -9,6 +9,7 @@ import (
 	"encoding/gob"
 )
 
+// ElementSet interface represents a read-only set of XML sub elements.
 type ElementSet interface {
 	// Children returns all elements identified by name.
 	// Returns an empty array if no elements are found.

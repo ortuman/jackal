@@ -10,6 +10,7 @@ import (
 	"io"
 )
 
+// Element represents a generic and mutable XML node element.
 type Element struct {
 	name     string
 	text     string
