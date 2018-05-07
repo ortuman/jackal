@@ -107,7 +107,7 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 	}
 	for _, j := range jds {
 		if !x.isJIDInBlockList(j, blItems) {
-			x.broadcastPresenceMatching(j, ris, xml.UnavailableType)
+			x.broadcastPresenceMatchingJID(j, ris, xml.UnavailableType)
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
 	}
@@ -141,14 +141,14 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 	if len(jds) == 0 {
 		for _, blItem := range blItems {
 			j, _ := xml.NewJIDString(blItem.JID, true)
-			x.broadcastPresenceMatching(j, ris, xml.AvailableType)
+			x.broadcastPresenceMatchingJID(j, ris, xml.AvailableType)
 		}
 		bl = blItems
 
 	} else {
 		for _, j := range jds {
 			if x.isJIDInBlockList(j, blItems) {
-				x.broadcastPresenceMatching(j, ris, xml.AvailableType)
+				x.broadcastPresenceMatchingJID(j, ris, xml.AvailableType)
 				bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 			}
 		}
@@ -176,7 +176,7 @@ func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
 	}
 }
 
-func (x *XEPBlockingCommand) broadcastPresenceMatching(jid *xml.JID, ris []model.RosterItem, presenceType string) {
+func (x *XEPBlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model.RosterItem, presenceType string) {
 	stms := c2s.Instance().StreamsMatchingJID(jid)
 	for _, stm := range stms {
 		if !x.isSubscribedFrom(stm.JID().ToBareJID(), ris) {
