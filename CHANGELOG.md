@@ -4,24 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.1.20] - 2018-04-16
+## [0.2.0] - 2018-05-08
 ### Added
+- Added support for XEP-0191 (Blocking Command)
 - Added support for XEP-0012 (Last Activity)
-
-## [0.1.19] - 2018-04-12
-### Fixed
-- Fixed a bug that didn't allow Gajim client to restart c2s stream after securing it.
-
-## [0.1.18] - 2018-04-09
-### Added
 - Added support for XEP-0237 (Roster Versioning)
-
-## [0.1.17] - 2018-03-26
-### Added
-- Automatically generate self-signed certificate for *localhost* domain.
-
-## [0.1.16] - 2018-03-26
-### Added
 - RFC 7395: XMPP Subprotocol for WebSocket
 
 ## [0.1.15] - 2018-03-20
