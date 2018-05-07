@@ -38,10 +38,6 @@ func (x *XEPLastActivity) AssociatedNamespaces() []string {
 	return []string{lastActivityNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPLastActivity) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the last activity module.
 func (x *XEPLastActivity) MatchesIQ(iq *xml.IQ) bool {

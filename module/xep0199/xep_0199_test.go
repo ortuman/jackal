@@ -19,7 +19,6 @@ func TestXEP0199_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	x := New(&Config{}, nil)
-	defer x.Done()
 
 	require.Equal(t, []string{pingNamespace}, x.AssociatedNamespaces())
 
@@ -43,7 +42,6 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{}, stm)
-	defer x.Done()
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -80,7 +78,6 @@ func TestXEP0199_SendPing(t *testing.T) {
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)
-	defer x.Done()
 
 	x.StartPinging()
 
@@ -113,7 +110,6 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)
-	defer x.Done()
 
 	x.StartPinging()
 

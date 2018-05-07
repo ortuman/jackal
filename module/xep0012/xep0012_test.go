@@ -22,7 +22,6 @@ func TestXEP0012_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	x := New(nil)
-	defer x.Done()
 
 	require.Equal(t, []string{lastActivityNamespace}, x.AssociatedNamespaces())
 
@@ -54,7 +53,6 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j2)
 
 	x := New(stm)
-	defer x.Done()
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetToJID(j1)
@@ -82,7 +80,6 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	stm2.SetResource("a_res")
 
 	x := New(stm1)
-	defer x.Done()
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(j2)

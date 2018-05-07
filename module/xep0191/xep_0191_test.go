@@ -20,7 +20,6 @@ func TestXEP0191_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	x := New(nil)
-	defer x.Done()
 
 	require.Equal(t, []string{blockingCommandNamespace}, x.AssociatedNamespaces())
 
@@ -52,7 +51,6 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := c2s.NewMockStream(uuid.New(), j)
 
 	x := New(stm)
-	defer x.Done()
 
 	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
@@ -93,7 +91,6 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm1 := c2s.NewMockStream(uuid.New(), j1)
 
 	x := New(stm1)
-	defer x.Done()
 
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
 	stm2 := c2s.NewMockStream(uuid.New(), j2)

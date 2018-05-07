@@ -55,12 +55,10 @@ func TestXEP0092(t *testing.T) {
 
 	// show OS
 	cfg.ShowOS = true
-	x.Done()
 
 	x = New(&cfg, stm)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
-	x.Done()
 }

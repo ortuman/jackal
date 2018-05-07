@@ -43,10 +43,6 @@ func (x *XEPRegister) AssociatedNamespaces() []string {
 	return []string{registerNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPRegister) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the in-band registration module.
 func (x *XEPRegister) MatchesIQ(iq *xml.IQ) bool {

@@ -1086,13 +1086,9 @@ func (s *c2sStream) disconnectClosingStream(closeStream bool) {
 			s.tr.WriteString(fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 		}
 	}
-	// stop modules
-	for _, iqHandler := range s.iqHandlers {
-		iqHandler.Done()
-	}
-	if s.offline != nil {
-		s.offline.Done()
-	}
+	// signal termination...
+	s.ctx.Terminate()
+
 	// unregister stream
 	if err := c2s.Instance().UnregisterStream(s); err != nil {
 		log.Error(err)

@@ -14,9 +14,6 @@ type Module interface {
 	// AssociatedNamespaces returns namespaces associated
 	// with this module.
 	AssociatedNamespaces() []string
-
-	// Done signals stream termination.
-	Done()
 }
 
 // IQHandler represents an IQ handler module.

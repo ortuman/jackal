@@ -18,7 +18,6 @@ const vCardNamespace = "vcard-temp"
 type XEPVCard struct {
 	stm     c2s.Stream
 	actorCh chan func()
-	doneCh  chan struct{}
 }
 
 // New returns a vCard IQ handler module.
@@ -26,9 +25,10 @@ func New(stm c2s.Stream) *XEPVCard {
 	v := &XEPVCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
-		doneCh:  make(chan struct{}),
 	}
-	go v.actorLoop()
+	if stm != nil {
+		go v.actorLoop(stm.Context().Done())
+	}
 	return v
 }
 
@@ -36,11 +36,6 @@ func New(stm c2s.Stream) *XEPVCard {
 // with vCard module.
 func (x *XEPVCard) AssociatedNamespaces() []string {
 	return []string{vCardNamespace}
-}
-
-// Done signals stream termination.
-func (x *XEPVCard) Done() {
-	x.doneCh <- struct{}{}
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -62,12 +57,12 @@ func (x *XEPVCard) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPVCard) actorLoop() {
+func (x *XEPVCard) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.doneCh:
+		case <-doneCh:
 			return
 		}
 	}

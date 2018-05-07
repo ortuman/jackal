@@ -13,6 +13,7 @@ type Context struct {
 	mu           sync.RWMutex
 	m            map[string]interface{}
 	onceHandlers map[string]struct{}
+	doneCh       chan struct{}
 }
 
 // NewContext returns an initialized stream context.
@@ -20,7 +21,18 @@ func NewContext() *Context {
 	return &Context{
 		m:            make(map[string]interface{}),
 		onceHandlers: make(map[string]struct{}),
+		doneCh:       make(chan struct{}),
 	}
+}
+
+// Done returns a channel that is closed when the stream is terminated.
+func (ctx *Context) Done() <-chan struct{} {
+	return ctx.doneCh
+}
+
+// Terminate will signal stream termination.
+func (ctx *Context) Terminate() {
+	close(ctx.doneCh)
 }
 
 // SetObject stores within the context an object reference.

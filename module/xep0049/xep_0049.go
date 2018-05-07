@@ -20,7 +20,6 @@ const privateStorageNamespace = "jabber:iq:private"
 type XEPPrivateStorage struct {
 	stm     c2s.Stream
 	actorCh chan func()
-	doneCh  chan struct{}
 }
 
 // New returns a private storage IQ handler module.
@@ -28,9 +27,10 @@ func New(stm c2s.Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
-		doneCh:  make(chan struct{}),
 	}
-	go x.actorLoop()
+	if stm != nil {
+		go x.actorLoop(stm.Context().Done())
+	}
 	return x
 }
 
@@ -38,11 +38,6 @@ func New(stm c2s.Stream) *XEPPrivateStorage {
 // with private storage module.
 func (x *XEPPrivateStorage) AssociatedNamespaces() []string {
 	return []string{}
-}
-
-// Done signals stream termination.
-func (x *XEPPrivateStorage) Done() {
-	x.doneCh <- struct{}{}
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -73,12 +68,12 @@ func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPPrivateStorage) actorLoop() {
+func (x *XEPPrivateStorage) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.doneCh:
+		case <-doneCh:
 			return
 		}
 	}

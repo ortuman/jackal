@@ -54,7 +54,7 @@ func New(cfg *Config, stm c2s.Stream) *ModRoster {
 		actorCh:    make(chan func(), 32),
 		errHandler: func(err error) { log.Error(err) },
 	}
-	go r.actorLoop()
+	go r.actorLoop(stm.Context().Done())
 	return r
 }
 
@@ -140,11 +140,13 @@ func (r *ModRoster) BroadcastPresenceAndWait(presence *xml.Presence) {
 	<-continueCh
 }
 
-func (r *ModRoster) actorLoop() {
+func (r *ModRoster) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-r.actorCh:
 			f()
+		case <-doneCh:
+			return
 		}
 	}
 }

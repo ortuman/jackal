@@ -50,10 +50,6 @@ func (x *XEPVersion) AssociatedNamespaces() []string {
 	return []string{versionNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPVersion) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the version module.
 func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {

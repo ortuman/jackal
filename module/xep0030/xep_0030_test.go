@@ -19,7 +19,6 @@ func TestXEP0030_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	x := New(nil)
-	defer x.Done()
 
 	for _, ns := range x.AssociatedNamespaces() {
 		switch ns {
@@ -54,7 +53,6 @@ func TestXEP0030_Matching(t *testing.T) {
 
 func TestXEP0030_SetItems(t *testing.T) {
 	x := New(nil)
-	defer x.Done()
 
 	its := []DiscoItem{
 		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},
@@ -66,7 +64,6 @@ func TestXEP0030_SetItems(t *testing.T) {
 
 func TestXEP0030_SetIdentities(t *testing.T) {
 	x := New(nil)
-	defer x.Done()
 
 	ids := []DiscoIdentity{{
 		Category: "server",
@@ -79,7 +76,6 @@ func TestXEP0030_SetIdentities(t *testing.T) {
 
 func TestXEP0030_SetFeatures(t *testing.T) {
 	x := New(nil)
-	defer x.Done()
 
 	fs := []DiscoFeature{
 		discoInfoNamespace,
@@ -94,7 +90,6 @@ func TestXEP0030_BadToJID(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
-	defer x.Done()
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
@@ -113,7 +108,6 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
-	defer x.Done()
 
 	ids := []DiscoIdentity{{
 		Category: "server",
@@ -149,7 +143,6 @@ func TestXEP0030_GetItems(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
-	defer x.Done()
 
 	its := []DiscoItem{
 		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},

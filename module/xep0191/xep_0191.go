@@ -37,10 +37,6 @@ func (x *XEPBlockingCommand) AssociatedNamespaces() []string {
 	return []string{blockingCommandNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPBlockingCommand) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the blocking command module.
 func (x *XEPBlockingCommand) MatchesIQ(iq *xml.IQ) bool {

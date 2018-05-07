@@ -83,10 +83,6 @@ func (x *XEPDiscoInfo) AssociatedNamespaces() []string {
 	return []string{discoInfoNamespace, discoItemsNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPDiscoInfo) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the disco info module.
 func (x *XEPDiscoInfo) MatchesIQ(iq *xml.IQ) bool {

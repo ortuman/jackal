@@ -9,6 +9,9 @@ import (
 	"sync"
 	"testing"
 
+	"sync/atomic"
+	"time"
+
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -64,4 +67,38 @@ func TestContext_DoOnce(t *testing.T) {
 	}
 	wg.Wait()
 	require.Equal(t, 1, cnt)
+}
+
+func TestContext_Terminate(t *testing.T) {
+	var cnt uint32
+
+	var wg sync.WaitGroup
+	c := NewContext()
+
+	wg.Add(1)
+	go func(doneCh <-chan struct{}) {
+		select {
+		case <-doneCh:
+			atomic.AddUint32(&cnt, 1)
+		case <-time.After(time.Second):
+			return
+		}
+		wg.Done()
+	}(c.Done())
+
+	wg.Add(1)
+	go func(doneCh <-chan struct{}) {
+		select {
+		case <-doneCh:
+			atomic.AddUint32(&cnt, 1)
+		case <-time.After(time.Second):
+			break
+		}
+		wg.Done()
+	}(c.Done())
+
+	c.Terminate()
+	wg.Wait()
+
+	require.Equal(t, uint32(2), cnt)
 }

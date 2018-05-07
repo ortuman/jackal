@@ -18,8 +18,6 @@ import (
 
 func TestOffline_AssociatedNamespaces(t *testing.T) {
 	x := New(&Config{}, nil)
-	defer x.Done()
-
 	require.Equal(t, []string{offlineNamespace}, x.AssociatedNamespaces())
 }
 
@@ -34,7 +32,6 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm.SetDomain("jackal.im")
 
 	x := New(&Config{QueueSize: 1}, stm)
-	defer x.Done()
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, "normal")
@@ -64,8 +61,6 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm2.SetDomain("jackal.im")
 
 	x2 := New(&Config{QueueSize: 1}, stm2)
-	defer x2.Done()
-
 	x2.DeliverOfflineMessages()
 
 	elem = stm2.FetchElement()

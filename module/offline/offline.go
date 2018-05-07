@@ -24,7 +24,6 @@ type ModOffline struct {
 	cfg     *Config
 	stm     c2s.Stream
 	actorCh chan func()
-	doneCh  chan struct{}
 }
 
 // New returns an offline server stream module.
@@ -33,9 +32,10 @@ func New(config *Config, stm c2s.Stream) *ModOffline {
 		cfg:     config,
 		stm:     stm,
 		actorCh: make(chan func(), 32),
-		doneCh:  make(chan struct{}),
 	}
-	go r.actorLoop()
+	if stm != nil {
+		go r.actorLoop(stm.Context().Done())
+	}
 	return r
 }
 
@@ -43,11 +43,6 @@ func New(config *Config, stm c2s.Stream) *ModOffline {
 // with offline module.
 func (o *ModOffline) AssociatedNamespaces() []string {
 	return []string{offlineNamespace}
-}
-
-// Done signals stream termination.
-func (o *ModOffline) Done() {
-	o.doneCh <- struct{}{}
 }
 
 // ArchiveMessage archives a new offline messages into the storage.
@@ -65,12 +60,12 @@ func (o *ModOffline) DeliverOfflineMessages() {
 	}
 }
 
-func (o *ModOffline) actorLoop() {
+func (o *ModOffline) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-o.actorCh:
 			f()
-		case <-o.doneCh:
+		case <-doneCh:
 			return
 		}
 	}

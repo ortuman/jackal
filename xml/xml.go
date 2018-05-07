@@ -18,7 +18,7 @@ var bufPool = pool.NewBufferPool()
 // ErrorType represents an 'error' stanza type.
 const ErrorType = "error"
 
-// XElement represents an XML node element.
+// XElement represents a generic XML node element.
 type XElement interface {
 	fmt.Stringer
 
@@ -42,7 +42,7 @@ type XElement interface {
 	ToGob(enc *gob.Encoder)
 }
 
-// Stanza represents an XMPP stanza.
+// Stanza represents an XML stanza.
 type Stanza interface {
 	XElement
 	FromJID() *JID

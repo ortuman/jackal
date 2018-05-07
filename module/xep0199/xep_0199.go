@@ -55,10 +55,6 @@ func (x *XEPPing) AssociatedNamespaces() []string {
 	return []string{pingNamespace}
 }
 
-// Done signals stream termination.
-func (x *XEPPing) Done() {
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the ping module.
 func (x *XEPPing) MatchesIQ(iq *xml.IQ) bool {
