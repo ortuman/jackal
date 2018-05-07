@@ -222,6 +222,39 @@ func (m *Manager) MustRoute(elem xml.Stanza) error {
 	return m.route(elem, true)
 }
 
+// StreamsMatchingJID returns all available streams that match a given JID.
+func (m *Manager) StreamsMatchingJID(jid *xml.JID) []Stream {
+	if !m.IsLocalDomain(jid.Domain()) {
+		return nil
+	}
+	var ret []Stream
+	opts := xml.JIDMatchesDomain
+	if jid.IsFull() {
+		opts |= xml.JIDMatchesResource
+	}
+
+	m.lock.RLock()
+	if len(jid.Node()) > 0 {
+		opts |= xml.JIDMatchesNode
+		stms := m.authedStms[jid.Node()]
+		for _, stm := range stms {
+			if stm.JID().Matches(jid, opts) {
+				ret = append(ret, stm)
+			}
+		}
+	} else {
+		for _, stms := range m.authedStms {
+			for _, stm := range stms {
+				if stm.JID().Matches(jid, opts) {
+					ret = append(ret, stm)
+				}
+			}
+		}
+	}
+	m.lock.RUnlock()
+	return ret
+}
+
 func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
 	toJID := elem.ToJID()
 	if !m.IsLocalDomain(toJID.Domain()) {
@@ -276,38 +309,6 @@ func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
 		}
 	}
 	return nil
-}
-
-func (m *Manager) StreamsMatchingJID(jid *xml.JID) []Stream {
-	if !m.IsLocalDomain(jid.Domain()) {
-		return nil
-	}
-	var ret []Stream
-	opts := xml.JIDMatchesDomain
-	if jid.IsFull() {
-		opts |= xml.JIDMatchesResource
-	}
-
-	m.lock.RLock()
-	if len(jid.Node()) > 0 {
-		opts |= xml.JIDMatchesNode
-		stms := m.authedStms[jid.Node()]
-		for _, stm := range stms {
-			if stm.JID().Matches(jid, opts) {
-				ret = append(ret, stm)
-			}
-		}
-	} else {
-		for _, stms := range m.authedStms {
-			for _, stm := range stms {
-				if stm.JID().Matches(jid, opts) {
-					ret = append(ret, stm)
-				}
-			}
-		}
-	}
-	m.lock.RUnlock()
-	return ret
 }
 
 func (m *Manager) getBlockList(username string) []*xml.JID {
