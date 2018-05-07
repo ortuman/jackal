@@ -25,7 +25,6 @@ install:
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
   - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
-  - go test -race -coverprofile=config.coverage.txt -covermode=atomic ./config
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
   - go test -race -coverprofile=offline.coverage.txt -covermode=atomic ./module/offline
