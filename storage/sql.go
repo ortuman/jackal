@@ -212,6 +212,9 @@ func (s *sqlStorage) FetchRosterItems(username string) ([]model.RosterItem, mode
 		return nil, model.RosterVersion{}, err
 	}
 	ver, err := s.fetchRosterVer(username)
+	if err != nil {
+		return nil, model.RosterVersion{}, err
+	}
 	return items, ver, nil
 }
 

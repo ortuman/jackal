@@ -207,7 +207,7 @@ func (j *JID) IsFullWithUser() bool {
 	return len(j.node) > 0 && len(j.resource) > 0
 }
 
-// IsEqual returns true if two JID's are equivalent.
+// Matches returns true if two JID's are equivalent.
 func (j *JID) Matches(j2 *JID, options JIDMatchingOptions) bool {
 	if (options&JIDMatchesNode) > 0 && j.node != j2.node {
 		return false

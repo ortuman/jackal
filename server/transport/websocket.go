@@ -36,7 +36,7 @@ type websocketTransport struct {
 	keepAlive     int
 }
 
-// NewSocketTransport creates a socket class stream transport.
+// NewWebSocketTransport creates a socket class stream transport.
 func NewWebSocketTransport(conn WebSocketConn, maxStanzaSize, keepAlive int) Transport {
 	wst := &websocketTransport{
 		conn:          conn,

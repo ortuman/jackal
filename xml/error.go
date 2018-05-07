@@ -29,7 +29,7 @@ func (se *StanzaError) Error() string {
 	return se.reason
 }
 
-// XElement returns StanzaError equivalent XML element.
+// Element returns StanzaError equivalent XML element.
 func (se *StanzaError) Element() *Element {
 	err := &Element{}
 	err.SetName("error")
@@ -263,7 +263,7 @@ func (el *Element) RemoteServerNotFoundError() XElement {
 	return NewErrorElementFromElement(el, ErrRemoteServerNotFound.(*StanzaError), nil)
 }
 
-// RemoteServerNotFoundError returns an error copy of the element
+// RemoteServerTimeoutError returns an error copy of the element
 // attaching 'remote-server-timeout' error sub element.
 func (el *Element) RemoteServerTimeoutError() XElement {
 	return NewErrorElementFromElement(el, ErrRemoteServerTimeout.(*StanzaError), nil)

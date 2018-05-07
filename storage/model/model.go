@@ -38,7 +38,7 @@ func (u *User) FromGob(dec *gob.Decoder) {
 	dec.Decode(&u.LoggedOutAt)
 }
 
-// ToBytes converts a User entity to it's gob binary representation.
+// ToGob converts a User entity to it's gob binary representation.
 func (u *User) ToGob(enc *gob.Encoder) {
 	enc.Encode(&u.Username)
 	enc.Encode(&u.Password)

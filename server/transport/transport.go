@@ -14,6 +14,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// ErrTooLargeStanza is returned by ReadElement when the size of
+// the received stanza is too large.
 var ErrTooLargeStanza = errors.New("too large stanza")
 
 // TransportType represents a stream transport type (socket).

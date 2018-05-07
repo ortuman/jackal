@@ -18,6 +18,7 @@ import (
 
 const lastActivityNamespace = "jabber:iq:last"
 
+// XEPLastActivity represents a last activity stream module.
 type XEPLastActivity struct {
 	stm       c2s.Stream
 	startTime time.Time

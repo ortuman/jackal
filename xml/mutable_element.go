@@ -76,6 +76,6 @@ func (e *Element) SetTo(to string) {
 }
 
 // SetType sets 'type' node attribute.
-func (m *Element) SetType(tp string) {
-	m.attrs.setAttribute("type", tp)
+func (e *Element) SetType(tp string) {
+	e.attrs.setAttribute("type", tp)
 }
