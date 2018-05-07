@@ -33,7 +33,8 @@ script:
   - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport
   - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage
   - go test -race -coverprofile=storage.model.coverage.txt -covermode=atomic ./storage/model
-  - go test -race -coverprofile=stream.c2s.coverage.txt -covermode=atomic ./stream/c2s
+  - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
+  - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./stream/c2s
   - go test -race -coverprofile=stream.errors.coverage.txt -covermode=atomic ./stream/errors
   - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
   - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
