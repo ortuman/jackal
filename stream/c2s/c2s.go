@@ -11,7 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -49,7 +48,7 @@ type Stream interface {
 
 // Manager manages the sessions associated with an account.
 type Manager struct {
-	cfg        *config.C2S
+	cfg        *Config
 	lock       sync.RWMutex
 	stms       map[string]Stream
 	authedStms map[string][]Stream
@@ -64,7 +63,7 @@ var (
 )
 
 // Initialize initializes the c2s session manager.
-func Initialize(cfg *config.C2S) {
+func Initialize(cfg *Config) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()

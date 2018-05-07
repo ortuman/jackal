@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +30,7 @@ func (tw *testLogWriter) Write(p []byte) (int, error) {
 }
 
 func TestDebugLog(t *testing.T) {
-	Initialize(&config.Logger{Level: config.DebugLevel})
+	Initialize(&Config{Level: DebugLevel})
 	defer Shutdown()
 
 	lw := newTestLogWriter()
@@ -56,7 +55,7 @@ func TestDebugLog(t *testing.T) {
 }
 
 func TestInfoLog(t *testing.T) {
-	Initialize(&config.Logger{Level: config.InfoLevel})
+	Initialize(&Config{Level: InfoLevel})
 	defer Shutdown()
 
 	lw := newTestLogWriter()
@@ -81,7 +80,7 @@ func TestInfoLog(t *testing.T) {
 }
 
 func TestWarningLog(t *testing.T) {
-	Initialize(&config.Logger{Level: config.WarningLevel})
+	Initialize(&Config{Level: WarningLevel})
 	defer Shutdown()
 
 	lw := newTestLogWriter()
@@ -106,7 +105,7 @@ func TestWarningLog(t *testing.T) {
 }
 
 func TestErrorLog(t *testing.T) {
-	Initialize(&config.Logger{Level: config.ErrorLevel})
+	Initialize(&Config{Level: ErrorLevel})
 	defer Shutdown()
 
 	lw := newTestLogWriter()
@@ -146,7 +145,7 @@ func TestErrorLog(t *testing.T) {
 }
 
 func TestFatalLog(t *testing.T) {
-	Initialize(&config.Logger{Level: config.FatalLevel})
+	Initialize(&Config{Level: FatalLevel})
 	defer Shutdown()
 
 	lw := newTestLogWriter()
@@ -174,7 +173,7 @@ func TestFatalLog(t *testing.T) {
 func TestLogFile(t *testing.T) {
 	logPath := "../testdata/log_file.log"
 
-	Initialize(&config.Logger{Level: config.DebugLevel, LogPath: logPath})
+	Initialize(&Config{Level: DebugLevel, LogPath: logPath})
 	defer Shutdown()
 	defer os.Remove(logPath)
 

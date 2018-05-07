@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
@@ -75,7 +74,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config) {
 	}
 }
 
-func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
+func (s *socketTransport) EnableCompression(level compress.Level) {
 	if !s.compressionEnabled {
 		s.rw = compress.NewZlibCompressor(s.rw, s.rw, level)
 		s.bw.Reset(s.rw)
@@ -84,10 +83,10 @@ func (s *socketTransport) EnableCompression(level config.CompressionLevel) {
 	}
 }
 
-func (s *socketTransport) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) []byte {
+func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	if tlsConn, ok := s.conn.(*tls.Conn); ok {
 		switch mechanism {
-		case config.TLSUnique:
+		case TLSUnique:
 			st := tlsConn.ConnectionState()
 			return st.TLSUnique
 		default:
@@ -110,6 +109,6 @@ func (s *socketTransport) readFromConn() error {
 		return ErrTooLargeStanza
 	}
 	s.r = bytes.NewReader(s.rbuf[:n])
-	s.p = xml.NewParserTransportType(s.r, config.SocketTransportType)
+	s.p = xml.NewParser(s.r)
 	return nil
 }

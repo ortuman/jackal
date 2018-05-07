@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/config"
-
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -78,8 +76,8 @@ func TestWebSocketTransport(t *testing.T) {
 	wst.WriteElement(msg, true)
 	require.Equal(t, msg.String(), conn.w.buf.String())
 
-	require.Nil(t, wst.ChannelBindingBytes(config.ChannelBindingMechanism(99)))
-	require.Nil(t, wst.ChannelBindingBytes(config.TLSUnique))
+	require.Nil(t, wst.ChannelBindingBytes(ChannelBindingMechanism(99)))
+	require.Nil(t, wst.ChannelBindingBytes(TLSUnique))
 
 	wst.Close()
 	require.True(t, conn.closed)

@@ -16,8 +16,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/ortuman/jackal/config"
 )
 
 const logChanBufferSize = 512
@@ -33,7 +31,7 @@ var (
 
 // Logger object is used to log messages for a specific system or application component.
 type Logger struct {
-	level     config.LogLevel
+	level     LogLevel
 	outWriter io.Writer
 	errWriter io.Writer
 	f         *os.File
@@ -41,7 +39,7 @@ type Logger struct {
 	closeCh   chan bool
 }
 
-func newLogger(cfg *config.Logger, outWriter io.Writer, errWriter io.Writer) (*Logger, error) {
+func newLogger(cfg *Config, outWriter io.Writer, errWriter io.Writer) (*Logger, error) {
 	l := &Logger{
 		level:     cfg.Level,
 		outWriter: outWriter,
@@ -65,7 +63,7 @@ func newLogger(cfg *config.Logger, outWriter io.Writer, errWriter io.Writer) (*L
 }
 
 // Initialize initializes the default log subsystem.
-func Initialize(cfg *config.Logger) {
+func Initialize(cfg *Config) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()
@@ -99,45 +97,45 @@ func Shutdown() {
 // Debugf logs a 'debug' message to the log file
 // and echoes it to the console.
 func Debugf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= config.DebugLevel {
+	if inst := instance(); inst != nil && inst.level <= DebugLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, config.DebugLevel, true, args...)
+		inst.writeLog(ci.filename, ci.line, format, DebugLevel, true, args...)
 	}
 }
 
 // Infof logs an 'info' message to the log file
 // and echoes it to the console.
 func Infof(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= config.InfoLevel {
+	if inst := instance(); inst != nil && inst.level <= InfoLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, config.InfoLevel, true, args...)
+		inst.writeLog(ci.filename, ci.line, format, InfoLevel, true, args...)
 	}
 }
 
 // Warnf logs a 'warning' message to the log file
 // and echoes it to the console.
 func Warnf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= config.WarningLevel {
+	if inst := instance(); inst != nil && inst.level <= WarningLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, config.WarningLevel, true, args...)
+		inst.writeLog(ci.filename, ci.line, format, WarningLevel, true, args...)
 	}
 }
 
 // Errorf logs an 'error' message to the log file
 // and echoes it to the console.
 func Errorf(format string, args ...interface{}) {
-	if inst := instance(); inst != nil && inst.level <= config.ErrorLevel {
+	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, config.ErrorLevel, true, args...)
+		inst.writeLog(ci.filename, ci.line, format, ErrorLevel, true, args...)
 	}
 }
 
 // Error logs an 'error' value to the log file
 // and echoes it to the console.
 func Error(err error) {
-	if inst := instance(); inst != nil && inst.level <= config.ErrorLevel {
+	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, "%v", config.ErrorLevel, true, err)
+		inst.writeLog(ci.filename, ci.line, "%v", ErrorLevel, true, err)
 	}
 }
 
@@ -147,7 +145,7 @@ func Error(err error) {
 func Fatalf(format string, args ...interface{}) {
 	if inst := instance(); inst != nil {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, config.FatalLevel, false, args...)
+		inst.writeLog(ci.filename, ci.line, format, FatalLevel, false, args...)
 	}
 }
 
@@ -157,14 +155,14 @@ type callerInfo struct {
 }
 
 type record struct {
-	level      config.LogLevel
+	level      LogLevel
 	file       string
 	line       int
 	log        string
 	continueCh chan struct{}
 }
 
-func (l *Logger) writeLog(file string, line int, format string, level config.LogLevel, async bool, args ...interface{}) {
+func (l *Logger) writeLog(file string, line int, format string, level LogLevel, async bool, args ...interface{}) {
 	entry := record{
 		level:      level,
 		file:       file,
@@ -197,11 +195,11 @@ func (l *Logger) loop() {
 				l.f.WriteString(line)
 			}
 			switch rec.level {
-			case config.DebugLevel, config.WarningLevel, config.InfoLevel:
+			case DebugLevel, WarningLevel, InfoLevel:
 				fmt.Fprintf(l.outWriter, line)
-			case config.ErrorLevel:
+			case ErrorLevel:
 				fmt.Fprintf(l.errWriter, line)
-			case config.FatalLevel:
+			case FatalLevel:
 				fmt.Fprintf(l.errWriter, line)
 				exitHandler()
 			}
@@ -228,17 +226,17 @@ func getCallerInfo() callerInfo {
 	return ci
 }
 
-func logLevelAbbreviation(logLevel config.LogLevel) string {
-	switch logLevel {
-	case config.DebugLevel:
+func logLevelAbbreviation(level LogLevel) string {
+	switch level {
+	case DebugLevel:
 		return "DBG"
-	case config.InfoLevel:
+	case InfoLevel:
 		return "INF"
-	case config.WarningLevel:
+	case WarningLevel:
 		return "WRN"
-	case config.ErrorLevel:
+	case ErrorLevel:
 		return "ERR"
-	case config.FatalLevel:
+	case FatalLevel:
 		return "FTL"
 	default:
 		// should not be reached
@@ -246,17 +244,17 @@ func logLevelAbbreviation(logLevel config.LogLevel) string {
 	}
 }
 
-func logLevelGlyph(logLevel config.LogLevel) string {
-	switch logLevel {
-	case config.DebugLevel:
+func logLevelGlyph(level LogLevel) string {
+	switch level {
+	case DebugLevel:
 		return "\U0001f50D"
-	case config.InfoLevel:
+	case InfoLevel:
 		return "\u2139\ufe0f"
-	case config.WarningLevel:
+	case WarningLevel:
 		return "\u26a0\ufe0f"
-	case config.ErrorLevel:
+	case ErrorLevel:
 		return "\U0001f4a5"
-	case config.FatalLevel:
+	case FatalLevel:
 		return "\U0001f480"
 	default:
 		// should not be reached

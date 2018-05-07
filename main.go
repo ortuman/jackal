@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
@@ -71,8 +70,8 @@ func main() {
 	}
 
 	// load configuration
-	var cfg config.Config
-	if err := config.FromFile(configFile, &cfg); err != nil {
+	var cfg Config
+	if err := cfg.FromFile(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		return
 	}

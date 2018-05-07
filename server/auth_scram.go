@@ -15,7 +15,6 @@ import (
 	"hash"
 	"strings"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -300,7 +299,7 @@ func (s *scramAuthenticator) getCBindInputString() string {
 	if s.usesCb {
 		switch s.params.cbMechanism {
 		case "tls-unique":
-			buf.Write(s.tr.ChannelBindingBytes(config.TLSUnique))
+			buf.Write(s.tr.ChannelBindingBytes(transport.TLSUnique))
 		}
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes())

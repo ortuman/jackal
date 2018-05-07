@@ -8,7 +8,6 @@ package c2s
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestC2SManager(t *testing.T) {
-	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 
 	require.Equal(t, "jackal.im", Instance().DefaultLocalDomain())
@@ -96,10 +95,10 @@ func TestC2SManager(t *testing.T) {
 }
 
 func TestC2SManager_Routing(t *testing.T) {
-	storage.Initialize(&config.Storage{Type: config.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Mock})
 	defer storage.Shutdown()
 
-	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
@@ -182,7 +181,7 @@ func TestC2SManager_Routing(t *testing.T) {
 }
 
 func TestC2SManager_StreamsMatching(t *testing.T) {
-	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
@@ -214,10 +213,10 @@ func TestC2SManager_StreamsMatching(t *testing.T) {
 }
 
 func TestC2SManager_BlockedJID(t *testing.T) {
-	storage.Initialize(&config.Storage{Type: config.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Mock})
 	defer storage.Shutdown()
 
-	Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}})
 	defer Shutdown()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)

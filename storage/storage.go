@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
@@ -61,17 +60,17 @@ var (
 )
 
 // Initialize initializes storage sub system.
-func Initialize(storageConfig *config.Storage) {
+func Initialize(cfg *Config) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()
 
-		switch storageConfig.Type {
-		case config.BadgerDB:
-			inst = newBadgerDB(storageConfig.BadgerDB)
-		case config.MySQL:
-			inst = newSQLStorage(storageConfig.MySQL)
-		case config.Mock:
+		switch cfg.Type {
+		case BadgerDB:
+			inst = newBadgerDB(cfg.BadgerDB)
+		case MySQL:
+			inst = newSQLStorage(cfg.MySQL)
+		case Mock:
 			inst = newMockStorage()
 		default:
 			// should not be reached

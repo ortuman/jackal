@@ -13,7 +13,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/go-sql-driver/mysql" // SQL driver
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
@@ -31,7 +30,7 @@ type sqlStorage struct {
 	doneCh chan chan bool
 }
 
-func newSQLStorage(cfg *config.MySQLDb) *sqlStorage {
+func newSQLStorage(cfg *MySQLDb) *sqlStorage {
 	var err error
 	s := &sqlStorage{
 		pool:   pool.NewBufferPool(),

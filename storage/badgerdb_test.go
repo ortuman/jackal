@@ -8,11 +8,9 @@ package storage
 import (
 	"io/ioutil"
 	"os"
+	"sort"
 	"testing"
 
-	"sort"
-
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -260,7 +258,7 @@ func tUtilBadgerDBSetup() *testBadgerDBHelper {
 	h := &testBadgerDBHelper{}
 	dir, _ := ioutil.TempDir("", "")
 	h.dataDir = dir + "/com.jackal.tests.badgerdb." + uuid.New()
-	cfg := config.BadgerDb{DataDir: h.dataDir}
+	cfg := BadgerDb{DataDir: h.dataDir}
 	h.db = newBadgerDB(&cfg)
 	return h
 }

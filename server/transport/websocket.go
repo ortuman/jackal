@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -81,13 +81,13 @@ func (wst *websocketTransport) Close() error {
 func (wst *websocketTransport) StartTLS(cfg *tls.Config) {
 }
 
-func (wst *websocketTransport) EnableCompression(level config.CompressionLevel) {
+func (wst *websocketTransport) EnableCompression(level compress.Level) {
 }
 
-func (wst *websocketTransport) ChannelBindingBytes(mechanism config.ChannelBindingMechanism) []byte {
+func (wst *websocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	if tlsConn, ok := wst.conn.UnderlyingConn().(*tls.Conn); ok {
 		switch mechanism {
-		case config.TLSUnique:
+		case TLSUnique:
 			st := tlsConn.ConnectionState()
 			return st.TLSUnique
 		default:
@@ -113,6 +113,6 @@ func (wst *websocketTransport) readFromConn() error {
 		return ErrTooLargeStanza
 	}
 	wst.r = bytes.NewReader(wst.rbuf[:n])
-	wst.p = xml.NewParserTransportType(wst.r, config.WebSocketTransportType)
+	wst.p = xml.NewParser(wst.r)
 	return nil
 }

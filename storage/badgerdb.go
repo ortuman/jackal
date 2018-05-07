@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
@@ -34,7 +33,7 @@ type badgerDB struct {
 	doneCh chan chan bool
 }
 
-func newBadgerDB(cfg *config.BadgerDb) *badgerDB {
+func newBadgerDB(cfg *BadgerDb) *badgerDB {
 	b := &badgerDB{
 		pool:   pool.NewBufferPool(),
 		doneCh: make(chan chan bool),

@@ -12,8 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/config"
-
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -103,7 +101,7 @@ func (mc *MockConn) ClientReadElement() xml.XElement {
 		goto doRead
 	}
 	mc.r = bytes.NewReader(<-mc.readCh)
-	mc.p = xml.NewParserTransportType(mc.r, config.SocketTransportType)
+	mc.p = xml.NewParser(mc.r)
 doRead:
 	el, _ := mc.p.ParseElement()
 	if el == nil {

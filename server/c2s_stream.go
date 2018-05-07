@@ -16,9 +16,19 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/module/offline"
+	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0012"
+	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/module/xep0049"
+	"github.com/ortuman/jackal/module/xep0054"
+	"github.com/ortuman/jackal/module/xep0077"
+	"github.com/ortuman/jackal/module/xep0092"
+	"github.com/ortuman/jackal/module/xep0191"
+	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -71,7 +81,7 @@ const (
 )
 
 type c2sStream struct {
-	cfg         *config.Server
+	cfg         *Config
 	tr          transport.Transport
 	id          string
 	connected   uint32
@@ -80,15 +90,15 @@ type c2sStream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
-	roster      *module.ModRoster
-	register    *module.XEPRegister
-	ping        *module.XEPPing
-	blockCmd    *module.XEPBlockingCommand
-	offline     *module.ModOffline
+	roster      *roster.ModRoster
+	register    *xep0077.XEPRegister
+	ping        *xep0199.XEPPing
+	blockCmd    *xep0191.XEPBlockingCommand
+	offline     *offline.ModOffline
 	actorCh     chan func()
 }
 
-func newC2SStream(id string, tr transport.Transport, cfg *config.Server) *c2sStream {
+func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
 	s := &c2sStream{
 		cfg:     cfg,
 		id:      id,
@@ -98,7 +108,7 @@ func newC2SStream(id string, tr transport.Transport, cfg *config.Server) *c2sStr
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// initialize stream context
-	secured := !(cfg.Transport.Type == config.SocketTransportType)
+	secured := !(cfg.Transport.Type == transport.Socket)
 	s.ctx.SetBool(secured, securedContextKey)
 
 	domain := c2s.Instance().DefaultLocalDomain()
@@ -216,53 +226,53 @@ func (s *c2sStream) initializeAuthenticators() {
 
 func (s *c2sStream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = module.NewRoster(&s.cfg.ModRoster, s)
+	s.roster = roster.NewRoster(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := s.cfg.Modules["last_activity"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPLastActivity(s))
+		s.iqHandlers = append(s.iqHandlers, xep0012.NewXEPLastActivity(s))
 	}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	discoInfo := module.NewXEPDiscoInfo(s)
+	discoInfo := xep0030.NewXEPDiscoInfo(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules["private"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPPrivateStorage(s))
+		s.iqHandlers = append(s.iqHandlers, xep0049.NewXEPPrivateStorage(s))
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPVCard(s))
+		s.iqHandlers = append(s.iqHandlers, xep0054.NewXEPVCard(s))
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = module.NewXEPRegister(&s.cfg.ModRegistration, s)
+		s.register = xep0077.NewXEPRegister(&s.cfg.ModRegistration, s)
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, module.NewXEPVersion(&s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, xep0092.NewXEPVersion(&s.cfg.ModVersion, s))
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := s.cfg.Modules["blocking_command"]; ok {
-		s.blockCmd = module.NewXEPBlockingCommand(s)
+		s.blockCmd = xep0191.NewXEPBlockingCommand(s)
 		s.iqHandlers = append(s.iqHandlers, s.blockCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
-		s.ping = module.NewXEPPing(&s.cfg.ModPing, s)
+		s.ping = xep0199.NewXEPPing(&s.cfg.ModPing, s)
 		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
 	// register server disco info identities
-	identities := []module.DiscoIdentity{{
+	identities := []xep0030.DiscoIdentity{{
 		Category: "server",
 		Type:     "im",
 		Name:     s.cfg.ID,
@@ -277,7 +287,7 @@ func (s *c2sStream) initializeXEPs() {
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
-		s.offline = module.NewOffline(&s.cfg.ModOffline, s)
+		s.offline = offline.NewOffline(&s.cfg.ModOffline, s)
 		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)
@@ -295,6 +305,11 @@ func (s *c2sStream) startConnectTimeoutTimer(timeoutInSeconds int) {
 }
 
 func (s *c2sStream) handleElement(elem xml.XElement) {
+	isWebSocketTr := s.cfg.Transport.Type == transport.WebSocket
+	if isWebSocketTr && elem.Name() == "close" && elem.Namespace() == framedStreamNamespace {
+		s.disconnect(nil)
+		return
+	}
 	switch s.getState() {
 	case connecting:
 		s.handleConnecting(elem)
@@ -330,7 +345,7 @@ func (s *c2sStream) handleConnecting(elem xml.XElement) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
-	isSocketTransport := s.cfg.Transport.Type == config.SocketTransportType
+	isSocketTransport := s.cfg.Transport.Type == transport.Socket
 
 	if !s.IsAuthenticated() {
 		if isSocketTransport && !s.IsSecured() {
@@ -365,7 +380,7 @@ func (s *c2sStream) handleConnecting(elem xml.XElement) {
 
 	} else {
 		// attach compression feature
-		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != config.NoCompression
+		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
 
 		if !s.IsCompressed() && compressionAvailable {
 			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
@@ -626,12 +641,12 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 
 	if stm != nil {
 		switch s.cfg.ResourceConflict {
-		case config.Override:
+		case Override:
 			// override the resource with a server-generated resourcepart...
 			h := sha256.New()
 			h.Write([]byte(s.ID()))
 			resource = hex.EncodeToString(h.Sum(nil))
-		case config.Replace:
+		case Replace:
 			// terminate the session of the currently connected client...
 			stm.Disconnect(streamerror.ErrResourceConstraint)
 		default:
@@ -830,8 +845,13 @@ func (s *c2sStream) doRead() {
 
 		var discErr error
 		switch err {
-		case nil, io.EOF, io.ErrUnexpectedEOF, xml.ErrStreamClosedByPeer:
+		case nil, io.EOF, io.ErrUnexpectedEOF:
 			break
+
+		case xml.ErrStreamClosedByPeer: // ...received </stream:stream>
+			if s.cfg.Transport.Type != transport.Socket {
+				discErr = streamerror.ErrInvalidXML
+			}
 
 		case transport.ErrTooLargeStanza:
 			discErr = streamerror.ErrPolicyViolation
@@ -894,13 +914,13 @@ func (s *c2sStream) openStream() {
 
 	buf := &bytes.Buffer{}
 	switch s.cfg.Transport.Type {
-	case config.SocketTransportType:
+	case transport.Socket:
 		ops = xml.NewElementName("stream:stream")
 		ops.SetAttribute("xmlns", jabberClientNamespace)
 		ops.SetAttribute("xmlns:stream", streamNamespace)
 		buf.WriteString(`<?xml version="1.0"?>`)
 
-	case config.WebSocketTransportType:
+	case transport.WebSocket:
 		ops = xml.NewElementName("open")
 		ops.SetAttribute("xmlns", framedStreamNamespace)
 		includeClosing = true
@@ -967,7 +987,7 @@ func (s *c2sStream) handleElementError(elem xml.XElement, err error) {
 
 func (s *c2sStream) validateStreamElement(elem xml.XElement) *streamerror.Error {
 	switch s.cfg.Transport.Type {
-	case config.SocketTransportType:
+	case transport.Socket:
 		if elem.Name() != "stream:stream" {
 			return streamerror.ErrUnsupportedStanzaType
 		}
@@ -975,7 +995,7 @@ func (s *c2sStream) validateStreamElement(elem xml.XElement) *streamerror.Error 
 			return streamerror.ErrInvalidNamespace
 		}
 
-	case config.WebSocketTransportType:
+	case transport.WebSocket:
 		if elem.Name() != "open" {
 			return streamerror.ErrUnsupportedStanzaType
 		}
@@ -1060,9 +1080,9 @@ func (s *c2sStream) disconnectClosingStream(closeStream bool) {
 	}
 	if closeStream {
 		switch s.cfg.Transport.Type {
-		case config.SocketTransportType:
+		case transport.Socket:
 			s.tr.WriteString("</stream:stream>")
-		case config.WebSocketTransportType:
+		case transport.WebSocket:
 			s.tr.WriteString(fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 		}
 	}
