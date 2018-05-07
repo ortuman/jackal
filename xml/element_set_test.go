@@ -71,10 +71,10 @@ func TestElementSet_Copy(t *testing.T) {
 	a2 := NewElementNamespace("b", "ns1")
 	a3 := NewElementNamespace("a", "ns2")
 	es0.append(a1, a2, a3)
-	es1.copyFrom(&es0)
+	es1.copyFrom(es0)
 	require.Equal(t, es0.Count(), es1.Count())
-	for i, el := range es0.elems {
-		require.Equal(t, el.String(), es1.elems[i].String())
+	for i, el := range es0 {
+		require.Equal(t, el.String(), es1[i].String())
 	}
 }
 
@@ -89,7 +89,7 @@ func TestElementSet_Gob(t *testing.T) {
 	es0.toGob(gob.NewEncoder(buf))
 	es1.fromGob(gob.NewDecoder(buf))
 	require.Equal(t, es0.Count(), es1.Count())
-	for i, el := range es0.elems {
-		require.Equal(t, el.String(), es1.elems[i].String())
+	for i, el := range es0 {
+		require.Equal(t, el.String(), es1[i].String())
 	}
 }
