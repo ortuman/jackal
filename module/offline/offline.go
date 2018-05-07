@@ -22,16 +22,16 @@ type Config struct {
 // ModOffline represents an offline server stream module.
 type ModOffline struct {
 	cfg     *Config
-	strm    c2s.Stream
+	stm     c2s.Stream
 	actorCh chan func()
 	doneCh  chan struct{}
 }
 
-// NewOffline returns an offline server stream module.
-func NewOffline(config *Config, strm c2s.Stream) *ModOffline {
+// New returns an offline server stream module.
+func New(config *Config, stm c2s.Stream) *ModOffline {
 	r := &ModOffline{
 		cfg:     config,
-		strm:    strm,
+		stm:     stm,
 		actorCh: make(chan func(), 32),
 		doneCh:  make(chan struct{}),
 	}
@@ -86,12 +86,12 @@ func (o *ModOffline) archiveMessage(message *xml.Message) {
 	if queueSize >= o.cfg.QueueSize {
 		response := xml.NewElementFromElement(message)
 		response.SetFrom(toJid.String())
-		response.SetTo(o.strm.JID().String())
-		o.strm.SendElement(response.ServiceUnavailableError())
+		response.SetTo(o.stm.JID().String())
+		o.stm.SendElement(response.ServiceUnavailableError())
 		return
 	}
 	delayed := xml.NewElementFromElement(message)
-	delayed.Delay(o.strm.Domain(), "Offline Storage")
+	delayed.Delay(o.stm.Domain(), "Offline Storage")
 	if err := storage.Instance().InsertOfflineMessage(delayed, toJid.Node()); err != nil {
 		log.Errorf("%v", err)
 		return
@@ -100,7 +100,7 @@ func (o *ModOffline) archiveMessage(message *xml.Message) {
 }
 
 func (o *ModOffline) deliverOfflineMessages() {
-	messages, err := storage.Instance().FetchOfflineMessages(o.strm.Username())
+	messages, err := storage.Instance().FetchOfflineMessages(o.stm.Username())
 	if err != nil {
 		log.Error(err)
 		return
@@ -111,9 +111,9 @@ func (o *ModOffline) deliverOfflineMessages() {
 	log.Infof("delivering offline messages... count: %d", len(messages))
 
 	for _, m := range messages {
-		o.strm.SendElement(m)
+		o.stm.SendElement(m)
 	}
-	if err := storage.Instance().DeleteOfflineMessages(o.strm.Username()); err != nil {
+	if err := storage.Instance().DeleteOfflineMessages(o.stm.Username()); err != nil {
 		log.Error(err)
 	}
 }

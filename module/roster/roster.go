@@ -46,8 +46,8 @@ type ModRoster struct {
 	errHandler func(error)
 }
 
-// NewRoster returns a roster server stream module.
-func NewRoster(cfg *Config, stm c2s.Stream) *ModRoster {
+// New returns a roster server stream module.
+func New(cfg *Config, stm c2s.Stream) *ModRoster {
 	r := &ModRoster{
 		cfg:        cfg,
 		stm:        stm,

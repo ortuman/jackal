@@ -18,15 +18,15 @@ const privateStorageNamespace = "jabber:iq:private"
 
 // XEPPrivateStorage represents a private storage server stream module.
 type XEPPrivateStorage struct {
-	strm    c2s.Stream
+	stm     c2s.Stream
 	actorCh chan func()
 	doneCh  chan struct{}
 }
 
-// NewXEPPrivateStorage returns a private storage IQ handler module.
-func NewXEPPrivateStorage(strm c2s.Stream) *XEPPrivateStorage {
+// New returns a private storage IQ handler module.
+func New(stm c2s.Stream) *XEPPrivateStorage {
 	x := &XEPPrivateStorage{
-		strm:    strm,
+		stm:     stm,
 		actorCh: make(chan func(), 32),
 		doneCh:  make(chan struct{}),
 	}
@@ -57,9 +57,9 @@ func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 	x.actorCh <- func() {
 		q := iq.Elements().ChildNamespace("query", privateStorageNamespace)
 		toJid := iq.ToJID()
-		validTo := toJid.IsServer() || toJid.Node() == x.strm.Username()
+		validTo := toJid.IsServer() || toJid.Node() == x.stm.Username()
 		if !validTo {
-			x.strm.SendElement(iq.ForbiddenError())
+			x.stm.SendElement(iq.ForbiddenError())
 			return
 		}
 		if iq.IsGet() {
@@ -67,7 +67,7 @@ func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 		} else if iq.IsSet() {
 			x.setPrivate(iq, q)
 		} else {
-			x.strm.SendElement(iq.BadRequestError())
+			x.stm.SendElement(iq.BadRequestError())
 			return
 		}
 	}
@@ -86,7 +86,7 @@ func (x *XEPPrivateStorage) actorLoop() {
 
 func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.XElement) {
 	if q.Elements().Count() != 1 {
-		x.strm.SendElement(iq.NotAcceptableError())
+		x.stm.SendElement(iq.NotAcceptableError())
 		return
 	}
 	privElem := q.Elements().All()[0]
@@ -94,15 +94,15 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.XElement) {
 	isValidNS := x.isValidNamespace(privNS)
 
 	if privElem.Elements().Count() > 0 || !isValidNS {
-		x.strm.SendElement(iq.NotAcceptableError())
+		x.stm.SendElement(iq.NotAcceptableError())
 		return
 	}
-	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, x.strm.Username(), x.strm.Resource())
+	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, x.stm.Username(), x.stm.Resource())
 
-	privElements, err := storage.Instance().FetchPrivateXML(privNS, x.strm.Username())
+	privElements, err := storage.Instance().FetchPrivateXML(privNS, x.stm.Username())
 	if err != nil {
 		log.Errorf("%v", err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
 	res := iq.ResultIQ()
@@ -114,7 +114,7 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.XElement) {
 	}
 	res.AppendElement(query)
 
-	x.strm.SendElement(res)
+	x.stm.SendElement(res)
 }
 
 func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.XElement) {
@@ -123,11 +123,11 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.XElement) {
 	for _, privElement := range q.Elements().All() {
 		ns := privElement.Namespace()
 		if len(ns) == 0 {
-			x.strm.SendElement(iq.BadRequestError())
+			x.stm.SendElement(iq.BadRequestError())
 			return
 		}
 		if !x.isValidNamespace(privElement.Namespace()) {
-			x.strm.SendElement(iq.NotAcceptableError())
+			x.stm.SendElement(iq.NotAcceptableError())
 			return
 		}
 		elems := nsElements[ns]
@@ -139,15 +139,15 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.XElement) {
 		nsElements[ns] = elems
 	}
 	for ns, elements := range nsElements {
-		log.Infof("saving private element. ns: %s... (%s/%s)", ns, x.strm.Username(), x.strm.Resource())
+		log.Infof("saving private element. ns: %s... (%s/%s)", ns, x.stm.Username(), x.stm.Resource())
 
-		if err := storage.Instance().InsertOrUpdatePrivateXML(elements, ns, x.strm.Username()); err != nil {
+		if err := storage.Instance().InsertOrUpdatePrivateXML(elements, ns, x.stm.Username()); err != nil {
 			log.Errorf("%v", err)
-			x.strm.SendElement(iq.InternalServerError())
+			x.stm.SendElement(iq.InternalServerError())
 			return
 		}
 	}
-	x.strm.SendElement(iq.ResultIQ())
+	x.stm.SendElement(iq.ResultIQ())
 }
 
 func (x *XEPPrivateStorage) isValidNamespace(ns string) bool {

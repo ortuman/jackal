@@ -18,7 +18,7 @@ import (
 func TestXEP0049_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := NewXEPPrivateStorage(nil)
+	x := New(nil)
 	defer x.Done()
 
 	require.Equal(t, []string{}, x.AssociatedNamespaces())
@@ -37,7 +37,7 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 	stm.SetUsername("romeo")
 
-	x := NewXEPPrivateStorage(stm)
+	x := New(stm)
 	defer x.Done()
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
@@ -89,7 +89,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 	stm.SetUsername("ortuman")
 
-	x := NewXEPPrivateStorage(stm)
+	x := New(stm)
 	defer x.Done()
 
 	iqID := uuid.New()

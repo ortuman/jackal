@@ -27,8 +27,8 @@ type Config struct {
 
 // XEPPing represents a ping server stream module.
 type XEPPing struct {
-	cfg  *Config
-	strm c2s.Stream
+	cfg *Config
+	stm c2s.Stream
 
 	pingTm *time.Timer
 	pongCh chan struct{}
@@ -40,11 +40,11 @@ type XEPPing struct {
 	pingOnce    sync.Once
 }
 
-// NewXEPPing returns an ping IQ handler module.
-func NewXEPPing(config *Config, strm c2s.Stream) *XEPPing {
+// New returns an ping IQ handler module.
+func New(config *Config, stm c2s.Stream) *XEPPing {
 	return &XEPPing{
 		cfg:    config,
-		strm:   strm,
+		stm:    stm,
 		pongCh: make(chan struct{}, 1),
 	}
 }
@@ -73,21 +73,21 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 		return
 	}
 	toJid := iq.ToJID()
-	if !toJid.IsServer() && toJid.Node() != x.strm.Username() {
-		x.strm.SendElement(iq.ForbiddenError())
+	if !toJid.IsServer() && toJid.Node() != x.stm.Username() {
+		x.stm.SendElement(iq.ForbiddenError())
 		return
 	}
 	p := iq.Elements().ChildNamespace("ping", pingNamespace)
 	if p == nil || p.Elements().Count() > 0 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
 	log.Infof("received ping... id: %s", iq.ID())
 	if iq.IsGet() {
 		log.Infof("sent pong... id: %s", iq.ID())
-		x.strm.SendElement(iq.ResultIQ())
+		x.stm.SendElement(iq.ResultIQ())
 	} else {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 	}
 }
 
@@ -123,10 +123,10 @@ func (x *XEPPing) sendPing() {
 	x.pingMu.Unlock()
 
 	iq := xml.NewIQType(pingId, xml.GetType)
-	iq.SetTo(x.strm.JID().String())
+	iq.SetTo(x.stm.JID().String())
 	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
 
-	x.strm.SendElement(iq)
+	x.stm.SendElement(iq)
 
 	log.Infof("sent ping... id: %s", pingId)
 
@@ -139,7 +139,7 @@ func (x *XEPPing) waitForPong() {
 	case <-x.pongCh:
 		return
 	case <-t.C:
-		x.strm.Disconnect(streamerror.ErrConnectionTimeout)
+		x.stm.Disconnect(streamerror.ErrConnectionTimeout)
 	}
 }
 

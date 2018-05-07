@@ -23,8 +23,8 @@ type XEPLastActivity struct {
 	startTime time.Time
 }
 
-// NewXEPLastActivity returns a last activity IQ handler module.
-func NewXEPLastActivity(stm c2s.Stream) *XEPLastActivity {
+// New returns a last activity IQ handler module.
+func New(stm c2s.Stream) *XEPLastActivity {
 	return &XEPLastActivity{
 		stm:       stm,
 		startTime: time.Now(),

@@ -18,7 +18,7 @@ import (
 func TestXEP0054_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := NewXEPVCard(nil)
+	x := New(nil)
 	defer x.Done()
 
 	require.Equal(t, []string{vCardNamespace}, x.AssociatedNamespaces())
@@ -54,7 +54,7 @@ func TestXEP0054_Set(t *testing.T) {
 	iq.SetToJID(j.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x := NewXEPVCard(stm)
+	x := New(stm)
 	defer x.Done()
 
 	x.ProcessIQ(iq)
@@ -86,7 +86,7 @@ func TestXEP0054_SetError(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 	stm.SetUsername("ortuman")
 
-	x := NewXEPVCard(stm)
+	x := New(stm)
 	defer x.Done()
 
 	// set other user vCard...
@@ -126,7 +126,7 @@ func TestXEP0054_Get(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := NewXEPVCard(stm)
+	x := New(stm)
 	defer x.Done()
 	x.ProcessIQ(iqSet)
 	_ = stm.FetchElement() // wait until set...
@@ -170,7 +170,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := NewXEPVCard(stm)
+	x := New(stm)
 	defer x.Done()
 	x.ProcessIQ(iqSet)
 	_ = stm.FetchElement() // wait until set...

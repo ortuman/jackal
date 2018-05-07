@@ -18,7 +18,7 @@ import (
 func TestXEP0030_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := NewXEPDiscoInfo(nil)
+	x := New(nil)
 	defer x.Done()
 
 	for _, ns := range x.AssociatedNamespaces() {
@@ -53,7 +53,7 @@ func TestXEP0030_Matching(t *testing.T) {
 }
 
 func TestXEP0030_SetItems(t *testing.T) {
-	x := NewXEPDiscoInfo(nil)
+	x := New(nil)
 	defer x.Done()
 
 	its := []DiscoItem{
@@ -65,7 +65,7 @@ func TestXEP0030_SetItems(t *testing.T) {
 }
 
 func TestXEP0030_SetIdentities(t *testing.T) {
-	x := NewXEPDiscoInfo(nil)
+	x := New(nil)
 	defer x.Done()
 
 	ids := []DiscoIdentity{{
@@ -78,7 +78,7 @@ func TestXEP0030_SetIdentities(t *testing.T) {
 }
 
 func TestXEP0030_SetFeatures(t *testing.T) {
-	x := NewXEPDiscoInfo(nil)
+	x := New(nil)
 	defer x.Done()
 
 	fs := []DiscoFeature{
@@ -93,7 +93,7 @@ func TestXEP0030_BadToJID(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd", j)
 
-	x := NewXEPDiscoInfo(stm)
+	x := New(stm)
 	defer x.Done()
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
@@ -112,7 +112,7 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd", j)
 
-	x := NewXEPDiscoInfo(stm)
+	x := New(stm)
 	defer x.Done()
 
 	ids := []DiscoIdentity{{
@@ -148,7 +148,7 @@ func TestXEP0030_GetItems(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd", j)
 
-	x := NewXEPDiscoInfo(stm)
+	x := New(stm)
 	defer x.Done()
 
 	its := []DiscoItem{

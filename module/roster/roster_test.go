@@ -23,7 +23,7 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
-	r := NewRoster(&Config{}, stm)
+	r := New(&Config{}, stm)
 	defer r.Done()
 
 	require.Equal(t, []string{}, r.AssociatedNamespaces())
@@ -44,7 +44,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
-	r := NewRoster(&Config{}, stm)
+	r := New(&Config{}, stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	q := xml.NewElementNamespace("query", rosterNamespace)
@@ -90,7 +90,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	storage.Instance().InsertOrUpdateRosterItem(ri2)
 
-	r = NewRoster(&Config{Versioning: true}, stm)
+	r = New(&Config{Versioning: true}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
@@ -122,7 +122,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r.Done()
 
 	storage.ActivateMockedError()
-	r = NewRoster(&Config{}, stm)
+	r = New(&Config{}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
@@ -146,7 +146,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 
 	stm, _ := tUtilRosterInitializeRoster()
 
-	r := NewRoster(&Config{}, stm)
+	r := New(&Config{}, stm)
 	defer r.Done()
 
 	storage.ActivateMockedError()
@@ -184,7 +184,7 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 	}
 	storage.Instance().InsertOrUpdateRosterItem(ri)
 
-	r := NewRoster(&Config{}, stm1)
+	r := New(&Config{}, stm1)
 	defer r.Done()
 
 	// test presence receive...
@@ -249,7 +249,7 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetResource("garden")
 	stm1.SetAuthenticated(true)
 
-	r := NewRoster(&Config{}, stm1)
+	r := New(&Config{}, stm1)
 	defer r.Done()
 
 	iqID := uuid.New()
@@ -292,7 +292,7 @@ func TestRoster_Subscribe(t *testing.T) {
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r := NewRoster(&Config{}, stm1)
+	r := New(&Config{}, stm1)
 	defer r.Done()
 
 	tUtilRosterRequestRoster(r, stm1)
@@ -333,8 +333,8 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(&Config{}, stm1)
-	r2 := NewRoster(&Config{}, stm2)
+	r1 := New(&Config{}, stm1)
+	r2 := New(&Config{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -381,8 +381,8 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(&Config{}, stm1)
-	r2 := NewRoster(&Config{}, stm2)
+	r1 := New(&Config{}, stm1)
+	r2 := New(&Config{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -424,8 +424,8 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(&Config{}, stm1)
-	r2 := NewRoster(&Config{}, stm2)
+	r1 := New(&Config{}, stm1)
+	r2 := New(&Config{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 
@@ -469,8 +469,8 @@ func TestRoster_DeleteItem(t *testing.T) {
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
-	r1 := NewRoster(&Config{}, stm1)
-	r2 := NewRoster(&Config{}, stm2)
+	r1 := New(&Config{}, stm1)
+	r2 := New(&Config{}, stm2)
 	defer r1.Done()
 	defer r2.Done()
 

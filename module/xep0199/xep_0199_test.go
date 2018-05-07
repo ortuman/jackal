@@ -18,7 +18,7 @@ func TestXEP0199_Matching(t *testing.T) {
 	t.Parallel()
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := NewXEPPing(&Config{}, nil)
+	x := New(&Config{}, nil)
 	defer x.Done()
 
 	require.Equal(t, []string{pingNamespace}, x.AssociatedNamespaces())
@@ -42,7 +42,7 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := NewXEPPing(&Config{}, stm)
+	x := New(&Config{}, stm)
 	defer x.Done()
 
 	iqID := uuid.New()
@@ -79,7 +79,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := NewXEPPing(&Config{Send: true, SendInterval: 1}, stm)
+	x := New(&Config{Send: true, SendInterval: 1}, stm)
 	defer x.Done()
 
 	x.StartPinging()
@@ -112,7 +112,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := NewXEPPing(&Config{Send: true, SendInterval: 1}, stm)
+	x := New(&Config{Send: true, SendInterval: 1}, stm)
 	defer x.Done()
 
 	x.StartPinging()

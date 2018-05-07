@@ -18,6 +18,16 @@ script:
   - go test -race -coverprofile=config.coverage.txt -covermode=atomic ./config
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
+  - go test -race -coverprofile=offline.coverage.txt -covermode=atomic ./module/offline
+  - go test -race -coverprofile=roster.coverage.txt -covermode=atomic ./module/roster
+  - go test -race -coverprofile=xep0012.coverage.txt -covermode=atomic ./module/xep0012
+  - go test -race -coverprofile=xep0030.coverage.txt -covermode=atomic ./module/xep0030
+  - go test -race -coverprofile=xep0049.coverage.txt -covermode=atomic ./module/xep0049
+  - go test -race -coverprofile=xep0054.coverage.txt -covermode=atomic ./module/xep0054
+  - go test -race -coverprofile=xep0077.coverage.txt -covermode=atomic ./module/xep0077
+  - go test -race -coverprofile=xep0092.coverage.txt -covermode=atomic ./module/xep0092
+  - go test -race -coverprofile=xep0191.coverage.txt -covermode=atomic ./module/xep0191
+  - go test -race -coverprofile=xep0199.coverage.txt -covermode=atomic ./module/xep0199
   - go test -race -coverprofile=server.coverage.txt -covermode=atomic ./server
   - go test -race -coverprofile=server.compress.coverage.txt -covermode=atomic ./server/compress  
   - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport

@@ -26,8 +26,8 @@ type XEPBlockingCommand struct {
 	stm c2s.Stream
 }
 
-// NewXEPBlockingCommand returns a blocking command IQ handler module.
-func NewXEPBlockingCommand(stm c2s.Stream) *XEPBlockingCommand {
+// New returns a blocking command IQ handler module.
+func New(stm c2s.Stream) *XEPBlockingCommand {
 	return &XEPBlockingCommand{stm: stm}
 }
 

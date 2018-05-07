@@ -226,48 +226,48 @@ func (s *c2sStream) initializeAuthenticators() {
 
 func (s *c2sStream) initializeXEPs() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = roster.NewRoster(&s.cfg.ModRoster, s)
+	s.roster = roster.New(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := s.cfg.Modules["last_activity"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0012.NewXEPLastActivity(s))
+		s.iqHandlers = append(s.iqHandlers, xep0012.New(s))
 	}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	discoInfo := xep0030.NewXEPDiscoInfo(s)
+	discoInfo := xep0030.New(s)
 	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules["private"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0049.NewXEPPrivateStorage(s))
+		s.iqHandlers = append(s.iqHandlers, xep0049.New(s))
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0054.NewXEPVCard(s))
+		s.iqHandlers = append(s.iqHandlers, xep0054.New(s))
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = xep0077.NewXEPRegister(&s.cfg.ModRegistration, s)
+		s.register = xep0077.New(&s.cfg.ModRegistration, s)
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0092.NewXEPVersion(&s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, xep0092.New(&s.cfg.ModVersion, s))
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := s.cfg.Modules["blocking_command"]; ok {
-		s.blockCmd = xep0191.NewXEPBlockingCommand(s)
+		s.blockCmd = xep0191.New(s)
 		s.iqHandlers = append(s.iqHandlers, s.blockCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
-		s.ping = xep0199.NewXEPPing(&s.cfg.ModPing, s)
+		s.ping = xep0199.New(&s.cfg.ModPing, s)
 		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
@@ -287,7 +287,7 @@ func (s *c2sStream) initializeXEPs() {
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
-		s.offline = offline.NewOffline(&s.cfg.ModOffline, s)
+		s.offline = offline.New(&s.cfg.ModOffline, s)
 		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
 	discoInfo.SetFeatures(features)

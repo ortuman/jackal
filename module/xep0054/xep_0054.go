@@ -16,15 +16,15 @@ const vCardNamespace = "vcard-temp"
 
 // XEPVCard represents a vCard server stream module.
 type XEPVCard struct {
-	strm    c2s.Stream
+	stm     c2s.Stream
 	actorCh chan func()
 	doneCh  chan struct{}
 }
 
-// NewXEPVCard returns a vCard IQ handler module.
-func NewXEPVCard(strm c2s.Stream) *XEPVCard {
+// New returns a vCard IQ handler module.
+func New(stm c2s.Stream) *XEPVCard {
 	v := &XEPVCard{
-		strm:    strm,
+		stm:     stm,
 		actorCh: make(chan func(), 32),
 		doneCh:  make(chan struct{}),
 	}
@@ -75,14 +75,14 @@ func (x *XEPVCard) actorLoop() {
 
 func (x *XEPVCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
 	if vCard.Elements().Count() > 0 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
 	toJid := iq.ToJID()
 
 	var username string
 	if toJid.IsServer() {
-		username = x.strm.Username()
+		username = x.stm.Username()
 	} else {
 		username = toJid.Node()
 	}
@@ -90,10 +90,10 @@ func (x *XEPVCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
 	resElem, err := storage.Instance().FetchVCard(username)
 	if err != nil {
 		log.Errorf("%v", err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	log.Infof("retrieving vcard... (%s/%s)", x.strm.Username(), x.strm.Resource())
+	log.Infof("retrieving vcard... (%s/%s)", x.stm.Username(), x.stm.Resource())
 
 	resultIQ := iq.ResultIQ()
 	if resElem != nil {
@@ -102,22 +102,22 @@ func (x *XEPVCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
 		// empty vCard
 		resultIQ.AppendElement(xml.NewElementNamespace("vCard", vCardNamespace))
 	}
-	x.strm.SendElement(resultIQ)
+	x.stm.SendElement(resultIQ)
 }
 
 func (x *XEPVCard) setVCard(vCard xml.XElement, iq *xml.IQ) {
 	toJid := iq.ToJID()
-	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.strm.Username()) {
-		log.Infof("saving vcard... (%s/%s)", x.strm.Username(), x.strm.Resource())
+	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.stm.Username()) {
+		log.Infof("saving vcard... (%s/%s)", x.stm.Username(), x.stm.Resource())
 
-		err := storage.Instance().InsertOrUpdateVCard(vCard, x.strm.Username())
+		err := storage.Instance().InsertOrUpdateVCard(vCard, x.stm.Username())
 		if err != nil {
 			log.Errorf("%v", err)
-			x.strm.SendElement(iq.InternalServerError())
+			x.stm.SendElement(iq.InternalServerError())
 			return
 		}
-		x.strm.SendElement(iq.ResultIQ())
+		x.stm.SendElement(iq.ResultIQ())
 	} else {
-		x.strm.SendElement(iq.ForbiddenError())
+		x.stm.SendElement(iq.ForbiddenError())
 	}
 }

@@ -31,15 +31,15 @@ type Config struct {
 
 // XEPVersion represents a version server stream module.
 type XEPVersion struct {
-	cfg  *Config
-	strm c2s.Stream
+	cfg *Config
+	stm c2s.Stream
 }
 
-// NewXEPVersion returns a version IQ handler module.
-func NewXEPVersion(config *Config, strm c2s.Stream) *XEPVersion {
+// New returns a version IQ handler module.
+func New(config *Config, stm c2s.Stream) *XEPVersion {
 	x := &XEPVersion{
-		cfg:  config,
-		strm: strm,
+		cfg: config,
+		stm: stm,
 	}
 	return x
 }
@@ -65,15 +65,15 @@ func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
 func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q.Elements().Count() != 0 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
 	x.sendSoftwareVersion(iq)
 }
 
 func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
-	username := x.strm.Username()
-	resource := x.strm.Resource()
+	username := x.stm.Username()
+	resource := x.stm.Resource()
 	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
 
 	result := iq.ResultIQ()
@@ -93,5 +93,5 @@ func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
 		query.AppendElement(os)
 	}
 	result.AppendElement(query)
-	x.strm.SendElement(result)
+	x.stm.SendElement(result)
 }

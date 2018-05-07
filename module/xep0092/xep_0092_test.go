@@ -21,7 +21,7 @@ func TestXEP0092(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	cfg := Config{}
-	x := NewXEPVersion(&cfg, stm)
+	x := New(&cfg, stm)
 	require.Equal(t, []string{versionNamespace}, x.AssociatedNamespaces())
 
 	// test MatchesIQ
@@ -57,7 +57,7 @@ func TestXEP0092(t *testing.T) {
 	cfg.ShowOS = true
 	x.Done()
 
-	x = NewXEPVersion(&cfg, stm)
+	x = New(&cfg, stm)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)

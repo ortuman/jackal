@@ -42,12 +42,9 @@ type XEPDiscoInfo struct {
 	items      []DiscoItem
 }
 
-// NewXEPDiscoInfo returns a disco info IQ handler module.
-func NewXEPDiscoInfo(strm c2s.Stream) *XEPDiscoInfo {
-	x := &XEPDiscoInfo{
-		stm: strm,
-	}
-	return x
+// New returns a disco info IQ handler module.
+func New(stm c2s.Stream) *XEPDiscoInfo {
+	return &XEPDiscoInfo{stm: stm}
 }
 
 // Identities returns disco info module's identities.

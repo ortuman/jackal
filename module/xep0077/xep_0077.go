@@ -25,15 +25,15 @@ type Config struct {
 // XEPRegister represents an in-band server stream module.
 type XEPRegister struct {
 	cfg        *Config
-	strm       c2s.Stream
+	stm        c2s.Stream
 	registered bool
 }
 
-// NewXEPRegister returns an in-band registration IQ handler.
-func NewXEPRegister(config *Config, strm c2s.Stream) *XEPRegister {
+// New returns an in-band registration IQ handler.
+func New(config *Config, stm c2s.Stream) *XEPRegister {
 	return &XEPRegister{
-		cfg:  config,
-		strm: strm,
+		cfg: config,
+		stm: stm,
 	}
 }
 
@@ -57,15 +57,15 @@ func (x *XEPRegister) MatchesIQ(iq *xml.IQ) bool {
 // taking according actions over the associated stream.
 func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 	if !x.isValidToJid(iq.ToJID()) {
-		x.strm.SendElement(iq.ForbiddenError())
+		x.stm.SendElement(iq.ForbiddenError())
 		return
 	}
 
 	q := iq.Elements().ChildNamespace("query", registerNamespace)
-	if !x.strm.IsAuthenticated() {
+	if !x.stm.IsAuthenticated() {
 		if iq.IsGet() {
 			if !x.cfg.AllowRegistration {
-				x.strm.SendElement(iq.NotAllowedError())
+				x.stm.SendElement(iq.NotAllowedError())
 				return
 			}
 			// ...send registration fields to requester entity...
@@ -76,10 +76,10 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 				x.registerNewUser(iq, q)
 			} else {
 				// return a <not-acceptable/> stanza error if an entity attempts to register a second identity
-				x.strm.SendElement(iq.NotAcceptableError())
+				x.stm.SendElement(iq.NotAcceptableError())
 			}
 		} else {
-			x.strm.SendElement(iq.BadRequestError())
+			x.stm.SendElement(iq.BadRequestError())
 		}
 	} else if iq.IsSet() {
 		if q.Elements().Child("remove") != nil {
@@ -92,17 +92,17 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 				// change password
 				x.changePassword(password.Text(), user.Text(), iq)
 			} else {
-				x.strm.SendElement(iq.BadRequestError())
+				x.stm.SendElement(iq.BadRequestError())
 			}
 		}
 	} else {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 	}
 }
 
 func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
 	if query.Elements().Count() > 0 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
 	result := iq.ResultIQ()
@@ -110,24 +110,24 @@ func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
 	q.AppendElement(xml.NewElementName("username"))
 	q.AppendElement(xml.NewElementName("password"))
 	result.AppendElement(q)
-	x.strm.SendElement(result)
+	x.stm.SendElement(result)
 }
 
 func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.XElement) {
 	userEl := query.Elements().Child("username")
 	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
 	exists, err := storage.Instance().UserExists(userEl.Text())
 	if err != nil {
 		log.Errorf("%v", err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
 	if exists {
-		x.strm.SendElement(iq.ConflictError())
+		x.stm.SendElement(iq.ConflictError())
 		return
 	}
 	user := model.User{
@@ -136,68 +136,68 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.XElement) {
 	}
 	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
 		log.Errorf("%v", err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	x.strm.SendElement(iq.ResultIQ())
+	x.stm.SendElement(iq.ResultIQ())
 	x.registered = true
 }
 
 func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.XElement) {
 	if !x.cfg.AllowCancel {
-		x.strm.SendElement(iq.NotAllowedError())
+		x.stm.SendElement(iq.NotAllowedError())
 		return
 	}
 	if query.Elements().Count() > 1 {
-		x.strm.SendElement(iq.BadRequestError())
+		x.stm.SendElement(iq.BadRequestError())
 		return
 	}
-	if err := storage.Instance().DeleteUser(x.strm.Username()); err != nil {
+	if err := storage.Instance().DeleteUser(x.stm.Username()); err != nil {
 		log.Error(err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	x.strm.SendElement(iq.ResultIQ())
+	x.stm.SendElement(iq.ResultIQ())
 }
 
 func (x *XEPRegister) changePassword(password string, username string, iq *xml.IQ) {
 	if !x.cfg.AllowChange {
-		x.strm.SendElement(iq.NotAllowedError())
+		x.stm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if username != x.strm.Username() {
-		x.strm.SendElement(iq.NotAllowedError())
+	if username != x.stm.Username() {
+		x.stm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if !x.strm.IsSecured() {
+	if !x.stm.IsSecured() {
 		// channel isn't safe enough to enable a password change
-		x.strm.SendElement(iq.NotAuthorizedError())
+		x.stm.SendElement(iq.NotAuthorizedError())
 		return
 	}
 	user, err := storage.Instance().FetchUser(username)
 	if err != nil {
 		log.Error(err)
-		x.strm.SendElement(iq.InternalServerError())
+		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
 	if user == nil {
-		x.strm.SendElement(iq.ResultIQ())
+		x.stm.SendElement(iq.ResultIQ())
 		return
 	}
 	if user.Password != password {
 		user.Password = password
 		if err := storage.Instance().InsertOrUpdateUser(user); err != nil {
 			log.Error(err)
-			x.strm.SendElement(iq.InternalServerError())
+			x.stm.SendElement(iq.InternalServerError())
 			return
 		}
 	}
-	x.strm.SendElement(iq.ResultIQ())
+	x.stm.SendElement(iq.ResultIQ())
 }
 
 func (x *XEPRegister) isValidToJid(jid *xml.JID) bool {
-	if x.strm.IsAuthenticated() {
+	if x.stm.IsAuthenticated() {
 		return jid.IsServer()
 	}
-	return jid.IsServer() || (jid.IsBare() && jid.Node() == x.strm.Username())
+	return jid.IsServer() || (jid.IsBare() && jid.Node() == x.stm.Username())
 }
