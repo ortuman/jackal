@@ -60,11 +60,24 @@ char *resourceprep(char *in) {
 */
 import "C"
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"strings"
 	"unsafe"
+)
+
+// JIDMatchingOptions represents a matching jid mask.
+type JIDMatchingOptions int8
+
+const (
+	// JIDMatchesNode indicates that left and right operand has same node value.
+	JIDMatchesNode = JIDMatchingOptions(1)
+
+	// JIDMatchesDomain indicates that left and right operand has same domain value.
+	JIDMatchesDomain = JIDMatchingOptions(2)
+
+	// JIDMatchesResource indicates that left and right operand has same resource value.
+	JIDMatchesResource = JIDMatchingOptions(4)
 )
 
 // JID represents an XMPP address (JID).
@@ -181,21 +194,28 @@ func (j *JID) IsBare() bool {
 
 // IsFull returns true if instance is a full JID.
 func (j *JID) IsFull() bool {
+	return len(j.resource) > 0
+}
+
+// IsFullWithServer returns true if instance is a full server JID.
+func (j *JID) IsFullWithServer() bool {
+	return len(j.node) == 0 && len(j.resource) > 0
+}
+
+// IsFullWithUser returns true if instance is a full client JID.
+func (j *JID) IsFullWithUser() bool {
 	return len(j.node) > 0 && len(j.resource) > 0
 }
 
 // IsEqual returns true if two JID's are equivalent.
-func (j *JID) IsEqual(j2 *JID) bool {
-	if j == j2 {
-		return true
-	}
-	if j.node != j2.node {
+func (j *JID) Matches(j2 *JID, options JIDMatchingOptions) bool {
+	if (options&JIDMatchesNode) > 0 && j.node != j2.node {
 		return false
 	}
-	if j.domain != j2.domain {
+	if (options&JIDMatchesDomain) > 0 && j.domain != j2.domain {
 		return false
 	}
-	if j.resource != j2.resource {
+	if (options&JIDMatchesResource) > 0 && j.resource != j2.resource {
 		return false
 	}
 	return true
@@ -203,7 +223,8 @@ func (j *JID) IsEqual(j2 *JID) bool {
 
 // String returns a string representation of the JID.
 func (j *JID) String() string {
-	buf := new(bytes.Buffer)
+	buf := bufPool.Get()
+	defer bufPool.Put(buf)
 	if len(j.node) > 0 {
 		buf.WriteString(j.node)
 		buf.WriteString("@")

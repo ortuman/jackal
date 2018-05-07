@@ -8,7 +8,6 @@ package server
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
@@ -18,7 +17,7 @@ import (
 )
 
 func authTestSetup(user *model.User) *c2s.MockStream {
-	storage.Initialize(&config.Storage{Type: config.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Mock})
 
 	storage.Instance().InsertOrUpdateUser(user)
 

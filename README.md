@@ -13,7 +13,7 @@ An XMPP server written in Go.
 
 <div align="center">
     <a href="#">
-        <img src="./doc/gopher.png">
+        <img src="./.github/gopher.png">
     </a>
 </div>
 
@@ -98,6 +98,7 @@ $ docker run --name jackal -p 5222:5222 ortuman/jackal
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html)
 - [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html)
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html)
+- [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html)
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
 - [XEP-0237: Roster Versioning](https://xmpp.org/extensions/xep-0237.html)
 

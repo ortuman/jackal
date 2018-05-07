@@ -11,7 +11,7 @@ import (
 	"crypto/tls"
 	"sync"
 
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -36,7 +36,7 @@ func NewMockTransport() *MockTransport {
 	mt.rb = new(bytes.Buffer)
 	mt.br = bufio.NewReader(mt.rb)
 	mt.bw = bufio.NewWriter(mt.wb)
-	mt.parser = xml.NewParserTransportType(mt.br, config.SocketTransportType)
+	mt.parser = xml.NewParser(mt.br)
 	return mt
 }
 
@@ -111,7 +111,7 @@ func (mt *MockTransport) IsSecured() bool {
 }
 
 // EnableCompression marks a mocked transport as compressed.
-func (mt *MockTransport) EnableCompression(level config.CompressionLevel) {
+func (mt *MockTransport) EnableCompression(level compress.Level) {
 	mt.mu.Lock()
 	mt.compressed = true
 	mt.mu.Unlock()
@@ -126,7 +126,7 @@ func (mt *MockTransport) IsCompressed() bool {
 }
 
 // ChannelBindingBytes returns mocked transport channel binding bytes.
-func (mt *MockTransport) ChannelBindingBytes(config.ChannelBindingMechanism) []byte {
+func (mt *MockTransport) ChannelBindingBytes(ChannelBindingMechanism) []byte {
 	mt.mu.RLock()
 	defer mt.mu.RUnlock()
 	return mt.cBindingBytes

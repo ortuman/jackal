@@ -9,17 +9,6 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-const moduleMailboxSize = 16
-
-// roster subscription values
-const (
-	subscriptionNone   = "none"
-	subscriptionFrom   = "from"
-	subscriptionTo     = "to"
-	subscriptionBoth   = "both"
-	subscriptionRemove = "remove"
-)
-
 // Module represents an XMPP module.
 type Module interface {
 	// AssociatedNamespaces returns namespaces associated

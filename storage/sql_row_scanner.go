@@ -22,7 +22,7 @@ type rowsScanner interface {
 
 func scanRosterItemEntity(ri *model.RosterItem, scanner rowScanner) error {
 	var groups string
-	if err := scanner.Scan(&ri.User, &ri.Contact, &ri.Name, &ri.Subscription, &groups, &ri.Ask, &ri.Ver); err != nil {
+	if err := scanner.Scan(&ri.Username, &ri.JID, &ri.Name, &ri.Subscription, &groups, &ri.Ask, &ri.Ver); err != nil {
 		return err
 	}
 	ri.Groups = strings.Split(groups, ";")
@@ -37,6 +37,16 @@ func scanRosterItemEntities(scanner rowsScanner) ([]model.RosterItem, error) {
 			return nil, err
 		}
 		ret = append(ret, ri)
+	}
+	return ret, nil
+}
+
+func scanBlockListItemEntities(scanner rowsScanner) ([]model.BlockListItem, error) {
+	var ret []model.BlockListItem
+	for scanner.Next() {
+		var it model.BlockListItem
+		scanner.Scan(&it.Username, &it.JID)
+		ret = append(ret, it)
 	}
 	return ret, nil
 }

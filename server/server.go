@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/stream/c2s"
@@ -23,10 +22,10 @@ import (
 )
 
 type server struct {
+	cfg        *Config
 	ln         net.Listener
 	wsSrv      *http.Server
 	wsUpgrader *websocket.Upgrader
-	cfg        *config.Server
 	strCounter int32
 	listening  uint32
 }
@@ -39,7 +38,7 @@ var (
 )
 
 // Initialize spawns a connection listener for every server configuration.
-func Initialize(srvConfigurations []config.Server, debugPort int) {
+func Initialize(srvConfigurations []Config, debugPort int) {
 	if !atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		return
 	}
@@ -79,7 +78,7 @@ func Shutdown() {
 	}
 }
 
-func initializeServer(srvConfig *config.Server) {
+func initializeServer(srvConfig *Config) {
 	srv := &server{cfg: srvConfig}
 	servers[srvConfig.ID] = srv
 	go srv.start()
@@ -93,9 +92,9 @@ func (s *server) start() {
 	log.Infof("%s: listening at %s [transport: %v]", s.cfg.ID, address, s.cfg.Transport.Type)
 
 	switch s.cfg.Transport.Type {
-	case config.SocketTransportType:
+	case transport.Socket:
 		s.listenSocketConn(address)
-	case config.WebSocketTransportType:
+	case transport.WebSocket:
 		s.listenWebSocketConn(address)
 		break
 	}
@@ -161,9 +160,9 @@ func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 func (s *server) shutdown() error {
 	if atomic.CompareAndSwapUint32(&s.listening, 1, 0) {
 		switch s.cfg.Transport.Type {
-		case config.SocketTransportType:
+		case transport.Socket:
 			return s.ln.Close()
-		case config.WebSocketTransportType:
+		case transport.WebSocket:
 			return s.wsSrv.Close()
 		}
 	}

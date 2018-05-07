@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage/model"
@@ -34,7 +33,7 @@ type badgerDB struct {
 	doneCh chan chan bool
 }
 
-func newBadgerDB(cfg *config.BadgerDb) *badgerDB {
+func newBadgerDB(cfg *BadgerDb) *badgerDB {
 	b := &badgerDB{
 		pool:   pool.NewBufferPool(),
 		doneCh: make(chan chan bool),
@@ -99,11 +98,11 @@ func (b *badgerDB) UserExists(username string) (bool, error) {
 
 func (b *badgerDB) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(ri, b.rosterItemKey(ri.User, ri.Contact), tx)
+		return b.insertOrUpdate(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
 	}); err != nil {
 		return model.RosterVersion{}, err
 	}
-	return b.updateRosterVer(ri.User, false)
+	return b.updateRosterVer(ri.Username, false)
 }
 
 func (b *badgerDB) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
@@ -139,13 +138,13 @@ func (b *badgerDB) FetchRosterItem(user, contact string) (*model.RosterItem, err
 
 func (b *badgerDB) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.User, rn.Contact), tx)
+		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
 	})
 }
 
-func (b *badgerDB) DeleteRosterNotification(user, contact string) error {
+func (b *badgerDB) DeleteRosterNotification(contact, jid string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.delete(b.rosterNotificationKey(user, contact), tx)
+		return b.delete(b.rosterNotificationKey(contact, jid), tx)
 	})
 }
 
@@ -234,6 +233,36 @@ func (b *badgerDB) DeleteOfflineMessages(username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.deletePrefix([]byte("offlineMessages:"+username), tx)
 	})
+}
+
+func (b *badgerDB) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		for _, item := range items {
+			if err := b.insertOrUpdate(&item, b.blockListItemKey(item.Username, item.JID), tx); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (b *badgerDB) DeleteBlockListItems(items []model.BlockListItem) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		for _, item := range items {
+			if err := b.delete(b.blockListItemKey(item.Username, item.JID), tx); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (b *badgerDB) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	var blItems []model.BlockListItem
+	if err := b.fetchAll(&blItems, []byte("blockListItems:"+username)); err != nil {
+		return nil, err
+	}
+	return blItems, nil
 }
 
 func (b *badgerDB) updateRosterVer(username string, isDeletion bool) (model.RosterVersion, error) {
@@ -424,10 +453,14 @@ func (b *badgerDB) rosterVersionKey(username string) []byte {
 	return []byte("rosterVersions:" + username)
 }
 
-func (b *badgerDB) rosterNotificationKey(user, contact string) []byte {
-	return []byte("rosterNotifications:" + contact + ":" + user)
+func (b *badgerDB) rosterNotificationKey(contact, jid string) []byte {
+	return []byte("rosterNotifications:" + contact + ":" + jid)
 }
 
 func (b *badgerDB) offlineMessageKey(username, identifier string) []byte {
 	return []byte("offlineMessages:" + username + ":" + identifier)
+}
+
+func (b *badgerDB) blockListItemKey(username, jid string) []byte {
+	return []byte("blockListItems:" + username + ":" + jid)
 }

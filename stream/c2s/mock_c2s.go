@@ -6,224 +6,134 @@
 package c2s
 
 import (
-	"sync"
+	"time"
 
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 // MockStream represents a mocked c2s stream.
 type MockStream struct {
-	mu              sync.RWMutex
-	id              string
-	username        string
-	domain          string
-	resource        string
-	jid             *xml.JID
-	priority        int8
-	disconnected    bool
-	secured         bool
-	authenticated   bool
-	compressed      bool
-	rosterRequested bool
-	presence        *xml.Presence
-	elemCh          chan xml.XElement
-	discCh          chan error
+	id     string
+	ctx    *stream.Context
+	elemCh chan xml.XElement
+	discCh chan error
 }
 
 // NewMockStream returns a new mocked stream instance.
 func NewMockStream(id string, jid *xml.JID) *MockStream {
-	strm := &MockStream{}
-	strm.id = id
-	strm.jid = jid
-	strm.username = jid.Node()
-	strm.domain = jid.Domain()
-	strm.resource = jid.Resource()
-	strm.elemCh = make(chan xml.XElement, 16)
-	strm.discCh = make(chan error, 1)
-	return strm
+	stm := &MockStream{
+		id:  id,
+		ctx: stream.NewContext(),
+	}
+	stm.ctx.SetObject(jid, "jid")
+	stm.ctx.SetString(jid.Node(), "username")
+	stm.ctx.SetString(jid.Domain(), "domain")
+	stm.ctx.SetString(jid.Resource(), "resource")
+	stm.elemCh = make(chan xml.XElement, 16)
+	stm.discCh = make(chan error, 1)
+	return stm
 }
 
 // ID returns mocked stream identifier.
 func (m *MockStream) ID() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
 	return m.id
 }
 
-// SetID sets mocked stream identifier.
-func (m *MockStream) SetID(id string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.id = id
+// Context returns mocked stream associated context.
+func (m *MockStream) Context() *stream.Context {
+	return m.ctx
 }
 
 // Username returns current mocked stream username.
 func (m *MockStream) Username() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.username
+	return m.ctx.String("username")
 }
 
 // SetUsername sets the mocked stream username value.
 func (m *MockStream) SetUsername(username string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.username = username
+	m.ctx.SetString(username, "username")
 }
 
 // Domain returns current mocked stream domain.
 func (m *MockStream) Domain() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.domain
+	return m.ctx.String("domain")
 }
 
 // SetDomain sets the mocked stream domain value.
 func (m *MockStream) SetDomain(domain string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.domain = domain
+	m.ctx.SetString(domain, "domain")
 }
 
 // Resource returns current mocked stream resource.
 func (m *MockStream) Resource() string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.resource
+	return m.ctx.String("resource")
 }
 
 // SetResource sets the mocked stream resource value.
 func (m *MockStream) SetResource(resource string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.resource = resource
+	m.ctx.SetString(resource, "resource")
 }
 
 // JID returns current user JID.
 func (m *MockStream) JID() *xml.JID {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.jid
+	return m.ctx.Object("jid").(*xml.JID)
 }
 
 // SetJID sets the mocked stream JID value.
 func (m *MockStream) SetJID(jid *xml.JID) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.jid = jid
-}
-
-// Priority returns current presence priority.
-func (m *MockStream) Priority() int8 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.priority
-}
-
-// SetPriority sets mocked stream priority.
-func (m *MockStream) SetPriority(priority int8) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.priority = priority
-}
-
-// Disconnect disconnects mocked stream.
-func (m *MockStream) Disconnect(err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.discCh <- err
-	m.disconnected = true
-}
-
-// IsDisconnected returns whether or not the mocked stream has been disconnected.
-func (m *MockStream) IsDisconnected() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.disconnected
-}
-
-// WaitDisconnection waits until the mocked stream disconnects.
-func (m *MockStream) WaitDisconnection() error {
-	return <-m.discCh
+	m.ctx.SetObject(jid, "jid")
 }
 
 // SetSecured sets whether or not the a mocked stream
 // has been secured.
 func (m *MockStream) SetSecured(secured bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.secured = secured
+	m.ctx.SetBool(secured, "secured")
 }
 
 // IsSecured returns whether or not the mocked stream
 // has been secured.
 func (m *MockStream) IsSecured() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.secured
+	return m.ctx.Bool("secured")
 }
 
 // SetAuthenticated sets whether or not the a mocked stream
 // has been authenticated.
 func (m *MockStream) SetAuthenticated(authenticated bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.authenticated = authenticated
+	m.ctx.SetBool(authenticated, "authenticated")
 }
 
 // IsAuthenticated returns whether or not the mocked stream
 // has successfully authenticated.
 func (m *MockStream) IsAuthenticated() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.authenticated
+	return m.ctx.Bool("authenticated")
 }
 
 // SetCompressed sets whether or not the a mocked stream
 // has been compressed.
 func (m *MockStream) SetCompressed(compressed bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.compressed = compressed
+	m.ctx.SetBool(compressed, "compressed")
 }
 
 // IsCompressed returns whether or not the mocked stream
 // has enabled a compression method.
 func (m *MockStream) IsCompressed() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.compressed
-}
-
-// SetRosterRequested sets whether or not the a mocked stream
-// roster has been requested.
-func (m *MockStream) SetRosterRequested(rosterRequested bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.rosterRequested = rosterRequested
-}
-
-// IsRosterRequested returns whether or not user's roster has been requested.
-func (m *MockStream) IsRosterRequested() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.rosterRequested
-}
-
-// Presence returns last sent presence element.
-func (m *MockStream) Presence() *xml.Presence {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.presence
+	return m.ctx.Bool("compressed")
 }
 
 // SetPresence sets the mocked stream last received
 // presence element.
 func (m *MockStream) SetPresence(presence *xml.Presence) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.presence = presence
+	m.ctx.SetObject(presence, "presence")
+}
+
+// Presence returns last sent presence element.
+func (m *MockStream) Presence() *xml.Presence {
+	switch v := m.ctx.Object("presence").(type) {
+	case *xml.Presence:
+		return v
+	}
+	return nil
 }
 
 // SendElement sends the given XML element.
@@ -234,5 +144,26 @@ func (m *MockStream) SendElement(element xml.XElement) {
 // FetchElement waits until a new XML element is sent to
 // the mocked stream and returns it.
 func (m *MockStream) FetchElement() xml.XElement {
-	return <-m.elemCh
+	select {
+	case e := <-m.elemCh:
+		return e
+	case <-time.After(time.Second * 3):
+		return &xml.Element{}
+	}
+}
+
+// Disconnect disconnects mocked stream.
+func (m *MockStream) Disconnect(err error) {
+	m.discCh <- err
+	m.ctx.SetBool(true, "disconnected")
+}
+
+// IsDisconnected returns whether or not the mocked stream has been disconnected.
+func (m *MockStream) IsDisconnected() bool {
+	return m.ctx.Bool("disconnected")
+}
+
+// WaitDisconnection waits until the mocked stream disconnects.
+func (m *MockStream) WaitDisconnection() error {
+	return <-m.discCh
 }

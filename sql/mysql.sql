@@ -13,19 +13,19 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE roster_notifications (
-    user VARCHAR(256) NOT NULL,
     contact VARCHAR(256) NOT NULL,
+    jid VARCHAR(512) NOT NULL,
     elements TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (user, contact)
+    PRIMARY KEY (contact, jid)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE INDEX i_approval_notifications_jid ON roster_notifications(contact);
+CREATE INDEX i_roster_notifications_jid ON roster_notifications(jid);
 
 CREATE TABLE roster_items (
-    user VARCHAR(256) NOT NULL,
-    contact VARCHAR(256) NOT NULL,
+    username VARCHAR(256) NOT NULL,
+    jid VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     subscription TEXT NOT NULL,
     groups TEXT NOT NULL,
@@ -33,11 +33,11 @@ CREATE TABLE roster_items (
     ver INT NOT NULL DEFAULT 0,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (user, contact)
+    PRIMARY KEY (username, jid)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE INDEX i_roster_items_user ON roster_items(user);
-CREATE INDEX i_roster_items_contact_domain ON roster_items(contact);
+CREATE INDEX i_roster_items_username ON roster_items(username);
+CREATE INDEX i_roster_items_jid ON roster_items(jid);
 
 CREATE TABLE roster_versions (
     username VARCHAR(256) NOT NULL,
@@ -47,6 +47,15 @@ CREATE TABLE roster_versions (
     created_at DATETIME NOT NULL,
     PRIMARY KEY (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blocklist_items (
+    username VARCHAR(256) NOT NULL,
+    jid VARCHAR(512) NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY(username, jid)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE INDEX i_blocklist_items_username ON blocklist_items(username);
 
 CREATE TABLE IF NOT EXISTS private_storage (
     username VARCHAR(256) NOT NULL,

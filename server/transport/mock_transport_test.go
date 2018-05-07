@@ -10,7 +10,7 @@ import (
 	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
@@ -32,12 +32,12 @@ func TestMockTransport(t *testing.T) {
 
 	bt := util.RandomBytes(256)
 	tr.SetChannelBindingBytes(bt)
-	require.Equal(t, 0, bytes.Compare(tr.ChannelBindingBytes(config.TLSUnique), bt))
+	require.Equal(t, 0, bytes.Compare(tr.ChannelBindingBytes(TLSUnique), bt))
 
 	tr.StartTLS(&tls.Config{})
 	require.True(t, tr.IsSecured())
 
-	tr.EnableCompression(config.BestCompression)
+	tr.EnableCompression(compress.BestCompression)
 	require.True(t, tr.IsCompressed())
 
 	tr.Close()

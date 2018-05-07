@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
@@ -29,12 +28,12 @@ type Storage interface {
 	UserExists(username string) (bool, error)
 
 	InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error)
-	DeleteRosterItem(user, contact string) (model.RosterVersion, error)
-	FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error)
-	FetchRosterItem(user, contact string) (*model.RosterItem, error)
+	DeleteRosterItem(username, jid string) (model.RosterVersion, error)
+	FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error)
+	FetchRosterItem(username, jid string) (*model.RosterItem, error)
 
 	InsertOrUpdateRosterNotification(rn *model.RosterNotification) error
-	DeleteRosterNotification(user, contact string) error
+	DeleteRosterNotification(contact, jid string) error
 	FetchRosterNotifications(contact string) ([]model.RosterNotification, error)
 
 	InsertOrUpdateVCard(vCard xml.XElement, username string) error
@@ -47,6 +46,11 @@ type Storage interface {
 	CountOfflineMessages(username string) (int, error)
 	FetchOfflineMessages(username string) ([]xml.XElement, error)
 	DeleteOfflineMessages(username string) error
+
+	InsertOrUpdateBlockListItems(items []model.BlockListItem) error
+	DeleteBlockListItems(items []model.BlockListItem) error
+
+	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }
 
 var (
@@ -56,17 +60,17 @@ var (
 )
 
 // Initialize initializes storage sub system.
-func Initialize(storageConfig *config.Storage) {
+func Initialize(cfg *Config) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()
 
-		switch storageConfig.Type {
-		case config.BadgerDB:
-			inst = newBadgerDB(storageConfig.BadgerDB)
-		case config.MySQL:
-			inst = newSQLStorage(storageConfig.MySQL)
-		case config.Mock:
+		switch cfg.Type {
+		case BadgerDB:
+			inst = newBadgerDB(cfg.BadgerDB)
+		case MySQL:
+			inst = newSQLStorage(cfg.MySQL)
+		case Mock:
 			inst = newMockStorage()
 		default:
 			// should not be reached

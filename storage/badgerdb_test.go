@@ -8,9 +8,9 @@ package storage
 import (
 	"io/ioutil"
 	"os"
+	"sort"
 	"testing"
 
-	"github.com/ortuman/jackal/config"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -106,13 +106,13 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	defer tUtilBadgerDBTeardown(h)
 
 	ri1 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "juliet",
+		Username:     "ortuman",
+		JID:          "juliet",
 		Subscription: "both",
 	}
 	ri2 := &model.RosterItem{
-		User:         "ortuman",
-		Contact:      "romeo",
+		Username:     "ortuman",
+		JID:          "romeo",
 		Subscription: "both",
 	}
 	_, err := h.db.InsertOrUpdateRosterItem(ri1)
@@ -149,13 +149,13 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	defer tUtilBadgerDBTeardown(h)
 
 	rn1 := model.RosterNotification{
-		User:     "juliet",
 		Contact:  "ortuman",
+		JID:      "juliet@jackal.im",
 		Elements: []xml.XElement{},
 	}
 	rn2 := model.RosterNotification{
-		User:     "romeo",
 		Contact:  "ortuman",
+		JID:      "romeo@jackal.im",
 		Elements: []xml.XElement{},
 	}
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
@@ -169,13 +169,13 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rns2))
 
-	require.NoError(t, h.db.DeleteRosterNotification(rn1.User, rn1.Contact))
+	require.NoError(t, h.db.DeleteRosterNotification(rn1.Contact, rn1.JID))
 
 	rns, err = h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rns))
 
-	require.NoError(t, h.db.DeleteRosterNotification(rn2.User, rn2.Contact))
+	require.NoError(t, h.db.DeleteRosterNotification(rn2.Contact, rn2.JID))
 
 	rns, err = h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)
@@ -219,11 +219,46 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	require.Equal(t, 0, cnt)
 }
 
+func TestBadgerDB_BlockListItems(t *testing.T) {
+	t.Parallel()
+
+	h := tUtilBadgerDBSetup()
+	defer tUtilBadgerDBTeardown(h)
+
+	items := []model.BlockListItem{
+		{"ortuman", "juliet@jackal.im"},
+		{"ortuman", "user@jackal.im"},
+		{"ortuman", "romeo@jackal.im"},
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
+
+	err := h.db.InsertOrUpdateBlockListItems(items)
+	require.Nil(t, err)
+
+	sItems, err := h.db.FetchBlockListItems("ortuman")
+	sort.Slice(sItems, func(i, j int) bool { return sItems[i].JID < sItems[j].JID })
+	require.Nil(t, err)
+	require.Equal(t, items, sItems)
+
+	items = append(items[:1], items[2:]...)
+	h.db.DeleteBlockListItems([]model.BlockListItem{{"ortuman", "romeo@jackal.im"}})
+
+	sItems, err = h.db.FetchBlockListItems("ortuman")
+	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
+	require.Nil(t, err)
+	require.Equal(t, items, sItems)
+
+	err = h.db.DeleteBlockListItems(items)
+	require.Nil(t, err)
+	sItems, err = h.db.FetchBlockListItems("ortuman")
+	require.Equal(t, 0, len(sItems))
+}
+
 func tUtilBadgerDBSetup() *testBadgerDBHelper {
 	h := &testBadgerDBHelper{}
 	dir, _ := ioutil.TempDir("", "")
 	h.dataDir = dir + "/com.jackal.tests.badgerdb." + uuid.New()
-	cfg := config.BadgerDb{DataDir: h.dataDir}
+	cfg := BadgerDb{DataDir: h.dataDir}
 	h.db = newBadgerDB(&cfg)
 	return h
 }

@@ -8,8 +8,6 @@ package compress
 import (
 	"compress/zlib"
 	"io"
-
-	"github.com/ortuman/jackal/config"
 )
 
 // ZlibCompressor represents zlib stream compressor.
@@ -22,17 +20,17 @@ type ZlibCompressor struct {
 }
 
 // NewZlibCompressor returns a new zlib compression method.
-func NewZlibCompressor(reader io.Reader, writer io.Writer, level config.CompressionLevel) *ZlibCompressor {
+func NewZlibCompressor(reader io.Reader, writer io.Writer, level Level) *ZlibCompressor {
 	z := &ZlibCompressor{
 		w: writer,
 		r: reader,
 	}
 	switch level {
-	case config.DefaultCompression:
+	case DefaultCompression:
 		z.level = zlib.DefaultCompression
-	case config.BestCompression:
+	case BestCompression:
 		z.level = zlib.BestCompression
-	case config.SpeedCompression:
+	case SpeedCompression:
 		z.level = zlib.BestSpeed
 	default:
 		z.level = int(level)

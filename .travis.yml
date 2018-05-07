@@ -28,12 +28,23 @@ script:
   - go test -race -coverprofile=config.coverage.txt -covermode=atomic ./config
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
+  - go test -race -coverprofile=offline.coverage.txt -covermode=atomic ./module/offline
+  - go test -race -coverprofile=roster.coverage.txt -covermode=atomic ./module/roster
+  - go test -race -coverprofile=xep0012.coverage.txt -covermode=atomic ./module/xep0012
+  - go test -race -coverprofile=xep0030.coverage.txt -covermode=atomic ./module/xep0030
+  - go test -race -coverprofile=xep0049.coverage.txt -covermode=atomic ./module/xep0049
+  - go test -race -coverprofile=xep0054.coverage.txt -covermode=atomic ./module/xep0054
+  - go test -race -coverprofile=xep0077.coverage.txt -covermode=atomic ./module/xep0077
+  - go test -race -coverprofile=xep0092.coverage.txt -covermode=atomic ./module/xep0092
+  - go test -race -coverprofile=xep0191.coverage.txt -covermode=atomic ./module/xep0191
+  - go test -race -coverprofile=xep0199.coverage.txt -covermode=atomic ./module/xep0199
   - go test -race -coverprofile=server.coverage.txt -covermode=atomic ./server
   - go test -race -coverprofile=server.compress.coverage.txt -covermode=atomic ./server/compress  
   - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport
   - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage
   - go test -race -coverprofile=storage.model.coverage.txt -covermode=atomic ./storage/model
-  - go test -race -coverprofile=stream.c2s.coverage.txt -covermode=atomic ./stream/c2s
+  - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
+  - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./stream/c2s
   - go test -race -coverprofile=stream.errors.coverage.txt -covermode=atomic ./stream/errors
   - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
   - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version

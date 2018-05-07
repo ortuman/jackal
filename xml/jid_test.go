@@ -58,21 +58,13 @@ func TestNewJIDString(t *testing.T) {
 	require.Equal(t, "ortuman@jackal.im/res", j.String())
 }
 
-func TestJIDEqual(t *testing.T) {
-	j1, _ := xml.NewJIDString("ortuman@jackal.im/res", false)
-	j2, _ := xml.NewJID("ortuman", "jackal.im", "res", false)
-	require.NotNil(t, j1)
-	require.NotNil(t, j2)
-	require.True(t, j1.IsEqual(j2))
-}
-
 func TestServerJID(t *testing.T) {
 	j1, _ := xml.NewJIDString("example.org", false)
 	j2, _ := xml.NewJIDString("user@example.org", false)
 	j3, _ := xml.NewJIDString("example.org/res", false)
 	require.True(t, j1.IsServer())
 	require.False(t, j2.IsServer())
-	require.True(t, j3.IsServer())
+	require.True(t, j3.IsServer() && j3.IsFull())
 }
 
 func TestBareJID(t *testing.T) {
@@ -84,20 +76,26 @@ func TestBareJID(t *testing.T) {
 
 func TestFullJID(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "example.org", "res", false)
-	require.True(t, j1.IsFull())
+	j2, _ := xml.NewJID("", "example.org", "res", false)
+	require.True(t, j1.IsFullWithUser())
+	require.True(t, j2.IsFullWithServer())
 }
 
-func TestEqualJID(t *testing.T) {
+func TestMatchesJID(t *testing.T) {
 	j1, _ := xml.NewJIDString("ortuman@example.org/res1", false)
-	j2, _ := xml.NewJIDString("user@example.org", false)
-	j3, _ := xml.NewJIDString("ortuman@test.org", false)
-	j4, _ := xml.NewJIDString("ortuman@example.org/res2", false)
-	j5, _ := xml.NewJIDString("ortuman@example.org/res1", false)
-	require.False(t, j1.IsEqual(j2))
-	require.False(t, j1.IsEqual(j3))
-	require.False(t, j1.IsEqual(j4))
-	require.True(t, j1.IsEqual(j1))
-	require.True(t, j1.IsEqual(j5))
+	j2, _ := xml.NewJIDString("ortuman@example.org", false)
+	j3, _ := xml.NewJIDString("example.org", false)
+	j4, _ := xml.NewJIDString("example.org/res1", false)
+	j6, _ := xml.NewJIDString("ortuman@example2.org/res2", false)
+	require.True(t, j1.Matches(j1, xml.JIDMatchesNode|xml.JIDMatchesDomain|xml.JIDMatchesResource))
+	require.True(t, j1.Matches(j2, xml.JIDMatchesNode|xml.JIDMatchesDomain))
+	require.True(t, j1.Matches(j3, xml.JIDMatchesDomain))
+	require.True(t, j1.Matches(j4, xml.JIDMatchesDomain|xml.JIDMatchesResource))
+
+	require.False(t, j1.Matches(j2, xml.JIDMatchesNode|xml.JIDMatchesDomain|xml.JIDMatchesResource))
+	require.False(t, j6.Matches(j2, xml.JIDMatchesNode|xml.JIDMatchesDomain))
+	require.False(t, j6.Matches(j3, xml.JIDMatchesDomain))
+	require.False(t, j6.Matches(j4, xml.JIDMatchesDomain|xml.JIDMatchesResource))
 }
 
 func TestBadPrep(t *testing.T) {

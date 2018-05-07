@@ -13,17 +13,17 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSocketServer(t *testing.T) {
-	storage.Initialize(&config.Storage{Type: config.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Mock})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
 	defer c2s.Shutdown()
 
 	go func() {
@@ -50,25 +50,25 @@ func TestSocketServer(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		Shutdown()
 	}()
-	cfg := config.Server{
+	cfg := Config{
 		ID: "srv-1234",
-		TLS: config.TLS{
+		TLS: TLSConfig{
 			PrivKeyFile: "../testdata/cert/test.server.key",
 			CertFile:    "../testdata/cert/test.server.crt",
 		},
-		Transport: config.Transport{
-			Type: config.SocketTransportType,
+		Transport: TransportConfig{
+			Type: transport.Socket,
 			Port: 5123,
 		},
 	}
-	Initialize([]config.Server{cfg}, 9123)
+	Initialize([]Config{cfg}, 9123)
 }
 
 func TestWebSocketServer(t *testing.T) {
-	storage.Initialize(&config.Storage{Type: config.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Mock})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&config.C2S{Domains: []string{"jackal.im"}})
+	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
 	defer c2s.Shutdown()
 
 	go func() {
@@ -93,16 +93,16 @@ func TestWebSocketServer(t *testing.T) {
 
 		Shutdown()
 	}()
-	cfg := config.Server{
+	cfg := Config{
 		ID: "srv-1234",
-		TLS: config.TLS{
+		TLS: TLSConfig{
 			PrivKeyFile: "../testdata/cert/test.server.key",
 			CertFile:    "../testdata/cert/test.server.crt",
 		},
-		Transport: config.Transport{
-			Type: config.WebSocketTransportType,
+		Transport: TransportConfig{
+			Type: transport.WebSocket,
 			Port: 9876,
 		},
 	}
-	Initialize([]config.Server{cfg}, 0)
+	Initialize([]Config{cfg}, 0)
 }

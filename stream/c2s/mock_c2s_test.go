@@ -16,14 +16,13 @@ import (
 func TestMockC2Stream(t *testing.T) {
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
 	j2, _ := xml.NewJIDString("romeo@jackal.im/orchard", false)
-	strm := NewMockStream(uuid.New(), j1)
+	id := uuid.New()
+	strm := NewMockStream(id, j1)
 	require.Equal(t, "ortuman", strm.Username())
 	require.Equal(t, "jackal.im", strm.Domain())
 	require.Equal(t, "balcony", strm.Resource())
 	require.Equal(t, "ortuman@jackal.im/balcony", strm.JID().String())
 
-	id := uuid.New()
-	strm.SetID(id)
 	require.Equal(t, id, strm.ID())
 	strm.SetUsername("juliet")
 	require.Equal(t, "juliet", strm.Username())
@@ -33,8 +32,6 @@ func TestMockC2Stream(t *testing.T) {
 	require.Equal(t, "garden", strm.Resource())
 	strm.SetJID(j2)
 	require.Equal(t, "romeo@jackal.im/orchard", strm.JID().String())
-	strm.SetPriority(-10)
-	require.Equal(t, int8(-10), strm.Priority())
 
 	strm.Disconnect(nil)
 	require.True(t, strm.IsDisconnected())
@@ -44,8 +41,6 @@ func TestMockC2Stream(t *testing.T) {
 	require.True(t, strm.IsCompressed())
 	strm.SetAuthenticated(true)
 	require.True(t, strm.IsAuthenticated())
-	strm.SetRosterRequested(true)
-	require.True(t, strm.IsRosterRequested())
 
 	presence := xml.NewPresence(j1, j2, xml.AvailableType)
 	presence.AppendElement(xml.NewElementName("status"))

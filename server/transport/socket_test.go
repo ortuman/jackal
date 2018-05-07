@@ -10,7 +10,7 @@ import (
 	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
@@ -31,15 +31,15 @@ func TestSocket(t *testing.T) {
 	require.NotNil(t, el3)
 	require.Equal(t, el2.String(), el3.String())
 
-	st.EnableCompression(config.BestCompression)
+	st.EnableCompression(compress.BestCompression)
 	require.True(t, st2.compressionEnabled)
 
 	st.StartTLS(&tls.Config{})
 	_, ok := st2.conn.(*tls.Conn)
 	require.True(t, ok)
 
-	require.Nil(t, st2.ChannelBindingBytes(config.ChannelBindingMechanism(99)))
-	require.Nil(t, st2.ChannelBindingBytes(config.TLSUnique))
+	require.Nil(t, st2.ChannelBindingBytes(ChannelBindingMechanism(99)))
+	require.Nil(t, st2.ChannelBindingBytes(TLSUnique))
 
 	st.Close()
 	require.True(t, mc.IsClosed())

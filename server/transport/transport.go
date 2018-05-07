@@ -10,11 +10,41 @@ import (
 	"errors"
 	"io"
 
-	"github.com/ortuman/jackal/config"
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
 var ErrTooLargeStanza = errors.New("too large stanza")
+
+// TransportType represents a stream transport type (socket).
+type TransportType int
+
+const (
+	// Socket represents a socket transport type.
+	Socket TransportType = iota + 1
+
+	// WebSocket represents a websocket transport type.
+	WebSocket
+)
+
+// String returns TransportType string representation.
+func (tt TransportType) String() string {
+	switch tt {
+	case Socket:
+		return "socket"
+	case WebSocket:
+		return "websocket"
+	}
+	return ""
+}
+
+// ChannelBindingMechanism represents a scram channel binding mechanism.
+type ChannelBindingMechanism int
+
+const (
+	// TLSUnique represents 'tls-unique' channel binding mechanism.
+	TLSUnique ChannelBindingMechanism = iota
+)
 
 // Transport represents a stream transport mechanism.
 type Transport interface {
@@ -35,9 +65,9 @@ type Transport interface {
 
 	// EnableCompression activates a compression
 	// mechanism on the transport.
-	EnableCompression(config.CompressionLevel)
+	EnableCompression(compress.Level)
 
 	// ChannelBindingBytes returns current transport
 	// channel binding bytes.
-	ChannelBindingBytes(config.ChannelBindingMechanism) []byte
+	ChannelBindingBytes(ChannelBindingMechanism) []byte
 }

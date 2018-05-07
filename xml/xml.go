@@ -41,3 +41,10 @@ type XElement interface {
 	ToXML(w io.Writer, includeClosing bool)
 	ToGob(enc *gob.Encoder)
 }
+
+// Stanza represents an XMPP stanza.
+type Stanza interface {
+	XElement
+	FromJID() *JID
+	ToJID() *JID
+}
