@@ -258,12 +258,6 @@ func (b *badgerDB) DeleteBlockListItems(items []model.BlockListItem) error {
 	})
 }
 
-func (b *badgerDB) DeleteBlockList(username string) error {
-	return b.db.Update(func(tx *badger.Txn) error {
-		return b.deletePrefix([]byte("blockListItems:"+username), tx)
-	})
-}
-
 func (b *badgerDB) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	var blItems []model.BlockListItem
 	if err := b.fetchAll(&blItems, []byte("blockListItems:"+username)); err != nil {

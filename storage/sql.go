@@ -456,15 +456,6 @@ func (s *sqlStorage) DeleteBlockListItems(items []model.BlockListItem) error {
 	})
 }
 
-func (s *sqlStorage) DeleteBlockList(username string) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
-		_, err := sq.Delete("blocklist_items").
-			Where(sq.Eq{"username": username}).
-			RunWith(tx).Exec()
-		return err
-	})
-}
-
 func (s *sqlStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	q := sq.Select("username", "jid").
 		From("blocklist_items").

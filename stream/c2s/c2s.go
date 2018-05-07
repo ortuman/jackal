@@ -22,7 +22,7 @@ var (
 	ErrNotExistingAccount = errors.New("c2s: account does not exist")
 	ErrResourceNotFound   = errors.New("c2s: resource not found")
 	ErrNotAuthenticated   = errors.New("c2s: user not authenticated")
-	ErrJIDBlocked         = errors.New("c2s: destination jid is blocked")
+	ErrBlockedJID         = errors.New("c2s: destination jid is blocked")
 )
 
 // Stream represents a client-to-server XMPP stream.
@@ -213,7 +213,7 @@ func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
 	}
 	if !ignoreBlocking && !toJID.IsServer() {
 		if m.IsBlockedJID(elem.FromJID(), toJID.Node()) {
-			return ErrJIDBlocked
+			return ErrBlockedJID
 		}
 	}
 	rcps := m.StreamsMatchingJID(toJID.ToBareJID())

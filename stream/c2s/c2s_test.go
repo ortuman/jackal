@@ -233,52 +233,61 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 	Instance().AuthenticateStream(stm2)
 
 	// node + domain + resource
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	bl1 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}})
+	}}
+	storage.Instance().InsertOrUpdateBlockListItems(bl1)
 	require.False(t, Instance().IsBlockedJID(j2, "ortuman"))
 	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
 
+	storage.Instance().DeleteBlockListItems(bl1)
+
 	// node + domain
-	storage.Instance().DeleteBlockList("ortuman")
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	bl2 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
-	}})
+	}}
+	storage.Instance().InsertOrUpdateBlockListItems(bl2)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
 	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
 	require.False(t, Instance().IsBlockedJID(j4, "ortuman"))
 
+	storage.Instance().DeleteBlockListItems(bl2)
+
 	// domain + resource
-	storage.Instance().DeleteBlockList("ortuman")
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	bl3 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
-	}})
+	}}
+	storage.Instance().InsertOrUpdateBlockListItems(bl3)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
 	require.False(t, Instance().IsBlockedJID(j3, "ortuman"))
 	require.False(t, Instance().IsBlockedJID(j4, "ortuman"))
 
+	storage.Instance().DeleteBlockListItems(bl3)
+
 	// domain
-	storage.Instance().DeleteBlockList("ortuman")
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	bl4 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "jackal.im",
-	}})
+	}}
+	storage.Instance().InsertOrUpdateBlockListItems(bl4)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
 	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
 	require.True(t, Instance().IsBlockedJID(j4, "ortuman"))
 
+	storage.Instance().DeleteBlockListItems(bl4)
+
 	// test blocked routing
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(j2)
 	iq.SetToJID(j1)
-	require.Equal(t, ErrJIDBlocked, Instance().Route(iq))
+	require.Equal(t, ErrBlockedJID, Instance().Route(iq))
 }

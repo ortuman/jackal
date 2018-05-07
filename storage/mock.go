@@ -294,13 +294,6 @@ func (m *mockStorage) DeleteBlockListItems(items []model.BlockListItem) error {
 	})
 }
 
-func (m *mockStorage) DeleteBlockList(username string) error {
-	return m.inWriteLock(func() error {
-		delete(m.blockListItems, username)
-		return nil
-	})
-}
-
 func (m *mockStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	var ret []model.BlockListItem
 	err := m.inReadLock(func() error {

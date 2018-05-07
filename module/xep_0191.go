@@ -99,20 +99,14 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 		x.stm.SendElement(iq.JidMalformedError())
 		return
 	}
-	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
-	if err != nil {
-		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
-		return
-	}
-	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	blItems, ris, err := x.fetchBlockListAndRosterItems()
 	if err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
 	for _, j := range jds {
-		if !x.isJIDInBlockList(j, blItms) {
+		if !x.isJIDInBlockList(j, blItems) {
 			x.broadcastPresenceMatching(j, ris, xml.UnavailableType)
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
@@ -129,50 +123,40 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 }
 
 func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
-	var bl []model.BlockListItem
-
-	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
-	if err != nil {
-		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
-		return
-	}
-	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
-	if err != nil {
-		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
-		return
-	}
 	items := unblock.Elements().Children("item")
-	if len(items) == 0 {
-		if err := storage.Instance().DeleteBlockList(x.stm.Username()); err != nil {
-			log.Error(err)
-			x.stm.SendElement(iq.InternalServerError())
-			return
-		}
-		for _, blItm := range blItms {
-			j, _ := xml.NewJIDString(blItm.JID, true)
+	jds, err := x.extractItemJIDs(items)
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.JidMalformedError())
+		return
+	}
+	blItems, ris, err := x.fetchBlockListAndRosterItems()
+	if err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
+	}
+
+	var bl []model.BlockListItem
+	if len(jds) == 0 {
+		for _, blItem := range blItems {
+			j, _ := xml.NewJIDString(blItem.JID, true)
 			x.broadcastPresenceMatching(j, ris, xml.AvailableType)
 		}
+		bl = blItems
 
 	} else {
-		jds, err := x.extractItemJIDs(items)
-		if err != nil {
-			log.Error(err)
-			x.stm.SendElement(iq.JidMalformedError())
-			return
-		}
 		for _, j := range jds {
-			if x.isJIDInBlockList(j, blItms) {
+			if x.isJIDInBlockList(j, blItems) {
 				x.broadcastPresenceMatching(j, ris, xml.AvailableType)
 				bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 			}
 		}
-		if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
-			log.Error(err)
-			x.stm.SendElement(iq.InternalServerError())
-			return
-		}
+	}
+	if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
+		log.Error(err)
+		x.stm.SendElement(iq.InternalServerError())
+		return
 	}
 	c2s.Instance().ReloadBlockList(x.stm.Username())
 
@@ -223,6 +207,18 @@ func (x *XEPBlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterIt
 		}
 	}
 	return false
+}
+
+func (x *XEPBlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem, []model.RosterItem, error) {
+	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
+	if err != nil {
+		return nil, nil, err
+	}
+	ris, _, err := storage.Instance().FetchRosterItems(x.stm.Username())
+	if err != nil {
+		return nil, nil, err
+	}
+	return blItms, ris, nil
 }
 
 func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {

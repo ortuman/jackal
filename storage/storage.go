@@ -50,7 +50,6 @@ type Storage interface {
 
 	InsertOrUpdateBlockListItems(items []model.BlockListItem) error
 	DeleteBlockListItems(items []model.BlockListItem) error
-	DeleteBlockList(username string) error
 
 	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }

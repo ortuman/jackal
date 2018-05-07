@@ -368,12 +368,4 @@ func TestMockStorageDeleteBlockListItems(t *testing.T) {
 		{"ortuman", "user@jackal.im"},
 		{"ortuman", "juliet@jackal.im"},
 	}, sItems)
-
-	s.activateMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteBlockList("ortuman"))
-	s.deactivateMockedError()
-
-	s.DeleteBlockList("ortuman")
-	sItems, _ = s.FetchBlockListItems("ortuman")
-	require.Equal(t, 0, len(sItems))
 }

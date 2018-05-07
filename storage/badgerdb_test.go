@@ -250,7 +250,7 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, items, sItems)
 
-	err = h.db.DeleteBlockList("ortuman")
+	err = h.db.DeleteBlockListItems(items)
 	require.Nil(t, err)
 	sItems, err = h.db.FetchBlockListItems("ortuman")
 	require.Equal(t, 0, len(sItems))

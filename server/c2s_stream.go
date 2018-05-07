@@ -801,7 +801,7 @@ sendMessage:
 		// treat the stanza as if it were addressed to <node@domain>
 		toJID = toJID.ToBareJID()
 		goto sendMessage
-	case c2s.ErrNotExistingAccount, c2s.ErrJIDBlocked:
+	case c2s.ErrNotExistingAccount, c2s.ErrBlockedJID:
 		s.writeElement(message.ServiceUnavailableError())
 	default:
 		log.Error(err)
