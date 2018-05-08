@@ -35,8 +35,8 @@
     "table",
     "y"
   ]
-  revision = "69611218c7078be6de16f4ea13fb256e701b6b73"
-  version = "v1.3.0"
+  revision = "754278dbecbe8bfa0fec445d6af3bc2e0cf21911"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"

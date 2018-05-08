@@ -11,7 +11,11 @@ WORKDIR /jackal
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends libidn11-dev
 
-RUN go get -u github.com/ortuman/jackal
+RUN curl -L -s https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 -o $GOPATH/bin/dep
+RUN chmod +x $GOPATH/bin/dep
+RUN go get -d github.com/ortuman/jackal
+
+RUN cd $GOPATH/src/github.com/ortuman/jackal && dep ensure
 RUN go build github.com/ortuman/jackal
 
 ADD docker.jackal.yml /etc/jackal/jackal.yml
