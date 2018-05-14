@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -95,7 +96,7 @@ func TestC2SManager(t *testing.T) {
 }
 
 func TestC2SManager_Routing(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	Initialize(&Config{Domains: []string{"jackal.im"}})
@@ -126,7 +127,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, ErrNotExistingAccount, Instance().Route(iq))
 
 	storage.ActivateMockedError()
-	require.Equal(t, storage.ErrMockedError, Instance().Route(iq))
+	require.Equal(t, memstorage.ErrMockedError, Instance().Route(iq))
 	storage.DeactivateMockedError()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
@@ -213,7 +214,7 @@ func TestC2SManager_StreamsMatching(t *testing.T) {
 }
 
 func TestC2SManager_BlockedJID(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	Initialize(&Config{Domains: []string{"jackal.im"}})

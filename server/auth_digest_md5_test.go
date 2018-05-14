@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/util"
@@ -137,7 +138,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 
 	// storage error...
 	storage.ActivateMockedError()
-	require.Equal(t, storage.ErrMockedError, helper.sendClientParamsResponse(clParams))
+	require.Equal(t, memstorage.ErrMockedError, helper.sendClientParamsResponse(clParams))
 
 	// successful authentication...
 	storage.DeactivateMockedError()

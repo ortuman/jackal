@@ -201,7 +201,7 @@ func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
 	return false
 }
 
-// ReloadBlockList reloads in-memory block list for a given user and starts
+// ReloadBlockList reloads in-memstorage block list for a given user and starts
 // applying it for future stanza routing.
 func (m *Manager) ReloadBlockList(username string) {
 	m.lock.Lock()

@@ -35,7 +35,7 @@ func TestRoster_MatchesIQ(t *testing.T) {
 }
 
 func TestRoster_FetchRoster(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -131,7 +131,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 }
 
 func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -167,7 +167,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 }
 
 func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -235,7 +235,7 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 }
 
 func TestRoster_Update(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -284,7 +284,7 @@ func TestRoster_Update(t *testing.T) {
 }
 
 func TestRoster_Subscribe(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -308,7 +308,7 @@ func TestRoster_Subscribe(t *testing.T) {
 }
 
 func TestRoster_Subscribed(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -372,7 +372,7 @@ func TestRoster_Subscribed(t *testing.T) {
 }
 
 func TestRoster_Unsubscribe(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -415,7 +415,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 }
 
 func TestRoster_Unsubscribed(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -460,7 +460,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 }
 
 func TestRoster_DeleteItem(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})

@@ -41,7 +41,7 @@ func TestXEP0054_Matching(t *testing.T) {
 }
 
 func TestXEP0054_Set(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -76,7 +76,7 @@ func TestXEP0054_Set(t *testing.T) {
 }
 
 func TestXEP0054_SetError(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -111,7 +111,7 @@ func TestXEP0054_SetError(t *testing.T) {
 }
 
 func TestXEP0054_Get(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -156,7 +156,7 @@ func TestXEP0054_Get(t *testing.T) {
 }
 
 func TestXEP0054_GetError(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)

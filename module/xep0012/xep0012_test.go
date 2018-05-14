@@ -67,7 +67,7 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 }
 
 func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})

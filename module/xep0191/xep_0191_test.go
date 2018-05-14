@@ -44,7 +44,7 @@ func TestXEP0191_Matching(t *testing.T) {
 }
 
 func TestXEP0191_GetBlockList(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
@@ -81,7 +81,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})

@@ -22,7 +22,7 @@ func TestOffline_AssociatedNamespaces(t *testing.T) {
 }
 
 func TestOffline_ArchiveMessage(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)

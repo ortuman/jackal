@@ -17,7 +17,7 @@ import (
 )
 
 func authTestSetup(user *model.User) *c2s.MockStream {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 
 	storage.Instance().InsertOrUpdateUser(user)
 
