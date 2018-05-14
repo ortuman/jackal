@@ -79,7 +79,7 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 }
 
 func TestXEP0049_SetAndGetPrivate(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)

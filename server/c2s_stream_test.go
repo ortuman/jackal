@@ -24,7 +24,7 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -36,7 +36,7 @@ func TestStream_ConnectTimeout(t *testing.T) {
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -50,7 +50,7 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -69,7 +69,7 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -93,7 +93,7 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_Compression(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -124,7 +124,7 @@ func TestStream_Compression(t *testing.T) {
 }
 
 func TestStream_StartSession(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -149,7 +149,7 @@ func TestStream_StartSession(t *testing.T) {
 }
 
 func TestStream_SendIQ(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -188,7 +188,7 @@ func TestStream_SendIQ(t *testing.T) {
 }
 
 func TestStream_SendPresence(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
@@ -235,7 +235,7 @@ func TestStream_SendPresence(t *testing.T) {
 }
 
 func TestStream_SendMessage(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})

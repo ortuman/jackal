@@ -42,6 +42,9 @@ script:
   - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport
   - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage
   - go test -race -coverprofile=storage.model.coverage.txt -covermode=atomic ./storage/model
+  - go test -race -coverprofile=storage.badgerdb.coverage.txt -covermode=atomic ./storage/badgerdb
+  - go test -race -coverprofile=storage.memstorage.coverage.txt -covermode=atomic ./storage/memstorage
+  - go test -race -coverprofile=storage.sql.coverage.txt -covermode=atomic ./storage/sql
   - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
   - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./stream/c2s
   - go test -race -coverprofile=stream.errors.coverage.txt -covermode=atomic ./stream/errors
