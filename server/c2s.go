@@ -90,11 +90,11 @@ type c2sStream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
-	roster      *roster.ModRoster
-	register    *xep0077.XEPRegister
-	ping        *xep0199.XEPPing
-	blockCmd    *xep0191.XEPBlockingCommand
-	offline     *offline.ModOffline
+	roster      *roster.Roster
+	register    *xep0077.Register
+	ping        *xep0199.Ping
+	blockCmd    *xep0191.BlockingCommand
+	offline     *offline.Offline
 	actorCh     chan func()
 }
 
@@ -120,8 +120,10 @@ func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
 	// initialize authenticators
 	s.initializeAuthenticators()
 
-	// initialize XEPs
-	s.initializeXEPs()
+	// initialize register module
+	if _, ok := s.cfg.Modules["registration"]; ok {
+		s.register = xep0077.New(&s.cfg.ModRegistration, s)
+	}
 
 	if cfg.Transport.ConnectTimeout > 0 {
 		go s.startConnectTimeoutTimer(cfg.Transport.ConnectTimeout)
@@ -224,7 +226,7 @@ func (s *c2sStream) initializeAuthenticators() {
 	}
 }
 
-func (s *c2sStream) initializeXEPs() {
+func (s *c2sStream) initializeModules() {
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
 	s.roster = roster.New(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
@@ -249,8 +251,7 @@ func (s *c2sStream) initializeXEPs() {
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
-	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = xep0077.New(&s.cfg.ModRegistration, s)
+	if s.register != nil {
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
@@ -271,26 +272,10 @@ func (s *c2sStream) initializeXEPs() {
 		s.iqHandlers = append(s.iqHandlers, s.ping)
 	}
 
-	// register server disco info identities
-	identities := []xep0030.DiscoIdentity{{
-		Category: "server",
-		Type:     "im",
-		Name:     s.cfg.ID,
-	}}
-	discoInfo.SetIdentities(identities)
-
-	// register disco info features
-	var features []string
-	for _, iqHandler := range s.iqHandlers {
-		features = append(features, iqHandler.AssociatedNamespaces()...)
-	}
-
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
 		s.offline = offline.New(&s.cfg.ModOffline, s)
-		features = append(features, s.offline.AssociatedNamespaces()...)
 	}
-	discoInfo.SetFeatures(features)
 }
 
 func (s *c2sStream) startConnectTimeoutTimer(timeoutInSeconds int) {
@@ -345,64 +330,80 @@ func (s *c2sStream) handleConnecting(elem xml.XElement) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
-	isSocketTransport := s.cfg.Transport.Type == transport.Socket
-
 	if !s.IsAuthenticated() {
-		if isSocketTransport && !s.IsSecured() {
-			startTLS := xml.NewElementName("starttls")
-			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
-			startTLS.AppendElement(xml.NewElementName("required"))
-			features.AppendElement(startTLS)
-		}
-
-		// attach SASL mechanisms
-		shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
-
-		if shouldOfferSASL && len(s.authrs) > 0 {
-			mechanisms := xml.NewElementName("mechanisms")
-			mechanisms.SetNamespace(saslNamespace)
-			for _, athr := range s.authrs {
-				mechanism := xml.NewElementName("mechanism")
-				mechanism.SetText(athr.Mechanism())
-				mechanisms.AppendElement(mechanism)
-			}
-			features.AppendElement(mechanisms)
-		}
-
-		// allow In-band registration over encrypted stream only
-		allowRegistration := s.IsSecured()
-
-		if _, ok := s.cfg.Modules["registration"]; ok && allowRegistration {
-			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
-			features.AppendElement(registerFeature)
-		}
+		features.AppendElements(s.unauthenticatedFeatures())
 		s.setState(connected)
 
 	} else {
-		// attach compression feature
-		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
-
-		if !s.IsCompressed() && compressionAvailable {
-			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
-			method := xml.NewElementName("method")
-			method.SetText("zlib")
-			compression.AppendElement(method)
-			features.AppendElement(compression)
-		}
-		bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
-		bind.AppendElement(xml.NewElementName("required"))
-		features.AppendElement(bind)
-
-		session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
-		features.AppendElement(session)
-
-		if s.roster != nil && s.cfg.ModRoster.Versioning {
-			ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
-			features.AppendElement(ver)
-		}
+		features.AppendElements(s.authenticatedFeatures())
 		s.setState(authenticated)
 	}
 	s.writeElement(features)
+}
+
+func (s *c2sStream) unauthenticatedFeatures() []xml.XElement {
+	var features []xml.XElement
+
+	isSocketTransport := s.cfg.Transport.Type == transport.Socket
+
+	if isSocketTransport && !s.IsSecured() {
+		startTLS := xml.NewElementName("starttls")
+		startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
+		startTLS.AppendElement(xml.NewElementName("required"))
+		features = append(features, startTLS)
+	}
+
+	// attach SASL mechanisms
+	shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
+
+	if shouldOfferSASL && len(s.authrs) > 0 {
+		mechanisms := xml.NewElementName("mechanisms")
+		mechanisms.SetNamespace(saslNamespace)
+		for _, athr := range s.authrs {
+			mechanism := xml.NewElementName("mechanism")
+			mechanism.SetText(athr.Mechanism())
+			mechanisms.AppendElement(mechanism)
+		}
+		features = append(features, mechanisms)
+	}
+
+	// allow In-band registration over encrypted stream only
+	allowRegistration := s.IsSecured()
+
+	if _, ok := s.cfg.Modules["registration"]; ok && allowRegistration {
+		registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
+		features = append(features, registerFeature)
+	}
+	return features
+}
+
+func (s *c2sStream) authenticatedFeatures() []xml.XElement {
+	var features []xml.XElement
+
+	isSocketTransport := s.cfg.Transport.Type == transport.Socket
+
+	// attach compression feature
+	compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
+
+	if !s.IsCompressed() && compressionAvailable {
+		compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
+		method := xml.NewElementName("method")
+		method.SetText("zlib")
+		compression.AppendElement(method)
+		features = append(features, compression)
+	}
+	bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
+	bind.AppendElement(xml.NewElementName("required"))
+	features = append(features, bind)
+
+	session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
+	features = append(features, session)
+
+	if s.roster != nil && s.cfg.ModRoster.Versioning {
+		ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
+		features = append(features, ver)
+	}
+	return features
 }
 
 func (s *c2sStream) handleConnected(elem xml.XElement) {
@@ -694,6 +695,9 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 		return
 	}
 	s.writeElement(iq.ResultIQ())
+
+	// initialize modules
+	s.initializeModules()
 
 	if s.ping != nil {
 		s.ping.StartPinging()

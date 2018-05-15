@@ -25,7 +25,7 @@ func TestXEP0030_Matching(t *testing.T) {
 		case discoInfoNamespace, discoItemsNamespace:
 			continue
 		default:
-			require.Fail(t, fmt.Sprintf("unrecognized XEPDiscoInfo namespace: %s", ns))
+			require.Fail(t, fmt.Sprintf("unrecognized DiscoInfo namespace: %s", ns))
 			return
 		}
 	}
@@ -54,7 +54,7 @@ func TestXEP0030_Matching(t *testing.T) {
 func TestXEP0030_SetItems(t *testing.T) {
 	x := New(nil)
 
-	its := []DiscoItem{
+	its := []Item{
 		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},
 		{Jid: "j2@jackal.im", Name: "a second name", Node: "node2"},
 	}
@@ -65,7 +65,7 @@ func TestXEP0030_SetItems(t *testing.T) {
 func TestXEP0030_SetIdentities(t *testing.T) {
 	x := New(nil)
 
-	ids := []DiscoIdentity{{
+	ids := []Identity{{
 		Category: "server",
 		Type:     "im",
 		Name:     "default",
@@ -77,7 +77,7 @@ func TestXEP0030_SetIdentities(t *testing.T) {
 func TestXEP0030_SetFeatures(t *testing.T) {
 	x := New(nil)
 
-	fs := []DiscoFeature{
+	fs := []Feature{
 		discoInfoNamespace,
 		discoItemsNamespace,
 	}
@@ -109,14 +109,14 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 
 	x := New(stm)
 
-	ids := []DiscoIdentity{{
+	ids := []Identity{{
 		Category: "server",
 		Type:     "im",
 		Name:     "default",
 	}}
 	x.SetIdentities(ids)
 
-	fs := []DiscoFeature{
+	fs := []Feature{
 		discoInfoNamespace,
 		discoItemsNamespace,
 	}
@@ -144,7 +144,7 @@ func TestXEP0030_GetItems(t *testing.T) {
 
 	x := New(stm)
 
-	its := []DiscoItem{
+	its := []Item{
 		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},
 		{Jid: "j2@jackal.im", Name: "a second name", Node: "node2"},
 	}

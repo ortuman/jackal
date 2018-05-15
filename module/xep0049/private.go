@@ -16,15 +16,15 @@ import (
 
 const privateStorageNamespace = "jabber:iq:private"
 
-// XEPPrivateStorage represents a private storage server stream module.
-type XEPPrivateStorage struct {
+// Private represents a private storage server stream module.
+type Private struct {
 	stm     c2s.Stream
 	actorCh chan func()
 }
 
 // New returns a private storage IQ handler module.
-func New(stm c2s.Stream) *XEPPrivateStorage {
-	x := &XEPPrivateStorage{
+func New(stm c2s.Stream) *Private {
+	x := &Private{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
 	}
@@ -36,19 +36,19 @@ func New(stm c2s.Stream) *XEPPrivateStorage {
 
 // AssociatedNamespaces returns namespaces associated
 // with private storage module.
-func (x *XEPPrivateStorage) AssociatedNamespaces() []string {
+func (x *Private) AssociatedNamespaces() []string {
 	return []string{}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the private storage module.
-func (x *XEPPrivateStorage) MatchesIQ(iq *xml.IQ) bool {
+func (x *Private) MatchesIQ(iq *xml.IQ) bool {
 	return iq.Elements().ChildNamespace("query", privateStorageNamespace) != nil
 }
 
 // ProcessIQ processes a private storage IQ taking according actions
 // over the associated stream.
-func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
+func (x *Private) ProcessIQ(iq *xml.IQ) {
 	x.actorCh <- func() {
 		q := iq.Elements().ChildNamespace("query", privateStorageNamespace)
 		toJid := iq.ToJID()
@@ -68,7 +68,7 @@ func (x *XEPPrivateStorage) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPPrivateStorage) actorLoop(doneCh <-chan struct{}) {
+func (x *Private) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-x.actorCh:
@@ -79,7 +79,7 @@ func (x *XEPPrivateStorage) actorLoop(doneCh <-chan struct{}) {
 	}
 }
 
-func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.XElement) {
+func (x *Private) getPrivate(iq *xml.IQ, q xml.XElement) {
 	if q.Elements().Count() != 1 {
 		x.stm.SendElement(iq.NotAcceptableError())
 		return
@@ -112,7 +112,7 @@ func (x *XEPPrivateStorage) getPrivate(iq *xml.IQ, q xml.XElement) {
 	x.stm.SendElement(res)
 }
 
-func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.XElement) {
+func (x *Private) setPrivate(iq *xml.IQ, q xml.XElement) {
 	nsElements := map[string][]xml.XElement{}
 
 	for _, privElement := range q.Elements().All() {
@@ -145,6 +145,6 @@ func (x *XEPPrivateStorage) setPrivate(iq *xml.IQ, q xml.XElement) {
 	x.stm.SendElement(iq.ResultIQ())
 }
 
-func (x *XEPPrivateStorage) isValidNamespace(ns string) bool {
+func (x *Private) isValidNamespace(ns string) bool {
 	return !strings.HasPrefix(ns, "jabber:") && !strings.HasPrefix(ns, "http://jabber.org/") && ns != "vcard-temp"
 }

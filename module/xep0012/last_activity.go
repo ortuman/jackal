@@ -18,15 +18,15 @@ import (
 
 const lastActivityNamespace = "jabber:iq:last"
 
-// XEPLastActivity represents a last activity stream module.
-type XEPLastActivity struct {
+// LastActivity represents a last activity stream module.
+type LastActivity struct {
 	stm       c2s.Stream
 	startTime time.Time
 }
 
 // New returns a last activity IQ handler module.
-func New(stm c2s.Stream) *XEPLastActivity {
-	return &XEPLastActivity{
+func New(stm c2s.Stream) *LastActivity {
+	return &LastActivity{
 		stm:       stm,
 		startTime: time.Now(),
 	}
@@ -34,19 +34,19 @@ func New(stm c2s.Stream) *XEPLastActivity {
 
 // AssociatedNamespaces returns namespaces associated
 // with last activity module.
-func (x *XEPLastActivity) AssociatedNamespaces() []string {
+func (x *LastActivity) AssociatedNamespaces() []string {
 	return []string{lastActivityNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the last activity module.
-func (x *XEPLastActivity) MatchesIQ(iq *xml.IQ) bool {
+func (x *LastActivity) MatchesIQ(iq *xml.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", lastActivityNamespace) != nil
 }
 
 // ProcessIQ processes a last activity IQ taking according actions
 // over the associated stream.
-func (x *XEPLastActivity) ProcessIQ(iq *xml.IQ) {
+func (x *LastActivity) ProcessIQ(iq *xml.IQ) {
 	toJID := iq.ToJID()
 	if toJID.IsServer() {
 		x.sendServerUptime(iq)
@@ -70,12 +70,12 @@ func (x *XEPLastActivity) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPLastActivity) sendServerUptime(iq *xml.IQ) {
+func (x *LastActivity) sendServerUptime(iq *xml.IQ) {
 	secs := int(time.Duration(time.Now().UnixNano()-x.startTime.UnixNano()) / time.Second)
 	x.sendReply(iq, secs, "")
 }
 
-func (x *XEPLastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
+func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
 	if len(c2s.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
 		x.sendReply(iq, 0, "")
 		return
@@ -94,7 +94,7 @@ func (x *XEPLastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
 	x.sendReply(iq, secs, usr.LoggedOutStatus)
 }
 
-func (x *XEPLastActivity) sendReply(iq *xml.IQ, secs int, status string) {
+func (x *LastActivity) sendReply(iq *xml.IQ, secs int, status string) {
 	q := xml.NewElementNamespace("query", lastActivityNamespace)
 	q.SetText(status)
 	q.SetAttribute("seconds", strconv.Itoa(secs))

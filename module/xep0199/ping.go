@@ -25,8 +25,8 @@ type Config struct {
 	SendInterval int  `yaml:"send_interval"`
 }
 
-// XEPPing represents a ping server stream module.
-type XEPPing struct {
+// Ping represents a ping server stream module.
+type Ping struct {
 	cfg *Config
 	stm c2s.Stream
 
@@ -41,8 +41,8 @@ type XEPPing struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm c2s.Stream) *XEPPing {
-	return &XEPPing{
+func New(config *Config, stm c2s.Stream) *Ping {
+	return &Ping{
 		cfg:    config,
 		stm:    stm,
 		pongCh: make(chan struct{}, 1),
@@ -51,19 +51,19 @@ func New(config *Config, stm c2s.Stream) *XEPPing {
 
 // AssociatedNamespaces returns namespaces associated
 // with ping module.
-func (x *XEPPing) AssociatedNamespaces() []string {
+func (x *Ping) AssociatedNamespaces() []string {
 	return []string{pingNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the ping module.
-func (x *XEPPing) MatchesIQ(iq *xml.IQ) bool {
+func (x *Ping) MatchesIQ(iq *xml.IQ) bool {
 	return x.isPongIQ(iq) || iq.Elements().ChildNamespace("ping", pingNamespace) != nil
 }
 
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
-func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
+func (x *Ping) ProcessIQ(iq *xml.IQ) {
 	if x.isPongIQ(iq) {
 		x.handlePongIQ(iq)
 		return
@@ -88,7 +88,7 @@ func (x *XEPPing) ProcessIQ(iq *xml.IQ) {
 }
 
 // StartPinging starts pinging peer every 'send interval' period.
-func (x *XEPPing) StartPinging() {
+func (x *Ping) StartPinging() {
 	if x.cfg.Send {
 		x.pingOnce.Do(func() {
 			x.pingTm = time.AfterFunc(time.Second*time.Duration(x.cfg.SendInterval), x.sendPing)
@@ -97,20 +97,20 @@ func (x *XEPPing) StartPinging() {
 }
 
 // ResetDeadline resets send ping deadline.
-func (x *XEPPing) ResetDeadline() {
+func (x *Ping) ResetDeadline() {
 	if x.cfg.Send && atomic.LoadUint32(&x.waitingPing) == 1 {
 		x.pingTm.Reset(time.Second * time.Duration(x.cfg.SendInterval))
 		return
 	}
 }
 
-func (x *XEPPing) isPongIQ(iq *xml.IQ) bool {
+func (x *Ping) isPongIQ(iq *xml.IQ) bool {
 	x.pingMu.RLock()
 	defer x.pingMu.RUnlock()
 	return x.pingId == iq.ID() && (iq.IsResult() || iq.Type() == xml.ErrorType)
 }
 
-func (x *XEPPing) sendPing() {
+func (x *Ping) sendPing() {
 	atomic.StoreUint32(&x.waitingPing, 0)
 
 	x.pingMu.Lock()
@@ -129,7 +129,7 @@ func (x *XEPPing) sendPing() {
 	x.waitForPong()
 }
 
-func (x *XEPPing) waitForPong() {
+func (x *Ping) waitForPong() {
 	t := time.NewTimer(time.Second * time.Duration(x.cfg.SendInterval))
 	select {
 	case <-x.pongCh:
@@ -139,7 +139,7 @@ func (x *XEPPing) waitForPong() {
 	}
 }
 
-func (x *XEPPing) handlePongIQ(iq *xml.IQ) {
+func (x *Ping) handlePongIQ(iq *xml.IQ) {
 	log.Infof("received pong... id: %s", iq.ID())
 
 	x.pingMu.Lock()

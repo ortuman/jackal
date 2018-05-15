@@ -21,25 +21,25 @@ const (
 	xep191RequestedContextKey = "xep_191:requested"
 )
 
-// XEPBlockingCommand returns a blocking command IQ handler module.
-type XEPBlockingCommand struct {
+// BlockingCommand returns a blocking command IQ handler module.
+type BlockingCommand struct {
 	stm c2s.Stream
 }
 
 // New returns a blocking command IQ handler module.
-func New(stm c2s.Stream) *XEPBlockingCommand {
-	return &XEPBlockingCommand{stm: stm}
+func New(stm c2s.Stream) *BlockingCommand {
+	return &BlockingCommand{stm: stm}
 }
 
 // AssociatedNamespaces returns namespaces associated
 // with blocking command module.
-func (x *XEPBlockingCommand) AssociatedNamespaces() []string {
+func (x *BlockingCommand) AssociatedNamespaces() []string {
 	return []string{blockingCommandNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the blocking command module.
-func (x *XEPBlockingCommand) MatchesIQ(iq *xml.IQ) bool {
+func (x *BlockingCommand) MatchesIQ(iq *xml.IQ) bool {
 	e := iq.Elements()
 	blockList := e.ChildNamespace("blocklist", blockingCommandNamespace)
 	block := e.ChildNamespace("block", blockingCommandNamespace)
@@ -49,7 +49,7 @@ func (x *XEPBlockingCommand) MatchesIQ(iq *xml.IQ) bool {
 
 // ProcessIQ processes a blocking command IQ taking according actions
 // over the associated stream.
-func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
+func (x *BlockingCommand) ProcessIQ(iq *xml.IQ) {
 	if iq.IsGet() {
 		x.sendBlockList(iq)
 	} else if iq.IsSet() {
@@ -62,7 +62,7 @@ func (x *XEPBlockingCommand) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
+func (x *BlockingCommand) sendBlockList(iq *xml.IQ) {
 	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
 	if err != nil {
 		log.Error(err)
@@ -82,7 +82,7 @@ func (x *XEPBlockingCommand) sendBlockList(iq *xml.IQ) {
 	x.stm.Context().SetBool(true, xep191RequestedContextKey)
 }
 
-func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
+func (x *BlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 	var bl []model.BlockListItem
 
 	items := block.Elements().Children("item")
@@ -119,7 +119,7 @@ func (x *XEPBlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 	x.pushIQ(block)
 }
 
-func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
+func (x *BlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 	items := unblock.Elements().Children("item")
 	jds, err := x.extractItemJIDs(items)
 	if err != nil {
@@ -161,7 +161,7 @@ func (x *XEPBlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 	x.pushIQ(unblock)
 }
 
-func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
+func (x *BlockingCommand) pushIQ(elem xml.XElement) {
 	stms := c2s.Instance().StreamsMatchingJID(x.stm.JID().ToBareJID())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
@@ -173,7 +173,7 @@ func (x *XEPBlockingCommand) pushIQ(elem xml.XElement) {
 	}
 }
 
-func (x *XEPBlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model.RosterItem, presenceType string) {
+func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model.RosterItem, presenceType string) {
 	stms := c2s.Instance().StreamsMatchingJID(jid)
 	for _, stm := range stms {
 		if !x.isSubscribedFrom(stm.JID().ToBareJID(), ris) {
@@ -187,7 +187,7 @@ func (x *XEPBlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []mo
 	}
 }
 
-func (x *XEPBlockingCommand) isJIDInBlockList(jid *xml.JID, blItems []model.BlockListItem) bool {
+func (x *BlockingCommand) isJIDInBlockList(jid *xml.JID, blItems []model.BlockListItem) bool {
 	for _, blItem := range blItems {
 		if blItem.JID == jid.String() {
 			return true
@@ -196,7 +196,7 @@ func (x *XEPBlockingCommand) isJIDInBlockList(jid *xml.JID, blItems []model.Bloc
 	return false
 }
 
-func (x *XEPBlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterItem) bool {
+func (x *BlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterItem) bool {
 	str := jid.String()
 	for _, ri := range ris {
 		if ri.JID == str && (ri.Subscription == roster.SubscriptionFrom || ri.Subscription == roster.SubscriptionBoth) {
@@ -206,7 +206,7 @@ func (x *XEPBlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterIt
 	return false
 }
 
-func (x *XEPBlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem, []model.RosterItem, error) {
+func (x *BlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem, []model.RosterItem, error) {
 	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
 	if err != nil {
 		return nil, nil, err
@@ -218,7 +218,7 @@ func (x *XEPBlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListIt
 	return blItms, ris, nil
 }
 
-func (x *XEPBlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {
+func (x *BlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {
 	var ret []*xml.JID
 	for _, item := range items {
 		j, err := xml.NewJIDString(item.Attributes().Get("jid"), false)

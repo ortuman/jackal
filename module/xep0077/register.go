@@ -22,16 +22,16 @@ type Config struct {
 	AllowCancel       bool `yaml:"allow_cancel"`
 }
 
-// XEPRegister represents an in-band server stream module.
-type XEPRegister struct {
+// Register represents an in-band server stream module.
+type Register struct {
 	cfg        *Config
 	stm        c2s.Stream
 	registered bool
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, stm c2s.Stream) *XEPRegister {
-	return &XEPRegister{
+func New(config *Config, stm c2s.Stream) *Register {
+	return &Register{
 		cfg: config,
 		stm: stm,
 	}
@@ -39,19 +39,19 @@ func New(config *Config, stm c2s.Stream) *XEPRegister {
 
 // AssociatedNamespaces returns namespaces associated
 // with in-band registration module.
-func (x *XEPRegister) AssociatedNamespaces() []string {
+func (x *Register) AssociatedNamespaces() []string {
 	return []string{registerNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the in-band registration module.
-func (x *XEPRegister) MatchesIQ(iq *xml.IQ) bool {
+func (x *Register) MatchesIQ(iq *xml.IQ) bool {
 	return iq.Elements().ChildNamespace("query", registerNamespace) != nil
 }
 
 // ProcessIQ processes an in-band registration IQ
 // taking according actions over the associated stream.
-func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
+func (x *Register) ProcessIQ(iq *xml.IQ) {
 	if !x.isValidToJid(iq.ToJID()) {
 		x.stm.SendElement(iq.ForbiddenError())
 		return
@@ -96,7 +96,7 @@ func (x *XEPRegister) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
+func (x *Register) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
 	if query.Elements().Count() > 0 {
 		x.stm.SendElement(iq.BadRequestError())
 		return
@@ -109,7 +109,7 @@ func (x *XEPRegister) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
 	x.stm.SendElement(result)
 }
 
-func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.XElement) {
+func (x *Register) registerNewUser(iq *xml.IQ, query xml.XElement) {
 	userEl := query.Elements().Child("username")
 	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
@@ -139,7 +139,7 @@ func (x *XEPRegister) registerNewUser(iq *xml.IQ, query xml.XElement) {
 	x.registered = true
 }
 
-func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.XElement) {
+func (x *Register) cancelRegistration(iq *xml.IQ, query xml.XElement) {
 	if !x.cfg.AllowCancel {
 		x.stm.SendElement(iq.NotAllowedError())
 		return
@@ -156,7 +156,7 @@ func (x *XEPRegister) cancelRegistration(iq *xml.IQ, query xml.XElement) {
 	x.stm.SendElement(iq.ResultIQ())
 }
 
-func (x *XEPRegister) changePassword(password string, username string, iq *xml.IQ) {
+func (x *Register) changePassword(password string, username string, iq *xml.IQ) {
 	if !x.cfg.AllowChange {
 		x.stm.SendElement(iq.NotAllowedError())
 		return
@@ -191,7 +191,7 @@ func (x *XEPRegister) changePassword(password string, username string, iq *xml.I
 	x.stm.SendElement(iq.ResultIQ())
 }
 
-func (x *XEPRegister) isValidToJid(jid *xml.JID) bool {
+func (x *Register) isValidToJid(jid *xml.JID) bool {
 	if x.stm.IsAuthenticated() {
 		return jid.IsServer()
 	}

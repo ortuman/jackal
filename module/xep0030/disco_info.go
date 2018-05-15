@@ -1,0 +1,133 @@
+/*
+ * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
+package xep0030
+
+import (
+	"sync"
+
+	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/xml"
+)
+
+const (
+	discoInfoNamespace  = "http://jabber.org/protocol/disco#info"
+	discoItemsNamespace = "http://jabber.org/protocol/disco#items"
+)
+
+// DiscoInfo represents a disco info server stream module.
+type DiscoInfo struct {
+	stm      c2s.Stream
+	mu       sync.RWMutex
+	entities map[string]*Entity
+}
+
+// New returns a disco info IQ handler module.
+func New(stm c2s.Stream) *DiscoInfo {
+	return &DiscoInfo{
+		stm:      stm,
+		entities: make(map[string]*Entity),
+	}
+}
+
+// AssociatedNamespaces returns namespaces associated
+// with disco info module.
+func (di *DiscoInfo) AssociatedNamespaces() []string {
+	return []string{discoInfoNamespace, discoItemsNamespace}
+}
+
+func (di *DiscoInfo) RegisterEntity(jid, node string) {
+	k := di.entityKey(jid, node)
+	di.mu.Lock()
+	di.entities[k] = &Entity{}
+	di.mu.Unlock()
+}
+
+func (di *DiscoInfo) Entity(jid, node string) *Entity {
+	k := di.entityKey(jid, node)
+	di.mu.RLock()
+	e := di.entities[k]
+	di.mu.RUnlock()
+	return e
+}
+
+// MatchesIQ returns whether or not an IQ should be
+// processed by the disco info module.
+func (di *DiscoInfo) MatchesIQ(iq *xml.IQ) bool {
+	q := iq.Elements().Child("query")
+	if q == nil {
+		return false
+	}
+	return iq.IsGet() && (q.Namespace() == discoInfoNamespace || q.Namespace() == discoItemsNamespace)
+}
+
+// ProcessIQ processes a disco info IQ taking according actions
+// over the associated stream.
+func (di *DiscoInfo) ProcessIQ(iq *xml.IQ) {
+	q := iq.Elements().Child("query")
+	ent := di.Entity(iq.ToJID().String(), q.Attributes().Get("node"))
+	if ent == nil {
+		di.stm.SendElement(iq.ItemNotFoundError())
+		return
+	}
+	switch q.Namespace() {
+	case discoInfoNamespace:
+		di.sendDiscoInfo(ent, iq)
+	case discoItemsNamespace:
+		di.sendDiscoItems(ent, iq)
+	}
+}
+
+func (di *DiscoInfo) sendDiscoInfo(ent *Entity, iq *xml.IQ) {
+	result := iq.ResultIQ()
+	query := xml.NewElementNamespace("query", discoInfoNamespace)
+
+	for _, identity := range ent.Identities() {
+		identityEl := xml.NewElementName("identity")
+		identityEl.SetAttribute("category", identity.Category)
+		if len(identity.Type) > 0 {
+			identityEl.SetAttribute("type", identity.Type)
+		}
+		if len(identity.Name) > 0 {
+			identityEl.SetAttribute("name", identity.Name)
+		}
+		query.AppendElement(identityEl)
+	}
+	for _, feature := range ent.Features() {
+		featureEl := xml.NewElementName("feature")
+		featureEl.SetAttribute("var", feature)
+		query.AppendElement(featureEl)
+	}
+	result.AppendElement(query)
+	di.stm.SendElement(result)
+}
+
+func (di *DiscoInfo) sendDiscoItems(ent *Entity, iq *xml.IQ) {
+	result := iq.ResultIQ()
+	query := xml.NewElementNamespace("query", discoItemsNamespace)
+
+	for _, item := range ent.Items() {
+		itemEl := xml.NewElementName("item")
+		itemEl.SetAttribute("jid", item.Jid)
+		if len(item.Name) > 0 {
+			itemEl.SetAttribute("name", item.Name)
+		}
+		if len(item.Node) > 0 {
+			itemEl.SetAttribute("node", item.Node)
+		}
+		query.AppendElement(itemEl)
+	}
+	result.AppendElement(query)
+	di.stm.SendElement(result)
+}
+
+func (di *DiscoInfo) entityKey(jid, node string) string {
+	k := jid
+	if len(node) > 0 {
+		k += ":"
+		k += node
+	}
+	return k
+}
