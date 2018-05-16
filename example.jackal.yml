@@ -6,7 +6,7 @@ debug:
   port: 6060
 
 logger:
-  level: debug
+  level: error
   log_path: jackal.log
 
 storage:

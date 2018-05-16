@@ -149,7 +149,7 @@ func (s *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotifi
 		buf.WriteString(notificationXML)
 		buf.WriteString("</root>")
 
-		parser := xml.NewParser(buf)
+		parser := xml.NewParser(buf, 0)
 		root, err := parser.ParseElement()
 		if err != nil {
 			return nil, err

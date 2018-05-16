@@ -170,11 +170,11 @@ func (s *server) shutdown() error {
 }
 
 func (s *server) handleSocketConn(conn net.Conn) {
-	s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.MaxStanzaSize, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) handleWebSocketConn(conn *websocket.Conn) {
-	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.MaxStanzaSize, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) startStream(tr transport.Transport) {

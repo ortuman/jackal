@@ -83,6 +83,7 @@ const (
 type c2sStream struct {
 	cfg         *Config
 	tr          transport.Transport
+	parser      *xml.Parser
 	id          string
 	connected   uint32
 	state       uint32
@@ -103,6 +104,7 @@ func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
 		cfg:     cfg,
 		id:      id,
 		tr:      tr,
+		parser:  xml.NewParser(tr, cfg.Transport.MaxStanzaSize),
 		state:   connecting,
 		ctx:     stream.NewContext(),
 		actorCh: make(chan func(), streamMailboxSize),
@@ -838,7 +840,7 @@ func (s *c2sStream) actorLoop() {
 }
 
 func (s *c2sStream) doRead() {
-	if elem, err := s.tr.ReadElement(); err == nil {
+	if elem, err := s.parser.ParseElement(); err == nil {
 		s.actorCh <- func() {
 			s.readElement(elem)
 		}
@@ -857,7 +859,7 @@ func (s *c2sStream) doRead() {
 				discErr = streamerror.ErrInvalidXML
 			}
 
-		case transport.ErrTooLargeStanza:
+		case xml.ErrTooLargeStanza:
 			discErr = streamerror.ErrPolicyViolation
 
 		default:
@@ -1041,7 +1043,7 @@ func (s *c2sStream) extractAddresses(elem xml.XElement, validateFrom bool) (from
 			return nil, nil, xml.ErrJidMalformed
 		}
 	} else {
-		toJID, err = xml.NewJID("", s.Domain(), "", true)
+		toJID = s.JID().ToBareJID() // account's bare JID as default 'to'
 	}
 	return
 }
@@ -1124,6 +1126,7 @@ func (s *c2sStream) isBlockedJID(jid *xml.JID) bool {
 }
 
 func (s *c2sStream) restart() {
+	s.parser = xml.NewParser(s.tr, s.cfg.Transport.MaxStanzaSize)
 	s.setState(connecting)
 }
 

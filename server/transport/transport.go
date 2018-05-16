@@ -7,16 +7,11 @@ package transport
 
 import (
 	"crypto/tls"
-	"errors"
 	"io"
 
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
-
-// ErrTooLargeStanza is returned by ReadElement when the size of
-// the received stanza is too large.
-var ErrTooLargeStanza = errors.New("too large stanza")
 
 // TransportType represents a stream transport type (socket).
 type TransportType int
@@ -50,10 +45,7 @@ const (
 
 // Transport represents a stream transport mechanism.
 type Transport interface {
-	io.Closer
-
-	// ReadElement reads next available XML element.
-	ReadElement() (xml.XElement, error)
+	io.ReadCloser
 
 	// WriteString writes a raw string to the transport.
 	WriteString(string) error
