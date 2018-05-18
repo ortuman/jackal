@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/xml"
@@ -41,18 +42,17 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm c2s.Stream) *Ping {
+func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Ping {
+	// register disco features
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(pingNamespace)
+		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(pingNamespace)
+	}
 	return &Ping{
 		cfg:    config,
 		stm:    stm,
 		pongCh: make(chan struct{}, 1),
 	}
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with ping module.
-func (x *Ping) AssociatedNamespaces() []string {
-	return []string{pingNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be

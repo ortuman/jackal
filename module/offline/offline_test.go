@@ -16,11 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOffline_AssociatedNamespaces(t *testing.T) {
-	x := New(&Config{}, nil)
-	require.Equal(t, []string{offlineNamespace}, x.AssociatedNamespaces())
-}
-
 func TestOffline_ArchiveMessage(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
@@ -31,7 +26,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j1)
 	stm.SetDomain("jackal.im")
 
-	x := New(&Config{QueueSize: 1}, stm)
+	x := New(&Config{QueueSize: 1}, stm, nil)
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, "normal")
@@ -60,7 +55,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm2 := c2s.NewMockStream("abcd", j2)
 	stm2.SetDomain("jackal.im")
 
-	x2 := New(&Config{QueueSize: 1}, stm2)
+	x2 := New(&Config{QueueSize: 1}, stm2, nil)
 	x2.DeliverOfflineMessages()
 
 	elem = stm2.FetchElement()

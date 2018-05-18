@@ -8,6 +8,7 @@ package xep0191
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
@@ -27,14 +28,13 @@ type BlockingCommand struct {
 }
 
 // New returns a blocking command IQ handler module.
-func New(stm c2s.Stream) *BlockingCommand {
+func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *BlockingCommand {
+	// register disco features
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(blockingCommandNamespace)
+		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
+	}
 	return &BlockingCommand{stm: stm}
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with blocking command module.
-func (x *BlockingCommand) AssociatedNamespaces() []string {
-	return []string{blockingCommandNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be

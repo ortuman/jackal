@@ -162,7 +162,7 @@ type TransportConfig struct {
 	Port           int
 	ConnectTimeout int
 	KeepAlive      int
-	MaxStanzaSize  int64
+	MaxStanzaSize  int
 }
 
 type transportProxyType struct {
@@ -171,7 +171,7 @@ type transportProxyType struct {
 	Port           int    `yaml:"port"`
 	ConnectTimeout int    `yaml:"connect_timeout"`
 	KeepAlive      int    `yaml:"keep_alive"`
-	MaxStanzaSize  int64  `yaml:"max_stanza_size"`
+	MaxStanzaSize  int    `yaml:"max_stanza_size"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.

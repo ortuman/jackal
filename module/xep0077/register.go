@@ -7,6 +7,7 @@ package xep0077
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream/c2s"
@@ -30,17 +31,16 @@ type Register struct {
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, stm c2s.Stream) *Register {
+func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Register {
+	// register disco feature
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(registerNamespace)
+	}
+
 	return &Register{
 		cfg: config,
 		stm: stm,
 	}
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with in-band registration module.
-func (x *Register) AssociatedNamespaces() []string {
-	return []string{registerNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be

@@ -35,11 +35,11 @@ type Parser struct {
 }
 
 // NewParser creates an empty Parser instance.
-func NewParser(reader io.Reader, maxStanzaSize int64) *Parser {
+func NewParser(reader io.Reader, maxStanzaSize int) *Parser {
 	return &Parser{
 		dec:           xml.NewDecoder(reader),
 		parsingIndex:  rootElementIndex,
-		maxStanzaSize: maxStanzaSize,
+		maxStanzaSize: int64(maxStanzaSize),
 	}
 }
 

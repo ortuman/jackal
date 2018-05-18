@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-const privateStorageNamespace = "jabber:iq:private"
+const privateNamespace = "jabber:iq:private"
 
 // Private represents a private storage server stream module.
 type Private struct {
@@ -34,23 +34,17 @@ func New(stm c2s.Stream) *Private {
 	return x
 }
 
-// AssociatedNamespaces returns namespaces associated
-// with private storage module.
-func (x *Private) AssociatedNamespaces() []string {
-	return []string{}
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the private storage module.
 func (x *Private) MatchesIQ(iq *xml.IQ) bool {
-	return iq.Elements().ChildNamespace("query", privateStorageNamespace) != nil
+	return iq.Elements().ChildNamespace("query", privateNamespace) != nil
 }
 
 // ProcessIQ processes a private storage IQ taking according actions
 // over the associated stream.
 func (x *Private) ProcessIQ(iq *xml.IQ) {
 	x.actorCh <- func() {
-		q := iq.Elements().ChildNamespace("query", privateStorageNamespace)
+		q := iq.Elements().ChildNamespace("query", privateNamespace)
 		toJid := iq.ToJID()
 		validTo := toJid.IsServer() || toJid.Node() == x.stm.Username()
 		if !validTo {
@@ -101,7 +95,7 @@ func (x *Private) getPrivate(iq *xml.IQ, q xml.XElement) {
 		return
 	}
 	res := iq.ResultIQ()
-	query := xml.NewElementNamespace("query", privateStorageNamespace)
+	query := xml.NewElementNamespace("query", privateNamespace)
 	if privElements != nil {
 		query.AppendElements(privElements)
 	} else {

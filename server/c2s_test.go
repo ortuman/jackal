@@ -6,6 +6,8 @@
 package server
 
 import (
+	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -23,6 +25,99 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type fakeSockReaderWriter struct {
+	r *io.PipeReader
+	w *io.PipeWriter
+}
+
+func newFakeSockReaderWriter() *fakeSockReaderWriter {
+	pr, pw := io.Pipe()
+	frw := &fakeSockReaderWriter{r: pr, w: pw}
+	return frw
+}
+
+func (frw *fakeSockReaderWriter) Write(b []byte) (n int, err error) { return frw.w.Write(b) }
+func (frw *fakeSockReaderWriter) Read(b []byte) (n int, err error)  { return frw.r.Read(b) }
+
+type fakeSocketConn struct {
+	rd      *fakeSockReaderWriter
+	wr      *fakeSockReaderWriter
+	wrCh    chan []byte
+	closeCh chan struct{}
+}
+
+func newFakeSocketConn() *fakeSocketConn {
+	fc := &fakeSocketConn{
+		rd:      newFakeSockReaderWriter(),
+		wr:      newFakeSockReaderWriter(),
+		wrCh:    make(chan []byte, 16),
+		closeCh: make(chan struct{}, 1),
+	}
+	go fc.loop()
+	return fc
+}
+
+func (c *fakeSocketConn) Read(b []byte) (n int, err error) { return c.rd.Read(b) }
+func (c *fakeSocketConn) Write(b []byte) (n int, err error) {
+	wb := make([]byte, len(b))
+	copy(wb, b)
+	c.wrCh <- wb
+	return len(wb), nil
+}
+func (c *fakeSocketConn) Close() error                       { close(c.closeCh); return nil }
+func (c *fakeSocketConn) LocalAddr() net.Addr                { return localAddr }
+func (c *fakeSocketConn) RemoteAddr() net.Addr               { return remoteAddr }
+func (c *fakeSocketConn) SetDeadline(t time.Time) error      { return nil }
+func (c *fakeSocketConn) SetReadDeadline(t time.Time) error  { return nil }
+func (c *fakeSocketConn) SetWriteDeadline(t time.Time) error { return nil }
+
+func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) {
+	return c.rd.Write(b)
+}
+
+func (c *fakeSocketConn) parseOutboundElement() xml.XElement {
+	var elem xml.XElement
+	var err error
+	p := xml.NewParser(c.wr, 0)
+	for err == nil {
+		elem, err = p.ParseElement()
+		if elem != nil {
+			return elem
+		}
+	}
+	return &xml.Element{}
+}
+
+func (c *fakeSocketConn) waitClose() bool {
+	select {
+	case <-c.closeCh:
+		return true
+	case <-time.After(time.Second * 5):
+		return false // timed out
+	}
+}
+
+func (c *fakeSocketConn) loop() {
+	for {
+		select {
+		case b := <-c.wrCh:
+			c.wr.Write(b)
+		case <-c.closeCh:
+			return
+		}
+	}
+}
+
+type fakeAddr int
+
+var (
+	localAddr  = fakeAddr(1)
+	remoteAddr = fakeAddr(2)
+)
+
+func (a fakeAddr) Network() string { return "net" }
+func (a fakeAddr) String() string  { return "str" }
+
 func TestStream_ConnectTimeout(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
@@ -30,8 +125,8 @@ func TestStream_ConnectTimeout(t *testing.T) {
 	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
 	defer c2s.Shutdown()
 
-	stm, conn := tUtilStreamInit()
-	conn.WaitCloseWithTimeout(time.Second * 2)
+	stm, _ := tUtilStreamInit()
+	time.Sleep(time.Second * 2)
 	require.Equal(t, disconnected, stm.getState())
 }
 
@@ -44,7 +139,7 @@ func TestStream_Disconnect(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	stm.Disconnect(nil)
-	require.True(t, conn.WaitClose())
+	require.True(t, conn.waitClose())
 
 	require.Equal(t, disconnected, stm.getState())
 }
@@ -59,10 +154,10 @@ func TestStream_Features(t *testing.T) {
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 	require.Equal(t, "stream:stream", elem.Name())
 
-	elem = conn.ClientReadElement()
+	elem = conn.parseOutboundElement()
 	require.Equal(t, "stream:features", elem.Name())
 
 	require.Equal(t, connected, stm.getState())
@@ -79,12 +174,12 @@ func TestStream_TLS(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
-	conn.ClientWriteBytes([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
+	conn.inboundWrite([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 
 	require.Equal(t, "proceed", elem.Name())
 	require.Equal(t, "urn:ietf:params:xml:ns:xmpp-tls", elem.Namespace())
@@ -103,20 +198,20 @@ func TestStream_Compression(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
-	conn.ClientWriteBytes([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
+	conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
 <method>zlib</method>
 </compress>`))
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 	require.Equal(t, "compressed", elem.Name())
 	require.Equal(t, "http://jabber.org/protocol/compress", elem.Namespace())
 
@@ -134,14 +229,14 @@ func TestStream_StartSession(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
 
@@ -159,14 +254,14 @@ func TestStream_SendIQ(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
 
@@ -177,9 +272,9 @@ func TestStream_SendIQ(t *testing.T) {
 	iq := xml.NewIQType(iqID, xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", "jabber:iq:roster"))
 
-	conn.ClientWriteBytes([]byte(iq.String()))
+	conn.inboundWrite([]byte(iq.String()))
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
 	require.NotNil(t, elem.Elements().ChildNamespace("query", "jabber:iq:roster"))
@@ -198,20 +293,20 @@ func TestStream_SendPresence(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
 
 	require.Equal(t, sessionStarted, stm.getState())
 
-	conn.ClientWriteBytes([]byte(`
+	conn.inboundWrite([]byte(`
 <presence>
 <show>away</show>
 <status>away!</status>
@@ -245,14 +340,14 @@ func TestStream_SendMessage(t *testing.T) {
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamAuthenticate(conn, t)
 
 	tUtilStreamOpen(conn)
-	_ = conn.ClientReadElement() // read stream opening...
-	_ = conn.ClientReadElement() // read stream features...
+	_ = conn.parseOutboundElement() // read stream opening...
+	_ = conn.parseOutboundElement() // read stream features...
 
 	tUtilStreamStartSession(conn, t)
 
@@ -274,7 +369,7 @@ func TestStream_SendMessage(t *testing.T) {
 	body.SetText("Hi buddy!")
 	msg.AppendElement(body)
 
-	conn.ClientWriteBytes([]byte(msg.String()))
+	conn.inboundWrite([]byte(msg.String()))
 
 	// to full jid...
 	elem := stm2.FetchElement()
@@ -283,63 +378,63 @@ func TestStream_SendMessage(t *testing.T) {
 
 	// to bare jid...
 	msg.SetToJID(jTo.ToBareJID())
-	conn.ClientWriteBytes([]byte(msg.String()))
+	conn.inboundWrite([]byte(msg.String()))
 	elem = stm2.FetchElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
 }
 
-func tUtilStreamOpen(conn *transport.MockConn) {
+func tUtilStreamOpen(conn *fakeSocketConn) {
 	s := `<?xml version="1.0"?>
 	<stream:stream xmlns:stream="http://etherx.jabber.org/streams"
 	version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 `
-	conn.ClientWriteBytes([]byte(s))
+	conn.inboundWrite([]byte(s))
 }
 
-func tUtilStreamAuthenticate(conn *transport.MockConn, t *testing.T) {
-	conn.ClientWriteBytes([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
+func tUtilStreamAuthenticate(conn *fakeSocketConn, t *testing.T) {
+	conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 	require.Equal(t, "challenge", elem.Name())
 
-	conn.ClientWriteBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
+	conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
 
-	elem = conn.ClientReadElement()
+	elem = conn.parseOutboundElement()
 	require.Equal(t, "challenge", elem.Name())
 
-	conn.ClientWriteBytes([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
+	conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
 
-	elem = conn.ClientReadElement()
+	elem = conn.parseOutboundElement()
 	require.Equal(t, "success", elem.Name())
 }
 
-func tUtilStreamStartSession(conn *transport.MockConn, t *testing.T) {
-	conn.ClientWriteBytes([]byte(`<iq type="set" id="bind_1">
+func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
+	conn.inboundWrite([]byte(`<iq type="set" id="bind_1">
 <bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
 <resource>balcony</resource>
 </bind>
 </iq>`))
 
-	elem := conn.ClientReadElement()
+	elem := conn.parseOutboundElement()
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, elem.Elements().Child("bind"))
 
 	// open session
-	conn.ClientWriteBytes([]byte(`<iq type="set" id="aab8a">
+	conn.inboundWrite([]byte(`<iq type="set" id="aab8a">
 <session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
 </iq>`))
 
-	elem = conn.ClientReadElement()
+	elem = conn.parseOutboundElement()
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, xml.ResultType, elem.Type())
 
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit() (*c2sStream, *transport.MockConn) {
-	conn := transport.NewMockConn()
-	tr := transport.NewSocketTransport(conn, 4096, 4096)
+func tUtilStreamInit() (*c2sStream, *fakeSocketConn) {
+	conn := newFakeSocketConn()
+	tr := transport.NewSocketTransport(conn, 4096)
 	stm := newC2SStream("abcd1234", tr, tUtilStreamDefaultConfig())
 	c2s.Instance().RegisterStream(stm)
 	return stm, conn

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
@@ -25,17 +26,14 @@ type LastActivity struct {
 }
 
 // New returns a last activity IQ handler module.
-func New(stm c2s.Stream) *LastActivity {
-	return &LastActivity{
-		stm:       stm,
-		startTime: time.Now(),
+func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *LastActivity {
+	// register disco features
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(lastActivityNamespace)
+		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
 	}
-}
 
-// AssociatedNamespaces returns namespaces associated
-// with last activity module.
-func (x *LastActivity) AssociatedNamespaces() []string {
-	return []string{lastActivityNamespace}
+	return &LastActivity{stm: stm, startTime: time.Now()}
 }
 
 // MatchesIQ returns whether or not an IQ should be

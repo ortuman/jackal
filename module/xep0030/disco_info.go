@@ -32,16 +32,13 @@ func New(stm c2s.Stream) *DiscoInfo {
 	}
 }
 
-// AssociatedNamespaces returns namespaces associated
-// with disco info module.
-func (di *DiscoInfo) AssociatedNamespaces() []string {
-	return []string{discoInfoNamespace, discoItemsNamespace}
-}
-
 func (di *DiscoInfo) RegisterEntity(jid, node string) {
 	k := di.entityKey(jid, node)
 	di.mu.Lock()
-	di.entities[k] = &Entity{}
+	ent := &Entity{}
+	ent.AddFeature(discoInfoNamespace)
+	ent.AddFeature(discoItemsNamespace)
+	di.entities[k] = ent
 	di.mu.Unlock()
 }
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
@@ -36,18 +37,15 @@ type Version struct {
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm c2s.Stream) *Version {
-	x := &Version{
+func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Version {
+	// register disco feature
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(versionNamespace)
+	}
+	return &Version{
 		cfg: config,
 		stm: stm,
 	}
-	return x
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with version module.
-func (x *Version) AssociatedNamespaces() []string {
-	return []string{versionNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be

@@ -10,6 +10,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"hash"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/util"
@@ -24,6 +26,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pbkdf2"
 )
+
+type fakeTransport struct {
+	cbBytes []byte
+}
+
+func (ft *fakeTransport) Read(p []byte) (n int, err error)                          { return 0, nil }
+func (ft *fakeTransport) Close() error                                              { return nil }
+func (ft *fakeTransport) WriteString(string) error                                  { return nil }
+func (ft *fakeTransport) WriteElement(elem xml.XElement, includeClosing bool) error { return nil }
+func (ft *fakeTransport) StartTLS(*tls.Config)                                      { return }
+func (ft *fakeTransport) EnableCompression(compress.Level)                          { return }
+func (ft *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte {
+	return ft.cbBytes
+}
 
 type scramAuthTestCase struct {
 	id          int
@@ -175,7 +191,7 @@ var tt = []scramAuthTestCase{
 }
 
 func TestScramMechanisms(t *testing.T) {
-	testTr := transport.NewMockTransport()
+	testTr := &fakeTransport{}
 	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()
 
@@ -200,7 +216,7 @@ func TestScramMechanisms(t *testing.T) {
 }
 
 func TestScramBadPayload(t *testing.T) {
-	testTr := transport.NewMockTransport()
+	testTr := &fakeTransport{}
 	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()
 
@@ -229,9 +245,9 @@ func TestScramSuccessTestCases(t *testing.T) {
 }
 
 func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
-	tr := transport.NewMockTransport()
+	tr := &fakeTransport{}
 	if tc.usesCb {
-		tr.SetChannelBindingBytes(tc.cbBytes)
+		tr.cbBytes = tc.cbBytes
 	}
 	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()

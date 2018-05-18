@@ -7,6 +7,7 @@ package xep0054
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
@@ -21,7 +22,13 @@ type VCard struct {
 }
 
 // New returns a vCard IQ handler module.
-func New(stm c2s.Stream) *VCard {
+func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *VCard {
+	// register disco features
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(vCardNamespace)
+		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
+	}
+
 	v := &VCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
@@ -30,12 +37,6 @@ func New(stm c2s.Stream) *VCard {
 		go v.actorLoop(stm.Context().Done())
 	}
 	return v
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with vCard module.
-func (x *VCard) AssociatedNamespaces() []string {
-	return []string{vCardNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
