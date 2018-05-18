@@ -51,6 +51,7 @@ func (c *fakeWebSocketConn) SetReadDeadline(t time.Time) error                  
 func (c *fakeWebSocketConn) UnderlyingConn() net.Conn                              { return &tls.Conn{} }
 
 func TestWebSocketTransport(t *testing.T) {
+	buff := make([]byte, 4096)
 	conn := newFakeWebSocketConn()
 
 	// test read...
@@ -58,10 +59,10 @@ func TestWebSocketTransport(t *testing.T) {
 	iq.SetFrom("localhost")
 	iq.ToXML(conn.r.buf, true)
 
-	wst := NewWebSocketTransport(conn, 16384, 10)
-	el, err := wst.ReadElement()
+	wst := NewWebSocketTransport(conn, 120)
+	n, err := wst.Read(buff)
 	require.Nil(t, err)
-	require.Equal(t, iq.String(), el.String())
+	require.Equal(t, iq.String(), string(buff[:n]))
 
 	// test write...
 	msg := xml.NewMessageType(uuid.New(), xml.ChatType)

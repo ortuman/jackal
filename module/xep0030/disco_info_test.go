@@ -6,7 +6,6 @@
 package xep0030
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/ortuman/jackal/stream/c2s"
@@ -20,15 +19,6 @@ func TestXEP0030_Matching(t *testing.T) {
 
 	x := New(nil)
 
-	for _, ns := range x.AssociatedNamespaces() {
-		switch ns {
-		case discoInfoNamespace, discoItemsNamespace:
-			continue
-		default:
-			require.Fail(t, fmt.Sprintf("unrecognized XEPDiscoInfo namespace: %s", ns))
-			return
-		}
-	}
 	// test MatchesIQ
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
@@ -53,43 +43,53 @@ func TestXEP0030_Matching(t *testing.T) {
 
 func TestXEP0030_SetItems(t *testing.T) {
 	x := New(nil)
+	x.RegisterEntity("jackal.im", "")
 
-	its := []DiscoItem{
+	its := []Item{
 		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},
 		{Jid: "j2@jackal.im", Name: "a second name", Node: "node2"},
 	}
-	x.SetItems(its)
-	require.Equal(t, its, x.Items())
+	ent := x.Entity("jackal.im", "")
+	ent.AddItem(its[0])
+	ent.AddItem(its[1])
+
+	require.Equal(t, its, ent.Items())
 }
 
 func TestXEP0030_SetIdentities(t *testing.T) {
 	x := New(nil)
+	x.RegisterEntity("jackal.im", "")
 
-	ids := []DiscoIdentity{{
+	ids := []Identity{{
 		Category: "server",
 		Type:     "im",
 		Name:     "default",
 	}}
-	x.SetIdentities(ids)
-	require.Equal(t, ids, x.Identities())
+	ent := x.Entity("jackal.im", "")
+	ent.AddIdentity(ids[0])
+
+	require.Equal(t, ids, ent.Identities())
 }
 
 func TestXEP0030_SetFeatures(t *testing.T) {
 	x := New(nil)
+	x.RegisterEntity("jackal.im", "")
 
-	fs := []DiscoFeature{
+	fs := []Feature{
 		discoInfoNamespace,
 		discoItemsNamespace,
 	}
-	x.SetFeatures(fs)
-	require.Equal(t, fs, x.Features())
+	ent := x.Entity("jackal.im", "")
+
+	require.Equal(t, fs, ent.Features())
 }
 
 func TestXEP0030_BadToJID(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := xml.NewJID("", "example.im", "", true)
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
+	x.RegisterEntity("jackal.im", "")
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
@@ -98,7 +98,7 @@ func TestXEP0030_BadToJID(t *testing.T) {
 
 	x.ProcessIQ(iq1)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrFeatureNotImplemented.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xml.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
 func TestXEP0030_GetFeatures(t *testing.T) {
@@ -108,19 +108,14 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
+	x.RegisterEntity("jackal.im", "")
 
-	ids := []DiscoIdentity{{
+	ent := x.Entity("jackal.im", "")
+	ent.AddIdentity(Identity{
 		Category: "server",
 		Type:     "im",
 		Name:     "default",
-	}}
-	x.SetIdentities(ids)
-
-	fs := []DiscoFeature{
-		discoInfoNamespace,
-		discoItemsNamespace,
-	}
-	x.SetFeatures(fs)
+	})
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
@@ -143,22 +138,23 @@ func TestXEP0030_GetItems(t *testing.T) {
 	stm := c2s.NewMockStream("abcd", j)
 
 	x := New(stm)
+	x.RegisterEntity("jackal.im", "http://jabber.org/protocol/commands")
 
-	its := []DiscoItem{
-		{Jid: "j1@jackal.im", Name: "a name", Node: "node1"},
-		{Jid: "j2@jackal.im", Name: "a second name", Node: "node2"},
-	}
-	x.SetItems(its)
+	ent := x.Entity("jackal.im", "http://jabber.org/protocol/commands")
+	ent.AddItem(Item{Jid: "j1@jackal.im", Name: "a name", Node: "node1"})
+	ent.AddItem(Item{Jid: "j2@jackal.im", Name: "a second name", Node: "node2"})
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
 	iq1.SetToJID(srvJid)
-	iq1.AppendElement(xml.NewElementNamespace("query", discoItemsNamespace))
+	q := xml.NewElementNamespace("query", discoItemsNamespace)
+	q.SetAttribute("node", "http://jabber.org/protocol/commands")
+	iq1.AppendElement(q)
 
 	x.ProcessIQ(iq1)
 	elem := stm.FetchElement()
 	require.NotNil(t, elem)
-	q := elem.Elements().ChildNamespace("query", discoItemsNamespace)
-	require.Equal(t, 2, q.Elements().Count())
-	require.Equal(t, "item", q.Elements().All()[0].Name())
+	q2 := elem.Elements().ChildNamespace("query", discoItemsNamespace)
+	require.Equal(t, 2, q2.Elements().Count())
+	require.Equal(t, "item", q2.Elements().All()[0].Name())
 }

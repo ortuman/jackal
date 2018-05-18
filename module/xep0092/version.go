@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
@@ -29,36 +30,33 @@ type Config struct {
 	ShowOS bool `yaml:"show_os"`
 }
 
-// XEPVersion represents a version server stream module.
-type XEPVersion struct {
+// Version represents a version server stream module.
+type Version struct {
 	cfg *Config
 	stm c2s.Stream
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm c2s.Stream) *XEPVersion {
-	x := &XEPVersion{
+func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Version {
+	// register disco feature
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(versionNamespace)
+	}
+	return &Version{
 		cfg: config,
 		stm: stm,
 	}
-	return x
-}
-
-// AssociatedNamespaces returns namespaces associated
-// with version module.
-func (x *XEPVersion) AssociatedNamespaces() []string {
-	return []string{versionNamespace}
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the version module.
-func (x *XEPVersion) MatchesIQ(iq *xml.IQ) bool {
+func (x *Version) MatchesIQ(iq *xml.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
-func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
+func (x *Version) ProcessIQ(iq *xml.IQ) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q.Elements().Count() != 0 {
 		x.stm.SendElement(iq.BadRequestError())
@@ -67,7 +65,7 @@ func (x *XEPVersion) ProcessIQ(iq *xml.IQ) {
 	x.sendSoftwareVersion(iq)
 }
 
-func (x *XEPVersion) sendSoftwareVersion(iq *xml.IQ) {
+func (x *Version) sendSoftwareVersion(iq *xml.IQ) {
 	username := x.stm.Username()
 	resource := x.stm.Resource()
 	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)

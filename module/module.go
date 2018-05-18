@@ -9,17 +9,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-// Module represents an XMPP module.
-type Module interface {
-	// AssociatedNamespaces returns namespaces associated
-	// with this module.
-	AssociatedNamespaces() []string
-}
-
 // IQHandler represents an IQ handler module.
 type IQHandler interface {
-	Module
-
 	// MatchesIQ returns whether or not an IQ should be
 	// processed by this module.
 	MatchesIQ(iq *xml.IQ) bool

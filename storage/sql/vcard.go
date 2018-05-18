@@ -31,7 +31,7 @@ func (s *Storage) FetchVCard(username string) (xml.XElement, error) {
 	err := q.RunWith(s.db).QueryRow().Scan(&vCard)
 	switch err {
 	case nil:
-		parser := xml.NewParser(strings.NewReader(vCard))
+		parser := xml.NewParser(strings.NewReader(vCard), 0)
 		return parser.ParseElement()
 	case sql.ErrNoRows:
 		return nil, nil

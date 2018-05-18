@@ -8,31 +8,70 @@ package transport
 import (
 	"bytes"
 	"crypto/tls"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
 
+type fakeSocketConn struct {
+	r      *bytes.Buffer
+	w      *bytes.Buffer
+	closed bool
+}
+
+func newFakeSocketConn() *fakeSocketConn {
+	return &fakeSocketConn{
+		r: new(bytes.Buffer),
+		w: new(bytes.Buffer),
+	}
+}
+
+func (c *fakeSocketConn) Read(b []byte) (n int, err error)   { return c.r.Read(b) }
+func (c *fakeSocketConn) Write(b []byte) (n int, err error)  { return c.w.Write(b) }
+func (c *fakeSocketConn) Close() error                       { c.closed = true; return nil }
+func (c *fakeSocketConn) LocalAddr() net.Addr                { return localAddr }
+func (c *fakeSocketConn) RemoteAddr() net.Addr               { return remoteAddr }
+func (c *fakeSocketConn) SetDeadline(t time.Time) error      { return nil }
+func (c *fakeSocketConn) SetReadDeadline(t time.Time) error  { return nil }
+func (c *fakeSocketConn) SetWriteDeadline(t time.Time) error { return nil }
+
+type fakeAddr int
+
+var (
+	localAddr  = fakeAddr(1)
+	remoteAddr = fakeAddr(2)
+)
+
+func (a fakeAddr) Network() string {
+	return "net"
+}
+
+func (a fakeAddr) String() string {
+	return "str"
+}
+
 func TestSocket(t *testing.T) {
-	mc := NewMockConn()
-	st := NewSocketTransport(mc, 4096, 120)
+	buff := make([]byte, 4096)
+	conn := newFakeSocketConn()
+	st := NewSocketTransport(conn, 4096)
 	st2 := st.(*socketTransport)
 
 	el1 := xml.NewElementNamespace("elem", "exodus:ns")
 	st.WriteElement(el1, true)
-	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), mc.ClientReadBytes()))
+	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), conn.w.Bytes()))
 
 	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")
-	mc.ClientWriteBytes([]byte(el2.String()))
-	el3, err := st.ReadElement()
+	el2.ToXML(conn.r, true)
+	n, err := st.Read(buff)
 	require.Nil(t, err)
-	require.NotNil(t, el3)
-	require.Equal(t, el2.String(), el3.String())
+	require.Equal(t, el2.String(), string(buff[:n]))
 
 	st.EnableCompression(compress.BestCompression)
-	require.True(t, st2.compressionEnabled)
+	require.True(t, st2.compressed)
 
 	st.StartTLS(&tls.Config{})
 	_, ok := st2.conn.(*tls.Conn)
@@ -42,5 +81,5 @@ func TestSocket(t *testing.T) {
 	require.Nil(t, st2.ChannelBindingBytes(TLSUnique))
 
 	st.Close()
-	require.True(t, mc.IsClosed())
+	require.True(t, conn.closed)
 }

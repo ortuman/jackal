@@ -83,6 +83,7 @@ const (
 type c2sStream struct {
 	cfg         *Config
 	tr          transport.Transport
+	parser      *xml.Parser
 	id          string
 	connected   uint32
 	state       uint32
@@ -90,11 +91,12 @@ type c2sStream struct {
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
-	roster      *roster.ModRoster
-	register    *xep0077.XEPRegister
-	ping        *xep0199.XEPPing
-	blockCmd    *xep0191.XEPBlockingCommand
-	offline     *offline.ModOffline
+	roster      *roster.Roster
+	discoInfo   *xep0030.DiscoInfo
+	register    *xep0077.Register
+	ping        *xep0199.Ping
+	blockCmd    *xep0191.BlockingCommand
+	offline     *offline.Offline
 	actorCh     chan func()
 }
 
@@ -103,6 +105,7 @@ func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
 		cfg:     cfg,
 		id:      id,
 		tr:      tr,
+		parser:  xml.NewParser(tr, cfg.Transport.MaxStanzaSize),
 		state:   connecting,
 		ctx:     stream.NewContext(),
 		actorCh: make(chan func(), streamMailboxSize),
@@ -120,8 +123,10 @@ func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
 	// initialize authenticators
 	s.initializeAuthenticators()
 
-	// initialize XEPs
-	s.initializeXEPs()
+	// initialize register module
+	if _, ok := s.cfg.Modules["registration"]; ok {
+		s.register = xep0077.New(&s.cfg.ModRegistration, s, s.discoInfo)
+	}
 
 	if cfg.Transport.ConnectTimeout > 0 {
 		go s.startConnectTimeoutTimer(cfg.Transport.ConnectTimeout)
@@ -224,19 +229,23 @@ func (s *c2sStream) initializeAuthenticators() {
 	}
 }
 
-func (s *c2sStream) initializeXEPs() {
+func (s *c2sStream) initializeModules() {
+	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
+	s.discoInfo = xep0030.New(s)
+	s.iqHandlers = append(s.iqHandlers, s.discoInfo)
+
+	// register default disco info entities
+	s.discoInfo.RegisterEntity(s.Domain(), "")
+	s.discoInfo.RegisterEntity(s.JID().ToBareJID().String(), "")
+
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
 	s.roster = roster.New(&s.cfg.ModRoster, s)
 	s.iqHandlers = append(s.iqHandlers, s.roster)
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := s.cfg.Modules["last_activity"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0012.New(s))
+		s.iqHandlers = append(s.iqHandlers, xep0012.New(s, s.discoInfo))
 	}
-
-	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	discoInfo := xep0030.New(s)
-	s.iqHandlers = append(s.iqHandlers, discoInfo)
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules["private"]; ok {
@@ -245,52 +254,35 @@ func (s *c2sStream) initializeXEPs() {
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0054.New(s))
+		s.iqHandlers = append(s.iqHandlers, xep0054.New(s, s.discoInfo))
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
-	if _, ok := s.cfg.Modules["registration"]; ok {
-		s.register = xep0077.New(&s.cfg.ModRegistration, s)
+	if s.register != nil {
 		s.iqHandlers = append(s.iqHandlers, s.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0092.New(&s.cfg.ModVersion, s))
+		s.iqHandlers = append(s.iqHandlers, xep0092.New(&s.cfg.ModVersion, s, s.discoInfo))
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := s.cfg.Modules["blocking_command"]; ok {
-		s.blockCmd = xep0191.New(s)
+		s.blockCmd = xep0191.New(s, s.discoInfo)
 		s.iqHandlers = append(s.iqHandlers, s.blockCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules["ping"]; ok {
-		s.ping = xep0199.New(&s.cfg.ModPing, s)
+		s.ping = xep0199.New(&s.cfg.ModPing, s, s.discoInfo)
 		s.iqHandlers = append(s.iqHandlers, s.ping)
-	}
-
-	// register server disco info identities
-	identities := []xep0030.DiscoIdentity{{
-		Category: "server",
-		Type:     "im",
-		Name:     s.cfg.ID,
-	}}
-	discoInfo.SetIdentities(identities)
-
-	// register disco info features
-	var features []string
-	for _, iqHandler := range s.iqHandlers {
-		features = append(features, iqHandler.AssociatedNamespaces()...)
 	}
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules["offline"]; ok {
-		s.offline = offline.New(&s.cfg.ModOffline, s)
-		features = append(features, s.offline.AssociatedNamespaces()...)
+		s.offline = offline.New(&s.cfg.ModOffline, s, s.discoInfo)
 	}
-	discoInfo.SetFeatures(features)
 }
 
 func (s *c2sStream) startConnectTimeoutTimer(timeoutInSeconds int) {
@@ -345,64 +337,79 @@ func (s *c2sStream) handleConnecting(elem xml.XElement) {
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
 
-	isSocketTransport := s.cfg.Transport.Type == transport.Socket
-
 	if !s.IsAuthenticated() {
-		if isSocketTransport && !s.IsSecured() {
-			startTLS := xml.NewElementName("starttls")
-			startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
-			startTLS.AppendElement(xml.NewElementName("required"))
-			features.AppendElement(startTLS)
-		}
-
-		// attach SASL mechanisms
-		shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
-
-		if shouldOfferSASL && len(s.authrs) > 0 {
-			mechanisms := xml.NewElementName("mechanisms")
-			mechanisms.SetNamespace(saslNamespace)
-			for _, athr := range s.authrs {
-				mechanism := xml.NewElementName("mechanism")
-				mechanism.SetText(athr.Mechanism())
-				mechanisms.AppendElement(mechanism)
-			}
-			features.AppendElement(mechanisms)
-		}
-
-		// allow In-band registration over encrypted stream only
-		allowRegistration := s.IsSecured()
-
-		if _, ok := s.cfg.Modules["registration"]; ok && allowRegistration {
-			registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
-			features.AppendElement(registerFeature)
-		}
+		features.AppendElements(s.unauthenticatedFeatures())
 		s.setState(connected)
-
 	} else {
-		// attach compression feature
-		compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
-
-		if !s.IsCompressed() && compressionAvailable {
-			compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
-			method := xml.NewElementName("method")
-			method.SetText("zlib")
-			compression.AppendElement(method)
-			features.AppendElement(compression)
-		}
-		bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
-		bind.AppendElement(xml.NewElementName("required"))
-		features.AppendElement(bind)
-
-		session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
-		features.AppendElement(session)
-
-		if s.roster != nil && s.cfg.ModRoster.Versioning {
-			ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
-			features.AppendElement(ver)
-		}
+		features.AppendElements(s.authenticatedFeatures())
 		s.setState(authenticated)
 	}
 	s.writeElement(features)
+}
+
+func (s *c2sStream) unauthenticatedFeatures() []xml.XElement {
+	var features []xml.XElement
+
+	isSocketTransport := s.cfg.Transport.Type == transport.Socket
+
+	if isSocketTransport && !s.IsSecured() {
+		startTLS := xml.NewElementName("starttls")
+		startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
+		startTLS.AppendElement(xml.NewElementName("required"))
+		features = append(features, startTLS)
+	}
+
+	// attach SASL mechanisms
+	shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
+
+	if shouldOfferSASL && len(s.authrs) > 0 {
+		mechanisms := xml.NewElementName("mechanisms")
+		mechanisms.SetNamespace(saslNamespace)
+		for _, athr := range s.authrs {
+			mechanism := xml.NewElementName("mechanism")
+			mechanism.SetText(athr.Mechanism())
+			mechanisms.AppendElement(mechanism)
+		}
+		features = append(features, mechanisms)
+	}
+
+	// allow In-band registration over encrypted stream only
+	allowRegistration := s.IsSecured()
+
+	if _, ok := s.cfg.Modules["registration"]; ok && allowRegistration {
+		registerFeature := xml.NewElementNamespace("register", "http://jabber.org/features/iq-register")
+		features = append(features, registerFeature)
+	}
+	return features
+}
+
+func (s *c2sStream) authenticatedFeatures() []xml.XElement {
+	var features []xml.XElement
+
+	isSocketTransport := s.cfg.Transport.Type == transport.Socket
+
+	// attach compression feature
+	compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
+
+	if !s.IsCompressed() && compressionAvailable {
+		compression := xml.NewElementNamespace("compression", "http://jabber.org/features/compress")
+		method := xml.NewElementName("method")
+		method.SetText("zlib")
+		compression.AppendElement(method)
+		features = append(features, compression)
+	}
+	bind := xml.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
+	bind.AppendElement(xml.NewElementName("required"))
+	features = append(features, bind)
+
+	session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
+	features = append(features, session)
+
+	if s.roster != nil && s.cfg.ModRoster.Versioning {
+		ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
+		features = append(features, ver)
+	}
+	return features
 }
 
 func (s *c2sStream) handleConnected(elem xml.XElement) {
@@ -695,6 +702,9 @@ func (s *c2sStream) startSession(iq *xml.IQ) {
 	}
 	s.writeElement(iq.ResultIQ())
 
+	// initialize modules
+	s.initializeModules()
+
 	if s.ping != nil {
 		s.ping.StartPinging()
 	}
@@ -834,7 +844,7 @@ func (s *c2sStream) actorLoop() {
 }
 
 func (s *c2sStream) doRead() {
-	if elem, err := s.tr.ReadElement(); err == nil {
+	if elem, err := s.parser.ParseElement(); err == nil {
 		s.actorCh <- func() {
 			s.readElement(elem)
 		}
@@ -853,7 +863,7 @@ func (s *c2sStream) doRead() {
 				discErr = streamerror.ErrInvalidXML
 			}
 
-		case transport.ErrTooLargeStanza:
+		case xml.ErrTooLargeStanza:
 			discErr = streamerror.ErrPolicyViolation
 
 		default:
@@ -1037,7 +1047,7 @@ func (s *c2sStream) extractAddresses(elem xml.XElement, validateFrom bool) (from
 			return nil, nil, xml.ErrJidMalformed
 		}
 	} else {
-		toJID, err = xml.NewJID("", s.Domain(), "", true)
+		toJID = s.JID().ToBareJID() // account's bare JID as default 'to'
 	}
 	return
 }
@@ -1120,6 +1130,7 @@ func (s *c2sStream) isBlockedJID(jid *xml.JID) bool {
 }
 
 func (s *c2sStream) restart() {
+	s.parser = xml.NewParser(s.tr, s.cfg.Transport.MaxStanzaSize)
 	s.setState(connecting)
 }
 

@@ -19,9 +19,7 @@ import (
 func TestXEP0077_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := New(&Config{}, nil)
-
-	require.Equal(t, []string{registerNamespace}, x.AssociatedNamespaces())
+	x := New(&Config{}, nil, nil)
 
 	// test MatchesIQ
 	iq := xml.NewIQType(uuid.New(), xml.SetType)
@@ -36,7 +34,7 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd1234", j)
 
-	x := New(&Config{}, stm)
+	x := New(&Config{}, stm, nil)
 
 	stm.SetUsername("romeo")
 	iq := xml.NewIQType(uuid.New(), xml.SetType)
@@ -63,7 +61,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd1234", j)
 
-	x := New(&Config{}, stm)
+	x := New(&Config{}, stm, nil)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	iq.SetFromJID(j)
@@ -79,7 +77,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	// allow registration...
-	x = New(&Config{AllowRegistration: true}, stm)
+	x = New(&Config{AllowRegistration: true}, stm, nil)
 
 	q := xml.NewElementNamespace("query", registerNamespace)
 	q.AppendElement(xml.NewElementName("q2"))
@@ -105,7 +103,7 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 	stm := c2s.NewMockStream("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm)
+	x := New(&Config{}, stm, nil)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	iq.SetFromJID(j)
@@ -132,7 +130,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := c2s.NewMockStream("abcd1234", j)
 
-	x := New(&Config{AllowRegistration: true}, stm)
+	x := New(&Config{AllowRegistration: true}, stm, nil)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(srvJid)
@@ -191,7 +189,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	stm := c2s.NewMockStream("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm)
+	x := New(&Config{}, stm, nil)
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -207,7 +205,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	elem := stm.FetchElement()
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x = New(&Config{AllowCancel: true}, stm)
+	x = New(&Config{AllowCancel: true}, stm, nil)
 
 	q.AppendElement(xml.NewElementName("remove2"))
 	x.ProcessIQ(iq)
@@ -241,7 +239,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	stm := c2s.NewMockStream("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm)
+	x := New(&Config{}, stm, nil)
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -262,7 +260,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	elem := stm.FetchElement()
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x = New(&Config{AllowChange: true}, stm)
+	x = New(&Config{AllowChange: true}, stm, nil)
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()

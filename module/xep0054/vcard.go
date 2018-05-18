@@ -7,6 +7,7 @@ package xep0054
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
@@ -14,15 +15,21 @@ import (
 
 const vCardNamespace = "vcard-temp"
 
-// XEPVCard represents a vCard server stream module.
-type XEPVCard struct {
+// VCard represents a vCard server stream module.
+type VCard struct {
 	stm     c2s.Stream
 	actorCh chan func()
 }
 
 // New returns a vCard IQ handler module.
-func New(stm c2s.Stream) *XEPVCard {
-	v := &XEPVCard{
+func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *VCard {
+	// register disco features
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(vCardNamespace)
+		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
+	}
+
+	v := &VCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
 	}
@@ -32,21 +39,15 @@ func New(stm c2s.Stream) *XEPVCard {
 	return v
 }
 
-// AssociatedNamespaces returns namespaces associated
-// with vCard module.
-func (x *XEPVCard) AssociatedNamespaces() []string {
-	return []string{vCardNamespace}
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the vCard module.
-func (x *XEPVCard) MatchesIQ(iq *xml.IQ) bool {
+func (x *VCard) MatchesIQ(iq *xml.IQ) bool {
 	return (iq.IsGet() || iq.IsSet()) && iq.Elements().ChildNamespace("vCard", vCardNamespace) != nil
 }
 
 // ProcessIQ processes a vCard IQ taking according actions
 // over the associated stream.
-func (x *XEPVCard) ProcessIQ(iq *xml.IQ) {
+func (x *VCard) ProcessIQ(iq *xml.IQ) {
 	x.actorCh <- func() {
 		vCard := iq.Elements().ChildNamespace("vCard", vCardNamespace)
 		if iq.IsGet() {
@@ -57,7 +58,7 @@ func (x *XEPVCard) ProcessIQ(iq *xml.IQ) {
 	}
 }
 
-func (x *XEPVCard) actorLoop(doneCh <-chan struct{}) {
+func (x *VCard) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-x.actorCh:
@@ -68,7 +69,7 @@ func (x *XEPVCard) actorLoop(doneCh <-chan struct{}) {
 	}
 }
 
-func (x *XEPVCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
+func (x *VCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
 	if vCard.Elements().Count() > 0 {
 		x.stm.SendElement(iq.BadRequestError())
 		return
@@ -100,7 +101,7 @@ func (x *XEPVCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
 	x.stm.SendElement(resultIQ)
 }
 
-func (x *XEPVCard) setVCard(vCard xml.XElement, iq *xml.IQ) {
+func (x *VCard) setVCard(vCard xml.XElement, iq *xml.IQ) {
 	toJid := iq.ToJID()
 	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.stm.Username()) {
 		log.Infof("saving vcard... (%s/%s)", x.stm.Username(), x.stm.Resource())

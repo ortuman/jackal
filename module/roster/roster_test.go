@@ -546,7 +546,7 @@ func tUtilRosterInsertRosterItems() {
 	storage.Instance().InsertOrUpdateRosterItem(ri2)
 }
 
-func tUtilRosterRequestRoster(r *ModRoster, stm *c2s.MockStream) {
+func tUtilRosterRequestRoster(r *Roster, stm *c2s.MockStream) {
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
 
