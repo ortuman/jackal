@@ -15,12 +15,12 @@ import (
 func TestStorageConfig(t *testing.T) {
 	cfg := Config{}
 
-	mockCfg := `
-  type: mock
+	memCfg := `
+  type: memory
 `
-	err := yaml.Unmarshal([]byte(mockCfg), &cfg)
+	err := yaml.Unmarshal([]byte(memCfg), &cfg)
 	require.Nil(t, err)
-	require.Equal(t, Mock, cfg.Type)
+	require.Equal(t, Memory, cfg.Type)
 
 	mySQLCfg := `
   type: mysql
@@ -70,9 +70,9 @@ func TestStorageConfig(t *testing.T) {
 func TestStorageBadConfig(t *testing.T) {
 	cfg := Config{}
 
-	mockCfg := `
+	memCfg := `
   type
 `
-	err := yaml.Unmarshal([]byte(mockCfg), &cfg)
+	err := yaml.Unmarshal([]byte(memCfg), &cfg)
 	require.NotNil(t, err)
 }

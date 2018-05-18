@@ -10,7 +10,7 @@ import (
 )
 
 // ApplicationVersion represents application version.
-var ApplicationVersion = NewVersion(0, 2, 0)
+var ApplicationVersion = NewVersion(0, 2, 1)
 
 // SemanticVersion represents version information with Semantic Versioning specifications.
 type SemanticVersion struct {

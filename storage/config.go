@@ -8,6 +8,9 @@ package storage
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ortuman/jackal/storage/badgerdb"
+	"github.com/ortuman/jackal/storage/sql"
 )
 
 const defaultMySQLPoolSize = 16
@@ -22,35 +25,21 @@ const (
 	// BadgerDB represents a BadgerDB storage type.
 	BadgerDB
 
-	// Mock represents a in-memory storage type.
-	Mock
+	// Memory represents a in-memstorage storage type.
+	Memory
 )
 
 // Config represents an storage manager configuration.
 type Config struct {
 	Type     StorageType
-	MySQL    *MySQLDb
-	BadgerDB *BadgerDb
-}
-
-// MySQLDb represents MySQL storage configuration.
-type MySQLDb struct {
-	Host     string `yaml:"host"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Database string `yaml:"database"`
-	PoolSize int    `yaml:"pool_size"`
-}
-
-// BadgerDb represents BadgerDB storage configuration.
-type BadgerDb struct {
-	DataDir string `yaml:"data_dir"`
+	MySQL    *sql.Config
+	BadgerDB *badgerdb.Config
 }
 
 type storageProxyType struct {
-	Type     string    `yaml:"type"`
-	MySQL    *MySQLDb  `yaml:"mysql"`
-	BadgerDB *BadgerDb `yaml:"badgerdb"`
+	Type     string           `yaml:"type"`
+	MySQL    *sql.Config      `yaml:"mysql"`
+	BadgerDB *badgerdb.Config `yaml:"badgerdb"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -83,8 +72,8 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			c.BadgerDB.DataDir = "./data"
 		}
 
-	case "mock":
-		c.Type = Mock
+	case "memory":
+		c.Type = Memory
 
 	case "":
 		return errors.New("storage.Config: unspecified storage type")

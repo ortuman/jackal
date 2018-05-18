@@ -87,10 +87,10 @@ func (iq *IQ) ResultIQ() *IQ {
 	rs := &IQ{}
 	rs.SetName("iq")
 	rs.SetAttribute("xmlns", iq.Namespace())
-	rs.SetAttribute("type", ResultType)
 	rs.SetAttribute("id", iq.ID())
 	rs.SetAttribute("from", iq.To())
 	rs.SetAttribute("to", iq.From())
+	rs.SetAttribute("type", ResultType)
 	return rs
 }
 

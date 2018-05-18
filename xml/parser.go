@@ -16,27 +16,36 @@ const rootElementIndex = -1
 
 const streamName = "stream"
 
+// ErrTooLargeStanza is returned by ReadElement when the size of
+// the received stanza is too large.
+var ErrTooLargeStanza = errors.New("too large stanza")
+
 // ErrStreamClosedByPeer is returned by Parse when peer closes the stream.
 var ErrStreamClosedByPeer = errors.New("stream closed by peer")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
-	dec          *xml.Decoder
-	nextElement  *Element
-	parsingIndex int
-	parsingStack []*Element
-	inElement    bool
+	dec           *xml.Decoder
+	nextElement   *Element
+	parsingIndex  int
+	parsingStack  []*Element
+	inElement     bool
+	lastOffset    int64
+	maxStanzaSize int64
 }
 
 // NewParser creates an empty Parser instance.
-func NewParser(reader io.Reader) *Parser {
-	return &Parser{dec: xml.NewDecoder(reader), parsingIndex: rootElementIndex}
+func NewParser(reader io.Reader, maxStanzaSize int) *Parser {
+	return &Parser{
+		dec:           xml.NewDecoder(reader),
+		parsingIndex:  rootElementIndex,
+		maxStanzaSize: int64(maxStanzaSize),
+	}
 }
 
 // ParseElement parses next available XML element from reader.
 func (p *Parser) ParseElement() (XElement, error) {
-	d := p.dec
-	t, err := d.RawToken()
+	t, err := p.dec.RawToken()
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +76,19 @@ func (p *Parser) ParseElement() (XElement, error) {
 				goto done
 			}
 		}
-		t, err = d.RawToken()
+		t, err = p.dec.RawToken()
 		if err != nil {
 			return nil, err
 		}
 	}
 done:
+	// check max stanza size limit
+	off := p.dec.InputOffset()
+	if p.maxStanzaSize > 0 && off-p.lastOffset > p.maxStanzaSize {
+		return nil, ErrTooLargeStanza
+	}
+	p.lastOffset = off
+
 	ret := p.nextElement
 	p.nextElement = nil
 	return ret, nil

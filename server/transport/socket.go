@@ -7,51 +7,50 @@ package transport
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/tls"
 	"io"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
+const socketBuffSize = 4096
+
 type socketTransport struct {
-	conn               net.Conn
-	rw                 io.ReadWriter
-	bw                 *bufio.Writer
-	r                  *bytes.Reader
-	rbuf               []byte
-	p                  *xml.Parser
-	maxStanzaSize      int
-	keepAlive          int
-	compressionEnabled bool
+	conn       net.Conn
+	rw         io.ReadWriter
+	br         *bufio.Reader
+	bw         *bufio.Writer
+	keepAlive  int
+	compressed bool
 }
 
 // NewSocketTransport creates a socket class stream transport.
-func NewSocketTransport(conn net.Conn, maxStanzaSize, keepAlive int) Transport {
+func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
 	s := &socketTransport{
-		conn:          conn,
-		rw:            conn,
-		bw:            bufio.NewWriter(conn),
-		rbuf:          make([]byte, maxStanzaSize+1),
-		maxStanzaSize: maxStanzaSize,
-		keepAlive:     keepAlive,
+		conn:      conn,
+		rw:        conn,
+		br:        bufio.NewReaderSize(conn, socketBuffSize),
+		bw:        bufio.NewWriterSize(conn, socketBuffSize),
+		keepAlive: keepAlive,
 	}
 	return s
 }
 
-func (s *socketTransport) ReadElement() (xml.XElement, error) {
-	if err := s.readFromConn(); err != nil {
-		return nil, err
-	}
-	return s.p.ParseElement()
+func (s *socketTransport) Read(p []byte) (n int, err error) {
+	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
+	return s.br.Read(p)
+}
+
+func (s *socketTransport) Close() error {
+	return s.conn.Close()
 }
 
 func (s *socketTransport) WriteString(str string) error {
-	_, err := io.Copy(s.rw, strings.NewReader(str))
+	defer s.bw.Flush()
+	_, err := io.WriteString(s.bw, str)
 	return err
 }
 
@@ -61,25 +60,21 @@ func (s *socketTransport) WriteElement(elem xml.XElement, includeClosing bool) e
 	return nil
 }
 
-func (s *socketTransport) Close() error {
-	return s.conn.Close()
-}
-
 func (s *socketTransport) StartTLS(cfg *tls.Config) {
 	if _, ok := s.conn.(*tls.Conn); !ok {
 		s.conn = tls.Server(s.conn, cfg)
 		s.rw = s.conn
 		s.bw.Reset(s.rw)
-		s.r = nil
+		s.br.Reset(s.rw)
 	}
 }
 
 func (s *socketTransport) EnableCompression(level compress.Level) {
-	if !s.compressionEnabled {
+	if !s.compressed {
 		s.rw = compress.NewZlibCompressor(s.rw, s.rw, level)
 		s.bw.Reset(s.rw)
-		s.r = nil
-		s.compressionEnabled = true
+		s.br.Reset(s.rw)
+		s.compressed = true
 	}
 }
 
@@ -93,22 +88,5 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 			break
 		}
 	}
-	return nil
-}
-
-func (s *socketTransport) readFromConn() error {
-	if s.r != nil && s.r.Len() > 0 {
-		return nil // remaining bytes in buffer...
-	}
-	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
-	n, err := s.rw.Read(s.rbuf)
-	if err != nil {
-		return err
-	}
-	if n > s.maxStanzaSize {
-		return ErrTooLargeStanza
-	}
-	s.r = bytes.NewReader(s.rbuf[:n])
-	s.p = xml.NewParser(s.r)
 	return nil
 }

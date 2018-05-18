@@ -1,7 +1,7 @@
 # Test basic configuration
 
 storage:
-  type: mock
+  type: memory
 
 c2s:
   domains: [jackal.im]

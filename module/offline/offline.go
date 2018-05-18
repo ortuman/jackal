@@ -7,6 +7,7 @@ package offline
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
@@ -19,16 +20,21 @@ type Config struct {
 	QueueSize int `yaml:"queue_size"`
 }
 
-// ModOffline represents an offline server stream module.
-type ModOffline struct {
+// Offline represents an offline server stream module.
+type Offline struct {
 	cfg     *Config
 	stm     c2s.Stream
 	actorCh chan func()
 }
 
 // New returns an offline server stream module.
-func New(config *Config, stm c2s.Stream) *ModOffline {
-	r := &ModOffline{
+func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Offline {
+	// register disco feature
+	if discoInfo != nil {
+		discoInfo.Entity(stm.Domain(), "").AddFeature(offlineNamespace)
+	}
+
+	r := &Offline{
 		cfg:     config,
 		stm:     stm,
 		actorCh: make(chan func(), 32),
@@ -41,12 +47,12 @@ func New(config *Config, stm c2s.Stream) *ModOffline {
 
 // AssociatedNamespaces returns namespaces associated
 // with offline module.
-func (o *ModOffline) AssociatedNamespaces() []string {
+func (o *Offline) AssociatedNamespaces() []string {
 	return []string{offlineNamespace}
 }
 
 // ArchiveMessage archives a new offline messages into the storage.
-func (o *ModOffline) ArchiveMessage(message *xml.Message) {
+func (o *Offline) ArchiveMessage(message *xml.Message) {
 	o.actorCh <- func() {
 		o.archiveMessage(message)
 	}
@@ -54,13 +60,13 @@ func (o *ModOffline) ArchiveMessage(message *xml.Message) {
 
 // DeliverOfflineMessages delivers every archived offline messages to the peer
 // deleting them from storage.
-func (o *ModOffline) DeliverOfflineMessages() {
+func (o *Offline) DeliverOfflineMessages() {
 	o.actorCh <- func() {
 		o.deliverOfflineMessages()
 	}
 }
 
-func (o *ModOffline) actorLoop(doneCh <-chan struct{}) {
+func (o *Offline) actorLoop(doneCh <-chan struct{}) {
 	for {
 		select {
 		case f := <-o.actorCh:
@@ -71,7 +77,7 @@ func (o *ModOffline) actorLoop(doneCh <-chan struct{}) {
 	}
 }
 
-func (o *ModOffline) archiveMessage(message *xml.Message) {
+func (o *Offline) archiveMessage(message *xml.Message) {
 	toJid := message.ToJID()
 	queueSize, err := storage.Instance().CountOfflineMessages(toJid.Node())
 	if err != nil {
@@ -94,7 +100,7 @@ func (o *ModOffline) archiveMessage(message *xml.Message) {
 	log.Infof("archived offline message... id: %s", message.ID())
 }
 
-func (o *ModOffline) deliverOfflineMessages() {
+func (o *Offline) deliverOfflineMessages() {
 	messages, err := storage.Instance().FetchOfflineMessages(o.stm.Username())
 	if err != nil {
 		log.Error(err)

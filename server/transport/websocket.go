@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -27,44 +26,41 @@ type WebSocketConn interface {
 	SetReadDeadline(t time.Time) error
 }
 
-type websocketTransport struct {
-	conn          WebSocketConn
-	r             *bytes.Reader
-	rbuf          []byte
-	p             *xml.Parser
-	maxStanzaSize int
-	keepAlive     int
+type webSocketTransport struct {
+	conn      WebSocketConn
+	r         *bytes.Reader
+	keepAlive int
 }
 
 // NewWebSocketTransport creates a socket class stream transport.
-func NewWebSocketTransport(conn WebSocketConn, maxStanzaSize, keepAlive int) Transport {
-	wst := &websocketTransport{
-		conn:          conn,
-		rbuf:          make([]byte, maxStanzaSize+1),
-		maxStanzaSize: maxStanzaSize,
-		keepAlive:     keepAlive,
+func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
+	wst := &webSocketTransport{
+		conn:      conn,
+		keepAlive: keepAlive,
 	}
 	return wst
 }
 
-func (wst *websocketTransport) ReadElement() (xml.XElement, error) {
-	if err := wst.readFromConn(); err != nil {
-		return nil, err
+func (wst *webSocketTransport) Read(p []byte) (n int, err error) {
+	_, r, err := wst.conn.NextReader()
+	if err != nil {
+		return 0, err
 	}
-	return wst.p.ParseElement()
+	wst.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(wst.keepAlive)))
+	return r.Read(p)
 }
 
-func (wst *websocketTransport) WriteString(str string) error {
+func (wst *webSocketTransport) WriteString(str string) error {
 	w, err := wst.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return err
 	}
 	defer w.Close()
-	_, err = io.Copy(w, strings.NewReader(str))
+	_, err = io.WriteString(w, str)
 	return err
 }
 
-func (wst *websocketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
+func (wst *webSocketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
 	w, err := wst.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return err
@@ -74,17 +70,17 @@ func (wst *websocketTransport) WriteElement(elem xml.XElement, includeClosing bo
 	return nil
 }
 
-func (wst *websocketTransport) Close() error {
+func (wst *webSocketTransport) Close() error {
 	return wst.conn.Close()
 }
 
-func (wst *websocketTransport) StartTLS(cfg *tls.Config) {
+func (wst *webSocketTransport) StartTLS(cfg *tls.Config) {
 }
 
-func (wst *websocketTransport) EnableCompression(level compress.Level) {
+func (wst *webSocketTransport) EnableCompression(level compress.Level) {
 }
 
-func (wst *websocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
+func (wst *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	if tlsConn, ok := wst.conn.UnderlyingConn().(*tls.Conn); ok {
 		switch mechanism {
 		case TLSUnique:
@@ -94,25 +90,5 @@ func (wst *websocketTransport) ChannelBindingBytes(mechanism ChannelBindingMecha
 			break
 		}
 	}
-	return nil
-}
-
-func (wst *websocketTransport) readFromConn() error {
-	if wst.r != nil && wst.r.Len() > 0 {
-		return nil // remaining bytes in buffer...
-	}
-	_, r, err := wst.conn.NextReader()
-	if err != nil {
-		return err
-	}
-	n, err := r.Read(wst.rbuf)
-	if err != nil {
-		return err
-	}
-	if n > wst.maxStanzaSize {
-		return ErrTooLargeStanza
-	}
-	wst.r = bytes.NewReader(wst.rbuf[:n])
-	wst.p = xml.NewParser(wst.r)
 	return nil
 }

@@ -20,7 +20,7 @@ import (
 )
 
 func TestSocketServer(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
@@ -65,7 +65,7 @@ func TestSocketServer(t *testing.T) {
 }
 
 func TestWebSocketServer(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Mock})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
 	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
