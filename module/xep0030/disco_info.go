@@ -33,6 +33,8 @@ func New(stm c2s.Stream) *DiscoInfo {
 	}
 }
 
+// RegisterDefaultEntities register and sets identities for the default
+// domain and account disco entities.
 func (di *DiscoInfo) RegisterDefaultEntities() error {
 	bareJID := di.stm.JID().ToBareJID()
 	srv, err := di.RegisterEntity(di.stm.Domain(), "")
@@ -56,6 +58,8 @@ func (di *DiscoInfo) RegisterDefaultEntities() error {
 	return nil
 }
 
+// RegisterEntity registers a new disco entity associated to a jid
+// and an optional node.
 func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
 	k := di.entityKey(jid, node)
 	di.mu.Lock()
@@ -70,6 +74,7 @@ func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
 	return ent, nil
 }
 
+// Entity returns a previously registered disco entity.
 func (di *DiscoInfo) Entity(jid, node string) *Entity {
 	k := di.entityKey(jid, node)
 	di.mu.RLock()

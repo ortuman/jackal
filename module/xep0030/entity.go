@@ -10,16 +10,6 @@ import (
 	"sync"
 )
 
-const (
-	Server  = "server"
-	Account = "account"
-)
-
-const (
-	Im         = "im"
-	Registered = "registered"
-)
-
 // Feature represents a disco info feature entity.
 type Feature = string
 
@@ -45,6 +35,7 @@ type Entity struct {
 	items      []Item
 }
 
+// AddFeature adds a new disco entity feature.
 func (e *Entity) AddFeature(feature Feature) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -52,30 +43,35 @@ func (e *Entity) AddFeature(feature Feature) {
 	sort.Slice(e.features, func(i, j int) bool { return e.features[i] < e.features[j] })
 }
 
+// Features returns disco entity features.
 func (e *Entity) Features() []Feature {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.features
 }
 
+// AddIdentity adds a new disco entity identity.
 func (e *Entity) AddIdentity(identity Identity) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.identities = append(e.identities, identity)
 }
 
+// Identities returns disco entity identities.
 func (e *Entity) Identities() []Identity {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.identities
 }
 
+// AddItem adds a new disco entity item.
 func (e *Entity) AddItem(item Item) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.items = append(e.items, item)
 }
 
+// Items returns disco entity items.
 func (e *Entity) Items() []Item {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
