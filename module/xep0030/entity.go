@@ -10,6 +10,16 @@ import (
 	"sync"
 )
 
+const (
+	Server  = "server"
+	Account = "account"
+)
+
+const (
+	Im         = "im"
+	Registered = "registered"
+)
+
 // Feature represents a disco info feature entity.
 type Feature = string
 

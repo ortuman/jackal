@@ -235,8 +235,7 @@ func (s *c2sStream) initializeModules() {
 	s.iqHandlers = append(s.iqHandlers, s.discoInfo)
 
 	// register default disco info entities
-	s.discoInfo.RegisterEntity(s.Domain(), "")
-	s.discoInfo.RegisterEntity(s.JID().ToBareJID().String(), "")
+	s.discoInfo.RegisterDefaultEntities()
 
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
 	s.roster = roster.New(&s.cfg.ModRoster, s)

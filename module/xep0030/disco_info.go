@@ -6,6 +6,7 @@
 package xep0030
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ortuman/jackal/stream/c2s"
@@ -32,14 +33,41 @@ func New(stm c2s.Stream) *DiscoInfo {
 	}
 }
 
-func (di *DiscoInfo) RegisterEntity(jid, node string) {
+func (di *DiscoInfo) RegisterDefaultEntities() error {
+	bareJID := di.stm.JID().ToBareJID()
+	srv, err := di.RegisterEntity(di.stm.Domain(), "")
+	if err != nil {
+		return err
+	}
+	acc, err := di.RegisterEntity(bareJID.String(), "")
+	if err != nil {
+		return err
+	}
+	srv.AddIdentity(Identity{
+		Type:     "im",
+		Category: "server",
+		Name:     "jackal",
+	})
+	acc.AddIdentity(Identity{
+		Type:     "registered",
+		Category: "account",
+	})
+	srv.AddItem(Item{Jid: bareJID.String()})
+	return nil
+}
+
+func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
 	k := di.entityKey(jid, node)
 	di.mu.Lock()
+	defer di.mu.Unlock()
+	if _, ok := di.entities[k]; ok {
+		return nil, fmt.Errorf("entity already registered: %s", k)
+	}
 	ent := &Entity{}
 	ent.AddFeature(discoInfoNamespace)
 	ent.AddFeature(discoItemsNamespace)
 	di.entities[k] = ent
-	di.mu.Unlock()
+	return ent, nil
 }
 
 func (di *DiscoInfo) Entity(jid, node string) *Entity {
