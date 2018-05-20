@@ -7,6 +7,24 @@ package memstorage
 
 import "github.com/ortuman/jackal/storage/model"
 
+// InsertOrUpdateUser inserts a new user entity into storage,
+// or updates it in case it's been previously inserted.
+func (m *Storage) InsertOrUpdateUser(user *model.User) error {
+	return m.inWriteLock(func() error {
+		m.users[user.Username] = user
+		return nil
+	})
+}
+
+// DeleteUser deletes a user entity from storage.
+func (m *Storage) DeleteUser(username string) error {
+	return m.inWriteLock(func() error {
+		delete(m.users, username)
+		return nil
+	})
+}
+
+// FetchUser retrieves from storage a user entity.
 func (m *Storage) FetchUser(username string) (*model.User, error) {
 	var ret *model.User
 	err := m.inReadLock(func() error {
@@ -16,20 +34,7 @@ func (m *Storage) FetchUser(username string) (*model.User, error) {
 	return ret, err
 }
 
-func (m *Storage) InsertOrUpdateUser(user *model.User) error {
-	return m.inWriteLock(func() error {
-		m.users[user.Username] = user
-		return nil
-	})
-}
-
-func (m *Storage) DeleteUser(username string) error {
-	return m.inWriteLock(func() error {
-		delete(m.users, username)
-		return nil
-	})
-}
-
+// UserExists returns whether or not a user exists within storage.
 func (m *Storage) UserExists(username string) (bool, error) {
 	var ret bool
 	err := m.inReadLock(func() error {

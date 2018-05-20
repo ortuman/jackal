@@ -7,32 +7,8 @@ package memstorage
 
 import "github.com/ortuman/jackal/storage/model"
 
-func (m *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	var ris []model.RosterItem
-	var v model.RosterVersion
-	err := m.inReadLock(func() error {
-		ris = m.rosterItems[user]
-		v = m.rosterVersions[user]
-		return nil
-	})
-	return ris, v, err
-}
-
-func (m *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	var ret *model.RosterItem
-	err := m.inReadLock(func() error {
-		ris := m.rosterItems[user]
-		for _, ri := range ris {
-			if ri.JID == contact {
-				ret = &ri
-				return nil
-			}
-		}
-		return nil
-	})
-	return ret, err
-}
-
+// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// or updates it in case it's been previously inserted.
 func (m *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	var v model.RosterVersion
 	err := m.inWriteLock(func() error {
@@ -60,6 +36,7 @@ func (m *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 	return v, err
 }
 
+// DeleteRosterItem deletes a roster item entity from storage.
 func (m *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
 	var v model.RosterVersion
 	err := m.inWriteLock(func() error {
@@ -80,15 +57,37 @@ func (m *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, e
 	return v, err
 }
 
-func (m *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	var ret []model.RosterNotification
+// FetchRosterItems retrieves from storage all roster item entities
+// associated to a given user.
+func (m *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
+	var ris []model.RosterItem
+	var v model.RosterVersion
 	err := m.inReadLock(func() error {
-		ret = m.rosterNotifications[contact]
+		ris = m.rosterItems[user]
+		v = m.rosterVersions[user]
+		return nil
+	})
+	return ris, v, err
+}
+
+// FetchRosterItem retrieves from storage a roster item entity.
+func (m *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
+	var ret *model.RosterItem
+	err := m.inReadLock(func() error {
+		ris := m.rosterItems[user]
+		for _, ri := range ris {
+			if ri.JID == contact {
+				ret = &ri
+				return nil
+			}
+		}
 		return nil
 	})
 	return ret, err
 }
 
+// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// into storage, or updates it in case it's been previously inserted.
 func (m *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	return m.inWriteLock(func() error {
 		rns := m.rosterNotifications[rn.Contact]
@@ -109,6 +108,7 @@ func (m *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification)
 	})
 }
 
+// DeleteRosterNotification deletes a roster notification entity from storage.
 func (m *Storage) DeleteRosterNotification(contact, jid string) error {
 	return m.inWriteLock(func() error {
 		rns := m.rosterNotifications[contact]
@@ -120,4 +120,15 @@ func (m *Storage) DeleteRosterNotification(contact, jid string) error {
 		}
 		return nil
 	})
+}
+
+// FetchRosterNotifications retrieves from storage all roster notifications
+// associated to a given user.
+func (m *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
+	var ret []model.RosterNotification
+	err := m.inReadLock(func() error {
+		ret = m.rosterNotifications[contact]
+		return nil
+	})
+	return ret, err
 }

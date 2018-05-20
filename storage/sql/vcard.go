@@ -13,6 +13,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// InsertOrUpdateVCard inserts a new vCard element into storage,
+// or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
 	rawXML := vCard.String()
 	q := sq.Insert("vcards").
@@ -24,6 +26,8 @@ func (s *Storage) InsertOrUpdateVCard(vCard xml.XElement, username string) error
 	return err
 }
 
+// FetchVCard retrieves from storage a vCard element associated
+// to a given user.
 func (s *Storage) FetchVCard(username string) (xml.XElement, error) {
 	q := sq.Select("vcard").From("vcards").Where(sq.Eq{"username": username})
 

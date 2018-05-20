@@ -10,6 +10,8 @@ import (
 	"github.com/ortuman/jackal/storage/model"
 )
 
+// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// or updates it in case it's been previously inserted.
 func (b *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
@@ -19,6 +21,7 @@ func (b *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 	return b.updateRosterVer(ri.Username, false)
 }
 
+// DeleteRosterItem deletes a roster item entity from storage.
 func (b *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
 		return b.delete(b.rosterItemKey(user, contact), tx)
@@ -28,6 +31,8 @@ func (b *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, e
 	return b.updateRosterVer(user, true)
 }
 
+// FetchRosterItems retrieves from storage all roster item entities
+// associated to a given user.
 func (b *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
 	var ris []model.RosterItem
 	if err := b.fetchAll(&ris, []byte("rosterItems:"+user)); err != nil {
@@ -37,6 +42,7 @@ func (b *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.Roste
 	return ris, ver, err
 }
 
+// FetchRosterItem retrieves from storage a roster item entity.
 func (b *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
 	var ri model.RosterItem
 	err := b.fetch(&ri, b.rosterItemKey(user, contact))
@@ -50,18 +56,23 @@ func (b *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, erro
 	}
 }
 
+// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// into storage, or updates it in case it's been previously inserted.
 func (b *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
 	})
 }
 
+// DeleteRosterNotification deletes a roster notification entity from storage.
 func (b *Storage) DeleteRosterNotification(contact, jid string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.delete(b.rosterNotificationKey(contact, jid), tx)
 	})
 }
 
+// FetchRosterNotifications retrieves from storage all roster notifications
+// associated to a given user.
 func (b *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
 	var rns []model.RosterNotification
 	if err := b.fetchAll(&rns, []byte("rosterNotifications:"+contact)); err != nil {

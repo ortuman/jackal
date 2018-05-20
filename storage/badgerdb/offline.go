@@ -10,12 +10,15 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// InsertOfflineMessage inserts a new message element into
+// user's offline queue.
 func (b *Storage) InsertOfflineMessage(message xml.XElement, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()), tx)
 	})
 }
 
+// CountOfflineMessages returns current length of user's offline queue.
 func (b *Storage) CountOfflineMessages(username string) (int, error) {
 	cnt := 0
 	prefix := []byte("offlineMessages:" + username)
@@ -26,6 +29,7 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 	return cnt, err
 }
 
+// FetchOfflineMessages retrieves from storage current user offline queue.
 func (b *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
 	var msgs []xml.Element
 	if err := b.fetchAll(&msgs, []byte("offlineMessages:"+username)); err != nil {
@@ -43,6 +47,7 @@ func (b *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) 
 	}
 }
 
+// DeleteOfflineMessages clears a user offline queue.
 func (b *Storage) DeleteOfflineMessages(username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.deletePrefix([]byte("offlineMessages:"+username), tx)

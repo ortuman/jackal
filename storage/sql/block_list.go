@@ -12,7 +12,9 @@ import (
 	"github.com/ortuman/jackal/storage/model"
 )
 
-func (s *Storage) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
+// InsertBlockListItems inserts a set of block list item entities
+// into storage, only in case they haven't been previously inserted.
+func (s *Storage) InsertBlockListItems(items []model.BlockListItem) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		for _, item := range items {
 			_, err := sq.Insert("blocklist_items").
@@ -28,6 +30,7 @@ func (s *Storage) InsertOrUpdateBlockListItems(items []model.BlockListItem) erro
 	})
 }
 
+// DeleteBlockListItems deletes a set of block list item entities from storage.
 func (s *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		for _, item := range items {
@@ -42,6 +45,8 @@ func (s *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 	})
 }
 
+// FetchBlockListItems retrieves from storage all block list item entities
+// associated to a given user.
 func (s *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	q := sq.Select("username", "jid").
 		From("blocklist_items").

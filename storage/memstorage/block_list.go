@@ -7,7 +7,9 @@ package memstorage
 
 import "github.com/ortuman/jackal/storage/model"
 
-func (m *Storage) InsertOrUpdateBlockListItems(items []model.BlockListItem) error {
+// InsertBlockListItems inserts a set of block list item entities
+// into storage, only in case they haven't been previously inserted.
+func (m *Storage) InsertBlockListItems(items []model.BlockListItem) error {
 	return m.inWriteLock(func() error {
 		for _, item := range items {
 			bl := m.blockListItems[item.Username]
@@ -27,6 +29,7 @@ func (m *Storage) InsertOrUpdateBlockListItems(items []model.BlockListItem) erro
 	})
 }
 
+// DeleteBlockListItems deletes a set of block list item entities from storage.
 func (m *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 	return m.inWriteLock(func() error {
 		for _, itm := range items {
@@ -42,6 +45,8 @@ func (m *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 	})
 }
 
+// FetchBlockListItems retrieves from storage all block list item entities
+// associated to a given user.
 func (m *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	var ret []model.BlockListItem
 	err := m.inReadLock(func() error {

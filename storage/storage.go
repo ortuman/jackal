@@ -18,43 +18,91 @@ import (
 )
 
 type userStorage interface {
+	// InsertOrUpdateUser inserts a new user entity into storage,
+	// or updates it in case it's been previously inserted.
 	InsertOrUpdateUser(user *model.User) error
+
+	// DeleteUser deletes a user entity from storage.
 	DeleteUser(username string) error
+
+	// FetchUser retrieves from storage a user entity.
 	FetchUser(username string) (*model.User, error)
+
+	// UserExists returns whether or not a user exists within storage.
 	UserExists(username string) (bool, error)
 }
 
 type rosterStorage interface {
+	// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+	// or updates it in case it's been previously inserted.
 	InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error)
+
+	// DeleteRosterItem deletes a roster item entity from storage.
 	DeleteRosterItem(username, jid string) (model.RosterVersion, error)
+
+	// FetchRosterItems retrieves from storage all roster item entities
+	// associated to a given user.
 	FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error)
+
+	// FetchRosterItem retrieves from storage a roster item entity.
 	FetchRosterItem(username, jid string) (*model.RosterItem, error)
 
+	// InsertOrUpdateRosterNotification inserts a new roster notification entity
+	// into storage, or updates it in case it's been previously inserted.
 	InsertOrUpdateRosterNotification(rn *model.RosterNotification) error
+
+	// DeleteRosterNotification deletes a roster notification entity from storage.
 	DeleteRosterNotification(contact, jid string) error
+
+	// FetchRosterNotifications retrieves from storage all roster notifications
+	// associated to a given user.
 	FetchRosterNotifications(contact string) ([]model.RosterNotification, error)
 }
 
 type offlineStorage interface {
+	// InsertOfflineMessage inserts a new message element into
+	// user's offline queue.
 	InsertOfflineMessage(message xml.XElement, username string) error
+
+	// CountOfflineMessages returns current length of user's offline queue.
 	CountOfflineMessages(username string) (int, error)
+
+	// FetchOfflineMessages retrieves from storage current user offline queue.
 	FetchOfflineMessages(username string) ([]xml.XElement, error)
+
+	// DeleteOfflineMessages clears a user offline queue.
 	DeleteOfflineMessages(username string) error
 }
 
 type vCardStorage interface {
+	// InsertOrUpdateVCard inserts a new vCard element into storage,
+	// or updates it in case it's been previously inserted.
 	InsertOrUpdateVCard(vCard xml.XElement, username string) error
+
+	// FetchVCard retrieves from storage a vCard element associated
+	// to a given user.
 	FetchVCard(username string) (xml.XElement, error)
 }
 
 type privateStorage interface {
+	// FetchPrivateXML retrieves from storage a private element.
 	FetchPrivateXML(namespace string, username string) ([]xml.XElement, error)
+
+	// InsertOrUpdatePrivateXML inserts a new private element into storage,
+	// or updates it in case it's been previously inserted.
 	InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error
 }
 
 type blockListStorage interface {
-	InsertOrUpdateBlockListItems(items []model.BlockListItem) error
+	// InsertBlockListItems inserts a set of block list item entities
+	// into storage, only in case they haven't been previously inserted.
+	InsertBlockListItems(items []model.BlockListItem) error
+
+	// DeleteBlockListItems deletes a set of block list item entities from storage.
 	DeleteBlockListItems(items []model.BlockListItem) error
+
+	// FetchBlockListItems retrieves from storage all block list item entities
+	// associated to a given user.
 	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }
 
@@ -67,6 +115,7 @@ type Storage interface {
 	privateStorage
 	blockListStorage
 
+	// Shutdown shuts down storage sub system.
 	Shutdown()
 }
 

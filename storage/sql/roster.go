@@ -14,6 +14,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
@@ -41,6 +43,7 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 	return s.fetchRosterVer(ri.Username)
 }
 
+// DeleteRosterItem deletes a roster item entity from storage.
 func (s *Storage) DeleteRosterItem(username, jid string) (model.RosterVersion, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
@@ -62,6 +65,8 @@ func (s *Storage) DeleteRosterItem(username, jid string) (model.RosterVersion, e
 	return s.fetchRosterVer(username)
 }
 
+// FetchRosterItems retrieves from storage all roster item entities
+// associated to a given user.
 func (s *Storage) FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
@@ -85,6 +90,7 @@ func (s *Storage) FetchRosterItems(username string) ([]model.RosterItem, model.R
 	return items, ver, nil
 }
 
+// FetchRosterItem retrieves from storage a roster item entity.
 func (s *Storage) FetchRosterItem(username, jid string) (*model.RosterItem, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
@@ -102,6 +108,8 @@ func (s *Storage) FetchRosterItem(username, jid string) (*model.RosterItem, erro
 	}
 }
 
+// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// into storage, or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
@@ -118,12 +126,15 @@ func (s *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification)
 	return err
 }
 
+// DeleteRosterNotification deletes a roster notification entity from storage.
 func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
+// FetchRosterNotifications retrieves from storage all roster notifications
+// associated to a given user.
 func (s *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
 	q := sq.Select("contact", "jid", "elements").
 		From("roster_notifications").

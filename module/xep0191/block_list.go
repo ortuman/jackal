@@ -108,7 +108,7 @@ func (x *BlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 			bl = append(bl, model.BlockListItem{Username: x.stm.Username(), JID: j.String()})
 		}
 	}
-	if err := storage.Instance().InsertOrUpdateBlockListItems(bl); err != nil {
+	if err := storage.Instance().InsertBlockListItems(bl); err != nil {
 		log.Error(err)
 		x.stm.SendElement(iq.InternalServerError())
 		return

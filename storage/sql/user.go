@@ -12,6 +12,8 @@ import (
 	"github.com/ortuman/jackal/storage/model"
 )
 
+// InsertOrUpdateUser inserts a new user entity into storage,
+// or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateUser(u *model.User) error {
 	q := sq.Insert("users").
 		Columns("username", "password", "logged_out_status", "logged_out_at", "updated_at", "created_at").
@@ -22,6 +24,7 @@ func (s *Storage) InsertOrUpdateUser(u *model.User) error {
 	return err
 }
 
+// FetchUser retrieves from storage a user entity.
 func (s *Storage) FetchUser(username string) (*model.User, error) {
 	q := sq.Select("username", "password", "logged_out_status", "logged_out_at").
 		From("users").
@@ -39,6 +42,7 @@ func (s *Storage) FetchUser(username string) (*model.User, error) {
 	}
 }
 
+// DeleteUser deletes a user entity from storage.
 func (s *Storage) DeleteUser(username string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		var err error
@@ -70,6 +74,7 @@ func (s *Storage) DeleteUser(username string) error {
 	})
 }
 
+// UserExists returns whether or not a user exists within storage.
 func (s *Storage) UserExists(username string) (bool, error) {
 	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})
 

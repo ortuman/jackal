@@ -12,6 +12,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// InsertOrUpdatePrivateXML inserts a new private element into storage,
+// or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
@@ -29,6 +31,7 @@ func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace 
 	return err
 }
 
+// FetchPrivateXML retrieves from storage a private element.
 func (s *Storage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
 	q := sq.Select("data").
 		From("private_storage").
