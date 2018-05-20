@@ -50,7 +50,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 
 	x := New(stm, nil)
 
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	storage.Instance().InsertBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	}, {
@@ -226,7 +226,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	storage.Instance().InsertOrUpdateBlockListItems([]model.BlockListItem{{
+	storage.Instance().InsertBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	}, {

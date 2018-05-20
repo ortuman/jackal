@@ -237,7 +237,7 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	}}
-	storage.Instance().InsertOrUpdateBlockListItems(bl1)
+	storage.Instance().InsertBlockListItems(bl1)
 	require.False(t, Instance().IsBlockedJID(j2, "ortuman"))
 	require.True(t, Instance().IsBlockedJID(j3, "ortuman"))
 
@@ -248,7 +248,7 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	}}
-	storage.Instance().InsertOrUpdateBlockListItems(bl2)
+	storage.Instance().InsertBlockListItems(bl2)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
@@ -262,7 +262,7 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	}}
-	storage.Instance().InsertOrUpdateBlockListItems(bl3)
+	storage.Instance().InsertBlockListItems(bl3)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))
@@ -276,7 +276,7 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 		Username: "ortuman",
 		JID:      "jackal.im",
 	}}
-	storage.Instance().InsertOrUpdateBlockListItems(bl4)
+	storage.Instance().InsertBlockListItems(bl4)
 	Instance().ReloadBlockList("ortuman")
 
 	require.True(t, Instance().IsBlockedJID(j2, "ortuman"))

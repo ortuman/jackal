@@ -20,10 +20,10 @@ func TestMockStorageInsertOrUpdateBlockListItems(t *testing.T) {
 	}
 	s := New()
 	s.ActivateMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOrUpdateBlockListItems(items))
+	require.Equal(t, ErrMockedError, s.InsertBlockListItems(items))
 	s.DeactivateMockedError()
 
-	s.InsertOrUpdateBlockListItems(items)
+	s.InsertBlockListItems(items)
 
 	s.ActivateMockedError()
 	_, err := s.FetchBlockListItems("ortuman")
@@ -41,7 +41,7 @@ func TestMockStorageDeleteBlockListItems(t *testing.T) {
 		{"ortuman", "juliet@jackal.im"},
 	}
 	s := New()
-	s.InsertOrUpdateBlockListItems(items)
+	s.InsertBlockListItems(items)
 
 	delItems := []model.BlockListItem{{"ortuman", "romeo@jackal.im"}}
 	s.ActivateMockedError()

@@ -26,7 +26,7 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
 
-	err := h.db.InsertOrUpdateBlockListItems(items)
+	err := h.db.InsertBlockListItems(items)
 	require.Nil(t, err)
 
 	sItems, err := h.db.FetchBlockListItems("ortuman")
