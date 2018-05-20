@@ -30,7 +30,7 @@ type rowsScanner interface {
 	Next() bool
 }
 
-// Config represents MySQL storage configuration.
+// Config represents SQL storage configuration.
 type Config struct {
 	Host     string `yaml:"host"`
 	User     string `yaml:"user"`
@@ -39,12 +39,14 @@ type Config struct {
 	PoolSize int    `yaml:"pool_size"`
 }
 
+// Storage represents a SQL storage sub system.
 type Storage struct {
 	db     *sql.DB
 	pool   *pool.BufferPool
 	doneCh chan chan bool
 }
 
+// New returns a SQL storage instance.
 func New(cfg *Config) *Storage {
 	var err error
 	s := &Storage{
@@ -72,6 +74,7 @@ func New(cfg *Config) *Storage {
 	return s
 }
 
+// NewMock returns a mocked SQL storage instance.
 func NewMock() (*Storage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
@@ -85,6 +88,7 @@ func NewMock() (*Storage, sqlmock.Sqlmock) {
 	return s, sqlMock
 }
 
+// Shutdown shuts down SQL storage sub system.
 func (s *Storage) Shutdown() {
 	ch := make(chan bool)
 	s.doneCh <- ch

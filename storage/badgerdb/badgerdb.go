@@ -31,12 +31,14 @@ type Config struct {
 	DataDir string `yaml:"data_dir"`
 }
 
+// Storage represents a BadgerDB storage sub system.
 type Storage struct {
 	db     *badger.DB
 	pool   *pool.BufferPool
 	doneCh chan chan bool
 }
 
+// New returns a new BadgerDB storage instance.
 func New(cfg *Config) *Storage {
 	b := &Storage{
 		pool:   pool.NewBufferPool(),
@@ -57,6 +59,7 @@ func New(cfg *Config) *Storage {
 	return b
 }
 
+// Shutdown shuts down BadgerDB storage sub system.
 func (b *Storage) Shutdown() {
 	ch := make(chan bool)
 	b.doneCh <- ch

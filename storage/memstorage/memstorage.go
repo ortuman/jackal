@@ -18,6 +18,7 @@ import (
 // when mocked error is activated.
 var ErrMockedError = errors.New("storage mocked error")
 
+// Storage represents an in memory storage sub system.
 type Storage struct {
 	mockErr             uint32
 	mu                  sync.RWMutex
@@ -31,6 +32,7 @@ type Storage struct {
 	blockListItems      map[string][]model.BlockListItem
 }
 
+// New returns a new in memory storage instance.
 func New() *Storage {
 	return &Storage{
 		users:               make(map[string]*model.User),
@@ -44,13 +46,16 @@ func New() *Storage {
 	}
 }
 
+// Shutdown shuts down in memory storage sub system.
 func (m *Storage) Shutdown() {
 }
 
+// ActivateMockedError activates in memory mocked error.
 func (m *Storage) ActivateMockedError() {
 	atomic.StoreUint32(&m.mockErr, 1)
 }
 
+// DeactivateMockedError deactivates in memory mocked error.
 func (m *Storage) DeactivateMockedError() {
 	atomic.StoreUint32(&m.mockErr, 0)
 }

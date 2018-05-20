@@ -10,7 +10,8 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
-// FetchPrivateXML retrieves from storage a private element.
+// InsertOrUpdatePrivateXML inserts a new private element into storage,
+// or updates it in case it's been previously inserted.
 func (b *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
 	r := xml.NewElementName("r")
 	r.AppendElements(privateXML)
@@ -19,8 +20,7 @@ func (b *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace 
 	})
 }
 
-// InsertOrUpdatePrivateXML inserts a new private element into storage,
-// or updates it in case it's been previously inserted.
+// FetchPrivateXML retrieves from storage a private element.
 func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
 	var r xml.Element
 	err := b.fetch(&r, b.privateStorageKey(username, namespace))
