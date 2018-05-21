@@ -50,6 +50,11 @@ func (p *Parser) ParseElement() (XElement, error) {
 		return nil, err
 	}
 	for {
+		// check max stanza size limit
+		off := p.dec.InputOffset()
+		if p.maxStanzaSize > 0 && off-p.lastOffset > p.maxStanzaSize {
+			return nil, ErrTooLargeStanza
+		}
 		switch t1 := t.(type) {
 		case xml.ProcInst:
 			return nil, nil
@@ -82,13 +87,7 @@ func (p *Parser) ParseElement() (XElement, error) {
 		}
 	}
 done:
-	// check max stanza size limit
-	off := p.dec.InputOffset()
-	if p.maxStanzaSize > 0 && off-p.lastOffset > p.maxStanzaSize {
-		return nil, ErrTooLargeStanza
-	}
-	p.lastOffset = off
-
+	p.lastOffset = p.dec.InputOffset()
 	ret := p.nextElement
 	p.nextElement = nil
 	return ret, nil
