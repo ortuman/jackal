@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"crypto/tls"
+
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
@@ -435,7 +437,7 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 func tUtilStreamInit() (*c2sStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	stm := newC2SStream("abcd1234", tr, tUtilStreamDefaultConfig())
+	stm := newC2SStream("abcd1234", tr, &tls.Config{}, tUtilStreamDefaultConfig())
 	c2s.Instance().RegisterStream(stm)
 	return stm, conn
 }

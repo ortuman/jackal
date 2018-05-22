@@ -19,7 +19,7 @@ storage:
     pool_size: 16
 
 c2s:
-  domains: [localhost]
+  domains: [jackal.im]
 
 servers:
   - id: default
