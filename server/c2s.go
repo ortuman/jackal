@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"crypto/tls"
+
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -35,7 +37,6 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/stream/errors"
-	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -82,6 +83,7 @@ const (
 
 type c2sStream struct {
 	cfg         *Config
+	tlsCfg      *tls.Config
 	tr          transport.Transport
 	parser      *xml.Parser
 	id          string
@@ -100,9 +102,10 @@ type c2sStream struct {
 	actorCh     chan func()
 }
 
-func newC2SStream(id string, tr transport.Transport, cfg *Config) *c2sStream {
+func newC2SStream(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) *c2sStream {
 	s := &c2sStream{
 		cfg:     cfg,
+		tlsCfg:  tlsCfg,
 		id:      id,
 		tr:      tr,
 		parser:  xml.NewParser(tr, cfg.Transport.MaxStanzaSize),
@@ -517,18 +520,11 @@ func (s *c2sStream) proceedStartTLS() {
 		s.disconnectWithStreamError(streamerror.ErrNotAuthorized)
 		return
 	}
-	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, s.Domain())
-	if err != nil {
-		log.Error(err)
-		s.writeElement(xml.NewElementNamespace("failure", tlsNamespace))
-		s.disconnectClosingStream(true)
-		return
-	}
 	s.ctx.SetBool(true, securedContextKey)
 
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
-	s.tr.StartTLS(tlsCfg)
+	s.tr.StartTLS(s.tlsCfg)
 
 	log.Infof("secured stream... id: %s", s.id)
 
