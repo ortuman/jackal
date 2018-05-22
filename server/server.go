@@ -6,6 +6,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 
 type server struct {
 	cfg        *Config
+	tlsCfg     *tls.Config
 	ln         net.Listener
 	wsSrv      *http.Server
 	wsUpgrader *websocket.Upgrader
@@ -52,7 +54,9 @@ func Initialize(srvConfigurations []Config, debugPort int) {
 
 	// initialize all servers
 	for i := 0; i < len(srvConfigurations); i++ {
-		initializeServer(&srvConfigurations[i])
+		if err := initializeServer(&srvConfigurations[i]); err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
 
 	// wait until shutdown...
@@ -78,10 +82,24 @@ func Shutdown() {
 	}
 }
 
-func initializeServer(srvConfig *Config) {
-	srv := &server{cfg: srvConfig}
-	servers[srvConfig.ID] = srv
+func newServer(cfg *Config) (*server, error) {
+	s := &server{cfg: cfg}
+	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, c2s.Instance().DefaultLocalDomain())
+	if err != nil {
+		return nil, err
+	}
+	s.tlsCfg = tlsCfg
+	return s, nil
+}
+
+func initializeServer(cfg *Config) error {
+	srv, err := newServer(cfg)
+	if err != nil {
+		return err
+	}
+	servers[cfg.ID] = srv
 	go srv.start()
+	return nil
 }
 
 func (s *server) start() {
@@ -124,13 +142,9 @@ func (s *server) listenWebSocketConn(address string) {
 			log.Fatalf("%v", err)
 		}
 	}()
-	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, c2s.Instance().DefaultLocalDomain())
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
 	wsSrv := &http.Server{
 		Addr:      address,
-		TLSConfig: tlsCfg,
+		TLSConfig: s.tlsCfg,
 	}
 	s.wsUpgrader = &websocket.Upgrader{
 		Subprotocols: []string{"xmpp"},
@@ -178,7 +192,7 @@ func (s *server) handleWebSocketConn(conn *websocket.Conn) {
 }
 
 func (s *server) startStream(tr transport.Transport) {
-	stm := newC2SStream(s.nextID(), tr, s.cfg)
+	stm := newC2SStream(s.nextID(), tr, s.tlsCfg, s.cfg)
 	if err := c2s.Instance().RegisterStream(stm); err != nil {
 		log.Error(err)
 	}
