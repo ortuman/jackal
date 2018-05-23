@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package stream
+package router
 
 import (
 	"sync"

@@ -3,19 +3,18 @@
  * See the LICENSE file for more information.
  */
 
-package c2s
+package router
 
 import (
 	"time"
 
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 // MockStream represents a mocked c2s stream.
 type MockStream struct {
 	id     string
-	ctx    *stream.Context
+	ctx    *Context
 	elemCh chan xml.XElement
 	discCh chan error
 }
@@ -24,7 +23,7 @@ type MockStream struct {
 func NewMockStream(id string, jid *xml.JID) *MockStream {
 	stm := &MockStream{
 		id:  id,
-		ctx: stream.NewContext(),
+		ctx: NewContext(),
 	}
 	stm.ctx.SetObject(jid, "jid")
 	stm.ctx.SetString(jid.Node(), "username")
@@ -41,7 +40,7 @@ func (m *MockStream) ID() string {
 }
 
 // Context returns mocked stream associated context.
-func (m *MockStream) Context() *stream.Context {
+func (m *MockStream) Context() *Context {
 	return m.ctx
 }
 
@@ -138,7 +137,12 @@ func (m *MockStream) Presence() *xml.Presence {
 
 // SendElement sends the given XML element.
 func (m *MockStream) SendElement(element xml.XElement) {
-	m.elemCh <- element
+	select {
+	case m.elemCh <- element:
+		return
+	default:
+		break
+	}
 }
 
 // FetchElement waits until a new XML element is sent to

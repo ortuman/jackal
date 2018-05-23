@@ -17,8 +17,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/transport"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/util"
 )
 
@@ -84,7 +84,7 @@ func Shutdown() {
 
 func newServer(cfg *Config) (*server, error) {
 	s := &server{cfg: cfg}
-	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, c2s.Instance().DefaultLocalDomain())
+	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, router.Instance().DefaultLocalDomain())
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (s *server) handleWebSocketConn(conn *websocket.Conn) {
 
 func (s *server) startStream(tr transport.Transport) {
 	stm := newC2SStream(s.nextID(), tr, s.tlsCfg, s.cfg)
-	if err := c2s.Instance().RegisterStream(stm); err != nil {
+	if err := router.Instance().RegisterStream(stm); err != nil {
 		log.Error(err)
 	}
 }

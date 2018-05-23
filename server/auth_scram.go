@@ -15,10 +15,10 @@ import (
 	"hash"
 	"strings"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -74,7 +74,7 @@ func (s *scramParameters) String() string {
 }
 
 type scramAuthenticator struct {
-	strm          c2s.Stream
+	stm           router.C2S
 	tr            transport.Transport
 	tp            scramType
 	usesCb        bool
@@ -89,9 +89,9 @@ type scramAuthenticator struct {
 	authenticated bool
 }
 
-func newScram(strm c2s.Stream, tr transport.Transport, scramType scramType, usesChannelBinding bool) *scramAuthenticator {
+func newScram(stm router.C2S, tr transport.Transport, scramType scramType, usesChannelBinding bool) *scramAuthenticator {
 	s := &scramAuthenticator{
-		strm:   strm,
+		stm:    stm,
 		tr:     tr,
 		tp:     scramType,
 		usesCb: usesChannelBinding,
@@ -197,7 +197,7 @@ func (s *scramAuthenticator) handleStart(elem xml.XElement) error {
 
 	respElem := xml.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
-	s.strm.SendElement(respElem)
+	s.stm.SendElement(respElem)
 
 	s.state = challengedScramState
 	return nil
@@ -233,7 +233,7 @@ func (s *scramAuthenticator) handleChallenged(elem xml.XElement) error {
 
 	respElem := xml.NewElementNamespace("success", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
-	s.strm.SendElement(respElem)
+	s.stm.SendElement(respElem)
 
 	s.authenticated = true
 	return nil

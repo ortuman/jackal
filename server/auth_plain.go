@@ -9,19 +9,19 @@ import (
 	"bytes"
 	"encoding/base64"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
 type plainAuthenticator struct {
-	strm          c2s.Stream
+	stm           router.C2S
 	username      string
 	authenticated bool
 }
 
-func newPlainAuthenticator(strm c2s.Stream) *plainAuthenticator {
-	return &plainAuthenticator{strm: strm}
+func newPlainAuthenticator(stm router.C2S) *plainAuthenticator {
+	return &plainAuthenticator{stm: stm}
 }
 
 func (p *plainAuthenticator) Mechanism() string {
@@ -69,7 +69,7 @@ func (p *plainAuthenticator) ProcessElement(elem xml.XElement) error {
 	p.username = username
 	p.authenticated = true
 
-	p.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	p.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 

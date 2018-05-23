@@ -8,6 +8,7 @@ package server
 import (
 	"bytes"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -15,9 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"crypto/tls"
-
 	"github.com/gorilla/websocket"
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
@@ -30,13 +30,11 @@ import (
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/stream/c2s"
-	"github.com/ortuman/jackal/stream/errors"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -89,7 +87,7 @@ type c2sStream struct {
 	id          string
 	connected   uint32
 	state       uint32
-	ctx         *stream.Context
+	ctx         *router.Context
 	authrs      []authenticator
 	activeAuthr authenticator
 	iqHandlers  []module.IQHandler
@@ -110,14 +108,14 @@ func newC2SStream(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Co
 		tr:      tr,
 		parser:  xml.NewParser(tr, cfg.Transport.MaxStanzaSize),
 		state:   connecting,
-		ctx:     stream.NewContext(),
+		ctx:     router.NewContext(),
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// initialize stream context
 	secured := !(cfg.Transport.Type == transport.Socket)
 	s.ctx.SetBool(secured, securedContextKey)
 
-	domain := c2s.Instance().DefaultLocalDomain()
+	domain := router.Instance().DefaultLocalDomain()
 	s.ctx.SetString(domain, domainContextKey)
 
 	j, _ := xml.NewJID("", domain, "", true)
@@ -146,7 +144,7 @@ func (s *c2sStream) ID() string {
 }
 
 // Context returns stream associated context.
-func (s *c2sStream) Context() *stream.Context {
+func (s *c2sStream) Context() *router.Context {
 	return s.ctx
 }
 
@@ -633,8 +631,8 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 		resource = uuid.New()
 	}
 	// try binding...
-	var stm c2s.Stream
-	stms := c2s.Instance().StreamsMatchingJID(s.JID().ToBareJID())
+	var stm router.C2S
+	stms := router.Instance().StreamsMatchingJID(s.JID().ToBareJID())
 	for _, s := range stms {
 		if s.Resource() == resource {
 			stm = s
@@ -679,7 +677,7 @@ func (s *c2sStream) bindResource(iq *xml.IQ) {
 
 	s.writeElement(result)
 
-	if err := c2s.Instance().AuthenticateStream(s); err != nil {
+	if err := router.Instance().AuthenticateStream(s); err != nil {
 		log.Error(err)
 	}
 }
@@ -729,11 +727,11 @@ func (s *c2sStream) processComponentStanza(stanza xml.Stanza) {
 
 func (s *c2sStream) processIQ(iq *xml.IQ) {
 	toJID := iq.ToJID()
-	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
+	if !router.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
-	if node := toJID.Node(); len(node) > 0 && c2s.Instance().IsBlockedJID(s.JID(), node) {
+	if node := toJID.Node(); len(node) > 0 && router.Instance().IsBlockedJID(s.JID(), node) {
 		// destination user blocked stream JID
 		if iq.IsGet() || iq.IsSet() {
 			s.writeElement(iq.ServiceUnavailableError())
@@ -741,8 +739,8 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 		return
 	}
 	if toJID.IsFullWithUser() {
-		switch c2s.Instance().Route(iq) {
-		case c2s.ErrResourceNotFound:
+		switch router.Instance().Route(iq) {
+		case router.ErrResourceNotFound:
 			s.writeElement(iq.ServiceUnavailableError())
 		}
 		return
@@ -764,7 +762,7 @@ func (s *c2sStream) processIQ(iq *xml.IQ) {
 
 func (s *c2sStream) processPresence(presence *xml.Presence) {
 	toJID := presence.ToJID()
-	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
+	if !router.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
@@ -775,7 +773,7 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 		return
 	}
 	if toJID.IsFullWithUser() {
-		c2s.Instance().Route(presence)
+		router.Instance().Route(presence)
 		return
 	}
 	// set context presence
@@ -800,28 +798,28 @@ func (s *c2sStream) processPresence(presence *xml.Presence) {
 
 func (s *c2sStream) processMessage(message *xml.Message) {
 	toJID := message.ToJID()
-	if !c2s.Instance().IsLocalDomain(toJID.Domain()) {
+	if !router.Instance().IsLocalDomain(toJID.Domain()) {
 		// TODO(ortuman): Implement XMPP federation
 		return
 	}
 
 sendMessage:
-	err := c2s.Instance().Route(message)
+	err := router.Instance().Route(message)
 	switch err {
 	case nil:
 		break
-	case c2s.ErrNotAuthenticated:
+	case router.ErrNotAuthenticated:
 		if s.offline != nil {
 			if (message.IsChat() || message.IsGroupChat()) && message.IsMessageWithBody() {
 				return
 			}
 			s.offline.ArchiveMessage(message)
 		}
-	case c2s.ErrResourceNotFound:
+	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
 		toJID = toJID.ToBareJID()
 		goto sendMessage
-	case c2s.ErrNotExistingAccount, c2s.ErrBlockedJID:
+	case router.ErrNotExistingAccount, router.ErrBlockedJID:
 		s.writeElement(message.ServiceUnavailableError())
 	default:
 		log.Error(err)
@@ -1009,7 +1007,7 @@ func (s *c2sStream) validateStreamElement(elem xml.XElement) *streamerror.Error 
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !c2s.Instance().IsLocalDomain(to) {
+	if len(to) > 0 && !router.Instance().IsLocalDomain(to) {
 		return streamerror.ErrHostUnknown
 	}
 	if elem.Version() != "1.0" {
@@ -1095,7 +1093,7 @@ func (s *c2sStream) disconnectClosingStream(closeStream bool) {
 	s.ctx.Terminate()
 
 	// unregister stream
-	if err := c2s.Instance().UnregisterStream(s); err != nil {
+	if err := router.Instance().UnregisterStream(s); err != nil {
 		log.Error(err)
 	}
 	s.setState(disconnected)
@@ -1118,10 +1116,10 @@ func (s *c2sStream) updateLogoutInfo() error {
 }
 
 func (s *c2sStream) isBlockedJID(jid *xml.JID) bool {
-	if jid.IsServer() && c2s.Instance().IsLocalDomain(jid.Domain()) {
+	if jid.IsServer() && router.Instance().IsLocalDomain(jid.Domain()) {
 		return false
 	}
-	return c2s.Instance().IsBlockedJID(jid, s.Username())
+	return router.Instance().IsBlockedJID(jid, s.Username())
 }
 
 func (s *c2sStream) restart() {

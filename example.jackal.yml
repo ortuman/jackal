@@ -18,8 +18,8 @@ storage:
     database: jackal
     pool_size: 16
 
-c2s:
-  domains: [jackal.im]
+router:
+  domains: [localhost]
 
 servers:
   - id: default

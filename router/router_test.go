@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package c2s
+package router
 
 import (
 	"testing"

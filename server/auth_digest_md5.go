@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 )
@@ -76,15 +76,15 @@ func (r *digestMD5Parameters) setParameter(p string) {
 }
 
 type digestMD5Authenticator struct {
-	strm          c2s.Stream
+	stm           router.C2S
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
-func newDigestMD5(strm c2s.Stream) *digestMD5Authenticator {
+func newDigestMD5(stm router.C2S) *digestMD5Authenticator {
 	return &digestMD5Authenticator{
-		strm:  strm,
+		stm:   stm,
 		state: startDigestMD5State,
 	}
 }
@@ -133,13 +133,13 @@ func (d *digestMD5Authenticator) Reset() {
 }
 
 func (d *digestMD5Authenticator) handleStart(elem xml.XElement) error {
-	domain := d.strm.Domain()
+	domain := d.stm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
 	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
 
 	respElem := xml.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(chnge)))
-	d.strm.SendElement(respElem)
+	d.stm.SendElement(respElem)
 
 	d.state = challengedDigestMD5State
 	return nil
@@ -156,7 +156,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 	params := d.parseParameters(string(b))
 
 	// validate realm
-	if params.realm != d.strm.Domain() {
+	if params.realm != d.stm.Domain() {
 		return errSASLNotAuthorized
 	}
 	// validate nc
@@ -172,7 +172,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 		return errSASLNotAuthorized
 	}
 	// validate digest-uri
-	if !strings.HasPrefix(params.digestURI, "xmpp/") || params.digestURI[5:] != d.strm.Domain() {
+	if !strings.HasPrefix(params.digestURI, "xmpp/") || params.digestURI[5:] != d.stm.Domain() {
 		return errSASLNotAuthorized
 	}
 	// validate user
@@ -195,7 +195,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 
 	respElem := xml.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(respAuth)))
-	d.strm.SendElement(respElem)
+	d.stm.SendElement(respElem)
 
 	d.username = user.Username
 	d.state = authenticatedDigestMD5State
@@ -204,7 +204,7 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 
 func (d *digestMD5Authenticator) handleAuthenticated(elem xml.XElement) error {
 	d.authenticated = true
-	d.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	d.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 

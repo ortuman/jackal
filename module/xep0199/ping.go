@@ -10,10 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/stream/c2s"
-	"github.com/ortuman/jackal/stream/errors"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -29,7 +29,7 @@ type Config struct {
 // Ping represents a ping server stream module.
 type Ping struct {
 	cfg *Config
-	stm c2s.Stream
+	stm router.C2S
 
 	pingTm *time.Timer
 	pongCh chan struct{}
@@ -42,7 +42,7 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Ping {
+func New(config *Config, stm router.C2S, discoInfo *xep0030.DiscoInfo) *Ping {
 	// register disco features
 	if discoInfo != nil {
 		discoInfo.Entity(stm.Domain(), "").AddFeature(pingNamespace)

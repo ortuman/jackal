@@ -12,8 +12,8 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -21,12 +21,12 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	stm       c2s.Stream
+	stm       router.C2S
 	startTime time.Time
 }
 
 // New returns a last activity IQ handler module.
-func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *LastActivity {
+func New(stm router.C2S, discoInfo *xep0030.DiscoInfo) *LastActivity {
 	// register disco features
 	if discoInfo != nil {
 		discoInfo.Entity(stm.Domain(), "").AddFeature(lastActivityNamespace)
@@ -74,7 +74,7 @@ func (x *LastActivity) sendServerUptime(iq *xml.IQ) {
 }
 
 func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
-	if len(c2s.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
+	if len(router.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
 		x.sendReply(iq, 0, "")
 		return
 	}

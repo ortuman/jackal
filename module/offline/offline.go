@@ -8,8 +8,8 @@ package offline
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -23,12 +23,12 @@ type Config struct {
 // Offline represents an offline server stream module.
 type Offline struct {
 	cfg     *Config
-	stm     c2s.Stream
+	stm     router.C2S
 	actorCh chan func()
 }
 
 // New returns an offline server stream module.
-func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Offline {
+func New(config *Config, stm router.C2S, discoInfo *xep0030.DiscoInfo) *Offline {
 	// register disco feature
 	if discoInfo != nil {
 		discoInfo.Entity(stm.Domain(), "").AddFeature(offlineNamespace)

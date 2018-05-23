@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package c2s
+package router
 
 import (
 	"errors"
@@ -13,33 +13,32 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 var (
 	// ErrNotExistingAccount will be returned by Route method
 	// if destination user does not exist.
-	ErrNotExistingAccount = errors.New("c2s: account does not exist")
+	ErrNotExistingAccount = errors.New("router: account does not exist")
 
 	// ErrResourceNotFound will be returned by Route method
 	// if destination resource does not match any of user's available resources.
-	ErrResourceNotFound = errors.New("c2s: resource not found")
+	ErrResourceNotFound = errors.New("router: resource not found")
 
 	// ErrNotAuthenticated will be returned by Route method if
 	// destination user is not available at this moment.
-	ErrNotAuthenticated = errors.New("c2s: user not authenticated")
+	ErrNotAuthenticated = errors.New("router: user not authenticated")
 
 	// ErrBlockedJID will be returned by Route method if
 	// destination JID matches any of the user's blocked JID.
-	ErrBlockedJID = errors.New("c2s: destination jid is blocked")
+	ErrBlockedJID = errors.New("router: destination jid is blocked")
 )
 
-// Stream represents a client-to-server XMPP stream.
-type Stream interface {
+// C2S represents a client-to-server XMPP stream.
+type C2S interface {
 	ID() string
 
-	Context() *stream.Context
+	Context() *Context
 
 	Username() string
 	Domain() string
@@ -57,18 +56,23 @@ type Stream interface {
 	Disconnect(err error)
 }
 
-// Manager manages the sessions associated with an account.
-type Manager struct {
+// Config represents a client-to-server manager configuration.
+type Config struct {
+	Domains []string `yaml:"domains"`
+}
+
+// Router manages the sessions associated with an account.
+type Router struct {
 	cfg        *Config
 	lock       sync.RWMutex
-	stms       map[string]Stream
-	authedStms map[string][]Stream
+	stms       map[string]C2S
+	authedStms map[string][]C2S
 	blockLists map[string][]*xml.JID
 }
 
 // singleton interface
 var (
-	inst        *Manager
+	inst        *Router
 	instMu      sync.RWMutex
 	initialized uint32
 )
@@ -79,17 +83,20 @@ func Initialize(cfg *Config) {
 		instMu.Lock()
 		defer instMu.Unlock()
 
-		inst = &Manager{
+		if len(cfg.Domains) == 0 {
+			log.Fatalf("router: no domain specified")
+		}
+		inst = &Router{
 			cfg:        cfg,
-			stms:       make(map[string]Stream),
-			authedStms: make(map[string][]Stream),
+			stms:       make(map[string]C2S),
+			authedStms: make(map[string][]C2S),
 			blockLists: make(map[string][]*xml.JID),
 		}
 	}
 }
 
 // Instance returns the c2s session manager instance.
-func Instance() *Manager {
+func Instance() *Router {
 	instMu.RLock()
 	defer instMu.RUnlock()
 
@@ -110,13 +117,13 @@ func Shutdown() {
 }
 
 // DefaultLocalDomain returns default local domain.
-func (m *Manager) DefaultLocalDomain() string {
-	return m.cfg.Domains[0]
+func (r *Router) DefaultLocalDomain() string {
+	return r.cfg.Domains[0]
 }
 
 // IsLocalDomain returns true if domain is a local server domain.
-func (m *Manager) IsLocalDomain(domain string) bool {
-	for _, localDomain := range m.cfg.Domains {
+func (r *Router) IsLocalDomain(domain string) bool {
+	for _, localDomain := range r.cfg.Domains {
 		if localDomain == domain {
 			return true
 		}
@@ -126,18 +133,18 @@ func (m *Manager) IsLocalDomain(domain string) bool {
 
 // RegisterStream registers the specified client stream.
 // An error will be returned in case the stream has been previously registered.
-func (m *Manager) RegisterStream(stm Stream) error {
-	if !m.IsLocalDomain(stm.Domain()) {
+func (r *Router) RegisterStream(stm C2S) error {
+	if !r.IsLocalDomain(stm.Domain()) {
 		return fmt.Errorf("invalid domain: %s", stm.Domain())
 	}
-	m.lock.Lock()
-	_, ok := m.stms[stm.ID()]
+	r.lock.Lock()
+	_, ok := r.stms[stm.ID()]
 	if ok {
-		m.lock.Unlock()
+		r.lock.Unlock()
 		return fmt.Errorf("stream already registered: %s", stm.ID())
 	}
-	m.stms[stm.ID()] = stm
-	m.lock.Unlock()
+	r.stms[stm.ID()] = stm
+	r.lock.Unlock()
 	log.Infof("registered stream... (id: %s)", stm.ID())
 	return nil
 }
@@ -145,14 +152,14 @@ func (m *Manager) RegisterStream(stm Stream) error {
 // UnregisterStream unregisters the specified client stream removing
 // associated resource from the manager.
 // An error will be returned in case the stream has not been previously registered.
-func (m *Manager) UnregisterStream(stm Stream) error {
-	m.lock.Lock()
-	_, ok := m.stms[stm.ID()]
+func (r *Router) UnregisterStream(stm C2S) error {
+	r.lock.Lock()
+	_, ok := r.stms[stm.ID()]
 	if !ok {
-		m.lock.Unlock()
+		r.lock.Unlock()
 		return fmt.Errorf("stream not found: %s", stm.ID())
 	}
-	if authedStms := m.authedStms[stm.Username()]; authedStms != nil {
+	if authedStms := r.authedStms[stm.Username()]; authedStms != nil {
 		res := stm.Resource()
 		for i := 0; i < len(authedStms); i++ {
 			if res == authedStms[i].Resource() {
@@ -161,40 +168,40 @@ func (m *Manager) UnregisterStream(stm Stream) error {
 			}
 		}
 		if len(authedStms) > 0 {
-			m.authedStms[stm.Username()] = authedStms
+			r.authedStms[stm.Username()] = authedStms
 		} else {
-			delete(m.authedStms, stm.Username())
+			delete(r.authedStms, stm.Username())
 		}
 	}
-	delete(m.stms, stm.ID())
-	m.lock.Unlock()
+	delete(r.stms, stm.ID())
+	r.lock.Unlock()
 	log.Infof("unregistered stream... (id: %s)", stm.ID())
 	return nil
 }
 
 // AuthenticateStream sets a previously registered stream as authenticated.
 // An error will be returned in case no assigned resource is found.
-func (m *Manager) AuthenticateStream(stm Stream) error {
+func (r *Router) AuthenticateStream(stm C2S) error {
 	if len(stm.Resource()) == 0 {
 		return fmt.Errorf("resource not yet assigned: %s", stm.ID())
 	}
-	m.lock.Lock()
-	if authedStrms := m.authedStms[stm.Username()]; authedStrms != nil {
-		m.authedStms[stm.Username()] = append(authedStrms, stm)
+	r.lock.Lock()
+	if authedStrms := r.authedStms[stm.Username()]; authedStrms != nil {
+		r.authedStms[stm.Username()] = append(authedStrms, stm)
 	} else {
-		m.authedStms[stm.Username()] = []Stream{stm}
+		r.authedStms[stm.Username()] = []C2S{stm}
 	}
-	m.lock.Unlock()
+	r.lock.Unlock()
 	log.Infof("authenticated stream... (%s/%s)", stm.Username(), stm.Resource())
 	return nil
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any
 // of a user's blocking list JID.
-func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
-	bl := m.getBlockList(username)
+func (r *Router) IsBlockedJID(jid *xml.JID, username string) bool {
+	bl := r.getBlockList(username)
 	for _, blkJID := range bl {
-		if m.jidMatchesBlockedJID(jid, blkJID) {
+		if r.jidMatchesBlockedJID(jid, blkJID) {
 			return true
 		}
 	}
@@ -203,47 +210,47 @@ func (m *Manager) IsBlockedJID(jid *xml.JID, username string) bool {
 
 // ReloadBlockList reloads in-memstorage block list for a given user and starts
 // applying it for future stanza routing.
-func (m *Manager) ReloadBlockList(username string) {
-	m.lock.Lock()
-	delete(m.blockLists, username)
-	m.lock.Unlock()
+func (r *Router) ReloadBlockList(username string) {
+	r.lock.Lock()
+	delete(r.blockLists, username)
+	r.lock.Unlock()
 	log.Infof("block list reloaded... (username: %s)", username)
 }
 
 // Route routes a stanza applying server rules for handling XML stanzas.
 // (https://xmpp.org/rfcs/rfc3921.html#rules)
-func (m *Manager) Route(elem xml.Stanza) error {
-	return m.route(elem, false)
+func (r *Router) Route(elem xml.Stanza) error {
+	return r.route(elem, false)
 }
 
 // MustRoute routes a stanza applying server rules for handling XML stanzas
 // and ignoring blocking lists.
-func (m *Manager) MustRoute(elem xml.Stanza) error {
-	return m.route(elem, true)
+func (r *Router) MustRoute(elem xml.Stanza) error {
+	return r.route(elem, true)
 }
 
 // StreamsMatchingJID returns all available streams that match a given JID.
-func (m *Manager) StreamsMatchingJID(jid *xml.JID) []Stream {
-	if !m.IsLocalDomain(jid.Domain()) {
+func (r *Router) StreamsMatchingJID(jid *xml.JID) []C2S {
+	if !r.IsLocalDomain(jid.Domain()) {
 		return nil
 	}
-	var ret []Stream
+	var ret []C2S
 	opts := xml.JIDMatchesDomain
 	if jid.IsFull() {
 		opts |= xml.JIDMatchesResource
 	}
 
-	m.lock.RLock()
+	r.lock.RLock()
 	if len(jid.Node()) > 0 {
 		opts |= xml.JIDMatchesNode
-		stms := m.authedStms[jid.Node()]
+		stms := r.authedStms[jid.Node()]
 		for _, stm := range stms {
 			if stm.JID().Matches(jid, opts) {
 				ret = append(ret, stm)
 			}
 		}
 	} else {
-		for _, stms := range m.authedStms {
+		for _, stms := range r.authedStms {
 			for _, stm := range stms {
 				if stm.JID().Matches(jid, opts) {
 					ret = append(ret, stm)
@@ -251,21 +258,21 @@ func (m *Manager) StreamsMatchingJID(jid *xml.JID) []Stream {
 			}
 		}
 	}
-	m.lock.RUnlock()
+	r.lock.RUnlock()
 	return ret
 }
 
-func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
+func (r *Router) route(elem xml.Stanza, ignoreBlocking bool) error {
 	toJID := elem.ToJID()
-	if !m.IsLocalDomain(toJID.Domain()) {
+	if !r.IsLocalDomain(toJID.Domain()) {
 		return nil
 	}
 	if !ignoreBlocking && !toJID.IsServer() {
-		if m.IsBlockedJID(elem.FromJID(), toJID.Node()) {
+		if r.IsBlockedJID(elem.FromJID(), toJID.Node()) {
 			return ErrBlockedJID
 		}
 	}
-	rcps := m.StreamsMatchingJID(toJID.ToBareJID())
+	rcps := r.StreamsMatchingJID(toJID.ToBareJID())
 	if len(rcps) == 0 {
 		exists, err := storage.Instance().UserExists(toJID.Node())
 		if err != nil {
@@ -311,10 +318,10 @@ func (m *Manager) route(elem xml.Stanza, ignoreBlocking bool) error {
 	return nil
 }
 
-func (m *Manager) getBlockList(username string) []*xml.JID {
-	m.lock.RLock()
-	bl := m.blockLists[username]
-	m.lock.RUnlock()
+func (r *Router) getBlockList(username string) []*xml.JID {
+	r.lock.RLock()
+	bl := r.blockLists[username]
+	r.lock.RUnlock()
 	if bl != nil {
 		return bl
 	}
@@ -328,13 +335,13 @@ func (m *Manager) getBlockList(username string) []*xml.JID {
 		j, _ := xml.NewJIDString(blItm.JID, true)
 		bl = append(bl, j)
 	}
-	m.lock.Lock()
-	m.blockLists[username] = bl
-	m.lock.Unlock()
+	r.lock.Lock()
+	r.blockLists[username] = bl
+	r.lock.Unlock()
 	return bl
 }
 
-func (m *Manager) jidMatchesBlockedJID(jid, blockedJID *xml.JID) bool {
+func (r *Router) jidMatchesBlockedJID(jid, blockedJID *xml.JID) bool {
 	if blockedJID.IsFullWithUser() {
 		return jid.Matches(blockedJID, xml.JIDMatchesNode|xml.JIDMatchesDomain|xml.JIDMatchesResource)
 	} else if blockedJID.IsFullWithServer() {

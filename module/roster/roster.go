@@ -11,9 +11,9 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -41,13 +41,13 @@ type Config struct {
 // Roster represents a roster server stream module.
 type Roster struct {
 	cfg        *Config
-	stm        c2s.Stream
+	stm        router.C2S
 	actorCh    chan func()
 	errHandler func(error)
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, stm c2s.Stream) *Roster {
+func New(cfg *Config, stm router.C2S) *Roster {
 	r := &Roster{
 		cfg:        cfg,
 		stm:        stm,
@@ -204,7 +204,7 @@ func (r *Roster) broadcastPresence(presence *xml.Presence) error {
 		case SubscriptionFrom, SubscriptionBoth:
 			p := xml.NewPresence(r.stm.JID(), r.rosterItemJID(&itm), presence.Type())
 			p.AppendElements(p.Elements().All())
-			c2s.Instance().Route(p)
+			router.Instance().Route(p)
 		}
 	}
 	return nil
@@ -317,7 +317,7 @@ func (r *Roster) removeItem(ri *model.RosterItem) error {
 		}
 	}
 
-	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
+	if router.Instance().IsLocalDomain(cntJID.Domain()) {
 		cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.String())
 		if err != nil {
 			return err
@@ -343,10 +343,10 @@ func (r *Roster) removeItem(ri *model.RosterItem) error {
 		}
 	}
 	if unsubscribe != nil {
-		c2s.Instance().Route(unsubscribe)
+		router.Instance().Route(unsubscribe)
 	}
 	if unsubscribed != nil {
-		c2s.Instance().Route(unsubscribed)
+		router.Instance().Route(unsubscribed)
 	}
 
 	if usrSub == SubscriptionFrom || usrSub == SubscriptionBoth {
@@ -422,13 +422,13 @@ func (r *Roster) processSubscribe(presence *xml.Presence) error {
 	p := xml.NewPresence(usrJID, cntJID, xml.SubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
+	if router.Instance().IsLocalDomain(cntJID.Domain()) {
 		// archive roster approval notification
 		if err := r.insertOrUpdateNotification(cntJID.Node(), usrJID, p); err != nil {
 			return err
 		}
 	}
-	c2s.Instance().Route(p)
+	router.Instance().Route(p)
 	return nil
 }
 
@@ -468,7 +468,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 	p := xml.NewPresence(cntJID, usrJID, xml.SubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if c2s.Instance().IsLocalDomain(usrJID.Domain()) {
+	if router.Instance().IsLocalDomain(usrJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.String())
 		if err != nil {
 			return err
@@ -488,7 +488,7 @@ func (r *Roster) processSubscribed(presence *xml.Presence) error {
 			}
 		}
 	}
-	c2s.Instance().Route(p)
+	router.Instance().Route(p)
 	r.routePresencesFrom(cntJID, usrJID, xml.AvailableType)
 	return nil
 }
@@ -520,7 +520,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 	p := xml.NewPresence(usrJID, cntJID, xml.UnsubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if c2s.Instance().IsLocalDomain(cntJID.Domain()) {
+	if router.Instance().IsLocalDomain(cntJID.Domain()) {
 		cntRi, err := storage.Instance().FetchRosterItem(cntJID.Node(), usrJID.String())
 		if err != nil {
 			return err
@@ -537,7 +537,7 @@ func (r *Roster) processUnsubscribe(presence *xml.Presence) error {
 			}
 		}
 	}
-	c2s.Instance().Route(p)
+	router.Instance().Route(p)
 
 	if usrSub == SubscriptionTo || usrSub == SubscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
@@ -575,7 +575,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 	p := xml.NewPresence(cntJID, usrJID, xml.UnsubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if c2s.Instance().IsLocalDomain(usrJID.Domain()) {
+	if router.Instance().IsLocalDomain(usrJID.Domain()) {
 		usrRi, err := storage.Instance().FetchRosterItem(usrJID.Node(), cntJID.String())
 		if err != nil {
 			return err
@@ -593,7 +593,7 @@ func (r *Roster) processUnsubscribed(presence *xml.Presence) error {
 			}
 		}
 	}
-	c2s.Instance().Route(p)
+	router.Instance().Route(p)
 
 	if cntSub == SubscriptionFrom || cntSub == SubscriptionBoth {
 		r.routePresencesFrom(cntJID, usrJID, xml.UnavailableType)
@@ -639,7 +639,7 @@ func (r *Roster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	}
 	query.AppendElement(r.elementFromRosterItem(ri))
 
-	stms := c2s.Instance().StreamsMatchingJID(to.ToBareJID())
+	stms := router.Instance().StreamsMatchingJID(to.ToBareJID())
 	for _, stm := range stms {
 		if !stm.Context().Bool(rosterRequestedContextKey) {
 			continue
@@ -653,13 +653,13 @@ func (r *Roster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 }
 
 func (r *Roster) routePresencesFrom(from *xml.JID, to *xml.JID, presenceType string) {
-	stms := c2s.Instance().StreamsMatchingJID(from.ToBareJID())
+	stms := router.Instance().StreamsMatchingJID(from.ToBareJID())
 	for _, stm := range stms {
 		p := xml.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
 		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		c2s.Instance().Route(p)
+		router.Instance().Route(p)
 	}
 }
 
