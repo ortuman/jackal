@@ -10,9 +10,9 @@ import (
 
 	"time"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -48,7 +48,7 @@ func TestXEP0012_Matching(t *testing.T) {
 func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	j1, _ := xml.NewJID("", "jackal.im", "", true)
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "garden", true)
-	stm := c2s.NewMockStream("abcd", j2)
+	stm := router.NewMockStream("abcd", j2)
 
 	x := New(stm, nil)
 
@@ -68,13 +68,13 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("noelia", "jackal.im", "", true)
-	stm1 := c2s.NewMockStream("abcd", j1)
-	stm2 := c2s.NewMockStream("abcde", j2)
+	stm1 := router.NewMockStream("abcd", j1)
+	stm2 := router.NewMockStream("abcde", j2)
 	stm2.SetResource("a_res")
 
 	x := New(stm1, nil)
@@ -105,8 +105,8 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	require.True(t, len(secs) > 0)
 
 	// set as online
-	c2s.Instance().RegisterStream(stm2)
-	c2s.Instance().AuthenticateStream(stm2)
+	router.Instance().RegisterStream(stm2)
+	router.Instance().AuthenticateStream(stm2)
 
 	x.ProcessIQ(iq)
 	elem = stm1.FetchElement()

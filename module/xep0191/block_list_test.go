@@ -8,9 +8,9 @@ package xep0191
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream(uuid.New(), j)
+	stm := router.NewMockStream(uuid.New(), j)
 
 	x := New(stm, nil)
 
@@ -82,31 +82,31 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm1 := c2s.NewMockStream(uuid.New(), j1)
+	stm1 := router.NewMockStream(uuid.New(), j1)
 
 	x := New(stm1, nil)
 
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
-	stm2 := c2s.NewMockStream(uuid.New(), j2)
+	stm2 := router.NewMockStream(uuid.New(), j2)
 
 	j3, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
-	stm3 := c2s.NewMockStream(uuid.New(), j3)
+	stm3 := router.NewMockStream(uuid.New(), j3)
 
 	j4, _ := xml.NewJID("romeo", "jackal.im", "jail", true)
-	stm4 := c2s.NewMockStream(uuid.New(), j4)
+	stm4 := router.NewMockStream(uuid.New(), j4)
 
-	c2s.Instance().RegisterStream(stm1)
-	c2s.Instance().RegisterStream(stm2)
-	c2s.Instance().RegisterStream(stm3)
-	c2s.Instance().RegisterStream(stm4)
-	c2s.Instance().AuthenticateStream(stm1)
-	c2s.Instance().AuthenticateStream(stm2)
-	c2s.Instance().AuthenticateStream(stm3)
-	c2s.Instance().AuthenticateStream(stm4)
+	router.Instance().RegisterStream(stm1)
+	router.Instance().RegisterStream(stm2)
+	router.Instance().RegisterStream(stm3)
+	router.Instance().RegisterStream(stm4)
+	router.Instance().AuthenticateStream(stm1)
+	router.Instance().AuthenticateStream(stm2)
+	router.Instance().AuthenticateStream(stm3)
+	router.Instance().AuthenticateStream(stm4)
 
 	stm1.SetAuthenticated(true)
 	stm2.SetAuthenticated(true)

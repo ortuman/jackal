@@ -17,11 +17,11 @@ import (
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -124,8 +124,8 @@ func TestStream_ConnectTimeout(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	stm, _ := tUtilStreamInit()
 	time.Sleep(time.Second * 2)
@@ -136,8 +136,8 @@ func TestStream_Disconnect(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	stm, conn := tUtilStreamInit()
 	stm.Disconnect(nil)
@@ -150,8 +150,8 @@ func TestStream_Features(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	stm, conn := tUtilStreamInit()
 	tUtilStreamOpen(conn)
@@ -169,8 +169,8 @@ func TestStream_TLS(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -193,8 +193,8 @@ func TestStream_Compression(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -224,8 +224,8 @@ func TestStream_StartSession(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -249,8 +249,8 @@ func TestStream_SendIQ(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -288,8 +288,8 @@ func TestStream_SendPresence(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -335,8 +335,8 @@ func TestStream_SendMessage(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
@@ -359,9 +359,9 @@ func TestStream_SendMessage(t *testing.T) {
 	jFrom, _ := xml.NewJID("user", "localhost", "balcony", true)
 	jTo, _ := xml.NewJID("ortuman", "localhost", "garden", true)
 
-	stm2 := c2s.NewMockStream("abcd7890", jTo)
-	c2s.Instance().RegisterStream(stm2)
-	c2s.Instance().AuthenticateStream(stm2)
+	stm2 := router.NewMockStream("abcd7890", jTo)
+	router.Instance().RegisterStream(stm2)
+	router.Instance().AuthenticateStream(stm2)
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, xml.ChatType)
@@ -438,7 +438,7 @@ func tUtilStreamInit() (*c2sStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
 	stm := newC2SStream("abcd1234", tr, &tls.Config{}, tUtilStreamDefaultConfig())
-	c2s.Instance().RegisterStream(stm)
+	router.Instance().RegisterStream(stm)
 	return stm, conn
 }
 

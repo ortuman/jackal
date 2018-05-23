@@ -8,9 +8,9 @@ package roster
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 func TestRoster_MatchesIQ(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := c2s.NewMockStream("abcd", j1)
+	stm := router.NewMockStream("abcd", j1)
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
@@ -40,7 +40,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := c2s.NewMockStream("abcd", j1)
+	stm := router.NewMockStream("abcd", j1)
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
@@ -134,8 +134,8 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	rn := model.RosterNotification{
 		Contact:  "ortuman",
@@ -170,8 +170,8 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
@@ -238,12 +238,12 @@ func TestRoster_Update(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm1 := c2s.NewMockStream("abcd1234", j1)
+	stm1 := router.NewMockStream("abcd1234", j1)
 	stm1.SetUsername("ortuman")
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("garden")
@@ -287,8 +287,8 @@ func TestRoster_Subscribe(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
@@ -311,8 +311,8 @@ func TestRoster_Subscribed(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	// insert roster item...
 	ri := &model.RosterItem{
@@ -375,8 +375,8 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
@@ -418,8 +418,8 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
@@ -463,8 +463,8 @@ func TestRoster_DeleteItem(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"jackal.im"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
+	defer router.Shutdown()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
@@ -546,7 +546,7 @@ func tUtilRosterInsertRosterItems() {
 	storage.Instance().InsertOrUpdateRosterItem(ri2)
 }
 
-func tUtilRosterRequestRoster(r *Roster, stm *c2s.MockStream) {
+func tUtilRosterRequestRoster(r *Roster, stm *router.MockStream) {
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
 
@@ -554,11 +554,11 @@ func tUtilRosterRequestRoster(r *Roster, stm *c2s.MockStream) {
 	_ = stm.FetchElement()
 }
 
-func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
+func tUtilRosterInitializeRoster() (*router.MockStream, *router.MockStream) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("noelia", "jackal.im", "garden", true)
 
-	stm1 := c2s.NewMockStream("abcd1234", j1)
+	stm1 := router.NewMockStream("abcd1234", j1)
 	stm1.SetUsername("ortuman")
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("balcony")
@@ -566,7 +566,7 @@ func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
 	stm1.Context().SetBool(true, rosterRequestedContextKey)
 	stm1.SetJID(j1)
 
-	stm2 := c2s.NewMockStream("abcd5678", j2)
+	stm2 := router.NewMockStream("abcd5678", j2)
 	stm2.SetUsername("noelia")
 	stm2.SetDomain("jackal.im")
 	stm2.SetResource("garden")
@@ -575,10 +575,10 @@ func tUtilRosterInitializeRoster() (*c2s.MockStream, *c2s.MockStream) {
 	stm2.SetJID(j2)
 
 	// register streams...
-	c2s.Instance().RegisterStream(stm1)
-	c2s.Instance().RegisterStream(stm2)
-	c2s.Instance().AuthenticateStream(stm1)
-	c2s.Instance().AuthenticateStream(stm2)
+	router.Instance().RegisterStream(stm1)
+	router.Instance().RegisterStream(stm2)
+	router.Instance().AuthenticateStream(stm1)
+	router.Instance().AuthenticateStream(stm2)
 
 	return stm1, stm2
 }

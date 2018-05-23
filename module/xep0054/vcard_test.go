@@ -8,8 +8,8 @@ package xep0054
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -43,7 +43,7 @@ func TestXEP0054_Set(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockStream("abcd", j)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -79,7 +79,7 @@ func TestXEP0054_SetError(t *testing.T) {
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockStream("abcd", j)
 	stm.SetUsername("ortuman")
 
 	x := New(stm, nil)
@@ -114,7 +114,7 @@ func TestXEP0054_Get(t *testing.T) {
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockStream("abcd", j)
 
 	iqSet := xml.NewIQType(uuid.New(), xml.SetType)
 	iqSet.SetFromJID(j)
@@ -158,7 +158,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockStream("abcd", j)
 
 	iqSet := xml.NewIQType(uuid.New(), xml.SetType)
 	iqSet.SetFromJID(j)
