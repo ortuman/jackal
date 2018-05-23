@@ -41,6 +41,10 @@ func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
 	return wst
 }
 
+func (wst *webSocketTransport) Type() TransportType {
+	return WebSocket
+}
+
 func (wst *webSocketTransport) Read(p []byte) (n int, err error) {
 	_, r, err := wst.conn.NextReader()
 	if err != nil {

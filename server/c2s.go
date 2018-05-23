@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -58,6 +59,7 @@ const (
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"
 	bindNamespace             = "urn:ietf:params:xml:ns:xmpp-bind"
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
+	saslNamespace             = "urn:ietf:params:xml:ns:xmpp-sasl"
 	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
 )
 
@@ -88,8 +90,8 @@ type c2sStream struct {
 	connected   uint32
 	state       uint32
 	ctx         *router.Context
-	authrs      []authenticator
-	activeAuthr authenticator
+	authrs      []auth.Authenticator
+	activeAuthr auth.Authenticator
 	iqHandlers  []module.IQHandler
 	roster      *roster.Roster
 	discoInfo   *xep0030.DiscoInfo
@@ -112,7 +114,7 @@ func newC2SStream(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Co
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	// initialize stream context
-	secured := !(cfg.Transport.Type == transport.Socket)
+	secured := !(tr.Type() == transport.Socket)
 	s.ctx.SetBool(secured, securedContextKey)
 
 	domain := router.Instance().DefaultLocalDomain()
@@ -214,18 +216,18 @@ func (s *c2sStream) initializeAuthenticators() {
 	for _, a := range s.cfg.SASL {
 		switch a {
 		case "plain":
-			s.authrs = append(s.authrs, newPlainAuthenticator(s))
+			s.authrs = append(s.authrs, auth.NewPlain(s))
 
 		case "digest_md5":
-			s.authrs = append(s.authrs, newDigestMD5(s))
+			s.authrs = append(s.authrs, auth.NewDigestMD5(s))
 
 		case "scram_sha_1":
-			s.authrs = append(s.authrs, newScram(s, s.tr, sha1ScramType, false))
-			s.authrs = append(s.authrs, newScram(s, s.tr, sha1ScramType, true))
+			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA1, false))
+			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA1, true))
 
 		case "scram_sha_256":
-			s.authrs = append(s.authrs, newScram(s, s.tr, sha256ScramType, false))
-			s.authrs = append(s.authrs, newScram(s, s.tr, sha256ScramType, true))
+			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA256, false))
+			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA256, true))
 		}
 	}
 }
@@ -386,7 +388,7 @@ func (s *c2sStream) unauthenticatedFeatures() []xml.XElement {
 func (s *c2sStream) authenticatedFeatures() []xml.XElement {
 	var features []xml.XElement
 
-	isSocketTransport := s.cfg.Transport.Type == transport.Socket
+	isSocketTransport := s.tr.Type() == transport.Socket
 
 	// attach compression feature
 	compressionAvailable := isSocketTransport && s.cfg.Compression.Level != compress.NoCompression
@@ -581,13 +583,13 @@ func (s *c2sStream) startAuthentication(elem xml.XElement) {
 	s.writeElement(failure)
 }
 
-func (s *c2sStream) continueAuthentication(elem xml.XElement, authr authenticator) error {
+func (s *c2sStream) continueAuthentication(elem xml.XElement, authr auth.Authenticator) error {
 	err := authr.ProcessElement(elem)
-	if saslErr, ok := err.(saslError); ok {
+	if saslErr, ok := err.(*auth.SASLError); ok {
 		s.failAuthentication(saslErr.Element())
 	} else if err != nil {
 		log.Error(err)
-		s.failAuthentication(errSASLTemporaryAuthFailure.(saslError).Element())
+		s.failAuthentication(auth.ErrSASLTemporaryAuthFailure.(*auth.SASLError).Element())
 	}
 	return err
 }

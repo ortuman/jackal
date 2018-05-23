@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"bytes"
@@ -75,37 +75,37 @@ func (r *digestMD5Parameters) setParameter(p string) {
 	}
 }
 
-type digestMD5Authenticator struct {
+type DigestMD5 struct {
 	stm           router.C2S
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
-func newDigestMD5(stm router.C2S) *digestMD5Authenticator {
-	return &digestMD5Authenticator{
+func NewDigestMD5(stm router.C2S) *DigestMD5 {
+	return &DigestMD5{
 		stm:   stm,
 		state: startDigestMD5State,
 	}
 }
 
-func (d *digestMD5Authenticator) Mechanism() string {
+func (d *DigestMD5) Mechanism() string {
 	return "DIGEST-MD5"
 }
 
-func (d *digestMD5Authenticator) Username() string {
+func (d *DigestMD5) Username() string {
 	return d.username
 }
 
-func (d *digestMD5Authenticator) Authenticated() bool {
+func (d *DigestMD5) Authenticated() bool {
 	return d.authenticated
 }
 
-func (d *digestMD5Authenticator) UsesChannelBinding() bool {
+func (d *DigestMD5) UsesChannelBinding() bool {
 	return false
 }
 
-func (d *digestMD5Authenticator) ProcessElement(elem xml.XElement) error {
+func (d *DigestMD5) ProcessElement(elem xml.XElement) error {
 	if d.Authenticated() {
 		return nil
 	}
@@ -123,16 +123,16 @@ func (d *digestMD5Authenticator) ProcessElement(elem xml.XElement) error {
 			return d.handleAuthenticated(elem)
 		}
 	}
-	return errSASLNotAuthorized
+	return ErrSASLNotAuthorized
 }
 
-func (d *digestMD5Authenticator) Reset() {
+func (d *DigestMD5) Reset() {
 	d.state = startDigestMD5State
 	d.username = ""
 	d.authenticated = false
 }
 
-func (d *digestMD5Authenticator) handleStart(elem xml.XElement) error {
+func (d *DigestMD5) handleStart(elem xml.XElement) error {
 	domain := d.stm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
 	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
@@ -145,35 +145,35 @@ func (d *digestMD5Authenticator) handleStart(elem xml.XElement) error {
 	return nil
 }
 
-func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
+func (d *DigestMD5) handleChallenged(elem xml.XElement) error {
 	if len(elem.Text()) == 0 {
-		return errSASLMalformedRequest
+		return ErrSASLMalformedRequest
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())
 	if err != nil {
-		return errSASLIncorrectEncoding
+		return ErrSASLIncorrectEncoding
 	}
 	params := d.parseParameters(string(b))
 
 	// validate realm
 	if params.realm != d.stm.Domain() {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate nc
 	if params.nc != "00000001" {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate qop
 	if params.qop != "auth" {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate serv-type
 	if len(params.servType) > 0 && params.servType != "xmpp" {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate digest-uri
 	if !strings.HasPrefix(params.digestURI, "xmpp/") || params.digestURI[5:] != d.stm.Domain() {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate user
 	user, err := storage.Instance().FetchUser(params.username)
@@ -181,12 +181,12 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 		return err
 	}
 	if user == nil {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	// validate response
 	clientResp := d.computeResponse(params, user, true)
 	if clientResp != params.response {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 
 	// authenticated... compute and send server response
@@ -202,13 +202,13 @@ func (d *digestMD5Authenticator) handleChallenged(elem xml.XElement) error {
 	return nil
 }
 
-func (d *digestMD5Authenticator) handleAuthenticated(elem xml.XElement) error {
+func (d *DigestMD5) handleAuthenticated(elem xml.XElement) error {
 	d.authenticated = true
 	d.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 
-func (d *digestMD5Authenticator) parseParameters(str string) *digestMD5Parameters {
+func (d *DigestMD5) parseParameters(str string) *digestMD5Parameters {
 	params := &digestMD5Parameters{}
 	s := strings.Split(str, ",")
 	for i := 0; i < len(s); i++ {
@@ -217,7 +217,7 @@ func (d *digestMD5Authenticator) parseParameters(str string) *digestMD5Parameter
 	return params
 }
 
-func (d *digestMD5Authenticator) computeResponse(params *digestMD5Parameters, user *model.User, asClient bool) string {
+func (d *DigestMD5) computeResponse(params *digestMD5Parameters, user *model.User, asClient bool) string {
 	x := params.username + ":" + params.realm + ":" + user.Password
 	y := d.md5Hash([]byte(x))
 
@@ -248,7 +248,7 @@ func (d *digestMD5Authenticator) computeResponse(params *digestMD5Parameters, us
 	return hex.EncodeToString(d.md5Hash([]byte(kd)))
 }
 
-func (d *digestMD5Authenticator) md5Hash(b []byte) []byte {
+func (d *DigestMD5) md5Hash(b []byte) []byte {
 	hasher := md5.New()
 	hasher.Write(b)
 	return hasher.Sum(nil)

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"encoding/base64"
@@ -23,7 +23,7 @@ import (
 type digestMD5AuthTestHelper struct {
 	t        *testing.T
 	testStrm router.C2S
-	authr    *digestMD5Authenticator
+	authr    *DigestMD5
 }
 
 func (h *digestMD5AuthTestHelper) clientParamsFromChallenge(challenge string) *digestMD5Parameters {
@@ -66,12 +66,12 @@ func TestDigesMD5Authentication(t *testing.T) {
 	testStrm := authTestSetup(user)
 	defer authTestTeardown()
 
-	authr := newDigestMD5(testStrm)
+	authr := NewDigestMD5(testStrm)
 	require.Equal(t, authr.Mechanism(), "DIGEST-MD5")
 	require.False(t, authr.UsesChannelBinding())
 
 	// test garbage input...
-	require.Equal(t, authr.ProcessElement(xml.NewElementName("garbage")), errSASLNotAuthorized)
+	require.Equal(t, authr.ProcessElement(xml.NewElementName("garbage")), ErrSASLNotAuthorized)
 
 	helper := digestMD5AuthTestHelper{t: t, testStrm: testStrm, authr: authr}
 
@@ -89,52 +89,52 @@ func TestDigesMD5Authentication(t *testing.T) {
 	// empty payload
 	response := xml.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
 	response.SetText("")
-	require.Equal(t, errSASLMalformedRequest, authr.ProcessElement(response))
+	require.Equal(t, ErrSASLMalformedRequest, authr.ProcessElement(response))
 
 	// incorrect payload encoding
 	response.SetText("bad_payload")
-	require.Equal(t, errSASLIncorrectEncoding, authr.ProcessElement(response))
+	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(response))
 
 	// invalid username...
 	cl0 := *clParams
 	cl0.setParameter("username=mariana-inv")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl0))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl0))
 
 	// invalid realm...
 	cl1 := *clParams
 	cl1.setParameter("realm=localhost-inv")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl1))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl1))
 
 	// invalid nc...
 	cl2 := *clParams
 	cl2.setParameter("nc=00000001-inv")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl2))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl2))
 
 	// invalid nc...
 	cl3 := *clParams
 	cl3.setParameter("qop=auth-inv")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl3))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl3))
 
 	// invalid serv-type...
 	cl4 := *clParams
 	cl4.setParameter("serv-type=http")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl4))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl4))
 
 	// invalid digest-uri...
 	cl5 := *clParams
 	cl5.setParameter("digest-uri=http/localhost")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl5))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl5))
 
 	cl6 := *clParams
 	cl6.setParameter("digest-uri=xmpp/localhost-inv")
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl6))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl6))
 
 	// invalid password...
 	cl7 := *clParams
 	user2 := &model.User{Username: "mariana", Password: "bad_password"}
 	badClientResp := authr.computeResponse(&cl7, user2, true)
 	cl7.setParameter("response=" + badClientResp)
-	require.Equal(t, errSASLNotAuthorized, helper.sendClientParamsResponse(&cl7))
+	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl7))
 
 	// storage error...
 	storage.ActivateMockedError()

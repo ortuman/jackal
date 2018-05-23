@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"testing"
@@ -37,13 +37,13 @@ func authTestTeardown() {
 }
 
 func TestAuthError(t *testing.T) {
-	require.Equal(t, "incorrect-encoding", errSASLIncorrectEncoding.(*saslErrorString).Error())
-	require.Equal(t, "malformed-request", errSASLMalformedRequest.(*saslErrorString).Error())
-	require.Equal(t, "not-authorized", errSASLNotAuthorized.(*saslErrorString).Error())
-	require.Equal(t, "temporary-auth-failure", errSASLTemporaryAuthFailure.(*saslErrorString).Error())
+	require.Equal(t, "incorrect-encoding", ErrSASLIncorrectEncoding.(*SASLError).Error())
+	require.Equal(t, "malformed-request", ErrSASLMalformedRequest.(*SASLError).Error())
+	require.Equal(t, "not-authorized", ErrSASLNotAuthorized.(*SASLError).Error())
+	require.Equal(t, "temporary-auth-failure", ErrSASLTemporaryAuthFailure.(*SASLError).Error())
 
-	require.Equal(t, "incorrect-encoding", errSASLIncorrectEncoding.(*saslErrorString).Element().Name())
-	require.Equal(t, "malformed-request", errSASLMalformedRequest.(*saslErrorString).Element().Name())
-	require.Equal(t, "not-authorized", errSASLNotAuthorized.(*saslErrorString).Element().Name())
-	require.Equal(t, "temporary-auth-failure", errSASLTemporaryAuthFailure.(*saslErrorString).Element().Name())
+	require.Equal(t, "incorrect-encoding", ErrSASLIncorrectEncoding.(*SASLError).Element().Name())
+	require.Equal(t, "malformed-request", ErrSASLMalformedRequest.(*SASLError).Element().Name())
+	require.Equal(t, "not-authorized", ErrSASLNotAuthorized.(*SASLError).Element().Name())
+	require.Equal(t, "temporary-auth-failure", ErrSASLTemporaryAuthFailure.(*SASLError).Element().Name())
 }

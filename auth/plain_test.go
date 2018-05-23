@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	testStm := authTestSetup(&model.User{Username: "mariana", Password: "1234"})
 	defer authTestTeardown()
 
-	authr := newPlainAuthenticator(testStm)
+	authr := NewPlain(testStm)
 	require.Equal(t, authr.Mechanism(), "PLAIN")
 	require.False(t, authr.UsesChannelBinding())
 
@@ -57,13 +57,13 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	authr.Reset()
 	elem.SetText("")
 	err = authr.ProcessElement(elem)
-	require.Equal(t, errSASLMalformedRequest, err)
+	require.Equal(t, ErrSASLMalformedRequest, err)
 
 	// invalid payload
 	authr.Reset()
 	elem.SetText("bad formed base64")
 	err = authr.ProcessElement(elem)
-	require.Equal(t, errSASLIncorrectEncoding, err)
+	require.Equal(t, ErrSASLIncorrectEncoding, err)
 
 	// invalid payload
 	buf.Reset()
@@ -76,7 +76,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	authr.Reset()
 	err = authr.ProcessElement(elem)
-	require.Equal(t, errSASLIncorrectEncoding, err)
+	require.Equal(t, ErrSASLIncorrectEncoding, err)
 
 	// invalid user
 	buf.Reset()
@@ -88,7 +88,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	authr.Reset()
 	err = authr.ProcessElement(elem)
-	require.Equal(t, errSASLNotAuthorized, err)
+	require.Equal(t, ErrSASLNotAuthorized, err)
 
 	// incorrect password
 	buf.Reset()
@@ -100,5 +100,5 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	authr.Reset()
 	err = authr.ProcessElement(elem)
-	require.Equal(t, errSASLNotAuthorized, err)
+	require.Equal(t, ErrSASLNotAuthorized, err)
 }
