@@ -24,7 +24,7 @@ install:
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
-  - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
+  - go test -race -coverprofile=errors.coverage.txt -covermode=atomic ./errors
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
   - go test -race -coverprofile=offline.coverage.txt -covermode=atomic ./module/offline
@@ -37,6 +37,8 @@ script:
   - go test -race -coverprofile=xep0092.coverage.txt -covermode=atomic ./module/xep0092
   - go test -race -coverprofile=xep0191.coverage.txt -covermode=atomic ./module/xep0191
   - go test -race -coverprofile=xep0199.coverage.txt -covermode=atomic ./module/xep0199
+  - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
+  - go test -race -coverprofile=router.coverage.txt -covermode=atomic ./router
   - go test -race -coverprofile=server.coverage.txt -covermode=atomic ./server
   - go test -race -coverprofile=server.compress.coverage.txt -covermode=atomic ./server/compress  
   - go test -race -coverprofile=server.transport.coverage.txt -covermode=atomic ./server/transport
@@ -45,9 +47,6 @@ script:
   - go test -race -coverprofile=storage.badgerdb.coverage.txt -covermode=atomic ./storage/badgerdb
   - go test -race -coverprofile=storage.memstorage.coverage.txt -covermode=atomic ./storage/memstorage
   - go test -race -coverprofile=storage.sql.coverage.txt -covermode=atomic ./storage/sql
-  - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
-  - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./stream/c2s
-  - go test -race -coverprofile=stream.errors.coverage.txt -covermode=atomic ./stream/errors
   - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
   - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
   - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xml
