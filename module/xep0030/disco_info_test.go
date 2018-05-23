@@ -86,7 +86,7 @@ func TestXEP0030_SetFeatures(t *testing.T) {
 
 func TestXEP0030_BadToJID(t *testing.T) {
 	j, _ := xml.NewJID("", "example.im", "", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "")
@@ -105,7 +105,7 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "")
@@ -135,7 +135,7 @@ func TestXEP0030_GetItems(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "http://jabber.org/protocol/commands")

@@ -84,7 +84,7 @@ func Initialize(cfg *Config) {
 		defer instMu.Unlock()
 
 		if len(cfg.Domains) == 0 {
-			log.Fatalf("router: no domain specified")
+			log.Fatalf("no domain specified")
 		}
 		inst = &Router{
 			cfg:        cfg,
@@ -101,7 +101,7 @@ func Instance() *Router {
 	defer instMu.RUnlock()
 
 	if inst == nil {
-		log.Fatalf("c2s manager not initialized")
+		log.Fatalf("router manager not initialized")
 	}
 	return inst
 }

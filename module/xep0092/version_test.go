@@ -18,7 +18,7 @@ import (
 func TestXEP0092(t *testing.T) {
 	srvJID, _ := xml.NewJID("", "jackal.im", "", true)
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	cfg := Config{}
 	x := New(&cfg, stm, nil)

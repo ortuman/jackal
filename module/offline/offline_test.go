@@ -23,7 +23,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("juliet", "jackal.im", "garden", true)
 
-	stm := router.NewMockStream("abcd", j1)
+	stm := router.NewMockC2S("abcd", j1)
 	stm.SetDomain("jackal.im")
 
 	x := New(&Config{QueueSize: 1}, stm, nil)
@@ -52,7 +52,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	require.Equal(t, xml.ErrServiceUnavailable.Error(), elem.Error().Elements().All()[0].Name())
 
 	// deliver offline messages...
-	stm2 := router.NewMockStream("abcd", j2)
+	stm2 := router.NewMockC2S("abcd", j2)
 	stm2.SetDomain("jackal.im")
 
 	x2 := New(&Config{QueueSize: 1}, stm2, nil)

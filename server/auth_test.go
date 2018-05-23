@@ -16,14 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func authTestSetup(user *model.User) *router.MockStream {
+func authTestSetup(user *model.User) *router.MockC2S {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 
 	storage.Instance().InsertOrUpdateUser(user)
 
 	jid, _ := xml.NewJID("mariana", "localhost", "res", true)
 
-	testStrm := router.NewMockStream(uuid.New(), jid)
+	testStrm := router.NewMockC2S(uuid.New(), jid)
 	testStrm.SetUsername("mariana")
 	testStrm.SetDomain("localhost")
 	testStrm.SetResource("res")

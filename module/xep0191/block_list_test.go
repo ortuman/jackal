@@ -46,7 +46,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream(uuid.New(), j)
+	stm := router.NewMockC2S(uuid.New(), j)
 
 	x := New(stm, nil)
 
@@ -86,18 +86,18 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	defer router.Shutdown()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm1 := router.NewMockStream(uuid.New(), j1)
+	stm1 := router.NewMockC2S(uuid.New(), j1)
 
 	x := New(stm1, nil)
 
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
-	stm2 := router.NewMockStream(uuid.New(), j2)
+	stm2 := router.NewMockC2S(uuid.New(), j2)
 
 	j3, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
-	stm3 := router.NewMockStream(uuid.New(), j3)
+	stm3 := router.NewMockC2S(uuid.New(), j3)
 
 	j4, _ := xml.NewJID("romeo", "jackal.im", "jail", true)
-	stm4 := router.NewMockStream(uuid.New(), j4)
+	stm4 := router.NewMockC2S(uuid.New(), j4)
 
 	router.Instance().RegisterStream(stm1)
 	router.Instance().RegisterStream(stm2)

@@ -31,7 +31,7 @@ func TestXEP0049_Matching(t *testing.T) {
 
 func TestXEP0049_InvalidIQ(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 	stm.SetUsername("romeo")
 
 	x := New(stm)
@@ -82,7 +82,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 	stm.SetUsername("ortuman")
 
 	x := New(stm)

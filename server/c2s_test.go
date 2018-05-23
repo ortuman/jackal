@@ -359,7 +359,7 @@ func TestStream_SendMessage(t *testing.T) {
 	jFrom, _ := xml.NewJID("user", "localhost", "balcony", true)
 	jTo, _ := xml.NewJID("ortuman", "localhost", "garden", true)
 
-	stm2 := router.NewMockStream("abcd7890", jTo)
+	stm2 := router.NewMockC2S("abcd7890", jTo)
 	router.Instance().RegisterStream(stm2)
 	router.Instance().AuthenticateStream(stm2)
 
