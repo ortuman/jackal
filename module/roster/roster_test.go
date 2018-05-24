@@ -24,9 +24,6 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	stm.SetDomain("jackal.im")
 
 	r := New(&Config{}, stm)
-	defer r.Done()
-
-	require.Equal(t, []string{}, r.AssociatedNamespaces())
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
@@ -68,7 +65,6 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	query := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 0, query.Elements().Count())
-	r.Done()
 
 	ri1 := &model.RosterItem{
 		Username:     "ortuman",
@@ -98,7 +94,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
-	require.True(t, stm.Context().Bool(rosterRequestedContextKey))
+	require.True(t, stm.Context().Bool(rosterRequestedCtxKey))
 
 	// test versioning
 	iq = xml.NewIQType(uuid.New(), xml.GetType)
@@ -119,14 +115,13 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "v2", query2.Attributes().Get("ver"))
 	item := query2.Elements().Child("item")
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
-	r.Done()
 
 	storage.ActivateMockedError()
 	r = New(&Config{}, stm)
 	r.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	r.Done()
+
 	storage.DeactivateMockedError()
 }
 
@@ -147,7 +142,6 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	stm, _ := tUtilRosterInitializeRoster()
 
 	r := New(&Config{}, stm)
-	defer r.Done()
 
 	storage.ActivateMockedError()
 	ch := make(chan bool)
@@ -185,7 +179,6 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 	storage.Instance().InsertOrUpdateRosterItem(ri)
 
 	r := New(&Config{}, stm1)
-	defer r.Done()
 
 	// test presence receive...
 	storage.ActivateMockedError()
@@ -250,7 +243,6 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 
 	r := New(&Config{}, stm1)
-	defer r.Done()
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -293,7 +285,6 @@ func TestRoster_Subscribe(t *testing.T) {
 	stm1, stm2 := tUtilRosterInitializeRoster()
 
 	r := New(&Config{}, stm1)
-	defer r.Done()
 
 	tUtilRosterRequestRoster(r, stm1)
 
@@ -335,8 +326,6 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
-	defer r1.Done()
-	defer r2.Done()
 
 	tUtilRosterRequestRoster(r1, stm1)
 	tUtilRosterRequestRoster(r2, stm2)
@@ -383,8 +372,6 @@ func TestRoster_Unsubscribe(t *testing.T) {
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
-	defer r1.Done()
-	defer r2.Done()
 
 	tUtilRosterRequestRoster(r1, stm1)
 	tUtilRosterRequestRoster(r2, stm2)
@@ -426,8 +413,6 @@ func TestRoster_Unsubscribed(t *testing.T) {
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
-	defer r1.Done()
-	defer r2.Done()
 
 	tUtilRosterRequestRoster(r1, stm1)
 	tUtilRosterRequestRoster(r2, stm2)
@@ -471,8 +456,6 @@ func TestRoster_DeleteItem(t *testing.T) {
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
-	defer r1.Done()
-	defer r2.Done()
 
 	tUtilRosterRequestRoster(r1, stm1)
 	tUtilRosterRequestRoster(r2, stm2)
@@ -563,7 +546,7 @@ func tUtilRosterInitializeRoster() (*router.MockC2S, *router.MockC2S) {
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("balcony")
 	stm1.SetAuthenticated(true)
-	stm1.Context().SetBool(true, rosterRequestedContextKey)
+	stm1.Context().SetBool(true, rosterRequestedCtxKey)
 	stm1.SetJID(j1)
 
 	stm2 := router.NewMockC2S("abcd5678", j2)
@@ -571,7 +554,7 @@ func tUtilRosterInitializeRoster() (*router.MockC2S, *router.MockC2S) {
 	stm2.SetDomain("jackal.im")
 	stm2.SetResource("garden")
 	stm2.SetAuthenticated(true)
-	stm2.Context().SetBool(true, rosterRequestedContextKey)
+	stm2.Context().SetBool(true, rosterRequestedCtxKey)
 	stm2.SetJID(j2)
 
 	// register streams...

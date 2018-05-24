@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	rosterRequestedContextKey = "roster:requested"
+	rosterRequestedCtxKey = "roster:requested"
 )
 
 // Config represents roster module configuration.
@@ -40,8 +40,8 @@ type Config struct {
 
 // Roster represents a roster server stream module.
 type Roster struct {
-	cfg        *Config
 	stm        router.C2S
+	verEnabled bool
 	actorCh    chan func()
 	errHandler func(error)
 }
@@ -49,8 +49,8 @@ type Roster struct {
 // New returns a roster server stream module.
 func New(cfg *Config, stm router.C2S) *Roster {
 	r := &Roster{
-		cfg:        cfg,
 		stm:        stm,
+		verEnabled: cfg.Versioning,
 		actorCh:    make(chan func(), 32),
 		errHandler: func(err error) { log.Error(err) },
 	}
@@ -58,14 +58,9 @@ func New(cfg *Config, stm router.C2S) *Roster {
 	return r
 }
 
-// AssociatedNamespaces returns namespaces associated
-// with roster module.
-func (r *Roster) AssociatedNamespaces() []string {
-	return []string{}
-}
-
-// Done signals stream termination.
-func (r *Roster) Done() {
+// VersioningEnabled returns whether or not versioning is enabled.
+func (r *Roster) VersioningEnabled() bool {
+	return r.verEnabled
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -226,10 +221,10 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.XElement) {
 	v := r.parseVer(query.Attributes().Get("ver"))
 
 	res := iq.ResultIQ()
-	if !r.cfg.Versioning || v == 0 || v < ver.DeletionVer {
+	if !r.verEnabled || v == 0 || v < ver.DeletionVer {
 		// push all roster items
 		q := xml.NewElementNamespace("query", rosterNamespace)
-		if r.cfg.Versioning {
+		if r.verEnabled {
 			q.SetAttribute("ver", fmt.Sprintf("v%d", ver.Ver))
 		}
 		for _, itm := range itms {
@@ -251,7 +246,7 @@ func (r *Roster) sendRoster(iq *xml.IQ, query xml.XElement) {
 			}
 		}
 	}
-	r.stm.Context().SetBool(true, rosterRequestedContextKey)
+	r.stm.Context().SetBool(true, rosterRequestedCtxKey)
 }
 
 func (r *Roster) updateRoster(iq *xml.IQ, query xml.XElement) {
@@ -634,14 +629,14 @@ func (r *Roster) deleteItem(ri *model.RosterItem, pushTo *xml.JID) error {
 
 func (r *Roster) pushItem(ri *model.RosterItem, to *xml.JID) error {
 	query := xml.NewElementNamespace("query", rosterNamespace)
-	if r.cfg.Versioning {
+	if r.verEnabled {
 		query.SetAttribute("ver", fmt.Sprintf("v%d", ri.Ver))
 	}
 	query.AppendElement(r.elementFromRosterItem(ri))
 
 	stms := router.Instance().StreamsMatchingJID(to.ToBareJID())
 	for _, stm := range stms {
-		if !stm.Context().Bool(rosterRequestedContextKey) {
+		if !stm.Context().Bool(rosterRequestedCtxKey) {
 			continue
 		}
 		pushEl := xml.NewIQType(uuid.New(), xml.SetType)

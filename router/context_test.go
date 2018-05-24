@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/xml"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,20 +52,6 @@ func TestContext_Bool(t *testing.T) {
 	require.False(t, c.Bool("b"))
 	c.SetBool(true, "b")
 	require.True(t, c.Bool("b"))
-}
-
-func TestContext_DoOnce(t *testing.T) {
-	var cnt int
-	f := func() { cnt++ }
-	h := uuid.New()
-	c := NewContext()
-	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() { c.DoOnce(h, f); wg.Done() }()
-	}
-	wg.Wait()
-	require.Equal(t, 1, cnt)
 }
 
 func TestContext_Terminate(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
+	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/transport"
@@ -130,7 +131,7 @@ func (s *server) listenSocketConn(address string) {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.handleSocketConn(conn)
+			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
 			continue
 		}
 	}
@@ -168,7 +169,7 @@ func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		return
 	}
-	go s.handleWebSocketConn(conn)
+	go s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) shutdown() error {
@@ -183,16 +184,8 @@ func (s *server) shutdown() error {
 	return nil
 }
 
-func (s *server) handleSocketConn(conn net.Conn) {
-	s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
-}
-
-func (s *server) handleWebSocketConn(conn *websocket.Conn) {
-	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
-}
-
 func (s *server) startStream(tr transport.Transport) {
-	stm := newC2SStream(s.nextID(), tr, s.tlsCfg, s.cfg)
+	stm := c2s.New(s.nextID(), tr, s.tlsCfg, &s.cfg.C2S)
 	if err := router.Instance().RegisterStream(stm); err != nil {
 		log.Error(err)
 	}

@@ -119,20 +119,6 @@ func (ctx *Context) Bool(key string) bool {
 	return ret
 }
 
-// DoOnce allows to execute a handler associated function
-// only once in a concurrently safe manner.
-func (ctx *Context) DoOnce(handler string, f func()) {
-	ctx.mu.Lock()
-	_, ok := ctx.onceHandlers[handler]
-	if !ok {
-		ctx.onceHandlers[handler] = struct{}{}
-		ctx.mu.Unlock()
-		f()
-		return
-	}
-	ctx.mu.Unlock()
-}
-
 func (ctx *Context) inWriteLock(f func()) {
 	ctx.mu.Lock()
 	f()
