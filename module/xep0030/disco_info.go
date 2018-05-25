@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -20,13 +20,13 @@ const (
 
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
-	stm      router.C2S
+	stm      stream.C2S
 	mu       sync.RWMutex
 	entities map[string]*Entity
 }
 
 // New returns a disco info IQ handler module.
-func New(stm router.C2S) *DiscoInfo {
+func New(stm stream.C2S) *DiscoInfo {
 	return &DiscoInfo{
 		stm:      stm,
 		entities: make(map[string]*Entity),

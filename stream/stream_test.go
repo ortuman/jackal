@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package router
+package stream
 
 import (
 	"testing"

@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 )
@@ -76,13 +76,13 @@ func (r *digestMD5Parameters) setParameter(p string) {
 }
 
 type DigestMD5 struct {
-	stm           router.C2S
+	stm           stream.C2S
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
-func NewDigestMD5(stm router.C2S) *DigestMD5 {
+func NewDigestMD5(stm stream.C2S) *DigestMD5 {
 	return &DigestMD5{
 		stm:   stm,
 		state: startDigestMD5State,

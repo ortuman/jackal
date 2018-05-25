@@ -10,8 +10,8 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -19,12 +19,12 @@ const privateNamespace = "jabber:iq:private"
 
 // Private represents a private storage server stream module.
 type Private struct {
-	stm     router.C2S
+	stm     stream.C2S
 	actorCh chan func()
 }
 
 // New returns a private storage IQ handler module.
-func New(stm router.C2S) *Private {
+func New(stm stream.C2S) *Private {
 	x := &Private{
 		stm:     stm,
 		actorCh: make(chan func(), 32),

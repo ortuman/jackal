@@ -14,6 +14,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -21,12 +22,12 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	stm       router.C2S
+	stm       stream.C2S
 	startTime time.Time
 }
 
 // New returns a last activity IQ handler module.
-func New(stm router.C2S) *LastActivity {
+func New(stm stream.C2S) *LastActivity {
 	return &LastActivity{stm: stm, startTime: time.Now()}
 }
 

@@ -8,9 +8,9 @@ package xep0077
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -26,12 +26,12 @@ type Config struct {
 // Register represents an in-band server stream module.
 type Register struct {
 	cfg        *Config
-	stm        router.C2S
+	stm        stream.C2S
 	registered bool
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, stm router.C2S) *Register {
+func New(config *Config, stm stream.C2S) *Register {
 	return &Register{
 		cfg: config,
 		stm: stm,

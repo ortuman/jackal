@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -41,14 +42,14 @@ type Config struct {
 
 // Roster represents a roster server stream module.
 type Roster struct {
-	stm        router.C2S
+	stm        stream.C2S
 	verEnabled bool
 	actorCh    chan func()
 	errHandler func(error)
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, stm router.C2S) *Roster {
+func New(cfg *Config, stm stream.C2S) *Roster {
 	r := &Roster{
 		stm:        stm,
 		verEnabled: cfg.Versioning,

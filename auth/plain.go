@@ -9,18 +9,18 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
 type Plain struct {
-	stm           router.C2S
+	stm           stream.C2S
 	username      string
 	authenticated bool
 }
 
-func NewPlain(stm router.C2S) *Plain {
+func NewPlain(stm stream.C2S) *Plain {
 	return &Plain{stm: stm}
 }
 

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package context
+package stream
 
 import "sync"
 
@@ -51,19 +51,14 @@ type context struct {
 	doneCh       chan struct{}
 }
 
-// New returns an initialized stream context.
-func New() (Context, chan<- struct{}) {
+// NewContext returns an initialized stream context.
+func NewContext() (Context, chan<- struct{}) {
 	doneCh := make(chan struct{})
 	return &context{
 		m:            make(map[string]interface{}),
 		onceHandlers: make(map[string]struct{}),
 		doneCh:       doneCh,
 	}, doneCh
-}
-
-// Done returns a channel that is closed when the stream is terminated.
-func (ctx *context) Done() <-chan struct{} {
-	return ctx.doneCh
 }
 
 // SetObject stores within the context an object reference.
@@ -148,6 +143,11 @@ func (ctx *context) Bool(key string) bool {
 		}
 	})
 	return ret
+}
+
+// Done returns a channel that is closed when the stream is terminated.
+func (ctx *context) Done() <-chan struct{} {
+	return ctx.doneCh
 }
 
 func (ctx *context) inWriteLock(f func()) {

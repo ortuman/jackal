@@ -8,8 +8,8 @@ package xep0054
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -17,12 +17,12 @@ const vCardNamespace = "vcard-temp"
 
 // VCard represents a vCard server stream module.
 type VCard struct {
-	stm     router.C2S
+	stm     stream.C2S
 	actorCh chan func()
 }
 
 // New returns a vCard IQ handler module.
-func New(stm router.C2S) *VCard {
+func New(stm stream.C2S) *VCard {
 	v := &VCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),

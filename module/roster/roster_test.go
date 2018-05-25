@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ import (
 func TestRoster_MatchesIQ(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := router.NewMockC2S("abcd", j1)
+	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
@@ -38,7 +39,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := router.NewMockC2S("abcd", j1)
+	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 	stm.SetDomain("jackal.im")
 
@@ -241,7 +242,7 @@ func TestRoster_Update(t *testing.T) {
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm1 := router.NewMockC2S("abcd1234", j1)
+	stm1 := stream.NewMockC2S("abcd1234", j1)
 	stm1.SetUsername("ortuman")
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("garden")
@@ -545,7 +546,7 @@ func tUtilRosterInsertRosterItems() {
 	storage.Instance().InsertOrUpdateRosterItem(ri2)
 }
 
-func tUtilRosterRequestRoster(r *Roster, stm *router.MockC2S) {
+func tUtilRosterRequestRoster(r *Roster, stm *stream.MockC2S) {
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
 
@@ -553,11 +554,11 @@ func tUtilRosterRequestRoster(r *Roster, stm *router.MockC2S) {
 	_ = stm.FetchElement()
 }
 
-func tUtilRosterInitializeRoster() (*router.MockC2S, *router.MockC2S) {
+func tUtilRosterInitializeRoster() (*stream.MockC2S, *stream.MockC2S) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("noelia", "jackal.im", "garden", true)
 
-	stm1 := router.NewMockC2S("abcd1234", j1)
+	stm1 := stream.NewMockC2S("abcd1234", j1)
 	stm1.SetUsername("ortuman")
 	stm1.SetDomain("jackal.im")
 	stm1.SetResource("balcony")
@@ -565,7 +566,7 @@ func tUtilRosterInitializeRoster() (*router.MockC2S, *router.MockC2S) {
 	stm1.Context().SetBool(true, rosterRequestedCtxKey)
 	stm1.SetJID(j1)
 
-	stm2 := router.NewMockC2S("abcd5678", j2)
+	stm2 := stream.NewMockC2S("abcd5678", j2)
 	stm2.SetUsername("noelia")
 	stm2.SetDomain("jackal.im")
 	stm2.SetResource("garden")

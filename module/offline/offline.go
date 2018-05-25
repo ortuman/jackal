@@ -8,8 +8,8 @@ package offline
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -23,12 +23,12 @@ type Config struct {
 // Offline represents an offline server stream module.
 type Offline struct {
 	cfg     *Config
-	stm     router.C2S
+	stm     stream.C2S
 	actorCh chan func()
 }
 
 // New returns an offline server stream module.
-func New(config *Config, stm router.C2S) *Offline {
+func New(config *Config, stm stream.C2S) *Offline {
 	r := &Offline{
 		cfg:     config,
 		stm:     stm,

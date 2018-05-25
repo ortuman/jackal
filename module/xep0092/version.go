@@ -11,7 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
 )
@@ -33,11 +33,11 @@ type Config struct {
 // Version represents a version server stream module.
 type Version struct {
 	cfg *Config
-	stm router.C2S
+	stm stream.C2S
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm router.C2S) *Version {
+func New(config *Config, stm stream.C2S) *Version {
 	return &Version{
 		cfg: config,
 		stm: stm,

@@ -8,7 +8,7 @@ package xep0199
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -36,7 +36,7 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("juliet", "jackal.im", "garden", true)
 
-	stm := router.NewMockC2S("abcd", j1)
+	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{}, stm)
@@ -72,7 +72,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	t.Parallel()
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := router.NewMockC2S("abcd", j1)
+	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)
@@ -104,7 +104,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	t.Parallel()
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	stm := router.NewMockC2S("abcd", j1)
+	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)

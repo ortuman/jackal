@@ -26,7 +26,6 @@ script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
   - go test -race -coverprofile=auth.coverage.txt -covermode=atomic ./auth
   - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./c2s
-  - go test -race -coverprofile=context.coverage.txt -covermode=atomic ./context  
   - go test -race -coverprofile=errors.coverage.txt -covermode=atomic ./errors
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
@@ -50,6 +49,7 @@ script:
   - go test -race -coverprofile=storage.badgerdb.coverage.txt -covermode=atomic ./storage/badgerdb
   - go test -race -coverprofile=storage.memstorage.coverage.txt -covermode=atomic ./storage/memstorage
   - go test -race -coverprofile=storage.sql.coverage.txt -covermode=atomic ./storage/sql
+  - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
   - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
   - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
   - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xml

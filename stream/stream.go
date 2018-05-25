@@ -3,20 +3,45 @@
  * See the LICENSE file for more information.
  */
 
-package router
+package stream
 
 import (
+	"errors"
 	"time"
 
-	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/xml"
-	"github.com/pkg/errors"
 )
+
+// Stream represents a generic XMPP stream.
+type Stream interface {
+	ID() string
+	SendElement(element xml.XElement)
+	Disconnect(err error)
+}
+
+// C2S represents a client-to-server XMPP stream.
+type C2S interface {
+	Stream
+
+	Context() Context
+
+	Username() string
+	Domain() string
+	Resource() string
+
+	JID() *xml.JID
+
+	IsSecured() bool
+	IsAuthenticated() bool
+	IsCompressed() bool
+
+	Presence() *xml.Presence
+}
 
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
 	id     string
-	ctx    context.Context
+	ctx    Context
 	elemCh chan xml.XElement
 	discCh chan error
 	doneCh chan<- struct{}
@@ -24,7 +49,7 @@ type MockC2S struct {
 
 // NewMockC2S returns a new mocked stream instance.
 func NewMockC2S(id string, jid *xml.JID) *MockC2S {
-	ctx, doneCh := context.New()
+	ctx, doneCh := NewContext()
 	stm := &MockC2S{
 		id:     id,
 		ctx:    ctx,
@@ -45,7 +70,7 @@ func (m *MockC2S) ID() string {
 }
 
 // Context returns mocked stream associated context.
-func (m *MockC2S) Context() context.Context {
+func (m *MockC2S) Context() Context {
 	return m.ctx
 }
 

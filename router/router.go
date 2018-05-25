@@ -11,9 +11,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -35,28 +35,6 @@ var (
 	ErrBlockedJID = errors.New("router: destination jid is blocked")
 )
 
-// C2S represents a client-to-server XMPP stream.
-type C2S interface {
-	ID() string
-
-	Context() context.Context
-
-	Username() string
-	Domain() string
-	Resource() string
-
-	JID() *xml.JID
-
-	IsSecured() bool
-	IsAuthenticated() bool
-	IsCompressed() bool
-
-	Presence() *xml.Presence
-
-	SendElement(element xml.XElement)
-	Disconnect(err error)
-}
-
 // Config represents a client-to-server manager configuration.
 type Config struct {
 	Domains []string `yaml:"domains"`
@@ -66,8 +44,8 @@ type Config struct {
 type Router struct {
 	cfg        *Config
 	lock       sync.RWMutex
-	stms       map[string]C2S
-	authedStms map[string][]C2S
+	stms       map[string]stream.C2S
+	authedStms map[string][]stream.C2S
 	blockLists map[string][]*xml.JID
 }
 
@@ -89,8 +67,8 @@ func Initialize(cfg *Config) {
 		}
 		inst = &Router{
 			cfg:        cfg,
-			stms:       make(map[string]C2S),
-			authedStms: make(map[string][]C2S),
+			stms:       make(map[string]stream.C2S),
+			authedStms: make(map[string][]stream.C2S),
 			blockLists: make(map[string][]*xml.JID),
 		}
 	}
@@ -134,7 +112,7 @@ func (r *Router) IsLocalDomain(domain string) bool {
 
 // RegisterStream registers the specified client stream.
 // An error will be returned in case the stream has been previously registered.
-func (r *Router) RegisterStream(stm C2S) error {
+func (r *Router) RegisterStream(stm stream.C2S) error {
 	if !r.IsLocalDomain(stm.Domain()) {
 		return fmt.Errorf("invalid domain: %s", stm.Domain())
 	}
@@ -153,7 +131,7 @@ func (r *Router) RegisterStream(stm C2S) error {
 // UnregisterStream unregisters the specified client stream removing
 // associated resource from the manager.
 // An error will be returned in case the stream has not been previously registered.
-func (r *Router) UnregisterStream(stm C2S) error {
+func (r *Router) UnregisterStream(stm stream.C2S) error {
 	r.lock.Lock()
 	_, ok := r.stms[stm.ID()]
 	if !ok {
@@ -182,7 +160,7 @@ func (r *Router) UnregisterStream(stm C2S) error {
 
 // AuthenticateStream sets a previously registered stream as authenticated.
 // An error will be returned in case no assigned resource is found.
-func (r *Router) AuthenticateStream(stm C2S) error {
+func (r *Router) AuthenticateStream(stm stream.C2S) error {
 	if len(stm.Resource()) == 0 {
 		return fmt.Errorf("resource not yet assigned: %s", stm.ID())
 	}
@@ -190,7 +168,7 @@ func (r *Router) AuthenticateStream(stm C2S) error {
 	if authedStrms := r.authedStms[stm.Username()]; authedStrms != nil {
 		r.authedStms[stm.Username()] = append(authedStrms, stm)
 	} else {
-		r.authedStms[stm.Username()] = []C2S{stm}
+		r.authedStms[stm.Username()] = []stream.C2S{stm}
 	}
 	r.lock.Unlock()
 	log.Infof("authenticated stream... (%s/%s)", stm.Username(), stm.Resource())
@@ -231,11 +209,11 @@ func (r *Router) MustRoute(elem xml.Stanza) error {
 }
 
 // StreamsMatchingJID returns all available streams that match a given JID.
-func (r *Router) StreamsMatchingJID(jid *xml.JID) []C2S {
+func (r *Router) StreamsMatchingJID(jid *xml.JID) []stream.C2S {
 	if !r.IsLocalDomain(jid.Domain()) {
 		return nil
 	}
-	var ret []C2S
+	var ret []stream.C2S
 	opts := xml.JIDMatchesDomain
 	if jid.IsFull() {
 		opts |= xml.JIDMatchesResource

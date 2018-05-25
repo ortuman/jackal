@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -30,12 +31,12 @@ func TestC2SManager(t *testing.T) {
 	j4, _ := xml.NewJIDString("romeo@jackal.im/balcony", false)
 	j5, _ := xml.NewJIDString("juliet@jackal.im/garden", false)
 	j6, _ := xml.NewJIDString("juliet@example.org/garden", false)
-	strm1 := NewMockC2S(uuid.New(), j1)
-	strm2 := NewMockC2S(uuid.New(), j2)
-	strm3 := NewMockC2S(uuid.New(), j3)
-	strm4 := NewMockC2S(uuid.New(), j4)
-	strm5 := NewMockC2S(uuid.New(), j5)
-	strm6 := NewMockC2S(uuid.New(), j6)
+	strm1 := stream.NewMockC2S(uuid.New(), j1)
+	strm2 := stream.NewMockC2S(uuid.New(), j2)
+	strm3 := stream.NewMockC2S(uuid.New(), j3)
+	strm4 := stream.NewMockC2S(uuid.New(), j4)
+	strm5 := stream.NewMockC2S(uuid.New(), j5)
+	strm6 := stream.NewMockC2S(uuid.New(), j6)
 
 	err := Instance().RegisterStream(strm1)
 	require.Nil(t, err)
@@ -108,9 +109,9 @@ func TestC2SManager_Routing(t *testing.T) {
 	j4, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
 	j5, _ := xml.NewJIDString("hamlet@jackal.im", false)
 	j6, _ := xml.NewJIDString("juliet@example.org/garden", false)
-	stm1 := NewMockC2S(uuid.New(), j1)
-	stm2 := NewMockC2S(uuid.New(), j2)
-	stm3 := NewMockC2S(uuid.New(), j3)
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm3 := stream.NewMockC2S(uuid.New(), j3)
 
 	Instance().RegisterStream(stm1)
 	Instance().RegisterStream(stm2)
@@ -133,7 +134,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
 	require.Equal(t, ErrNotAuthenticated, Instance().Route(iq))
 
-	stm4 := NewMockC2S(uuid.New(), j4)
+	stm4 := stream.NewMockC2S(uuid.New(), j4)
 	Instance().RegisterStream(stm4)
 	Instance().AuthenticateStream(stm4)
 	require.Equal(t, ErrResourceNotFound, Instance().Route(iq))
@@ -189,10 +190,10 @@ func TestC2SManager_StreamsMatching(t *testing.T) {
 	j2, _ := xml.NewJIDString("ortuman@jackal.im/garden", false)
 	j3, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
 	j4, _ := xml.NewJIDString("juliet@jackal.im/garden", false)
-	stm1 := NewMockC2S(uuid.New(), j1)
-	stm2 := NewMockC2S(uuid.New(), j2)
-	stm3 := NewMockC2S(uuid.New(), j3)
-	stm4 := NewMockC2S(uuid.New(), j4)
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm3 := stream.NewMockC2S(uuid.New(), j3)
+	stm4 := stream.NewMockC2S(uuid.New(), j4)
 
 	Instance().RegisterStream(stm1)
 	Instance().RegisterStream(stm2)
@@ -224,8 +225,8 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 	j2, _ := xml.NewJIDString("hamlet@jackal.im/balcony", false)
 	j3, _ := xml.NewJIDString("hamlet@jackal.im/garden", false)
 	j4, _ := xml.NewJIDString("juliet@jackal.im/garden", false)
-	stm1 := NewMockC2S(uuid.New(), j1)
-	stm2 := NewMockC2S(uuid.New(), j2)
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
 	Instance().RegisterStream(stm1)
 	Instance().RegisterStream(stm2)

@@ -15,10 +15,10 @@ import (
 	"hash"
 	"strings"
 
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -74,7 +74,7 @@ func (s *scramParameters) String() string {
 }
 
 type Scram struct {
-	stm           router.C2S
+	stm           stream.C2S
 	tr            transport.Transport
 	tp            ScramType
 	usesCb        bool
@@ -89,7 +89,7 @@ type Scram struct {
 	authenticated bool
 }
 
-func NewScram(stm router.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
+func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
 	s := &Scram{
 		stm:    stm,
 		tr:     tr,

@@ -36,7 +36,7 @@ const (
 	Replace
 )
 
-// CompressConfig represents a server stream compression configuration.
+// CompressConfig represents a server Stream compression configuration.
 type CompressConfig struct {
 	Level compress.Level
 }
@@ -112,7 +112,7 @@ func (cfg *ModulesConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
-// Config represents C2S stream configuration.
+// Config represents C2S Stream configuration.
 type Config struct {
 	ConnectTimeout   int
 	MaxStanzaSize    int

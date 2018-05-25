@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ import (
 
 type digestMD5AuthTestHelper struct {
 	t        *testing.T
-	testStrm router.C2S
+	testStrm stream.C2S
 	authr    *DigestMD5
 }
 

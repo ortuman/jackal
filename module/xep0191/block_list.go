@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -24,11 +25,11 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
-	stm router.C2S
+	stm stream.C2S
 }
 
 // New returns a blocking command IQ handler module.
-func New(stm router.C2S) *BlockingCommand {
+func New(stm stream.C2S) *BlockingCommand {
 	return &BlockingCommand{stm: stm}
 }
 

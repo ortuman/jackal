@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -29,7 +29,7 @@ type Config struct {
 // Ping represents a ping server stream module.
 type Ping struct {
 	cfg *Config
-	stm router.C2S
+	stm stream.C2S
 
 	pingTm *time.Timer
 	pongCh chan struct{}
@@ -42,7 +42,7 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm router.C2S) *Ping {
+func New(config *Config, stm stream.C2S) *Ping {
 	return &Ping{
 		cfg:    config,
 		stm:    stm,

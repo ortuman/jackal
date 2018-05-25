@@ -8,7 +8,7 @@ package xep0092
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -18,7 +18,7 @@ import (
 func TestXEP0092(t *testing.T) {
 	srvJID, _ := xml.NewJID("", "jackal.im", "", true)
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := router.NewMockC2S("abcd", j)
+	stm := stream.NewMockC2S("abcd", j)
 
 	cfg := Config{}
 	x := New(&cfg, stm)

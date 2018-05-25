@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -48,7 +49,7 @@ func TestXEP0012_Matching(t *testing.T) {
 func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	j1, _ := xml.NewJID("", "jackal.im", "", true)
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "garden", true)
-	stm := router.NewMockC2S("abcd", j2)
+	stm := stream.NewMockC2S("abcd", j2)
 
 	x := New(stm)
 
@@ -73,8 +74,8 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("noelia", "jackal.im", "", true)
-	stm1 := router.NewMockC2S("abcd", j1)
-	stm2 := router.NewMockC2S("abcde", j2)
+	stm1 := stream.NewMockC2S("abcd", j1)
+	stm2 := stream.NewMockC2S("abcde", j2)
 	stm2.SetResource("a_res")
 
 	x := New(stm1)

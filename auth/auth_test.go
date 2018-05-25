@@ -8,22 +8,22 @@ package auth
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func authTestSetup(user *model.User) *router.MockC2S {
+func authTestSetup(user *model.User) *stream.MockC2S {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 
 	storage.Instance().InsertOrUpdateUser(user)
 
 	jid, _ := xml.NewJID("mariana", "localhost", "res", true)
 
-	testStrm := router.NewMockC2S(uuid.New(), jid)
+	testStrm := stream.NewMockC2S(uuid.New(), jid)
 	testStrm.SetUsername("mariana")
 	testStrm.SetDomain("localhost")
 	testStrm.SetResource("res")
