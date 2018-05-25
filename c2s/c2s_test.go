@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package c2s
 
 import (
 	"io"
@@ -15,11 +15,12 @@ import (
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/compress"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -122,10 +123,10 @@ func TestStream_ConnectTimeout(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
-	stm, _ := tUtilStreamInit()
+	stm, _ := tUtilStreamInit(t)
 	time.Sleep(time.Second * 2)
 	require.Equal(t, disconnected, stm.getState())
 }
@@ -134,10 +135,10 @@ func TestStream_Disconnect(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	stm.Disconnect(nil)
 	require.True(t, conn.waitClose())
 
@@ -148,10 +149,10 @@ func TestStream_Features(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 
 	elem := conn.parseOutboundElement()
@@ -167,12 +168,12 @@ func TestStream_TLS(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -191,12 +192,12 @@ func TestStream_Compression(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -222,12 +223,12 @@ func TestStream_StartSession(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -247,12 +248,12 @@ func TestStream_SendIQ(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -286,12 +287,12 @@ func TestStream_SendPresence(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -333,12 +334,12 @@ func TestStream_SendMessage(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	c2s.Initialize(&c2s.Config{Domains: []string{"localhost"}})
-	defer c2s.Shutdown()
+	router.Initialize(&router.Config{Domains: []string{"localhost"}})
+	defer router.Shutdown()
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
@@ -357,9 +358,9 @@ func TestStream_SendMessage(t *testing.T) {
 	jFrom, _ := xml.NewJID("user", "localhost", "balcony", true)
 	jTo, _ := xml.NewJID("ortuman", "localhost", "garden", true)
 
-	stm2 := c2s.NewMockStream("abcd7890", jTo)
-	c2s.Instance().RegisterStream(stm2)
-	c2s.Instance().AuthenticateStream(stm2)
+	stm2 := router.NewMockC2S("abcd7890", jTo)
+	router.Instance().RegisterStream(stm2)
+	router.Instance().AuthenticateStream(stm2)
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, xml.ChatType)
@@ -432,12 +433,18 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit() (*c2sStream, *fakeSocketConn) {
+func tUtilStreamInit(t *testing.T) (*stream, *fakeSocketConn) {
+	keyFile := "../testdata/cert/test.server.key"
+	certFile := "../testdata/cert/test.server.crt"
+
+	tlsConfig, err := util.LoadCertificate(keyFile, certFile, "localhost")
+	require.Nil(t, err)
+
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	stm := newC2SStream("abcd1234", tr, tUtilStreamDefaultConfig())
-	c2s.Instance().RegisterStream(stm)
-	return stm, conn
+	stm := New("abcd1234", tr, tlsConfig, tUtilStreamDefaultConfig())
+	router.Instance().RegisterStream(stm)
+	return stm.(*stream), conn
 }
 
 func tUtilStreamDefaultConfig() *Config {
@@ -451,24 +458,17 @@ func tUtilStreamDefaultConfig() *Config {
 	modules["offline"] = struct{}{}
 
 	return &Config{
-		ID:               "server-id:1234",
+		ConnectTimeout:   1,
+		MaxStanzaSize:    8192,
 		ResourceConflict: Reject,
-		Type:             C2SServerType,
-		Transport: TransportConfig{
-			Type:           transport.Socket,
-			ConnectTimeout: 1,
-			KeepAlive:      5,
+		Compression:      CompressConfig{Level: compress.DefaultCompression},
+		SASL:             []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256"},
+		Modules: ModulesConfig{
+			Enabled:      modules,
+			Offline:      offline.Config{QueueSize: 10},
+			Registration: xep0077.Config{AllowRegistration: true, AllowChange: true},
+			Version:      xep0092.Config{ShowOS: true},
+			Ping:         xep0199.Config{SendInterval: 5, Send: true},
 		},
-		TLS: TLSConfig{
-			PrivKeyFile: "../testdata/cert/test.server.key",
-			CertFile:    "../testdata/cert/test.server.crt",
-		},
-		Compression:     CompressConfig{Level: compress.DefaultCompression},
-		SASL:            []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256"},
-		Modules:         modules,
-		ModOffline:      offline.Config{QueueSize: 10},
-		ModRegistration: xep0077.Config{AllowRegistration: true, AllowChange: true},
-		ModVersion:      xep0092.Config{ShowOS: true},
-		ModPing:         xep0199.Config{SendInterval: 5, Send: true},
 	}
 }

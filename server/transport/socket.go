@@ -39,6 +39,10 @@ func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
 	return s
 }
 
+func (s *socketTransport) Type() TransportType {
+	return Socket
+}
+
 func (s *socketTransport) Read(p []byte) (n int, err error) {
 	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
 	return s.br.Read(p)

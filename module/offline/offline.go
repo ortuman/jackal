@@ -8,8 +8,8 @@ package offline
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -23,32 +23,25 @@ type Config struct {
 // Offline represents an offline server stream module.
 type Offline struct {
 	cfg     *Config
-	stm     c2s.Stream
+	stm     router.C2S
 	actorCh chan func()
 }
 
 // New returns an offline server stream module.
-func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Offline {
-	// register disco feature
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(offlineNamespace)
-	}
-
+func New(config *Config, stm router.C2S) *Offline {
 	r := &Offline{
 		cfg:     config,
 		stm:     stm,
 		actorCh: make(chan func(), 32),
 	}
-	if stm != nil {
-		go r.actorLoop(stm.Context().Done())
-	}
+	go r.actorLoop(stm.Context().Done())
 	return r
 }
 
-// AssociatedNamespaces returns namespaces associated
-// with offline module.
-func (o *Offline) AssociatedNamespaces() []string {
-	return []string{offlineNamespace}
+// RegisterDisco registers disco entity features/items
+// associated to offline module.
+func (o *Offline) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	discoInfo.Entity(o.stm.Domain(), "").AddFeature(offlineNamespace)
 }
 
 // ArchiveMessage archives a new offline messages into the storage.

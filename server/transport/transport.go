@@ -47,6 +47,9 @@ const (
 type Transport interface {
 	io.ReadCloser
 
+	// Type returns transport type value.
+	Type() TransportType
+
 	// WriteString writes a raw string to the transport.
 	WriteString(string) error
 

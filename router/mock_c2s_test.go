@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package c2s
+package router
 
 import (
 	"testing"
@@ -17,7 +17,7 @@ func TestMockC2Stream(t *testing.T) {
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
 	j2, _ := xml.NewJIDString("romeo@jackal.im/orchard", false)
 	id := uuid.New()
-	strm := NewMockStream(id, j1)
+	strm := NewMockC2S(id, j1)
 	require.Equal(t, "ortuman", strm.Username())
 	require.Equal(t, "jackal.im", strm.Domain())
 	require.Equal(t, "balcony", strm.Resource())

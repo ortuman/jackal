@@ -8,7 +8,7 @@ package xep0030
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -80,13 +80,15 @@ func TestXEP0030_SetFeatures(t *testing.T) {
 		discoItemsNamespace,
 	}
 	ent := x.Entity("jackal.im", "")
+	ent.AddFeature(fs[0])
+	ent.AddFeature(fs[1])
 
 	require.Equal(t, fs, ent.Features())
 }
 
 func TestXEP0030_BadToJID(t *testing.T) {
 	j, _ := xml.NewJID("", "example.im", "", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "")
@@ -105,7 +107,7 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "")
@@ -116,6 +118,8 @@ func TestXEP0030_GetFeatures(t *testing.T) {
 		Type:     "im",
 		Name:     "default",
 	})
+	ent.AddFeature("c")
+	ent.AddFeature("a")
 
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
 	iq1.SetFromJID(j)
@@ -135,7 +139,7 @@ func TestXEP0030_GetItems(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	x := New(stm)
 	x.RegisterEntity("jackal.im", "http://jabber.org/protocol/commands")

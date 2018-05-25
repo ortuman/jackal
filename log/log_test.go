@@ -109,7 +109,7 @@ func TestErrorLog(t *testing.T) {
 	defer Shutdown()
 
 	lw := newTestLogWriter()
-	instance().errWriter = lw
+	instance().outWriter = lw
 
 	continueCh1 := make(chan struct{})
 
@@ -149,7 +149,7 @@ func TestFatalLog(t *testing.T) {
 	defer Shutdown()
 
 	lw := newTestLogWriter()
-	instance().errWriter = lw
+	instance().outWriter = lw
 	exitHandler = func() {}
 
 	continueCh := make(chan struct{})

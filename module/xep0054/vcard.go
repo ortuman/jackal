@@ -8,8 +8,8 @@ package xep0054
 import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -17,18 +17,12 @@ const vCardNamespace = "vcard-temp"
 
 // VCard represents a vCard server stream module.
 type VCard struct {
-	stm     c2s.Stream
+	stm     router.C2S
 	actorCh chan func()
 }
 
 // New returns a vCard IQ handler module.
-func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *VCard {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(vCardNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
-	}
-
+func New(stm router.C2S) *VCard {
 	v := &VCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
@@ -37,6 +31,13 @@ func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *VCard {
 		go v.actorLoop(stm.Context().Done())
 	}
 	return v
+}
+
+// RegisterDisco registers disco entity features/items
+// associated to vCard module.
+func (x *VCard) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(vCardNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

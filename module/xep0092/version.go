@@ -11,7 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
 )
@@ -33,19 +33,21 @@ type Config struct {
 // Version represents a version server stream module.
 type Version struct {
 	cfg *Config
-	stm c2s.Stream
+	stm router.C2S
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *Version {
-	// register disco feature
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(versionNamespace)
-	}
+func New(config *Config, stm router.C2S) *Version {
 	return &Version{
 		cfg: config,
 		stm: stm,
 	}
+}
+
+// RegisterDisco registers disco entity features/items
+// associated to version module.
+func (x *Version) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(versionNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

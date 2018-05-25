@@ -13,9 +13,9 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/version"
 )
 
@@ -85,7 +85,7 @@ func main() {
 
 	storage.Initialize(&cfg.Storage)
 
-	c2s.Initialize(&cfg.C2S)
+	router.Initialize(&cfg.Router)
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {

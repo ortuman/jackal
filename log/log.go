@@ -33,17 +33,15 @@ var (
 type Logger struct {
 	level     LogLevel
 	outWriter io.Writer
-	errWriter io.Writer
 	f         *os.File
 	recCh     chan record
 	closeCh   chan bool
 }
 
-func newLogger(cfg *Config, outWriter io.Writer, errWriter io.Writer) (*Logger, error) {
+func newLogger(cfg *Config, outWriter io.Writer) (*Logger, error) {
 	l := &Logger{
 		level:     cfg.Level,
 		outWriter: outWriter,
-		errWriter: errWriter,
 	}
 	if len(cfg.LogPath) > 0 {
 		// create logFile intermediate directories.
@@ -68,7 +66,7 @@ func Initialize(cfg *Config) {
 		instMu.Lock()
 		defer instMu.Unlock()
 
-		l, err := newLogger(cfg, os.Stdout, os.Stderr)
+		l, err := newLogger(cfg, os.Stdout)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -195,12 +193,10 @@ func (l *Logger) loop() {
 				l.f.WriteString(line)
 			}
 			switch rec.level {
-			case DebugLevel, WarningLevel, InfoLevel:
+			case DebugLevel, WarningLevel, InfoLevel, ErrorLevel:
 				fmt.Fprintf(l.outWriter, line)
-			case ErrorLevel:
-				fmt.Fprintf(l.errWriter, line)
 			case FatalLevel:
-				fmt.Fprintf(l.errWriter, line)
+				fmt.Fprintf(l.outWriter, line)
 				exitHandler()
 			}
 			close(rec.continueCh)
