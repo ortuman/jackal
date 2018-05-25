@@ -24,6 +24,7 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	stm.SetDomain("jackal.im")
 
 	r := New(&Config{}, stm)
+	defer stm.Disconnect(nil)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
@@ -42,6 +43,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm.SetDomain("jackal.im")
 
 	r := New(&Config{}, stm)
+	defer stm.Disconnect(nil)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	q := xml.NewElementNamespace("query", rosterNamespace)
@@ -142,6 +144,7 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	stm, _ := tUtilRosterInitializeRoster()
 
 	r := New(&Config{}, stm)
+	defer stm.Disconnect(nil)
 
 	storage.ActivateMockedError()
 	ch := make(chan bool)
@@ -168,6 +171,8 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 	defer router.Shutdown()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	// insert roster item...
 	ri := &model.RosterItem{
@@ -243,6 +248,7 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 
 	r := New(&Config{}, stm1)
+	defer stm1.Disconnect(nil)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -283,6 +289,8 @@ func TestRoster_Subscribe(t *testing.T) {
 	defer router.Shutdown()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	r := New(&Config{}, stm1)
 
@@ -323,6 +331,8 @@ func TestRoster_Subscribed(t *testing.T) {
 	storage.Instance().InsertOrUpdateRosterNotification(rn)
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -369,6 +379,8 @@ func TestRoster_Unsubscribe(t *testing.T) {
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -410,6 +422,8 @@ func TestRoster_Unsubscribed(t *testing.T) {
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -453,6 +467,8 @@ func TestRoster_DeleteItem(t *testing.T) {
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
+	defer stm1.Disconnect(nil)
+	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
