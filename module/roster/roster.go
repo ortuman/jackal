@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
@@ -61,6 +62,9 @@ func New(cfg *Config, stm router.C2S) *Roster {
 // VersioningEnabled returns whether or not versioning is enabled.
 func (r *Roster) VersioningEnabled() bool {
 	return r.verEnabled
+}
+
+func (r *Roster) RegisterDisco(_ *xep0030.DiscoInfo) {
 }
 
 // MatchesIQ returns whether or not an IQ should be

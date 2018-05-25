@@ -31,16 +31,16 @@ type Register struct {
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, stm router.C2S, discoInfo *xep0030.DiscoInfo) *Register {
-	// register disco feature
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(registerNamespace)
-	}
-
+func New(config *Config, stm router.C2S) *Register {
 	return &Register{
 		cfg: config,
 		stm: stm,
 	}
+}
+
+func (x *Register) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco feature
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(registerNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

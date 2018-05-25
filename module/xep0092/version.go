@@ -37,15 +37,16 @@ type Version struct {
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm router.C2S, discoInfo *xep0030.DiscoInfo) *Version {
-	// register disco feature
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(versionNamespace)
-	}
+func New(config *Config, stm router.C2S) *Version {
 	return &Version{
 		cfg: config,
 		stm: stm,
 	}
+}
+
+func (x *Version) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco feature
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(versionNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

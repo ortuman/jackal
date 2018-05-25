@@ -21,7 +21,7 @@ func TestXEP0092(t *testing.T) {
 	stm := router.NewMockC2S("abcd", j)
 
 	cfg := Config{}
-	x := New(&cfg, stm, nil)
+	x := New(&cfg, stm)
 
 	// test MatchesIQ
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
@@ -55,7 +55,7 @@ func TestXEP0092(t *testing.T) {
 	// show OS
 	cfg.ShowOS = true
 
-	x = New(&cfg, stm, nil)
+	x = New(&cfg, stm)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)

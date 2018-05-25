@@ -17,8 +17,10 @@ import (
 
 func TestXEP0049_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	stm := router.NewMockC2S("abcd", j)
+	stm.SetUsername("romeo")
 
-	x := New(nil)
+	x := New(stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(j)

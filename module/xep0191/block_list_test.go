@@ -19,7 +19,7 @@ import (
 func TestXEP0191_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, nil)
+	x := New(nil)
 
 	// test MatchesIQ
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
@@ -48,7 +48,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := router.NewMockC2S(uuid.New(), j)
 
-	x := New(stm, nil)
+	x := New(stm)
 
 	storage.Instance().InsertBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
@@ -88,7 +88,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm1 := router.NewMockC2S(uuid.New(), j1)
 
-	x := New(stm1, nil)
+	x := New(stm1)
 
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
 	stm2 := router.NewMockC2S(uuid.New(), j2)

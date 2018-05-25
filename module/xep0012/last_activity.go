@@ -26,14 +26,14 @@ type LastActivity struct {
 }
 
 // New returns a last activity IQ handler module.
-func New(stm router.C2S, discoInfo *xep0030.DiscoInfo) *LastActivity {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(lastActivityNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
-	}
-
+func New(stm router.C2S) *LastActivity {
 	return &LastActivity{stm: stm, startTime: time.Now()}
+}
+
+func (x *LastActivity) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco features
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(lastActivityNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

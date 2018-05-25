@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xml"
@@ -28,10 +29,11 @@ func New(stm router.C2S) *Private {
 		stm:     stm,
 		actorCh: make(chan func(), 32),
 	}
-	if stm != nil {
-		go x.actorLoop(stm.Context().Done())
-	}
+	go x.actorLoop(stm.Context().Done())
 	return x
+}
+
+func (x *Private) RegisterDisco(_ *xep0030.DiscoInfo) {
 }
 
 // MatchesIQ returns whether or not an IQ should be

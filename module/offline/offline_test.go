@@ -26,7 +26,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm := router.NewMockC2S("abcd", j1)
 	stm.SetDomain("jackal.im")
 
-	x := New(&Config{QueueSize: 1}, stm, nil)
+	x := New(&Config{QueueSize: 1}, stm)
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, "normal")
@@ -55,7 +55,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm2 := router.NewMockC2S("abcd", j2)
 	stm2.SetDomain("jackal.im")
 
-	x2 := New(&Config{QueueSize: 1}, stm2, nil)
+	x2 := New(&Config{QueueSize: 1}, stm2)
 	x2.DeliverOfflineMessages()
 
 	elem = stm2.FetchElement()

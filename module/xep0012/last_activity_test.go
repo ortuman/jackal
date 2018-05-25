@@ -21,7 +21,7 @@ import (
 func TestXEP0012_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, nil)
+	x := New(nil)
 
 	// test MatchesIQ
 	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
@@ -50,7 +50,7 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "garden", true)
 	stm := router.NewMockC2S("abcd", j2)
 
-	x := New(stm, nil)
+	x := New(stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetToJID(j1)
@@ -77,7 +77,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	stm2 := router.NewMockC2S("abcde", j2)
 	stm2.SetResource("a_res")
 
-	x := New(stm1, nil)
+	x := New(stm1)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(j2)

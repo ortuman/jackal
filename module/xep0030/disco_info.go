@@ -33,6 +33,14 @@ func New(stm router.C2S) *DiscoInfo {
 	}
 }
 
+func (di *DiscoInfo) RegisterDisco(discoInfo *DiscoInfo) {
+	// register disco features
+	discoInfo.Entity(di.stm.Domain(), "").AddFeature(discoInfoNamespace)
+	fmt.Println("kk0")
+	discoInfo.Entity(di.stm.JID().ToBareJID().String(), "").AddFeature(discoItemsNamespace)
+	fmt.Println("kk1")
+}
+
 // RegisterDefaultEntities register and sets identities for the default
 // domain and account disco entities.
 func (di *DiscoInfo) RegisterDefaultEntities() error {
@@ -68,8 +76,6 @@ func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
 		return nil, fmt.Errorf("entity already registered: %s", k)
 	}
 	ent := &Entity{}
-	ent.AddFeature(discoInfoNamespace)
-	ent.AddFeature(discoItemsNamespace)
 	di.entities[k] = ent
 	return ent, nil
 }

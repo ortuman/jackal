@@ -28,13 +28,14 @@ type BlockingCommand struct {
 }
 
 // New returns a blocking command IQ handler module.
-func New(stm router.C2S, discoInfo *xep0030.DiscoInfo) *BlockingCommand {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(blockingCommandNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
-	}
+func New(stm router.C2S) *BlockingCommand {
 	return &BlockingCommand{stm: stm}
+}
+
+func (x *BlockingCommand) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco features
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(blockingCommandNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

@@ -6,11 +6,18 @@
 package module
 
 import (
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/xml"
 )
 
+type Module interface {
+	RegisterDisco(discoInfo *xep0030.DiscoInfo)
+}
+
 // IQHandler represents an IQ handler module.
 type IQHandler interface {
+	Module
+
 	// MatchesIQ returns whether or not an IQ should be
 	// processed by this module.
 	MatchesIQ(iq *xml.IQ) bool

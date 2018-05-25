@@ -42,17 +42,18 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm router.C2S, discoInfo *xep0030.DiscoInfo) *Ping {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(pingNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(pingNamespace)
-	}
+func New(config *Config, stm router.C2S) *Ping {
 	return &Ping{
 		cfg:    config,
 		stm:    stm,
 		pongCh: make(chan struct{}, 1),
 	}
+}
+
+func (x *Ping) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco features
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(pingNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(pingNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

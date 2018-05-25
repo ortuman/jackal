@@ -22,13 +22,7 @@ type VCard struct {
 }
 
 // New returns a vCard IQ handler module.
-func New(stm router.C2S, discoInfo *xep0030.DiscoInfo) *VCard {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(vCardNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
-	}
-
+func New(stm router.C2S) *VCard {
 	v := &VCard{
 		stm:     stm,
 		actorCh: make(chan func(), 32),
@@ -37,6 +31,12 @@ func New(stm router.C2S, discoInfo *xep0030.DiscoInfo) *VCard {
 		go v.actorLoop(stm.Context().Done())
 	}
 	return v
+}
+
+func (x *VCard) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	// register disco features
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(vCardNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be

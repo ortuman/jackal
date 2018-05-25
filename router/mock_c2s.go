@@ -8,6 +8,7 @@ package router
 import (
 	"time"
 
+	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pkg/errors"
 )
@@ -15,16 +16,19 @@ import (
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
 	id     string
-	ctx    *Context
+	ctx    context.Context
 	elemCh chan xml.XElement
 	discCh chan error
+	doneCh chan<- struct{}
 }
 
 // NewMockC2S returns a new mocked stream instance.
 func NewMockC2S(id string, jid *xml.JID) *MockC2S {
+	ctx, doneCh := context.New()
 	stm := &MockC2S{
-		id:  id,
-		ctx: NewContext(),
+		id:     id,
+		ctx:    ctx,
+		doneCh: doneCh,
 	}
 	stm.ctx.SetObject(jid, "jid")
 	stm.ctx.SetString(jid.Node(), "username")
@@ -41,7 +45,7 @@ func (m *MockC2S) ID() string {
 }
 
 // Context returns mocked stream associated context.
-func (m *MockC2S) Context() *Context {
+func (m *MockC2S) Context() context.Context {
 	return m.ctx
 }
 
@@ -161,6 +165,7 @@ func (m *MockC2S) FetchElement() xml.XElement {
 func (m *MockC2S) Disconnect(err error) {
 	m.ctx.SetBool(true, "disconnected")
 	m.discCh <- err
+	close(m.doneCh)
 }
 
 // IsDisconnected returns whether or not the mocked stream has been disconnected.

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xml"
@@ -38,7 +39,7 @@ var (
 type C2S interface {
 	ID() string
 
-	Context() *Context
+	Context() context.Context
 
 	Username() string
 	Domain() string

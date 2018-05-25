@@ -18,7 +18,7 @@ func TestXEP0199_Matching(t *testing.T) {
 	t.Parallel()
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := New(&Config{}, nil, nil)
+	x := New(&Config{}, nil)
 
 	// test MatchesIQ
 	iqID := uuid.New()
@@ -39,7 +39,7 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	stm := router.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -75,7 +75,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	stm := router.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := New(&Config{Send: true, SendInterval: 1}, stm, nil)
+	x := New(&Config{Send: true, SendInterval: 1}, stm)
 
 	x.StartPinging()
 
@@ -107,7 +107,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	stm := router.NewMockC2S("abcd", j1)
 	stm.SetUsername("ortuman")
 
-	x := New(&Config{Send: true, SendInterval: 1}, stm, nil)
+	x := New(&Config{Send: true, SendInterval: 1}, stm)
 
 	x.StartPinging()
 

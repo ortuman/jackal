@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/auth"
+	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -65,44 +66,55 @@ const (
 
 // stream context keys
 const (
-	usernameCtxKey      = "username"
-	domainCtxKey        = "domain"
-	resourceCtxKey      = "resource"
-	jidCtxKey           = "jid"
-	securedCtxKey       = "secured"
-	authenticatedCtxKey = "authenticated"
-	compressedCtxKey    = "compressed"
-	presenceCtxKey      = "presence"
+	usernameCtxKey      = "stream:username"
+	domainCtxKey        = "stream:domain"
+	resourceCtxKey      = "stream:resource"
+	jidCtxKey           = "stream:jid"
+	securedCtxKey       = "stream:secured"
+	authenticatedCtxKey = "stream:authenticated"
+	compressedCtxKey    = "stream:compressed"
+	presenceCtxKey      = "stream:presence"
 )
 
 // once context keys
 const (
-	rosterOnceCtxKey  = "rosterOnce"
-	offlineOnceCtxKey = "offlineOnce"
+	rosterOnceCtxKey  = "stream:rosterOnce"
+	offlineOnceCtxKey = "stream:offlineOnce"
 )
 
+type modules struct {
+	roster       *roster.Roster
+	offline      *offline.Offline
+	lastActivity *xep0012.LastActivity
+	discoInfo    *xep0030.DiscoInfo
+	private      *xep0049.Private
+	vCard        *xep0054.VCard
+	register     *xep0077.Register
+	version      *xep0092.Version
+	blockingCmd  *xep0191.BlockingCommand
+	ping         *xep0199.Ping
+	iqHandlers   []module.IQHandler
+	all          []module.Module
+}
+
 type stream struct {
-	cfg         *Config
-	tlsCfg      *tls.Config
-	tr          transport.Transport
-	parser      *xml.Parser
-	id          string
-	connectTm   *time.Timer
-	state       uint32
-	ctx         *router.Context
-	authrs      []auth.Authenticator
-	activeAuthr auth.Authenticator
-	iqHandlers  []module.IQHandler
-	roster      *roster.Roster
-	discoInfo   *xep0030.DiscoInfo
-	register    *xep0077.Register
-	ping        *xep0199.Ping
-	blockCmd    *xep0191.BlockingCommand
-	offline     *offline.Offline
-	actorCh     chan func()
+	cfg            *Config
+	tlsCfg         *tls.Config
+	tr             transport.Transport
+	parser         *xml.Parser
+	id             string
+	connectTm      *time.Timer
+	state          uint32
+	ctx            context.Context
+	authenticators []auth.Authenticator
+	activeAuth     auth.Authenticator
+	mods           modules
+	actorCh        chan func()
+	doneCh         chan<- struct{}
 }
 
 func New(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) router.C2S {
+	ctx, doneCh := context.New()
 	s := &stream{
 		cfg:     cfg,
 		tlsCfg:  tlsCfg,
@@ -110,8 +122,9 @@ func New(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) rou
 		tr:      tr,
 		parser:  xml.NewParser(tr, cfg.MaxStanzaSize),
 		state:   connecting,
-		ctx:     router.NewContext(),
+		ctx:     ctx,
 		actorCh: make(chan func(), streamMailboxSize),
+		doneCh:  doneCh,
 	}
 	// initialize stream context
 	secured := !(tr.Type() == transport.Socket)
@@ -126,10 +139,8 @@ func New(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) rou
 	// initialize authenticators
 	s.initializeAuthenticators()
 
-	// initialize register module
-	if _, ok := s.cfg.Modules.Enabled["registration"]; ok {
-		s.register = xep0077.New(&s.cfg.Modules.Registration, s, s.discoInfo)
-	}
+	// initialize modules
+	s.initializeModules()
 
 	if cfg.ConnectTimeout > 0 {
 		s.connectTm = time.AfterFunc(time.Duration(cfg.ConnectTimeout)*time.Second, s.connectTimeout)
@@ -145,8 +156,8 @@ func (s *stream) ID() string {
 	return s.id
 }
 
-// Context returns stream associated context.
-func (s *stream) Context() *router.Context {
+// context returns stream associated context.
+func (s *stream) Context() context.Context {
 	return s.ctx
 }
 
@@ -213,78 +224,95 @@ func (s *stream) Disconnect(err error) {
 }
 
 func (s *stream) initializeAuthenticators() {
+	var authenticators []auth.Authenticator
 	for _, a := range s.cfg.SASL {
 		switch a {
 		case "plain":
-			s.authrs = append(s.authrs, auth.NewPlain(s))
+			authenticators = append(authenticators, auth.NewPlain(s))
 
 		case "digest_md5":
-			s.authrs = append(s.authrs, auth.NewDigestMD5(s))
+			authenticators = append(authenticators, auth.NewDigestMD5(s))
 
 		case "scram_sha_1":
-			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA1, false))
-			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA1, true))
+			authenticators = append(authenticators, auth.NewScram(s, s.tr, auth.ScramSHA1, false))
+			authenticators = append(authenticators, auth.NewScram(s, s.tr, auth.ScramSHA1, true))
 
 		case "scram_sha_256":
-			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA256, false))
-			s.authrs = append(s.authrs, auth.NewScram(s, s.tr, auth.ScramSHA256, true))
+			authenticators = append(authenticators, auth.NewScram(s, s.tr, auth.ScramSHA256, false))
+			authenticators = append(authenticators, auth.NewScram(s, s.tr, auth.ScramSHA256, true))
 		}
 	}
+	s.authenticators = authenticators
 }
 
 func (s *stream) initializeModules() {
-	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
-	s.discoInfo = xep0030.New(s)
-	s.iqHandlers = append(s.iqHandlers, s.discoInfo)
+	var mods modules
 
-	// register default disco info entities
-	s.discoInfo.RegisterDefaultEntities()
+	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
+	mods.discoInfo = xep0030.New(s)
+	mods.iqHandlers = append(mods.iqHandlers, mods.discoInfo)
+	mods.all = append(mods.all, mods.discoInfo)
 
 	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	s.roster = roster.New(&s.cfg.Modules.Roster, s)
-	s.iqHandlers = append(s.iqHandlers, s.roster)
+	mods.roster = roster.New(&s.cfg.Modules.Roster, s)
+	mods.iqHandlers = append(mods.iqHandlers, mods.roster)
+	mods.all = append(mods.all, mods.roster)
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := s.cfg.Modules.Enabled["last_activity"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0012.New(s, s.discoInfo))
+		mods.lastActivity = xep0012.New(s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.lastActivity)
+		mods.all = append(mods.all, mods.lastActivity)
 	}
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := s.cfg.Modules.Enabled["private"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0049.New(s))
+		mods.private = xep0049.New(s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.private)
+		mods.all = append(mods.all, mods.private)
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := s.cfg.Modules.Enabled["vcard"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0054.New(s, s.discoInfo))
+		mods.vCard = xep0054.New(s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.vCard)
+		mods.all = append(mods.all, mods.vCard)
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
-	if s.register != nil {
-		s.iqHandlers = append(s.iqHandlers, s.register)
+	if _, ok := s.cfg.Modules.Enabled["registration"]; ok {
+		mods.register = xep0077.New(&s.cfg.Modules.Registration, s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.register)
+		mods.all = append(mods.all, mods.register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := s.cfg.Modules.Enabled["version"]; ok {
-		s.iqHandlers = append(s.iqHandlers, xep0092.New(&s.cfg.Modules.Version, s, s.discoInfo))
+		mods.version = xep0092.New(&s.cfg.Modules.Version, s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.version)
+		mods.all = append(mods.all, mods.version)
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := s.cfg.Modules.Enabled["blocking_command"]; ok {
-		s.blockCmd = xep0191.New(s, s.discoInfo)
-		s.iqHandlers = append(s.iqHandlers, s.blockCmd)
+		mods.blockingCmd = xep0191.New(s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.blockingCmd)
+		mods.all = append(mods.all, mods.blockingCmd)
 	}
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := s.cfg.Modules.Enabled["ping"]; ok {
-		s.ping = xep0199.New(&s.cfg.Modules.Ping, s, s.discoInfo)
-		s.iqHandlers = append(s.iqHandlers, s.ping)
+		mods.ping = xep0199.New(&s.cfg.Modules.Ping, s)
+		mods.iqHandlers = append(mods.iqHandlers, mods.ping)
+		mods.all = append(mods.all, mods.ping)
 	}
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := s.cfg.Modules.Enabled["offline"]; ok {
-		s.offline = offline.New(&s.cfg.Modules.Offline, s, s.discoInfo)
+		mods.offline = offline.New(&s.cfg.Modules.Offline, s)
+		mods.all = append(mods.all, mods.offline)
 	}
+	s.mods = mods
 }
 
 func (s *stream) connectTimeout() {
@@ -362,10 +390,10 @@ func (s *stream) unauthenticatedFeatures() []xml.XElement {
 	// attach SASL mechanisms
 	shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
 
-	if shouldOfferSASL && len(s.authrs) > 0 {
+	if shouldOfferSASL && len(s.authenticators) > 0 {
 		mechanisms := xml.NewElementName("mechanisms")
 		mechanisms.SetNamespace(saslNamespace)
-		for _, athr := range s.authrs {
+		for _, athr := range s.authenticators {
 			mechanism := xml.NewElementName("mechanism")
 			mechanism.SetText(athr.Mechanism())
 			mechanisms.AppendElement(mechanism)
@@ -405,7 +433,7 @@ func (s *stream) authenticatedFeatures() []xml.XElement {
 	session := xml.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 	features = append(features, session)
 
-	if s.roster != nil && s.cfg.Modules.Roster.Versioning {
+	if s.mods.roster != nil && s.mods.roster.VersioningEnabled() {
 		ver := xml.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
 		features = append(features, ver)
 	}
@@ -436,8 +464,8 @@ func (s *stream) handleConnected(elem xml.XElement) {
 		}
 		iq := stanza.(*xml.IQ)
 
-		if s.register != nil && s.register.MatchesIQ(iq) {
-			s.register.ProcessIQ(iq)
+		if reg := s.mods.register; reg.MatchesIQ(iq) {
+			reg.ProcessIQ(iq)
 			return
 
 		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
@@ -460,7 +488,7 @@ func (s *stream) handleAuthenticating(elem xml.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
 	}
-	authr := s.activeAuthr
+	authr := s.activeAuth
 	s.continueAuthentication(elem, authr)
 	if authr.Authenticated() {
 		s.finishAuthentication(authr.Username())
@@ -497,8 +525,8 @@ func (s *stream) handleAuthenticated(elem xml.XElement) {
 
 func (s *stream) handleSessionStarted(elem xml.XElement) {
 	// reset ping timer deadline
-	if s.ping != nil {
-		s.ping.ResetDeadline()
+	if p := s.mods.ping; p != nil {
+		p.ResetDeadline()
 	}
 
 	stanza, err := s.buildStanza(elem, true)
@@ -560,7 +588,7 @@ func (s *stream) compress(elem xml.XElement) {
 
 func (s *stream) startAuthentication(elem xml.XElement) {
 	mechanism := elem.Attributes().Get("mechanism")
-	for _, authr := range s.authrs {
+	for _, authr := range s.authenticators {
 		if authr.Mechanism() == mechanism {
 			if err := s.continueAuthentication(elem, authr); err != nil {
 				return
@@ -568,13 +596,12 @@ func (s *stream) startAuthentication(elem xml.XElement) {
 			if authr.Authenticated() {
 				s.finishAuthentication(authr.Username())
 			} else {
-				s.activeAuthr = authr
+				s.activeAuth = authr
 				s.setState(authenticating)
 			}
 			return
 		}
 	}
-
 	// ...mechanism not found...
 	failure := xml.NewElementNamespace("failure", saslNamespace)
 	failure.AppendElement(xml.NewElementName("invalid-mechanism"))
@@ -593,9 +620,9 @@ func (s *stream) continueAuthentication(elem xml.XElement, authr auth.Authentica
 }
 
 func (s *stream) finishAuthentication(username string) {
-	if s.activeAuthr != nil {
-		s.activeAuthr.Reset()
-		s.activeAuthr = nil
+	if s.activeAuth != nil {
+		s.activeAuth.Reset()
+		s.activeAuth = nil
 	}
 	j, _ := xml.NewJID(username, s.Domain(), "", true)
 
@@ -611,9 +638,9 @@ func (s *stream) failAuthentication(elem xml.XElement) {
 	failure.AppendElement(elem)
 	s.writeElement(failure)
 
-	if s.activeAuthr != nil {
-		s.activeAuthr.Reset()
-		s.activeAuthr = nil
+	if s.activeAuth != nil {
+		s.activeAuth.Reset()
+		s.activeAuth = nil
 	}
 	s.setState(connected)
 }
@@ -695,11 +722,15 @@ func (s *stream) startSession(iq *xml.IQ) {
 	}
 	s.writeElement(iq.ResultIQ())
 
-	// initialize modules
-	s.initializeModules()
+	// register disco info elements
+	s.mods.discoInfo.RegisterDefaultEntities()
 
-	if s.ping != nil {
-		s.ping.StartPinging()
+	for _, mod := range s.mods.all {
+		mod.RegisterDisco(s.mods.discoInfo)
+	}
+
+	if p := s.mods.ping; p != nil {
+		p.StartPinging()
 	}
 	s.setState(sessionStarted)
 }
@@ -746,7 +777,7 @@ func (s *stream) processIQ(iq *xml.IQ) {
 		return
 	}
 
-	for _, handler := range s.iqHandlers {
+	for _, handler := range s.mods.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
@@ -767,8 +798,8 @@ func (s *stream) processPresence(presence *xml.Presence) {
 		return
 	}
 	if toJID.IsBare() && (toJID.Node() != s.Username() || toJID.Domain() != s.Domain()) {
-		if s.roster != nil {
-			s.roster.ProcessPresence(presence)
+		if rst := s.mods.roster; rst != nil {
+			rst.ProcessPresence(presence)
 		}
 		return
 	}
@@ -780,19 +811,19 @@ func (s *stream) processPresence(presence *xml.Presence) {
 	s.ctx.SetObject(presence, presenceCtxKey)
 
 	// deliver pending approval notifications
-	if s.roster != nil {
+	if rst := s.mods.roster; rst != nil {
 		if !s.ctx.Bool(rosterOnceCtxKey) {
-			s.roster.DeliverPendingApprovalNotifications()
-			s.roster.ReceivePresences()
+			rst.DeliverPendingApprovalNotifications()
+			rst.ReceivePresences()
 			s.ctx.SetBool(true, rosterOnceCtxKey)
 		}
-		s.roster.BroadcastPresence(presence)
+		rst.BroadcastPresence(presence)
 	}
 
 	// deliver offline messages
-	if p := s.Presence(); s.offline != nil && p != nil && p.Priority() >= 0 {
+	if p := s.Presence(); s.mods.offline != nil && p != nil && p.Priority() >= 0 {
 		if !s.ctx.Bool(offlineOnceCtxKey) {
-			s.offline.DeliverOfflineMessages()
+			s.mods.offline.DeliverOfflineMessages()
 			s.ctx.SetBool(true, offlineOnceCtxKey)
 		}
 	}
@@ -811,11 +842,11 @@ sendMessage:
 	case nil:
 		break
 	case router.ErrNotAuthenticated:
-		if s.offline != nil {
+		if off := s.mods.offline; off != nil {
 			if (message.IsChat() || message.IsGroupChat()) && message.IsMessageWithBody() {
 				return
 			}
-			s.offline.ArchiveMessage(message)
+			off.ArchiveMessage(message)
 		}
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -1080,8 +1111,8 @@ func (s *stream) disconnectClosingStream(closeStream bool) {
 	if err := s.updateLogoutInfo(); err != nil {
 		log.Error(err)
 	}
-	if presence := s.Presence(); presence != nil && presence.IsAvailable() && s.roster != nil {
-		s.roster.BroadcastPresenceAndWait(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
+	if presence := s.Presence(); presence != nil && presence.IsAvailable() && s.mods.roster != nil {
+		s.mods.roster.BroadcastPresenceAndWait(xml.NewPresence(s.JID(), s.JID(), xml.UnavailableType))
 	}
 	if closeStream {
 		switch s.tr.Type() {
@@ -1092,7 +1123,7 @@ func (s *stream) disconnectClosingStream(closeStream bool) {
 		}
 	}
 	// signal termination...
-	s.ctx.Terminate()
+	close(s.doneCh)
 
 	// unregister stream
 	if err := router.Instance().UnregisterStream(s); err != nil {
