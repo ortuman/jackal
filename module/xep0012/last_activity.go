@@ -30,8 +30,9 @@ func New(stm router.C2S) *LastActivity {
 	return &LastActivity{stm: stm, startTime: time.Now()}
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to last activity module.
 func (x *LastActivity) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco features
 	discoInfo.Entity(x.stm.Domain(), "").AddFeature(lastActivityNamespace)
 	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
 }

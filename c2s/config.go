@@ -66,6 +66,7 @@ func (c *CompressConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	return nil
 }
 
+// ModulesConfig represents C2S modules configuration.
 type ModulesConfig struct {
 	Enabled      map[string]struct{}
 	Roster       roster.Config
@@ -111,6 +112,7 @@ func (cfg *ModulesConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
+// Config represents C2S stream configuration.
 type Config struct {
 	ConnectTimeout   int
 	MaxStanzaSize    int

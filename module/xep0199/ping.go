@@ -50,8 +50,9 @@ func New(config *Config, stm router.C2S) *Ping {
 	}
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to ping module.
 func (x *Ping) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco features
 	discoInfo.Entity(x.stm.Domain(), "").AddFeature(pingNamespace)
 	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(pingNamespace)
 }

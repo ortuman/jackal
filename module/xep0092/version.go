@@ -44,8 +44,9 @@ func New(config *Config, stm router.C2S) *Version {
 	}
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to version module.
 func (x *Version) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco feature
 	discoInfo.Entity(x.stm.Domain(), "").AddFeature(versionNamespace)
 }
 

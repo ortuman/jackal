@@ -33,12 +33,11 @@ func New(stm router.C2S) *DiscoInfo {
 	}
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to disco info module.
 func (di *DiscoInfo) RegisterDisco(discoInfo *DiscoInfo) {
-	// register disco features
 	discoInfo.Entity(di.stm.Domain(), "").AddFeature(discoInfoNamespace)
-	fmt.Println("kk0")
 	discoInfo.Entity(di.stm.JID().ToBareJID().String(), "").AddFeature(discoItemsNamespace)
-	fmt.Println("kk1")
 }
 
 // RegisterDefaultEntities register and sets identities for the default

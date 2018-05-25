@@ -33,6 +33,8 @@ func New(stm router.C2S) *Private {
 	return x
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to private module.
 func (x *Private) RegisterDisco(_ *xep0030.DiscoInfo) {
 }
 

@@ -38,8 +38,9 @@ func New(config *Config, stm router.C2S) *Offline {
 	return r
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to offline module.
 func (o *Offline) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco feature
 	discoInfo.Entity(o.stm.Domain(), "").AddFeature(offlineNamespace)
 }
 

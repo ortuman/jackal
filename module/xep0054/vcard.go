@@ -33,8 +33,9 @@ func New(stm router.C2S) *VCard {
 	return v
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to vCard module.
 func (x *VCard) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco features
 	discoInfo.Entity(x.stm.Domain(), "").AddFeature(vCardNamespace)
 	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
 }

@@ -32,8 +32,9 @@ func New(stm router.C2S) *BlockingCommand {
 	return &BlockingCommand{stm: stm}
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to blocking command module.
 func (x *BlockingCommand) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco features
 	discoInfo.Entity(x.stm.Domain(), "").AddFeature(blockingCommandNamespace)
 	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
 }

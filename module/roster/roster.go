@@ -64,6 +64,8 @@ func (r *Roster) VersioningEnabled() bool {
 	return r.verEnabled
 }
 
+// RegisterDisco registers disco entity features/items
+// associated to roster module.
 func (r *Roster) RegisterDisco(_ *xep0030.DiscoInfo) {
 }
 
