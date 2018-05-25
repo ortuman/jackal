@@ -12,8 +12,8 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -21,19 +21,20 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	stm       c2s.Stream
+	stm       router.C2S
 	startTime time.Time
 }
 
 // New returns a last activity IQ handler module.
-func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *LastActivity {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(lastActivityNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
-	}
-
+func New(stm router.C2S) *LastActivity {
 	return &LastActivity{stm: stm, startTime: time.Now()}
+}
+
+// RegisterDisco registers disco entity features/items
+// associated to last activity module.
+func (x *LastActivity) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(lastActivityNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(lastActivityNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -74,7 +75,7 @@ func (x *LastActivity) sendServerUptime(iq *xml.IQ) {
 }
 
 func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
-	if len(c2s.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
+	if len(router.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
 		x.sendReply(iq, 0, "")
 		return
 	}

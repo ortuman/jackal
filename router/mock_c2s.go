@@ -3,28 +3,32 @@
  * See the LICENSE file for more information.
  */
 
-package c2s
+package router
 
 import (
 	"time"
 
-	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/context"
 	"github.com/ortuman/jackal/xml"
+	"github.com/pkg/errors"
 )
 
-// MockStream represents a mocked c2s stream.
-type MockStream struct {
+// MockC2S represents a mocked c2s stream.
+type MockC2S struct {
 	id     string
-	ctx    *stream.Context
+	ctx    context.Context
 	elemCh chan xml.XElement
 	discCh chan error
+	doneCh chan<- struct{}
 }
 
-// NewMockStream returns a new mocked stream instance.
-func NewMockStream(id string, jid *xml.JID) *MockStream {
-	stm := &MockStream{
-		id:  id,
-		ctx: stream.NewContext(),
+// NewMockC2S returns a new mocked stream instance.
+func NewMockC2S(id string, jid *xml.JID) *MockC2S {
+	ctx, doneCh := context.New()
+	stm := &MockC2S{
+		id:     id,
+		ctx:    ctx,
+		doneCh: doneCh,
 	}
 	stm.ctx.SetObject(jid, "jid")
 	stm.ctx.SetString(jid.Node(), "username")
@@ -36,99 +40,99 @@ func NewMockStream(id string, jid *xml.JID) *MockStream {
 }
 
 // ID returns mocked stream identifier.
-func (m *MockStream) ID() string {
+func (m *MockC2S) ID() string {
 	return m.id
 }
 
 // Context returns mocked stream associated context.
-func (m *MockStream) Context() *stream.Context {
+func (m *MockC2S) Context() context.Context {
 	return m.ctx
 }
 
 // Username returns current mocked stream username.
-func (m *MockStream) Username() string {
+func (m *MockC2S) Username() string {
 	return m.ctx.String("username")
 }
 
 // SetUsername sets the mocked stream username value.
-func (m *MockStream) SetUsername(username string) {
+func (m *MockC2S) SetUsername(username string) {
 	m.ctx.SetString(username, "username")
 }
 
 // Domain returns current mocked stream domain.
-func (m *MockStream) Domain() string {
+func (m *MockC2S) Domain() string {
 	return m.ctx.String("domain")
 }
 
 // SetDomain sets the mocked stream domain value.
-func (m *MockStream) SetDomain(domain string) {
+func (m *MockC2S) SetDomain(domain string) {
 	m.ctx.SetString(domain, "domain")
 }
 
 // Resource returns current mocked stream resource.
-func (m *MockStream) Resource() string {
+func (m *MockC2S) Resource() string {
 	return m.ctx.String("resource")
 }
 
 // SetResource sets the mocked stream resource value.
-func (m *MockStream) SetResource(resource string) {
+func (m *MockC2S) SetResource(resource string) {
 	m.ctx.SetString(resource, "resource")
 }
 
 // JID returns current user JID.
-func (m *MockStream) JID() *xml.JID {
+func (m *MockC2S) JID() *xml.JID {
 	return m.ctx.Object("jid").(*xml.JID)
 }
 
 // SetJID sets the mocked stream JID value.
-func (m *MockStream) SetJID(jid *xml.JID) {
+func (m *MockC2S) SetJID(jid *xml.JID) {
 	m.ctx.SetObject(jid, "jid")
 }
 
 // SetSecured sets whether or not the a mocked stream
 // has been secured.
-func (m *MockStream) SetSecured(secured bool) {
+func (m *MockC2S) SetSecured(secured bool) {
 	m.ctx.SetBool(secured, "secured")
 }
 
 // IsSecured returns whether or not the mocked stream
 // has been secured.
-func (m *MockStream) IsSecured() bool {
+func (m *MockC2S) IsSecured() bool {
 	return m.ctx.Bool("secured")
 }
 
 // SetAuthenticated sets whether or not the a mocked stream
 // has been authenticated.
-func (m *MockStream) SetAuthenticated(authenticated bool) {
+func (m *MockC2S) SetAuthenticated(authenticated bool) {
 	m.ctx.SetBool(authenticated, "authenticated")
 }
 
 // IsAuthenticated returns whether or not the mocked stream
 // has successfully authenticated.
-func (m *MockStream) IsAuthenticated() bool {
+func (m *MockC2S) IsAuthenticated() bool {
 	return m.ctx.Bool("authenticated")
 }
 
 // SetCompressed sets whether or not the a mocked stream
 // has been compressed.
-func (m *MockStream) SetCompressed(compressed bool) {
+func (m *MockC2S) SetCompressed(compressed bool) {
 	m.ctx.SetBool(compressed, "compressed")
 }
 
 // IsCompressed returns whether or not the mocked stream
 // has enabled a compression method.
-func (m *MockStream) IsCompressed() bool {
+func (m *MockC2S) IsCompressed() bool {
 	return m.ctx.Bool("compressed")
 }
 
 // SetPresence sets the mocked stream last received
 // presence element.
-func (m *MockStream) SetPresence(presence *xml.Presence) {
+func (m *MockC2S) SetPresence(presence *xml.Presence) {
 	m.ctx.SetObject(presence, "presence")
 }
 
 // Presence returns last sent presence element.
-func (m *MockStream) Presence() *xml.Presence {
+func (m *MockC2S) Presence() *xml.Presence {
 	switch v := m.ctx.Object("presence").(type) {
 	case *xml.Presence:
 		return v
@@ -137,33 +141,44 @@ func (m *MockStream) Presence() *xml.Presence {
 }
 
 // SendElement sends the given XML element.
-func (m *MockStream) SendElement(element xml.XElement) {
-	m.elemCh <- element
+func (m *MockC2S) SendElement(element xml.XElement) {
+	select {
+	case m.elemCh <- element:
+		return
+	default:
+		break
+	}
 }
 
 // FetchElement waits until a new XML element is sent to
 // the mocked stream and returns it.
-func (m *MockStream) FetchElement() xml.XElement {
+func (m *MockC2S) FetchElement() xml.XElement {
 	select {
 	case e := <-m.elemCh:
 		return e
-	case <-time.After(time.Second * 3):
+	case <-time.After(time.Second * 5):
 		return &xml.Element{}
 	}
 }
 
 // Disconnect disconnects mocked stream.
-func (m *MockStream) Disconnect(err error) {
-	m.discCh <- err
+func (m *MockC2S) Disconnect(err error) {
 	m.ctx.SetBool(true, "disconnected")
+	m.discCh <- err
+	close(m.doneCh)
 }
 
 // IsDisconnected returns whether or not the mocked stream has been disconnected.
-func (m *MockStream) IsDisconnected() bool {
+func (m *MockC2S) IsDisconnected() bool {
 	return m.ctx.Bool("disconnected")
 }
 
 // WaitDisconnection waits until the mocked stream disconnects.
-func (m *MockStream) WaitDisconnection() error {
-	return <-m.discCh
+func (m *MockC2S) WaitDisconnection() error {
+	select {
+	case err := <-m.discCh:
+		return err
+	case <-time.After(time.Second * 5):
+		return errors.New("operation timed out")
+	}
 }

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"bytes"
@@ -15,24 +15,24 @@ import (
 	"hash"
 	"strings"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )
 
-const iterationsCount = 4096
-
-type scramType int
+type ScramType int
 
 const (
-	sha1ScramType scramType = iota
-	sha256ScramType
+	ScramSHA1 ScramType = iota
+	ScramSHA256
 )
+
+const iterationsCount = 4096
 
 type scramState int
 
@@ -73,10 +73,10 @@ func (s *scramParameters) String() string {
 	return ret
 }
 
-type scramAuthenticator struct {
-	strm          c2s.Stream
+type Scram struct {
+	stm           router.C2S
 	tr            transport.Transport
-	tp            scramType
+	tp            ScramType
 	usesCb        bool
 	h             func() hash.Hash
 	hKeyLen       int
@@ -89,15 +89,15 @@ type scramAuthenticator struct {
 	authenticated bool
 }
 
-func newScram(strm c2s.Stream, tr transport.Transport, scramType scramType, usesChannelBinding bool) *scramAuthenticator {
-	s := &scramAuthenticator{
-		strm:   strm,
+func NewScram(stm router.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
+	s := &Scram{
+		stm:    stm,
 		tr:     tr,
 		tp:     scramType,
 		usesCb: usesChannelBinding,
 		state:  startScramState,
 	}
-	if s.tp == sha1ScramType {
+	if s.tp == ScramSHA1 {
 		s.h = sha1.New
 		s.hKeyLen = sha1.Size
 	} else {
@@ -107,15 +107,15 @@ func newScram(strm c2s.Stream, tr transport.Transport, scramType scramType, uses
 	return s
 }
 
-func (s *scramAuthenticator) Mechanism() string {
+func (s *Scram) Mechanism() string {
 	switch s.tp {
-	case sha1ScramType:
+	case ScramSHA1:
 		if s.usesCb {
 			return "SCRAM-SHA-1-PLUS"
 		}
 		return "SCRAM-SHA-1"
 
-	case sha256ScramType:
+	case ScramSHA256:
 		if s.usesCb {
 			return "SCRAM-SHA-256-PLUS"
 		}
@@ -124,22 +124,22 @@ func (s *scramAuthenticator) Mechanism() string {
 	return ""
 }
 
-func (s *scramAuthenticator) Username() string {
+func (s *Scram) Username() string {
 	if s.authenticated {
 		return s.user.Username
 	}
 	return ""
 }
 
-func (s *scramAuthenticator) Authenticated() bool {
+func (s *Scram) Authenticated() bool {
 	return s.authenticated
 }
 
-func (s *scramAuthenticator) UsesChannelBinding() bool {
+func (s *Scram) UsesChannelBinding() bool {
 	return s.usesCb
 }
 
-func (s *scramAuthenticator) ProcessElement(elem xml.XElement) error {
+func (s *Scram) ProcessElement(elem xml.XElement) error {
 	if s.Authenticated() {
 		return nil
 	}
@@ -153,10 +153,10 @@ func (s *scramAuthenticator) ProcessElement(elem xml.XElement) error {
 			return s.handleChallenged(elem)
 		}
 	}
-	return errSASLNotAuthorized
+	return ErrSASLNotAuthorized
 }
 
-func (s *scramAuthenticator) Reset() {
+func (s *Scram) Reset() {
 	s.authenticated = false
 
 	s.state = startScramState
@@ -167,7 +167,7 @@ func (s *scramAuthenticator) Reset() {
 	s.firstMessage = ""
 }
 
-func (s *scramAuthenticator) handleStart(elem xml.XElement) error {
+func (s *Scram) handleStart(elem xml.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -179,14 +179,14 @@ func (s *scramAuthenticator) handleStart(elem xml.XElement) error {
 	cNonce := s.params.getParameter("r")
 
 	if len(username) == 0 || len(cNonce) == 0 {
-		return errSASLMalformedRequest
+		return ErrSASLMalformedRequest
 	}
 	user, err := storage.Instance().FetchUser(username)
 	if err != nil {
 		return err
 	}
 	if user == nil {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	s.user = user
 
@@ -197,13 +197,13 @@ func (s *scramAuthenticator) handleStart(elem xml.XElement) error {
 
 	respElem := xml.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
-	s.strm.SendElement(respElem)
+	s.stm.SendElement(respElem)
 
 	s.state = challengedScramState
 	return nil
 }
 
-func (s *scramAuthenticator) handleChallenged(elem xml.XElement) error {
+func (s *Scram) handleChallenged(elem xml.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -227,51 +227,51 @@ func (s *scramAuthenticator) handleChallenged(elem xml.XElement) error {
 
 	clientFinalMessage := clientFinalMessageBare + ",p=" + base64.StdEncoding.EncodeToString(clientProof)
 	if clientFinalMessage != p {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	v := "v=" + base64.StdEncoding.EncodeToString(serverSignature)
 
 	respElem := xml.NewElementNamespace("success", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
-	s.strm.SendElement(respElem)
+	s.stm.SendElement(respElem)
 
 	s.authenticated = true
 	return nil
 }
 
-func (s *scramAuthenticator) getElementPayload(elem xml.XElement) (string, error) {
+func (s *Scram) getElementPayload(elem xml.XElement) (string, error) {
 	if len(elem.Text()) == 0 {
-		return "", errSASLIncorrectEncoding
+		return "", ErrSASLIncorrectEncoding
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())
 	if err != nil {
-		return "", errSASLIncorrectEncoding
+		return "", ErrSASLIncorrectEncoding
 	}
 	return string(b), nil
 }
 
-func (s *scramAuthenticator) parseParameters(str string) error {
+func (s *Scram) parseParameters(str string) error {
 	p := &scramParameters{}
 
 	sp := strings.Split(str, ",")
 	if len(sp) < 2 {
-		return errSASLIncorrectEncoding
+		return ErrSASLIncorrectEncoding
 	}
 	gs2BindFlag := sp[0]
 
 	switch gs2BindFlag {
 	case "y":
 		if !s.usesCb {
-			return errSASLNotAuthorized
+			return ErrSASLNotAuthorized
 		}
 	case "n":
 		break
 	default:
 		if !strings.HasPrefix(gs2BindFlag, "p=") {
-			return errSASLMalformedRequest
+			return ErrSASLMalformedRequest
 		}
 		if !s.usesCb {
-			return errSASLNotAuthorized
+			return ErrSASLNotAuthorized
 		}
 		p.cbMechanism = gs2BindFlag[2:]
 	}
@@ -281,7 +281,7 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 	if len(authzID) > 0 {
 		key, val := util.SplitKeyAndValue(authzID, '=')
 		if len(key) == 0 || key != "a" {
-			return errSASLMalformedRequest
+			return ErrSASLMalformedRequest
 		}
 		p.authzID = val
 	}
@@ -293,7 +293,7 @@ func (s *scramAuthenticator) parseParameters(str string) error {
 	return nil
 }
 
-func (s *scramAuthenticator) getCBindInputString() string {
+func (s *Scram) getCBindInputString() string {
 	buf := new(bytes.Buffer)
 	buf.Write([]byte(s.params.gs2Header))
 	if s.usesCb {
@@ -305,17 +305,17 @@ func (s *scramAuthenticator) getCBindInputString() string {
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func (s *scramAuthenticator) pbkdf2(b []byte) []byte {
+func (s *Scram) pbkdf2(b []byte) []byte {
 	return pbkdf2.Key(b, s.salt, iterationsCount, s.hKeyLen, s.h)
 }
 
-func (s *scramAuthenticator) hmac(b []byte, key []byte) []byte {
+func (s *Scram) hmac(b []byte, key []byte) []byte {
 	m := hmac.New(s.h, key)
 	m.Write(b)
 	return m.Sum(nil)
 }
 
-func (s *scramAuthenticator) hash(b []byte) []byte {
+func (s *Scram) hash(b []byte) []byte {
 	h := s.h()
 	h.Write(b)
 	return h.Sum(nil)

@@ -3,57 +3,57 @@
  * See the LICENSE file for more information.
  */
 
-package server
+package auth
 
 import (
 	"bytes"
 	"encoding/base64"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 )
 
-type plainAuthenticator struct {
-	strm          c2s.Stream
+type Plain struct {
+	stm           router.C2S
 	username      string
 	authenticated bool
 }
 
-func newPlainAuthenticator(strm c2s.Stream) *plainAuthenticator {
-	return &plainAuthenticator{strm: strm}
+func NewPlain(stm router.C2S) *Plain {
+	return &Plain{stm: stm}
 }
 
-func (p *plainAuthenticator) Mechanism() string {
+func (p *Plain) Mechanism() string {
 	return "PLAIN"
 }
 
-func (p *plainAuthenticator) Username() string {
+func (p *Plain) Username() string {
 	return p.username
 }
 
-func (p *plainAuthenticator) Authenticated() bool {
+func (p *Plain) Authenticated() bool {
 	return p.authenticated
 }
 
-func (p *plainAuthenticator) UsesChannelBinding() bool {
+func (p *Plain) UsesChannelBinding() bool {
 	return false
 }
 
-func (p *plainAuthenticator) ProcessElement(elem xml.XElement) error {
+func (p *Plain) ProcessElement(elem xml.XElement) error {
 	if p.authenticated {
 		return nil
 	}
 	if len(elem.Text()) == 0 {
-		return errSASLMalformedRequest
+		return ErrSASLMalformedRequest
 	}
 	b, err := base64.StdEncoding.DecodeString(elem.Text())
 	if err != nil {
-		return errSASLIncorrectEncoding
+		return ErrSASLIncorrectEncoding
 	}
 	s := bytes.Split(b, []byte{0})
 	if len(s) != 3 {
-		return errSASLIncorrectEncoding
+		return ErrSASLIncorrectEncoding
 	}
 	username := string(s[1])
 	password := string(s[2])
@@ -64,16 +64,16 @@ func (p *plainAuthenticator) ProcessElement(elem xml.XElement) error {
 		return err
 	}
 	if user == nil || user.Password != password {
-		return errSASLNotAuthorized
+		return ErrSASLNotAuthorized
 	}
 	p.username = username
 	p.authenticated = true
 
-	p.strm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	p.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 
-func (p *plainAuthenticator) Reset() {
+func (p *Plain) Reset() {
 	p.username = ""
 	p.authenticated = false
 }

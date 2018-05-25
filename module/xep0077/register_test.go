@@ -8,9 +8,9 @@ package xep0077
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 func TestXEP0077_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
-	x := New(&Config{}, nil, nil)
+	x := New(&Config{}, nil)
 
 	// test MatchesIQ
 	iq := xml.NewIQType(uuid.New(), xml.SetType)
@@ -32,9 +32,9 @@ func TestXEP0077_Matching(t *testing.T) {
 
 func TestXEP0077_InvalidToJID(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	stm.SetUsername("romeo")
 	iq := xml.NewIQType(uuid.New(), xml.SetType)
@@ -59,9 +59,9 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 
 func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	iq.SetFromJID(j)
@@ -77,7 +77,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	// allow registration...
-	x = New(&Config{AllowRegistration: true}, stm, nil)
+	x = New(&Config{AllowRegistration: true}, stm)
 
 	q := xml.NewElementNamespace("query", registerNamespace)
 	q.AppendElement(xml.NewElementName("q2"))
@@ -100,10 +100,10 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.ResultType)
 	iq.SetFromJID(j)
@@ -128,9 +128,9 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 
-	x := New(&Config{AllowRegistration: true}, stm, nil)
+	x := New(&Config{AllowRegistration: true}, stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(srvJid)
@@ -186,10 +186,10 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -205,7 +205,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	elem := stm.FetchElement()
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x = New(&Config{AllowCancel: true}, stm, nil)
+	x = New(&Config{AllowCancel: true}, stm)
 
 	q.AppendElement(xml.NewElementName("remove2"))
 	x.ProcessIQ(iq)
@@ -236,10 +236,10 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd1234", j)
+	stm := router.NewMockC2S("abcd1234", j)
 	stm.SetAuthenticated(true)
 
-	x := New(&Config{}, stm, nil)
+	x := New(&Config{}, stm)
 
 	storage.Instance().InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -260,7 +260,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	elem := stm.FetchElement()
 	require.Equal(t, xml.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x = New(&Config{AllowChange: true}, stm, nil)
+	x = New(&Config{AllowChange: true}, stm)
 
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()

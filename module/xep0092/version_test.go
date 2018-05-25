@@ -8,7 +8,7 @@ package xep0092
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
@@ -18,10 +18,10 @@ import (
 func TestXEP0092(t *testing.T) {
 	srvJID, _ := xml.NewJID("", "jackal.im", "", true)
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 
 	cfg := Config{}
-	x := New(&cfg, stm, nil)
+	x := New(&cfg, stm)
 
 	// test MatchesIQ
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
@@ -55,7 +55,7 @@ func TestXEP0092(t *testing.T) {
 	// show OS
 	cfg.ShowOS = true
 
-	x = New(&cfg, stm, nil)
+	x = New(&cfg, stm)
 	x.ProcessIQ(iq)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)

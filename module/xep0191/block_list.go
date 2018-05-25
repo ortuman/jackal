@@ -9,9 +9,9 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/model"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 )
@@ -24,17 +24,19 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
-	stm c2s.Stream
+	stm router.C2S
 }
 
 // New returns a blocking command IQ handler module.
-func New(stm c2s.Stream, discoInfo *xep0030.DiscoInfo) *BlockingCommand {
-	// register disco features
-	if discoInfo != nil {
-		discoInfo.Entity(stm.Domain(), "").AddFeature(blockingCommandNamespace)
-		discoInfo.Entity(stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
-	}
+func New(stm router.C2S) *BlockingCommand {
 	return &BlockingCommand{stm: stm}
+}
+
+// RegisterDisco registers disco entity features/items
+// associated to blocking command module.
+func (x *BlockingCommand) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
+	discoInfo.Entity(x.stm.Domain(), "").AddFeature(blockingCommandNamespace)
+	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(blockingCommandNamespace)
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -113,7 +115,7 @@ func (x *BlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	c2s.Instance().ReloadBlockList(x.stm.Username())
+	router.Instance().ReloadBlockList(x.stm.Username())
 
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(block)
@@ -155,14 +157,14 @@ func (x *BlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	c2s.Instance().ReloadBlockList(x.stm.Username())
+	router.Instance().ReloadBlockList(x.stm.Username())
 
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(unblock)
 }
 
 func (x *BlockingCommand) pushIQ(elem xml.XElement) {
-	stms := c2s.Instance().StreamsMatchingJID(x.stm.JID().ToBareJID())
+	stms := router.Instance().StreamsMatchingJID(x.stm.JID().ToBareJID())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
 			continue
@@ -174,7 +176,7 @@ func (x *BlockingCommand) pushIQ(elem xml.XElement) {
 }
 
 func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model.RosterItem, presenceType string) {
-	stms := c2s.Instance().StreamsMatchingJID(jid)
+	stms := router.Instance().StreamsMatchingJID(jid)
 	for _, stm := range stms {
 		if !x.isSubscribedFrom(stm.JID().ToBareJID(), ris) {
 			continue
@@ -183,7 +185,7 @@ func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model
 		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		c2s.Instance().MustRoute(p)
+		router.Instance().MustRoute(p)
 	}
 }
 

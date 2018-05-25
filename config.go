@@ -10,9 +10,9 @@ import (
 	"io/ioutil"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"gopkg.in/yaml.v2"
 )
 
@@ -24,7 +24,7 @@ type Config struct {
 	} `yaml:"debug"`
 	Logger  log.Config      `yaml:"logger"`
 	Storage storage.Config  `yaml:"storage"`
-	C2S     c2s.Config      `yaml:"c2s"`
+	Router  router.Config   `yaml:"router"`
 	Servers []server.Config `yaml:"servers"`
 }
 

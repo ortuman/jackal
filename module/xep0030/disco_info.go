@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/stream/c2s"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -20,17 +20,24 @@ const (
 
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
-	stm      c2s.Stream
+	stm      router.C2S
 	mu       sync.RWMutex
 	entities map[string]*Entity
 }
 
 // New returns a disco info IQ handler module.
-func New(stm c2s.Stream) *DiscoInfo {
+func New(stm router.C2S) *DiscoInfo {
 	return &DiscoInfo{
 		stm:      stm,
 		entities: make(map[string]*Entity),
 	}
+}
+
+// RegisterDisco registers disco entity features/items
+// associated to disco info module.
+func (di *DiscoInfo) RegisterDisco(discoInfo *DiscoInfo) {
+	discoInfo.Entity(di.stm.Domain(), "").AddFeature(discoInfoNamespace)
+	discoInfo.Entity(di.stm.JID().ToBareJID().String(), "").AddFeature(discoItemsNamespace)
 }
 
 // RegisterDefaultEntities register and sets identities for the default
@@ -68,8 +75,6 @@ func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
 		return nil, fmt.Errorf("entity already registered: %s", k)
 	}
 	ent := &Entity{}
-	ent.AddFeature(discoInfoNamespace)
-	ent.AddFeature(discoItemsNamespace)
 	di.entities[k] = ent
 	return ent, nil
 }

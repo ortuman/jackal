@@ -18,61 +18,63 @@ storage:
     database: jackal
     pool_size: 16
 
-c2s:
-  domains: [jackal.im]
+router:
+  domains: [localhost]
 
 servers:
   - id: default
     type: c2s
 
-    resource_conflict: replace  # [override, replace, reject]
-
     transport:
       type: socket # websocket
       bind_addr: 0.0.0.0
       port: 5222
-      connect_timeout: 5
       keep_alive: 120
-      max_stanza_size: 32768
 
     tls:
       privkey_path: ""
       cert_path: ""
 
-    compression:
-      level: default
+    c2s:
+      connect_timeout: 5
+      max_stanza_size: 32768
+      resource_conflict: replace  # [override, replace, reject]
 
-    sasl: 
-      - plain
-      - digest_md5
-      - scram_sha_1 
-      - scram_sha_256
+      compression:
+        level: default
 
-    modules:
-      - roster           # Roster
-      - last_activity    # XEP-0012: Last Activity
-      - private          # XEP-0049: Private XML Storage
-      - vcard            # XEP-0054: vcard-temp
-      - registration     # XEP-0077: In-Band Registration
-      - version          # XEP-0092: Software Version
-      - blocking_command # XEP-0191: Blocking Command
-      - ping             # XEP-0199: XMPP Ping
-      - offline          # Offline storage
+      sasl:
+        - plain
+        - digest_md5
+        - scram_sha_1
+        - scram_sha_256
 
-    mod_roster:
-      versioning: true
+      modules:
+        enabled:
+          - roster           # Roster
+          - last_activity    # XEP-0012: Last Activity
+          - private          # XEP-0049: Private XML Storage
+          - vcard            # XEP-0054: vcard-temp
+          - registration     # XEP-0077: In-Band Registration
+          - version          # XEP-0092: Software Version
+          - blocking_command # XEP-0191: Blocking Command
+          - ping             # XEP-0199: XMPP Ping
+          - offline          # Offline storage
 
-    mod_offline:
-      queue_size: 2500
+        mod_roster:
+          versioning: true
 
-    mod_registration:
-      allow_registration: yes
-      allow_change: yes
-      allow_cancel: yes
+        mod_offline:
+          queue_size: 2500
 
-    mod_version:
-      show_os: true
+        mod_registration:
+          allow_registration: yes
+          allow_change: yes
+          allow_cancel: yes
 
-    mod_ping:
-      send: no
-      send_interval: 60
+        mod_version:
+          show_os: true
+
+        mod_ping:
+          send: no
+          send_interval: 60

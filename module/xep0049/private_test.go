@@ -8,8 +8,8 @@ package xep0049
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream/c2s"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
@@ -17,8 +17,10 @@ import (
 
 func TestXEP0049_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	stm := router.NewMockC2S("abcd", j)
+	stm.SetUsername("romeo")
 
-	x := New(nil)
+	x := New(stm)
 
 	iq := xml.NewIQType(uuid.New(), xml.GetType)
 	iq.SetFromJID(j)
@@ -31,7 +33,7 @@ func TestXEP0049_Matching(t *testing.T) {
 
 func TestXEP0049_InvalidIQ(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 	stm.SetUsername("romeo")
 
 	x := New(stm)
@@ -82,7 +84,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	stm := c2s.NewMockStream("abcd", j)
+	stm := router.NewMockC2S("abcd", j)
 	stm.SetUsername("ortuman")
 
 	x := New(stm)
