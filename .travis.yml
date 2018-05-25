@@ -25,6 +25,8 @@ install:
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic
   - go test -race -coverprofile=auth.coverage.txt -covermode=atomic ./auth
+  - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./c2s
+  - go test -race -coverprofile=context.coverage.txt -covermode=atomic ./context  
   - go test -race -coverprofile=errors.coverage.txt -covermode=atomic ./errors
   - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
   - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
