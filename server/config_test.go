@@ -46,9 +46,7 @@ func TestTransportConfig(t *testing.T) {
 type: socket
 bind_addr: 192.168.0.1
 port: 6666
-connect_timeout: 10
 keep_alive: 240
-max_stanza_size: 8192
 `
 	tr := TransportConfig{}
 	err := yaml.Unmarshal([]byte(cfg), &tr)
@@ -56,9 +54,7 @@ max_stanza_size: 8192
 	require.Equal(t, transport.Socket, tr.Type)
 	require.Equal(t, "192.168.0.1", tr.BindAddress)
 	require.Equal(t, 6666, tr.Port)
-	require.Equal(t, 10, tr.ConnectTimeout)
 	require.Equal(t, 240, tr.KeepAlive)
-	require.Equal(t, 8192, tr.MaxStanzaSize)
 
 	// test defaults
 	err = yaml.Unmarshal([]byte("{type: socket}"), &tr)

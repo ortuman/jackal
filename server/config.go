@@ -42,20 +42,17 @@ func (st ServerType) String() string {
 
 // TransportConfig represents an XMPP stream transport configuration.
 type TransportConfig struct {
-	Type           transport.TransportType
-	BindAddress    string
-	Port           int
-	ConnectTimeout int
-	KeepAlive      int
-	MaxStanzaSize  int
+	Type        transport.TransportType
+	BindAddress string
+	Port        int
+	KeepAlive   int
 }
 
 type transportProxyType struct {
-	Type          string `yaml:"type"`
-	BindAddress   string `yaml:"bind_addr"`
-	Port          int    `yaml:"port"`
-	KeepAlive     int    `yaml:"keep_alive"`
-	MaxStanzaSize int    `yaml:"max_stanza_size"`
+	Type        string `yaml:"type"`
+	BindAddress string `yaml:"bind_addr"`
+	Port        int    `yaml:"port"`
+	KeepAlive   int    `yaml:"keep_alive"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -77,12 +74,12 @@ func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	}
 	t.BindAddress = p.BindAddress
 	t.Port = p.Port
+	t.KeepAlive = p.KeepAlive
 
 	// assign transport's defaults
 	if t.Port == 0 {
 		t.Port = defaultTransportPort
 	}
-	t.KeepAlive = p.KeepAlive
 	if t.KeepAlive == 0 {
 		t.KeepAlive = defaultTransportKeepAlive
 	}

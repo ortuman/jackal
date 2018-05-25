@@ -34,30 +34,24 @@ func TestCompressionConfig(t *testing.T) {
 	require.NotNil(t, err)
 }
 
-func TestServerConfig(t *testing.T) {
+func TestConfig(t *testing.T) {
 	s := Config{}
-	err := yaml.Unmarshal([]byte("{id: default, type: c2s}"), &s)
-	require.Nil(t, err)
-
-	// s2s not yet supported...
-	err = yaml.Unmarshal([]byte("{id: default, type: s2s}"), &s)
-	require.NotNil(t, err)
 
 	// resource conflict options...
-	err = yaml.Unmarshal([]byte("{id: default, type: c2s, resource_conflict: reject}"), &s)
+	err := yaml.Unmarshal([]byte("{connect_timeout: 5, resource_conflict: reject}"), &s)
 	require.Nil(t, err)
 
-	err = yaml.Unmarshal([]byte("{id: default, type: c2s, resource_conflict: override}"), &s)
+	err = yaml.Unmarshal([]byte("{connect_timeout: 5, resource_conflict: override}"), &s)
 	require.Nil(t, err)
 
 	// invalid resource conflict option...
-	err = yaml.Unmarshal([]byte("{id: default, type: c2s, resource_conflict: invalid}"), &s)
+	err = yaml.Unmarshal([]byte("{connect_timeout: 5, resource_conflict: invalid}"), &s)
 	require.NotNil(t, err)
 
 	// auth mechanisms...
 	authCfg := `
-id: default
-type: c2s
+connect_timeout: 5
+resource_conflict: reject
 sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 `
 	err = yaml.Unmarshal([]byte(authCfg), &s)
@@ -70,19 +64,22 @@ sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 
 	// server modules...
 	modulesCfg := `
-id: default
-type: c2s
-modules: [roster, private, vcard, registration, version, ping, offline]
+connect_timeout: 5 
+resource_conflict: reject
+modules:
+  enabled: [roster, private, vcard, registration, version, ping, offline]
 `
 	err = yaml.Unmarshal([]byte(modulesCfg), &s)
 	require.Nil(t, err)
 
 	// invalid server module...
-	err = yaml.Unmarshal([]byte("{id: default, type: c2s, modules: [invalid]}"), &s)
-	require.NotNil(t, err)
-
-	// invalid type
-	err = yaml.Unmarshal([]byte("{id: default, type: invalid}"), &s)
+	modulesCfg = `
+connect_timeout: 5 
+resource_conflict: reject
+modules:
+  enabled: [invalid]
+`
+	err = yaml.Unmarshal([]byte(modulesCfg), &s)
 	require.NotNil(t, err)
 
 	// invalid yaml
