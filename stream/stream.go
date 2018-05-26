@@ -188,9 +188,11 @@ func (m *MockC2S) FetchElement() xml.XElement {
 
 // Disconnect disconnects mocked stream.
 func (m *MockC2S) Disconnect(err error) {
-	m.ctx.SetBool(true, "disconnected")
-	m.discCh <- err
-	close(m.doneCh)
+	if !m.ctx.Bool("disconnected") {
+		m.discCh <- err
+		close(m.doneCh)
+		m.ctx.SetBool(true, "disconnected")
+	}
 }
 
 // IsDisconnected returns whether or not the mocked stream has been disconnected.

@@ -351,15 +351,15 @@ func (s *Stream) handleConnecting(elem xml.XElement) {
 		s.connectTm = nil
 	}
 
-	// validate Stream element
+	// validate stream element
 	if err := s.validateStreamElement(elem); err != nil {
 		s.disconnectWithStreamError(err)
 		return
 	}
-	// assign Stream domain
+	// assign stream domain
 	s.ctx.SetString(elem.To(), domainCtxKey)
 
-	// open Stream
+	// open stream
 	s.openStream()
 
 	features := xml.NewElementName("stream:features")
@@ -379,9 +379,9 @@ func (s *Stream) handleConnecting(elem xml.XElement) {
 func (s *Stream) unauthenticatedFeatures() []xml.XElement {
 	var features []xml.XElement
 
-	isSocketTransport := s.tr.Type() == transport.Socket
+	isSocketTr := s.tr.Type() == transport.Socket
 
-	if isSocketTransport && !s.IsSecured() {
+	if isSocketTr && !s.IsSecured() {
 		startTLS := xml.NewElementName("starttls")
 		startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
 		startTLS.AppendElement(xml.NewElementName("required"))
@@ -389,7 +389,7 @@ func (s *Stream) unauthenticatedFeatures() []xml.XElement {
 	}
 
 	// attach SASL mechanisms
-	shouldOfferSASL := (!isSocketTransport || (isSocketTransport && s.IsSecured()))
+	shouldOfferSASL := (!isSocketTr || (isSocketTr && s.IsSecured()))
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		mechanisms := xml.NewElementName("mechanisms")
@@ -553,7 +553,7 @@ func (s *Stream) proceedStartTLS() {
 
 	s.tr.StartTLS(s.tlsCfg)
 
-	log.Infof("secured Stream... id: %s", s.id)
+	log.Infof("secured stream... id: %s", s.id)
 
 	s.restart()
 }
@@ -582,7 +582,7 @@ func (s *Stream) compress(elem xml.XElement) {
 
 	s.tr.EnableCompression(s.cfg.Compression.Level)
 
-	log.Infof("compressed Stream... id: %s", s.id)
+	log.Infof("compressed stream... id: %s", s.id)
 
 	s.restart()
 }
@@ -725,7 +725,6 @@ func (s *Stream) startSession(iq *xml.IQ) {
 
 	// register disco info elements
 	s.mods.discoInfo.RegisterDefaultEntities()
-
 	for _, mod := range s.mods.all {
 		mod.RegisterDisco(s.mods.discoInfo)
 	}
