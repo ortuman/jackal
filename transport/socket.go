@@ -64,9 +64,13 @@ func (s *socketTransport) WriteElement(elem xml.XElement, includeClosing bool) e
 	return nil
 }
 
-func (s *socketTransport) StartTLS(cfg *tls.Config) {
+func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 	if _, ok := s.conn.(*tls.Conn); !ok {
-		s.conn = tls.Server(s.conn, cfg)
+		if asClient {
+			s.conn = tls.Client(s.conn, cfg)
+		} else {
+			s.conn = tls.Server(s.conn, cfg)
+		}
 		s.rw = s.conn
 		s.bw.Reset(s.rw)
 		s.br.Reset(s.rw)

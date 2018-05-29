@@ -98,19 +98,13 @@ func Instance() *Router {
 // This method should be used only for testing purposes.
 func Shutdown() {
 	if atomic.CompareAndSwapUint32(&initialized, 1, 0) {
-		var wg sync.WaitGroup
 		inst.c2sMu.RLock()
-		for _, stm := range inst.streams {
-			wg.Add(1)
-			go func(s stream.C2S) {
-				s.Disconnect(streamerror.ErrSystemShutdown)
-				wg.Done()
-			}(stm)
-		}
+		stms := inst.streams
 		inst.c2sMu.RUnlock()
 
-		wg.Wait()
-
+		for _, stm := range stms {
+			stm.Disconnect(streamerror.ErrSystemShutdown)
+		}
 		instMu.Lock()
 		inst = nil
 		instMu.Unlock()

@@ -78,7 +78,7 @@ func (wst *webSocketTransport) Close() error {
 	return wst.conn.Close()
 }
 
-func (wst *webSocketTransport) StartTLS(cfg *tls.Config) {
+func (wst *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {
 }
 
 func (wst *webSocketTransport) EnableCompression(level compress.Level) {

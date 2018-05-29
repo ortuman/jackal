@@ -11,14 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"fmt"
-	"sync/atomic"
-
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 )
-
-var streamCounter uint64
 
 func Dial(domain string, opts stream.S2SDialerOptions) (stream.S2SOut, error) {
 	_, addrs, err := net.LookupSRV("xmpp-server", "tcp", domain)
@@ -34,6 +29,5 @@ func Dial(domain string, opts stream.S2SDialerOptions) (stream.S2SOut, error) {
 		return nil, err
 	}
 	tr := transport.NewSocketTransport(conn, opts.KeepAlive)
-	identifier := fmt.Sprintf("s2s_out-%d", atomic.AddUint64(&streamCounter, 1))
-	return NewOut(identifier, tr), nil
+	return NewOut(domain, tr), nil
 }

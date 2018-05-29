@@ -22,7 +22,6 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
@@ -225,9 +224,6 @@ func TestStream_TLS(t *testing.T) {
 
 	require.Equal(t, "proceed", elem.Name())
 	require.Equal(t, "urn:ietf:params:xml:ns:xmpp-tls", elem.Namespace())
-
-	// close fake conn to avoid deadlock when closing transport
-	conn.Close()
 
 	require.True(t, stm.IsSecured())
 }
@@ -483,15 +479,9 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 }
 
 func tUtilStreamInit(t *testing.T) (*Stream, *fakeSocketConn) {
-	keyFile := "../testdata/cert/test.server.key"
-	certFile := "../testdata/cert/test.server.crt"
-
-	tlsConfig, err := util.LoadCertificate(keyFile, certFile, "localhost")
-	require.Nil(t, err)
-
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	stm := New("abcd1234", tr, tlsConfig, tUtilStreamDefaultConfig())
+	stm := New("abcd1234", tr, nil, tUtilStreamDefaultConfig())
 	router.Instance().RegisterC2S(stm)
 	return stm.(*Stream), conn
 }

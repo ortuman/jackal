@@ -15,7 +15,6 @@ import (
 // Stream represents a generic XMPP stream.
 type Stream interface {
 	ID() string
-
 	SendElement(elem xml.XElement)
 	Disconnect(err error)
 }

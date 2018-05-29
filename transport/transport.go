@@ -58,7 +58,7 @@ type Transport interface {
 	WriteElement(elem xml.XElement, includeClosing bool) error
 
 	// StartTLS secures the transport using SSL/TLS
-	StartTLS(*tls.Config)
+	StartTLS(cfg *tls.Config, asClient bool)
 
 	// EnableCompression activates a compression
 	// mechanism on the transport.

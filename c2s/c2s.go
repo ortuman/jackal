@@ -364,7 +364,7 @@ func (s *Stream) handleConnecting(elem xml.XElement) {
 	s.ctx.SetString(elem.To(), domainCtxKey)
 
 	// open stream
-	s.openStream()
+	s.opentream()
 
 	features := xml.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
@@ -554,8 +554,10 @@ func (s *Stream) proceedStartTLS() {
 
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
-	s.tr.StartTLS(s.tlsCfg)
-
+	// don't do anything in case no TLS configurations has been provided (useful for testing purposes).
+	if tlsCfg := s.tlsCfg; tlsCfg != nil {
+		s.tr.StartTLS(tlsCfg, false)
+	}
 	log.Infof("secured stream... id: %s", s.id)
 
 	s.restart()
@@ -941,7 +943,7 @@ func (s *Stream) disconnect(err error) {
 	}
 }
 
-func (s *Stream) openStream() {
+func (s *Stream) opentream() {
 	var ops *xml.Element
 	var includeClosing bool
 
@@ -1098,7 +1100,7 @@ func (s *Stream) isComponentDomain(domain string) bool {
 
 func (s *Stream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == connecting {
-		s.openStream()
+		s.opentream()
 	}
 	s.writeElement(err.Element())
 	s.disconnectClosingStream(true)

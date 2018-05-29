@@ -73,7 +73,7 @@ func TestSocket(t *testing.T) {
 	st.EnableCompression(compress.BestCompression)
 	require.True(t, st2.compressed)
 
-	st.StartTLS(&tls.Config{})
+	st.StartTLS(&tls.Config{}, false)
 	_, ok := st2.conn.(*tls.Conn)
 	require.True(t, ok)
 
