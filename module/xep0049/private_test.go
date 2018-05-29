@@ -17,7 +17,10 @@ import (
 
 func TestXEP0049_Matching(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("romeo")
 
 	x := New(stm)
@@ -33,7 +36,10 @@ func TestXEP0049_Matching(t *testing.T) {
 
 func TestXEP0049_InvalidIQ(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("romeo")
 
 	x := New(stm)
@@ -85,6 +91,8 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("ortuman")
 
 	x := New(stm)

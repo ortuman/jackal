@@ -14,6 +14,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/server"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
@@ -83,9 +84,9 @@ func main() {
 	// initialize subsystems
 	log.Initialize(&cfg.Logger)
 
-	storage.Initialize(&cfg.Storage)
+	router.Initialize(&cfg.Router, s2s.Dial)
 
-	router.Initialize(&cfg.Router)
+	storage.Initialize(&cfg.Storage)
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {

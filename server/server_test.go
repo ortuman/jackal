@@ -14,17 +14,18 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/transport"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSocketServer(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -65,11 +66,12 @@ func TestSocketServer(t *testing.T) {
 }
 
 func TestWebSocketServer(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)

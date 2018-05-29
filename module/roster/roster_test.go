@@ -129,11 +129,12 @@ func TestRoster_FetchRoster(t *testing.T) {
 }
 
 func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	rn := model.RosterNotification{
 		Contact:  "ortuman",
@@ -145,7 +146,6 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 	stm, _ := tUtilRosterInitializeRoster()
 
 	r := New(&Config{}, stm)
-	defer stm.Disconnect(nil)
 
 	storage.ActivateMockedError()
 	ch := make(chan bool)
@@ -165,15 +165,14 @@ func TestRoster_DeliverPendingApprovalNotifications(t *testing.T) {
 }
 
 func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	// insert roster item...
 	ri := &model.RosterItem{
@@ -234,11 +233,12 @@ func TestRoster_ReceiveAndBroadcastPresence(t *testing.T) {
 }
 
 func TestRoster_Update(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
@@ -249,7 +249,6 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 
 	r := New(&Config{}, stm1)
-	defer stm1.Disconnect(nil)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -283,15 +282,14 @@ func TestRoster_Update(t *testing.T) {
 }
 
 func TestRoster_Subscribe(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	r := New(&Config{}, stm1)
 
@@ -308,11 +306,12 @@ func TestRoster_Subscribe(t *testing.T) {
 }
 
 func TestRoster_Subscribed(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	// insert roster item...
 	ri := &model.RosterItem{
@@ -332,8 +331,6 @@ func TestRoster_Subscribed(t *testing.T) {
 	storage.Instance().InsertOrUpdateRosterNotification(rn)
 
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -372,16 +369,15 @@ func TestRoster_Subscribed(t *testing.T) {
 }
 
 func TestRoster_Unsubscribe(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -415,16 +411,15 @@ func TestRoster_Unsubscribe(t *testing.T) {
 }
 
 func TestRoster_Unsubscribed(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -460,16 +455,15 @@ func TestRoster_Unsubscribed(t *testing.T) {
 }
 
 func TestRoster_DeleteItem(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	tUtilRosterInsertRosterItems()
 	stm1, stm2 := tUtilRosterInitializeRoster()
-	defer stm1.Disconnect(nil)
-	defer stm2.Disconnect(nil)
 
 	r1 := New(&Config{}, stm1)
 	r2 := New(&Config{}, stm2)
@@ -575,10 +569,10 @@ func tUtilRosterInitializeRoster() (*stream.MockC2S, *stream.MockC2S) {
 	stm2.SetJID(j2)
 
 	// register streams...
-	router.Instance().RegisterStream(stm1)
-	router.Instance().RegisterStream(stm2)
-	router.Instance().AuthenticateStream(stm1)
-	router.Instance().AuthenticateStream(stm2)
+	router.Instance().RegisterC2S(stm1)
+	router.Instance().RegisterC2S(stm2)
+	router.Instance().AuthenticateC2S(stm1)
+	router.Instance().AuthenticateC2S(stm2)
 
 	return stm1, stm2
 }

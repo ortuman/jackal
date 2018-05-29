@@ -32,7 +32,9 @@ func TestXEP0077_Matching(t *testing.T) {
 
 func TestXEP0077_InvalidToJID(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
 
 	x := New(&Config{}, stm)
 
@@ -59,7 +61,9 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 
 func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
 
 	x := New(&Config{}, stm)
 
@@ -98,9 +102,11 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, stm)
@@ -126,9 +132,10 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	defer storage.Shutdown()
 
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
 
 	x := New(&Config{AllowRegistration: true}, stm)
 
@@ -186,7 +193,10 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, stm)
@@ -236,7 +246,10 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd1234", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, stm)

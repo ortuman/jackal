@@ -18,7 +18,9 @@ import (
 func TestXEP0092(t *testing.T) {
 	srvJID, _ := xml.NewJID("", "jackal.im", "", true)
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
 
 	cfg := Config{}
 	x := New(&cfg, stm)

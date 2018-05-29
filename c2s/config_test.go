@@ -8,7 +8,7 @@ package c2s
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )

@@ -12,7 +12,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -23,12 +23,12 @@ type socketTransport struct {
 	rw         io.ReadWriter
 	br         *bufio.Reader
 	bw         *bufio.Writer
-	keepAlive  int
+	keepAlive  time.Duration
 	compressed bool
 }
 
 // NewSocketTransport creates a socket class stream transport.
-func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
+func NewSocketTransport(conn net.Conn, keepAlive time.Duration) Transport {
 	s := &socketTransport{
 		conn:      conn,
 		rw:        conn,
@@ -44,7 +44,7 @@ func (s *socketTransport) Type() TransportType {
 }
 
 func (s *socketTransport) Read(p []byte) (n int, err error) {
-	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
+	s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
 	return s.br.Read(p)
 }
 

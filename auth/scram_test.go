@@ -18,9 +18,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ortuman/jackal/server/compress"
-	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/transport"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"

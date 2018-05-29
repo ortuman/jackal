@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )

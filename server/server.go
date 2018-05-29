@@ -14,12 +14,13 @@ import (
 	"net/url"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
 )
 
@@ -131,7 +132,8 @@ func (s *server) listenSocketConn(address string) {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			keepAlive := time.Second * time.Duration(s.cfg.Transport.KeepAlive)
+			go s.startStream(transport.NewSocketTransport(conn, keepAlive))
 			continue
 		}
 	}
@@ -186,7 +188,7 @@ func (s *server) shutdown() error {
 
 func (s *server) startStream(tr transport.Transport) {
 	stm := c2s.New(s.nextID(), tr, s.tlsCfg, &s.cfg.C2S)
-	if err := router.Instance().RegisterStream(stm); err != nil {
+	if err := router.Instance().RegisterC2S(stm); err != nil {
 		log.Error(err)
 	}
 }

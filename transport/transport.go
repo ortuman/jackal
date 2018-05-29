@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"io"
 
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xml"
 )
 
