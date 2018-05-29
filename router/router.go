@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -102,7 +103,7 @@ func Shutdown() {
 		for _, stm := range inst.streams {
 			wg.Add(1)
 			go func(s stream.C2S) {
-				s.Disconnect(nil)
+				s.Disconnect(streamerror.ErrSystemShutdown)
 				wg.Done()
 			}(stm)
 		}
