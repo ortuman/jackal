@@ -8,11 +8,9 @@ package session
 import (
 	"bytes"
 	stdxml "encoding/xml"
-	"io"
-
 	"fmt"
-
-	"sync"
+	"io"
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
@@ -29,6 +27,11 @@ const (
 	streamNamespace       = "http://etherx.jabber.org/streams"
 )
 
+type Error struct {
+	Element       xml.XElement
+	UnderlyingErr error
+}
+
 type Config struct {
 	JID       *xml.JID
 	Transport transport.Transport
@@ -41,9 +44,8 @@ type Session struct {
 	tr       transport.Transport
 	pr       *xml.Parser
 	isServer bool
-
-	mu sync.RWMutex
-	j  *xml.JID
+	started  uint32
+	j        atomic.Value
 }
 
 func New(config *Config) *Session {
@@ -52,15 +54,13 @@ func New(config *Config) *Session {
 		tr:       config.Transport,
 		pr:       config.Parser,
 		isServer: config.IsServer,
-		j:        config.JID,
 	}
+	s.j.Store(config.JID)
 	return s
 }
 
 func (s *Session) UpdateJID(sessionJID *xml.JID) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.j = sessionJID
+	s.j.Store(sessionJID)
 }
 
 func (s *Session) Open() error {
@@ -112,20 +112,37 @@ func (s *Session) Send(elem xml.XElement) {
 	s.tr.WriteElement(elem, true)
 }
 
-func (s *Session) Receive() (xml.XElement, error) {
+func (s *Session) Receive() (xml.XElement, *Error) {
 	elem, err := s.pr.ParseElement()
 	if err != nil {
-		return nil, s.mapErrorToStreamError(err)
+		return nil, s.mapErrorToSessionError(err)
 	} else if elem != nil {
 		log.Debugf("RECV: %v", elem)
-		if elem.IsStanza() {
-			return s.buildStanza(elem)
+
+		if atomic.LoadUint32(&s.started) == 0 {
+			if err := s.validateStreamElement(elem); err != nil {
+				return nil, err
+			}
+			atomic.StoreUint32(&s.started, 1)
+
+		} else if elem.IsStanza() {
+			stanza, err := s.buildStanza(elem)
+			if err != nil {
+				return nil, err
+			}
+			return stanza, nil
+
+		} else {
+			isWebSocketTr := s.tr.Type() == transport.WebSocket
+			if isWebSocketTr && elem.Name() == "close" && elem.Namespace() == framedStreamNamespace {
+				return nil, &Error{}
+			}
 		}
 	}
 	return elem, nil
 }
 
-func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, error) {
+func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, *Error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, err
 	}
@@ -138,7 +155,7 @@ func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, error) {
 		iq, err := xml.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
 		}
 		return iq, nil
 
@@ -146,7 +163,7 @@ func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, error) {
 		presence, err := xml.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
 		}
 		return presence, nil
 
@@ -154,32 +171,37 @@ func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, error) {
 		message, err := xml.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, xml.ErrBadRequest
+			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
 		}
 		return message, nil
 	}
-	return nil, streamerror.ErrUnsupportedStanzaType
+	return nil, &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 }
 
-func (s *Session) extractAddresses(elem xml.XElement) (fromJID *xml.JID, toJID *xml.JID, err error) {
+func (s *Session) extractAddresses(elem xml.XElement) (*xml.JID, *xml.JID, *Error) {
+	var fromJID, toJID *xml.JID
+	var err error
+
 	// do not validate 'from' address until full user JID has been set
 	if s.jid().IsFullWithUser() {
 		from := elem.From()
 		if len(from) > 0 && !s.isValidFrom(from) {
-			return nil, nil, streamerror.ErrInvalidFrom
+			return nil, nil, &Error{UnderlyingErr: streamerror.ErrInvalidFrom}
 		}
 	}
+	fromJID = s.jid()
+
 	// validate 'to' address
 	to := elem.To()
 	if len(to) > 0 {
 		toJID, err = xml.NewJIDString(elem.To(), false)
 		if err != nil {
-			return nil, nil, xml.ErrJidMalformed
+			return nil, nil, &Error{Element: elem, UnderlyingErr: xml.ErrJidMalformed}
 		}
 	} else {
 		toJID = s.jid().ToBareJID() // account's bare JID as default 'to'
 	}
-	return
+	return fromJID, toJID, nil
 }
 
 func (s *Session) isValidFrom(from string) bool {
@@ -198,40 +220,40 @@ func (s *Session) isValidFrom(from string) bool {
 	return validFrom
 }
 
-func (s *Session) validateStreamElement(elem xml.XElement) *streamerror.Error {
+func (s *Session) validateStreamElement(elem xml.XElement) *Error {
 	switch s.tr.Type() {
 	case transport.Socket:
 		if elem.Name() != "stream:stream" {
-			return streamerror.ErrUnsupportedStanzaType
+			return &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 		}
 		if elem.Namespace() != s.namespace() || elem.Attributes().Get("xmlns:stream") != streamNamespace {
-			return streamerror.ErrInvalidNamespace
+			return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
 		}
 
 	case transport.WebSocket:
 		if elem.Name() != "open" {
-			return streamerror.ErrUnsupportedStanzaType
+			return &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 		}
 		if elem.Namespace() != framedStreamNamespace {
-			return streamerror.ErrInvalidNamespace
+			return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
 		}
 	}
 	to := elem.To()
 	if len(to) > 0 && !router.Instance().IsLocalDomain(to) {
-		return streamerror.ErrHostUnknown
+		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {
-		return streamerror.ErrUnsupportedVersion
+		return &Error{UnderlyingErr: streamerror.ErrUnsupportedVersion}
 	}
 	return nil
 }
 
-func (s *Session) validateNamespace(elem xml.XElement) *streamerror.Error {
+func (s *Session) validateNamespace(elem xml.XElement) *Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.namespace() {
 		return nil
 	}
-	return streamerror.ErrInvalidNamespace
+	return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
 }
 
 func (s *Session) namespace() string {
@@ -242,31 +264,29 @@ func (s *Session) namespace() string {
 }
 
 func (s *Session) jid() *xml.JID {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.j
+	return s.j.Load().(*xml.JID)
 }
 
-func (s *Session) mapErrorToStreamError(err error) *streamerror.Error {
+func (s *Session) mapErrorToSessionError(err error) *Error {
 	switch err {
 	case nil, io.EOF, io.ErrUnexpectedEOF:
 		break
 
 	case xml.ErrTooLargeStanza:
-		return streamerror.ErrPolicyViolation
+		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
 
 	case xml.ErrStreamClosedByPeer: // ...received </stream:stream>
 		if s.tr.Type() != transport.Socket {
-			return streamerror.ErrInvalidXML
+			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
 		}
 
 	default:
 		switch err.(type) {
 		case *stdxml.SyntaxError:
-			return streamerror.ErrInvalidXML
+			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
 		default:
-			return streamerror.ErrUndefinedCondition
+			return &Error{UnderlyingErr: streamerror.ErrUndefinedCondition}
 		}
 	}
-	return nil
+	return &Error{}
 }

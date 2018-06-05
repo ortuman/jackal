@@ -49,9 +49,6 @@ type Router struct {
 	c2sMu         sync.RWMutex
 	streams       map[string]stream.C2S
 	authenticated map[string][]stream.C2S
-	s2sMu         sync.RWMutex
-	dialer        stream.S2SDialer
-	outStreams    map[string]stream.S2SOut
 	blockListsMu  sync.RWMutex
 	blockLists    map[string][]*xml.JID
 }
@@ -64,7 +61,7 @@ var (
 )
 
 // Initialize initializes the router manager.
-func Initialize(cfg *Config, dialer stream.S2SDialer) {
+func Initialize(cfg *Config, _ stream.S2SDialer) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()
@@ -76,8 +73,6 @@ func Initialize(cfg *Config, dialer stream.S2SDialer) {
 			cfg:           cfg,
 			streams:       make(map[string]stream.C2S),
 			authenticated: make(map[string][]stream.C2S),
-			dialer:        dialer,
-			outStreams:    make(map[string]stream.S2SOut),
 			blockLists:    make(map[string][]*xml.JID),
 		}
 	}
@@ -178,9 +173,9 @@ func (r *Router) UnregisterC2S(stm stream.C2S) error {
 	return nil
 }
 
-// AuthenticateC2S marks a previously registered c2s stream as authenticated.
+// RegisterC2SResource marks a previously registered c2s stream as authenticated.
 // An error will be returned in case no assigned resource is found.
-func (r *Router) AuthenticateC2S(stm stream.C2S) error {
+func (r *Router) RegisterC2SResource(stm stream.C2S) error {
 	if len(stm.Resource()) == 0 {
 		return fmt.Errorf("resource not yet assigned: %s", stm.ID())
 	}

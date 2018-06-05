@@ -405,7 +405,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 	stm2 := stream.NewMockC2S("abcd7890", jTo)
 	router.Instance().RegisterC2S(stm2)
-	router.Instance().AuthenticateC2S(stm2)
+	router.Instance().RegisterC2SResource(stm2)
 
 	msgID := uuid.New()
 	msg := xml.NewMessageType(msgID, xml.ChatType)

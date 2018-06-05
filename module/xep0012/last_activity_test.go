@@ -110,7 +110,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 
 	// set as online
 	router.Instance().RegisterC2S(stm2)
-	router.Instance().AuthenticateC2S(stm2)
+	router.Instance().RegisterC2SResource(stm2)
 
 	x.ProcessIQ(iq)
 	elem = stm1.FetchElement()
