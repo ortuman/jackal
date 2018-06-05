@@ -112,6 +112,15 @@ func (e *Element) Type() string {
 	return e.attrs.Get("type")
 }
 
+// IsStanza returns true if element is an XMPP stanza.
+func (e *Element) IsStanza() bool {
+	switch e.Name() {
+	case "iq", "presence", "message":
+		return true
+	}
+	return false
+}
+
 // IsError returns true if element has a 'type' attribute of value 'error'.
 func (e *Element) IsError() bool {
 	return e.Type() == ErrorType

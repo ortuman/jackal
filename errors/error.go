@@ -48,6 +48,9 @@ var (
 	// ErrSystemShutdown represents 'system-shutdown' stream error.
 	ErrSystemShutdown = newStreamError("system-shutdown")
 
+	// ErrUndefinedCondition represents 'system-shutdown' stream error.
+	ErrUndefinedCondition = newStreamError("undefined-condition")
+
 	// ErrInternalServerError represents 'internal-server-error' stream error.
 	ErrInternalServerError = newStreamError("internal-server-error")
 )

@@ -14,7 +14,6 @@ import (
 
 // Stream represents a generic XMPP stream.
 type Stream interface {
-	ID() string
 	SendElement(elem xml.XElement)
 	Disconnect(err error)
 }
@@ -23,6 +22,7 @@ type Stream interface {
 type C2S interface {
 	Stream
 
+	ID() string
 	Context() Context
 
 	Username() string
@@ -41,6 +41,7 @@ type C2S interface {
 // S2S represents an outgoing server-to-server XMPP stream.
 type S2SOut interface {
 	Stream
+	Domain() string
 	StartSession()
 }
 

@@ -10,8 +10,10 @@ import (
 
 	"bytes"
 
+	"fmt"
+
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xml"
 )
@@ -19,8 +21,10 @@ import (
 const streamMailboxSize = 64
 
 const (
-	connecting uint32 = iota
+	idle uint32 = iota
+	connecting
 	connected
+	securing
 	disconnected
 )
 
@@ -37,7 +41,7 @@ func NewOut(domain string, tr transport.Transport) *Out {
 		domain:  domain,
 		tr:      tr,
 		parser:  xml.NewParser(tr, 32768),
-		state:   connecting,
+		state:   idle,
 		actorCh: make(chan func(), streamMailboxSize),
 	}
 	go s.actorLoop()
@@ -46,14 +50,23 @@ func NewOut(domain string, tr transport.Transport) *Out {
 	return s
 }
 
-func (s *Out) ID() string {
+func (s *Out) Domain() string {
 	return s.domain
 }
 
 func (s *Out) SendElement(elem xml.XElement) {
+	s.actorCh <- func() {
+		s.writeElement(elem)
+	}
 }
 
 func (s *Out) Disconnect(err error) {
+	waitCh := make(chan struct{})
+	s.actorCh <- func() {
+		s.disconnect(err)
+		close(waitCh)
+	}
+	<-waitCh
 }
 
 func (s *Out) StartSession() {
@@ -72,8 +85,7 @@ func (s *Out) startSession() {
 	ops.SetAttribute("xmlns:stream", streamNamespace)
 	buf.WriteString(`<?xml version="1.0"?>`)
 
-	ops.SetAttribute("from", router.Instance().DefaultLocalDomain())
-	ops.SetAttribute("to", s.ID())
+	ops.SetAttribute("to", s.domain)
 	ops.SetAttribute("version", "1.0")
 	ops.ToXML(buf, includeClosing)
 
@@ -93,6 +105,56 @@ func (s *Out) actorLoop() {
 	}
 }
 
+func (s *Out) handleElement(elem xml.XElement) {
+	switch s.getState() {
+	case connecting:
+		s.handleConnecting(elem)
+	case connected:
+		s.handleConnected(elem)
+	}
+}
+
+func (s *Out) handleConnecting(elem xml.XElement) {
+	switch elem.Name() {
+	case "stream:stream":
+		if len(elem.Namespace()) > 0 && elem.Namespace() != jabberServerNamespace {
+			s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
+			return
+		}
+		if elem.Attributes().Get("version") != "1.0" {
+			s.disconnectWithStreamError(streamerror.ErrUnsupportedVersion)
+			return
+		}
+	}
+	s.setState(connected)
+}
+
+func (s *Out) handleConnected(elem xml.XElement) {
+	fmt.Println(elem)
+}
+
+func (s *Out) disconnect(err error) {
+	if s.getState() == disconnected {
+		return
+	}
+	switch err {
+	case nil:
+		s.disconnectClosingStream(false)
+	default:
+		if strmErr, ok := err.(*streamerror.Error); ok {
+			s.disconnectWithStreamError(strmErr)
+		} else {
+			log.Error(err)
+			s.disconnectClosingStream(false)
+		}
+	}
+}
+
+func (s *Out) writeElement(element xml.XElement) {
+	log.Debugf("SEND: %v", element)
+	s.tr.WriteElement(element, true)
+}
+
 func (s *Out) readElement(elem xml.XElement) {
 	if elem != nil {
 		log.Debugf("RECV: %v", elem)
@@ -103,7 +165,19 @@ func (s *Out) readElement(elem xml.XElement) {
 	}
 }
 
-func (s *Out) handleElement(elem xml.XElement) {
+func (s *Out) disconnectWithStreamError(err *streamerror.Error) {
+	s.writeElement(err.Element())
+	s.disconnectClosingStream(true)
+}
+
+func (s *Out) disconnectClosingStream(closeStream bool) {
+	if closeStream {
+		s.tr.WriteString("</stream:stream>")
+	}
+	// TODO(ortuman): unregister from router manager
+
+	s.setState(disconnected)
+	s.tr.Close()
 }
 
 func (s *Out) doRead() {

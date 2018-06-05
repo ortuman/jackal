@@ -354,7 +354,6 @@ func (s *Stream) handleConnecting(elem xml.XElement) {
 		s.connectTm.Stop()
 		s.connectTm = nil
 	}
-
 	// validate stream element
 	if err := s.validateStreamElement(elem); err != nil {
 		s.disconnectWithStreamError(err)
@@ -364,7 +363,7 @@ func (s *Stream) handleConnecting(elem xml.XElement) {
 	s.ctx.SetString(elem.To(), domainCtxKey)
 
 	// open stream
-	s.opentream()
+	s.openStream()
 
 	features := xml.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
@@ -554,7 +553,7 @@ func (s *Stream) proceedStartTLS() {
 
 	s.writeElement(xml.NewElementNamespace("proceed", tlsNamespace))
 
-	// don't do anything in case no TLS configurations has been provided (useful for testing purposes).
+	// don't do anything in case no TLS configuration has been provided (useful for testing purposes).
 	if tlsCfg := s.tlsCfg; tlsCfg != nil {
 		s.tr.StartTLS(tlsCfg, false)
 	}
@@ -671,7 +670,6 @@ func (s *Stream) bindResource(iq *xml.IQ) {
 			stm = s
 		}
 	}
-
 	if stm != nil {
 		switch s.cfg.ResourceConflict {
 		case Override:
@@ -780,7 +778,6 @@ func (s *Stream) processIQ(iq *xml.IQ) {
 		}
 		return
 	}
-
 	for _, handler := range s.mods.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue
@@ -943,7 +940,7 @@ func (s *Stream) disconnect(err error) {
 	}
 }
 
-func (s *Stream) opentream() {
+func (s *Stream) openStream() {
 	var ops *xml.Element
 	var includeClosing bool
 
@@ -1100,7 +1097,7 @@ func (s *Stream) isComponentDomain(domain string) bool {
 
 func (s *Stream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == connecting {
-		s.opentream()
+		s.openStream()
 	}
 	s.writeElement(err.Element())
 	s.disconnectClosingStream(true)
