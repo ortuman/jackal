@@ -72,7 +72,7 @@ func (b *Storage) loop() {
 	for {
 		select {
 		case <-tc.C:
-			b.db.PurgeOlderVersions()
+			// b.db.PurgeOlderVersions() -> https://github.com/dgraph-io/badger/issues/493
 			b.db.RunValueLogGC(0.5)
 		case ch := <-b.doneCh:
 			b.db.Close()
