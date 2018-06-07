@@ -115,7 +115,7 @@ func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) {
 func (c *fakeSocketConn) parseOutboundElement() xml.XElement {
 	var elem xml.XElement
 	var err error
-	p := xml.NewParser(c.wr, 0)
+	p := xml.NewParser(c.wr, xml.SocketStream, 0)
 	for err == nil {
 		elem, err = p.ParseElement()
 		if elem != nil {

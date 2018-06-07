@@ -47,7 +47,7 @@ func (s *Storage) FetchPrivateXML(namespace string, username string) ([]xml.XEle
 		buf.WriteString(privateXML)
 		buf.WriteString("</root>")
 
-		parser := xml.NewParser(buf, 0)
+		parser := xml.NewParser(buf, xml.DefaultMode, 0)
 		rootEl, err := parser.ParseElement()
 		if err != nil {
 			return nil, err

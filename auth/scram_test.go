@@ -31,13 +31,13 @@ type fakeTransport struct {
 	cbBytes []byte
 }
 
-func (ft *fakeTransport) Type() transport.TransportType                             { return transport.Socket }
-func (ft *fakeTransport) Read(p []byte) (n int, err error)                          { return 0, nil }
-func (ft *fakeTransport) Close() error                                              { return nil }
-func (ft *fakeTransport) WriteString(string) error                                  { return nil }
-func (ft *fakeTransport) WriteElement(elem xml.XElement, includeClosing bool) error { return nil }
-func (ft *fakeTransport) StartTLS(*tls.Config, bool)                                { return }
-func (ft *fakeTransport) EnableCompression(compress.Level)                          { return }
+func (ft *fakeTransport) Read(p []byte) (n int, err error)        { return 0, nil }
+func (ft *fakeTransport) Write(p []byte) (n int, err error)       { return 0, nil }
+func (ft *fakeTransport) Close() error                            { return nil }
+func (ft *fakeTransport) Type() transport.TransportType           { return transport.Socket }
+func (ft *fakeTransport) WriteString(s string) (n int, err error) { return 0, nil }
+func (ft *fakeTransport) StartTLS(*tls.Config, bool)              { return }
+func (ft *fakeTransport) EnableCompression(compress.Level)        { return }
 func (ft *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte {
 	return ft.cbBytes
 }

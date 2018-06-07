@@ -44,13 +44,13 @@ type Config struct {
 
 // Router manages the sessions associated with an account.
 type Router struct {
-	mu            sync.RWMutex
-	cfg           *Config
-	c2sMu         sync.RWMutex
-	streams       map[string]stream.C2S
-	authenticated map[string][]stream.C2S
-	blockListsMu  sync.RWMutex
-	blockLists    map[string][]*xml.JID
+	mu           sync.RWMutex
+	cfg          *Config
+	c2sMu        sync.RWMutex
+	streams      map[string]stream.C2S
+	resources    map[string][]stream.C2S
+	blockListsMu sync.RWMutex
+	blockLists   map[string][]*xml.JID
 }
 
 // singleton interface
@@ -70,10 +70,10 @@ func Initialize(cfg *Config, _ stream.S2SDialer) {
 			log.Fatalf("no domain specified")
 		}
 		inst = &Router{
-			cfg:           cfg,
-			streams:       make(map[string]stream.C2S),
-			authenticated: make(map[string][]stream.C2S),
-			blockLists:    make(map[string][]*xml.JID),
+			cfg:        cfg,
+			streams:    make(map[string]stream.C2S),
+			resources:  make(map[string][]stream.C2S),
+			blockLists: make(map[string][]*xml.JID),
 		}
 	}
 }
@@ -154,18 +154,18 @@ func (r *Router) UnregisterC2S(stm stream.C2S) error {
 	if !ok {
 		return fmt.Errorf("stream not found: %s", stm.ID())
 	}
-	if authenticated := r.authenticated[stm.Username()]; authenticated != nil {
+	if resources := r.resources[stm.Username()]; resources != nil {
 		res := stm.Resource()
-		for i := 0; i < len(authenticated); i++ {
-			if res == authenticated[i].Resource() {
-				authenticated = append(authenticated[:i], authenticated[i+1:]...)
+		for i := 0; i < len(resources); i++ {
+			if res == resources[i].Resource() {
+				resources = append(resources[:i], resources[i+1:]...)
 				break
 			}
 		}
-		if len(authenticated) > 0 {
-			r.authenticated[stm.Username()] = authenticated
+		if len(resources) > 0 {
+			r.resources[stm.Username()] = resources
 		} else {
-			delete(r.authenticated, stm.Username())
+			delete(r.resources, stm.Username())
 		}
 	}
 	delete(r.streams, stm.ID())
@@ -182,10 +182,10 @@ func (r *Router) RegisterC2SResource(stm stream.C2S) error {
 	r.c2sMu.Lock()
 	defer r.c2sMu.Unlock()
 
-	if authenticated := r.authenticated[stm.Username()]; authenticated != nil {
-		r.authenticated[stm.Username()] = append(authenticated, stm)
+	if authenticated := r.resources[stm.Username()]; authenticated != nil {
+		r.resources[stm.Username()] = append(authenticated, stm)
 	} else {
-		r.authenticated[stm.Username()] = []stream.C2S{stm}
+		r.resources[stm.Username()] = []stream.C2S{stm}
 	}
 	log.Infof("authenticated stream... (%s/%s)", stm.Username(), stm.Resource())
 	return nil
@@ -241,14 +241,14 @@ func (r *Router) StreamsMatchingJID(jid *xml.JID) []stream.C2S {
 
 	if len(jid.Node()) > 0 {
 		opts |= xml.JIDMatchesNode
-		stms := r.authenticated[jid.Node()]
+		stms := r.resources[jid.Node()]
 		for _, stm := range stms {
 			if stm.JID().Matches(jid, opts) {
 				ret = append(ret, stm)
 			}
 		}
 	} else {
-		for _, stms := range r.authenticated {
+		for _, stms := range r.resources {
 			for _, stm := range stms {
 				if stm.JID().Matches(jid, opts) {
 					ret = append(ret, stm)

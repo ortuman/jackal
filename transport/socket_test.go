@@ -61,7 +61,7 @@ func TestSocket(t *testing.T) {
 	st2 := st.(*socketTransport)
 
 	el1 := xml.NewElementNamespace("elem", "exodus:ns")
-	st.WriteElement(el1, true)
+	el1.ToXML(st, true)
 	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), conn.w.Bytes()))
 
 	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")

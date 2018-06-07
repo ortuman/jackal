@@ -10,14 +10,15 @@ import (
 	stdxml "encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xml"
 	"github.com/pborman/uuid"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -27,43 +28,74 @@ const (
 	streamNamespace       = "http://etherx.jabber.org/streams"
 )
 
+// Error represents a session error.
 type Error struct {
-	Element       xml.XElement
+	// Element returns the original incoming element that generated
+	// the session error.
+	Element xml.XElement
+
+	// UnderlyingErr is the underlying session error.
 	UnderlyingErr error
 }
 
+// A Config structure is used to configure an XMPP session.
 type Config struct {
-	JID       *xml.JID
+	// JID defines an initial session JID.
+	JID *xml.JID
+
+	// Transport provides the underlying session transport
+	// that will be used to send and received elements.
 	Transport transport.Transport
-	Parser    *xml.Parser
-	IsServer  bool
+
+	// MaxStanzaSize defines the maximum stanza size that
+	// can be read from the session transport.
+	MaxStanzaSize int
+
+	// IsServer defines whether or not this session is established
+	// between two servers.
+	IsServer bool
 }
 
+// Session represents an XMPP session between the two peers.
 type Session struct {
 	id       string
 	tr       transport.Transport
 	pr       *xml.Parser
 	isServer bool
+	opened   uint32
 	started  uint32
-	j        atomic.Value
+	sJID     atomic.Value
 }
 
+// New creates a new session instance.
 func New(config *Config) *Session {
+	var parsingMode xml.ParsingMode
+	switch config.Transport.Type() {
+	case transport.Socket:
+		parsingMode = xml.SocketStream
+	case transport.WebSocket:
+		parsingMode = xml.WebSocketStream
+	}
 	s := &Session{
 		id:       uuid.New(),
 		tr:       config.Transport,
-		pr:       config.Parser,
+		pr:       xml.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
 		isServer: config.IsServer,
 	}
-	s.j.Store(config.JID)
+	s.sJID.Store(config.JID)
 	return s
 }
 
+// UpdateJID updates current session JID.
 func (s *Session) UpdateJID(sessionJID *xml.JID) {
-	s.j.Store(sessionJID)
+	s.sJID.Store(sessionJID)
 }
 
+// Open opens session sending the proper XMPP payload.
 func (s *Session) Open() error {
+	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
+		return errors.New("session already opened")
+	}
 	var ops *xml.Element
 	var includeClosing bool
 
@@ -91,28 +123,41 @@ func (s *Session) Open() error {
 	openStr := buf.String()
 	log.Debugf("SEND: %s", openStr)
 
-	if err := s.tr.WriteString(buf.String()); err != nil {
-		return err
-	}
-	return nil
+	_, err := io.Copy(s.tr, strings.NewReader(openStr))
+	return err
 }
 
+// Close closes session sending the proper XMPP payload.
+// Is responsability of the caller to close underlying transport.
 func (s *Session) Close() error {
+	if atomic.LoadUint32(&s.opened) == 0 {
+		return errors.New("session already closed")
+	}
 	switch s.tr.Type() {
 	case transport.Socket:
-		s.tr.WriteString("</stream:stream>")
+		io.WriteString(s.tr, "</stream:stream>")
 	case transport.WebSocket:
-		s.tr.WriteString(fmt.Sprintf(`<close xmlns="%s"/>`, framedStreamNamespace))
+		io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
 	return nil
 }
 
-func (s *Session) Send(elem xml.XElement) {
+// Send writes an XML element to the underlying session transport.
+func (s *Session) Send(elem xml.XElement) error {
+	if atomic.LoadUint32(&s.opened) == 0 {
+		return errors.New("send on closed session")
+	}
 	log.Debugf("SEND: %v", elem)
-	s.tr.WriteElement(elem, true)
+	elem.ToXML(s.tr, true)
+	return nil
 }
 
+// Receive returns next incoming session element.
 func (s *Session) Receive() (xml.XElement, *Error) {
+	if atomic.LoadUint32(&s.opened) == 0 {
+		return nil, &Error{UnderlyingErr: errors.New("receive from closed session")}
+	}
+
 	elem, err := s.pr.ParseElement()
 	if err != nil {
 		return nil, s.mapErrorToSessionError(err)
@@ -131,12 +176,6 @@ func (s *Session) Receive() (xml.XElement, *Error) {
 				return nil, err
 			}
 			return stanza, nil
-
-		} else {
-			isWebSocketTr := s.tr.Type() == transport.WebSocket
-			if isWebSocketTr && elem.Name() == "close" && elem.Namespace() == framedStreamNamespace {
-				return nil, &Error{}
-			}
 		}
 	}
 	return elem, nil
@@ -239,7 +278,7 @@ func (s *Session) validateStreamElement(elem xml.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !router.Instance().IsLocalDomain(to) {
+	if len(to) > 0 && to != s.jid().Domain() {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {
@@ -264,7 +303,7 @@ func (s *Session) namespace() string {
 }
 
 func (s *Session) jid() *xml.JID {
-	return s.j.Load().(*xml.JID)
+	return s.sJID.Load().(*xml.JID)
 }
 
 func (s *Session) mapErrorToSessionError(err error) *Error {
@@ -272,20 +311,18 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 	case nil, io.EOF, io.ErrUnexpectedEOF:
 		break
 
+	case xml.ErrStreamClosedByPeer:
+		s.Close()
+
 	case xml.ErrTooLargeStanza:
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
-
-	case xml.ErrStreamClosedByPeer: // ...received </stream:stream>
-		if s.tr.Type() != transport.Socket {
-			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
-		}
 
 	default:
 		switch err.(type) {
 		case *stdxml.SyntaxError:
 			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
 		default:
-			return &Error{UnderlyingErr: streamerror.ErrUndefinedCondition}
+			return &Error{UnderlyingErr: err}
 		}
 	}
 	return &Error{}

@@ -70,11 +70,11 @@ func TestWebSocketTransport(t *testing.T) {
 	b.SetText("Hi buddy!")
 	msg.AppendElement(b)
 
-	wst.WriteString(msg.String())
+	io.WriteString(wst, msg.String())
 	require.Equal(t, msg.String(), conn.w.buf.String())
 	conn.w.buf.Reset()
 
-	wst.WriteElement(msg, true)
+	msg.ToXML(wst, true)
 	require.Equal(t, msg.String(), conn.w.buf.String())
 
 	require.Nil(t, wst.ChannelBindingBytes(ChannelBindingMechanism(99)))

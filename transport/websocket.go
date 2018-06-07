@@ -10,11 +10,11 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/xml"
 )
 
 // WebSocketConn represents a websocket connection interface.
@@ -41,10 +41,6 @@ func NewWebSocketTransport(conn WebSocketConn, keepAlive int) Transport {
 	return wst
 }
 
-func (wst *webSocketTransport) Type() TransportType {
-	return WebSocket
-}
-
 func (wst *webSocketTransport) Read(p []byte) (n int, err error) {
 	_, r, err := wst.conn.NextReader()
 	if err != nil {
@@ -54,28 +50,31 @@ func (wst *webSocketTransport) Read(p []byte) (n int, err error) {
 	return r.Read(p)
 }
 
-func (wst *webSocketTransport) WriteString(str string) error {
+func (wst *webSocketTransport) Write(p []byte) (n int, err error) {
 	w, err := wst.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer w.Close()
-	_, err = io.WriteString(w, str)
-	return err
-}
-
-func (wst *webSocketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
-	w, err := wst.conn.NextWriter(websocket.TextMessage)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	elem.ToXML(w, includeClosing)
-	return nil
+	return w.Write(p)
 }
 
 func (wst *webSocketTransport) Close() error {
 	return wst.conn.Close()
+}
+
+func (wst *webSocketTransport) Type() TransportType {
+	return WebSocket
+}
+
+func (wst *webSocketTransport) WriteString(str string) (int, error) {
+	w, err := wst.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return 0, err
+	}
+	defer w.Close()
+	n, err := io.Copy(w, strings.NewReader(str))
+	return int(n), err
 }
 
 func (wst *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {

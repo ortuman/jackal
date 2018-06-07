@@ -115,7 +115,6 @@ func New(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) str
 		tlsCfg:  tlsCfg,
 		tr:      tr,
 		id:      id,
-		state:   connecting,
 		ctx:     ctx,
 		actorCh: make(chan func(), streamMailboxSize),
 		doneCh:  doneCh,
@@ -130,18 +129,14 @@ func New(id string, tr transport.Transport, tlsCfg *tls.Config, cfg *Config) str
 	j, _ := xml.NewJID("", domain, "", true)
 	s.ctx.SetObject(j, jidCtxKey)
 
-	// create c2s session
-	s.sess = session.New(&session.Config{
-		JID:       j,
-		Transport: tr,
-		Parser:    xml.NewParser(tr, cfg.MaxStanzaSize),
-	})
-
 	// initialize authenticators
 	s.initializeAuthenticators()
 
 	// initialize modules
 	s.initializeModules()
+
+	// start c2s session
+	s.restartSession()
 
 	if cfg.ConnectTimeout > 0 {
 		s.connectTm = time.AfterFunc(time.Duration(cfg.ConnectTimeout)*time.Second, s.connectTimeout)
@@ -501,7 +496,11 @@ func (s *Stream) handleSessionStarted(elem xml.XElement) {
 	if p := s.mods.ping; p != nil {
 		p.ResetDeadline()
 	}
-	stanza := elem.(xml.Stanza)
+	stanza, ok := elem.(xml.Stanza)
+	if !ok {
+		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
+		return
+	}
 	if s.isComponentDomain(stanza.ToJID().Domain()) {
 		s.processComponentStanza(stanza)
 	} else {
@@ -524,7 +523,7 @@ func (s *Stream) proceedStartTLS() {
 	}
 	log.Infof("secured stream... id: %s", s.id)
 
-	s.restart()
+	s.restartSession()
 }
 
 func (s *Stream) compress(elem xml.XElement) {
@@ -553,7 +552,7 @@ func (s *Stream) compress(elem xml.XElement) {
 
 	log.Infof("compressed stream... id: %s", s.id)
 
-	s.restart()
+	s.restartSession()
 }
 
 func (s *Stream) startAuthentication(elem xml.XElement) {
@@ -602,7 +601,7 @@ func (s *Stream) finishAuthentication(username string) {
 
 	s.sess.UpdateJID(j)
 
-	s.restart()
+	s.restartSession()
 }
 
 func (s *Stream) failAuthentication(elem xml.XElement) {
@@ -857,6 +856,9 @@ func (s *Stream) handleSessionError(sessErr *session.Error) {
 		s.disconnectWithStreamError(err)
 	case *xml.StanzaError:
 		s.writeElement(xml.NewErrorElementFromElement(sessErr.Element, err, nil))
+	default:
+		log.Error(err)
+		s.disconnectWithStreamError(streamerror.ErrUndefinedCondition)
 	}
 }
 
@@ -945,11 +947,11 @@ func (s *Stream) isBlockedJID(jid *xml.JID) bool {
 	return router.Instance().IsBlockedJID(jid, s.Username())
 }
 
-func (s *Stream) restart() {
+func (s *Stream) restartSession() {
 	s.sess = session.New(&session.Config{
-		JID:       s.JID(),
-		Transport: s.tr,
-		Parser:    xml.NewParser(s.tr, s.cfg.MaxStanzaSize),
+		JID:           s.JID(),
+		Transport:     s.tr,
+		MaxStanzaSize: s.cfg.MaxStanzaSize,
 	})
 	s.setState(connecting)
 }
