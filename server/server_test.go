@@ -22,10 +22,6 @@ import (
 func TestSocketServer(t *testing.T) {
 	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -39,7 +35,6 @@ func TestSocketServer(t *testing.T) {
 		n, err := conn.Write(xmlHdr)
 		require.Nil(t, err)
 		require.Equal(t, len(xmlHdr), n)
-		conn.Close()
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
@@ -63,15 +58,14 @@ func TestSocketServer(t *testing.T) {
 		},
 	}
 	Initialize([]Config{cfg}, 9123)
+
+	router.Shutdown()
+	storage.Shutdown()
 }
 
 func TestWebSocketServer(t *testing.T) {
 	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -86,7 +80,6 @@ func TestWebSocketServer(t *testing.T) {
 		open := []byte(`<?xml version="1.0" encoding="UTF-8">`)
 		err = conn.WriteMessage(websocket.TextMessage, open)
 		require.Nil(t, err)
-		conn.Close()
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
@@ -104,4 +97,7 @@ func TestWebSocketServer(t *testing.T) {
 		},
 	}
 	Initialize([]Config{cfg}, 0)
+
+	router.Shutdown()
+	storage.Shutdown()
 }
