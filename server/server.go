@@ -48,10 +48,7 @@ func Initialize(srvConfigurations []Config, debugPort int) {
 	}
 	if debugPort > 0 {
 		// initialize debug service
-		go func() {
-			debugSrv = &http.Server{Addr: fmt.Sprintf(":%d", debugPort)}
-			debugSrv.ListenAndServe()
-		}()
+		go startDebugServer(debugPort)
 	}
 
 	// initialize all servers
@@ -82,6 +79,11 @@ func Shutdown() {
 		}
 		shutdownCh <- true
 	}
+}
+
+func startDebugServer(port int) {
+	debugSrv = &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	debugSrv.ListenAndServe()
 }
 
 func newServer(cfg *Config) (*server, error) {
@@ -140,11 +142,6 @@ func (s *server) listenSocketConn(address string) {
 }
 
 func (s *server) listenWebSocketConn(address string) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Fatalf("%v", err)
-		}
-	}()
 	wsSrv := &http.Server{
 		Addr:      address,
 		TLSConfig: s.tlsCfg,
