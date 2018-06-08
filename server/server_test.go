@@ -76,11 +76,8 @@ func TestWebSocketServer(t *testing.T) {
 	go func() {
 		time.Sleep(time.Millisecond * 150)
 		d := &websocket.Dialer{
-			Proxy:            http.ProxyFromEnvironment,
-			HandshakeTimeout: 15 * time.Second,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		h := http.Header{"Sec-WebSocket-Protocol": []string{"xmpp"}}
 		conn, _, err := d.Dial("wss://localhost:9876/srv-1234/ws", h)

@@ -90,7 +90,7 @@ func Shutdown() {
 		if debugSrv != nil {
 			debugSrv.Close()
 		}
-		close(shutdownCh)
+		shutdownCh <- true
 	}
 }
 
@@ -183,7 +183,7 @@ func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		return
 	}
-	go s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) shutdown() error {
