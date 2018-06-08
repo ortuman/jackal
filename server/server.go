@@ -26,23 +26,12 @@ import (
 
 var listenerProvider = net.Listen
 
-type websocketUpgrader interface {
-	Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error)
-}
-
-var websocketUpgraderProvider = func() websocketUpgrader {
-	return &websocket.Upgrader{
-		Subprotocols: []string{"xmpp"},
-		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
-	}
-}
-
 type server struct {
 	cfg        *Config
 	tlsCfg     *tls.Config
 	ln         net.Listener
 	wsSrv      *http.Server
-	wsUpgrader websocketUpgrader
+	wsUpgrader *websocket.Upgrader
 	strCounter int32
 	listening  uint32
 }
@@ -166,7 +155,10 @@ func (s *server) listenWebSocketConn(address string) error {
 	http.HandleFunc(fmt.Sprintf("/%s/ws", url.PathEscape(s.cfg.ID)), s.websocketUpgrade)
 
 	s.wsSrv = &http.Server{TLSConfig: s.tlsCfg}
-	s.wsUpgrader = websocketUpgraderProvider()
+	s.wsUpgrader = &websocket.Upgrader{
+		Subprotocols: []string{"xmpp"},
+		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
+	}
 
 	// start listening
 	ln, err := listenerProvider("tcp", address)
