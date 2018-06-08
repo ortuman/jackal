@@ -61,12 +61,12 @@ func Initialize(srvConfigurations []Config, debugPort int) {
 	}
 	if debugPort > 0 {
 		// initialize debug service
-		go listenDebugServer(debugPort)
+		go startDebugServer(debugPort)
 	}
 
 	// initialize all servers
 	for i := 0; i < len(srvConfigurations); i++ {
-		if err := initializeServer(&srvConfigurations[i]); err != nil {
+		if _, err := initializeServer(&srvConfigurations[i]); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
@@ -94,14 +94,14 @@ func Shutdown() {
 	}
 }
 
-func initializeServer(cfg *Config) error {
+func initializeServer(cfg *Config) (*server, error) {
 	srv, err := newServer(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	servers[cfg.ID] = srv
 	go srv.start()
-	return nil
+	return srv, nil
 }
 
 func newServer(cfg *Config) (*server, error) {
@@ -134,7 +134,7 @@ func (s *server) start() {
 	}
 }
 
-func listenDebugServer(port int) {
+func startDebugServer(port int) {
 	debugSrv = &http.Server{}
 	ln, err := listenerProvider("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
