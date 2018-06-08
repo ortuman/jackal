@@ -42,6 +42,7 @@ script:
   - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
   - go test -race -coverprofile=router.coverage.txt -covermode=atomic ./router
   - go test -race -coverprofile=server.coverage.txt -covermode=atomic ./server
+  - go test -race -coverprofile=session.coverage.txt -covermode=atomic ./session
   - go test -race -coverprofile=transport.coverage.txt -covermode=atomic ./transport
   - go test -race -coverprofile=transport.compress.coverage.txt -covermode=atomic ./transport/compress
   - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage

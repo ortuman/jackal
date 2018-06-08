@@ -4,3 +4,8 @@
  */
 
 package server
+
+import "testing"
+
+func TestServer_Socket(t *testing.T) {
+}

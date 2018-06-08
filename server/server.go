@@ -94,16 +94,6 @@ func Shutdown() {
 	}
 }
 
-func newServer(cfg *Config) (*server, error) {
-	s := &server{cfg: cfg}
-	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, router.Instance().DefaultLocalDomain())
-	if err != nil {
-		return nil, err
-	}
-	s.tlsCfg = tlsCfg
-	return s, nil
-}
-
 func initializeServer(cfg *Config) error {
 	srv, err := newServer(cfg)
 	if err != nil {
@@ -112,6 +102,16 @@ func initializeServer(cfg *Config) error {
 	servers[cfg.ID] = srv
 	go srv.start()
 	return nil
+}
+
+func newServer(cfg *Config) (*server, error) {
+	s := &server{cfg: cfg}
+	tlsCfg, err := util.LoadCertificate(s.cfg.TLS.PrivKeyFile, s.cfg.TLS.CertFile, router.Instance().DefaultLocalDomain())
+	if err != nil {
+		return nil, err
+	}
+	s.tlsCfg = tlsCfg
+	return s, nil
 }
 
 func (s *server) start() {
