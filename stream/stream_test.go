@@ -33,15 +33,6 @@ func TestMockC2Stream(t *testing.T) {
 	strm.SetJID(j2)
 	require.Equal(t, "romeo@jackal.im/orchard", strm.JID().String())
 
-	strm.Disconnect(nil)
-	require.True(t, strm.IsDisconnected())
-	strm.SetSecured(true)
-	require.True(t, strm.IsSecured())
-	strm.SetCompressed(true)
-	require.True(t, strm.IsCompressed())
-	strm.SetAuthenticated(true)
-	require.True(t, strm.IsAuthenticated())
-
 	presence := xml.NewPresence(j1, j2, xml.AvailableType)
 	presence.AppendElement(xml.NewElementName("status"))
 	strm.SetPresence(presence)
@@ -53,4 +44,13 @@ func TestMockC2Stream(t *testing.T) {
 	fetch := strm.FetchElement()
 	require.NotNil(t, fetch)
 	require.Equal(t, "elem1234", fetch.Name())
+
+	strm.Disconnect(nil)
+	require.True(t, strm.IsDisconnected())
+	strm.SetSecured(true)
+	require.True(t, strm.IsSecured())
+	strm.SetCompressed(true)
+	require.True(t, strm.IsCompressed())
+	strm.SetAuthenticated(true)
+	require.True(t, strm.IsAuthenticated())
 }

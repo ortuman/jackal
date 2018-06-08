@@ -9,8 +9,7 @@ import (
 	"crypto/tls"
 	"io"
 
-	"github.com/ortuman/jackal/server/compress"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/transport/compress"
 )
 
 // TransportType represents a stream transport type (socket).
@@ -45,20 +44,16 @@ const (
 
 // Transport represents a stream transport mechanism.
 type Transport interface {
-	io.ReadCloser
+	io.ReadWriteCloser
 
 	// Type returns transport type value.
 	Type() TransportType
 
 	// WriteString writes a raw string to the transport.
-	WriteString(string) error
-
-	// WriteElement writes an element to the transport
-	// serializing it to it's XML representation.
-	WriteElement(elem xml.XElement, includeClosing bool) error
+	WriteString(s string) (n int, err error)
 
 	// StartTLS secures the transport using SSL/TLS
-	StartTLS(*tls.Config)
+	StartTLS(cfg *tls.Config, asClient bool)
 
 	// EnableCompression activates a compression
 	// mechanism on the transport.

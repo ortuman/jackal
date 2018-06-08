@@ -18,7 +18,7 @@ import (
 )
 
 func TestC2SManager(t *testing.T) {
-	Initialize(&Config{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}}, nil)
 	defer Shutdown()
 
 	require.Equal(t, "jackal.im", Instance().DefaultLocalDomain())
@@ -38,34 +38,34 @@ func TestC2SManager(t *testing.T) {
 	strm5 := stream.NewMockC2S(uuid.New(), j5)
 	strm6 := stream.NewMockC2S(uuid.New(), j6)
 
-	err := Instance().RegisterStream(strm1)
+	err := Instance().RegisterC2S(strm1)
 	require.Nil(t, err)
-	err = Instance().RegisterStream(strm1) // already registered...
+	err = Instance().RegisterC2S(strm1) // already registered...
 	require.NotNil(t, err)
-	err = Instance().RegisterStream(strm2)
+	err = Instance().RegisterC2S(strm2)
 	require.Nil(t, err)
-	err = Instance().RegisterStream(strm3)
+	err = Instance().RegisterC2S(strm3)
 	require.Nil(t, err)
-	err = Instance().RegisterStream(strm4)
+	err = Instance().RegisterC2S(strm4)
 	require.Nil(t, err)
-	err = Instance().RegisterStream(strm5)
+	err = Instance().RegisterC2S(strm5)
 	require.Nil(t, err)
-	err = Instance().RegisterStream(strm6)
+	err = Instance().RegisterC2S(strm6)
 	require.NotNil(t, err)
 
 	strm1.SetResource("")
-	err = Instance().AuthenticateStream(strm1) // resource not assigned...
+	err = Instance().RegisterC2SResource(strm1) // resource not assigned...
 	require.NotNil(t, err)
 	strm1.SetResource("balcony")
-	err = Instance().AuthenticateStream(strm1)
+	err = Instance().RegisterC2SResource(strm1)
 	require.Nil(t, err)
-	err = Instance().AuthenticateStream(strm2)
+	err = Instance().RegisterC2SResource(strm2)
 	require.Nil(t, err)
-	err = Instance().AuthenticateStream(strm3)
+	err = Instance().RegisterC2SResource(strm3)
 	require.Nil(t, err)
-	err = Instance().AuthenticateStream(strm4)
+	err = Instance().RegisterC2SResource(strm4)
 	require.Nil(t, err)
-	err = Instance().AuthenticateStream(strm5)
+	err = Instance().RegisterC2SResource(strm5)
 	require.Nil(t, err)
 
 	strms := Instance().StreamsMatchingJID(j1.ToBareJID())
@@ -85,11 +85,11 @@ func TestC2SManager(t *testing.T) {
 	strms = Instance().StreamsMatchingJID(mj3)
 	require.Nil(t, strms)
 
-	err = Instance().UnregisterStream(strm1)
+	err = Instance().UnregisterC2S(strm1)
 	require.Nil(t, err)
-	err = Instance().UnregisterStream(strm1)
+	err = Instance().UnregisterC2S(strm1)
 	require.NotNil(t, err) // already unregistered...
-	err = Instance().UnregisterStream(strm2)
+	err = Instance().UnregisterC2S(strm2)
 	require.Nil(t, err)
 
 	strms = Instance().StreamsMatchingJID(j1.ToBareJID())
@@ -97,11 +97,12 @@ func TestC2SManager(t *testing.T) {
 }
 
 func TestC2SManager_Routing(t *testing.T) {
+	Initialize(&Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	Initialize(&Config{Domains: []string{"jackal.im"}})
-	defer Shutdown()
+	defer func() {
+		Shutdown()
+		storage.Shutdown()
+	}()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
 	j2, _ := xml.NewJIDString("ortuman@jackal.im/garden", false)
@@ -113,10 +114,10 @@ func TestC2SManager_Routing(t *testing.T) {
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 
-	Instance().RegisterStream(stm1)
-	Instance().RegisterStream(stm2)
-	Instance().AuthenticateStream(stm1)
-	Instance().AuthenticateStream(stm2)
+	Instance().RegisterC2S(stm1)
+	Instance().RegisterC2S(stm2)
+	Instance().RegisterC2SResource(stm1)
+	Instance().RegisterC2SResource(stm2)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -135,12 +136,12 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, ErrNotAuthenticated, Instance().Route(iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
-	Instance().RegisterStream(stm4)
-	Instance().AuthenticateStream(stm4)
+	Instance().RegisterC2S(stm4)
+	Instance().RegisterC2SResource(stm4)
 	require.Equal(t, ErrResourceNotFound, Instance().Route(iq))
 
-	Instance().RegisterStream(stm3)
-	Instance().AuthenticateStream(stm3)
+	Instance().RegisterC2S(stm3)
+	Instance().RegisterC2SResource(stm3)
 	require.Nil(t, Instance().Route(iq))
 	elem := stm3.FetchElement()
 	require.Equal(t, iqID, elem.ID())
@@ -183,7 +184,7 @@ func TestC2SManager_Routing(t *testing.T) {
 }
 
 func TestC2SManager_StreamsMatching(t *testing.T) {
-	Initialize(&Config{Domains: []string{"jackal.im"}})
+	Initialize(&Config{Domains: []string{"jackal.im"}}, nil)
 	defer Shutdown()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
@@ -195,14 +196,14 @@ func TestC2SManager_StreamsMatching(t *testing.T) {
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
 
-	Instance().RegisterStream(stm1)
-	Instance().RegisterStream(stm2)
-	Instance().RegisterStream(stm3)
-	Instance().RegisterStream(stm4)
-	Instance().AuthenticateStream(stm1)
-	Instance().AuthenticateStream(stm2)
-	Instance().AuthenticateStream(stm3)
-	Instance().AuthenticateStream(stm4)
+	Instance().RegisterC2S(stm1)
+	Instance().RegisterC2S(stm2)
+	Instance().RegisterC2S(stm3)
+	Instance().RegisterC2S(stm4)
+	Instance().RegisterC2SResource(stm1)
+	Instance().RegisterC2SResource(stm2)
+	Instance().RegisterC2SResource(stm3)
+	Instance().RegisterC2SResource(stm4)
 
 	j, _ := xml.NewJIDString("ortuman@jackal.im/garden", true)
 	require.Equal(t, 1, len(Instance().StreamsMatchingJID(j)))
@@ -215,11 +216,12 @@ func TestC2SManager_StreamsMatching(t *testing.T) {
 }
 
 func TestC2SManager_BlockedJID(t *testing.T) {
+	Initialize(&Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	Initialize(&Config{Domains: []string{"jackal.im"}})
-	defer Shutdown()
+	defer func() {
+		Shutdown()
+		storage.Shutdown()
+	}()
 
 	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
 	j2, _ := xml.NewJIDString("hamlet@jackal.im/balcony", false)
@@ -228,10 +230,10 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	Instance().RegisterStream(stm1)
-	Instance().RegisterStream(stm2)
-	Instance().AuthenticateStream(stm1)
-	Instance().AuthenticateStream(stm2)
+	Instance().RegisterC2S(stm1)
+	Instance().RegisterC2S(stm2)
+	Instance().RegisterC2SResource(stm1)
+	Instance().RegisterC2SResource(stm2)
 
 	// node + domain + resource
 	bl1 := []model.BlockListItem{{

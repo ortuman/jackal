@@ -43,7 +43,9 @@ func TestXEP0054_Set(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
 
 	iqID := uuid.New()
 	iq := xml.NewIQType(iqID, xml.SetType)
@@ -79,7 +81,10 @@ func TestXEP0054_SetError(t *testing.T) {
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("ortuman")
 
 	x := New(stm)
@@ -114,7 +119,9 @@ func TestXEP0054_Get(t *testing.T) {
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
 
 	iqSet := xml.NewIQType(uuid.New(), xml.SetType)
 	iqSet.SetFromJID(j)
@@ -158,7 +165,9 @@ func TestXEP0054_GetError(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S("abcd", j)
+	defer stm.Disconnect(nil)
 
 	iqSet := xml.NewIQType(uuid.New(), xml.SetType)
 	iqSet.SetFromJID(j)

@@ -36,6 +36,9 @@ type XElement interface {
 	To() string
 	Type() string
 
+	IsStanza() bool
+	IsError() bool
+
 	Error() XElement
 
 	ToXML(w io.Writer, includeClosing bool)

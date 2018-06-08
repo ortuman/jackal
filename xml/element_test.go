@@ -74,3 +74,14 @@ func TestElement_ToXML(t *testing.T) {
 	e1.ToXML(buf, false)
 	require.Equal(t, `<n xmlns="ns" id="id" type="normal">`, buf.String())
 }
+
+func TestElement_IsStanza(t *testing.T) {
+	e1 := NewElementName("iq")
+	e2 := NewElementName("presence")
+	e3 := NewElementName("message")
+	e4 := NewElementName("starttls")
+	require.True(t, e1.IsStanza())
+	require.True(t, e2.IsStanza())
+	require.True(t, e3.IsStanza())
+	require.False(t, e4.IsStanza())
+}

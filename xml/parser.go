@@ -14,18 +14,37 @@ import (
 
 const rootElementIndex = -1
 
-const streamName = "stream"
+const (
+	streamName            = "stream"
+	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
+)
+
+// ParsingMode defines the way in which special parsed element
+// should be considered or not according to the reader nature.
+type ParsingMode int
+
+const (
+	// DefaultMode treats incoming elements as provided from raw byte reader.
+	DefaultMode = ParsingMode(iota)
+
+	// SocketStream treats incoming elements as provided from a socket transport.
+	SocketStream
+
+	// WebSocketStream treats incoming elements as provided from a websocket transport.
+	WebSocketStream
+)
 
 // ErrTooLargeStanza is returned by ReadElement when the size of
-// the received stanza is too large.
-var ErrTooLargeStanza = errors.New("too large stanza")
+// the incoming stanza is too large.
+var ErrTooLargeStanza = errors.New("xml: too large stanza")
 
 // ErrStreamClosedByPeer is returned by Parse when peer closes the stream.
-var ErrStreamClosedByPeer = errors.New("stream closed by peer")
+var ErrStreamClosedByPeer = errors.New("xml: stream closed by peer")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
 	dec           *xml.Decoder
+	mode          ParsingMode
 	nextElement   *Element
 	parsingIndex  int
 	parsingStack  []*Element
@@ -35,9 +54,10 @@ type Parser struct {
 }
 
 // NewParser creates an empty Parser instance.
-func NewParser(reader io.Reader, maxStanzaSize int) *Parser {
+func NewParser(reader io.Reader, mode ParsingMode, maxStanzaSize int) *Parser {
 	return &Parser{
 		dec:           xml.NewDecoder(reader),
+		mode:          mode,
 		parsingIndex:  rootElementIndex,
 		maxStanzaSize: int64(maxStanzaSize),
 	}
@@ -61,7 +81,7 @@ func (p *Parser) ParseElement() (XElement, error) {
 
 		case xml.StartElement:
 			p.startElement(t1)
-			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {
 				p.closeElement()
 				goto done
 			}
@@ -73,7 +93,7 @@ func (p *Parser) ParseElement() (XElement, error) {
 			p.setElementText(t1)
 
 		case xml.EndElement:
-			if t1.Name.Local == streamName && t1.Name.Space == streamName {
+			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {
 				return nil, ErrStreamClosedByPeer
 			}
 			p.endElement(t1)
@@ -89,6 +109,9 @@ func (p *Parser) ParseElement() (XElement, error) {
 done:
 	p.lastOffset = p.dec.InputOffset()
 	ret := p.nextElement
+	if p.mode == WebSocketStream && ret.Name() == "close" && ret.Namespace() == framedStreamNamespace {
+		return nil, ErrStreamClosedByPeer
+	}
 	p.nextElement = nil
 	return ret, nil
 }

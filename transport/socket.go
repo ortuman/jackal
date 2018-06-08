@@ -12,8 +12,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/ortuman/jackal/server/compress"
-	"github.com/ortuman/jackal/xml"
+	"strings"
+
+	"github.com/ortuman/jackal/transport/compress"
 )
 
 const socketBuffSize = 4096
@@ -23,12 +24,12 @@ type socketTransport struct {
 	rw         io.ReadWriter
 	br         *bufio.Reader
 	bw         *bufio.Writer
-	keepAlive  int
+	keepAlive  time.Duration
 	compressed bool
 }
 
 // NewSocketTransport creates a socket class stream transport.
-func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
+func NewSocketTransport(conn net.Conn, keepAlive time.Duration) Transport {
 	s := &socketTransport{
 		conn:      conn,
 		rw:        conn,
@@ -39,34 +40,37 @@ func NewSocketTransport(conn net.Conn, keepAlive int) Transport {
 	return s
 }
 
-func (s *socketTransport) Type() TransportType {
-	return Socket
+func (s *socketTransport) Read(p []byte) (n int, err error) {
+	s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
+	return s.br.Read(p)
 }
 
-func (s *socketTransport) Read(p []byte) (n int, err error) {
-	s.conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(s.keepAlive)))
-	return s.br.Read(p)
+func (s *socketTransport) Write(p []byte) (n int, err error) {
+	defer s.bw.Flush()
+	return s.bw.Write(p)
 }
 
 func (s *socketTransport) Close() error {
 	return s.conn.Close()
 }
 
-func (s *socketTransport) WriteString(str string) error {
-	defer s.bw.Flush()
-	_, err := io.WriteString(s.bw, str)
-	return err
+func (s *socketTransport) Type() TransportType {
+	return Socket
 }
 
-func (s *socketTransport) WriteElement(elem xml.XElement, includeClosing bool) error {
+func (s *socketTransport) WriteString(str string) (int, error) {
 	defer s.bw.Flush()
-	elem.ToXML(s.bw, includeClosing)
-	return nil
+	n, err := io.Copy(s.bw, strings.NewReader(str))
+	return int(n), err
 }
 
-func (s *socketTransport) StartTLS(cfg *tls.Config) {
+func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 	if _, ok := s.conn.(*tls.Conn); !ok {
-		s.conn = tls.Server(s.conn, cfg)
+		if asClient {
+			s.conn = tls.Client(s.conn, cfg)
+		} else {
+			s.conn = tls.Server(s.conn, cfg)
+		}
 		s.rw = s.conn
 		s.bw.Reset(s.rw)
 		s.br.Reset(s.rw)

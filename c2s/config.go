@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 )
 
 const (

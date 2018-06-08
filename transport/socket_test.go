@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/server/compress"
+	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
@@ -46,13 +46,8 @@ var (
 	remoteAddr = fakeAddr(2)
 )
 
-func (a fakeAddr) Network() string {
-	return "net"
-}
-
-func (a fakeAddr) String() string {
-	return "str"
-}
+func (a fakeAddr) Network() string { return "net" }
+func (a fakeAddr) String() string  { return "str" }
 
 func TestSocket(t *testing.T) {
 	buff := make([]byte, 4096)
@@ -61,7 +56,7 @@ func TestSocket(t *testing.T) {
 	st2 := st.(*socketTransport)
 
 	el1 := xml.NewElementNamespace("elem", "exodus:ns")
-	st.WriteElement(el1, true)
+	el1.ToXML(st, true)
 	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), conn.w.Bytes()))
 
 	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")
@@ -73,7 +68,7 @@ func TestSocket(t *testing.T) {
 	st.EnableCompression(compress.BestCompression)
 	require.True(t, st2.compressed)
 
-	st.StartTLS(&tls.Config{})
+	st.StartTLS(&tls.Config{}, false)
 	_, ok := st2.conn.(*tls.Conn)
 	require.True(t, ok)
 

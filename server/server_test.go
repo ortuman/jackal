@@ -14,23 +14,24 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server/transport"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/transport"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSocketServer(t *testing.T) {
+func TestServer_Socket(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
 
 		// test XMPP port...
-		conn, err := net.Dial("tcp", "localhost:5123")
+		conn, err := net.Dial("tcp", "127.0.0.1:9999")
 		require.Nil(t, err)
 		require.NotNil(t, conn)
 
@@ -43,7 +44,7 @@ func TestSocketServer(t *testing.T) {
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
 		// test debug port...
-		req, err := http.NewRequest("GET", "http://localhost:9123/debug/pprof", nil)
+		req, err := http.NewRequest("GET", "http://127.0.0.1:9998/debug/pprof", nil)
 		require.Nil(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.Nil(t, err)
@@ -58,18 +59,19 @@ func TestSocketServer(t *testing.T) {
 		},
 		Transport: TransportConfig{
 			Type: transport.Socket,
-			Port: 5123,
+			Port: 9999,
 		},
 	}
-	Initialize([]Config{cfg}, 9123)
+	Initialize([]Config{cfg}, 9998)
 }
 
-func TestWebSocketServer(t *testing.T) {
+func TestServer_WebSocket(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -81,7 +83,7 @@ func TestWebSocketServer(t *testing.T) {
 			},
 		}
 		h := http.Header{"Sec-WebSocket-Protocol": []string{"xmpp"}}
-		conn, _, err := d.Dial("wss://localhost:9876/srv-1234/ws", h)
+		conn, _, err := d.Dial("wss://127.0.0.1:9999/srv-1234/ws", h)
 		require.Nil(t, err)
 
 		open := []byte(`<?xml version="1.0" encoding="UTF-8">`)
@@ -101,7 +103,7 @@ func TestWebSocketServer(t *testing.T) {
 		},
 		Transport: TransportConfig{
 			Type: transport.WebSocket,
-			Port: 9876,
+			Port: 9999,
 		},
 	}
 	Initialize([]Config{cfg}, 0)
