@@ -68,7 +68,7 @@ func newFakeSocketConn() *fakeSocketConn {
 	fc := &fakeSocketConn{
 		rd:      newFakeSockReaderWriter(),
 		wr:      newFakeSockReaderWriter(),
-		wrCh:    make(chan []byte, 16),
+		wrCh:    make(chan []byte, 256),
 		closeCh: make(chan struct{}, 1),
 	}
 	go fc.loop()
@@ -215,6 +215,7 @@ func TestStream_TLS(t *testing.T) {
 
 	stm, conn := tUtilStreamInit(t)
 	tUtilStreamOpen(conn)
+
 	_ = conn.parseOutboundElement() // read stream opening...
 	_ = conn.parseOutboundElement() // read stream features...
 
@@ -399,7 +400,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 	require.Equal(t, sessionStarted, stm.getState())
 
-	// define a second Stream...
+	// define a second stream...
 	jFrom, _ := xml.NewJID("user", "localhost", "balcony", true)
 	jTo, _ := xml.NewJID("ortuman", "localhost", "garden", true)
 

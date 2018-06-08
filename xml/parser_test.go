@@ -90,12 +90,12 @@ func TestParser_DocChildElements(t *testing.T) {
 
 func TestStream(t *testing.T) {
 	openStreamXML := `<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace"> `
-	p := xml.NewParser(strings.NewReader(openStreamXML), xml.DefaultMode, 0)
+	p := xml.NewParser(strings.NewReader(openStreamXML), xml.SocketStream, 0)
 	elem, err := p.ParseElement()
 	require.Nil(t, err)
 	require.Equal(t, "stream:stream", elem.Name())
 	closeStreamXML := `</stream:stream> `
-	p = xml.NewParser(strings.NewReader(closeStreamXML), xml.DefaultMode, 0)
+	p = xml.NewParser(strings.NewReader(closeStreamXML), xml.SocketStream, 0)
 	_, err = p.ParseElement()
 	require.Equal(t, xml.ErrStreamClosedByPeer, err)
 }

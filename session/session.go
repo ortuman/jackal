@@ -143,21 +143,13 @@ func (s *Session) Close() error {
 }
 
 // Send writes an XML element to the underlying session transport.
-func (s *Session) Send(elem xml.XElement) error {
-	if atomic.LoadUint32(&s.opened) == 0 {
-		return errors.New("send on closed session")
-	}
+func (s *Session) Send(elem xml.XElement) {
 	log.Debugf("SEND: %v", elem)
 	elem.ToXML(s.tr, true)
-	return nil
 }
 
 // Receive returns next incoming session element.
 func (s *Session) Receive() (xml.XElement, *Error) {
-	if atomic.LoadUint32(&s.opened) == 0 {
-		return nil, &Error{UnderlyingErr: errors.New("receive from closed session")}
-	}
-
 	elem, err := s.pr.ParseElement()
 	if err != nil {
 		return nil, s.mapErrorToSessionError(err)

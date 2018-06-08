@@ -49,7 +49,6 @@ func TestSession_Open(t *testing.T) {
 	tr := newFakeTransport(transport.Socket)
 	sess := New(&Config{JID: j, Transport: tr})
 
-	require.NotNil(t, sess.Send(nil))
 	require.NotNil(t, sess.Close())
 	_, err1 := sess.Receive()
 	require.NotNil(t, err1)

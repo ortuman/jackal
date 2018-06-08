@@ -599,8 +599,6 @@ func (s *Stream) finishAuthentication(username string) {
 	s.ctx.SetBool(true, authenticatedCtxKey)
 	s.ctx.SetObject(j, jidCtxKey)
 
-	s.sess.UpdateJID(j)
-
 	s.restartSession()
 }
 
