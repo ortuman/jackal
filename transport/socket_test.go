@@ -46,13 +46,8 @@ var (
 	remoteAddr = fakeAddr(2)
 )
 
-func (a fakeAddr) Network() string {
-	return "net"
-}
-
-func (a fakeAddr) String() string {
-	return "str"
-}
+func (a fakeAddr) Network() string { return "net" }
+func (a fakeAddr) String() string  { return "str" }
 
 func TestSocket(t *testing.T) {
 	buff := make([]byte, 4096)

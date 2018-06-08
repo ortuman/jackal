@@ -44,7 +44,7 @@ func TestServer_Socket(t *testing.T) {
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
 		// test debug port...
-		req, err := http.NewRequest("GET", "http://localhost:9998/debug/pprof", nil)
+		req, err := http.NewRequest("GET", "http://127.0.0.1:9998/debug/pprof", nil)
 		require.Nil(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.Nil(t, err)
@@ -83,7 +83,7 @@ func TestServer_WebSocket(t *testing.T) {
 			},
 		}
 		h := http.Header{"Sec-WebSocket-Protocol": []string{"xmpp"}}
-		conn, _, err := d.Dial("wss://localhost:9999/srv-1234/ws", h)
+		conn, _, err := d.Dial("wss://127.0.0.1:9999/srv-1234/ws", h)
 		require.Nil(t, err)
 
 		open := []byte(`<?xml version="1.0" encoding="UTF-8">`)
