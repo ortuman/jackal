@@ -47,7 +47,9 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	defer storage.Shutdown()
 
 	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+
 	stm := stream.NewMockC2S(uuid.New(), j)
+	defer stm.Disconnect(nil)
 
 	x := New(stm)
 
@@ -80,11 +82,12 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
@@ -100,14 +103,14 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	j4, _ := xml.NewJID("romeo", "jackal.im", "jail", true)
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
 
-	router.Instance().RegisterStream(stm1)
-	router.Instance().RegisterStream(stm2)
-	router.Instance().RegisterStream(stm3)
-	router.Instance().RegisterStream(stm4)
-	router.Instance().AuthenticateStream(stm1)
-	router.Instance().AuthenticateStream(stm2)
-	router.Instance().AuthenticateStream(stm3)
-	router.Instance().AuthenticateStream(stm4)
+	router.Instance().RegisterC2S(stm1)
+	router.Instance().RegisterC2S(stm2)
+	router.Instance().RegisterC2S(stm3)
+	router.Instance().RegisterC2S(stm4)
+	router.Instance().RegisterC2SResource(stm1)
+	router.Instance().RegisterC2SResource(stm2)
+	router.Instance().RegisterC2SResource(stm3)
+	router.Instance().RegisterC2SResource(stm4)
 
 	stm1.SetAuthenticated(true)
 	stm2.SetAuthenticated(true)

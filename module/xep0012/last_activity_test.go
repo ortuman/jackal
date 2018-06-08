@@ -49,7 +49,9 @@ func TestXEP0012_Matching(t *testing.T) {
 func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	j1, _ := xml.NewJID("", "jackal.im", "", true)
 	j2, _ := xml.NewJID("ortuman", "jackal.im", "garden", true)
+
 	stm := stream.NewMockC2S("abcd", j2)
+	defer stm.Disconnect(nil)
 
 	x := New(stm)
 
@@ -66,11 +68,12 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 }
 
 func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
+	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
 	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
-
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}})
-	defer router.Shutdown()
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+	}()
 
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 	j2, _ := xml.NewJID("noelia", "jackal.im", "", true)
@@ -106,8 +109,8 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	require.True(t, len(secs) > 0)
 
 	// set as online
-	router.Instance().RegisterStream(stm2)
-	router.Instance().AuthenticateStream(stm2)
+	router.Instance().RegisterC2S(stm2)
+	router.Instance().RegisterC2SResource(stm2)
 
 	x.ProcessIQ(iq)
 	elem = stm1.FetchElement()

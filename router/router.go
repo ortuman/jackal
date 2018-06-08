@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -35,18 +36,21 @@ var (
 	ErrBlockedJID = errors.New("router: destination jid is blocked")
 )
 
-// Config represents a client-to-server manager configuration.
+// Config represents a router manager configuration.
 type Config struct {
-	Domains []string `yaml:"domains"`
+	Domains     []string `yaml:"domains"`
+	S2SDisabled bool     `yaml:"s2s_disabled"`
 }
 
 // Router manages the sessions associated with an account.
 type Router struct {
-	cfg        *Config
-	lock       sync.RWMutex
-	stms       map[string]stream.C2S
-	authedStms map[string][]stream.C2S
-	blockLists map[string][]*xml.JID
+	mu           sync.RWMutex
+	cfg          *Config
+	c2sMu        sync.RWMutex
+	streams      map[string]stream.C2S
+	resources    map[string][]stream.C2S
+	blockListsMu sync.RWMutex
+	blockLists   map[string][]*xml.JID
 }
 
 // singleton interface
@@ -56,8 +60,8 @@ var (
 	initialized uint32
 )
 
-// Initialize initializes the c2s session manager.
-func Initialize(cfg *Config) {
+// Initialize initializes the router manager.
+func Initialize(cfg *Config, _ stream.S2SDialer) {
 	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
 		instMu.Lock()
 		defer instMu.Unlock()
@@ -67,14 +71,14 @@ func Initialize(cfg *Config) {
 		}
 		inst = &Router{
 			cfg:        cfg,
-			stms:       make(map[string]stream.C2S),
-			authedStms: make(map[string][]stream.C2S),
+			streams:    make(map[string]stream.C2S),
+			resources:  make(map[string][]stream.C2S),
 			blockLists: make(map[string][]*xml.JID),
 		}
 	}
 }
 
-// Instance returns the c2s session manager instance.
+// Instance returns the router manager instance.
 func Instance() *Router {
 	instMu.RLock()
 	defer instMu.RUnlock()
@@ -85,23 +89,34 @@ func Instance() *Router {
 	return inst
 }
 
-// Shutdown shuts down c2s manager system.
+// Shutdown shuts down router manager system.
 // This method should be used only for testing purposes.
 func Shutdown() {
 	if atomic.CompareAndSwapUint32(&initialized, 1, 0) {
+		inst.c2sMu.RLock()
+		stms := inst.streams
+		inst.c2sMu.RUnlock()
+
+		for _, stm := range stms {
+			stm.Disconnect(streamerror.ErrSystemShutdown)
+		}
 		instMu.Lock()
-		defer instMu.Unlock()
 		inst = nil
+		instMu.Unlock()
 	}
 }
 
 // DefaultLocalDomain returns default local domain.
 func (r *Router) DefaultLocalDomain() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	return r.cfg.Domains[0]
 }
 
 // IsLocalDomain returns true if domain is a local server domain.
 func (r *Router) IsLocalDomain(domain string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	for _, localDomain := range r.cfg.Domains {
 		if localDomain == domain {
 			return true
@@ -110,67 +125,68 @@ func (r *Router) IsLocalDomain(domain string) bool {
 	return false
 }
 
-// RegisterStream registers the specified client stream.
+// RegisterC2S registers the specified c2s stream.
 // An error will be returned in case the stream has been previously registered.
-func (r *Router) RegisterStream(stm stream.C2S) error {
+func (r *Router) RegisterC2S(stm stream.C2S) error {
 	if !r.IsLocalDomain(stm.Domain()) {
 		return fmt.Errorf("invalid domain: %s", stm.Domain())
 	}
-	r.lock.Lock()
-	_, ok := r.stms[stm.ID()]
+	r.c2sMu.Lock()
+	defer r.c2sMu.Unlock()
+
+	_, ok := r.streams[stm.ID()]
 	if ok {
-		r.lock.Unlock()
 		return fmt.Errorf("stream already registered: %s", stm.ID())
 	}
-	r.stms[stm.ID()] = stm
-	r.lock.Unlock()
+	r.streams[stm.ID()] = stm
 	log.Infof("registered stream... (id: %s)", stm.ID())
 	return nil
 }
 
-// UnregisterStream unregisters the specified client stream removing
+// UnregisterC2S unregisters the specified c2s stream removing
 // associated resource from the manager.
 // An error will be returned in case the stream has not been previously registered.
-func (r *Router) UnregisterStream(stm stream.C2S) error {
-	r.lock.Lock()
-	_, ok := r.stms[stm.ID()]
+func (r *Router) UnregisterC2S(stm stream.C2S) error {
+	r.c2sMu.Lock()
+	defer r.c2sMu.Unlock()
+
+	_, ok := r.streams[stm.ID()]
 	if !ok {
-		r.lock.Unlock()
 		return fmt.Errorf("stream not found: %s", stm.ID())
 	}
-	if authedStms := r.authedStms[stm.Username()]; authedStms != nil {
+	if resources := r.resources[stm.Username()]; resources != nil {
 		res := stm.Resource()
-		for i := 0; i < len(authedStms); i++ {
-			if res == authedStms[i].Resource() {
-				authedStms = append(authedStms[:i], authedStms[i+1:]...)
+		for i := 0; i < len(resources); i++ {
+			if res == resources[i].Resource() {
+				resources = append(resources[:i], resources[i+1:]...)
 				break
 			}
 		}
-		if len(authedStms) > 0 {
-			r.authedStms[stm.Username()] = authedStms
+		if len(resources) > 0 {
+			r.resources[stm.Username()] = resources
 		} else {
-			delete(r.authedStms, stm.Username())
+			delete(r.resources, stm.Username())
 		}
 	}
-	delete(r.stms, stm.ID())
-	r.lock.Unlock()
+	delete(r.streams, stm.ID())
 	log.Infof("unregistered stream... (id: %s)", stm.ID())
 	return nil
 }
 
-// AuthenticateStream sets a previously registered stream as authenticated.
+// RegisterC2SResource marks a previously registered c2s stream as authenticated.
 // An error will be returned in case no assigned resource is found.
-func (r *Router) AuthenticateStream(stm stream.C2S) error {
+func (r *Router) RegisterC2SResource(stm stream.C2S) error {
 	if len(stm.Resource()) == 0 {
 		return fmt.Errorf("resource not yet assigned: %s", stm.ID())
 	}
-	r.lock.Lock()
-	if authedStrms := r.authedStms[stm.Username()]; authedStrms != nil {
-		r.authedStms[stm.Username()] = append(authedStrms, stm)
+	r.c2sMu.Lock()
+	defer r.c2sMu.Unlock()
+
+	if authenticated := r.resources[stm.Username()]; authenticated != nil {
+		r.resources[stm.Username()] = append(authenticated, stm)
 	} else {
-		r.authedStms[stm.Username()] = []stream.C2S{stm}
+		r.resources[stm.Username()] = []stream.C2S{stm}
 	}
-	r.lock.Unlock()
 	log.Infof("authenticated stream... (%s/%s)", stm.Username(), stm.Resource())
 	return nil
 }
@@ -187,12 +203,13 @@ func (r *Router) IsBlockedJID(jid *xml.JID, username string) bool {
 	return false
 }
 
-// ReloadBlockList reloads in-memstorage block list for a given user and starts
+// ReloadBlockList reloads in memory block list for a given user and starts
 // applying it for future stanza routing.
 func (r *Router) ReloadBlockList(username string) {
-	r.lock.Lock()
+	r.blockListsMu.Lock()
+	defer r.blockListsMu.Unlock()
+
 	delete(r.blockLists, username)
-	r.lock.Unlock()
 	log.Infof("block list reloaded... (username: %s)", username)
 }
 
@@ -203,33 +220,35 @@ func (r *Router) Route(elem xml.Stanza) error {
 }
 
 // MustRoute routes a stanza applying server rules for handling XML stanzas
-// and ignoring blocking lists.
+// ignoring blocking lists.
 func (r *Router) MustRoute(elem xml.Stanza) error {
 	return r.route(elem, true)
 }
 
-// StreamsMatchingJID returns all available streams that match a given JID.
+// StreamsMatchingJID returns all available c2s streams matching a given JID.
 func (r *Router) StreamsMatchingJID(jid *xml.JID) []stream.C2S {
 	if !r.IsLocalDomain(jid.Domain()) {
 		return nil
 	}
+
 	var ret []stream.C2S
 	opts := xml.JIDMatchesDomain
 	if jid.IsFull() {
 		opts |= xml.JIDMatchesResource
 	}
+	r.c2sMu.RLock()
+	defer r.c2sMu.RUnlock()
 
-	r.lock.RLock()
 	if len(jid.Node()) > 0 {
 		opts |= xml.JIDMatchesNode
-		stms := r.authedStms[jid.Node()]
+		stms := r.resources[jid.Node()]
 		for _, stm := range stms {
 			if stm.JID().Matches(jid, opts) {
 				ret = append(ret, stm)
 			}
 		}
 	} else {
-		for _, stms := range r.authedStms {
+		for _, stms := range r.resources {
 			for _, stm := range stms {
 				if stm.JID().Matches(jid, opts) {
 					ret = append(ret, stm)
@@ -237,15 +256,19 @@ func (r *Router) StreamsMatchingJID(jid *xml.JID) []stream.C2S {
 			}
 		}
 	}
-	r.lock.RUnlock()
 	return ret
 }
 
 func (r *Router) route(elem xml.Stanza, ignoreBlocking bool) error {
 	toJID := elem.ToJID()
 	if !r.IsLocalDomain(toJID.Domain()) {
-		return nil
+		return r.s2sRoute(elem, ignoreBlocking)
 	}
+	return r.c2sRoute(elem, ignoreBlocking)
+}
+
+func (r *Router) c2sRoute(elem xml.Stanza, ignoreBlocking bool) error {
+	toJID := elem.ToJID()
 	if !ignoreBlocking && !toJID.IsServer() {
 		if r.IsBlockedJID(elem.FromJID(), toJID.Node()) {
 			return ErrBlockedJID
@@ -297,10 +320,14 @@ func (r *Router) route(elem xml.Stanza, ignoreBlocking bool) error {
 	return nil
 }
 
+func (r *Router) s2sRoute(elem xml.Stanza, ignoreBlocking bool) error {
+	return nil
+}
+
 func (r *Router) getBlockList(username string) []*xml.JID {
-	r.lock.RLock()
+	r.blockListsMu.RLock()
 	bl := r.blockLists[username]
-	r.lock.RUnlock()
+	r.blockListsMu.RUnlock()
 	if bl != nil {
 		return bl
 	}
@@ -314,9 +341,9 @@ func (r *Router) getBlockList(username string) []*xml.JID {
 		j, _ := xml.NewJIDString(blItm.JID, true)
 		bl = append(bl, j)
 	}
-	r.lock.Lock()
+	r.blockListsMu.Lock()
 	r.blockLists[username] = bl
-	r.lock.Unlock()
+	r.blockListsMu.Unlock()
 	return bl
 }
 

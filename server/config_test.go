@@ -8,7 +8,7 @@ package server
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/transport"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/c2s"
-	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/transport"
 )
 
 const (

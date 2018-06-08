@@ -14,8 +14,7 @@ import (
 
 // Stream represents a generic XMPP stream.
 type Stream interface {
-	ID() string
-	SendElement(element xml.XElement)
+	SendElement(elem xml.XElement)
 	Disconnect(err error)
 }
 
@@ -23,6 +22,7 @@ type Stream interface {
 type C2S interface {
 	Stream
 
+	ID() string
 	Context() Context
 
 	Username() string
@@ -38,29 +38,46 @@ type C2S interface {
 	Presence() *xml.Presence
 }
 
+// S2S represents an outgoing server-to-server XMPP stream.
+type S2SOut interface {
+	Stream
+	Domain() string
+	StartSession()
+}
+
+type S2SDialerOptions struct {
+	Timeout   time.Duration
+	KeepAlive time.Duration
+}
+
+type S2SDialer func(domain string, opts S2SDialerOptions) (S2SOut, error)
+
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
-	id     string
-	ctx    Context
-	elemCh chan xml.XElement
-	discCh chan error
-	doneCh chan<- struct{}
+	id      string
+	ctx     Context
+	elemCh  chan xml.XElement
+	actorCh chan func()
+	discCh  chan error
+	doneCh  chan<- struct{}
 }
 
 // NewMockC2S returns a new mocked stream instance.
 func NewMockC2S(id string, jid *xml.JID) *MockC2S {
 	ctx, doneCh := NewContext()
 	stm := &MockC2S{
-		id:     id,
-		ctx:    ctx,
-		doneCh: doneCh,
+		id:      id,
+		ctx:     ctx,
+		elemCh:  make(chan xml.XElement, 16),
+		actorCh: make(chan func(), 64),
+		discCh:  make(chan error, 1),
+		doneCh:  doneCh,
 	}
 	stm.ctx.SetObject(jid, "jid")
 	stm.ctx.SetString(jid.Node(), "username")
 	stm.ctx.SetString(jid.Domain(), "domain")
 	stm.ctx.SetString(jid.Resource(), "resource")
-	stm.elemCh = make(chan xml.XElement, 16)
-	stm.discCh = make(chan error, 1)
+	go stm.actorLoop()
 	return stm
 }
 
@@ -150,6 +167,11 @@ func (m *MockC2S) IsCompressed() bool {
 	return m.ctx.Bool("compressed")
 }
 
+// IsDisconnected returns whether or not the mocked stream has been disconnected.
+func (m *MockC2S) IsDisconnected() bool {
+	return m.ctx.Bool("disconnected")
+}
+
 // SetPresence sets the mocked stream last received
 // presence element.
 func (m *MockC2S) SetPresence(presence *xml.Presence) {
@@ -166,13 +188,20 @@ func (m *MockC2S) Presence() *xml.Presence {
 }
 
 // SendElement sends the given XML element.
-func (m *MockC2S) SendElement(element xml.XElement) {
-	select {
-	case m.elemCh <- element:
-		return
-	default:
-		break
+func (m *MockC2S) SendElement(elem xml.XElement) {
+	m.actorCh <- func() {
+		m.sendElement(elem)
 	}
+}
+
+// Disconnect disconnects mocked stream.
+func (m *MockC2S) Disconnect(err error) {
+	waitCh := make(chan struct{})
+	m.actorCh <- func() {
+		m.disconnect(err)
+		close(waitCh)
+	}
+	<-waitCh
 }
 
 // FetchElement waits until a new XML element is sent to
@@ -186,20 +215,6 @@ func (m *MockC2S) FetchElement() xml.XElement {
 	}
 }
 
-// Disconnect disconnects mocked stream.
-func (m *MockC2S) Disconnect(err error) {
-	if !m.ctx.Bool("disconnected") {
-		m.discCh <- err
-		close(m.doneCh)
-		m.ctx.SetBool(true, "disconnected")
-	}
-}
-
-// IsDisconnected returns whether or not the mocked stream has been disconnected.
-func (m *MockC2S) IsDisconnected() bool {
-	return m.ctx.Bool("disconnected")
-}
-
 // WaitDisconnection waits until the mocked stream disconnects.
 func (m *MockC2S) WaitDisconnection() error {
 	select {
@@ -207,5 +222,33 @@ func (m *MockC2S) WaitDisconnection() error {
 		return err
 	case <-time.After(time.Second * 5):
 		return errors.New("operation timed out")
+	}
+}
+
+func (m *MockC2S) actorLoop() {
+	for {
+		select {
+		case f := <-m.actorCh:
+			f()
+		case <-m.discCh:
+			return
+		}
+	}
+}
+
+func (m *MockC2S) sendElement(elem xml.XElement) {
+	select {
+	case m.elemCh <- elem:
+		return
+	default:
+		break
+	}
+}
+
+func (m *MockC2S) disconnect(err error) {
+	if !m.ctx.Bool("disconnected") {
+		m.discCh <- err
+		close(m.doneCh)
+		m.ctx.SetBool(true, "disconnected")
 	}
 }

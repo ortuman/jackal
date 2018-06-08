@@ -14,21 +14,35 @@ import (
 	"net/url"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server/transport"
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
 )
+
+var listenerProvider = net.Listen
+
+type websocketUpgrader interface {
+	Upgrade(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*websocket.Conn, error)
+}
+
+var websocketUpgraderProvider = func() websocketUpgrader {
+	return &websocket.Upgrader{
+		Subprotocols: []string{"xmpp"},
+		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
+	}
+}
 
 type server struct {
 	cfg        *Config
 	tlsCfg     *tls.Config
 	ln         net.Listener
 	wsSrv      *http.Server
-	wsUpgrader *websocket.Upgrader
+	wsUpgrader websocketUpgrader
 	strCounter int32
 	listening  uint32
 }
@@ -47,10 +61,7 @@ func Initialize(srvConfigurations []Config, debugPort int) {
 	}
 	if debugPort > 0 {
 		// initialize debug service
-		go func() {
-			debugSrv = &http.Server{Addr: fmt.Sprintf(":%d", debugPort)}
-			debugSrv.ListenAndServe()
-		}()
+		go listenDebugServer(debugPort)
 	}
 
 	// initialize all servers
@@ -79,7 +90,7 @@ func Shutdown() {
 		if debugSrv != nil {
 			debugSrv.Close()
 		}
-		shutdownCh <- true
+		close(shutdownCh)
 	}
 }
 
@@ -110,20 +121,32 @@ func (s *server) start() {
 
 	log.Infof("%s: listening at %s [transport: %v]", s.cfg.ID, address, s.cfg.Transport.Type)
 
+	var err error
 	switch s.cfg.Transport.Type {
 	case transport.Socket:
-		s.listenSocketConn(address)
+		err = s.listenSocketConn(address)
 	case transport.WebSocket:
-		s.listenWebSocketConn(address)
+		err = s.listenWebSocketConn(address)
 		break
+	}
+	if err != nil {
+		log.Fatalf("%v", err)
 	}
 }
 
-func (s *server) listenSocketConn(address string) {
-	ln, err := net.Listen("tcp", address)
+func listenDebugServer(port int) {
+	debugSrv = &http.Server{}
+	ln, err := listenerProvider("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("%v", err)
-		return
+	}
+	debugSrv.Serve(ln)
+}
+
+func (s *server) listenSocketConn(address string) error {
+	ln, err := listenerProvider("tcp", address)
+	if err != nil {
+		return err
 	}
 	s.ln = ln
 
@@ -131,36 +154,27 @@ func (s *server) listenSocketConn(address string) {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			keepAlive := time.Second * time.Duration(s.cfg.Transport.KeepAlive)
+			go s.startStream(transport.NewSocketTransport(conn, keepAlive))
 			continue
 		}
 	}
+	return nil
 }
 
-func (s *server) listenWebSocketConn(address string) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Fatalf("%v", err)
-		}
-	}()
-	wsSrv := &http.Server{
-		Addr:      address,
-		TLSConfig: s.tlsCfg,
-	}
-	s.wsUpgrader = &websocket.Upgrader{
-		Subprotocols: []string{"xmpp"},
-		CheckOrigin: func(r *http.Request) bool {
-			return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp"
-		},
-	}
-	s.wsSrv = wsSrv
-
+func (s *server) listenWebSocketConn(address string) error {
 	http.HandleFunc(fmt.Sprintf("/%s/ws", url.PathEscape(s.cfg.ID)), s.websocketUpgrade)
 
-	atomic.StoreUint32(&s.listening, 1)
-	if err := s.wsSrv.ListenAndServeTLS("", ""); err != nil {
-		log.Fatalf("%v", err)
+	s.wsSrv = &http.Server{TLSConfig: s.tlsCfg}
+	s.wsUpgrader = websocketUpgraderProvider()
+
+	// start listening
+	ln, err := listenerProvider("tcp", address)
+	if err != nil {
+		return err
 	}
+	atomic.StoreUint32(&s.listening, 1)
+	return s.wsSrv.ServeTLS(ln, "", "")
 }
 
 func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +200,7 @@ func (s *server) shutdown() error {
 
 func (s *server) startStream(tr transport.Transport) {
 	stm := c2s.New(s.nextID(), tr, s.tlsCfg, &s.cfg.C2S)
-	if err := router.Instance().RegisterStream(stm); err != nil {
+	if err := router.Instance().RegisterC2S(stm); err != nil {
 		log.Error(err)
 	}
 }

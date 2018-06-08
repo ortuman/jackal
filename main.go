@@ -83,9 +83,9 @@ func main() {
 	// initialize subsystems
 	log.Initialize(&cfg.Logger)
 
-	storage.Initialize(&cfg.Storage)
+	router.Initialize(&cfg.Router, nil)
 
-	router.Initialize(&cfg.Router)
+	storage.Initialize(&cfg.Storage)
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {

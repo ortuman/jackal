@@ -37,6 +37,8 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	j2, _ := xml.NewJID("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{}, stm)
@@ -73,6 +75,8 @@ func TestXEP0199_SendPing(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)
@@ -105,6 +109,8 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
+	defer stm.Disconnect(nil)
+
 	stm.SetUsername("ortuman")
 
 	x := New(&Config{Send: true, SendInterval: 1}, stm)

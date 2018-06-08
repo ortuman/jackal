@@ -61,7 +61,7 @@ func (s *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) 
 	}
 	buf.WriteString("</root>")
 
-	parser := xml.NewParser(buf, 0)
+	parser := xml.NewParser(buf, xml.DefaultMode, 0)
 	rootEl, err := parser.ParseElement()
 	if err != nil {
 		return nil, err
