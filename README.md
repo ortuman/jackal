@@ -110,7 +110,7 @@ Contributions of all kinds are welcome: reporting issues, updating documentation
 
 ## Licensing
 
-jackal is licensed under the Mozilla Public License, Version 2.0. See
+jackal is licensed under the GNU General Public License, Version 3.0. See
 [LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
 license text.
 
