@@ -34,3 +34,7 @@ server.crt
 # Project folders
 .idea/
 .vscode/
+
+# Dep
+Gopkg.lock
+Gopkg.toml
