@@ -7,33 +7,73 @@ package sql
 
 import (
 	"database/sql"
+	"strings"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 // InsertOrUpdateUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateUser(u *model.User) error {
-	q := sq.Insert("users").
-		Columns("username", "password", "logged_out_status", "logged_out_at", "updated_at", "created_at").
-		Values(u.Username, u.Password, u.LoggedOutStatus, nowExpr, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE password = ?, logged_out_status = ?, logged_out_at = ?, updated_at = NOW()", u.Password, u.LoggedOutStatus, u.LoggedOutAt)
+	var presenceXML string
+	if u.LastPresence != nil {
+		buf := s.pool.Get()
+		u.LastPresence.ToXML(buf, true)
+		presenceXML = buf.String()
+		s.pool.Put(buf)
+	}
+	columns := []string{"username", "password", "updated_at", "created_at"}
+	values := []interface{}{u.Username, u.Password, nowExpr, nowExpr}
 
+	if len(presenceXML) > 0 {
+		columns = append(columns, []string{"last_presence", "last_presence_at"}...)
+		values = append(values, []interface{}{presenceXML, nowExpr}...)
+	}
+	var suffix string
+	var suffixArgs []interface{}
+	if len(presenceXML) > 0 {
+		suffix = "ON DUPLICATE KEY UPDATE password = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
+		suffixArgs = []interface{}{u.Password, presenceXML}
+	} else {
+		suffix = "ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()"
+		suffixArgs = []interface{}{u.Password}
+	}
+	q := sq.Insert("users").
+		Columns(columns...).
+		Values(values...).
+		Suffix(suffix, suffixArgs...)
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 // FetchUser retrieves from storage a user entity.
 func (s *Storage) FetchUser(username string) (*model.User, error) {
-	q := sq.Select("username", "password", "logged_out_status", "logged_out_at").
+	q := sq.Select("username", "password", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
 
+	var presenceXML string
+	var presenceAt time.Time
 	var usr model.User
-	err := q.RunWith(s.db).QueryRow().Scan(&usr.Username, &usr.Password, &usr.LoggedOutStatus, &usr.LoggedOutAt)
+
+	err := q.RunWith(s.db).QueryRow().Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
 	switch err {
 	case nil:
+		if len(presenceXML) > 0 {
+			parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
+			lastPresence, err := parser.ParseElement()
+			if err != nil {
+				return nil, err
+			}
+			fromJID, _ := jid.NewWithString(lastPresence.From(), true)
+			toJID, _ := jid.NewWithString(lastPresence.To(), true)
+			usr.LastPresence, _ = xml.NewPresenceFromElement(lastPresence, fromJID, toJID)
+			usr.LastPresenceAt = presenceAt
+		}
 		return &usr, nil
 	case sql.ErrNoRows:
 		return nil, nil
@@ -77,7 +117,6 @@ func (s *Storage) DeleteUser(username string) error {
 // UserExists returns whether or not a user exists within storage.
 func (s *Storage) UserExists(username string) (bool, error) {
 	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})
-
 	var count int
 	err := q.RunWith(s.db).QueryRow().Scan(&count)
 	switch err {

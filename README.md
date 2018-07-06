@@ -100,6 +100,7 @@ $ docker run --name jackal -p 5222:5222 ortuman/jackal
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html)
 - [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html)
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html)
+- [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html)
 - [XEP-0237: Roster Versioning](https://xmpp.org/extensions/xep-0237.html)
 
 ## Join and Contribute

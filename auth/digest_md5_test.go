@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"

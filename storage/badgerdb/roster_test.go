@@ -8,7 +8,7 @@ package badgerdb
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
@@ -19,12 +19,12 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
-	ri1 := &model.RosterItem{
+	ri1 := &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "juliet",
 		Subscription: "both",
 	}
-	ri2 := &model.RosterItem{
+	ri2 := &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo",
 		Subscription: "both",
@@ -62,15 +62,15 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
-	rn1 := model.RosterNotification{
+	rn1 := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "juliet@jackal.im",
-		Elements: []xml.XElement{},
+		Presence: &xml.Presence{},
 	}
-	rn2 := model.RosterNotification{
+	rn2 := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "romeo@jackal.im",
-		Elements: []xml.XElement{},
+		Presence: &xml.Presence{},
 	}
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn2))

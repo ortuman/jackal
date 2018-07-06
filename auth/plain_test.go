@@ -10,9 +10,9 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )

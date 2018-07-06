@@ -5,7 +5,7 @@
 
 package memstorage
 
-import "github.com/ortuman/jackal/storage/model"
+import "github.com/ortuman/jackal/model"
 
 // InsertBlockListItems inserts a set of block list item entities
 // into storage, only in case they haven't been previously inserted.

@@ -8,16 +8,17 @@ package xep0077
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0077_Matching(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	x := New(&Config{}, nil)
 
@@ -31,7 +32,7 @@ func TestXEP0077_Matching(t *testing.T) {
 }
 
 func TestXEP0077_InvalidToJID(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
@@ -60,7 +61,7 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 }
 
 func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
@@ -101,8 +102,8 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 }
 
 func TestXEP0077_AuthenticatedErrors(t *testing.T) {
-	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	srvJid, _ := jid.New("", "jackal.im", "", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
@@ -131,8 +132,8 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	srvJid, _ := jid.New("", "jackal.im", "", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
@@ -190,9 +191,8 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	srvJid, _ := jid.New("", "jackal.im", "", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
@@ -243,9 +243,8 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	srvJid, _ := xml.NewJID("", "jackal.im", "", true)
-
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	srvJid, _ := jid.New("", "jackal.im", "", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)

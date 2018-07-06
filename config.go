@@ -9,23 +9,35 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
 	"gopkg.in/yaml.v2"
 )
 
+type DebugConfig struct {
+	Port int `yaml:"port"`
+}
+
+// TLSConfig represents a server TLS configuration.
+type TLSConfig struct {
+	CertFile    string `yaml:"cert_path"`
+	PrivKeyFile string `yaml:"privkey_path"`
+}
+
 // Config represents a global configuration.
 type Config struct {
-	PIDFile string `yaml:"pid_path"`
-	Debug   struct {
-		Port int `yaml:"port"`
-	} `yaml:"debug"`
-	Logger  log.Config      `yaml:"logger"`
-	Storage storage.Config  `yaml:"storage"`
-	Router  router.Config   `yaml:"router"`
-	Servers []server.Config `yaml:"servers"`
+	PIDFile      string         `yaml:"pid_path"`
+	Debug        DebugConfig    `yaml:"debug"`
+	Logger       log.Config     `yaml:"logger"`
+	Storage      storage.Config `yaml:"storage"`
+	Hosts        []host.Config  `yaml:"hosts"`
+	Modules      module.Config  `yaml:"modules"`
+	VirtualHosts []c2s.Config   `yaml:"virtual_hosts"`
+	S2S          s2s.Config     `yaml:"s2s"`
 }
 
 // FromFile loads default global configuration from

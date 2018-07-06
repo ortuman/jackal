@@ -9,18 +9,23 @@ import (
 	"testing"
 	"time"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertUser(t *testing.T) {
-	now := time.Now()
-	user := model.User{Username: "ortuman", Password: "1234", LoggedOutStatus: "Bye!", LoggedOutAt: now}
+	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
+	to, _ := jid.NewWithString("ortuman@jackal.im", true)
+	p := xml.NewPresence(from, to, xml.UnavailableType)
+
+	user := model.User{Username: "ortuman", Password: "1234", LastPresence: p}
 
 	s, mock := NewMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", "Bye!", "1234", "Bye!", now).
+		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err := s.InsertOrUpdateUser(&user)
@@ -29,7 +34,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 
 	s, mock = NewMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", "Bye!", "1234", "Bye!", now).
+		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnError(errMySQLStorage)
 	err = s.InsertOrUpdateUser(&user)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -69,7 +74,11 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 }
 
 func TestMySQLStorageFetchUser(t *testing.T) {
-	var userColumns = []string{"username", "password", "logged_out_status", "logged_out_at"}
+	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
+	to, _ := jid.NewWithString("ortuman@jackal.im", true)
+	p := xml.NewPresence(from, to, xml.UnavailableType)
+
+	var userColumns = []string{"username", "password", "last_presence", "last_presence_at"}
 
 	s, mock := NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
@@ -83,7 +92,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
-		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", "Bye!", time.Now()))
+		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
 	_, err = s.FetchUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)

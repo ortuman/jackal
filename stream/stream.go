@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 // Stream represents a generic XMPP stream.
 type Stream interface {
+	ID() string
 	SendElement(elem xml.XElement)
 	Disconnect(err error)
 }
@@ -22,14 +24,13 @@ type Stream interface {
 type C2S interface {
 	Stream
 
-	ID() string
 	Context() Context
 
 	Username() string
 	Domain() string
 	Resource() string
 
-	JID() *xml.JID
+	JID() *jid.JID
 
 	IsSecured() bool
 	IsAuthenticated() bool
@@ -38,19 +39,15 @@ type C2S interface {
 	Presence() *xml.Presence
 }
 
+// S2S represents an incoming server-to-server XMPP stream.
+type S2SIn interface {
+	Stream
+}
+
 // S2S represents an outgoing server-to-server XMPP stream.
 type S2SOut interface {
 	Stream
-	Domain() string
-	StartSession()
 }
-
-type S2SDialerOptions struct {
-	Timeout   time.Duration
-	KeepAlive time.Duration
-}
-
-type S2SDialer func(domain string, opts S2SDialerOptions) (S2SOut, error)
 
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
@@ -63,7 +60,7 @@ type MockC2S struct {
 }
 
 // NewMockC2S returns a new mocked stream instance.
-func NewMockC2S(id string, jid *xml.JID) *MockC2S {
+func NewMockC2S(id string, jid *jid.JID) *MockC2S {
 	ctx, doneCh := NewContext()
 	stm := &MockC2S{
 		id:      id,
@@ -122,12 +119,12 @@ func (m *MockC2S) SetResource(resource string) {
 }
 
 // JID returns current user JID.
-func (m *MockC2S) JID() *xml.JID {
-	return m.ctx.Object("jid").(*xml.JID)
+func (m *MockC2S) JID() *jid.JID {
+	return m.ctx.Object("jid").(*jid.JID)
 }
 
 // SetJID sets the mocked stream JID value.
-func (m *MockC2S) SetJID(jid *xml.JID) {
+func (m *MockC2S) SetJID(jid *jid.JID) {
 	m.ctx.SetObject(jid, "jid")
 }
 

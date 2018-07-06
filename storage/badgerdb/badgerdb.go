@@ -17,8 +17,8 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/pool"
-	"github.com/ortuman/jackal/storage/model"
 )
 
 var (

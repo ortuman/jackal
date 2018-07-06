@@ -11,12 +11,13 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0054_Matching(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	x := New(nil)
 
@@ -42,7 +43,7 @@ func TestXEP0054_Set(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
@@ -79,8 +80,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
@@ -117,8 +118,8 @@ func TestXEP0054_Get(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	j2, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
@@ -164,7 +165,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)

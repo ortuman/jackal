@@ -7,44 +7,44 @@ package badgerdb
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 )
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
+func (b *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
 	}); err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	return b.updateRosterVer(ri.Username, false)
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
-func (b *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
+func (b *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
 		return b.delete(b.rosterItemKey(user, contact), tx)
 	}); err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	return b.updateRosterVer(user, true)
 }
 
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
-func (b *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	var ris []model.RosterItem
+func (b *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel.Version, error) {
+	var ris []rostermodel.Item
 	if err := b.fetchAll(&ris, []byte("rosterItems:"+user)); err != nil {
-		return nil, model.RosterVersion{}, err
+		return nil, rostermodel.Version{}, err
 	}
 	ver, err := b.fetchRosterVer(user)
 	return ris, ver, err
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
-func (b *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	var ri model.RosterItem
+func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
+	var ri rostermodel.Item
 	err := b.fetch(&ri, b.rosterItemKey(user, contact))
 	switch err {
 	case nil:
@@ -58,7 +58,7 @@ func (b *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, erro
 
 // InsertOrUpdateRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
+func (b *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
 	})
@@ -71,20 +71,34 @@ func (b *Storage) DeleteRosterNotification(contact, jid string) error {
 	})
 }
 
+// FetchRosterNotification retrieves from storage a roster notification entity.
+func (b *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+	var rn rostermodel.Notification
+	err := b.fetch(&rn, b.rosterNotificationKey(contact, jid))
+	switch err {
+	case nil:
+		return &rn, nil
+	case errBadgerDBEntityNotFound:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
 // FetchRosterNotifications retrieves from storage all roster notifications
 // associated to a given user.
-func (b *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	var rns []model.RosterNotification
+func (b *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+	var rns []rostermodel.Notification
 	if err := b.fetchAll(&rns, []byte("rosterNotifications:"+contact)); err != nil {
 		return nil, err
 	}
 	return rns, nil
 }
 
-func (b *Storage) updateRosterVer(username string, isDeletion bool) (model.RosterVersion, error) {
+func (b *Storage) updateRosterVer(username string, isDeletion bool) (rostermodel.Version, error) {
 	v, err := b.fetchRosterVer(username)
 	if err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	v.Ver++
 	if isDeletion {
@@ -93,13 +107,13 @@ func (b *Storage) updateRosterVer(username string, isDeletion bool) (model.Roste
 	if err := b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(&v, b.rosterVersionKey(username), tx)
 	}); err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	return v, nil
 }
 
-func (b *Storage) fetchRosterVer(username string) (model.RosterVersion, error) {
-	var ver model.RosterVersion
+func (b *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
+	var ver rostermodel.Version
 	err := b.fetch(&ver, b.rosterVersionKey(username))
 	switch err {
 	case nil, errBadgerDBEntityNotFound:

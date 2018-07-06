@@ -3,12 +3,7 @@
 storage:
   type: memory
 
-c2s:
-  domains: [jackal.im]
-
-servers:
+virtual_hosts:
   - id: default
-    type: c2s
-
     transport:
       port: 5222

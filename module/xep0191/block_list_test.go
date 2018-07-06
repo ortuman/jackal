@@ -8,17 +8,21 @@ package xep0191
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/rostermodel"
+	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0191_Matching(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	x := New(nil)
 
@@ -46,7 +50,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	defer stm.Disconnect(nil)
@@ -82,45 +86,55 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	router.Initialize(&router.Config{Domains: []string{"jackal.im"}}, nil)
+	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer func() {
-		router.Shutdown()
 		storage.Shutdown()
+		router.Shutdown()
+		host.Shutdown()
 	}()
 
-	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-
 	x := New(stm1)
 
-	j2, _ := xml.NewJID("ortuman", "jackal.im", "yard", true)
+	j2, _ := jid.New("ortuman", "jackal.im", "yard", true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	j3, _ := xml.NewJID("romeo", "jackal.im", "garden", true)
+	j3, _ := jid.New("romeo", "jackal.im", "garden", true)
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 
-	j4, _ := xml.NewJID("romeo", "jackal.im", "jail", true)
+	j4, _ := jid.New("romeo", "jackal.im", "jail", true)
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
-
-	router.Instance().RegisterC2S(stm1)
-	router.Instance().RegisterC2S(stm2)
-	router.Instance().RegisterC2S(stm3)
-	router.Instance().RegisterC2S(stm4)
-	router.Instance().RegisterC2SResource(stm1)
-	router.Instance().RegisterC2SResource(stm2)
-	router.Instance().RegisterC2SResource(stm3)
-	router.Instance().RegisterC2SResource(stm4)
 
 	stm1.SetAuthenticated(true)
 	stm2.SetAuthenticated(true)
 	stm3.SetAuthenticated(true)
 	stm4.SetAuthenticated(true)
 
+	router.Bind(stm1)
+	router.Bind(stm2)
+	router.Bind(stm3)
+	router.Bind(stm4)
+
+	// register presences
+	ph := roster.NewPresenceHandler(&roster.Config{})
+	ph.ProcessPresence(xml.NewPresence(j1, j1, xml.AvailableType))
+	ph.ProcessPresence(xml.NewPresence(j2, j2, xml.AvailableType))
+	ph.ProcessPresence(xml.NewPresence(j3, j3, xml.AvailableType))
+	ph.ProcessPresence(xml.NewPresence(j4, j4, xml.AvailableType))
+	defer func() {
+		ph.ProcessPresence(xml.NewPresence(j1, j1, xml.UnavailableType))
+		ph.ProcessPresence(xml.NewPresence(j2, j2, xml.UnavailableType))
+		ph.ProcessPresence(xml.NewPresence(j3, j3, xml.UnavailableType))
+		ph.ProcessPresence(xml.NewPresence(j4, j4, xml.UnavailableType))
+	}()
+
 	stm1.Context().SetBool(true, xep191RequestedContextKey)
 	stm2.Context().SetBool(true, xep191RequestedContextKey)
 
-	storage.Instance().InsertOrUpdateRosterItem(&model.RosterItem{
+	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",

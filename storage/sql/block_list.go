@@ -9,7 +9,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
 )
 
 // InsertBlockListItems inserts a set of block list item entities

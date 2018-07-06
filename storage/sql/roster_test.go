@@ -10,15 +10,14 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/pool"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xml"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
 
 	args := []driver.Value{
 		ri.Username,
@@ -132,25 +131,18 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 }
 
 func TestMySQLStorageInsertRosterNotification(t *testing.T) {
-	rn := model.RosterNotification{
+	rn := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		[]xml.XElement{xml.NewElementName("priority")},
+		&xml.Presence{},
 	}
-	p := pool.NewBufferPool()
-
-	buf := p.Get()
-	defer p.Put(buf)
-	for _, elem := range rn.Elements {
-		buf.WriteString(elem.String())
-	}
-	elementsXML := buf.String()
+	presenceXML := rn.Presence.String()
 
 	args := []driver.Value{
 		rn.Contact,
 		rn.JID,
-		elementsXML,
-		elementsXML,
+		presenceXML,
+		presenceXML,
 	}
 	s, mock := NewMock()
 	mock.ExpectExec("INSERT INTO roster_notifications (.+) ON DUPLICATE KEY UPDATE (.+)").

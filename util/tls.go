@@ -30,31 +30,28 @@ const (
 // LoadCertificate loads a certificate given a private key and certificate PEM files.
 // Only in case the associated domain is localhost and no files are specified
 // a self signed certificate will be automatically generated.
-func LoadCertificate(keyFile, certFile, domain string) (*tls.Config, error) {
+func LoadCertificate(keyFile, certFile, domain string) (tls.Certificate, error) {
 	if len(certFile) == 0 || len(keyFile) == 0 {
 		switch domain {
 		case localhostDomain:
 			if !selfSignedCertificateExists() {
 				err := generateSelfSignedCertificate(selfSignedCertPrivateKey, selfSignedCertFile, domain)
 				if err != nil {
-					return nil, err
+					return tls.Certificate{}, err
 				}
 			}
 			keyFile = selfSignedCertPrivateKey
 			certFile = selfSignedCertFile
 
 		default:
-			return nil, fmt.Errorf("must specify a private key and a server certificate for the domain '%s'", domain)
+			return tls.Certificate{}, fmt.Errorf("must specify a private key and a server certificate for the domain '%s'", domain)
 		}
 	}
 	cer, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return nil, err
+		return tls.Certificate{}, err
 	}
-	return &tls.Config{
-		ServerName:   domain,
-		Certificates: []tls.Certificate{cer},
-	}, nil
+	return cer, nil
 }
 
 func generateSelfSignedCertificate(keyFile, certFile, domain string) error {

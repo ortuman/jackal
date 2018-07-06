@@ -112,6 +112,7 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "idna",
     "internal/timeseries",
     "trace"
   ]
@@ -124,6 +125,32 @@
   revision = "a2a45943ae67364d56c5d7d62dee78cff16c8dc8"
 
 [[projects]]
+  name = "golang.org/x/text"
+  packages = [
+    "cases",
+    "collate",
+    "collate/build",
+    "internal",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "runes",
+    "secure/bidirule",
+    "secure/precis",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable",
+    "width"
+  ]
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -132,6 +159,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0e16fed30c0cd0d2dfcb2cbe051b42d1c681184450970546d41079aff8904a29"
+  inputs-digest = "e3039ab755a26a91ffc0a970e19a6b700c6d84c1962e661250f3627666acebfe"
   solver-name = "gps-cdcl"
   solver-version = 1

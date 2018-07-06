@@ -8,14 +8,15 @@ package memstorage
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
 
 	s := New()
 	s.ActivateMockedError()
@@ -31,7 +32,7 @@ func TestMockStorageInsertRosterItem(t *testing.T) {
 
 func TestMockStorageFetchRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
 
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
@@ -52,8 +53,8 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 
 func TestMockStorageFetchRosterItems(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
-	ri2 := model.RosterItem{"user", "contact2", "a name 2", "both", false, 2, g}
+	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
+	ri2 := rostermodel.Item{"user", "contact2", "a name 2", "both", false, 2, g}
 
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
@@ -69,7 +70,7 @@ func TestMockStorageFetchRosterItems(t *testing.T) {
 
 func TestMockStorageDeleteRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := model.RosterItem{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 
@@ -87,10 +88,10 @@ func TestMockStorageDeleteRosterItem(t *testing.T) {
 }
 
 func TestMockStorageInsertRosterNotification(t *testing.T) {
-	rn := model.RosterNotification{
+	rn := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		[]xml.XElement{xml.NewElementName("priority")},
+		&xml.Presence{},
 	}
 	s := New()
 	s.ActivateMockedError()
@@ -100,21 +101,23 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 }
 
 func TestMockStorageFetchRosterNotifications(t *testing.T) {
-	rn1 := model.RosterNotification{
+	rn1 := rostermodel.Notification{
 		"romeo",
 		"ortuman@jackal.im",
-		[]xml.XElement{xml.NewElementName("priority")},
+		&xml.Presence{},
 	}
-	rn2 := model.RosterNotification{
+	rn2 := rostermodel.Notification{
 		"romeo",
 		"ortuman2@jackal.im",
-		[]xml.XElement{xml.NewElementName("priority")},
+		&xml.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)
 	s.InsertOrUpdateRosterNotification(&rn2)
 
-	rn2.Elements = []xml.XElement{xml.NewElementName("status")}
+	from, _ := jid.NewWithString("ortuman2@jackal.im", true)
+	to, _ := jid.NewWithString("romeo@jackal.im", true)
+	rn2.Presence = xml.NewPresence(from, to, xml.SubscribeType)
 	s.InsertOrUpdateRosterNotification(&rn2)
 
 	s.ActivateMockedError()
@@ -129,10 +132,10 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 }
 
 func TestMockStorageDeleteRosterNotification(t *testing.T) {
-	rn1 := model.RosterNotification{
+	rn1 := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		[]xml.XElement{xml.NewElementName("priority")},
+		&xml.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)

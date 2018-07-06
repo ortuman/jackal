@@ -30,6 +30,9 @@ var (
 	// ErrPolicyViolation represents 'connection-timeout' stream error.
 	ErrPolicyViolation = newStreamError("policy-violation")
 
+	// ErrRemoteConnectionFailed represents 'remote-connection-failed' stream error.
+	ErrRemoteConnectionFailed = newStreamError("remote-connection-failed")
+
 	// ErrConnectionTimeout represents 'connection-timeout' stream error.
 	ErrConnectionTimeout = newStreamError("connection-timeout")
 

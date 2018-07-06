@@ -5,12 +5,14 @@
 
 package memstorage
 
-import "github.com/ortuman/jackal/storage/model"
+import (
+	"github.com/ortuman/jackal/model/rostermodel"
+)
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (m *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
-	var v model.RosterVersion
+func (m *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+	var v rostermodel.Version
 	err := m.inWriteLock(func() error {
 		ris := m.rosterItems[ri.Username]
 		if ris != nil {
@@ -22,7 +24,7 @@ func (m *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 			}
 			ris = append(ris, *ri)
 		} else {
-			ris = []model.RosterItem{*ri}
+			ris = []rostermodel.Item{*ri}
 		}
 
 	done:
@@ -37,8 +39,8 @@ func (m *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
-func (m *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, error) {
-	var v model.RosterVersion
+func (m *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, error) {
+	var v rostermodel.Version
 	err := m.inWriteLock(func() error {
 		ris := m.rosterItems[user]
 		for i, ri := range ris {
@@ -59,9 +61,9 @@ func (m *Storage) DeleteRosterItem(user, contact string) (model.RosterVersion, e
 
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
-func (m *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.RosterVersion, error) {
-	var ris []model.RosterItem
-	var v model.RosterVersion
+func (m *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel.Version, error) {
+	var ris []rostermodel.Item
+	var v rostermodel.Version
 	err := m.inReadLock(func() error {
 		ris = m.rosterItems[user]
 		v = m.rosterVersions[user]
@@ -71,8 +73,8 @@ func (m *Storage) FetchRosterItems(user string) ([]model.RosterItem, model.Roste
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
-func (m *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, error) {
-	var ret *model.RosterItem
+func (m *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
+	var ret *rostermodel.Item
 	err := m.inReadLock(func() error {
 		ris := m.rosterItems[user]
 		for _, ri := range ris {
@@ -88,7 +90,7 @@ func (m *Storage) FetchRosterItem(user, contact string) (*model.RosterItem, erro
 
 // InsertOrUpdateRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (m *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
+func (m *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
 	return m.inWriteLock(func() error {
 		rns := m.rosterNotifications[rn.Contact]
 		if rns != nil {
@@ -100,7 +102,7 @@ func (m *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification)
 			}
 			rns = append(rns, *rn)
 		} else {
-			rns = []model.RosterNotification{*rn}
+			rns = []rostermodel.Notification{*rn}
 		}
 	done:
 		m.rosterNotifications[rn.Contact] = rns
@@ -122,10 +124,26 @@ func (m *Storage) DeleteRosterNotification(contact, jid string) error {
 	})
 }
 
+// FetchRosterNotification retrieves from storage a roster notification entity.
+func (m *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+	var ret *rostermodel.Notification
+	err := m.inReadLock(func() error {
+		rns := m.rosterNotifications[contact]
+		for _, rn := range rns {
+			if rn.JID == jid {
+				ret = &rn
+				break
+			}
+		}
+		return nil
+	})
+	return ret, err
+}
+
 // FetchRosterNotifications retrieves from storage all roster notifications
 // associated to a given user.
-func (m *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
-	var ret []model.RosterNotification
+func (m *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+	var ret []rostermodel.Notification
 	err := m.inReadLock(func() error {
 		ret = m.rosterNotifications[contact]
 		return nil

@@ -96,7 +96,9 @@ func (p *Parser) ParseElement() (XElement, error) {
 			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {
 				return nil, ErrStreamClosedByPeer
 			}
-			p.endElement(t1)
+			if err := p.endElement(t1); err != nil {
+				return nil, err
+			}
 			if p.parsingIndex == rootElementIndex {
 				goto done
 			}
@@ -131,7 +133,7 @@ func (p *Parser) startElement(t xml.StartElement) {
 	}
 	element := &Element{name: name, attrs: attributeSet(attrs)}
 	p.parsingStack = append(p.parsingStack, element)
-	p.parsingIndex++
+	p.parsingIndex = len(p.parsingStack) - 1
 	p.inElement = true
 }
 
@@ -142,7 +144,7 @@ func (p *Parser) setElementText(t xml.CharData) {
 
 func (p *Parser) endElement(t xml.EndElement) error {
 	name := xmlName(t.Name.Space, t.Name.Local)
-	if p.parsingStack[p.parsingIndex].Name() != name {
+	if p.parsingIndex == rootElementIndex || p.parsingStack[p.parsingIndex].Name() != name {
 		return fmt.Errorf("unexpected end element </" + name + ">")
 	}
 	p.closeElement()
@@ -153,7 +155,7 @@ func (p *Parser) closeElement() {
 	element := p.parsingStack[p.parsingIndex]
 	p.parsingStack = p.parsingStack[:p.parsingIndex]
 
-	p.parsingIndex--
+	p.parsingIndex = len(p.parsingStack) - 1
 	if p.parsingIndex == rootElementIndex {
 		p.nextElement = element
 	} else {

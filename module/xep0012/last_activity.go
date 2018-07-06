@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 const lastActivityNamespace = "jabber:iq:last"
@@ -59,14 +60,12 @@ func (x *LastActivity) ProcessIQ(iq *xml.IQ) {
 		}
 		if ri != nil {
 			switch ri.Subscription {
-			case roster.SubscriptionTo, roster.SubscriptionBoth:
+			case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 				x.sendUserLastActivity(iq, toJID)
-			default:
-				x.stm.SendElement(iq.ForbiddenError())
+				return
 			}
-		} else {
-			x.stm.SendElement(iq.ForbiddenError())
 		}
+		x.stm.SendElement(iq.ForbiddenError())
 	}
 }
 
@@ -75,8 +74,8 @@ func (x *LastActivity) sendServerUptime(iq *xml.IQ) {
 	x.sendReply(iq, secs, "")
 }
 
-func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
-	if len(router.Instance().StreamsMatchingJID(to.ToBareJID())) > 0 { // user online
+func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *jid.JID) {
+	if len(router.UserStreams(to.Node())) > 0 { // user online
 		x.sendReply(iq, 0, "")
 		return
 	}
@@ -90,8 +89,15 @@ func (x *LastActivity) sendUserLastActivity(iq *xml.IQ, to *xml.JID) {
 		x.stm.SendElement(iq.ItemNotFoundError())
 		return
 	}
-	secs := int(time.Duration(time.Now().UnixNano()-usr.LoggedOutAt.UnixNano()) / time.Second)
-	x.sendReply(iq, secs, usr.LoggedOutStatus)
+	var secs int
+	var status string
+	if p := usr.LastPresence; p != nil {
+		secs = int(time.Duration(time.Now().UnixNano()-usr.LastPresenceAt.UnixNano()) / time.Second)
+		if st := p.Elements().Child("status"); st != nil {
+			status = st.Text()
+		}
+	}
+	x.sendReply(iq, secs, status)
 }
 
 func (x *LastActivity) sendReply(iq *xml.IQ, secs int, status string) {

@@ -7,12 +7,12 @@ package storage
 
 import (
 	"sync"
-	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/storage/badgerdb"
 	"github.com/ortuman/jackal/storage/memstorage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/storage/sql"
 	"github.com/ortuman/jackal/xml"
 )
@@ -35,28 +35,31 @@ type userStorage interface {
 type rosterStorage interface {
 	// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
 	// or updates it in case it's been previously inserted.
-	InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error)
+	InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error)
 
 	// DeleteRosterItem deletes a roster item entity from storage.
-	DeleteRosterItem(username, jid string) (model.RosterVersion, error)
+	DeleteRosterItem(username, jid string) (rostermodel.Version, error)
 
 	// FetchRosterItems retrieves from storage all roster item entities
 	// associated to a given user.
-	FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error)
+	FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error)
 
 	// FetchRosterItem retrieves from storage a roster item entity.
-	FetchRosterItem(username, jid string) (*model.RosterItem, error)
+	FetchRosterItem(username, jid string) (*rostermodel.Item, error)
 
 	// InsertOrUpdateRosterNotification inserts a new roster notification entity
 	// into storage, or updates it in case it's been previously inserted.
-	InsertOrUpdateRosterNotification(rn *model.RosterNotification) error
+	InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error
 
 	// DeleteRosterNotification deletes a roster notification entity from storage.
 	DeleteRosterNotification(contact, jid string) error
 
+	// FetchRosterNotification retrieves from storage a roster notification entity.
+	FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error)
+
 	// FetchRosterNotifications retrieves from storage all roster notifications
 	// associated to a given user.
-	FetchRosterNotifications(contact string) ([]model.RosterNotification, error)
+	FetchRosterNotifications(contact string) ([]rostermodel.Notification, error)
 }
 
 type offlineStorage interface {
@@ -120,36 +123,36 @@ type Storage interface {
 }
 
 var (
-	inst        Storage
 	instMu      sync.RWMutex
-	initialized uint32
+	inst        Storage
+	initialized bool
 )
 
 // Initialize initializes storage sub system.
 func Initialize(cfg *Config) {
-	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
-		instMu.Lock()
-		defer instMu.Unlock()
-
-		switch cfg.Type {
-		case BadgerDB:
-			inst = badgerdb.New(cfg.BadgerDB)
-		case MySQL:
-			inst = sql.New(cfg.MySQL)
-		case Memory:
-			inst = memstorage.New()
-		default:
-			// should not be reached
-			break
-		}
+	instMu.Lock()
+	defer instMu.Unlock()
+	if initialized {
+		return
 	}
+	switch cfg.Type {
+	case BadgerDB:
+		inst = badgerdb.New(cfg.BadgerDB)
+	case MySQL:
+		inst = sql.New(cfg.MySQL)
+	case Memory:
+		inst = memstorage.New()
+	default:
+		// should not be reached
+		break
+	}
+	initialized = true
 }
 
 // Instance returns global storage sub system.
 func Instance() Storage {
 	instMu.RLock()
 	defer instMu.RUnlock()
-
 	if inst == nil {
 		log.Fatalf("storage subsystem not initialized")
 	}
@@ -159,13 +162,11 @@ func Instance() Storage {
 // Shutdown shuts down storage sub system.
 // This method should be used only for testing purposes.
 func Shutdown() {
-	if atomic.CompareAndSwapUint32(&initialized, 1, 0) {
-		instMu.Lock()
-		defer instMu.Unlock()
-
-		inst.Shutdown()
-		inst = nil
-	}
+	instMu.Lock()
+	defer instMu.Unlock()
+	inst.Shutdown()
+	inst = nil
+	initialized = false
 }
 
 // ActivateMockedError forces the return of ErrMockedError from current storage manager.

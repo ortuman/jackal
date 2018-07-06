@@ -8,14 +8,17 @@ package session
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	stdxml "encoding/xml"
 	"io"
 	"testing"
 
 	"github.com/ortuman/jackal/errors"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -39,15 +42,14 @@ func (t *fakeTransport) WriteString(s string) (n int, err error)                
 func (t *fakeTransport) StartTLS(cfg *tls.Config, asClient bool)                      {}
 func (t *fakeTransport) EnableCompression(compress.Level)                             {}
 func (t *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte { return nil }
+func (t *fakeTransport) PeerCertificates() []*x509.Certificate                        { return nil }
 
 func TestSession_Open(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("jackal.im", true)
+	j, _ := jid.NewWithString("jackal.im", true)
 
 	// test client socket session start
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 
 	require.NotNil(t, sess.Close())
 	_, err1 := sess.Receive()
@@ -64,7 +66,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test server socket session start
 	tr.wrBuf.Reset()
-	sess = New(&Config{JID: j, Transport: tr, IsServer: true})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true})
 	sess.Open()
 	pr = xml.NewParser(tr.wrBuf, xml.SocketStream, 0)
 	_, _ = pr.ParseElement() // read xml header
@@ -74,7 +76,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test websocket session start
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	pr = xml.NewParser(tr.wrBuf, xml.WebSocketStream, 0)
 	elem, err = pr.ParseElement()
@@ -84,7 +86,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test unsupported transport type
 	tr = newFakeTransport(transport.TransportType(9999))
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	require.Nil(t, sess.Open())
 
 	// open twice
@@ -92,12 +94,10 @@ func TestSession_Open(t *testing.T) {
 }
 
 func TestSession_Close(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("jackal.im", true)
+	j, _ := jid.NewWithString("jackal.im", true)
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	tr.wrBuf.Reset()
 
@@ -105,7 +105,7 @@ func TestSession_Close(t *testing.T) {
 	require.Equal(t, "</stream:stream>", tr.wrBuf.String())
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	tr.wrBuf.Reset()
 
@@ -114,11 +114,9 @@ func TestSession_Close(t *testing.T) {
 }
 
 func TestSession_Send(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("ortuman@jackal.im/res", true)
+	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	elem := xml.NewElementNamespace("open", "urn:ietf:params:xml:ns:xmpp-framing")
 	sess.Open()
 	tr.wrBuf.Reset()
@@ -128,17 +126,15 @@ func TestSession_Send(t *testing.T) {
 }
 
 func TestSession_Receive(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("ortuman@jackal.im/res", true)
+	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.WebSocket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	_, err := sess.Receive()
 	require.Equal(t, &Error{}, err)
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	open := xml.NewElementNamespace("open", "")
 	open.ToXML(tr.rdBuf, true)
@@ -147,7 +143,7 @@ func TestSession_Receive(t *testing.T) {
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, err)
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	open.SetNamespace("urn:ietf:params:xml:ns:xmpp-framing")
 	open.SetVersion("1.0")
@@ -162,7 +158,7 @@ func TestSession_Receive(t *testing.T) {
 	require.Equal(t, "iq", st.Name())
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	open.ToXML(tr.rdBuf, true)
 
@@ -175,46 +171,45 @@ func TestSession_Receive(t *testing.T) {
 }
 
 func TestSession_IsValidNamespace(t *testing.T) {
-	t.Parallel()
-
 	iqClient := xml.NewElementNamespace("iq", "jabber:client")
 	iqServer := xml.NewElementNamespace("iq", "jabber:server")
 
-	j, _ := xml.NewJIDString("jackal.im", true)
+	j, _ := jid.NewWithString("jackal.im", true)
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	require.Nil(t, sess.validateNamespace(iqClient))
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqServer))
 
 	tr = newFakeTransport(transport.Socket)
-	sess = New(&Config{JID: j, Transport: tr, IsServer: true})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true})
 	sess.Open()
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqClient))
 	require.Nil(t, sess.validateNamespace(iqServer))
 }
 
 func TestSession_IsValidFrom(t *testing.T) {
-	t.Parallel()
-
-	j1, _ := xml.NewJIDString("jackal.im", true)                  // server domain
-	j2, _ := xml.NewJIDString("ortuman@jackal.im/resource", true) // full jid with user
+	j1, _ := jid.NewWithString("jackal.im", true)                  // server domain
+	j2, _ := jid.NewWithString("ortuman@jackal.im/resource", true) // full jid with user
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j2, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j2, Transport: tr})
 	sess.Open()
-	sess.UpdateJID(j1)
+	sess.SetJID(j1)
 	require.False(t, sess.isValidFrom("romeo@jackal.im"))
 
-	sess.UpdateJID(j2)
+	sess.SetJID(j2)
 	require.True(t, sess.isValidFrom("ortuman@jackal.im/resource"))
 }
 
 func TestSession_ValidateStream(t *testing.T) {
-	t.Parallel()
+	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	defer func() {
+		host.Shutdown()
+	}()
 
-	j, _ := xml.NewJIDString("jackal.im", true) // server domain
+	j, _ := jid.NewWithString("jackal.im", true) // server domain
 
 	elem1 := xml.NewElementNamespace("stream:stream", "")
 	elem2 := xml.NewElementNamespace("stream:stream", "jabber:client")
@@ -223,7 +218,7 @@ func TestSession_ValidateStream(t *testing.T) {
 
 	// try socket
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	err := sess.validateStreamElement(elem1)
 	sess.Open()
 	require.NotNil(t, err)
@@ -253,7 +248,7 @@ func TestSession_ValidateStream(t *testing.T) {
 
 	// try websocket
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(&Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 	err = sess.validateStreamElement(elem4)
 	require.NotNil(t, err)
@@ -279,24 +274,22 @@ func TestSession_ValidateStream(t *testing.T) {
 }
 
 func TestSession_ExtractAddresses(t *testing.T) {
-	t.Parallel()
-
-	j1, _ := xml.NewJIDString("jackal.im", true)
-	j2, _ := xml.NewJIDString("ortuman@jackal.im/res", true)
+	j1, _ := jid.NewWithString("jackal.im", true)
+	j2, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 
 	iq := xml.NewElementNamespace("iq", "jabber:client")
 	iq.SetFrom("ortuman@jackal.im/res")
 	iq.SetTo("romeo@example.org")
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j1, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j1, Transport: tr})
 	sess.Open()
 	from, to, err := sess.extractAddresses(iq)
 	require.Nil(t, err)
 	require.Equal(t, "jackal.im", from.String())
 	require.Equal(t, "romeo@example.org", to.String())
 
-	sess.UpdateJID(j2)
+	sess.SetJID(j2)
 
 	iq.SetFrom("romeo@example.org")
 	iq.SetTo("")
@@ -310,7 +303,7 @@ func TestSession_ExtractAddresses(t *testing.T) {
 	require.Equal(t, "ortuman@jackal.im/res", from.String())
 	require.Equal(t, "ortuman@jackal.im", to.String())
 
-	iq.SetTo("ortuman@\U0001f480/res")
+	iq.SetTo("ortuman@" + string([]byte{255, 255, 255}) + "/res")
 	_, _, err = sess.extractAddresses(iq)
 	require.NotNil(t, err)
 	require.Equal(t, iq, err.Element)
@@ -318,11 +311,9 @@ func TestSession_ExtractAddresses(t *testing.T) {
 }
 
 func TestSession_BuildStanza(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("ortuman@jackal.im/res", true)
+	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 
 	elem := xml.NewElementNamespace("n", "ns")
@@ -336,7 +327,7 @@ func TestSession_BuildStanza(t *testing.T) {
 	require.Equal(t, streamerror.ErrUnsupportedStanzaType, err.UnderlyingErr)
 
 	elem.SetName("iq")
-	elem.SetTo("ortuman@\U0001f480/res")
+	elem.SetTo("ortuman@" + string([]byte{255, 255, 255}) + "/res")
 	_, err = sess.buildStanza(elem)
 	require.NotNil(t, err)
 	require.Equal(t, xml.ErrJidMalformed, err.UnderlyingErr)
@@ -371,11 +362,9 @@ func TestSession_BuildStanza(t *testing.T) {
 }
 
 func TestSession_MapErrorq(t *testing.T) {
-	t.Parallel()
-
-	j, _ := xml.NewJIDString("ortuman@jackal.im/res", true)
+	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(&Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
 	sess.Open()
 
 	require.Equal(t, &Error{}, sess.mapErrorToSessionError(nil))

@@ -10,7 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xml"
 )
 
@@ -23,22 +24,22 @@ type Storage struct {
 	mockErr             uint32
 	mu                  sync.RWMutex
 	users               map[string]*model.User
-	rosterItems         map[string][]model.RosterItem
-	rosterVersions      map[string]model.RosterVersion
-	rosterNotifications map[string][]model.RosterNotification
+	rosterItems         map[string][]rostermodel.Item
+	rosterVersions      map[string]rostermodel.Version
+	rosterNotifications map[string][]rostermodel.Notification
 	vCards              map[string]xml.XElement
 	privateXML          map[string][]xml.XElement
 	offlineMessages     map[string][]xml.XElement
 	blockListItems      map[string][]model.BlockListItem
 }
 
-// New returns a new in memory storage instance.
+// NewItem returns a new in memory storage instance.
 func New() *Storage {
 	return &Storage{
 		users:               make(map[string]*model.User),
-		rosterItems:         make(map[string][]model.RosterItem),
-		rosterVersions:      make(map[string]model.RosterVersion),
-		rosterNotifications: make(map[string][]model.RosterNotification),
+		rosterItems:         make(map[string][]rostermodel.Item),
+		rosterVersions:      make(map[string]rostermodel.Version),
+		rosterNotifications: make(map[string][]rostermodel.Notification),
 		vCards:              make(map[string]xml.XElement),
 		privateXML:          make(map[string][]xml.XElement),
 		offlineMessages:     make(map[string][]xml.XElement),

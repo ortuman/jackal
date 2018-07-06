@@ -11,13 +11,14 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0092(t *testing.T) {
-	srvJID, _ := xml.NewJID("", "jackal.im", "", true)
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	srvJID, _ := jid.New("", "jackal.im", "", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)

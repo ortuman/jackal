@@ -6,8 +6,11 @@
 package c2s
 
 import (
+	"os"
 	"testing"
+	"time"
 
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -34,7 +37,28 @@ func TestCompressionConfig(t *testing.T) {
 	require.NotNil(t, err)
 }
 
+func TestTransportConfig(t *testing.T) {
+	s := TransportConfig{}
+
+	err := yaml.Unmarshal([]byte("{type: socket, bind_addr: 0.0.0.0, port: 5222, keep_alive: 120}"), &s)
+	require.Nil(t, err)
+
+	require.Equal(t, transport.Socket, s.Type)
+	require.Equal(t, "0.0.0.0", s.BindAddress)
+	require.Equal(t, 5222, s.Port)
+	require.Equal(t, time.Second*time.Duration(120), s.KeepAlive)
+
+	err = yaml.Unmarshal([]byte("{type: websocket, url_path: /xmpp/ws}"), &s)
+	require.Nil(t, err)
+
+	require.Equal(t, transport.WebSocket, s.Type)
+	require.Equal(t, 5222, s.Port)
+	require.Equal(t, time.Second*time.Duration(120), s.KeepAlive)
+}
+
 func TestConfig(t *testing.T) {
+	defer os.RemoveAll("./.cert")
+
 	s := Config{}
 
 	// resource conflict options...
@@ -60,26 +84,6 @@ sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
 
 	// invalid auth mechanism...
 	err = yaml.Unmarshal([]byte("{id: default, type: c2s, sasl: [invalid]}"), &s)
-	require.NotNil(t, err)
-
-	// server modules...
-	modulesCfg := `
-connect_timeout: 5 
-resource_conflict: reject
-modules:
-  enabled: [roster, private, vcard, registration, version, ping, offline]
-`
-	err = yaml.Unmarshal([]byte(modulesCfg), &s)
-	require.Nil(t, err)
-
-	// invalid server module...
-	modulesCfg = `
-connect_timeout: 5 
-resource_conflict: reject
-modules:
-  enabled: [invalid]
-`
-	err = yaml.Unmarshal([]byte(modulesCfg), &s)
 	require.NotNil(t, err)
 
 	// invalid yaml

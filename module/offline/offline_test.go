@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -20,8 +21,8 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	j2, _ := xml.NewJID("juliet", "jackal.im", "garden", true)
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
 	stm.SetDomain("jackal.im")

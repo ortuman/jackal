@@ -9,13 +9,14 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockC2Stream(t *testing.T) {
-	j1, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
-	j2, _ := xml.NewJIDString("romeo@jackal.im/orchard", false)
+	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
+	j2, _ := jid.NewWithString("romeo@jackal.im/orchard", false)
 	id := uuid.New()
 	strm := NewMockC2S(id, j1)
 	require.Equal(t, "ortuman", strm.Username())

@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockStorageInsertOfflineMessage(t *testing.T) {
-	j, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xml.NewElementName("message")
 	message.SetID(uuid.New())
 	message.AppendElement(xml.NewElementName("body"))
@@ -28,7 +29,7 @@ func TestMockStorageInsertOfflineMessage(t *testing.T) {
 }
 
 func TestMockStorageCountOfflineMessages(t *testing.T) {
-	j, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xml.NewElementName("message")
 	message.SetID(uuid.New())
 	message.AppendElement(xml.NewElementName("body"))
@@ -46,7 +47,7 @@ func TestMockStorageCountOfflineMessages(t *testing.T) {
 }
 
 func TestMockStorageFetchOfflineMessages(t *testing.T) {
-	j, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xml.NewElementName("message")
 	message.SetID(uuid.New())
 	message.AppendElement(xml.NewElementName("body"))
@@ -64,7 +65,7 @@ func TestMockStorageFetchOfflineMessages(t *testing.T) {
 }
 
 func TestMockStorageDeleteOfflineMessages(t *testing.T) {
-	j, _ := xml.NewJIDString("ortuman@jackal.im/balcony", false)
+	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xml.NewElementName("message")
 	message.SetID(uuid.New())
 	message.AppendElement(xml.NewElementName("body"))

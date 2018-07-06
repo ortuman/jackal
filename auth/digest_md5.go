@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
 	"github.com/ortuman/jackal/xml"

@@ -10,13 +10,14 @@ import (
 
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0199_Matching(t *testing.T) {
 	t.Parallel()
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	x := New(&Config{}, nil)
 
@@ -33,8 +34,8 @@ func TestXEP0199_Matching(t *testing.T) {
 
 func TestXEP0199_ReceivePing(t *testing.T) {
 	t.Parallel()
-	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
-	j2, _ := xml.NewJID("juliet", "jackal.im", "garden", true)
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
@@ -72,7 +73,7 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 
 func TestXEP0199_SendPing(t *testing.T) {
 	t.Parallel()
-	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
@@ -106,7 +107,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 
 func TestXEP0199_Disconnect(t *testing.T) {
 	t.Parallel()
-	j1, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)

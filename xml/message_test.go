@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMessageBuild(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "example.org", "balcony", false)
+	j, _ := jid.New("ortuman", "example.org", "balcony", false)
 
 	elem := xml.NewElementName("iq")
 	_, err := xml.NewMessageFromElement(elem, j, j) // wrong name...
@@ -38,7 +39,7 @@ func TestMessageBuild(t *testing.T) {
 }
 
 func TestMessageType(t *testing.T) {
-	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &xml.JID{}, &xml.JID{})
+	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &jid.JID{}, &jid.JID{})
 	require.True(t, message.IsNormal())
 
 	message.SetType(xml.NormalType)
@@ -55,9 +56,9 @@ func TestMessageType(t *testing.T) {
 }
 
 func TestMessageJID(t *testing.T) {
-	from, _ := xml.NewJID("ortuman", "test.org", "balcony", false)
-	to, _ := xml.NewJID("ortuman", "example.org", "garden", false)
-	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &xml.JID{}, &xml.JID{})
+	from, _ := jid.New("ortuman", "test.org", "balcony", false)
+	to, _ := jid.New("ortuman", "example.org", "garden", false)
+	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &jid.JID{}, &jid.JID{})
 	message.SetFromJID(from)
 	require.Equal(t, message.FromJID().String(), message.From())
 	message.SetToJID(to)

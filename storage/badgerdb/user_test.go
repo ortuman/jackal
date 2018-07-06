@@ -8,7 +8,7 @@ package badgerdb
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
 	"github.com/stretchr/testify/require"
 )
 

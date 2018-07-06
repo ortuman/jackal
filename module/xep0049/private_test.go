@@ -11,12 +11,13 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0049_Matching(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
@@ -35,7 +36,7 @@ func TestXEP0049_Matching(t *testing.T) {
 }
 
 func TestXEP0049_InvalidIQ(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
@@ -89,7 +90,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	storage.Initialize(&storage.Config{Type: storage.Memory})
 	defer storage.Shutdown()
 
-	j, _ := xml.NewJID("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
 

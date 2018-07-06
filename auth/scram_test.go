@@ -11,6 +11,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"hash"
@@ -18,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/util"
@@ -41,6 +42,7 @@ func (ft *fakeTransport) EnableCompression(compress.Level)        { return }
 func (ft *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte {
 	return ft.cbBytes
 }
+func (ft *fakeTransport) PeerCertificates() []*x509.Certificate { return nil }
 
 type scramAuthTestCase struct {
 	id          int

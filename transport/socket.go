@@ -8,16 +8,20 @@ package transport
 import (
 	"bufio"
 	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"net"
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/ortuman/jackal/transport/compress"
 )
 
 const socketBuffSize = 4096
+
+type tlsStateQueryable interface {
+	ConnectionState() tls.ConnectionState
+}
 
 type socketTransport struct {
 	conn       net.Conn
@@ -41,7 +45,9 @@ func NewSocketTransport(conn net.Conn, keepAlive time.Duration) Transport {
 }
 
 func (s *socketTransport) Read(p []byte) (n int, err error) {
-	s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
+	if s.keepAlive > 0 {
+		s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
+	}
 	return s.br.Read(p)
 }
 
@@ -65,7 +71,7 @@ func (s *socketTransport) WriteString(str string) (int, error) {
 }
 
 func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
-	if _, ok := s.conn.(*tls.Conn); !ok {
+	if _, ok := s.conn.(*net.TCPConn); ok {
 		if asClient {
 			s.conn = tls.Client(s.conn, cfg)
 		} else {
@@ -87,14 +93,22 @@ func (s *socketTransport) EnableCompression(level compress.Level) {
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
-	if tlsConn, ok := s.conn.(*tls.Conn); ok {
+	if conn, ok := s.conn.(tlsStateQueryable); ok {
 		switch mechanism {
 		case TLSUnique:
-			st := tlsConn.ConnectionState()
+			st := conn.ConnectionState()
 			return st.TLSUnique
 		default:
 			break
 		}
+	}
+	return nil
+}
+
+func (s *socketTransport) PeerCertificates() []*x509.Certificate {
+	if conn, ok := s.conn.(tlsStateQueryable); ok {
+		st := conn.ConnectionState()
+		return st.PeerCertificates
 	}
 	return nil
 }

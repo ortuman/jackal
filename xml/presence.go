@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 const (
 	// AvailableType represents an 'available' Presence type.
-	AvailableType = "available"
+	AvailableType = ""
 
 	// UnavailableType represents a 'unavailable' Presence type.
 	UnavailableType = "unavailable"
@@ -29,6 +31,9 @@ const (
 
 	// UnsubscribedType represents a 'unsubscribed' Presence type.
 	UnsubscribedType = "unsubscribed"
+
+	// ProbeType represents a 'probe' Presence type.
+	ProbeType = "probe"
 )
 
 // ShowState represents Presence show state.
@@ -56,14 +61,14 @@ const (
 // stream will automatically be converted to Presence objects.
 type Presence struct {
 	Element
-	to        *JID
-	from      *JID
+	to        *jid.JID
+	from      *jid.JID
 	showState ShowState
 	priority  int8
 }
 
 // NewPresenceFromElement creates a Presence object from XElement.
-func NewPresenceFromElement(e XElement, from *JID, to *JID) (*Presence, error) {
+func NewPresenceFromElement(e XElement, from *jid.JID, to *jid.JID) (*Presence, error) {
 	if e.Name() != "presence" {
 		return nil, fmt.Errorf("wrong Presence element name: %s", e.Name())
 	}
@@ -88,11 +93,12 @@ func NewPresenceFromElement(e XElement, from *JID, to *JID) (*Presence, error) {
 	}
 	p.SetToJID(to)
 	p.SetFromJID(from)
+	p.SetNamespace("")
 	return p, nil
 }
 
 // NewPresence creates and returns a new Presence element.
-func NewPresence(from *JID, to *JID, presenceType string) *Presence {
+func NewPresence(from *jid.JID, to *jid.JID, presenceType string) *Presence {
 	p := &Presence{to: to, from: from}
 	p.SetName("presence")
 	p.SetFrom(from.String())
@@ -103,7 +109,7 @@ func NewPresence(from *JID, to *JID, presenceType string) *Presence {
 
 // IsAvailable returns true if this is an 'available' type Presence.
 func (p *Presence) IsAvailable() bool {
-	return p.Type() == AvailableType || p.Type() == ""
+	return p.Type() == AvailableType
 }
 
 // IsUnavailable returns true if this is an 'unavailable' type Presence.
@@ -131,6 +137,11 @@ func (p *Presence) IsUnsubscribed() bool {
 	return p.Type() == UnsubscribedType
 }
 
+// IsProbe returns true if this is an 'probe' type Presence.
+func (p *Presence) IsProbe() bool {
+	return p.Type() == ProbeType
+}
+
 // Status returns presence stanza default status.
 func (p *Presence) Status() string {
 	if st := p.Elements().Child("status"); st != nil {
@@ -150,30 +161,31 @@ func (p *Presence) Priority() int8 {
 }
 
 // ToJID returns presence 'to' JID value.
-func (p *Presence) ToJID() *JID {
+func (p *Presence) ToJID() *jid.JID {
 	return p.to
 }
 
 // SetToJID sets the presence 'to' JID value.
-func (p *Presence) SetToJID(to *JID) {
+func (p *Presence) SetToJID(to *jid.JID) {
 	p.to = to
 	p.SetAttribute("to", to.String())
 }
 
 // FromJID returns presence 'from' JID value.
-func (p *Presence) FromJID() *JID {
+func (p *Presence) FromJID() *jid.JID {
 	return p.from
 }
 
 // SetFromJID sets the presence 'from' JID value.
-func (p *Presence) SetFromJID(from *JID) {
+func (p *Presence) SetFromJID(from *jid.JID) {
 	p.from = from
 	p.SetAttribute("from", from.String())
 }
 
 func isPresenceType(presenceType string) bool {
 	switch presenceType {
-	case "", ErrorType, AvailableType, UnavailableType, SubscribeType, UnsubscribeType, SubscribedType, UnsubscribedType:
+	case ErrorType, AvailableType, UnavailableType, SubscribeType,
+		UnsubscribeType, SubscribedType, UnsubscribedType, ProbeType:
 		return true
 	default:
 		return false

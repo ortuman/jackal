@@ -7,6 +7,7 @@ package transport
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"io"
 
 	"github.com/ortuman/jackal/transport/compress"
@@ -62,4 +63,8 @@ type Transport interface {
 	// ChannelBindingBytes returns current transport
 	// channel binding bytes.
 	ChannelBindingBytes(ChannelBindingMechanism) []byte
+
+	// PeerCertificates returns the certificate chain
+	// presented by remote peer.
+	PeerCertificates() []*x509.Certificate
 }

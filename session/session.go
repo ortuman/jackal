@@ -6,17 +6,20 @@
 package session
 
 import (
-	"bytes"
 	stdxml "encoding/xml"
 	"fmt"
 	"io"
+	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 )
@@ -26,7 +29,12 @@ const (
 	jabberServerNamespace = "jabber:server"
 	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
 	streamNamespace       = "http://etherx.jabber.org/streams"
+	dialbackNamespace     = "jabber:server:dialback"
 )
+
+type namespaceSettable interface {
+	SetNamespace(string)
+}
 
 // Error represents a session error.
 type Error struct {
@@ -41,7 +49,7 @@ type Error struct {
 // A Config structure is used to configure an XMPP session.
 type Config struct {
 	// JID defines an initial session JID.
-	JID *xml.JID
+	JID *jid.JID
 
 	// Transport provides the underlying session transport
 	// that will be used to send and received elements.
@@ -51,24 +59,36 @@ type Config struct {
 	// can be read from the session transport.
 	MaxStanzaSize int
 
+	// Remote domain represents the remote receiving entity domain name.
+	RemoteDomain string
+
 	// IsServer defines whether or not this session is established
-	// between two servers.
+	// by the server.
 	IsServer bool
+
+	// IsInitiating defines whether or not this is an initiating
+	// entity session.
+	IsInitiating bool
 }
 
 // Session represents an XMPP session between the two peers.
 type Session struct {
-	id       string
-	tr       transport.Transport
-	pr       *xml.Parser
-	isServer bool
-	opened   uint32
-	started  uint32
-	sJID     atomic.Value
+	id           string
+	tr           transport.Transport
+	pr           *xml.Parser
+	remoteDomain string
+	isServer     bool
+	isInitiating bool
+	opened       uint32
+	started      uint32
+
+	mu       sync.RWMutex
+	streamID string
+	sJID     *jid.JID
 }
 
 // New creates a new session instance.
-func New(config *Config) *Session {
+func New(id string, config *Config) *Session {
 	var parsingMode xml.ParsingMode
 	switch config.Transport.Type() {
 	case transport.Socket:
@@ -77,21 +97,42 @@ func New(config *Config) *Session {
 		parsingMode = xml.WebSocketStream
 	}
 	s := &Session{
-		id:       uuid.New(),
-		tr:       config.Transport,
-		pr:       xml.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
-		isServer: config.IsServer,
+		id:           id,
+		tr:           config.Transport,
+		pr:           xml.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
+		remoteDomain: config.RemoteDomain,
+		isServer:     config.IsServer,
+		isInitiating: config.IsInitiating,
+		sJID:         config.JID,
 	}
-	s.sJID.Store(config.JID)
+	if !s.isInitiating {
+		s.streamID = uuid.New()
+	}
 	return s
 }
 
-// UpdateJID updates current session JID.
-func (s *Session) UpdateJID(sessionJID *xml.JID) {
-	s.sJID.Store(sessionJID)
+// StreamID returns session stream identifier.
+func (s *Session) StreamID() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.streamID
 }
 
-// Open opens session sending the proper XMPP payload.
+// SetJID updates current session JID.
+func (s *Session) SetJID(sessionJID *jid.JID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sJID = sessionJID
+}
+
+// SetRemoteDomain sets current session remote domain.
+func (s *Session) SetRemoteDomain(remoteDomain string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.remoteDomain = remoteDomain
+}
+
+// Open initializes a sending the proper XMPP payload.
 func (s *Session) Open() error {
 	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
 		return errors.New("session already opened")
@@ -99,12 +140,15 @@ func (s *Session) Open() error {
 	var ops *xml.Element
 	var includeClosing bool
 
-	buf := &bytes.Buffer{}
+	buf := &strings.Builder{}
 	switch s.tr.Type() {
 	case transport.Socket:
 		ops = xml.NewElementName("stream:stream")
 		ops.SetAttribute("xmlns", s.namespace())
 		ops.SetAttribute("xmlns:stream", streamNamespace)
+		if s.isServer {
+			ops.SetAttribute("xmlns:db", dialbackNamespace)
+		}
 		buf.WriteString(`<?xml version="1.0"?>`)
 
 	case transport.WebSocket:
@@ -115,13 +159,22 @@ func (s *Session) Open() error {
 	default:
 		return nil
 	}
-	ops.SetAttribute("id", s.id)
+	if !s.isInitiating {
+		s.mu.RLock()
+		ops.SetAttribute("id", s.streamID)
+		s.mu.RUnlock()
+	}
 	ops.SetAttribute("from", s.jid().Domain())
+	if s.isInitiating {
+		s.mu.RLock()
+		ops.SetAttribute("to", s.remoteDomain)
+		s.mu.RUnlock()
+	}
 	ops.SetAttribute("version", "1.0")
 	ops.ToXML(buf, includeClosing)
 
 	openStr := buf.String()
-	log.Debugf("SEND: %s", openStr)
+	log.Debugf("SEND(%s): %s", s.id, openStr)
 
 	_, err := io.Copy(s.tr, strings.NewReader(openStr))
 	return err
@@ -144,7 +197,11 @@ func (s *Session) Close() error {
 
 // Send writes an XML element to the underlying session transport.
 func (s *Session) Send(elem xml.XElement) {
-	log.Debugf("SEND: %v", elem)
+	// clear namespace if sending a stanza
+	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
+		e.SetNamespace("")
+	}
+	log.Debugf("SEND(%s): %v", s.id, elem)
 	elem.ToXML(s.tr, true)
 }
 
@@ -154,11 +211,16 @@ func (s *Session) Receive() (xml.XElement, *Error) {
 	if err != nil {
 		return nil, s.mapErrorToSessionError(err)
 	} else if elem != nil {
-		log.Debugf("RECV: %v", elem)
+		log.Debugf("RECV(%s): %v", s.id, elem)
 
 		if atomic.LoadUint32(&s.started) == 0 {
 			if err := s.validateStreamElement(elem); err != nil {
 				return nil, err
+			}
+			if s.isInitiating {
+				s.mu.Lock()
+				s.streamID = elem.ID()
+				s.mu.Unlock()
 			}
 			atomic.StoreUint32(&s.started, 1)
 
@@ -209,23 +271,31 @@ func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, *Error) {
 	return nil, &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 }
 
-func (s *Session) extractAddresses(elem xml.XElement) (*xml.JID, *xml.JID, *Error) {
-	var fromJID, toJID *xml.JID
+func (s *Session) extractAddresses(elem xml.XElement) (*jid.JID, *jid.JID, *Error) {
+	var fromJID, toJID *jid.JID
 	var err error
 
-	// do not validate 'from' address until full user JID has been set
-	if s.jid().IsFullWithUser() {
-		from := elem.From()
-		if len(from) > 0 && !s.isValidFrom(from) {
+	from := elem.From()
+	if !s.isServer {
+		// do not validate 'from' address until full user JID has been set
+		if s.jid().IsFullWithUser() {
+			if len(from) > 0 && !s.isValidFrom(from) {
+				return nil, nil, &Error{UnderlyingErr: streamerror.ErrInvalidFrom}
+			}
+		}
+		fromJID = s.jid()
+	} else {
+		j, err := jid.NewWithString(from, false)
+		if err != nil || j.Domain() != s.remoteDomain {
 			return nil, nil, &Error{UnderlyingErr: streamerror.ErrInvalidFrom}
 		}
+		fromJID = j
 	}
-	fromJID = s.jid()
 
 	// validate 'to' address
 	to := elem.To()
 	if len(to) > 0 {
-		toJID, err = xml.NewJIDString(elem.To(), false)
+		toJID, err = jid.NewWithString(elem.To(), false)
 		if err != nil {
 			return nil, nil, &Error{Element: elem, UnderlyingErr: xml.ErrJidMalformed}
 		}
@@ -237,7 +307,7 @@ func (s *Session) extractAddresses(elem xml.XElement) (*xml.JID, *xml.JID, *Erro
 
 func (s *Session) isValidFrom(from string) bool {
 	validFrom := false
-	j, err := xml.NewJIDString(from, false)
+	j, err := jid.NewWithString(from, false)
 	if err == nil && j != nil {
 		node := j.Node()
 		domain := j.Domain()
@@ -270,7 +340,7 @@ func (s *Session) validateStreamElement(elem xml.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && to != s.jid().Domain() {
+	if len(to) > 0 && !host.IsLocalHost(to) {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {
@@ -294,8 +364,10 @@ func (s *Session) namespace() string {
 	return jabberClientNamespace
 }
 
-func (s *Session) jid() *xml.JID {
-	return s.sJID.Load().(*xml.JID)
+func (s *Session) jid() *jid.JID {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.sJID
 }
 
 func (s *Session) mapErrorToSessionError(err error) *Error {
@@ -310,7 +382,13 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
 
 	default:
-		switch err.(type) {
+		switch e := err.(type) {
+		case net.Error:
+			if e.Timeout() {
+				return &Error{UnderlyingErr: streamerror.ErrConnectionTimeout}
+			} else {
+				return &Error{UnderlyingErr: err}
+			}
 		case *stdxml.SyntaxError:
 			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
 		default:

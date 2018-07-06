@@ -7,13 +7,15 @@ package xep0191
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/pborman/uuid"
 )
 
@@ -116,7 +118,7 @@ func (x *BlockingCommand) block(iq *xml.IQ, block xml.XElement) {
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.Instance().ReloadBlockList(x.stm.Username())
+	router.ReloadBlockList(x.stm.Username())
 
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(block)
@@ -140,7 +142,7 @@ func (x *BlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 	var bl []model.BlockListItem
 	if len(jds) == 0 {
 		for _, blItem := range blItems {
-			j, _ := xml.NewJIDString(blItem.JID, true)
+			j, _ := jid.NewWithString(blItem.JID, true)
 			x.broadcastPresenceMatchingJID(j, ris, xml.AvailableType)
 		}
 		bl = blItems
@@ -158,14 +160,14 @@ func (x *BlockingCommand) unblock(iq *xml.IQ, unblock xml.XElement) {
 		x.stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.Instance().ReloadBlockList(x.stm.Username())
+	router.ReloadBlockList(x.stm.Username())
 
 	x.stm.SendElement(iq.ResultIQ())
 	x.pushIQ(unblock)
 }
 
 func (x *BlockingCommand) pushIQ(elem xml.XElement) {
-	stms := router.Instance().StreamsMatchingJID(x.stm.JID().ToBareJID())
+	stms := router.UserStreams(x.stm.JID().Node())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
 			continue
@@ -176,21 +178,21 @@ func (x *BlockingCommand) pushIQ(elem xml.XElement) {
 	}
 }
 
-func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *xml.JID, ris []model.RosterItem, presenceType string) {
-	stms := router.Instance().StreamsMatchingJID(jid)
-	for _, stm := range stms {
-		if !x.isSubscribedFrom(stm.JID().ToBareJID(), ris) {
+func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *jid.JID, ris []rostermodel.Item, presenceType string) {
+	presences := roster.OnlinePresencesMatchingJID(jid)
+	for _, presence := range presences {
+		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {
 			continue
 		}
-		p := xml.NewPresence(stm.JID(), x.stm.JID().ToBareJID(), presenceType)
-		if presence := stm.Presence(); presence != nil && presenceType == xml.AvailableType {
+		p := xml.NewPresence(presence.FromJID(), x.stm.JID().ToBareJID(), presenceType)
+		if presenceType == xml.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		router.Instance().MustRoute(p)
+		router.MustRoute(p)
 	}
 }
 
-func (x *BlockingCommand) isJIDInBlockList(jid *xml.JID, blItems []model.BlockListItem) bool {
+func (x *BlockingCommand) isJIDInBlockList(jid *jid.JID, blItems []model.BlockListItem) bool {
 	for _, blItem := range blItems {
 		if blItem.JID == jid.String() {
 			return true
@@ -199,17 +201,17 @@ func (x *BlockingCommand) isJIDInBlockList(jid *xml.JID, blItems []model.BlockLi
 	return false
 }
 
-func (x *BlockingCommand) isSubscribedFrom(jid *xml.JID, ris []model.RosterItem) bool {
+func (x *BlockingCommand) isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) bool {
 	str := jid.String()
 	for _, ri := range ris {
-		if ri.JID == str && (ri.Subscription == roster.SubscriptionFrom || ri.Subscription == roster.SubscriptionBoth) {
+		if ri.JID == str && (ri.Subscription == rostermodel.SubscriptionTo || ri.Subscription == rostermodel.SubscriptionBoth) {
 			return true
 		}
 	}
 	return false
 }
 
-func (x *BlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem, []model.RosterItem, error) {
+func (x *BlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem, []rostermodel.Item, error) {
 	blItms, err := storage.Instance().FetchBlockListItems(x.stm.Username())
 	if err != nil {
 		return nil, nil, err
@@ -221,10 +223,10 @@ func (x *BlockingCommand) fetchBlockListAndRosterItems() ([]model.BlockListItem,
 	return blItms, ris, nil
 }
 
-func (x *BlockingCommand) extractItemJIDs(items []xml.XElement) ([]*xml.JID, error) {
-	var ret []*xml.JID
+func (x *BlockingCommand) extractItemJIDs(items []xml.XElement) ([]*jid.JID, error) {
+	var ret []*jid.JID
 	for _, item := range items {
-		j, err := xml.NewJIDString(item.Attributes().Get("jid"), false)
+		j, err := jid.NewWithString(item.Attributes().Get("jid"), false)
 		if err != nil {
 			return nil, err
 		}

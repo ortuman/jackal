@@ -8,6 +8,8 @@ package xml
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 const (
@@ -26,12 +28,12 @@ const (
 // stream will automatically be converted to IQ objects.
 type IQ struct {
 	Element
-	to   *JID
-	from *JID
+	to   *jid.JID
+	from *jid.JID
 }
 
 // NewIQFromElement creates an IQ object from XElement.
-func NewIQFromElement(e XElement, from *JID, to *JID) (*IQ, error) {
+func NewIQFromElement(e XElement, from *jid.JID, to *jid.JID) (*IQ, error) {
 	if e.Name() != "iq" {
 		return nil, fmt.Errorf("wrong IQ element name: %s", e.Name())
 	}
@@ -55,6 +57,7 @@ func NewIQFromElement(e XElement, from *JID, to *JID) (*IQ, error) {
 	iq.copyFrom(e)
 	iq.SetToJID(to)
 	iq.SetFromJID(from)
+	iq.SetNamespace("")
 	return iq, nil
 }
 
@@ -95,23 +98,23 @@ func (iq *IQ) ResultIQ() *IQ {
 }
 
 // ToJID returns iq 'from' JID value.
-func (iq *IQ) ToJID() *JID {
+func (iq *IQ) ToJID() *jid.JID {
 	return iq.to
 }
 
 // SetToJID sets the IQ 'to' JID value.
-func (iq *IQ) SetToJID(to *JID) {
+func (iq *IQ) SetToJID(to *jid.JID) {
 	iq.to = to
 	iq.SetAttribute("to", to.String())
 }
 
 // FromJID returns presence 'from' JID value.
-func (iq *IQ) FromJID() *JID {
+func (iq *IQ) FromJID() *jid.JID {
 	return iq.from
 }
 
 // SetFromJID sets the IQ 'from' JID value.
-func (iq *IQ) SetFromJID(from *JID) {
+func (iq *IQ) SetFromJID(from *jid.JID) {
 	iq.from = from
 	iq.SetAttribute("from", from.String())
 }

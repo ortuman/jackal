@@ -9,6 +9,8 @@ import (
 	"os"
 	"testing"
 
+	"crypto/tls"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,8 +28,8 @@ func TestLoadCertificate(t *testing.T) {
 		require.NotNil(t, tlsCfg)
 	})
 	t.Run("Failed", func(t *testing.T) {
-		tlsCfg, err := LoadCertificate("", "", "jackal.im")
-		require.Nil(t, tlsCfg)
+		cer, err := LoadCertificate("", "", "jackal.im")
+		require.Equal(t, tls.Certificate{}, cer)
 		require.NotNil(t, err)
 		require.Equal(t, "must specify a private key and a server certificate for the domain 'jackal.im'", err.Error())
 	})

@@ -6,7 +6,7 @@
 package util
 
 // SplitKeyAndValue splits a string between 'key' and 'value' sub elements.
-func SplitKeyAndValue(str string, sep byte) (string, string) {
+func SplitKeyAndValue(str string, sep byte) (key string, value string) {
 	j := -1
 	for i := 0; i < len(str); i++ {
 		if str[i] == sep {
@@ -17,7 +17,7 @@ func SplitKeyAndValue(str string, sep byte) (string, string) {
 	if j == -1 {
 		return "", ""
 	}
-	key := str[0:j]
-	val := str[j+1:]
-	return key, val
+	key = str[0:j]
+	value = str[j+1:]
+	return
 }

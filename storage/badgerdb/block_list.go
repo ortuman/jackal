@@ -7,7 +7,7 @@ package badgerdb
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
 )
 
 // InsertBlockListItems inserts a set of block list item entities

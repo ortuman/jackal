@@ -10,23 +10,26 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 const logChanBufferSize = 512
 
+const projectFolder = "jackal"
+
 var exitHandler = func() { os.Exit(-1) }
 
 // singleton interface
 var (
-	inst        *Logger
 	instMu      sync.RWMutex
-	initialized uint32
+	inst        *Logger
+	initialized bool
 )
 
 // Logger object is used to log messages for a specific system or application component.
@@ -36,6 +39,7 @@ type Logger struct {
 	f         *os.File
 	recCh     chan record
 	closeCh   chan bool
+	b         strings.Builder
 }
 
 func newLogger(cfg *Config, outWriter io.Writer) (*Logger, error) {
@@ -62,16 +66,17 @@ func newLogger(cfg *Config, outWriter io.Writer) (*Logger, error) {
 
 // Initialize initializes the default log subsystem.
 func Initialize(cfg *Config) {
-	if atomic.CompareAndSwapUint32(&initialized, 0, 1) {
-		instMu.Lock()
-		defer instMu.Unlock()
-
-		l, err := newLogger(cfg, os.Stdout)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		inst = l
+	instMu.Lock()
+	defer instMu.Unlock()
+	if initialized {
+		return
 	}
+	l, err := newLogger(cfg, os.Stdout)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	inst = l
+	initialized = true
 }
 
 func instance() *Logger {
@@ -83,13 +88,14 @@ func instance() *Logger {
 // Shutdown shuts down log sub system.
 // This method should be used only for testing purposes.
 func Shutdown() {
-	if atomic.CompareAndSwapUint32(&initialized, 1, 0) {
-		instMu.Lock()
-		defer instMu.Unlock()
-
-		inst.closeCh <- true
-		inst = nil
+	instMu.Lock()
+	defer instMu.Unlock()
+	if !initialized {
+		return
 	}
+	inst.closeCh <- true
+	inst = nil
+	initialized = false
 }
 
 // Debugf logs a 'debug' message to the log file
@@ -97,7 +103,7 @@ func Shutdown() {
 func Debugf(format string, args ...interface{}) {
 	if inst := instance(); inst != nil && inst.level <= DebugLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, DebugLevel, true, args...)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, DebugLevel, true, args...)
 	}
 }
 
@@ -106,7 +112,7 @@ func Debugf(format string, args ...interface{}) {
 func Infof(format string, args ...interface{}) {
 	if inst := instance(); inst != nil && inst.level <= InfoLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, InfoLevel, true, args...)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, InfoLevel, true, args...)
 	}
 }
 
@@ -115,7 +121,7 @@ func Infof(format string, args ...interface{}) {
 func Warnf(format string, args ...interface{}) {
 	if inst := instance(); inst != nil && inst.level <= WarningLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, WarningLevel, true, args...)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, WarningLevel, true, args...)
 	}
 }
 
@@ -124,7 +130,7 @@ func Warnf(format string, args ...interface{}) {
 func Errorf(format string, args ...interface{}) {
 	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, ErrorLevel, true, args...)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, ErrorLevel, true, args...)
 	}
 }
 
@@ -133,7 +139,7 @@ func Errorf(format string, args ...interface{}) {
 func Error(err error) {
 	if inst := instance(); inst != nil && inst.level <= ErrorLevel {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, "%v", ErrorLevel, true, err)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, "%v", ErrorLevel, true, err)
 	}
 }
 
@@ -143,26 +149,29 @@ func Error(err error) {
 func Fatalf(format string, args ...interface{}) {
 	if inst := instance(); inst != nil {
 		ci := getCallerInfo()
-		inst.writeLog(ci.filename, ci.line, format, FatalLevel, false, args...)
+		inst.writeLog(ci.pkg, ci.filename, ci.line, format, FatalLevel, false, args...)
 	}
 }
 
 type callerInfo struct {
+	pkg      string
 	filename string
 	line     int
 }
 
 type record struct {
 	level      LogLevel
+	pkg        string
 	file       string
 	line       int
 	log        string
 	continueCh chan struct{}
 }
 
-func (l *Logger) writeLog(file string, line int, format string, level LogLevel, async bool, args ...interface{}) {
+func (l *Logger) writeLog(pkg, file string, line int, format string, level LogLevel, async bool, args ...interface{}) {
 	entry := record{
 		level:      level,
+		pkg:        pkg,
 		file:       file,
 		line:       line,
 		log:        fmt.Sprintf(format, args...),
@@ -182,13 +191,27 @@ func (l *Logger) loop() {
 	for {
 		select {
 		case rec := <-l.recCh:
-			t := time.Now()
-			tm := t.Format("2006-01-02 15:04:05")
+			l.b.Reset()
 
-			glyph := logLevelGlyph(rec.level)
-			abbr := logLevelAbbreviation(rec.level)
-			line := fmt.Sprintf("%s %s [%s] %s:%d - %s\n", tm, glyph, abbr, rec.file, rec.line, rec.log)
+			l.b.WriteString(time.Now().Format("2006-01-02 15:04:05"))
+			l.b.WriteString(" ")
+			l.b.WriteString(logLevelGlyph(rec.level))
+			l.b.WriteString(" [")
+			l.b.WriteString(logLevelAbbreviation(rec.level))
+			l.b.WriteString("] ")
 
+			l.b.WriteString(rec.pkg)
+			if len(rec.pkg) > 0 {
+				l.b.WriteString("/")
+			}
+			l.b.WriteString(rec.file)
+			l.b.WriteString(":")
+			l.b.WriteString(strconv.Itoa(rec.line))
+			l.b.WriteString(" - ")
+			l.b.WriteString(rec.log)
+			l.b.WriteString("\n")
+
+			line := l.b.String()
 			if l.f != nil {
 				l.f.WriteString(line)
 			}
@@ -211,14 +234,20 @@ func (l *Logger) loop() {
 }
 
 func getCallerInfo() callerInfo {
-	_, file, ln, ok := runtime.Caller(2)
-	if !ok {
-		file = "???"
-	}
 	ci := callerInfo{}
-	filename := filepath.Base(file)
-	ci.filename = strings.TrimSuffix(filename, filepath.Ext(filename))
-	ci.line = ln
+	_, file, ln, ok := runtime.Caller(2)
+	if ok {
+		ci.pkg = filepath.Base(path.Dir(file))
+		if ci.pkg == projectFolder {
+			ci.pkg = ""
+		}
+		filename := filepath.Base(file)
+		ci.filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+		ci.line = ln
+	} else {
+		ci.filename = "???"
+		ci.pkg = "???"
+	}
 	return ci
 }
 

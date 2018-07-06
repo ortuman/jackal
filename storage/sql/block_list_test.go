@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model"
 	"github.com/stretchr/testify/require"
 )
 

@@ -25,7 +25,7 @@ func TestElement_NewElement(t *testing.T) {
 
 func TestElement_NewError(t *testing.T) {
 	e1 := NewElementNamespace("n", "ns")
-	e2 := NewErrorElementFromElement(e1, ErrNotAuthorized.(*StanzaError), nil)
+	e2 := NewErrorElementFromElement(e1, ErrNotAuthorized, nil)
 	require.True(t, e2.IsError())
 	require.NotNil(t, e2.Error())
 }

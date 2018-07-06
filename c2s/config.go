@@ -8,18 +8,18 @@ package c2s
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/ortuman/jackal/module/offline"
-	"github.com/ortuman/jackal/module/roster"
-	"github.com/ortuman/jackal/module/xep0077"
-	"github.com/ortuman/jackal/module/xep0092"
-	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 )
 
 const (
-	defaultTransportConnectTimeout = 5
+	defaultTransportConnectTimeout = time.Duration(5) * time.Second
 	defaultTransportMaxStanzaSize  = 32768
+	defaultTransportPort           = 5222
+	defaultTransportKeepAlive      = time.Duration(120) * time.Second
 )
 
 // ResourceConflictPolicy represents a resource conflict policy.
@@ -66,69 +66,82 @@ func (c *CompressConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	return nil
 }
 
-// ModulesConfig represents C2S modules configuration.
-type ModulesConfig struct {
-	Enabled      map[string]struct{}
-	Roster       roster.Config
-	Offline      offline.Config
-	Registration xep0077.Config
-	Version      xep0092.Config
-	Ping         xep0199.Config
+// TransportConfig represents an XMPP stream transport configuration.
+type TransportConfig struct {
+	Type        transport.TransportType
+	BindAddress string
+	Port        int
+	KeepAlive   time.Duration
+	URLPath     string
 }
 
-type modulesConfigProxy struct {
-	Enabled      []string       `yaml:"enabled"`
-	Roster       roster.Config  `yaml:"mod_roster"`
-	Offline      offline.Config `yaml:"mod_offline"`
-	Registration xep0077.Config `yaml:"mod_registration"`
-	Version      xep0092.Config `yaml:"mod_version"`
-	Ping         xep0199.Config `yaml:"mod_ping"`
+type transportProxyType struct {
+	Type        string `yaml:"type"`
+	BindAddress string `yaml:"bind_addr"`
+	Port        int    `yaml:"port"`
+	KeepAlive   int    `yaml:"keep_alive"`
+	URLPath     string `yaml:"url_path"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
-func (cfg *ModulesConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	p := modulesConfigProxy{}
+func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := transportProxyType{}
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
-	// validate modules
-	enabled := make(map[string]struct{}, len(p.Enabled))
-	for _, mod := range p.Enabled {
-		switch mod {
-		case "roster", "last_activity", "private", "vcard", "registration", "version", "blocking_command",
-			"ping", "offline":
-			break
-		default:
-			return fmt.Errorf("c2s.ModulesConfig: unrecognized module: %s", mod)
-		}
-		enabled[mod] = struct{}{}
+	// validate transport type
+	switch p.Type {
+	case "", "socket":
+		t.Type = transport.Socket
+
+	case "websocket":
+		t.Type = transport.WebSocket
+
+	default:
+		return fmt.Errorf("c2s.TransportConfig: unrecognized transport type: %s", p.Type)
 	}
-	cfg.Enabled = enabled
-	cfg.Roster = p.Roster
-	cfg.Offline = p.Offline
-	cfg.Registration = p.Registration
-	cfg.Version = p.Version
-	cfg.Ping = p.Ping
+	t.BindAddress = p.BindAddress
+	t.Port = p.Port
+	t.URLPath = p.URLPath
+
+	// assign transport's defaults
+	if t.Port == 0 {
+		t.Port = defaultTransportPort
+	}
+	t.KeepAlive = time.Duration(p.KeepAlive) * time.Second
+	if t.KeepAlive == 0 {
+		t.KeepAlive = defaultTransportKeepAlive
+	}
 	return nil
 }
 
-// Config represents C2S Stream configuration.
+// TLSConfig represents a server TLS configuration.
+type TLSConfig struct {
+	CertFile    string `yaml:"cert_path"`
+	PrivKeyFile string `yaml:"privkey_path"`
+}
+
+// Config represents C2S server configuration.
 type Config struct {
-	ConnectTimeout   int
+	ID               string
+	ConnectTimeout   time.Duration
 	MaxStanzaSize    int
 	ResourceConflict ResourceConflictPolicy
+	Transport        TransportConfig
 	SASL             []string
 	Compression      CompressConfig
-	Modules          ModulesConfig
 }
 
 type configProxy struct {
-	ConnectTimeout   int            `yaml:"connect_timeout"`
-	MaxStanzaSize    int            `yaml:"max_stanza_size"`
-	ResourceConflict string         `yaml:"resource_conflict"`
-	SASL             []string       `yaml:"sasl"`
-	Compression      CompressConfig `yaml:"compression"`
-	Modules          ModulesConfig  `yaml:"modules"`
+	ID               string          `yaml:"id"`
+	Domain           string          `yaml:"domain"`
+	TLS              TLSConfig       `yaml:"tls"`
+	ConnectTimeout   int             `yaml:"connect_timeout"`
+	MaxStanzaSize    int             `yaml:"max_stanza_size"`
+	ResourceConflict string          `yaml:"resource_conflict"`
+	Transport        TransportConfig `yaml:"transport"`
+	SASL             []string        `yaml:"sasl"`
+	Compression      CompressConfig  `yaml:"compression"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -137,6 +150,16 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
+	cfg.ID = p.ID
+	cfg.ConnectTimeout = time.Duration(p.ConnectTimeout) * time.Second
+	if cfg.ConnectTimeout == 0 {
+		cfg.ConnectTimeout = defaultTransportConnectTimeout
+	}
+	cfg.MaxStanzaSize = p.MaxStanzaSize
+	if cfg.MaxStanzaSize == 0 {
+		cfg.MaxStanzaSize = defaultTransportMaxStanzaSize
+	}
+
 	// validate resource conflict policy type
 	rc := strings.ToLower(p.ResourceConflict)
 	switch rc {
@@ -158,16 +181,18 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return fmt.Errorf("c2s.Config: unrecognized SASL mechanism: %s", sasl)
 		}
 	}
-	cfg.ConnectTimeout = p.ConnectTimeout
-	if cfg.ConnectTimeout == 0 {
-		cfg.ConnectTimeout = defaultTransportConnectTimeout
-	}
-	cfg.MaxStanzaSize = p.MaxStanzaSize
-	if cfg.MaxStanzaSize == 0 {
-		cfg.MaxStanzaSize = defaultTransportMaxStanzaSize
-	}
+	cfg.Transport = p.Transport
 	cfg.SASL = p.SASL
 	cfg.Compression = p.Compression
-	cfg.Modules = p.Modules
 	return nil
+}
+
+type streamConfig struct {
+	transport        transport.Transport
+	connectTimeout   time.Duration
+	maxStanzaSize    int
+	resourceConflict ResourceConflictPolicy
+	sasl             []string
+	compression      CompressConfig
+	modules          *module.Config
 }

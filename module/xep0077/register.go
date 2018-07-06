@@ -7,11 +7,12 @@ package xep0077
 
 import (
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/model"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 const registerNamespace = "jabber:iq:register"
@@ -193,9 +194,9 @@ func (x *Register) changePassword(password string, username string, iq *xml.IQ) 
 	x.stm.SendElement(iq.ResultIQ())
 }
 
-func (x *Register) isValidToJid(jid *xml.JID) bool {
+func (x *Register) isValidToJid(j *jid.JID) bool {
 	if x.stm.IsAuthenticated() {
-		return jid.IsServer()
+		return j.IsServer()
 	}
-	return jid.IsServer() || (jid.IsBare() && jid.Node() == x.stm.Username())
+	return j.IsServer() || (j.IsBare() && j.Node() == x.stm.Username())
 }

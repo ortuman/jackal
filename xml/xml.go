@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 var bufPool = pool.NewBufferPool()
@@ -48,6 +49,6 @@ type XElement interface {
 // Stanza represents an XML stanza.
 type Stanza interface {
 	XElement
-	FromJID() *JID
-	ToJID() *JID
+	FromJID() *jid.JID
+	ToJID() *jid.JID
 }

@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/storage/model"
+	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVersion, error) {
+func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
@@ -38,13 +39,13 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *model.RosterItem) (model.RosterVe
 		return err
 	})
 	if err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	return s.fetchRosterVer(ri.Username)
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
-func (s *Storage) DeleteRosterItem(username, jid string) (model.RosterVersion, error) {
+func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
@@ -60,14 +61,14 @@ func (s *Storage) DeleteRosterItem(username, jid string) (model.RosterVersion, e
 		return err
 	})
 	if err != nil {
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 	return s.fetchRosterVer(username)
 }
 
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
-func (s *Storage) FetchRosterItems(username string) ([]model.RosterItem, model.RosterVersion, error) {
+func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.Eq{"username": username}).
@@ -75,28 +76,28 @@ func (s *Storage) FetchRosterItems(username string) ([]model.RosterItem, model.R
 
 	rows, err := q.RunWith(s.db).Query()
 	if err != nil {
-		return nil, model.RosterVersion{}, err
+		return nil, rostermodel.Version{}, err
 	}
 	defer rows.Close()
 
 	items, err := s.scanRosterItemEntities(rows)
 	if err != nil {
-		return nil, model.RosterVersion{}, err
+		return nil, rostermodel.Version{}, err
 	}
 	ver, err := s.fetchRosterVer(username)
 	if err != nil {
-		return nil, model.RosterVersion{}, err
+		return nil, rostermodel.Version{}, err
 	}
 	return items, ver, nil
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
-func (s *Storage) FetchRosterItem(username, jid string) (*model.RosterItem, error) {
+func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}})
 
-	var ri model.RosterItem
+	var ri rostermodel.Item
 	err := s.scanRosterItemEntity(&ri, q.RunWith(s.db).QueryRow())
 	switch err {
 	case nil:
@@ -110,32 +111,19 @@ func (s *Storage) FetchRosterItem(username, jid string) (*model.RosterItem, erro
 
 // InsertOrUpdateRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterNotification(rn *model.RosterNotification) error {
-	buf := s.pool.Get()
-	defer s.pool.Put(buf)
-	for _, elem := range rn.Elements {
-		buf.WriteString(elem.String())
-	}
-	elementsXML := buf.String()
-
+func (s *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
+	presenceXML := rn.Presence.String()
 	q := sq.Insert("roster_notifications").
 		Columns("contact", "jid", "elements", "updated_at", "created_at").
-		Values(rn.Contact, rn.JID, elementsXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", elementsXML)
-	_, err := q.RunWith(s.db).Exec()
-	return err
-}
-
-// DeleteRosterNotification deletes a roster notification entity from storage.
-func (s *Storage) DeleteRosterNotification(contact, jid string) error {
-	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
+		Values(rn.Contact, rn.JID, presenceXML, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", presenceXML)
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
 
 // FetchRosterNotifications retrieves from storage all roster notifications
 // associated to a given user.
-func (s *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotification, error) {
+func (s *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
 	q := sq.Select("contact", "jid", "elements").
 		From("roster_notifications").
 		Where(sq.Eq{"contact": contact}).
@@ -147,48 +135,74 @@ func (s *Storage) FetchRosterNotifications(contact string) ([]model.RosterNotifi
 	}
 	defer rows.Close()
 
-	buf := s.pool.Get()
-	defer s.pool.Put(buf)
-
-	var ret []model.RosterNotification
+	var ret []rostermodel.Notification
 	for rows.Next() {
-		var rn model.RosterNotification
-		var notificationXML string
-		rows.Scan(&rn.Contact, &rn.JID, &notificationXML)
-		buf.Reset()
-		buf.WriteString("<root>")
-		buf.WriteString(notificationXML)
-		buf.WriteString("</root>")
-
-		parser := xml.NewParser(buf, xml.DefaultMode, 0)
-		root, err := parser.ParseElement()
-		if err != nil {
+		var rn rostermodel.Notification
+		if err := s.scanRosterNotificationEntity(&rn, rows); err != nil {
 			return nil, err
 		}
-		rn.Elements = root.Elements().All()
-
 		ret = append(ret, rn)
 	}
 	return ret, nil
 }
 
-func (s *Storage) fetchRosterVer(username string) (model.RosterVersion, error) {
+// FetchRosterNotification retrieves from storage a roster notification entity.
+func (s *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+	q := sq.Select("contact", "jid", "elements").
+		From("roster_notifications").
+		Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
+
+	var rn rostermodel.Notification
+	err := s.scanRosterNotificationEntity(&rn, q.RunWith(s.db).QueryRow())
+	switch err {
+	case nil:
+		return &rn, nil
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
+// DeleteRosterNotification deletes a roster notification entity from storage.
+func (s *Storage) DeleteRosterNotification(contact, jid string) error {
+	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
+	_, err := q.RunWith(s.db).Exec()
+	return err
+}
+
+func (s *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
 	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
 		From("roster_versions").
 		Where(sq.Eq{"username": username})
 
-	var ver model.RosterVersion
+	var ver rostermodel.Version
 	row := q.RunWith(s.db).QueryRow()
 	err := row.Scan(&ver.Ver, &ver.DeletionVer)
 	switch err {
 	case nil:
 		return ver, nil
 	default:
-		return model.RosterVersion{}, err
+		return rostermodel.Version{}, err
 	}
 }
 
-func (s *Storage) scanRosterItemEntity(ri *model.RosterItem, scanner rowScanner) error {
+func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {
+	var presenceXML string
+	scanner.Scan(&rn.Contact, &rn.JID, &presenceXML)
+
+	parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
+	elem, err := parser.ParseElement()
+	if err != nil {
+		return err
+	}
+	fromJID, _ := jid.NewWithString(elem.From(), true)
+	toJID, _ := jid.NewWithString(elem.To(), true)
+	rn.Presence, _ = xml.NewPresenceFromElement(elem, fromJID, toJID)
+	return nil
+}
+
+func (s *Storage) scanRosterItemEntity(ri *rostermodel.Item, scanner rowScanner) error {
 	var groups string
 	if err := scanner.Scan(&ri.Username, &ri.JID, &ri.Name, &ri.Subscription, &groups, &ri.Ask, &ri.Ver); err != nil {
 		return err
@@ -197,10 +211,10 @@ func (s *Storage) scanRosterItemEntity(ri *model.RosterItem, scanner rowScanner)
 	return nil
 }
 
-func (s *Storage) scanRosterItemEntities(scanner rowsScanner) ([]model.RosterItem, error) {
-	var ret []model.RosterItem
+func (s *Storage) scanRosterItemEntities(scanner rowsScanner) ([]rostermodel.Item, error) {
+	var ret []rostermodel.Item
 	for scanner.Next() {
-		var ri model.RosterItem
+		var ri rostermodel.Item
 		if err := s.scanRosterItemEntity(&ri, scanner); err != nil {
 			return nil, err
 		}

@@ -43,6 +43,12 @@ func TestParser_FailedDocParse(t *testing.T) {
 	element, err := p.ParseElement()
 	require.Equal(t, io.EOF, err)
 	require.Nil(t, element)
+
+	docSrc3 := `</auth>\n`
+	p = xml.NewParser(strings.NewReader(docSrc3), xml.DefaultMode, 0)
+	element, err = p.ParseElement()
+	require.NotNil(t, err)
+	require.Nil(t, element)
 }
 
 func TestParser_Close(t *testing.T) {

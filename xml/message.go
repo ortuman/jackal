@@ -7,6 +7,8 @@ package xml
 
 import (
 	"fmt"
+
+	"github.com/ortuman/jackal/xml/jid"
 )
 
 const (
@@ -28,12 +30,12 @@ const (
 // stream will automatically be converted to Message objects.
 type Message struct {
 	Element
-	to   *JID
-	from *JID
+	to   *jid.JID
+	from *jid.JID
 }
 
 // NewMessageFromElement creates a Message object from XElement.
-func NewMessageFromElement(e XElement, from *JID, to *JID) (*Message, error) {
+func NewMessageFromElement(e XElement, from *jid.JID, to *jid.JID) (*Message, error) {
 	if e.Name() != "message" {
 		return nil, fmt.Errorf("wrong Message element name: %s", e.Name())
 	}
@@ -45,6 +47,7 @@ func NewMessageFromElement(e XElement, from *JID, to *JID) (*Message, error) {
 	m.copyFrom(e)
 	m.SetToJID(to)
 	m.SetFromJID(from)
+	m.SetNamespace("")
 	return m, nil
 }
 
@@ -84,23 +87,23 @@ func (m *Message) IsMessageWithBody() bool {
 }
 
 // ToJID returns message 'to' JID value.
-func (m *Message) ToJID() *JID {
+func (m *Message) ToJID() *jid.JID {
 	return m.to
 }
 
 // SetToJID sets the message 'to' JID value.
-func (m *Message) SetToJID(to *JID) {
+func (m *Message) SetToJID(to *jid.JID) {
 	m.to = to
 	m.SetAttribute("to", to.String())
 }
 
 // FromJID returns message 'from' JID value.
-func (m *Message) FromJID() *JID {
+func (m *Message) FromJID() *jid.JID {
 	return m.from
 }
 
 // SetFromJID sets the message 'from' JID value.
-func (m *Message) SetFromJID(from *JID) {
+func (m *Message) SetFromJID(from *jid.JID) {
 	m.from = from
 	m.SetAttribute("from", from.String())
 }

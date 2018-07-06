@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xml/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPresenceBuild(t *testing.T) {
-	j, _ := xml.NewJID("ortuman", "example.org", "balcony", false)
+	j, _ := jid.New("ortuman", "example.org", "balcony", false)
 
 	elem := xml.NewElementName("message")
 	_, err := xml.NewPresenceFromElement(elem, j, j) // wrong name...
@@ -119,7 +120,7 @@ func TestPresenceBuild(t *testing.T) {
 }
 
 func TestPresenceType(t *testing.T) {
-	presence := xml.NewPresence(&xml.JID{}, &xml.JID{}, "")
+	presence := xml.NewPresence(&jid.JID{}, &jid.JID{}, "")
 	require.True(t, presence.IsAvailable())
 
 	presence.SetType(xml.AvailableType)
@@ -142,9 +143,9 @@ func TestPresenceType(t *testing.T) {
 }
 
 func TestPresenceJID(t *testing.T) {
-	from, _ := xml.NewJID("ortuman", "test.org", "balcony", false)
-	to, _ := xml.NewJID("ortuman", "example.org", "garden", false)
-	presence, _ := xml.NewPresenceFromElement(xml.NewElementName("presence"), &xml.JID{}, &xml.JID{})
+	from, _ := jid.New("ortuman", "test.org", "balcony", false)
+	to, _ := jid.New("ortuman", "example.org", "garden", false)
+	presence, _ := xml.NewPresenceFromElement(xml.NewElementName("presence"), &jid.JID{}, &jid.JID{})
 	presence.SetFromJID(from)
 	require.Equal(t, presence.FromJID().String(), presence.From())
 	presence.SetToJID(to)

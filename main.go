@@ -8,13 +8,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
+	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/server"
+	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 )
@@ -68,24 +72,24 @@ func main() {
 		fmt.Fprintf(os.Stdout, "jackal version: %v\n", version.ApplicationVersion)
 		return
 	}
-
 	// load configuration
 	var cfg Config
 	if err := cfg.FromFile(configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		return
 	}
-	if len(cfg.Servers) == 0 {
-		fmt.Fprint(os.Stderr, "jackal: couldn't find a server configuration\n")
+	if len(cfg.VirtualHosts) == 0 {
+		fmt.Fprint(os.Stderr, "jackal: at least one virtual host configuration is required\n")
 		return
 	}
-
 	// initialize subsystems
 	log.Initialize(&cfg.Logger)
 
-	router.Initialize(&cfg.Router, nil)
-
 	storage.Initialize(&cfg.Storage)
+
+	host.Initialize(cfg.Hosts)
+
+	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {
@@ -98,7 +102,25 @@ func main() {
 	log.Infof("")
 	log.Infof("jackal %v\n", version.ApplicationVersion)
 
-	server.Initialize(cfg.Servers, cfg.Debug.Port)
+	if cfg.Debug.Port > 0 {
+		go initDebugServer(cfg.Debug.Port)
+	}
+	// start serving s2s...
+	s2s.Initialize(&cfg.S2S, &cfg.Modules)
+
+	// start serving c2s...
+	c2s.Initialize(cfg.VirtualHosts, &cfg.Modules)
+}
+
+var debugSrv *http.Server
+
+func initDebugServer(port int) {
+	debugSrv = &http.Server{}
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	debugSrv.Serve(ln)
 }
 
 func createPIDFile(pidFile string) error {
