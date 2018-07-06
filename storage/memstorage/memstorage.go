@@ -33,7 +33,7 @@ type Storage struct {
 	blockListItems      map[string][]model.BlockListItem
 }
 
-// NewItem returns a new in memory storage instance.
+// New returns a new in memory storage instance.
 func New() *Storage {
 	return &Storage{
 		users:               make(map[string]*model.User),

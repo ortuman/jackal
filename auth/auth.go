@@ -42,10 +42,12 @@ func newSASLError(reason string) error {
 	return &SASLError{reason}
 }
 
+// Element returs sasl error XML representation.
 func (se *SASLError) Element() xml.XElement {
 	return xml.NewElementName(se.reason)
 }
 
+// Error satisfies error interface.
 func (se *SASLError) Error() string {
 	return se.reason
 }

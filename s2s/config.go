@@ -23,6 +23,7 @@ const (
 	defaultMaxStanzaSize      = 131072
 )
 
+// TransportConfig represents s2s transport configuration.
 type TransportConfig struct {
 	BindAddress string
 	Port        int
@@ -60,6 +61,7 @@ type TLSConfig struct {
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
+// Config represents an s2s configuration.
 type Config struct {
 	Enabled        bool
 	DialTimeout    time.Duration

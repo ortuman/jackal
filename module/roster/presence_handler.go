@@ -19,6 +19,7 @@ import (
 
 var onlineJIDs sync.Map
 
+// OnlinePresencesMatchingJID returns current online presences matching a given JID.
 func OnlinePresencesMatchingJID(j *jid.JID) []*xml.Presence {
 	var ret []*xml.Presence
 	onlineJIDs.Range(func(_, value interface{}) bool {
@@ -44,14 +45,17 @@ func onlineJIDMatchesJID(onlineJID, j *jid.JID) bool {
 	return onlineJID.Matches(j, jid.MatchesDomain)
 }
 
+// PresenceHandler represents a roster presence handler.
 type PresenceHandler struct {
 	cfg *Config
 }
 
+// NewPresenceHandler returns a new presence handler instance.
 func NewPresenceHandler(cfg *Config) *PresenceHandler {
 	return &PresenceHandler{cfg: cfg}
 }
 
+// ProcessPresence processes an incoming presence stanza.
 func (ph *PresenceHandler) ProcessPresence(presence *xml.Presence) error {
 	switch presence.Type() {
 	case xml.SubscribeType:
