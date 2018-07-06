@@ -34,6 +34,7 @@ type Item struct {
 	Groups       []string
 }
 
+// NewItem parses an XML element returning a derived roster item instance.
 func NewItem(elem xml.XElement) (*Item, error) {
 	if elem.Name() != "item" {
 		return nil, fmt.Errorf("invalid item element name: %s", elem.Name())
@@ -79,6 +80,7 @@ func NewItem(elem xml.XElement) (*Item, error) {
 	return ri, nil
 }
 
+// Element returns a roster item XML element representation.
 func (ri *Item) Element() xml.XElement {
 	riJID := ri.ContactJID()
 	item := xml.NewElementName("item")
@@ -100,6 +102,7 @@ func (ri *Item) Element() xml.XElement {
 	return item
 }
 
+// ContactJID parses and returns roster item contact JID.
 func (ri *Item) ContactJID() *jid.JID {
 	j, _ := jid.NewWithString(ri.JID, true)
 	return j

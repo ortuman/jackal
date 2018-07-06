@@ -13,16 +13,21 @@ import (
 	"github.com/ortuman/jackal/xml/jid"
 )
 
-// Stream represents a generic XMPP stream.
-type Stream interface {
+// InStream represents a generic incoming stream.
+type InStream interface {
 	ID() string
-	SendElement(elem xml.XElement)
 	Disconnect(err error)
+}
+
+// InOutStream represents a generic incoming/outgoing stream.
+type InOutStream interface {
+	InStream
+	SendElement(elem xml.XElement)
 }
 
 // C2S represents a client-to-server XMPP stream.
 type C2S interface {
-	Stream
+	InOutStream
 
 	Context() Context
 
@@ -41,12 +46,12 @@ type C2S interface {
 
 // S2S represents an incoming server-to-server XMPP stream.
 type S2SIn interface {
-	Stream
+	InStream
 }
 
 // S2S represents an outgoing server-to-server XMPP stream.
 type S2SOut interface {
-	Stream
+	InOutStream
 }
 
 // MockC2S represents a mocked c2s stream.

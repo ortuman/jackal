@@ -17,6 +17,7 @@ type TLSConfig struct {
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
+// Config represents a host configuration.
 type Config struct {
 	Name        string
 	Certificate tls.Certificate

@@ -21,6 +21,7 @@ var (
 	initialized bool
 )
 
+// Initialize initializes host manager sub system.
 func Initialize(configurations []Config) {
 	instMu.Lock()
 	defer instMu.Unlock()
@@ -41,6 +42,7 @@ func Initialize(configurations []Config) {
 	initialized = true
 }
 
+// Shutdown shuts down host sub system.
 func Shutdown() {
 	instMu.Lock()
 	defer instMu.Unlock()
@@ -58,6 +60,7 @@ func IsLocalHost(domain string) bool {
 	return ok
 }
 
+// Certificates returns an array of all configured domain certificates.
 func Certificates() []tls.Certificate {
 	instMu.RLock()
 	defer instMu.RUnlock()

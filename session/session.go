@@ -386,9 +386,9 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 		case net.Error:
 			if e.Timeout() {
 				return &Error{UnderlyingErr: streamerror.ErrConnectionTimeout}
-			} else {
-				return &Error{UnderlyingErr: err}
 			}
+			return &Error{UnderlyingErr: err}
+
 		case *stdxml.SyntaxError:
 			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
 		default:
