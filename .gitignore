@@ -17,9 +17,6 @@ debug
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
-# Dep folder
-vendor/
-
 # PID files
 *.pid
 
