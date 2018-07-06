@@ -44,12 +44,12 @@ type C2S interface {
 	Presence() *xml.Presence
 }
 
-// S2S represents an incoming server-to-server XMPP stream.
+// S2SIn represents an incoming server-to-server XMPP stream.
 type S2SIn interface {
 	InStream
 }
 
-// S2S represents an outgoing server-to-server XMPP stream.
+// S2SOut represents an outgoing server-to-server XMPP stream.
 type S2SOut interface {
 	InOutStream
 }

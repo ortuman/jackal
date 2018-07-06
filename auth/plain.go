@@ -14,32 +14,41 @@ import (
 	"github.com/ortuman/jackal/xml"
 )
 
+// Plain represents a PLAIN authenticator.
 type Plain struct {
 	stm           stream.C2S
 	username      string
 	authenticated bool
 }
 
+// NewPlain returns a new plain authenticator instance.
 func NewPlain(stm stream.C2S) *Plain {
 	return &Plain{stm: stm}
 }
 
+// Mechanism returns authenticator mechanism name.
 func (p *Plain) Mechanism() string {
 	return "PLAIN"
 }
 
+// Username returns authenticated username in case
+// authentication process has been completed.
 func (p *Plain) Username() string {
 	return p.username
 }
 
+// Authenticated returns whether or not user has been authenticated.
 func (p *Plain) Authenticated() bool {
 	return p.authenticated
 }
 
+// UsesChannelBinding returns whether or not plain authenticator
+// requires channel binding bytes.
 func (p *Plain) UsesChannelBinding() bool {
 	return false
 }
 
+// ProcessElement process an incoming authenticator element.
 func (p *Plain) ProcessElement(elem xml.XElement) error {
 	if p.authenticated {
 		return nil
@@ -73,6 +82,7 @@ func (p *Plain) ProcessElement(elem xml.XElement) error {
 	return nil
 }
 
+// Reset resets plain authenticator internal state.
 func (p *Plain) Reset() {
 	p.username = ""
 	p.authenticated = false

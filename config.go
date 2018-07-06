@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// DebugConfig represents debug server configuration.
 type DebugConfig struct {
 	Port int `yaml:"port"`
 }

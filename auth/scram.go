@@ -25,10 +25,15 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+
+// ScramType represents a scram autheticator class
 type ScramType int
 
 const (
+	// ScramSHA256 represents SCRAM-SHA1 authentication method.
 	ScramSHA1 ScramType = iota
+
+	// ScramSHA256 represents SCRAM-SHA256 authentication method.
 	ScramSHA256
 )
 
@@ -73,6 +78,7 @@ func (s *scramParameters) String() string {
 	return ret
 }
 
+// Scram represents a SCRAM authenticator.
 type Scram struct {
 	stm           stream.C2S
 	tr            transport.Transport
@@ -89,6 +95,7 @@ type Scram struct {
 	authenticated bool
 }
 
+// NewScram returns a new scram authenticator instance.
 func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
 	s := &Scram{
 		stm:    stm,
@@ -107,6 +114,7 @@ func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesC
 	return s
 }
 
+// Mechanism returns authenticator mechanism name.
 func (s *Scram) Mechanism() string {
 	switch s.tp {
 	case ScramSHA1:
@@ -124,6 +132,8 @@ func (s *Scram) Mechanism() string {
 	return ""
 }
 
+// Username returns authenticated username in case
+// authentication process has been completed.
 func (s *Scram) Username() string {
 	if s.authenticated {
 		return s.user.Username
@@ -131,14 +141,18 @@ func (s *Scram) Username() string {
 	return ""
 }
 
+// Authenticated returns whether or not user has been authenticated.
 func (s *Scram) Authenticated() bool {
 	return s.authenticated
 }
 
+// UsesChannelBinding returns whether or not scram authenticator
+// requires channel binding bytes.
 func (s *Scram) UsesChannelBinding() bool {
 	return s.usesCb
 }
 
+// ProcessElement process an incoming authenticator element.
 func (s *Scram) ProcessElement(elem xml.XElement) error {
 	if s.Authenticated() {
 		return nil
@@ -156,6 +170,7 @@ func (s *Scram) ProcessElement(elem xml.XElement) error {
 	return ErrSASLNotAuthorized
 }
 
+// Reset resets scram internal state.
 func (s *Scram) Reset() {
 	s.authenticated = false
 

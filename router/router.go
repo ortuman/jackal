@@ -39,7 +39,10 @@ var (
 	ErrFailedRemoteConnect = errors.New("router: failed remote connection")
 )
 
+// Config represents router configuration.
 type Config struct {
+
+	// GetS2SOut if set, acts as an s2s outgoing stream provider.
 	GetS2SOut func(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 

@@ -31,7 +31,8 @@ var (
 	initialized bool
 )
 
-// Initialize spawns a connection listener for every server configuration.
+// Initialize initializes c2s sub system spawning a connection listener
+// for every server configuration.
 func Initialize(srvConfigurations []Config, modConfig *module.Config) {
 	mu.Lock()
 	if initialized {

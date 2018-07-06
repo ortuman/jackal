@@ -75,6 +75,7 @@ func (r *digestMD5Parameters) setParameter(p string) {
 	}
 }
 
+// DigestMD5 represents a DIGEST-MD5 authenticator.
 type DigestMD5 struct {
 	stm           stream.C2S
 	state         digestMD5State
@@ -82,6 +83,7 @@ type DigestMD5 struct {
 	authenticated bool
 }
 
+// NewDigestMD5 returns a new digest-md5 authenticator instance.
 func NewDigestMD5(stm stream.C2S) *DigestMD5 {
 	return &DigestMD5{
 		stm:   stm,
@@ -89,22 +91,29 @@ func NewDigestMD5(stm stream.C2S) *DigestMD5 {
 	}
 }
 
+// Mechanism returns authenticator mechanism name.
 func (d *DigestMD5) Mechanism() string {
 	return "DIGEST-MD5"
 }
 
+// Username returns authenticated username in case
+// authentication process has been completed.
 func (d *DigestMD5) Username() string {
 	return d.username
 }
 
+// Authenticated returns whether or not user has been authenticated.
 func (d *DigestMD5) Authenticated() bool {
 	return d.authenticated
 }
 
+// UsesChannelBinding returns whether or not digest-md5 authenticator
+// requires channel binding bytes.
 func (d *DigestMD5) UsesChannelBinding() bool {
 	return false
 }
 
+// ProcessElement process an incoming authenticator element.
 func (d *DigestMD5) ProcessElement(elem xml.XElement) error {
 	if d.Authenticated() {
 		return nil
@@ -126,6 +135,7 @@ func (d *DigestMD5) ProcessElement(elem xml.XElement) error {
 	return ErrSASLNotAuthorized
 }
 
+// Reset resets digest-md5 authenticator internal state.
 func (d *DigestMD5) Reset() {
 	d.state = startDigestMD5State
 	d.username = ""

@@ -29,6 +29,7 @@ var (
 	initialized   bool
 )
 
+// Initialize initializes s2s sub system.
 func Initialize(cfg *Config, modConfig *module.Config) {
 	instMu.Lock()
 	defer instMu.Unlock()
@@ -44,6 +45,8 @@ func Initialize(cfg *Config, modConfig *module.Config) {
 	initialized = true
 }
 
+// Shutdown closes every server listener.
+// This method should be used only for testing purposes.
 func Shutdown() {
 	instMu.Lock()
 	defer instMu.Unlock()
@@ -54,6 +57,7 @@ func Shutdown() {
 	}
 }
 
+// GetS2SOut returns an outgoing s2s stream given a domain pair.
 func GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
 	instMu.RLock()
 	if !initialized {
