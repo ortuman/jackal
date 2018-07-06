@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added S2S support.
 
 ### Removed
-- Removed CGO dependency... thanks Sam Whited! ;)
+- Removed CGO dependency... thanks Sam Whited! 😉
 
 ### Fixed
 - crash: invalid XML parsing.
