@@ -46,8 +46,11 @@ type Options struct {
 	// How should LSM tree be accessed.
 	TableLoadingMode options.FileLoadingMode
 
-	// How should value log be accessed
+	// How should value log be accessed.
 	ValueLogLoadingMode options.FileLoadingMode
+
+	// How many versions to keep per key.
+	NumVersionsToKeep int
 
 	// 3. Flags that user might want to review
 	// ----------------------------------------
@@ -72,6 +75,10 @@ type Options struct {
 
 	// Size of single value log file.
 	ValueLogFileSize int64
+
+	// Max number of entries a value log file can hold (approximately). A value log file would be
+	// determined by the smaller of its file size and max entries.
+	ValueLogMaxEntries uint32
 
 	// Number of compaction workers to run concurrently.
 	NumCompactors int
@@ -114,11 +121,13 @@ var DefaultOptions = Options{
 	NumLevelZeroTablesStall: 10,
 	NumMemtables:            5,
 	SyncWrites:              true,
+	NumVersionsToKeep:       1,
 	// Nothing to read/write value log using standard File I/O
 	// MemoryMap to mmap() the value log files
-	ValueLogFileSize: 1 << 30,
-	ValueThreshold:   20,
-	Truncate:         false,
+	ValueLogFileSize:   1 << 30,
+	ValueLogMaxEntries: 1000000,
+	ValueThreshold:     32,
+	Truncate:           false,
 }
 
 // LSMOnlyOptions follows from DefaultOptions, but sets a higher ValueThreshold so values would

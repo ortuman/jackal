@@ -281,6 +281,17 @@ func (s *levelsController) compactBuildTables(
 		cd.elog.LazyPrintf("Key range overlaps with lower levels: %v", hasOverlap)
 	}
 
+	// Try to collect stats so that we can inform value log about GC. That would help us find which
+	// value log file should be GCed.
+	discardStats := make(map[uint32]int64)
+	updateStats := func(vs y.ValueStruct) {
+		if vs.Meta&bitValuePointer > 0 {
+			var vp valuePointer
+			vp.Decode(vs.Value)
+			discardStats[vp.Fid] += int64(vp.Len)
+		}
+	}
+
 	// Create iterators across all the tables involved first.
 	var iters []y.Iterator
 	if l == 0 {
@@ -297,20 +308,35 @@ func (s *levelsController) compactBuildTables(
 
 	it.Rewind()
 
-	readTs := s.kv.orc.readTs()
+	// Pick up the currently pending transactions' min readTs, so we can discard versions below this
+	// readTs. We should never discard any versions starting from above this timestamp, because that
+	// would affect the snapshot view guarantee provided by transactions.
+	minReadTs := s.kv.orc.readMark.MinReadTs()
+
 	// Start generating new tables.
 	type newTableResult struct {
 		table *table.Table
 		err   error
 	}
 	resultCh := make(chan newTableResult)
-	var numBuilds int
+	var numBuilds, numVersions int
 	var lastKey, skipKey []byte
 	for it.Valid() {
 		timeStart := time.Now()
 		builder := table.NewTableBuilder()
 		var numKeys, numSkips uint64
 		for ; it.Valid(); it.Next() {
+			// See if we need to skip this key.
+			if len(skipKey) > 0 {
+				if y.SameKey(it.Key(), skipKey) {
+					numSkips++
+					updateStats(it.Value())
+					continue
+				} else {
+					skipKey = skipKey[:0]
+				}
+			}
+
 			if !y.SameKey(it.Key(), lastKey) {
 				if builder.ReachedCapacity(s.kv.opt.MaxTableSize) {
 					// Only break if we are on a different key, and have reached capacity. We want
@@ -319,31 +345,37 @@ func (s *levelsController) compactBuildTables(
 					break
 				}
 				lastKey = y.SafeCopy(lastKey, it.Key())
-			}
-			if len(skipKey) > 0 {
-				if y.SameKey(it.Key(), skipKey) {
-					numSkips++
-					continue
-				} else {
-					skipKey = skipKey[:0]
-				}
+				numVersions = 0
 			}
 
 			vs := it.Value()
 			version := y.ParseTs(it.Key())
-			if version < readTs && isDeletedOrExpired(vs.Meta, vs.ExpiresAt) {
-				// If this version of the key is deleted or expired, skip all the rest of the
-				// versions. Ensure that we're only removing versions below readTs.
-				skipKey = y.SafeCopy(skipKey, it.Key())
+			if version <= minReadTs {
+				// Keep track of the number of versions encountered for this key. Only consider the
+				// versions which are below the minReadTs, otherwise, we might end up discarding the
+				// only valid version for a running transaction.
+				numVersions++
+				lastValidVersion := vs.Meta&bitDiscardEarlierVersions > 0
+				if isDeletedOrExpired(vs.Meta, vs.ExpiresAt) ||
+					numVersions > s.kv.opt.NumVersionsToKeep ||
+					lastValidVersion {
+					// If this version of the key is deleted or expired, skip all the rest of the
+					// versions. Ensure that we're only removing versions below readTs.
+					skipKey = y.SafeCopy(skipKey, it.Key())
 
-				if !hasOverlap {
-					// If no overlap, we can skip all the versions, by continuing here.
-					numSkips++
-					continue // Skip adding this key.
-				} else {
-					// If this key range has overlap with lower levels, then keep the deletion
-					// marker with the latest version, discarding the rest. This logic here
-					// would not continue, but has set the skipKey for the future iterations.
+					if lastValidVersion {
+						// Add this key. We have set skipKey, so the following key versions
+						// would be skipped.
+					} else if hasOverlap {
+						// If this key range has overlap with lower levels, then keep the deletion
+						// marker with the latest version, discarding the rest. We have set skipKey,
+						// so the following key versions would be skipped.
+					} else {
+						// If no overlap, we can skip all the versions, by continuing here.
+						numSkips++
+						updateStats(vs)
+						continue // Skip adding this key.
+					}
 				}
 			}
 			numKeys++
@@ -410,7 +442,8 @@ func (s *levelsController) compactBuildTables(
 	sort.Slice(newTables, func(i, j int) bool {
 		return y.CompareKeys(newTables[i].Biggest(), newTables[j].Biggest()) < 0
 	})
-
+	s.kv.vlog.updateGCStats(discardStats)
+	cd.elog.LazyPrintf("Discard stats: %v", discardStats)
 	return newTables, func() error { return decrRefs(newTables) }, nil
 }
 
@@ -684,14 +717,12 @@ func (s *levelsController) close() error {
 }
 
 // get returns the found value if any. If not found, we return nil.
-func (s *levelsController) get(key []byte, maxVs y.ValueStruct) (y.ValueStruct, error) {
+func (s *levelsController) get(key []byte) (y.ValueStruct, error) {
 	// It's important that we iterate the levels from 0 on upward.  The reason is, if we iterated
 	// in opposite order, or in parallel (naively calling all the h.RLock() in some order) we could
 	// read level L's tables post-compaction and level L+1's tables pre-compaction.  (If we do
 	// parallelize this, we will need to call the h.RLock() function by increasing order of level
 	// number.)
-
-	version := y.ParseTs(key)
 	for _, h := range s.levels {
 		vs, err := h.get(key) // Calls h.RLock() and h.RUnlock().
 		if err != nil {
@@ -700,14 +731,9 @@ func (s *levelsController) get(key []byte, maxVs y.ValueStruct) (y.ValueStruct, 
 		if vs.Value == nil && vs.Meta == 0 {
 			continue
 		}
-		if vs.Version == version {
-			return vs, nil
-		}
-		if maxVs.Version < vs.Version {
-			maxVs = vs
-		}
+		return vs, nil
 	}
-	return maxVs, nil
+	return y.ValueStruct{}, nil
 }
 
 func appendIteratorsReversed(out []y.Iterator, th []*table.Table, reversed bool) []y.Iterator {
