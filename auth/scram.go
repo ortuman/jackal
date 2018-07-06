@@ -25,7 +25,6 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-
 // ScramType represents a scram autheticator class
 type ScramType int
 

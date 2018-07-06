@@ -53,8 +53,15 @@ func (se *SASLError) Error() string {
 }
 
 var (
-	ErrSASLIncorrectEncoding    = newSASLError("incorrect-encoding")
-	ErrSASLMalformedRequest     = newSASLError("malformed-request")
-	ErrSASLNotAuthorized        = newSASLError("not-authorized")
+	// ErrSASLIncorrectEncoding represents a 'incorrect-encoding' authentication error.
+	ErrSASLIncorrectEncoding = newSASLError("incorrect-encoding")
+
+	// ErrSASLMalformedRequest represents a 'malformed-request' authentication error.
+	ErrSASLMalformedRequest = newSASLError("malformed-request")
+
+	// ErrSASLNotAuthorized represents a 'not-authorized' authentication error.
+	ErrSASLNotAuthorized = newSASLError("not-authorized")
+
+	// ErrSASLTemporaryAuthFailure represents a 'temporary-auth-failure' authentication error.
 	ErrSASLTemporaryAuthFailure = newSASLError("temporary-auth-failure")
 )
