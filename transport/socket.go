@@ -19,10 +19,6 @@ import (
 
 const socketBuffSize = 4096
 
-type tlsStateQueryable interface {
-	ConnectionState() tls.ConnectionState
-}
-
 type socketTransport struct {
 	conn       net.Conn
 	rw         io.ReadWriter

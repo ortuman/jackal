@@ -87,7 +87,7 @@ func (wst *webSocketTransport) EnableCompression(level compress.Level) {
 }
 
 func (wst *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
-	if tlsConn, ok := wst.conn.UnderlyingConn().(*tls.Conn); ok {
+	if tlsConn, ok := wst.conn.UnderlyingConn().(tlsStateQueryable); ok {
 		switch mechanism {
 		case TLSUnique:
 			st := tlsConn.ConnectionState()
@@ -100,7 +100,7 @@ func (wst *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMecha
 }
 
 func (wst *webSocketTransport) PeerCertificates() []*x509.Certificate {
-	if tlsConn, ok := wst.conn.UnderlyingConn().(*tls.Conn); ok {
+	if tlsConn, ok := wst.conn.UnderlyingConn().(tlsStateQueryable); ok {
 		st := tlsConn.ConnectionState()
 		return st.PeerCertificates
 	}

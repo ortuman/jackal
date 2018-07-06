@@ -68,3 +68,7 @@ type Transport interface {
 	// presented by remote peer.
 	PeerCertificates() []*x509.Certificate
 }
+
+type tlsStateQueryable interface {
+	ConnectionState() tls.ConnectionState
+}
