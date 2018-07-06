@@ -35,6 +35,3 @@ server.crt
 .idea/
 .vscode/
 
-# Dep
-Gopkg.lock
-Gopkg.toml

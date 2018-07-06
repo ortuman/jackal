@@ -72,7 +72,6 @@ func (b *Storage) loop() {
 	for {
 		select {
 		case <-tc.C:
-			b.db.PurgeOlderVersions()
 			b.db.RunValueLogGC(0.5)
 		case ch := <-b.doneCh:
 			b.db.Close()
