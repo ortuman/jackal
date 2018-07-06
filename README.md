@@ -7,7 +7,7 @@ An XMPP server written in Go.
 [![codecov](https://codecov.io/gh/ortuman/jackal/branch/master/graph/badge.svg)](https://codecov.io/gh/ortuman/jackal)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/8e1575d0e64141a8bd4f8656e44052e6)](https://www.codacy.com/app/ortuman/jackal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ortuman/jackal&amp;utm_campaign=Badge_Grade)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ortuman/jackal)](https://goreportcard.com/report/github.com/ortuman/jackal)
-[![License](https://img.shields.io/badge/license-MPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/ortuman/jackal.svg)](https://hub.docker.com/r/ortuman/jackal/)
 [![Join the chat at https://gitter.im/jackal-im/jackal](https://badges.gitter.im/jackal-im/jackal.svg)](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
