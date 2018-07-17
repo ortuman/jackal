@@ -706,7 +706,7 @@ func (s *inStream) processComponentStanza(stanza xml.Stanza) {
 func (s *inStream) processIQ(iq *xml.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := toJID.IsBare() && host.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && host.IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch router.Route(iq) {
 		case router.ErrResourceNotFound:
