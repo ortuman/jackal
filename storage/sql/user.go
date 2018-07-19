@@ -65,14 +65,14 @@ func (s *Storage) FetchUser(username string) (*model.User, error) {
 	case nil:
 		if len(presenceXML) > 0 {
 			parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
-			lastPresence, err := parser.ParseElement()
-			if err != nil {
+			if lastPresence, err := parser.ParseElement(); err != nil {
 				return nil, err
+			} else {
+				fromJID, _ := jid.NewWithString(lastPresence.From(), true)
+				toJID, _ := jid.NewWithString(lastPresence.To(), true)
+				usr.LastPresence, _ = xml.NewPresenceFromElement(lastPresence, fromJID, toJID)
+				usr.LastPresenceAt = presenceAt
 			}
-			fromJID, _ := jid.NewWithString(lastPresence.From(), true)
-			toJID, _ := jid.NewWithString(lastPresence.To(), true)
-			usr.LastPresence, _ = xml.NewPresenceFromElement(lastPresence, fromJID, toJID)
-			usr.LastPresenceAt = presenceAt
 		}
 		return &usr, nil
 	case sql.ErrNoRows:
