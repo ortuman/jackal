@@ -28,7 +28,7 @@ CREATE TABLE roster_items (
     jid VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     subscription TEXT NOT NULL,
-    groups TEXT NOT NULL,
+    `groups` TEXT NOT NULL,
     ask BOOL NOT NULL,
     ver INT NOT NULL DEFAULT 0,
     updated_at DATETIME NOT NULL,
