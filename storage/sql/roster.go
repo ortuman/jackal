@@ -11,8 +11,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
@@ -31,9 +31,9 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 
 		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.Username)
 		q = sq.Insert("roster_items").
-			Columns("username", "jid", "name", "subscription", "groups", "ask", "ver", "created_at", "updated_at").
+			Columns("username", "jid", "name", "subscription", "`groups`", "ask", "ver", "created_at", "updated_at").
 			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, groups = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
+			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, `groups` = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
 
 		_, err := q.RunWith(tx).Exec()
 		return err
@@ -69,7 +69,7 @@ func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, e
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
 func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
+	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
 		From("roster_items").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at DESC")
@@ -93,7 +93,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 
 // FetchRosterItem retrieves from storage a roster item entity.
 func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
+	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
 		From("roster_items").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}})
 
@@ -191,14 +191,14 @@ func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, sca
 	var presenceXML string
 	scanner.Scan(&rn.Contact, &rn.JID, &presenceXML)
 
-	parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
+	parser := xmpp.NewParser(strings.NewReader(presenceXML), xmpp.DefaultMode, 0)
 	elem, err := parser.ParseElement()
 	if err != nil {
 		return err
 	}
 	fromJID, _ := jid.NewWithString(elem.From(), true)
 	toJID, _ := jid.NewWithString(elem.To(), true)
-	rn.Presence, _ = xml.NewPresenceFromElement(elem, fromJID, toJID)
+	rn.Presence, _ = xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 	return nil
 }
 
