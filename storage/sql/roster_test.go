@@ -78,7 +78,7 @@ func TestMySQLStorageDeleteRosterItem(t *testing.T) {
 }
 
 func TestMySQLStorageFetchRosterItems(t *testing.T) {
-	var riColumns = []string{"user", "contact", "name", "subscription", "groups", "ask", "ver"}
+	var riColumns = []string{"user", "contact", "name", "subscription", "`groups`", "ask", "ver"}
 
 	s, mock := NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
