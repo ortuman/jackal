@@ -198,8 +198,7 @@ func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, sca
 	}
 	fromJID, _ := jid.NewWithString(elem.From(), true)
 	toJID, _ := jid.NewWithString(elem.To(), true)
-	rn.Presence, _ = xml
-	.NewPresenceFromElement(elem, fromJID, toJID)
+	rn.Presence, _ = xml.NewPresenceFromElement(elem, fromJID, toJID)
 	return nil
 }
 
