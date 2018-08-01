@@ -132,6 +132,7 @@ func (x *Register) registerNewUser(iq *xml.IQ, query xml.XElement) {
 	user := model.User{
 		Username: userEl.Text(),
 		Password: passwordEl.Text(),
+		LastPresence: xml.NewPresence(x.stm.JID(), x.stm.JID(), xml.UnavailableType),
 	}
 	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
 		log.Errorf("%v", err)
