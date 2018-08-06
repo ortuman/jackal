@@ -6,14 +6,14 @@
 package s2s
 
 import (
-	"crypto/tls"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/transport"
+	"crypto/tls"
+	"github.com/ortuman/jackal/host"
 )
 
 type dialer struct {
@@ -45,10 +45,16 @@ func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	tlsConfig := &tls.Config{
-		ServerName:   remoteDomain,
-		Certificates: host.Certificates(),
 	}
+	if d.cfg.TLSEnabled {
+		tlsConfig.ServerName = remoteDomain
+		tlsConfig.Certificates = host.Certificates()
+	} else {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
 	tr := transport.NewSocketTransport(conn, d.cfg.Transport.KeepAlive)
 	return &streamConfig{
 		keyGen:        &keyGen{d.cfg.DialbackSecret},

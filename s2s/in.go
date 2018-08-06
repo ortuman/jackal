@@ -228,7 +228,11 @@ func (s *inStream) startAuthentication(elem xml.XElement) {
 		s.failAuthentication("invalid-mechanism", "")
 		return
 	}
-	// validate initiating server certificate
+	if s.cfg.dialer != nil && !s.cfg.dialer.cfg.TLSEnabled {
+		s.finishAuthentication()
+		return
+	}
+	//validate initiating server certificate
 	certs := s.cfg.transport.PeerCertificates()
 	for _, cert := range certs {
 		for _, dnsName := range cert.DNSNames {
