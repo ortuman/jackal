@@ -228,7 +228,7 @@ func (s *inStream) startAuthentication(elem xml.XElement) {
 		s.failAuthentication("invalid-mechanism", "")
 		return
 	}
-	if !s.cfg.dialer.cfg.TLSEnabled {
+	if s.cfg.dialer != nil && !s.cfg.dialer.cfg.TLSEnabled {
 		s.finishAuthentication()
 		return
 	}
