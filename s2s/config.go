@@ -79,7 +79,7 @@ type configProxy struct {
 	DialbackSecret string          `yaml:"dialback_secret"`
 	MaxStanzaSize  int             `yaml:"max_stanza_size"`
 	Transport      TransportConfig `yaml:"transport"`
-	TlsEnabled	   bool 		   `yaml:"tls"`
+	TlsEnabled     bool 		   `yaml:"tls"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
