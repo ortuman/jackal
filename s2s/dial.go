@@ -48,7 +48,7 @@ func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
 
 	tlsConfig := &tls.Config{
 	}
-	if d.cfg.TlsEnabled {
+	if d.cfg.TLSEnabled {
 		tlsConfig.ServerName = remoteDomain
 		tlsConfig.Certificates = host.Certificates()
 	} else {
