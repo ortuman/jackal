@@ -109,6 +109,9 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if c.MaxStanzaSize == 0 {
 		c.MaxStanzaSize = defaultMaxStanzaSize
 	}
+
+	c.TLSEnabled = p.TLSEnabled
+	
 	return nil
 }
 
