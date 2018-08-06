@@ -228,17 +228,21 @@ func (s *inStream) startAuthentication(elem xml.XElement) {
 		s.failAuthentication("invalid-mechanism", "")
 		return
 	}
-	// validate initiating server certificate
-	certs := s.cfg.transport.PeerCertificates()
-	for _, cert := range certs {
-		for _, dnsName := range cert.DNSNames {
-			if dnsName == s.remoteDomain {
-				s.finishAuthentication()
-				return
+	if s.cfg.dialer.cfg.TlsEnabled {
+		//validate initiating server certificate
+		certs := s.cfg.transport.PeerCertificates()
+		for _, cert := range certs {
+			for _, dnsName := range cert.DNSNames {
+				if dnsName == s.remoteDomain {
+					s.finishAuthentication()
+					return
+				}
 			}
 		}
+		s.failAuthentication("bad-protocol", "failed to get peer certificate")
+	} else {
+		s.finishAuthentication()
 	}
-	s.failAuthentication("bad-protocol", "failed to get peer certificate")
 }
 
 func (s *inStream) finishAuthentication() {
