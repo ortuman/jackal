@@ -9,12 +9,12 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // InsertOrUpdatePrivateXML inserts a new private element into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error {
+func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	for _, elem := range privateXML {
@@ -32,7 +32,7 @@ func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace 
 }
 
 // FetchPrivateXML retrieves from storage a private element.
-func (s *Storage) FetchPrivateXML(namespace string, username string) ([]xml.XElement, error) {
+func (s *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
 	q := sq.Select("data").
 		From("private_storage").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"namespace": namespace}})
@@ -47,7 +47,7 @@ func (s *Storage) FetchPrivateXML(namespace string, username string) ([]xml.XEle
 		buf.WriteString(privateXML)
 		buf.WriteString("</root>")
 
-		parser := xml.NewParser(buf, xml.DefaultMode, 0)
+		parser := xmpp.NewParser(buf, xmpp.DefaultMode, 0)
 		rootEl, err := parser.ParseElement()
 		if err != nil {
 			return nil, err

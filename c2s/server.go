@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -25,7 +24,6 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg        *Config
-	modConfig  *module.Config
 	ln         net.Listener
 	wsSrv      *http.Server
 	wsUpgrader *websocket.Upgrader
@@ -118,7 +116,6 @@ func (s *server) startStream(tr transport.Transport) {
 		maxStanzaSize:    s.cfg.MaxStanzaSize,
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,
-		modules:          s.modConfig,
 	}
 	newStream(s.nextID(), cfg)
 }

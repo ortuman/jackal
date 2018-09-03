@@ -3,12 +3,16 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"bytes"
 	"encoding/gob"
 	"testing"
+
+	"github.com/ortuman/jackal/xmpp/jid"
+
+	"github.com/pborman/uuid"
 
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +28,11 @@ func TestElement_NewElement(t *testing.T) {
 }
 
 func TestElement_NewError(t *testing.T) {
-	e1 := NewElementNamespace("n", "ns")
-	e2 := NewErrorElementFromElement(e1, ErrNotAuthorized, nil)
+	j, _ := jid.New("", "jackal.im", "", true)
+	e1 := NewIQType(uuid.New(), GetType)
+	e1.SetFromJID(j)
+	e1.SetToJID(j)
+	e2 := NewErrorStanzaFromStanza(e1, ErrNotAuthorized, nil)
 	require.True(t, e2.IsError())
 	require.NotNil(t, e2.Error())
 }

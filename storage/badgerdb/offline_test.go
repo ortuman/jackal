@@ -8,7 +8,7 @@ package badgerdb
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -19,13 +19,13 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
-	msg1 := xml.NewMessageType(uuid.New(), xml.NormalType)
-	b1 := xml.NewElementName("body")
+	msg1 := xmpp.NewMessageType(uuid.New(), xmpp.NormalType)
+	b1 := xmpp.NewElementName("body")
 	b1.SetText("Hi buddy!")
 	msg1.AppendElement(b1)
 
-	msg2 := xml.NewMessageType(uuid.New(), xml.NormalType)
-	b2 := xml.NewElementName("body")
+	msg2 := xmpp.NewMessageType(uuid.New(), xmpp.NormalType)
+	b2 := xmpp.NewElementName("body")
 	b2.SetText("what's up?!")
 	msg1.AppendElement(b1)
 

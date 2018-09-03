@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,6 @@ func TestS2SSocketServer(t *testing.T) {
 
 	errCh := make(chan error)
 	cfg := Config{
-		Enabled:        true,
 		ConnectTimeout: time.Second * time.Duration(5),
 		MaxStanzaSize:  8192,
 		Transport: TransportConfig{
@@ -32,7 +30,7 @@ func TestS2SSocketServer(t *testing.T) {
 			KeepAlive: time.Duration(600) * time.Second,
 		},
 	}
-	go Initialize(&cfg, &module.Config{})
+	go Initialize(&cfg)
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)

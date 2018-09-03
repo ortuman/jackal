@@ -9,11 +9,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"testing"
-
 	"time"
 
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +24,7 @@ func TestModelUser(t *testing.T) {
 
 	usr1.Username = "ortuman"
 	usr1.Password = "1234"
-	usr1.LastPresence = xml.NewPresence(j1, j2, xml.AvailableType)
+	usr1.LastPresence = xmpp.NewPresence(j1, j2, xmpp.AvailableType)
 
 	buf := new(bytes.Buffer)
 	usr1.ToGob(gob.NewEncoder(buf))

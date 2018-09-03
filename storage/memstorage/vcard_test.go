@@ -8,13 +8,13 @@ package memstorage
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockStorageInsertVCard(t *testing.T) {
-	vCard := xml.NewElementName("vCard")
-	fn := xml.NewElementName("FN")
+	vCard := xmpp.NewElementName("vCard")
+	fn := xmpp.NewElementName("FN")
 	fn.SetText("Miguel Ángel")
 	vCard.AppendElement(fn)
 
@@ -26,8 +26,8 @@ func TestMockStorageInsertVCard(t *testing.T) {
 }
 
 func TestMockStorageFetchVCard(t *testing.T) {
-	vCard := xml.NewElementName("vCard")
-	fn := xml.NewElementName("FN")
+	vCard := xmpp.NewElementName("vCard")
+	fn := xmpp.NewElementName("FN")
 	fn.SetText("Miguel Ángel")
 	vCard.AppendElement(fn)
 

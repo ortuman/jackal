@@ -5,7 +5,7 @@
 
 package auth
 
-import "github.com/ortuman/jackal/xml"
+import "github.com/ortuman/jackal/xmpp"
 
 const saslNamespace = "urn:ietf:params:xml:ns:xmpp-sasl"
 
@@ -27,7 +27,7 @@ type Authenticator interface {
 	UsesChannelBinding() bool
 
 	// ProcessElement process an incoming authenticator element.
-	ProcessElement(xml.XElement) error
+	ProcessElement(xmpp.XElement) error
 
 	// Reset resets authenticator internal state.
 	Reset()
@@ -43,8 +43,8 @@ func newSASLError(reason string) error {
 }
 
 // Element returs sasl error XML representation.
-func (se *SASLError) Element() xml.XElement {
-	return xml.NewElementName(se.reason)
+func (se *SASLError) Element() xmpp.XElement {
+	return xmpp.NewElementName(se.reason)
 }
 
 // Error satisfies error interface.

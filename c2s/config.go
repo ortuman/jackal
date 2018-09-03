@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 )
@@ -20,6 +19,7 @@ const (
 	defaultTransportMaxStanzaSize  = 32768
 	defaultTransportPort           = 5222
 	defaultTransportKeepAlive      = time.Duration(120) * time.Second
+	defaultTransportURLPath        = "/xmpp/ws"
 )
 
 // ResourceConflictPolicy represents a resource conflict policy.
@@ -102,7 +102,11 @@ func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	}
 	t.BindAddress = p.BindAddress
 	t.Port = p.Port
+
 	t.URLPath = p.URLPath
+	if len(t.URLPath) == 0 {
+		t.URLPath = defaultTransportURLPath
+	}
 
 	// assign transport's defaults
 	if t.Port == 0 {
@@ -194,5 +198,4 @@ type streamConfig struct {
 	resourceConflict ResourceConflictPolicy
 	sasl             []string
 	compression      CompressConfig
-	modules          *module.Config
 }

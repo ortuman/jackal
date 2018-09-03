@@ -11,8 +11,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
@@ -191,14 +191,14 @@ func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, sca
 	var presenceXML string
 	scanner.Scan(&rn.Contact, &rn.JID, &presenceXML)
 
-	parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
+	parser := xmpp.NewParser(strings.NewReader(presenceXML), xmpp.DefaultMode, 0)
 	elem, err := parser.ParseElement()
 	if err != nil {
 		return err
 	}
 	fromJID, _ := jid.NewWithString(elem.From(), true)
 	toJID, _ := jid.NewWithString(elem.To(), true)
-	rn.Presence, _ = xml.NewPresenceFromElement(elem, fromJID, toJID)
+	rn.Presence, _ = xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 	return nil
 }
 

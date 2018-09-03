@@ -6,7 +6,7 @@
 package streamerror
 
 import (
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // Error represents a "stream:error" element.
@@ -63,9 +63,9 @@ func newStreamError(reason string) *Error {
 }
 
 // Element returns stream error XML node.
-func (se *Error) Element() xml.XElement {
-	ret := xml.NewElementName("stream:error")
-	reason := xml.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
+func (se *Error) Element() xmpp.XElement {
+	ret := xmpp.NewElementName("stream:error")
+	reason := xmpp.NewElementNamespace(se.reason, "urn:ietf:params:xml:ns:xmpp-streams")
 	ret.AppendElement(reason)
 	return ret
 }

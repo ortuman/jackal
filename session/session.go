@@ -18,8 +18,8 @@ import (
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 )
@@ -40,7 +40,7 @@ type namespaceSettable interface {
 type Error struct {
 	// Element returns the original incoming element that generated
 	// the session error.
-	Element xml.XElement
+	Element xmpp.XElement
 
 	// UnderlyingErr is the underlying session error.
 	UnderlyingErr error
@@ -75,7 +75,7 @@ type Config struct {
 type Session struct {
 	id           string
 	tr           transport.Transport
-	pr           *xml.Parser
+	pr           *xmpp.Parser
 	remoteDomain string
 	isServer     bool
 	isInitiating bool
@@ -89,17 +89,17 @@ type Session struct {
 
 // New creates a new session instance.
 func New(id string, config *Config) *Session {
-	var parsingMode xml.ParsingMode
+	var parsingMode xmpp.ParsingMode
 	switch config.Transport.Type() {
 	case transport.Socket:
-		parsingMode = xml.SocketStream
+		parsingMode = xmpp.SocketStream
 	case transport.WebSocket:
-		parsingMode = xml.WebSocketStream
+		parsingMode = xmpp.WebSocketStream
 	}
 	s := &Session{
 		id:           id,
 		tr:           config.Transport,
-		pr:           xml.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
+		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
 		remoteDomain: config.RemoteDomain,
 		isServer:     config.IsServer,
 		isInitiating: config.IsInitiating,
@@ -137,13 +137,13 @@ func (s *Session) Open() error {
 	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
 		return errors.New("session already opened")
 	}
-	var ops *xml.Element
+	var ops *xmpp.Element
 	var includeClosing bool
 
 	buf := &strings.Builder{}
 	switch s.tr.Type() {
 	case transport.Socket:
-		ops = xml.NewElementName("stream:stream")
+		ops = xmpp.NewElementName("stream:stream")
 		ops.SetAttribute("xmlns", s.namespace())
 		ops.SetAttribute("xmlns:stream", streamNamespace)
 		if s.isServer {
@@ -152,7 +152,7 @@ func (s *Session) Open() error {
 		buf.WriteString(`<?xml version="1.0"?>`)
 
 	case transport.WebSocket:
-		ops = xml.NewElementName("open")
+		ops = xmpp.NewElementName("open")
 		ops.SetAttribute("xmlns", framedStreamNamespace)
 		includeClosing = true
 
@@ -196,7 +196,7 @@ func (s *Session) Close() error {
 }
 
 // Send writes an XML element to the underlying session transport.
-func (s *Session) Send(elem xml.XElement) {
+func (s *Session) Send(elem xmpp.XElement) {
 	// clear namespace if sending a stanza
 	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
 		e.SetNamespace("")
@@ -206,7 +206,7 @@ func (s *Session) Send(elem xml.XElement) {
 }
 
 // Receive returns next incoming session element.
-func (s *Session) Receive() (xml.XElement, *Error) {
+func (s *Session) Receive() (xmpp.XElement, *Error) {
 	elem, err := s.pr.ParseElement()
 	if err != nil {
 		return nil, s.mapErrorToSessionError(err)
@@ -235,7 +235,7 @@ func (s *Session) Receive() (xml.XElement, *Error) {
 	return elem, nil
 }
 
-func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, *Error) {
+func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 	if err := s.validateNamespace(elem); err != nil {
 		return nil, err
 	}
@@ -245,33 +245,33 @@ func (s *Session) buildStanza(elem xml.XElement) (xml.Stanza, *Error) {
 	}
 	switch elem.Name() {
 	case "iq":
-		iq, err := xml.NewIQFromElement(elem, fromJID, toJID)
+		iq, err := xmpp.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
+			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return iq, nil
 
 	case "presence":
-		presence, err := xml.NewPresenceFromElement(elem, fromJID, toJID)
+		presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
+			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return presence, nil
 
 	case "message":
-		message, err := xml.NewMessageFromElement(elem, fromJID, toJID)
+		message, err := xmpp.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xml.ErrBadRequest}
+			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
 		}
 		return message, nil
 	}
 	return nil, &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 }
 
-func (s *Session) extractAddresses(elem xml.XElement) (*jid.JID, *jid.JID, *Error) {
+func (s *Session) extractAddresses(elem xmpp.XElement) (*jid.JID, *jid.JID, *Error) {
 	var fromJID, toJID *jid.JID
 	var err error
 
@@ -297,7 +297,7 @@ func (s *Session) extractAddresses(elem xml.XElement) (*jid.JID, *jid.JID, *Erro
 	if len(to) > 0 {
 		toJID, err = jid.NewWithString(elem.To(), false)
 		if err != nil {
-			return nil, nil, &Error{Element: elem, UnderlyingErr: xml.ErrJidMalformed}
+			return nil, nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrJidMalformed}
 		}
 	} else {
 		toJID = s.jid().ToBareJID() // account's bare JID as default 'to'
@@ -321,7 +321,7 @@ func (s *Session) isValidFrom(from string) bool {
 	return validFrom
 }
 
-func (s *Session) validateStreamElement(elem xml.XElement) *Error {
+func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 	switch s.tr.Type() {
 	case transport.Socket:
 		if elem.Name() != "stream:stream" {
@@ -349,7 +349,7 @@ func (s *Session) validateStreamElement(elem xml.XElement) *Error {
 	return nil
 }
 
-func (s *Session) validateNamespace(elem xml.XElement) *Error {
+func (s *Session) validateNamespace(elem xmpp.XElement) *Error {
 	ns := elem.Namespace()
 	if len(ns) == 0 || ns == s.namespace() {
 		return nil
@@ -375,10 +375,10 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 	case nil, io.EOF, io.ErrUnexpectedEOF:
 		break
 
-	case xml.ErrStreamClosedByPeer:
+	case xmpp.ErrStreamClosedByPeer:
 		s.Close()
 
-	case xml.ErrTooLargeStanza:
+	case xmpp.ErrTooLargeStanza:
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
 
 	default:

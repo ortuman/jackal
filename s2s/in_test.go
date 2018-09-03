@@ -24,8 +24,8 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -224,7 +224,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	conn.inboundWriteString(`<db:result to="foo.org">abcd</db:result>`)
 	elem := conn.outboundRead()
 	require.Equal(t, "db:result", elem.Name())
-	require.Equal(t, xml.ErrorType, elem.Type())
+	require.Equal(t, xmpp.ErrorType, elem.Type())
 	require.NotNil(t, elem.Elements().Child("error"))
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
@@ -244,7 +244,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
 	elem = conn.outboundRead()
 	require.Equal(t, "db:result", elem.Name())
-	require.Equal(t, xml.ErrorType, elem.Type())
+	require.Equal(t, xmpp.ErrorType, elem.Type())
 	require.NotNil(t, elem.Elements().Child("error"))
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("remote-server-not-found"))
 
@@ -269,7 +269,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	outConn.Close()
 	elem = conn.outboundRead()
 	require.Equal(t, "db:result", elem.Name())
-	require.Equal(t, xml.ErrorType, elem.Type())
+	require.Equal(t, xmpp.ErrorType, elem.Type())
 	require.NotNil(t, elem.Elements().Child("error"))
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("remote-server-timeout"))
 
@@ -356,14 +356,14 @@ func TestStream_SendElement(t *testing.T) {
 	atomic.StoreUint32(&stm.authenticated, 1)
 
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.ResultType)
+	iq := xmpp.NewIQType(iqID, xmpp.ResultType)
 	iq.SetFromJID(fromJID)
 	iq.SetToJID(toJID)
 	conn.inboundWriteString(iq.String())
 
 	elem := stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
 	// invalid from...

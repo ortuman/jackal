@@ -17,7 +17,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +28,7 @@ func TestOutStream_Start(t *testing.T) {
 	defer stm.Disconnect(nil)
 
 	// wrong verification name...
-	cfg.dbVerify = xml.NewElementName("foo")
+	cfg.dbVerify = xmpp.NewElementName("foo")
 	err := stm.start(cfg)
 	require.NotNil(t, err)
 
@@ -101,7 +101,7 @@ func TestOutStream_DBVerify(t *testing.T) {
 	defer host.Shutdown()
 
 	cfg, conn := tUtilOutStreamDefaultConfig()
-	dbVerify := xml.NewElementName("db:verify")
+	dbVerify := xmpp.NewElementName("db:verify")
 	key := uuid.New()
 	dbVerify.SetID("abcde")
 	dbVerify.SetFrom("jackal.im")
@@ -234,8 +234,8 @@ func TestOutStream_Authenticate(t *testing.T) {
 
 	// store pending stanza...
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.GetType)
-	iq.AppendElement(xml.NewElementNamespace("query", "jabber:foo"))
+	iq := xmpp.NewIQType(iqID, xmpp.GetType)
+	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:foo"))
 	stm.SendElement(iq)
 
 	conn.inboundWriteString(`
@@ -292,7 +292,7 @@ func TestOutStream_Dialback(t *testing.T) {
 	_ = conn.outboundRead()
 
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.GetType)
+	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	stm.SendElement(iq) //...store pending...
 
 	conn.inboundWriteString(`

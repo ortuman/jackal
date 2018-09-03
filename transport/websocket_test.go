@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +55,7 @@ func TestWebSocketTransport(t *testing.T) {
 	conn := newFakeWebSocketConn()
 
 	// test read...
-	iq := xml.NewIQType(uuid.New(), xml.ResultType)
+	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFrom("localhost")
 	iq.ToXML(conn.r.buf, true)
 
@@ -65,8 +65,8 @@ func TestWebSocketTransport(t *testing.T) {
 	require.Equal(t, iq.String(), string(buff[:n]))
 
 	// test write...
-	msg := xml.NewMessageType(uuid.New(), xml.ChatType)
-	b := xml.NewElementName("body")
+	msg := xmpp.NewMessageType(uuid.New(), xmpp.ChatType)
+	b := xmpp.NewElementName("body")
 	b.SetText("Hi buddy!")
 	msg.AppendElement(b)
 

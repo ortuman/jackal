@@ -20,7 +20,7 @@ import (
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -152,7 +152,7 @@ func (s *Scram) UsesChannelBinding() bool {
 }
 
 // ProcessElement process an incoming authenticator element.
-func (s *Scram) ProcessElement(elem xml.XElement) error {
+func (s *Scram) ProcessElement(elem xmpp.XElement) error {
 	if s.Authenticated() {
 		return nil
 	}
@@ -181,7 +181,7 @@ func (s *Scram) Reset() {
 	s.firstMessage = ""
 }
 
-func (s *Scram) handleStart(elem xml.XElement) error {
+func (s *Scram) handleStart(elem xmpp.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -209,7 +209,7 @@ func (s *Scram) handleStart(elem xml.XElement) error {
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
 
-	respElem := xml.NewElementNamespace("challenge", saslNamespace)
+	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
 	s.stm.SendElement(respElem)
 
@@ -217,7 +217,7 @@ func (s *Scram) handleStart(elem xml.XElement) error {
 	return nil
 }
 
-func (s *Scram) handleChallenged(elem xml.XElement) error {
+func (s *Scram) handleChallenged(elem xmpp.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -245,7 +245,7 @@ func (s *Scram) handleChallenged(elem xml.XElement) error {
 	}
 	v := "v=" + base64.StdEncoding.EncodeToString(serverSignature)
 
-	respElem := xml.NewElementNamespace("success", saslNamespace)
+	respElem := xmpp.NewElementNamespace("success", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
 	s.stm.SendElement(respElem)
 
@@ -253,7 +253,7 @@ func (s *Scram) handleChallenged(elem xml.XElement) error {
 	return nil
 }
 
-func (s *Scram) getElementPayload(elem xml.XElement) (string, error) {
+func (s *Scram) getElementPayload(elem xmpp.XElement) (string, error) {
 	if len(elem.Text()) == 0 {
 		return "", ErrSASLIncorrectEncoding
 	}

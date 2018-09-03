@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
@@ -78,11 +79,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "jackal: %v\n", err)
 		return
 	}
-	if len(cfg.VirtualHosts) == 0 {
-		fmt.Fprint(os.Stderr, "jackal: at least one virtual host configuration is required\n")
-		return
-	}
-	// initialize subsystems
+	// initialize subsystems... (order matters)
 	log.Initialize(&cfg.Logger)
 
 	storage.Initialize(&cfg.Storage)
@@ -90,6 +87,9 @@ func main() {
 	host.Initialize(cfg.Hosts)
 
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
+
+	// initialize modules...
+	module.Initialize(&cfg.Modules)
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {
@@ -102,14 +102,16 @@ func main() {
 	log.Infof("")
 	log.Infof("jackal %v\n", version.ApplicationVersion)
 
+	// initialize debug server...
 	if cfg.Debug.Port > 0 {
 		go initDebugServer(cfg.Debug.Port)
 	}
+
 	// start serving s2s...
-	s2s.Initialize(&cfg.S2S, &cfg.Modules)
+	s2s.Initialize(cfg.S2S)
 
 	// start serving c2s...
-	c2s.Initialize(cfg.VirtualHosts, &cfg.Modules)
+	c2s.Initialize(cfg.C2S)
 }
 
 var debugSrv *http.Server

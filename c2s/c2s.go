@@ -9,10 +9,13 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module"
+	"github.com/pkg/errors"
 )
 
-const streamMailboxSize = 64
+const (
+	streamMailboxSize   = 64
+	iqResultMailboxSize = 32
+)
 
 const (
 	streamNamespace           = "http://etherx.jabber.org/streams"
@@ -33,15 +36,19 @@ var (
 
 // Initialize initializes c2s sub system spawning a connection listener
 // for every server configuration.
-func Initialize(srvConfigurations []Config, modConfig *module.Config) {
+func Initialize(srvConfigurations []Config) {
 	mu.Lock()
 	if initialized {
 		mu.Unlock()
 		return
 	}
+	if len(srvConfigurations) == 0 {
+		log.Error(errors.New("at least one c2s configuration is required"))
+		return
+	}
 	// initialize all servers
 	for i := 0; i < len(srvConfigurations); i++ {
-		if _, err := initializeServer(&srvConfigurations[i], modConfig); err != nil {
+		if _, err := initializeServer(&srvConfigurations[i]); err != nil {
 			log.Fatalf("%v", err)
 		}
 	}
@@ -72,8 +79,8 @@ func Shutdown() {
 	<-ch
 }
 
-func initializeServer(cfg *Config, modConfig *module.Config) (*server, error) {
-	srv := &server{cfg: cfg, modConfig: modConfig}
+func initializeServer(cfg *Config) (*server, error) {
+	srv := &server{cfg: cfg}
 	servers[cfg.ID] = srv
 	go srv.start()
 	return srv, nil

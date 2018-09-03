@@ -8,7 +8,7 @@ package badgerdb
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,8 +18,8 @@ func TestBadgerDB_VCard(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
-	vcard := xml.NewElementNamespace("vCard", "vcard-temp")
-	fn := xml.NewElementName("FN")
+	vcard := xmpp.NewElementNamespace("vCard", "vcard-temp")
+	fn := xmpp.NewElementName("FN")
 	fn.SetText("Miguel Ángel Ortuño")
 	vcard.AppendElement(fn)
 

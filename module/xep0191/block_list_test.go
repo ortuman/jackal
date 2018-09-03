@@ -7,6 +7,7 @@ package xep0191
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model"
@@ -15,8 +16,8 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -24,25 +25,26 @@ import (
 func TestXEP0191_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil)
+	r := roster.New(&roster.Config{}, nil)
+	x := New(nil, r, nil)
 
 	// test MatchesIQ
-	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
+	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
 	iq1.SetToJID(j)
-	iq1.AppendElement(xml.NewElementNamespace("blocklist", blockingCommandNamespace))
+	iq1.AppendElement(xmpp.NewElementNamespace("blocklist", blockingCommandNamespace))
 	require.True(t, x.MatchesIQ(iq1))
 
-	iq2 := xml.NewIQType(uuid.New(), xml.SetType)
+	iq2 := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq2.SetFromJID(j)
 	iq2.SetToJID(j)
-	iq2.AppendElement(xml.NewElementNamespace("block", blockingCommandNamespace))
+	iq2.AppendElement(xmpp.NewElementNamespace("block", blockingCommandNamespace))
 	require.True(t, x.MatchesIQ(iq2))
 
-	iq3 := xml.NewIQType(uuid.New(), xml.SetType)
+	iq3 := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq3.SetFromJID(j)
 	iq3.SetToJID(j)
-	iq3.AppendElement(xml.NewElementNamespace("unblock", blockingCommandNamespace))
+	iq3.AppendElement(xmpp.NewElementNamespace("unblock", blockingCommandNamespace))
 	require.True(t, x.MatchesIQ(iq2))
 }
 
@@ -55,7 +57,8 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	defer stm.Disconnect(nil)
 
-	x := New(stm)
+	r := roster.New(&roster.Config{}, nil)
+	x := New(nil, r, nil)
 
 	storage.Instance().InsertBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
@@ -65,12 +68,12 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 		JID:      "jabber.org",
 	}})
 
-	iq1 := xml.NewIQType(uuid.New(), xml.GetType)
+	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
 	iq1.SetToJID(j)
-	iq1.AppendElement(xml.NewElementNamespace("blocklist", blockingCommandNamespace))
+	iq1.AppendElement(xmpp.NewElementNamespace("blocklist", blockingCommandNamespace))
 
-	x.ProcessIQ(iq1)
+	x.ProcessIQ(iq1, stm)
 	elem := stm.FetchElement()
 	bl := elem.Elements().ChildNamespace("blocklist", blockingCommandNamespace)
 	require.NotNil(t, bl)
@@ -79,9 +82,9 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	require.True(t, stm.Context().Bool(xep191RequestedContextKey))
 
 	storage.ActivateMockedError()
-	x.ProcessIQ(iq1)
+	x.ProcessIQ(iq1, stm)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 }
 
@@ -94,10 +97,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 		router.Shutdown()
 		host.Shutdown()
 	}()
+	r := roster.New(&roster.Config{}, nil)
+	x := New(nil, r, nil)
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	x := New(stm1)
 
 	j2, _ := jid.New("ortuman", "jackal.im", "yard", true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
@@ -119,17 +123,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	router.Bind(stm4)
 
 	// register presences
-	ph := roster.NewPresenceHandler(&roster.Config{})
-	ph.ProcessPresence(xml.NewPresence(j1, j1, xml.AvailableType))
-	ph.ProcessPresence(xml.NewPresence(j2, j2, xml.AvailableType))
-	ph.ProcessPresence(xml.NewPresence(j3, j3, xml.AvailableType))
-	ph.ProcessPresence(xml.NewPresence(j4, j4, xml.AvailableType))
-	defer func() {
-		ph.ProcessPresence(xml.NewPresence(j1, j1, xml.UnavailableType))
-		ph.ProcessPresence(xml.NewPresence(j2, j2, xml.UnavailableType))
-		ph.ProcessPresence(xml.NewPresence(j3, j3, xml.UnavailableType))
-		ph.ProcessPresence(xml.NewPresence(j4, j4, xml.UnavailableType))
-	}()
+	r.ProcessPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+
+	time.Sleep(time.Millisecond * 150) // wait until processed...
 
 	stm1.Context().SetBool(true, xep191RequestedContextKey)
 	stm2.Context().SetBool(true, xep191RequestedContextKey)
@@ -141,17 +140,17 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	})
 
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.SetType)
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j1)
-	block := xml.NewElementNamespace("block", blockingCommandNamespace)
+	block := xmpp.NewElementNamespace("block", blockingCommandNamespace)
 	iq.AppendElement(block)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
 	elem := stm1.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
-	item := xml.NewElementName("item")
+	item := xmpp.NewElementName("item")
 	item.SetAttribute("jid", "jackal.im/jail")
 	block.AppendElement(item)
 	iq.ClearElements()
@@ -159,29 +158,29 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	// TEST BLOCK
 	storage.ActivateMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
 
 	// unavailable presence from *@jackal.im/jail
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, xml.UnavailableType, elem.Type())
+	require.Equal(t, xmpp.UnavailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	// result IQ
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// block IQ push
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.SetType, elem.Type())
+	require.Equal(t, xmpp.SetType, elem.Type())
 	block2 := elem.Elements().ChildNamespace("block", blockingCommandNamespace)
 	require.NotNil(t, block2)
 	item2 := block.Elements().Child("item")
@@ -190,12 +189,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	// ortuman@jackal.im/yard
 	elem = stm2.FetchElement()
 	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, xml.UnavailableType, elem.Type())
+	require.Equal(t, xmpp.UnavailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	elem = stm2.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.SetType, elem.Type())
+	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// check storage
 	bl, _ := storage.Instance().FetchBlockListItems("ortuman")
@@ -205,39 +204,39 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	// TEST UNBLOCK
 	iqID = uuid.New()
-	iq = xml.NewIQType(iqID, xml.SetType)
+	iq = xmpp.NewIQType(iqID, xmpp.SetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j1)
-	unblock := xml.NewElementNamespace("unblock", blockingCommandNamespace)
-	item = xml.NewElementName("item")
+	unblock := xmpp.NewElementNamespace("unblock", blockingCommandNamespace)
+	item = xmpp.NewElementName("item")
 	item.SetAttribute("jid", "jackal.im/jail")
 	unblock.AppendElement(item)
 	iq.AppendElement(unblock)
 
 	storage.ActivateMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	storage.DeactivateMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
 
 	// receive available presence from *@jackal.im/jail
 	elem = stm1.FetchElement()
 	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, xml.AvailableType, elem.Type())
+	require.Equal(t, xmpp.AvailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	// result IQ
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// unblock IQ push
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.SetType, elem.Type())
+	require.Equal(t, xmpp.SetType, elem.Type())
 	unblock2 := elem.Elements().ChildNamespace("unblock", blockingCommandNamespace)
 	require.NotNil(t, block2)
 	item2 = unblock2.Elements().Child("item")
@@ -253,13 +252,15 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	}})
 
 	iqID = uuid.New()
-	iq = xml.NewIQType(iqID, xml.SetType)
+	iq = xmpp.NewIQType(iqID, xmpp.SetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j1)
-	unblock = xml.NewElementNamespace("unblock", blockingCommandNamespace)
+	unblock = xmpp.NewElementNamespace("unblock", blockingCommandNamespace)
 	iq.AppendElement(unblock)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm1)
+
+	time.Sleep(time.Millisecond * 150) // wait until processed...
 
 	blItms, _ := storage.Instance().FetchBlockListItems("ortuman")
 	require.Equal(t, 0, len(blItms))

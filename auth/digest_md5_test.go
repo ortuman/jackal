@@ -16,7 +16,7 @@ import (
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ func (h *digestMD5AuthTestHelper) clientParamsFromChallenge(challenge string) *d
 }
 
 func (h *digestMD5AuthTestHelper) sendClientParamsResponse(params *digestMD5Parameters) error {
-	response := xml.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
+	response := xmpp.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
 	response.SetText(h.serializeParams(params))
 	return h.authr.ProcessElement(response)
 }
@@ -71,11 +71,11 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.False(t, authr.UsesChannelBinding())
 
 	// test garbage input...
-	require.Equal(t, authr.ProcessElement(xml.NewElementName("garbage")), ErrSASLNotAuthorized)
+	require.Equal(t, authr.ProcessElement(xmpp.NewElementName("garbage")), ErrSASLNotAuthorized)
 
 	helper := digestMD5AuthTestHelper{t: t, testStrm: testStrm, authr: authr}
 
-	auth := xml.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
+	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", "DIGEST-MD5")
 	authr.ProcessElement(auth)
 
@@ -87,7 +87,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	clParams.response = clientResp
 
 	// empty payload
-	response := xml.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
+	response := xmpp.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
 	response.SetText("")
 	require.Equal(t, ErrSASLMalformedRequest, authr.ProcessElement(response))
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // ErrMockedError will be returned by any Storage method
@@ -27,9 +27,9 @@ type Storage struct {
 	rosterItems         map[string][]rostermodel.Item
 	rosterVersions      map[string]rostermodel.Version
 	rosterNotifications map[string][]rostermodel.Notification
-	vCards              map[string]xml.XElement
-	privateXML          map[string][]xml.XElement
-	offlineMessages     map[string][]xml.XElement
+	vCards              map[string]xmpp.XElement
+	privateXML          map[string][]xmpp.XElement
+	offlineMessages     map[string][]*xmpp.Message
 	blockListItems      map[string][]model.BlockListItem
 }
 
@@ -40,9 +40,9 @@ func New() *Storage {
 		rosterItems:         make(map[string][]rostermodel.Item),
 		rosterVersions:      make(map[string]rostermodel.Version),
 		rosterNotifications: make(map[string][]rostermodel.Notification),
-		vCards:              make(map[string]xml.XElement),
-		privateXML:          make(map[string][]xml.XElement),
-		offlineMessages:     make(map[string][]xml.XElement),
+		vCards:              make(map[string]xmpp.XElement),
+		privateXML:          make(map[string][]xmpp.XElement),
+		offlineMessages:     make(map[string][]*xmpp.Message),
 		blockListItems:      make(map[string][]model.BlockListItem),
 	}
 }

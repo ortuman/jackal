@@ -10,111 +10,109 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
+
+const mailboxSize = 2048
 
 const vCardNamespace = "vcard-temp"
 
 // VCard represents a vCard server stream module.
 type VCard struct {
-	stm     stream.C2S
-	actorCh chan func()
+	actorCh    chan func()
+	shutdownCh <-chan struct{}
 }
 
 // New returns a vCard IQ handler module.
-func New(stm stream.C2S) *VCard {
+func New(disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *VCard {
 	v := &VCard{
-		stm:     stm,
-		actorCh: make(chan func(), 32),
+		actorCh:    make(chan func(), mailboxSize),
+		shutdownCh: shutdownCh,
 	}
-	if stm != nil {
-		go v.actorLoop(stm.Context().Done())
+	go v.loop()
+	if disco != nil {
+		disco.RegisterServerFeature(vCardNamespace)
+		disco.RegisterAccountFeature(vCardNamespace)
 	}
 	return v
 }
 
-// RegisterDisco registers disco entity features/items
-// associated to vCard module.
-func (x *VCard) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	discoInfo.Entity(x.stm.Domain(), "").AddFeature(vCardNamespace)
-	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(vCardNamespace)
-}
-
 // MatchesIQ returns whether or not an IQ should be
 // processed by the vCard module.
-func (x *VCard) MatchesIQ(iq *xml.IQ) bool {
+func (x *VCard) MatchesIQ(iq *xmpp.IQ) bool {
 	return (iq.IsGet() || iq.IsSet()) && iq.Elements().ChildNamespace("vCard", vCardNamespace) != nil
 }
 
 // ProcessIQ processes a vCard IQ taking according actions
 // over the associated stream.
-func (x *VCard) ProcessIQ(iq *xml.IQ) {
-	x.actorCh <- func() {
-		vCard := iq.Elements().ChildNamespace("vCard", vCardNamespace)
-		if iq.IsGet() {
-			x.getVCard(vCard, iq)
-		} else if iq.IsSet() {
-			x.setVCard(vCard, iq)
-		}
-	}
+func (x *VCard) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
-func (x *VCard) actorLoop(doneCh <-chan struct{}) {
+// runs on it's own goroutine
+func (x *VCard) loop() {
 	for {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-doneCh:
+		case <-x.shutdownCh:
 			return
 		}
 	}
 }
 
-func (x *VCard) getVCard(vCard xml.XElement, iq *xml.IQ) {
+func (x *VCard) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+	vCard := iq.Elements().ChildNamespace("vCard", vCardNamespace)
+	if vCard != nil {
+		if iq.IsGet() {
+			x.getVCard(vCard, iq, stm)
+			return
+		} else if iq.IsSet() {
+			x.setVCard(vCard, iq, stm)
+			return
+		}
+	}
+	stm.SendElement(iq.BadRequestError())
+}
+
+func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 	if vCard.Elements().Count() > 0 {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 		return
 	}
-	toJid := iq.ToJID()
-
-	var username string
-	if toJid.IsServer() {
-		username = x.stm.Username()
-	} else {
-		username = toJid.Node()
-	}
-
-	resElem, err := storage.Instance().FetchVCard(username)
+	toJID := iq.ToJID()
+	resElem, err := storage.Instance().FetchVCard(toJID.Node())
 	if err != nil {
 		log.Errorf("%v", err)
-		x.stm.SendElement(iq.InternalServerError())
+		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	log.Infof("retrieving vcard... (%s/%s)", x.stm.Username(), x.stm.Resource())
+	log.Infof("retrieving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
 	resultIQ := iq.ResultIQ()
 	if resElem != nil {
 		resultIQ.AppendElement(resElem)
 	} else {
 		// empty vCard
-		resultIQ.AppendElement(xml.NewElementNamespace("vCard", vCardNamespace))
+		resultIQ.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 	}
-	x.stm.SendElement(resultIQ)
+	stm.SendElement(resultIQ)
 }
 
-func (x *VCard) setVCard(vCard xml.XElement, iq *xml.IQ) {
-	toJid := iq.ToJID()
-	if toJid.IsServer() || (toJid.IsBare() && toJid.Node() == x.stm.Username()) {
-		log.Infof("saving vcard... (%s/%s)", x.stm.Username(), x.stm.Resource())
+func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
+	toJID := iq.ToJID()
+	if toJID.IsServer() || (toJID.Node() == stm.Username()) {
+		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
-		err := storage.Instance().InsertOrUpdateVCard(vCard, x.stm.Username())
+		err := storage.Instance().InsertOrUpdateVCard(vCard, toJID.Node())
 		if err != nil {
-			log.Errorf("%v", err)
-			x.stm.SendElement(iq.InternalServerError())
+			log.Error(err)
+			stm.SendElement(iq.InternalServerError())
 			return
+
 		}
-		x.stm.SendElement(iq.ResultIQ())
+		stm.SendElement(iq.ResultIQ())
 	} else {
-		x.stm.SendElement(iq.ForbiddenError())
+		stm.SendElement(iq.ForbiddenError())
 	}
 }

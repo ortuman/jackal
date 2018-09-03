@@ -54,11 +54,11 @@ modules:
     send: no
     send_interval: 60
 
-virtual_hosts:
+c2s:
   - id: default
 
     connect_timeout: 5
-    max_stanza_size: 32768
+    max_stanza_size: 65536
     resource_conflict: replace  # [override, replace, reject]
 
     transport:
@@ -66,7 +66,7 @@ virtual_hosts:
       bind_addr: 0.0.0.0
       port: 5222
       keep_alive: 120
-      url_path: /xmpp/ws
+      # url_path: /xmpp/ws
 
     compression:
       level: default
@@ -77,14 +77,12 @@ virtual_hosts:
       - scram_sha_1
       - scram_sha_256
 
-s2s:
-  enabled: false
-
-  dial_timeout: 15
-  dialback_secret: s3cr3tf0rd14lb4ck
-  max_stanza_size: 131072
-
-  transport:
-    bind_addr: 0.0.0.0
-    port: 5269
-    keep_alive: 600
+#s2s:
+#    dial_timeout: 15
+#    dialback_secret: s3cr3tf0rd14lb4ck
+#    max_stanza_size: 131072
+#
+#    transport:
+#      bind_addr: 0.0.0.0
+#      port: 5269
+#      keep_alive: 600

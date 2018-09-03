@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 var errFakeSockAlreadyClosed = errors.New("fakeSockReaderWriter: already closed")
@@ -99,17 +99,17 @@ func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) {
 	return c.rd.Write(b)
 }
 
-func (c *fakeSocketConn) outboundRead() xml.XElement {
-	var elem xml.XElement
+func (c *fakeSocketConn) outboundRead() xmpp.XElement {
+	var elem xmpp.XElement
 	var err error
-	p := xml.NewParser(c.wr, xml.SocketStream, 0)
+	p := xmpp.NewParser(c.wr, xmpp.SocketStream, 0)
 	for err == nil {
 		elem, err = p.ParseElement()
 		if elem != nil {
 			return elem
 		}
 	}
-	return &xml.Element{}
+	return &xmpp.Element{}
 }
 
 func (c *fakeSocketConn) waitClose() bool {

@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertPrivateXML(t *testing.T) {
-	private := xml.NewElementNamespace("exodus", "exodus:ns")
+	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 	rawXML := private.String()
 
 	s, mock := NewMock()
@@ -22,7 +22,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdatePrivateXML([]xml.XElement{private}, "exodus:ns", "ortuman")
+	err := s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -31,7 +31,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertOrUpdatePrivateXML([]xml.XElement{private}, "exodus:ns", "ortuman")
+	err = s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

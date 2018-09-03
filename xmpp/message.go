@@ -3,12 +3,12 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"fmt"
 
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 const (
@@ -29,9 +29,7 @@ const (
 // All incoming <message> elements providing from the
 // stream will automatically be converted to Message objects.
 type Message struct {
-	Element
-	to   *jid.JID
-	from *jid.JID
+	stanzaElement
 }
 
 // NewMessageFromElement creates a Message object from XElement.
@@ -45,8 +43,8 @@ func NewMessageFromElement(e XElement, from *jid.JID, to *jid.JID) (*Message, er
 	}
 	m := &Message{}
 	m.copyFrom(e)
-	m.SetToJID(to)
 	m.SetFromJID(from)
+	m.SetToJID(to)
 	m.SetNamespace("")
 	return m, nil
 }
@@ -84,28 +82,6 @@ func (m *Message) IsGroupChat() bool {
 // has a body sub element.
 func (m *Message) IsMessageWithBody() bool {
 	return m.elements.Child("body") != nil
-}
-
-// ToJID returns message 'to' JID value.
-func (m *Message) ToJID() *jid.JID {
-	return m.to
-}
-
-// SetToJID sets the message 'to' JID value.
-func (m *Message) SetToJID(to *jid.JID) {
-	m.to = to
-	m.SetAttribute("to", to.String())
-}
-
-// FromJID returns message 'from' JID value.
-func (m *Message) FromJID() *jid.JID {
-	return m.from
-}
-
-// SetFromJID sets the message 'from' JID value.
-func (m *Message) SetFromJID(from *jid.JID) {
-	m.from = from
-	m.SetAttribute("from", from.String())
 }
 
 func isMessageType(messageType string) bool {

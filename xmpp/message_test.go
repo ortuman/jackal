@@ -3,62 +3,62 @@
  * See the LICENSE file for more information.
  */
 
-package xml_test
+package xmpp_test
 
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMessageBuild(t *testing.T) {
 	j, _ := jid.New("ortuman", "example.org", "balcony", false)
 
-	elem := xml.NewElementName("iq")
-	_, err := xml.NewMessageFromElement(elem, j, j) // wrong name...
+	elem := xmpp.NewElementName("iq")
+	_, err := xmpp.NewMessageFromElement(elem, j, j) // wrong name...
 	require.NotNil(t, err)
 
 	elem.SetName("message")
 	elem.SetType("invalid")
-	_, err = xml.NewMessageFromElement(elem, j, j) // invalid type...
+	_, err = xmpp.NewMessageFromElement(elem, j, j) // invalid type...
 	require.NotNil(t, err)
 
 	// valid message...
-	elem.SetType(xml.ChatType)
-	elem.AppendElement(xml.NewElementName("body"))
-	message, err := xml.NewMessageFromElement(elem, j, j)
+	elem.SetType(xmpp.ChatType)
+	elem.AppendElement(xmpp.NewElementName("body"))
+	message, err := xmpp.NewMessageFromElement(elem, j, j)
 	require.Nil(t, err)
 	require.NotNil(t, message)
 	require.True(t, message.IsMessageWithBody())
 
-	msg2 := xml.NewMessageType("an-id123", xml.GroupChatType)
+	msg2 := xmpp.NewMessageType("an-id123", xmpp.GroupChatType)
 	require.Equal(t, "an-id123", msg2.ID())
-	require.Equal(t, xml.GroupChatType, msg2.Type())
+	require.Equal(t, xmpp.GroupChatType, msg2.Type())
 }
 
 func TestMessageType(t *testing.T) {
-	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &jid.JID{}, &jid.JID{})
+	message, _ := xmpp.NewMessageFromElement(xmpp.NewElementName("message"), &jid.JID{}, &jid.JID{})
 	require.True(t, message.IsNormal())
 
-	message.SetType(xml.NormalType)
+	message.SetType(xmpp.NormalType)
 	require.True(t, message.IsNormal())
 
-	message.SetType(xml.HeadlineType)
+	message.SetType(xmpp.HeadlineType)
 	require.True(t, message.IsHeadline())
 
-	message.SetType(xml.ChatType)
+	message.SetType(xmpp.ChatType)
 	require.True(t, message.IsChat())
 
-	message.SetType(xml.GroupChatType)
+	message.SetType(xmpp.GroupChatType)
 	require.True(t, message.IsGroupChat())
 }
 
 func TestMessageJID(t *testing.T) {
 	from, _ := jid.New("ortuman", "test.org", "balcony", false)
 	to, _ := jid.New("ortuman", "example.org", "garden", false)
-	message, _ := xml.NewMessageFromElement(xml.NewElementName("message"), &jid.JID{}, &jid.JID{})
+	message, _ := xmpp.NewMessageFromElement(xmpp.NewElementName("message"), &jid.JID{}, &jid.JID{})
 	message.SetFromJID(from)
 	require.Equal(t, message.FromJID().String(), message.From())
 	message.SetToJID(to)

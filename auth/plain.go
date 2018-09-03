@@ -11,7 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // Plain represents a PLAIN authenticator.
@@ -49,7 +49,7 @@ func (p *Plain) UsesChannelBinding() bool {
 }
 
 // ProcessElement process an incoming authenticator element.
-func (p *Plain) ProcessElement(elem xml.XElement) error {
+func (p *Plain) ProcessElement(elem xmpp.XElement) error {
 	if p.authenticated {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (p *Plain) ProcessElement(elem xml.XElement) error {
 	p.username = username
 	p.authenticated = true
 
-	p.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	p.stm.SendElement(xmpp.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 

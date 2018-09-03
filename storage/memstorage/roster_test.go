@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -91,7 +91,7 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 	rn := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		&xml.Presence{},
+		&xmpp.Presence{},
 	}
 	s := New()
 	s.ActivateMockedError()
@@ -104,12 +104,12 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rn1 := rostermodel.Notification{
 		"romeo",
 		"ortuman@jackal.im",
-		&xml.Presence{},
+		&xmpp.Presence{},
 	}
 	rn2 := rostermodel.Notification{
 		"romeo",
 		"ortuman2@jackal.im",
-		&xml.Presence{},
+		&xmpp.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)
@@ -117,7 +117,7 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 
 	from, _ := jid.NewWithString("ortuman2@jackal.im", true)
 	to, _ := jid.NewWithString("romeo@jackal.im", true)
-	rn2.Presence = xml.NewPresence(from, to, xml.SubscribeType)
+	rn2.Presence = xmpp.NewPresence(from, to, xmpp.SubscribeType)
 	s.InsertOrUpdateRosterNotification(&rn2)
 
 	s.ActivateMockedError()
@@ -135,7 +135,7 @@ func TestMockStorageDeleteRosterNotification(t *testing.T) {
 	rn1 := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		&xml.Presence{},
+		&xmpp.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)

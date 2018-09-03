@@ -10,8 +10,8 @@ import (
 
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -24,16 +24,16 @@ func TestXEP0092(t *testing.T) {
 	defer stm.Disconnect(nil)
 
 	cfg := Config{}
-	x := New(&cfg, stm)
+	x := New(&cfg, nil, nil)
 
 	// test MatchesIQ
-	iq := xml.NewIQType(uuid.New(), xml.GetType)
+	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j)
 	iq.SetToJID(j)
 
-	qVer := xml.NewElementNamespace("query", versionNamespace)
+	qVer := xmpp.NewElementNamespace("query", versionNamespace)
 
-	iq.AppendElement(xml.NewElementNamespace("query", "jabber:client"))
+	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:client"))
 	require.False(t, x.MatchesIQ(iq))
 	iq.ClearElements()
 	iq.AppendElement(qVer)
@@ -41,14 +41,14 @@ func TestXEP0092(t *testing.T) {
 	iq.SetToJID(srvJID)
 	require.True(t, x.MatchesIQ(iq))
 
-	qVer.AppendElement(xml.NewElementName("version"))
-	x.ProcessIQ(iq)
+	qVer.AppendElement(xmpp.NewElementName("version"))
+	x.ProcessIQ(iq, stm)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// get version
 	qVer.ClearElements()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	ver := elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, "jackal", ver.Elements().Child("name").Text())
@@ -58,8 +58,8 @@ func TestXEP0092(t *testing.T) {
 	// show OS
 	cfg.ShowOS = true
 
-	x = New(&cfg, stm)
-	x.ProcessIQ(iq)
+	x = New(&cfg, nil, nil)
+	x.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, osString, ver.Elements().Child("os").Text())

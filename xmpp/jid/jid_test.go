@@ -8,7 +8,7 @@ package jid_test
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 

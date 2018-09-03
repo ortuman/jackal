@@ -13,19 +13,19 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 type fakeS2SOut struct {
-	elems []xml.XElement
+	elems []xmpp.XElement
 }
 
-func (f *fakeS2SOut) ID() string                    { return uuid.New() }
-func (f *fakeS2SOut) SendElement(elem xml.XElement) { f.elems = append(f.elems, elem) }
-func (f *fakeS2SOut) Disconnect(err error)          {}
+func (f *fakeS2SOut) ID() string                     { return uuid.New() }
+func (f *fakeS2SOut) SendElement(elem xmpp.XElement) { f.elems = append(f.elems, elem) }
+func (f *fakeS2SOut) Disconnect(err error)           {}
 
 func TestC2SManager(t *testing.T) {
 	host.Initialize([]host.Config{{Name: "jackal.im"}})
@@ -89,7 +89,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	Bind(stm2)
 
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.SetType)
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j6)
 
@@ -125,28 +125,28 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, iqID, elem.ID())
 
 	// send message to highest priority
-	p1 := xml.NewElementName("presence")
+	p1 := xmpp.NewElementName("presence")
 	p1.SetFrom(j3.String())
 	p1.SetTo(j3.String())
-	p1.SetType(xml.AvailableType)
-	pr1 := xml.NewElementName("priority")
+	p1.SetType(xmpp.AvailableType)
+	pr1 := xmpp.NewElementName("priority")
 	pr1.SetText("2")
 	p1.AppendElement(pr1)
-	presence1, _ := xml.NewPresenceFromElement(p1, j3, j3)
+	presence1, _ := xmpp.NewPresenceFromElement(p1, j3, j3)
 	stm3.SetPresence(presence1)
 
-	p2 := xml.NewElementName("presence")
+	p2 := xmpp.NewElementName("presence")
 	p2.SetFrom(j4.String())
 	p2.SetTo(j4.String())
-	p2.SetType(xml.AvailableType)
-	pr2 := xml.NewElementName("priority")
+	p2.SetType(xmpp.AvailableType)
+	pr2 := xmpp.NewElementName("priority")
 	pr2.SetText("1")
 	p2.AppendElement(pr2)
-	presence2, _ := xml.NewPresenceFromElement(p2, j4, j4)
+	presence2, _ := xmpp.NewPresenceFromElement(p2, j4, j4)
 	stm4.SetPresence(presence2)
 
 	msgID := uuid.New()
-	msg := xml.NewMessageType(msgID, xml.ChatType)
+	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
 	msg.SetToJID(j5)
 	require.Nil(t, Route(msg))
 	elem = stm3.FetchElement()
@@ -227,7 +227,7 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 	storage.Instance().DeleteBlockListItems(bl4)
 
 	// test blocked routing
-	iq := xml.NewIQType(uuid.New(), xml.GetType)
+	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j2)
 	iq.SetToJID(j1)
 	require.Equal(t, ErrBlockedJID, Route(iq))

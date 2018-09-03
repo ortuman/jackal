@@ -11,11 +11,15 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+const mailboxSize = 2048
+
 const registerNamespace = "jabber:iq:register"
+
+const xep077RegisteredCtxKey = "xep0077:registered"
 
 // Config represents XMPP In-Band Registration module (XEP-0077) configuration.
 type Config struct {
@@ -27,177 +31,191 @@ type Config struct {
 // Register represents an in-band server stream module.
 type Register struct {
 	cfg        *Config
-	stm        stream.C2S
-	registered bool
+	actorCh    chan func()
+	shutdownCh <-chan struct{}
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, stm stream.C2S) *Register {
-	return &Register{
-		cfg: config,
-		stm: stm,
+func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Register {
+	r := &Register{
+		cfg:        config,
+		actorCh:    make(chan func(), mailboxSize),
+		shutdownCh: shutdownCh,
 	}
-}
-
-// RegisterDisco registers disco entity features/items
-// associated to register module.
-func (x *Register) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	// register disco feature
-	discoInfo.Entity(x.stm.Domain(), "").AddFeature(registerNamespace)
+	go r.loop()
+	if disco != nil {
+		disco.RegisterServerFeature(registerNamespace)
+	}
+	return r
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the in-band registration module.
-func (x *Register) MatchesIQ(iq *xml.IQ) bool {
+func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.Elements().ChildNamespace("query", registerNamespace) != nil
 }
 
 // ProcessIQ processes an in-band registration IQ
 // taking according actions over the associated stream.
-func (x *Register) ProcessIQ(iq *xml.IQ) {
-	if !x.isValidToJid(iq.ToJID()) {
-		x.stm.SendElement(iq.ForbiddenError())
+func (x *Register) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	x.actorCh <- func() { x.processIQ(iq, stm) }
+}
+
+// runs on it's own goroutine
+func (x *Register) loop() {
+	for {
+		select {
+		case f := <-x.actorCh:
+			f()
+		case <-x.shutdownCh:
+			return
+		}
+	}
+}
+
+func (x *Register) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+	if !x.isValidToJid(iq.ToJID(), stm) {
+		stm.SendElement(iq.ForbiddenError())
 		return
 	}
-
 	q := iq.Elements().ChildNamespace("query", registerNamespace)
-	if !x.stm.IsAuthenticated() {
+	if !stm.IsAuthenticated() {
 		if iq.IsGet() {
 			if !x.cfg.AllowRegistration {
-				x.stm.SendElement(iq.NotAllowedError())
+				stm.SendElement(iq.NotAllowedError())
 				return
 			}
 			// ...send registration fields to requester entity...
-			x.sendRegistrationFields(iq, q)
+			x.sendRegistrationFields(iq, q, stm)
 		} else if iq.IsSet() {
-			if !x.registered {
+			if !stm.Context().Bool(xep077RegisteredCtxKey) {
 				// ...register a new user...
-				x.registerNewUser(iq, q)
+				x.registerNewUser(iq, q, stm)
 			} else {
 				// return a <not-acceptable/> stanza error if an entity attempts to register a second identity
-				x.stm.SendElement(iq.NotAcceptableError())
+				stm.SendElement(iq.NotAcceptableError())
 			}
 		} else {
-			x.stm.SendElement(iq.BadRequestError())
+			stm.SendElement(iq.BadRequestError())
 		}
 	} else if iq.IsSet() {
 		if q.Elements().Child("remove") != nil {
 			// remove user
-			x.cancelRegistration(iq, q)
+			x.cancelRegistration(iq, q, stm)
 		} else {
 			user := q.Elements().Child("username")
 			password := q.Elements().Child("password")
 			if user != nil && password != nil {
 				// change password
-				x.changePassword(password.Text(), user.Text(), iq)
+				x.changePassword(password.Text(), user.Text(), iq, stm)
 			} else {
-				x.stm.SendElement(iq.BadRequestError())
+				stm.SendElement(iq.BadRequestError())
 			}
 		}
 	} else {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 	}
 }
 
-func (x *Register) sendRegistrationFields(iq *xml.IQ, query xml.XElement) {
+func (x *Register) sendRegistrationFields(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	if query.Elements().Count() > 0 {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 		return
 	}
 	result := iq.ResultIQ()
-	q := xml.NewElementNamespace("query", registerNamespace)
-	q.AppendElement(xml.NewElementName("username"))
-	q.AppendElement(xml.NewElementName("password"))
+	q := xmpp.NewElementNamespace("query", registerNamespace)
+	q.AppendElement(xmpp.NewElementName("username"))
+	q.AppendElement(xmpp.NewElementName("password"))
 	result.AppendElement(q)
-	x.stm.SendElement(result)
+	stm.SendElement(result)
 }
 
-func (x *Register) registerNewUser(iq *xml.IQ, query xml.XElement) {
+func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	userEl := query.Elements().Child("username")
 	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 		return
 	}
 	exists, err := storage.Instance().UserExists(userEl.Text())
 	if err != nil {
 		log.Errorf("%v", err)
-		x.stm.SendElement(iq.InternalServerError())
+		stm.SendElement(iq.InternalServerError())
 		return
 	}
 	if exists {
-		x.stm.SendElement(iq.ConflictError())
+		stm.SendElement(iq.ConflictError())
 		return
 	}
 	user := model.User{
-		Username: userEl.Text(),
-		Password: passwordEl.Text(),
-		LastPresence: xml.NewPresence(x.stm.JID(), x.stm.JID(), xml.UnavailableType),
+		Username:     userEl.Text(),
+		Password:     passwordEl.Text(),
+		LastPresence: xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
 	}
 	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
-		log.Errorf("%v", err)
-		x.stm.SendElement(iq.InternalServerError())
+		log.Error(err)
+		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	x.stm.SendElement(iq.ResultIQ())
-	x.registered = true
+	stm.SendElement(iq.ResultIQ())
+	stm.Context().SetBool(true, xep077RegisteredCtxKey) // mark as registered
 }
 
-func (x *Register) cancelRegistration(iq *xml.IQ, query xml.XElement) {
+func (x *Register) cancelRegistration(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	if !x.cfg.AllowCancel {
-		x.stm.SendElement(iq.NotAllowedError())
+		stm.SendElement(iq.NotAllowedError())
 		return
 	}
 	if query.Elements().Count() > 1 {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 		return
 	}
-	if err := storage.Instance().DeleteUser(x.stm.Username()); err != nil {
+	if err := storage.Instance().DeleteUser(stm.Username()); err != nil {
 		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
+		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	x.stm.SendElement(iq.ResultIQ())
+	stm.SendElement(iq.ResultIQ())
 }
 
-func (x *Register) changePassword(password string, username string, iq *xml.IQ) {
+func (x *Register) changePassword(password string, username string, iq *xmpp.IQ, stm stream.C2S) {
 	if !x.cfg.AllowChange {
-		x.stm.SendElement(iq.NotAllowedError())
+		stm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if username != x.stm.Username() {
-		x.stm.SendElement(iq.NotAllowedError())
+	if username != stm.Username() {
+		stm.SendElement(iq.NotAllowedError())
 		return
 	}
-	if !x.stm.IsSecured() {
+	if !stm.IsSecured() {
 		// channel isn't safe enough to enable a password change
-		x.stm.SendElement(iq.NotAuthorizedError())
+		stm.SendElement(iq.NotAuthorizedError())
 		return
 	}
 	user, err := storage.Instance().FetchUser(username)
 	if err != nil {
 		log.Error(err)
-		x.stm.SendElement(iq.InternalServerError())
+		stm.SendElement(iq.InternalServerError())
 		return
 	}
 	if user == nil {
-		x.stm.SendElement(iq.ResultIQ())
+		stm.SendElement(iq.ResultIQ())
 		return
 	}
 	if user.Password != password {
 		user.Password = password
 		if err := storage.Instance().InsertOrUpdateUser(user); err != nil {
 			log.Error(err)
-			x.stm.SendElement(iq.InternalServerError())
+			stm.SendElement(iq.InternalServerError())
 			return
 		}
 	}
-	x.stm.SendElement(iq.ResultIQ())
+	stm.SendElement(iq.ResultIQ())
 }
 
-func (x *Register) isValidToJid(j *jid.JID) bool {
-	if x.stm.IsAuthenticated() {
-		return j.IsServer()
+func (x *Register) isValidToJid(j *jid.JID, stm stream.C2S) bool {
+	if stm.IsAuthenticated() && (j.IsBare() && j.Node() != stm.Username()) {
+		return false
 	}
-	return j.IsServer() || (j.IsBare() && j.Node() == x.stm.Username())
+	return true
 }

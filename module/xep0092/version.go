@@ -13,8 +13,10 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
+
+const mailboxSize = 2048
 
 const versionNamespace = "jabber:iq:version"
 
@@ -30,64 +32,82 @@ type Config struct {
 	ShowOS bool `yaml:"show_os"`
 }
 
-// Version represents a version server stream module.
+// Version represents a version module.
 type Version struct {
-	cfg *Config
-	stm stream.C2S
+	cfg        *Config
+	actorCh    chan func()
+	shutdownCh <-chan struct{}
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, stm stream.C2S) *Version {
-	return &Version{
-		cfg: config,
-		stm: stm,
+func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Version {
+	v := &Version{
+		cfg:        config,
+		actorCh:    make(chan func(), mailboxSize),
+		shutdownCh: shutdownCh,
 	}
-}
-
-// RegisterDisco registers disco entity features/items
-// associated to version module.
-func (x *Version) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	discoInfo.Entity(x.stm.Domain(), "").AddFeature(versionNamespace)
+	go v.loop()
+	if disco != nil {
+		disco.RegisterServerFeature(versionNamespace)
+	}
+	return v
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the version module.
-func (x *Version) MatchesIQ(iq *xml.IQ) bool {
+func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
-func (x *Version) ProcessIQ(iq *xml.IQ) {
-	q := iq.Elements().ChildNamespace("query", versionNamespace)
-	if q.Elements().Count() != 0 {
-		x.stm.SendElement(iq.BadRequestError())
-		return
-	}
-	x.sendSoftwareVersion(iq)
+func (x *Version) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
-func (x *Version) sendSoftwareVersion(iq *xml.IQ) {
-	username := x.stm.Username()
-	resource := x.stm.Resource()
+// runs on it's own goroutine
+func (x *Version) loop() {
+	for {
+		select {
+		case f := <-x.actorCh:
+			f()
+		case <-x.shutdownCh:
+			return
+		}
+	}
+}
+
+func (x *Version) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+	q := iq.Elements().ChildNamespace("query", versionNamespace)
+	if q == nil || q.Elements().Count() != 0 {
+		stm.SendElement(iq.BadRequestError())
+		return
+	}
+	x.sendSoftwareVersion(iq, stm)
+}
+
+func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.C2S) {
+	userJID := stm.JID()
+	username := userJID.Node()
+	resource := userJID.Resource()
 	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)
 
 	result := iq.ResultIQ()
-	query := xml.NewElementNamespace("query", versionNamespace)
+	query := xmpp.NewElementNamespace("query", versionNamespace)
 
-	name := xml.NewElementName("name")
+	name := xmpp.NewElementName("name")
 	name.SetText("jackal")
 	query.AppendElement(name)
 
-	ver := xml.NewElementName("version")
+	ver := xmpp.NewElementName("version")
 	ver.SetText(version.ApplicationVersion.String())
 	query.AppendElement(ver)
 
 	if x.cfg.ShowOS {
-		os := xml.NewElementName("os")
+		os := xmpp.NewElementName("os")
 		os.SetText(osString)
 		query.AppendElement(os)
 	}
 	result.AppendElement(query)
-	x.stm.SendElement(result)
+	stm.SendElement(result)
 }

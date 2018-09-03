@@ -8,27 +8,27 @@ package memstorage
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMockStorageInsertPrivateXML(t *testing.T) {
-	private := xml.NewElementNamespace("exodus", "exodus:ns")
+	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
 	s := New()
 	s.ActivateMockedError()
-	err := s.InsertOrUpdatePrivateXML([]xml.XElement{private}, "exodus:ns", "ortuman")
+	err := s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DeactivateMockedError()
-	err = s.InsertOrUpdatePrivateXML([]xml.XElement{private}, "exodus:ns", "ortuman")
+	err = s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, err)
 }
 
 func TestMockStorageFetchPrivateXML(t *testing.T) {
-	private := xml.NewElementNamespace("exodus", "exodus:ns")
+	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
 	s := New()
-	s.InsertOrUpdatePrivateXML([]xml.XElement{private}, "exodus:ns", "ortuman")
+	s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 
 	s.ActivateMockedError()
 	_, err := s.FetchPrivateXML("exodus:ns", "ortuman")

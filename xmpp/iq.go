@@ -3,13 +3,13 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 const (
@@ -27,9 +27,7 @@ const (
 // All incoming <iq> elements providing from the
 // stream will automatically be converted to IQ objects.
 type IQ struct {
-	Element
-	to   *jid.JID
-	from *jid.JID
+	stanzaElement
 }
 
 // NewIQFromElement creates an IQ object from XElement.
@@ -55,8 +53,8 @@ func NewIQFromElement(e XElement, from *jid.JID, to *jid.JID) (*IQ, error) {
 	}
 	iq := &IQ{}
 	iq.copyFrom(e)
-	iq.SetToJID(to)
 	iq.SetFromJID(from)
+	iq.SetToJID(to)
 	iq.SetNamespace("")
 	return iq, nil
 }
@@ -89,34 +87,12 @@ func (iq *IQ) IsResult() bool {
 func (iq *IQ) ResultIQ() *IQ {
 	rs := &IQ{}
 	rs.SetName("iq")
+	rs.SetAttribute("type", ResultType)
 	rs.SetAttribute("xmlns", iq.Namespace())
 	rs.SetAttribute("id", iq.ID())
-	rs.SetAttribute("from", iq.To())
-	rs.SetAttribute("to", iq.From())
-	rs.SetAttribute("type", ResultType)
+	rs.SetFromJID(iq.ToJID())
+	rs.SetToJID(iq.FromJID())
 	return rs
-}
-
-// ToJID returns iq 'from' JID value.
-func (iq *IQ) ToJID() *jid.JID {
-	return iq.to
-}
-
-// SetToJID sets the IQ 'to' JID value.
-func (iq *IQ) SetToJID(to *jid.JID) {
-	iq.to = to
-	iq.SetAttribute("to", to.String())
-}
-
-// FromJID returns presence 'from' JID value.
-func (iq *IQ) FromJID() *jid.JID {
-	return iq.from
-}
-
-// SetFromJID sets the IQ 'from' JID value.
-func (iq *IQ) SetFromJID(from *jid.JID) {
-	iq.from = from
-	iq.SetAttribute("from", from.String())
 }
 
 func isIQType(tp string) bool {

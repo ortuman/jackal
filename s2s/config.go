@@ -11,7 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +63,7 @@ type TLSConfig struct {
 
 // Config represents an s2s configuration.
 type Config struct {
-	Enabled        bool
+	ID             string
 	DialTimeout    time.Duration
 	ConnectTimeout time.Duration
 	DialbackSecret string
@@ -72,7 +72,7 @@ type Config struct {
 }
 
 type configProxy struct {
-	Enabled        bool            `yaml:"enabled"`
+	ID             string          `yaml:"id"`
 	DialTimeout    int             `yaml:"dial_timeout"`
 	ConnectTimeout int             `yaml:"connect_timeout"`
 	DialbackSecret string          `yaml:"dialback_secret"`
@@ -86,10 +86,7 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
-	c.Enabled = p.Enabled
-	if !c.Enabled {
-		return nil
-	}
+	c.ID = p.ID
 	c.DialbackSecret = p.DialbackSecret
 	if len(c.DialbackSecret) == 0 {
 		return errors.New("s2s.Config: must specify a dialback secret")
@@ -119,6 +116,6 @@ type streamConfig struct {
 	tls            *tls.Config
 	transport      transport.Transport
 	maxStanzaSize  int
-	dbVerify       xml.XElement
+	dbVerify       xmpp.XElement
 	dialer         *dialer
 }

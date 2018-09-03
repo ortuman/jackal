@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -19,7 +18,6 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg       *Config
-	modConfig *module.Config
 	ln        net.Listener
 	listening uint32
 }
@@ -62,7 +60,6 @@ func (s *server) listenConn(address string) error {
 
 func (s *server) startStream(tr transport.Transport) {
 	newInStream(&streamConfig{
-		modConfig:      s.modConfig,
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,

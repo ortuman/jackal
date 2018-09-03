@@ -6,91 +6,114 @@
 package xep0030
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+const mailboxSize = 2048
 
 const (
 	discoInfoNamespace  = "http://jabber.org/protocol/disco#info"
 	discoItemsNamespace = "http://jabber.org/protocol/disco#items"
 )
 
+// Feature represents a disco info feature entity.
+type Feature = string
+
+// Identity represents a disco info identity entity.
+type Identity struct {
+	Category string
+	Type     string
+	Name     string
+}
+
+// Item represents a disco info item entity.
+type Item struct {
+	Jid  string
+	Name string
+	Node string
+}
+
+// Provider represents a generic disco info domain provider.
+type Provider interface {
+	// Identities returns all identities associated to the provider.
+	Identities(toJID, fromJID *jid.JID, node string) []Identity
+
+	// Items returns all items associated to the provider.
+	// A proper stanza error should be returned in case an error occurs.
+	Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError)
+
+	// Features returns all features associated to the provider.
+	// A proper stanza error should be returned in case an error occurs.
+	Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError)
+}
+
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
-	stm      stream.C2S
-	mu       sync.RWMutex
-	entities map[string]*Entity
+	mu          sync.RWMutex
+	actorCh     chan func()
+	shutdownCh  <-chan struct{}
+	srvProvider *serverProvider
+	providers   map[string]Provider
 }
 
 // New returns a disco info IQ handler module.
-func New(stm stream.C2S) *DiscoInfo {
-	return &DiscoInfo{
-		stm:      stm,
-		entities: make(map[string]*Entity),
+func New(shutdownCh <-chan struct{}) *DiscoInfo {
+	di := &DiscoInfo{
+		srvProvider: &serverProvider{},
+		providers:   make(map[string]Provider),
+		actorCh:     make(chan func(), mailboxSize),
+		shutdownCh:  shutdownCh,
 	}
+	go di.loop()
+	di.RegisterServerFeature(discoItemsNamespace)
+	di.RegisterServerFeature(discoInfoNamespace)
+	di.RegisterAccountFeature(discoItemsNamespace)
+	di.RegisterAccountFeature(discoInfoNamespace)
+	return di
 }
 
-// RegisterDisco registers disco entity features/items
-// associated to disco info module.
-func (di *DiscoInfo) RegisterDisco(discoInfo *DiscoInfo) {
-	discoInfo.Entity(di.stm.Domain(), "").AddFeature(discoInfoNamespace)
-	discoInfo.Entity(di.stm.JID().ToBareJID().String(), "").AddFeature(discoItemsNamespace)
+// RegisterServerFeature registers a new feature associated to server domain.
+func (di *DiscoInfo) RegisterServerFeature(feature string) {
+	di.srvProvider.registerServerFeature(feature)
 }
 
-// RegisterDefaultEntities register and sets identities for the default
-// domain and account disco entities.
-func (di *DiscoInfo) RegisterDefaultEntities() error {
-	bareJID := di.stm.JID().ToBareJID()
-	srv, err := di.RegisterEntity(di.stm.Domain(), "")
-	if err != nil {
-		return err
-	}
-	acc, err := di.RegisterEntity(bareJID.String(), "")
-	if err != nil {
-		return err
-	}
-	srv.AddIdentity(Identity{
-		Type:     "im",
-		Category: "server",
-		Name:     "jackal",
-	})
-	acc.AddIdentity(Identity{
-		Type:     "registered",
-		Category: "account",
-	})
-	srv.AddItem(Item{Jid: bareJID.String()})
-	return nil
+// UnregisterServerFeature unregisters a previous registered server feature.
+func (di *DiscoInfo) UnregisterServerFeature(feature string) {
+	di.srvProvider.unregisterServerFeature(feature)
 }
 
-// RegisterEntity registers a new disco entity associated to a jid
-// and an optional node.
-func (di *DiscoInfo) RegisterEntity(jid, node string) (*Entity, error) {
-	k := di.entityKey(jid, node)
+// RegisterAccountFeature registers a new feature associated to all account domains.
+func (di *DiscoInfo) RegisterAccountFeature(feature string) {
+	di.srvProvider.registerAccountFeature(feature)
+}
+
+// UnregisterAccountFeature unregisters a previous registered account feature.
+func (di *DiscoInfo) UnregisterAccountFeature(feature string) {
+	di.srvProvider.unregisterAccountFeature(feature)
+}
+
+// RegisterProvider registers a new disco info provider given a domain name.
+func (di *DiscoInfo) RegisterProvider(domain string, provider Provider) {
 	di.mu.Lock()
 	defer di.mu.Unlock()
-	if _, ok := di.entities[k]; ok {
-		return nil, fmt.Errorf("entity already registered: %s", k)
-	}
-	ent := &Entity{}
-	di.entities[k] = ent
-	return ent, nil
+	di.providers[domain] = provider
 }
 
-// Entity returns a previously registered disco entity.
-func (di *DiscoInfo) Entity(jid, node string) *Entity {
-	k := di.entityKey(jid, node)
-	di.mu.RLock()
-	e := di.entities[k]
-	di.mu.RUnlock()
-	return e
+// UnregisterProvider unregisters a previously registered disco info provider.
+func (di *DiscoInfo) UnregisterProvider(domain string) {
+	di.mu.Lock()
+	defer di.mu.Unlock()
+	delete(di.providers, domain)
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the disco info module.
-func (di *DiscoInfo) MatchesIQ(iq *xml.IQ) bool {
+func (di *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 	q := iq.Elements().Child("query")
 	if q == nil {
 		return false
@@ -100,27 +123,66 @@ func (di *DiscoInfo) MatchesIQ(iq *xml.IQ) bool {
 
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
-func (di *DiscoInfo) ProcessIQ(iq *xml.IQ) {
-	q := iq.Elements().Child("query")
-	ent := di.Entity(iq.ToJID().String(), q.Attributes().Get("node"))
-	if ent == nil {
-		di.stm.SendElement(iq.ItemNotFoundError())
-		return
-	}
-	switch q.Namespace() {
-	case discoInfoNamespace:
-		di.sendDiscoInfo(ent, iq)
-	case discoItemsNamespace:
-		di.sendDiscoItems(ent, iq)
+func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	di.actorCh <- func() { di.processIQ(iq, stm) }
+}
+
+// runs on it's own goroutine
+func (di *DiscoInfo) loop() {
+	for {
+		select {
+		case f := <-di.actorCh:
+			f()
+		case <-di.shutdownCh:
+			return
+		}
 	}
 }
 
-func (di *DiscoInfo) sendDiscoInfo(ent *Entity, iq *xml.IQ) {
-	result := iq.ResultIQ()
-	query := xml.NewElementNamespace("query", discoInfoNamespace)
+func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+	fromJID := iq.FromJID()
+	toJID := iq.ToJID()
 
-	for _, identity := range ent.Identities() {
-		identityEl := xml.NewElementName("identity")
+	var prov Provider
+	if host.IsLocalHost(toJID.Domain()) {
+		prov = di.srvProvider
+	} else {
+		prov = di.providers[toJID.Domain()]
+		if prov == nil {
+			stm.SendElement(iq.ItemNotFoundError())
+			return
+		}
+	}
+	q := iq.Elements().Child("query")
+	node := q.Attributes().Get("node")
+	if q != nil {
+		switch q.Namespace() {
+		case discoInfoNamespace:
+			di.sendDiscoInfo(prov, toJID, fromJID, node, iq, stm)
+			return
+		case discoItemsNamespace:
+			di.sendDiscoItems(prov, toJID, fromJID, node, iq, stm)
+			return
+		}
+	}
+	stm.SendElement(iq.BadRequestError())
+}
+
+func (di *DiscoInfo) sendDiscoInfo(prov Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+	features, sErr := prov.Features(toJID, fromJID, node)
+	if sErr != nil {
+		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		return
+	} else if len(features) == 0 {
+		stm.SendElement(iq.ItemNotFoundError())
+		return
+	}
+	result := iq.ResultIQ()
+	query := xmpp.NewElementNamespace("query", discoInfoNamespace)
+
+	identities := prov.Identities(toJID, fromJID, node)
+	for _, identity := range identities {
+		identityEl := xmpp.NewElementName("identity")
 		identityEl.SetAttribute("category", identity.Category)
 		if len(identity.Type) > 0 {
 			identityEl.SetAttribute("type", identity.Type)
@@ -130,21 +192,28 @@ func (di *DiscoInfo) sendDiscoInfo(ent *Entity, iq *xml.IQ) {
 		}
 		query.AppendElement(identityEl)
 	}
-	for _, feature := range ent.Features() {
-		featureEl := xml.NewElementName("feature")
+	for _, feature := range features {
+		featureEl := xmpp.NewElementName("feature")
 		featureEl.SetAttribute("var", feature)
 		query.AppendElement(featureEl)
 	}
 	result.AppendElement(query)
-	di.stm.SendElement(result)
+	stm.SendElement(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(ent *Entity, iq *xml.IQ) {
+func (di *DiscoInfo) sendDiscoItems(prov Provider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+	items, sErr := prov.Items(toJID, fromJID, node)
+	if sErr != nil {
+		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		return
+	} else if len(items) == 0 {
+		stm.SendElement(iq.ItemNotFoundError())
+		return
+	}
 	result := iq.ResultIQ()
-	query := xml.NewElementNamespace("query", discoItemsNamespace)
-
-	for _, item := range ent.Items() {
-		itemEl := xml.NewElementName("item")
+	query := xmpp.NewElementNamespace("query", discoItemsNamespace)
+	for _, item := range items {
+		itemEl := xmpp.NewElementName("item")
 		itemEl.SetAttribute("jid", item.Jid)
 		if len(item.Name) > 0 {
 			itemEl.SetAttribute("name", item.Name)
@@ -155,14 +224,5 @@ func (di *DiscoInfo) sendDiscoItems(ent *Entity, iq *xml.IQ) {
 		query.AppendElement(itemEl)
 	}
 	result.AppendElement(query)
-	di.stm.SendElement(result)
-}
-
-func (di *DiscoInfo) entityKey(jid, node string) string {
-	k := jid
-	if len(node) > 0 {
-		k += ":"
-		k += node
-	}
-	return k
+	stm.SendElement(result)
 }

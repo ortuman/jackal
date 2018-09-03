@@ -12,8 +12,8 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // InsertOrUpdateUser inserts a new user entity into storage,
@@ -64,13 +64,13 @@ func (s *Storage) FetchUser(username string) (*model.User, error) {
 	switch err {
 	case nil:
 		if len(presenceXML) > 0 {
-			parser := xml.NewParser(strings.NewReader(presenceXML), xml.DefaultMode, 0)
+			parser := xmpp.NewParser(strings.NewReader(presenceXML), xmpp.DefaultMode, 0)
 			if lastPresence, err := parser.ParseElement(); err != nil {
 				return nil, err
 			} else {
 				fromJID, _ := jid.NewWithString(lastPresence.From(), true)
 				toJID, _ := jid.NewWithString(lastPresence.To(), true)
-				usr.LastPresence, _ = xml.NewPresenceFromElement(lastPresence, fromJID, toJID)
+				usr.LastPresence, _ = xmpp.NewPresenceFromElement(lastPresence, fromJID, toJID)
 				usr.LastPresenceAt = presenceAt
 			}
 		}

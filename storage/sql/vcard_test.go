@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertVCard(t *testing.T) {
-	vCard := xml.NewElementName("vCard")
+	vCard := xmpp.NewElementName("vCard")
 	rawXML := vCard.String()
 
 	s, mock := NewMock()

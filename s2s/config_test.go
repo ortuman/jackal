@@ -43,27 +43,16 @@ keep_alive: 200
 }
 
 func TestConfig(t *testing.T) {
-	rawCfg := `
-enabled false
-`
 	cfg := Config{}
+	rawCfg := `
+dial_timeout: 300
+connect_timeout: 250
+max_stanza_size: 8192
+`
 	err := yaml.Unmarshal([]byte(rawCfg), &cfg)
-	require.NotNil(t, err)
-
-	rawCfg = `
-enabled: false
-`
-	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
-	require.Nil(t, err)
-
-	rawCfg = `
-enabled: true
-`
-	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
 	require.NotNil(t, err) // missing dialback secret
 
 	rawCfg = `
-enabled: true
 dialback_secret: s3cr3t
 `
 	err = yaml.Unmarshal([]byte(rawCfg), &cfg)
@@ -73,7 +62,6 @@ dialback_secret: s3cr3t
 	require.Equal(t, defaultMaxStanzaSize, cfg.MaxStanzaSize)
 
 	rawCfg = `
-enabled: true
 dialback_secret: s3cr3t
 dial_timeout: 300
 connect_timeout: 250

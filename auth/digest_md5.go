@@ -17,7 +17,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 type digestMD5State int
@@ -114,7 +114,7 @@ func (d *DigestMD5) UsesChannelBinding() bool {
 }
 
 // ProcessElement process an incoming authenticator element.
-func (d *DigestMD5) ProcessElement(elem xml.XElement) error {
+func (d *DigestMD5) ProcessElement(elem xmpp.XElement) error {
 	if d.Authenticated() {
 		return nil
 	}
@@ -142,12 +142,12 @@ func (d *DigestMD5) Reset() {
 	d.authenticated = false
 }
 
-func (d *DigestMD5) handleStart(elem xml.XElement) error {
+func (d *DigestMD5) handleStart(elem xmpp.XElement) error {
 	domain := d.stm.Domain()
 	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
 	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
 
-	respElem := xml.NewElementNamespace("challenge", saslNamespace)
+	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(chnge)))
 	d.stm.SendElement(respElem)
 
@@ -155,7 +155,7 @@ func (d *DigestMD5) handleStart(elem xml.XElement) error {
 	return nil
 }
 
-func (d *DigestMD5) handleChallenged(elem xml.XElement) error {
+func (d *DigestMD5) handleChallenged(elem xmpp.XElement) error {
 	if len(elem.Text()) == 0 {
 		return ErrSASLMalformedRequest
 	}
@@ -203,7 +203,7 @@ func (d *DigestMD5) handleChallenged(elem xml.XElement) error {
 	serverResp := d.computeResponse(params, user, false)
 	respAuth := fmt.Sprintf("rspauth=%s", serverResp)
 
-	respElem := xml.NewElementNamespace("challenge", saslNamespace)
+	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(respAuth)))
 	d.stm.SendElement(respElem)
 
@@ -212,9 +212,9 @@ func (d *DigestMD5) handleChallenged(elem xml.XElement) error {
 	return nil
 }
 
-func (d *DigestMD5) handleAuthenticated(elem xml.XElement) error {
+func (d *DigestMD5) handleAuthenticated(elem xmpp.XElement) error {
 	d.authenticated = true
-	d.stm.SendElement(xml.NewElementNamespace("success", saslNamespace))
+	d.stm.SendElement(xmpp.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 

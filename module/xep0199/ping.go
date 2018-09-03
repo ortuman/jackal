@@ -6,149 +6,216 @@
 package xep0199
 
 import (
-	"sync"
-	"sync/atomic"
+	"fmt"
 	"time"
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 )
+
+const mailboxSize = 2048
 
 const pingNamespace = "urn:xmpp:ping"
 
 // Config represents XMPP Ping module (XEP-0199) configuration.
 type Config struct {
+	Send         bool
+	SendInterval time.Duration
+}
+
+type configProxy struct {
 	Send         bool `yaml:"send"`
 	SendInterval int  `yaml:"send_interval"`
 }
 
+// UnmarshalYAML satisfies Unmarshaler interface.
+func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := configProxy{}
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
+	c.Send = p.Send
+	c.SendInterval = time.Second * time.Duration(p.SendInterval)
+	if c.Send && c.SendInterval < time.Second {
+		return fmt.Errorf("xep0199.Config: send interval must be 1 or higher")
+	}
+	return nil
+}
+
+type ping struct {
+	identifier string
+	timer      *time.Timer
+	stm        stream.C2S
+}
+
 // Ping represents a ping server stream module.
 type Ping struct {
-	cfg *Config
-	stm stream.C2S
-
-	pingTm *time.Timer
-	pongCh chan struct{}
-
-	pingMu sync.RWMutex // guards 'pingID'
-	pingId string
-
-	waitingPing uint32
-	pingOnce    sync.Once
+	cfg         *Config
+	pings       map[string]*ping
+	activePings map[string]*ping
+	actorCh     chan func()
+	shutdownCh  <-chan struct{}
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, stm stream.C2S) *Ping {
-	return &Ping{
-		cfg:    config,
-		stm:    stm,
-		pongCh: make(chan struct{}, 1),
+func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Ping {
+	p := &Ping{
+		cfg:         config,
+		pings:       make(map[string]*ping),
+		activePings: make(map[string]*ping),
+		actorCh:     make(chan func(), mailboxSize),
+		shutdownCh:  shutdownCh,
 	}
-}
-
-// RegisterDisco registers disco entity features/items
-// associated to ping module.
-func (x *Ping) RegisterDisco(discoInfo *xep0030.DiscoInfo) {
-	discoInfo.Entity(x.stm.Domain(), "").AddFeature(pingNamespace)
-	discoInfo.Entity(x.stm.JID().ToBareJID().String(), "").AddFeature(pingNamespace)
+	go p.loop()
+	if disco != nil {
+		disco.RegisterServerFeature(pingNamespace)
+		disco.RegisterAccountFeature(pingNamespace)
+	}
+	return p
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the ping module.
-func (x *Ping) MatchesIQ(iq *xml.IQ) bool {
+func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 	return x.isPongIQ(iq) || iq.Elements().ChildNamespace("ping", pingNamespace) != nil
 }
 
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
-func (x *Ping) ProcessIQ(iq *xml.IQ) {
+func (x *Ping) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+	x.actorCh <- func() { x.processIQ(iq, stm) }
+}
+
+// SchedulePing schedules a new ping in a 'send interval' period,
+// cancelling previous scheduled ping.
+func (x *Ping) SchedulePing(stm stream.C2S) {
+	x.actorCh <- func() { x.schedulePing(stm) }
+}
+
+// CancelPing cancels a previous scheduled ping.
+func (x *Ping) CancelPing(stm stream.C2S) {
+	x.actorCh <- func() { x.cancelPing(stm) }
+}
+
+// runs on it's own goroutine
+func (x *Ping) loop() {
+	for {
+		select {
+		case f := <-x.actorCh:
+			f()
+		case <-x.shutdownCh:
+			for _, pi := range x.pings {
+				pi.timer.Stop()
+			}
+			return
+		}
+	}
+}
+
+func (x *Ping) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	if x.isPongIQ(iq) {
-		x.handlePongIQ(iq)
+		x.handlePongIQ(iq, stm)
 		return
 	}
 	toJid := iq.ToJID()
-	if !toJid.IsServer() && toJid.Node() != x.stm.Username() {
-		x.stm.SendElement(iq.ForbiddenError())
+	if !toJid.IsServer() && toJid.Node() != stm.Username() {
+		stm.SendElement(iq.ForbiddenError())
 		return
 	}
 	p := iq.Elements().ChildNamespace("ping", pingNamespace)
 	if p == nil || p.Elements().Count() > 0 {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 		return
 	}
 	log.Infof("received ping... id: %s", iq.ID())
 	if iq.IsGet() {
 		log.Infof("sent pong... id: %s", iq.ID())
-		x.stm.SendElement(iq.ResultIQ())
+		stm.SendElement(iq.ResultIQ())
 	} else {
-		x.stm.SendElement(iq.BadRequestError())
+		stm.SendElement(iq.BadRequestError())
 	}
 }
 
-// StartPinging starts pinging peer every 'send interval' period.
-func (x *Ping) StartPinging() {
-	if x.cfg.Send {
-		x.pingOnce.Do(func() {
-			x.pingTm = time.AfterFunc(time.Second*time.Duration(x.cfg.SendInterval), x.sendPing)
-		})
-	}
-}
-
-// ResetDeadline resets send ping deadline.
-func (x *Ping) ResetDeadline() {
-	if x.cfg.Send && atomic.LoadUint32(&x.waitingPing) == 1 {
-		x.pingTm.Reset(time.Second * time.Duration(x.cfg.SendInterval))
+func (x *Ping) schedulePing(stm stream.C2S) {
+	if !x.cfg.Send || !stm.JID().IsFull() {
 		return
 	}
+	userJID := stm.JID().String()
+
+	if pi := x.pings[userJID]; pi != nil {
+		if _, ok := x.activePings[pi.identifier]; ok {
+			// waiting for pong
+			return
+		}
+		// cancel previous ping
+		pi.timer.Stop()
+	}
+	x.schedulePingTimer(stm)
 }
 
-func (x *Ping) isPongIQ(iq *xml.IQ) bool {
-	x.pingMu.RLock()
-	defer x.pingMu.RUnlock()
-	return x.pingId == iq.ID() && (iq.IsResult() || iq.Type() == xml.ErrorType)
-}
-
-func (x *Ping) sendPing() {
-	atomic.StoreUint32(&x.waitingPing, 0)
-
-	x.pingMu.Lock()
-	x.pingId = uuid.New()
-	pingId := x.pingId
-	x.pingMu.Unlock()
-
-	iq := xml.NewIQType(pingId, xml.GetType)
-	iq.SetTo(x.stm.JID().String())
-	iq.AppendElement(xml.NewElementNamespace("ping", pingNamespace))
-
-	x.stm.SendElement(iq)
-
-	log.Infof("sent ping... id: %s", pingId)
-
-	x.waitForPong()
-}
-
-func (x *Ping) waitForPong() {
-	t := time.NewTimer(time.Second * time.Duration(x.cfg.SendInterval))
-	select {
-	case <-x.pongCh:
+func (x *Ping) cancelPing(stm stream.C2S) {
+	if !x.cfg.Send || !stm.JID().IsFull() {
 		return
-	case <-t.C:
-		x.stm.Disconnect(streamerror.ErrConnectionTimeout)
+	}
+	userJID := stm.JID().String()
+
+	if pi := x.pings[userJID]; pi != nil {
+		pi.timer.Stop()
+
+		delete(x.pings, userJID)
+		delete(x.activePings, pi.identifier)
 	}
 }
 
-func (x *Ping) handlePongIQ(iq *xml.IQ) {
-	log.Infof("received pong... id: %s", iq.ID())
+func (x *Ping) schedulePingTimer(stm stream.C2S) {
+	pi := &ping{
+		identifier: uuid.New(),
+		stm:        stm,
+	}
+	pi.timer = time.AfterFunc(x.cfg.SendInterval, func() {
+		x.actorCh <- func() { x.sendPing(pi) }
+	})
+	x.pings[stm.JID().String()] = pi
+}
 
-	x.pingMu.Lock()
-	x.pingId = ""
-	x.pingMu.Unlock()
+func (x *Ping) handlePongIQ(iq *xmpp.IQ, stm stream.C2S) {
+	pongID := iq.ID()
+	if pi := x.activePings[pongID]; pi != nil && pi.stm == stm {
+		log.Infof("received pong... id: %s", pongID)
 
-	x.pongCh <- struct{}{}
-	x.pingTm.Reset(time.Second * time.Duration(x.cfg.SendInterval))
-	atomic.StoreUint32(&x.waitingPing, 1)
+		pi.timer.Stop()
+		x.schedulePingTimer(stm)
+	}
+}
+
+func (x *Ping) sendPing(pi *ping) {
+	srvJID, _ := jid.New("", pi.stm.JID().Domain(), "", true)
+
+	iq := xmpp.NewIQType(pi.identifier, xmpp.GetType)
+	iq.SetFromJID(srvJID)
+	iq.SetToJID(pi.stm.JID())
+	iq.AppendElement(xmpp.NewElementNamespace("ping", pingNamespace))
+
+	pi.stm.SendElement(iq)
+
+	log.Infof("sent ping... id: %s", pi.identifier)
+
+	pi.timer = time.AfterFunc(x.cfg.SendInterval/3, func() {
+		x.actorCh <- func() { x.disconnectStream(pi) }
+	})
+	x.activePings[pi.identifier] = pi
+}
+
+func (x *Ping) disconnectStream(pi *ping) {
+	pi.stm.Disconnect(streamerror.ErrConnectionTimeout)
+}
+
+func (x *Ping) isPongIQ(iq *xmpp.IQ) bool {
+	_, ok := x.activePings[iq.ID()]
+	return ok && (iq.IsResult() || iq.Type() == xmpp.ErrorType)
 }

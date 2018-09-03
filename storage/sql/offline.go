@@ -7,12 +7,13 @@ package sql
 
 import (
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // InsertOfflineMessage inserts a new message element into
 // user's offline queue.
-func (s *Storage) InsertOfflineMessage(message xml.XElement, username string) error {
+func (s *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	q := sq.Insert("offline_messages").
 		Columns("username", "data", "created_at").
 		Values(username, message.String(), nowExpr)
@@ -38,7 +39,7 @@ func (s *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (s *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
+func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
 	q := sq.Select("data").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -53,20 +54,32 @@ func (s *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) 
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 
-	buf.WriteString("<root>")
+	buf.WriteString("<r>")
 	for rows.Next() {
 		var msg string
 		rows.Scan(&msg)
 		buf.WriteString(msg)
 	}
-	buf.WriteString("</root>")
+	buf.WriteString("</r>")
 
-	parser := xml.NewParser(buf, xml.DefaultMode, 0)
+	parser := xmpp.NewParser(buf, xmpp.DefaultMode, 0)
 	rootEl, err := parser.ParseElement()
 	if err != nil {
 		return nil, err
 	}
-	return rootEl.Elements().All(), nil
+	elems := rootEl.Elements().All()
+
+	var msgs []*xmpp.Message
+	for _, el := range elems {
+		fromJID, _ := jid.NewWithString(el.From(), true)
+		toJID, _ := jid.NewWithString(el.To(), true)
+		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
+		if err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
 }
 
 // DeleteOfflineMessages clears a user offline queue.

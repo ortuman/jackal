@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"encoding/gob"
@@ -11,7 +11,7 @@ import (
 	"io"
 
 	"github.com/ortuman/jackal/pool"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 var bufPool = pool.NewBufferPool()
@@ -38,15 +38,14 @@ type XElement interface {
 	Type() string
 
 	IsStanza() bool
-	IsError() bool
 
+	IsError() bool
 	Error() XElement
 
 	ToXML(w io.Writer, includeClosing bool)
 	ToGob(enc *gob.Encoder)
 }
 
-// Stanza represents an XML stanza.
 type Stanza interface {
 	XElement
 	FromJID() *jid.JID

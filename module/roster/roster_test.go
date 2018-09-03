@@ -7,14 +7,16 @@ package roster
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -23,14 +25,12 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
-	stm.SetUsername("ortuman")
-	stm.SetDomain("jackal.im")
 
-	r := New(&Config{}, stm)
+	r := New(&Config{}, nil)
 	defer stm.Disconnect(nil)
 
-	iq := xml.NewIQType(uuid.New(), xml.GetType)
-	iq.AppendElement(xml.NewElementNamespace("query", rosterNamespace))
+	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
+	iq.AppendElement(xmpp.NewElementNamespace("query", rosterNamespace))
 
 	require.True(t, r.MatchesIQ(iq))
 }
@@ -41,32 +41,32 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	stm := stream.NewMockC2S("abcd", j1)
-	stm.SetUsername("ortuman")
-	stm.SetDomain("jackal.im")
+	stm := stream.NewMockC2S(uuid.New(), j1)
 
-	r := New(&Config{}, stm)
+	r := New(&Config{}, nil)
 	defer stm.Disconnect(nil)
 
-	iq := xml.NewIQType(uuid.New(), xml.ResultType)
-	q := xml.NewElementNamespace("query", rosterNamespace)
-	q.AppendElement(xml.NewElementName("q2"))
+	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1.ToBareJID())
+	q := xmpp.NewElementNamespace("query", rosterNamespace)
+	q.AppendElement(xmpp.NewElementName("q2"))
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm)
 	elem := stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
-	iq.SetType(xml.GetType)
-	r.ProcessIQ(iq)
+	iq.SetType(xmpp.GetType)
+	r.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	query := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 0, query.Elements().Count())
@@ -91,41 +91,43 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	storage.Instance().InsertOrUpdateRosterItem(ri2)
 
-	r = New(&Config{Versioning: true}, stm)
-	r.ProcessIQ(iq)
+	r = New(&Config{Versioning: true}, nil)
+	r.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
 	require.True(t, stm.Context().Bool(rosterRequestedCtxKey))
 
 	// test versioning
-	iq = xml.NewIQType(uuid.New(), xml.GetType)
-	q = xml.NewElementNamespace("query", rosterNamespace)
+	iq = xmpp.NewIQType(uuid.New(), xmpp.GetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1.ToBareJID())
+	q = xmpp.NewElementNamespace("query", rosterNamespace)
 	q.SetAttribute("ver", "v1")
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// expect set item...
 	elem = stm.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.SetType, elem.Type())
+	require.Equal(t, xmpp.SetType, elem.Type())
 	query2 = elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, "v2", query2.Attributes().Get("ver"))
 	item := query2.Elements().Child("item")
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	storage.ActivateMockedError()
-	r = New(&Config{}, stm)
-	r.ProcessIQ(iq)
+	r = New(&Config{}, nil)
+	r.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
-	require.Equal(t, xml.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 
 	storage.DeactivateMockedError()
 }
@@ -149,15 +151,17 @@ func TestRoster_Update(t *testing.T) {
 	stm2.SetAuthenticated(true)
 	stm2.Context().SetBool(true, rosterRequestedCtxKey)
 
-	r := New(&Config{}, stm1)
+	r := New(&Config{}, nil)
 
 	router.Bind(stm1)
 	router.Bind(stm2)
 
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.SetType)
-	q := xml.NewElementNamespace("query", rosterNamespace)
-	item := xml.NewElementName("item")
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1.ToBareJID())
+	q := xmpp.NewElementNamespace("query", rosterNamespace)
+	item := xmpp.NewElementName("item")
 	item.SetAttribute("jid", "noelia@jackal.im")
 	item.SetAttribute("subscription", rostermodel.SubscriptionNone)
 	item.SetAttribute("name", "My Juliet")
@@ -165,32 +169,32 @@ func TestRoster_Update(t *testing.T) {
 	q.AppendElement(item)
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm1)
 	elem := stm1.FetchElement()
-	require.Equal(t, xml.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
+	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	q.AppendElement(item)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
 	// expecting roster push...
 	elem = stm2.FetchElement()
-	require.Equal(t, xml.SetType, elem.Type())
+	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// update name
 	item.SetAttribute("name", "My Girl")
 	q.ClearElements()
 	q.AppendElement(item)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ResultType, elem.Type())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
 	ri, err := storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
@@ -224,30 +228,272 @@ func TestRoster_RemoveItem(t *testing.T) {
 		Name:         "My Romeo",
 		Subscription: rostermodel.SubscriptionBoth,
 	})
-	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	stm := stream.NewMockC2S("abcd", j1)
-	stm.SetUsername("ortuman")
-	stm.SetDomain("jackal.im")
+	stm := stream.NewMockC2S(uuid.New(), j)
 
-	r := New(&Config{}, stm)
+	r := New(&Config{}, nil)
 	defer stm.Disconnect(nil)
 
 	// remove item
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.SetType)
-	q := xml.NewElementNamespace("query", rosterNamespace)
-	item := xml.NewElementName("item")
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
+	iq.SetFromJID(j)
+	iq.SetToJID(j.ToBareJID())
+
+	q := xmpp.NewElementNamespace("query", rosterNamespace)
+	item := xmpp.NewElementName("item")
 	item.SetAttribute("jid", "noelia@jackal.im")
 	item.SetAttribute("subscription", rostermodel.SubscriptionRemove)
 	q.AppendElement(item)
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq)
+	r.ProcessIQ(iq, stm)
 	elem := stm.FetchElement()
 	require.Equal(t, iqID, elem.ID())
 
 	ri, err := storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
 	require.Nil(t, err)
 	require.Nil(t, ri)
+}
+
+func TestRoster_OnlineJIDs(t *testing.T) {
+	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	router.Initialize(&router.Config{})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+		host.Shutdown()
+	}()
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
+	j3, _ := jid.New("fruela", "jackal.im", "balcony", true)
+	j4, _ := jid.New("ortuman", "jackal.im", "yard", true)
+	j5, _ := jid.New("boss", "jabber.org", "yard", true)
+
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetAuthenticated(true)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm2.SetAuthenticated(true)
+
+	router.Bind(stm1)
+	router.Bind(stm2)
+
+	// user entity
+	storage.Instance().InsertOrUpdateUser(&model.User{
+		Username:     "ortuman",
+		LastPresence: xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType),
+	})
+
+	// roster items
+	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
+		Username:     "noelia",
+		JID:          "ortuman@jackal.im",
+		Subscription: rostermodel.SubscriptionBoth,
+	})
+	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
+		Subscription: rostermodel.SubscriptionBoth,
+	})
+
+	// pending notification
+	storage.Instance().InsertOrUpdateRosterNotification(&rostermodel.Notification{
+		Contact:  "ortuman",
+		JID:      j3.ToBareJID().String(),
+		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
+	})
+
+	r := New(&Config{}, nil)
+
+	// online presence...
+	r.ProcessPresence(xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.AvailableType))
+
+	// receive pending approval notification...
+	elem := stm1.FetchElement()
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, j3.ToBareJID().String(), elem.From())
+	require.Equal(t, xmpp.SubscribeType, elem.Type())
+
+	// expect user's available presence
+	elem = stm2.FetchElement()
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, j1.String(), elem.From())
+	require.Equal(t, xmpp.AvailableType, elem.Type())
+
+	// check if last presence was updated
+	usr, err := storage.Instance().FetchUser("ortuman")
+	require.Nil(t, err)
+	require.NotNil(t, usr)
+	require.NotNil(t, usr.LastPresence)
+	require.Equal(t, xmpp.AvailableType, usr.LastPresence.Type())
+
+	// send remaining online presences...
+	r.ProcessPresence(xmpp.NewPresence(j2, j2.ToBareJID(), xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j3, j3.ToBareJID(), xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j4, j1.ToBareJID(), xmpp.AvailableType))
+	r.ProcessPresence(xmpp.NewPresence(j5, j1.ToBareJID(), xmpp.AvailableType))
+
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	require.Equal(t, 1, len(r.OnlinePresencesMatchingJID(j1)))
+
+	j6, _ := jid.NewWithString("jackal.im", true)
+	require.Equal(t, 4, len(r.OnlinePresencesMatchingJID(j6)))
+
+	j7, _ := jid.NewWithString("jabber.org", true)
+	require.Equal(t, 1, len(r.OnlinePresencesMatchingJID(j7)))
+
+	j8, _ := jid.NewWithString("jackal.im/balcony", true)
+	require.Equal(t, 2, len(r.OnlinePresencesMatchingJID(j8)))
+
+	j9, _ := jid.NewWithString("ortuman@jackal.im", true)
+	require.Equal(t, 2, len(r.OnlinePresencesMatchingJID(j9)))
+
+	// send unavailable presences...
+	r.ProcessPresence(xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType))
+	r.ProcessPresence(xmpp.NewPresence(j2, j2.ToBareJID(), xmpp.UnavailableType))
+	r.ProcessPresence(xmpp.NewPresence(j3, j3.ToBareJID(), xmpp.UnavailableType))
+	r.ProcessPresence(xmpp.NewPresence(j4, j4.ToBareJID(), xmpp.UnavailableType))
+	r.ProcessPresence(xmpp.NewPresence(j5, j1.ToBareJID(), xmpp.UnavailableType))
+
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	require.Equal(t, 0, len(r.OnlinePresencesMatchingJID(j1)))
+	require.Equal(t, 0, len(r.OnlinePresencesMatchingJID(j6)))
+	require.Equal(t, 0, len(r.OnlinePresencesMatchingJID(j7)))
+	require.Equal(t, 0, len(r.OnlinePresencesMatchingJID(j8)))
+	require.Equal(t, 0, len(r.OnlinePresencesMatchingJID(j9)))
+}
+
+func TestRoster_Probe(t *testing.T) {
+	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	router.Initialize(&router.Config{})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+		host.Shutdown()
+	}()
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
+
+	stm := stream.NewMockC2S(uuid.New(), j1)
+	stm.SetAuthenticated(true)
+
+	router.Bind(stm)
+
+	r := New(&Config{}, nil)
+
+	// user doesn't exist...
+	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
+	elem := stm.FetchElement()
+	require.Equal(t, "presence", elem.Name())
+	require.Equal(t, "noelia@jackal.im", elem.From())
+	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
+
+	storage.Instance().InsertOrUpdateUser(&model.User{
+		Username:     "noelia",
+		LastPresence: xmpp.NewPresence(j2.ToBareJID(), j2.ToBareJID(), xmpp.UnavailableType),
+	})
+
+	// user exists, with no presence subscription...
+	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
+	elem = stm.FetchElement()
+	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
+
+	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
+		Username:     "noelia",
+		JID:          "ortuman@jackal.im",
+		Subscription: rostermodel.SubscriptionFrom,
+	})
+	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
+	elem = stm.FetchElement()
+	require.Equal(t, xmpp.UnavailableType, elem.Type())
+
+	// test available presence...
+	p2 := xmpp.NewPresence(j2, j2.ToBareJID(), xmpp.AvailableType)
+	storage.Instance().InsertOrUpdateUser(&model.User{
+		Username:     "noelia",
+		LastPresence: p2,
+	})
+	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
+	elem = stm.FetchElement()
+	require.Equal(t, xmpp.AvailableType, elem.Type())
+	require.Equal(t, "noelia@jackal.im/garden", elem.From())
+}
+
+func TestRoster_Subscription(t *testing.T) {
+	host.Initialize([]host.Config{{Name: "jackal.im"}})
+	router.Initialize(&router.Config{})
+	storage.Initialize(&storage.Config{Type: storage.Memory})
+	defer func() {
+		router.Shutdown()
+		storage.Shutdown()
+		host.Shutdown()
+	}()
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
+
+	r := New(&Config{}, nil)
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	rns, err := storage.Instance().FetchRosterNotifications("noelia")
+	require.Nil(t, err)
+	require.Equal(t, 1, len(rns))
+
+	// resend request...
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))
+
+	// contact request cancellation
+	r.ProcessPresence(xmpp.NewPresence(j2.ToBareJID(), j1.ToBareJID(), xmpp.UnsubscribedType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	rns, err = storage.Instance().FetchRosterNotifications("noelia")
+	require.Nil(t, err)
+	require.Equal(t, 0, len(rns))
+
+	ri, err := storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionNone, ri.Subscription)
+
+	// contact accepts request...
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))
+	r.ProcessPresence(xmpp.NewPresence(j2.ToBareJID(), j1.ToBareJID(), xmpp.SubscribedType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	ri, err = storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionTo, ri.Subscription)
+
+	// contact subscribes to user's presence...
+	r.ProcessPresence(xmpp.NewPresence(j2.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType))
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribedType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	ri, err = storage.Instance().FetchRosterItem("noelia", "ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionBoth, ri.Subscription)
+
+	// user unsubscribes from contact's presence...
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.UnsubscribeType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	ri, err = storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionFrom, ri.Subscription)
+
+	// user cancels contact subscription
+	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.UnsubscribedType))
+	time.Sleep(time.Millisecond * 150) // wait until processed...
+
+	ri, err = storage.Instance().FetchRosterItem("ortuman", "noelia@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionNone, ri.Subscription)
+
+	ri, err = storage.Instance().FetchRosterItem("noelia", "ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Equal(t, rostermodel.SubscriptionNone, ri.Subscription)
 }

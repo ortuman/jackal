@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package xml_test
+package xmpp_test
 
 import (
 	"bytes"
@@ -11,13 +11,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDocParse(t *testing.T) {
 	docSrc := `<a xmlns="im.jackal">Hi!</a>\n`
-	p := xml.NewParser(strings.NewReader(docSrc), xml.DefaultMode, 0)
+	p := xmpp.NewParser(strings.NewReader(docSrc), xmpp.DefaultMode, 0)
 	a, err := p.ParseElement()
 	require.Nil(t, err)
 	require.NotNil(t, a)
@@ -27,25 +27,25 @@ func TestDocParse(t *testing.T) {
 }
 
 func TestParser_EmptyDocParse(t *testing.T) {
-	p := xml.NewParser(new(bytes.Buffer), xml.DefaultMode, 0)
+	p := xmpp.NewParser(new(bytes.Buffer), xmpp.DefaultMode, 0)
 	_, err := p.ParseElement()
 	require.NotNil(t, err)
 }
 
 func TestParser_FailedDocParse(t *testing.T) {
 	docSrc := `<a><b><c a="attr1">HI</c><b></a>\n`
-	p := xml.NewParser(strings.NewReader(docSrc), xml.DefaultMode, 0)
+	p := xmpp.NewParser(strings.NewReader(docSrc), xmpp.DefaultMode, 0)
 	_, err := p.ParseElement()
 	require.NotNil(t, err)
 
 	docSrc2 := `<element a="attr1">\n`
-	p = xml.NewParser(strings.NewReader(docSrc2), xml.DefaultMode, 0)
+	p = xmpp.NewParser(strings.NewReader(docSrc2), xmpp.DefaultMode, 0)
 	element, err := p.ParseElement()
 	require.Equal(t, io.EOF, err)
 	require.Nil(t, element)
 
 	docSrc3 := `</auth>\n`
-	p = xml.NewParser(strings.NewReader(docSrc3), xml.DefaultMode, 0)
+	p = xmpp.NewParser(strings.NewReader(docSrc3), xmpp.DefaultMode, 0)
 	element, err = p.ParseElement()
 	require.NotNil(t, err)
 	require.Nil(t, element)
@@ -53,20 +53,20 @@ func TestParser_FailedDocParse(t *testing.T) {
 
 func TestParser_Close(t *testing.T) {
 	src := `</stream:stream>\n`
-	p := xml.NewParser(strings.NewReader(src), xml.SocketStream, 0)
+	p := xmpp.NewParser(strings.NewReader(src), xmpp.SocketStream, 0)
 	_, err := p.ParseElement()
-	require.Equal(t, xml.ErrStreamClosedByPeer, err)
+	require.Equal(t, xmpp.ErrStreamClosedByPeer, err)
 
 	src = `<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />\n`
-	p = xml.NewParser(strings.NewReader(src), xml.WebSocketStream, 0)
+	p = xmpp.NewParser(strings.NewReader(src), xmpp.WebSocketStream, 0)
 	_, err = p.ParseElement()
-	require.Equal(t, xml.ErrStreamClosedByPeer, err)
+	require.Equal(t, xmpp.ErrStreamClosedByPeer, err)
 }
 
 func TestParser_ParseSeveralElements(t *testing.T) {
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/><b/><c/>`
 	reader := strings.NewReader(docSrc)
-	p := xml.NewParser(reader, xml.DefaultMode, 0)
+	p := xmpp.NewParser(reader, xmpp.DefaultMode, 0)
 	header, err := p.ParseElement()
 	require.Nil(t, header)
 	require.Nil(t, err)
@@ -83,7 +83,7 @@ func TestParser_ParseSeveralElements(t *testing.T) {
 
 func TestParser_DocChildElements(t *testing.T) {
 	docSrc := `<parent><a/><b/><c/></parent>\n`
-	p := xml.NewParser(strings.NewReader(docSrc), xml.DefaultMode, 0)
+	p := xmpp.NewParser(strings.NewReader(docSrc), xmpp.DefaultMode, 0)
 	parent, err := p.ParseElement()
 	require.Nil(t, err)
 	require.NotNil(t, parent)
@@ -96,12 +96,12 @@ func TestParser_DocChildElements(t *testing.T) {
 
 func TestStream(t *testing.T) {
 	openStreamXML := `<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace"> `
-	p := xml.NewParser(strings.NewReader(openStreamXML), xml.SocketStream, 0)
+	p := xmpp.NewParser(strings.NewReader(openStreamXML), xmpp.SocketStream, 0)
 	elem, err := p.ParseElement()
 	require.Nil(t, err)
 	require.Equal(t, "stream:stream", elem.Name())
 	closeStreamXML := `</stream:stream> `
-	p = xml.NewParser(strings.NewReader(closeStreamXML), xml.SocketStream, 0)
+	p = xmpp.NewParser(strings.NewReader(closeStreamXML), xmpp.SocketStream, 0)
 	_, err = p.ParseElement()
-	require.Equal(t, xml.ErrStreamClosedByPeer, err)
+	require.Equal(t, xmpp.ErrStreamClosedByPeer, err)
 }

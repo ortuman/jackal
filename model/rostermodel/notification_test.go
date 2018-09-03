@@ -10,8 +10,8 @@ import (
 	"encoding/gob"
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func TestModelRosterNotification(t *testing.T) {
 	rn1 = Notification{
 		Contact:  "noelia",
 		JID:      "ortuman@jackal.im",
-		Presence: xml.NewPresence(j1, j2, xml.AvailableType),
+		Presence: xmpp.NewPresence(j1, j2, xmpp.AvailableType),
 	}
 	buf := new(bytes.Buffer)
 	rn1.ToGob(gob.NewEncoder(buf))

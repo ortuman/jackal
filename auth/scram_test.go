@@ -23,7 +23,7 @@ import (
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/util"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -225,7 +225,7 @@ func TestScramBadPayload(t *testing.T) {
 
 	authr := NewScram(testStrm, testTr, ScramSHA1, false)
 
-	auth := xml.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
+	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", authr.Mechanism())
 
 	// empty auth payload
@@ -257,7 +257,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 
 	authr := NewScram(testStrm, tr, tc.scramType, tc.usesCb)
 
-	auth := xml.NewElementNamespace("auth", saslNamespace)
+	auth := xmpp.NewElementNamespace("auth", saslNamespace)
 	auth.SetAttribute("mechanism", authr.Mechanism())
 
 	clientInitialMessage := fmt.Sprintf(`n=%s,r=%s`, tc.n, tc.r)
@@ -293,7 +293,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 
 	res := computeScramAuthResult(tc.scramType, clientInitialMessage, string(srvInitialMessage), srvNonce, cBytes, tc.password, salt, iterations)
 
-	response := xml.NewElementNamespace("response", saslNamespace)
+	response := xmpp.NewElementNamespace("response", saslNamespace)
 	response.SetText(base64.StdEncoding.EncodeToString([]byte(res.clientFinalMessage)))
 
 	err = authr.ProcessElement(response)

@@ -10,8 +10,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // roster item subscription values
@@ -35,7 +35,7 @@ type Item struct {
 }
 
 // NewItem parses an XML element returning a derived roster item instance.
-func NewItem(elem xml.XElement) (*Item, error) {
+func NewItem(elem xmpp.XElement) (*Item, error) {
 	if elem.Name() != "item" {
 		return nil, fmt.Errorf("invalid item element name: %s", elem.Name())
 	}
@@ -81,9 +81,9 @@ func NewItem(elem xml.XElement) (*Item, error) {
 }
 
 // Element returns a roster item XML element representation.
-func (ri *Item) Element() xml.XElement {
+func (ri *Item) Element() xmpp.XElement {
 	riJID := ri.ContactJID()
-	item := xml.NewElementName("item")
+	item := xmpp.NewElementName("item")
 	item.SetAttribute("jid", riJID.ToBareJID().String())
 	if len(ri.Name) > 0 {
 		item.SetAttribute("name", ri.Name)
@@ -95,7 +95,7 @@ func (ri *Item) Element() xml.XElement {
 		item.SetAttribute("ask", "subscribe")
 	}
 	for _, group := range ri.Groups {
-		gr := xml.NewElementName("group")
+		gr := xmpp.NewElementName("group")
 		gr.SetText(group)
 		item.AppendElement(gr)
 	}

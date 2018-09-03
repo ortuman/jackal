@@ -10,12 +10,12 @@ import (
 	"encoding/gob"
 	"testing"
 
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestItemElement(t *testing.T) {
-	elem := xml.NewElementName("item2")
+	elem := xmpp.NewElementName("item2")
 	it, err := NewItem(elem)
 	require.Nil(t, it)
 	require.NotNil(t, err)
@@ -48,13 +48,13 @@ func TestItemElement(t *testing.T) {
 
 	// attach bad group
 	elem.SetAttribute("ask", "subscribe")
-	elem.AppendElement(xml.NewElementNamespace("group", "ns"))
+	elem.AppendElement(xmpp.NewElementNamespace("group", "ns"))
 	it, err = NewItem(elem)
 	require.Nil(t, it)
 	require.NotNil(t, err)
 
 	elem.RemoveElements("group")
-	gr := xml.NewElementName("group")
+	gr := xmpp.NewElementName("group")
 	gr.SetText("friends")
 	elem.AppendElement(gr)
 	elem.SetAttribute("name", "buddy")

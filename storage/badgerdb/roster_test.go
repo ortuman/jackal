@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,12 +65,12 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 	rn1 := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "juliet@jackal.im",
-		Presence: &xml.Presence{},
+		Presence: &xmpp.Presence{},
 	}
 	rn2 := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "romeo@jackal.im",
-		Presence: &xml.Presence{},
+		Presence: &xmpp.Presence{},
 	}
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
 	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn2))

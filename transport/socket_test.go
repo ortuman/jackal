@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,11 +55,11 @@ func TestSocket(t *testing.T) {
 	st := NewSocketTransport(conn, 4096)
 	st2 := st.(*socketTransport)
 
-	el1 := xml.NewElementNamespace("elem", "exodus:ns")
+	el1 := xmpp.NewElementNamespace("elem", "exodus:ns")
 	el1.ToXML(st, true)
 	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), conn.w.Bytes()))
 
-	el2 := xml.NewElementNamespace("elem2", "exodus2:ns")
+	el2 := xmpp.NewElementNamespace("elem2", "exodus2:ns")
 	el2.ToXML(conn.r, true)
 	n, err := st.Read(buff)
 	require.Nil(t, err)

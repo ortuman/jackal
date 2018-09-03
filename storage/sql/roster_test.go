@@ -11,7 +11,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -134,7 +134,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 	rn := rostermodel.Notification{
 		"ortuman",
 		"romeo",
-		&xml.Presence{},
+		&xmpp.Presence{},
 	}
 	presenceXML := rn.Presence.String()
 

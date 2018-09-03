@@ -8,8 +8,8 @@ package rostermodel
 import (
 	"encoding/gob"
 
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // Notification represents a roster subscription
@@ -17,7 +17,7 @@ import (
 type Notification struct {
 	Contact  string
 	JID      string
-	Presence *xml.Presence
+	Presence *xmpp.Presence
 }
 
 // FromGob deserializes a Notification entity
@@ -25,11 +25,11 @@ type Notification struct {
 func (rn *Notification) FromGob(dec *gob.Decoder) {
 	dec.Decode(&rn.Contact)
 	dec.Decode(&rn.JID)
-	el := &xml.Element{}
+	el := &xmpp.Element{}
 	el.FromGob(dec)
 	fromJID, _ := jid.NewWithString(el.From(), true)
 	toJID, _ := jid.NewWithString(el.To(), true)
-	rn.Presence, _ = xml.NewPresenceFromElement(el, fromJID, toJID)
+	rn.Presence, _ = xmpp.NewPresenceFromElement(el, fromJID, toJID)
 }
 
 // ToGob converts a Notification entity

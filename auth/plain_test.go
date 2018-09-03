@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	require.Equal(t, authr.Mechanism(), "PLAIN")
 	require.False(t, authr.UsesChannelBinding())
 
-	elem := xml.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
+	elem := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	elem.SetAttribute("mechanism", "PLAIN")
 	authr.ProcessElement(elem)
 

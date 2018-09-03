@@ -3,11 +3,13 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"encoding/gob"
 	"io"
+
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // Element represents a generic and mutable XML node element.
@@ -38,20 +40,20 @@ func NewElementFromElement(elem XElement) *Element {
 	return e
 }
 
-// NewErrorElementFromElement returns a copy of an element of stanza error class.
-func NewErrorElementFromElement(elem XElement, stanzaErr *StanzaError, errorElements []XElement) *Element {
-	e := &Element{}
-	e.copyFrom(elem)
-	e.SetType("error")
-	e.SetFrom(elem.To())
-	e.SetTo(elem.From())
+// NewErrorStanzaFromStanza returns a copy of an element of stanza error class.
+func NewErrorStanzaFromStanza(stanza Stanza, stanzaErr *StanzaError, errorElements []XElement) Stanza {
+	e := &stanzaElement{}
+	e.copyFrom(stanza)
+	e.SetType(ErrorType)
+	e.SetFromJID(stanza.ToJID())
+	e.SetToJID(stanza.FromJID())
 	errEl := stanzaErr.Element()
 	errEl.AppendElements(errorElements)
 	e.AppendElement(errEl)
 	return e
 }
 
-// Name returns XML node name.
+// Domain returns XML node name.
 func (e *Element) Name() string {
 	return e.name
 }
@@ -203,4 +205,32 @@ func (e *Element) copyFrom(el XElement) {
 	e.text = el.Text()
 	e.attrs.copyFrom(el.Attributes().(attributeSet))
 	e.elements.copyFrom(el.Elements().(elementSet))
+}
+
+type stanzaElement struct {
+	Element
+	fromJID *jid.JID
+	toJID   *jid.JID
+}
+
+// ToJID returns iq 'from' JID value.
+func (stanza *stanzaElement) ToJID() *jid.JID {
+	return stanza.toJID
+}
+
+// SetToJID sets the IQ 'to' JID value.
+func (stanza *stanzaElement) SetToJID(j *jid.JID) {
+	stanza.toJID = j
+	stanza.SetTo(j.String())
+}
+
+// FromJID returns presence 'from' JID value.
+func (stanza *stanzaElement) FromJID() *jid.JID {
+	return stanza.fromJID
+}
+
+// SetFromJID sets the IQ 'from' JID value.
+func (stanza *stanzaElement) SetFromJID(j *jid.JID) {
+	stanza.fromJID = j
+	stanza.SetFrom(j.String())
 }

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 // SetName sets XML node name.
 func (e *Element) SetName(name string) {

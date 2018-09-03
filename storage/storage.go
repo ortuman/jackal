@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/storage/badgerdb"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/sql"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 type userStorage interface {
@@ -65,13 +65,13 @@ type rosterStorage interface {
 type offlineStorage interface {
 	// InsertOfflineMessage inserts a new message element into
 	// user's offline queue.
-	InsertOfflineMessage(message xml.XElement, username string) error
+	InsertOfflineMessage(message *xmpp.Message, username string) error
 
 	// CountOfflineMessages returns current length of user's offline queue.
 	CountOfflineMessages(username string) (int, error)
 
 	// FetchOfflineMessages retrieves from storage current user offline queue.
-	FetchOfflineMessages(username string) ([]xml.XElement, error)
+	FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 
 	// DeleteOfflineMessages clears a user offline queue.
 	DeleteOfflineMessages(username string) error
@@ -80,20 +80,20 @@ type offlineStorage interface {
 type vCardStorage interface {
 	// InsertOrUpdateVCard inserts a new vCard element into storage,
 	// or updates it in case it's been previously inserted.
-	InsertOrUpdateVCard(vCard xml.XElement, username string) error
+	InsertOrUpdateVCard(vCard xmpp.XElement, username string) error
 
 	// FetchVCard retrieves from storage a vCard element associated
 	// to a given user.
-	FetchVCard(username string) (xml.XElement, error)
+	FetchVCard(username string) (xmpp.XElement, error)
 }
 
 type privateStorage interface {
 	// FetchPrivateXML retrieves from storage a private element.
-	FetchPrivateXML(namespace string, username string) ([]xml.XElement, error)
+	FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error)
 
 	// InsertOrUpdatePrivateXML inserts a new private element into storage,
 	// or updates it in case it's been previously inserted.
-	InsertOrUpdatePrivateXML(privateXML []xml.XElement, namespace string, username string) error
+	InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error
 }
 
 type blockListStorage interface {

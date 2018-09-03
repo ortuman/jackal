@@ -14,7 +14,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/transport"
@@ -38,7 +37,7 @@ func TestC2SSocketServer(t *testing.T) {
 			Port: 9998,
 		},
 	}
-	go Initialize([]Config{cfg}, &module.Config{})
+	go Initialize([]Config{cfg})
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -92,7 +91,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 			Port:    9999,
 		},
 	}
-	go Initialize([]Config{cfg}, &module.Config{})
+	go Initialize([]Config{cfg})
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)

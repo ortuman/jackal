@@ -3,7 +3,7 @@
 storage:
   type: memory
 
-virtual_hosts:
+c2s:
   - id: default
     transport:
       port: 5222

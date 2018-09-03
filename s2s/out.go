@@ -12,8 +12,8 @@ import (
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/session"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 const (
@@ -36,8 +36,8 @@ type outStream struct {
 	secured       uint32
 	authenticated uint32
 	actorCh       chan func()
-	sendQueue     []xml.XElement
-	verified      chan xml.XElement
+	sendQueue     []xmpp.XElement
+	verified      chan xmpp.XElement
 	verifyCh      chan bool
 	discCh        chan *streamerror.Error
 }
@@ -55,7 +55,7 @@ func (s *outStream) ID() string {
 	return s.cfg.localDomain + ":" + s.cfg.remoteDomain
 }
 
-func (s *outStream) SendElement(elem xml.XElement) {
+func (s *outStream) SendElement(elem xmpp.XElement) {
 	if s.getState() == outDisconnected {
 		return
 	}
@@ -137,7 +137,7 @@ func (s *outStream) doRead() {
 	}
 }
 
-func (s *outStream) handleElement(elem xml.XElement) {
+func (s *outStream) handleElement(elem xmpp.XElement) {
 	switch s.getState() {
 	case outConnecting:
 		s.handleConnecting(elem)
@@ -154,11 +154,11 @@ func (s *outStream) handleElement(elem xml.XElement) {
 	}
 }
 
-func (s *outStream) handleConnecting(elem xml.XElement) {
+func (s *outStream) handleConnecting(elem xmpp.XElement) {
 	s.setState(outConnected)
 }
 
-func (s *outStream) handleConnected(elem xml.XElement) {
+func (s *outStream) handleConnected(elem xmpp.XElement) {
 	if elem.Name() != "stream:features" {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
@@ -169,7 +169,7 @@ func (s *outStream) handleConnected(elem xml.XElement) {
 			s.disconnectWithStreamError(streamerror.ErrPolicyViolation)
 			return
 		}
-		s.writeElement(xml.NewElementNamespace("starttls", tlsNamespace))
+		s.writeElement(xmpp.NewElementNamespace("starttls", tlsNamespace))
 		s.setState(outSecuring)
 
 	} else {
@@ -190,14 +190,14 @@ func (s *outStream) handleConnected(elem xml.XElement) {
 				}
 			}
 			if hasExternalAuth {
-				auth := xml.NewElementNamespace("auth", saslNamespace)
+				auth := xmpp.NewElementNamespace("auth", saslNamespace)
 				auth.SetAttribute("mechanism", "EXTERNAL")
 				auth.SetText("=")
 				s.writeElement(auth)
 				s.setState(outAuthenticating)
 
 			} else if elem.Elements().ChildrenNamespace("dialback", dialbackNamespace) != nil {
-				db := xml.NewElementName("db:result")
+				db := xmpp.NewElementName("db:result")
 				db.SetFrom(s.cfg.localDomain)
 				db.SetTo(s.cfg.remoteDomain)
 				db.SetText(s.cfg.keyGen.generate(s.cfg.remoteDomain, s.cfg.localDomain, s.sess.StreamID()))
@@ -214,7 +214,7 @@ func (s *outStream) handleConnected(elem xml.XElement) {
 	}
 }
 
-func (s *outStream) handleSecuring(elem xml.XElement) {
+func (s *outStream) handleSecuring(elem xmpp.XElement) {
 	if elem.Name() != "proceed" {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
@@ -230,7 +230,7 @@ func (s *outStream) handleSecuring(elem xml.XElement) {
 	atomic.StoreUint32(&s.secured, 1)
 }
 
-func (s *outStream) handleAuthenticating(elem xml.XElement) {
+func (s *outStream) handleAuthenticating(elem xmpp.XElement) {
 	if elem.Namespace() != saslNamespace {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
@@ -249,7 +249,7 @@ func (s *outStream) handleAuthenticating(elem xml.XElement) {
 	}
 }
 
-func (s *outStream) handleValidatingDialbackKey(elem xml.XElement) {
+func (s *outStream) handleValidatingDialbackKey(elem xmpp.XElement) {
 	switch elem.Name() {
 	case "db:result":
 		if elem.From() != s.cfg.remoteDomain {
@@ -268,7 +268,7 @@ func (s *outStream) handleValidatingDialbackKey(elem xml.XElement) {
 	}
 }
 
-func (s *outStream) handleAuthorizingDialbackKey(elem xml.XElement) {
+func (s *outStream) handleAuthorizingDialbackKey(elem xmpp.XElement) {
 	switch elem.Name() {
 	case "db:verify":
 		s.verifyCh <- elem.Type() == "valid"
@@ -287,11 +287,20 @@ func (s *outStream) finishVerification() {
 	s.setState(outVerified)
 }
 
-func (s *outStream) writeElement(elem xml.XElement) {
+func (s *outStream) writeStanzaErrorResponse(elem xmpp.XElement, stanzaErr *xmpp.StanzaError) {
+	resp := xmpp.NewElementFromElement(elem)
+	resp.SetType(xmpp.ErrorType)
+	resp.SetFrom(elem.To())
+	resp.SetTo(elem.From())
+	resp.AppendElement(stanzaErr.Element())
+	s.writeElement(resp)
+}
+
+func (s *outStream) writeElement(elem xmpp.XElement) {
 	s.sess.Send(elem)
 }
 
-func (s *outStream) readElement(elem xml.XElement) {
+func (s *outStream) readElement(elem xmpp.XElement) {
 	if elem != nil {
 		s.handleElement(elem)
 	}
@@ -300,14 +309,14 @@ func (s *outStream) readElement(elem xml.XElement) {
 	}
 }
 
-func (s *outStream) handleSessionError(sessErr *session.Error) {
-	switch err := sessErr.UnderlyingErr.(type) {
+func (s *outStream) handleSessionError(sErr *session.Error) {
+	switch err := sErr.UnderlyingErr.(type) {
 	case nil:
 		s.disconnect(nil)
 	case *streamerror.Error:
 		s.disconnectWithStreamError(err)
-	case *xml.StanzaError:
-		s.writeElement(xml.NewErrorElementFromElement(sessErr.Element, err, nil))
+	case *xmpp.StanzaError:
+		s.writeStanzaErrorResponse(sErr.Element, err)
 	default:
 		log.Error(err)
 		s.disconnectWithStreamError(streamerror.ErrUndefinedCondition)

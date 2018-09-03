@@ -11,15 +11,15 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertUser(t *testing.T) {
 	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
-	p := xml.NewPresence(from, to, xml.UnavailableType)
+	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
 
 	user := model.User{Username: "ortuman", Password: "1234", LastPresence: p}
 
@@ -76,7 +76,7 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 func TestMySQLStorageFetchUser(t *testing.T) {
 	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
-	p := xml.NewPresence(from, to, xml.UnavailableType)
+	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
 
 	var userColumns = []string{"username", "password", "last_presence", "last_presence_at"}
 

@@ -12,17 +12,13 @@ import (
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/module/offline"
-	"github.com/ortuman/jackal/module/xep0077"
-	"github.com/ortuman/jackal/module/xep0092"
-	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/xml"
-	"github.com/ortuman/jackal/xml/jid"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -84,7 +80,8 @@ func TestStream_Features(t *testing.T) {
 
 	// secured features
 	stm2, conn2 := tUtilStreamInit()
-	stm2.Context().SetBool(true, securedCtxKey)
+	stm2.setSecured(true)
+
 	tUtilStreamOpen(conn2)
 
 	elem = conn2.outboundRead()
@@ -165,7 +162,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 
 	elem = conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
-	require.Equal(t, xml.ErrorType, elem.Type())
+	require.Equal(t, xmpp.ErrorType, elem.Type())
 	require.NotNil(t, elem.Elements().Child("error"))
 }
 
@@ -250,7 +247,9 @@ func TestStream_SendIQ(t *testing.T) {
 	host.Initialize([]host.Config{{Name: "localhost"}})
 	router.Initialize(&router.Config{})
 	storage.Initialize(&storage.Config{Type: storage.Memory})
+	tUtilInitModules()
 	defer func() {
+		module.Shutdown()
 		router.Shutdown()
 		storage.Shutdown()
 		host.Shutdown()
@@ -275,8 +274,8 @@ func TestStream_SendIQ(t *testing.T) {
 
 	// request roster...
 	iqID := uuid.New()
-	iq := xml.NewIQType(iqID, xml.GetType)
-	iq.AppendElement(xml.NewElementNamespace("query", "jabber:iq:roster"))
+	iq := xmpp.NewIQType(iqID, xmpp.GetType)
+	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:iq:roster"))
 
 	conn.inboundWrite([]byte(iq.String()))
 
@@ -330,7 +329,7 @@ func TestStream_SendPresence(t *testing.T) {
 	p := stm.Presence()
 	require.NotNil(t, p)
 	require.Equal(t, int8(5), p.Priority())
-	x := xml.NewElementName("x")
+	x := xmpp.NewElementName("x")
 	x.AppendElements(stm.Presence().Elements().All())
 	require.NotNil(t, x.Elements().Child("show"))
 	require.NotNil(t, x.Elements().Child("status"))
@@ -373,10 +372,10 @@ func TestStream_SendMessage(t *testing.T) {
 	router.Bind(stm2)
 
 	msgID := uuid.New()
-	msg := xml.NewMessageType(msgID, xml.ChatType)
+	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
 	msg.SetFromJID(jFrom)
 	msg.SetToJID(jTo)
-	body := xml.NewElementName("body")
+	body := xmpp.NewElementName("body")
 	body.SetText("Hi buddy!")
 	msg.AppendElement(body)
 
@@ -432,7 +431,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	elem := conn.outboundRead()
 	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, xml.ErrorType, elem.Type())
+	require.Equal(t, xmpp.ErrorType, elem.Type())
 	require.NotNil(t, elem.Elements().Child("error"))
 }
 
@@ -479,7 +478,7 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 
 	elem = conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
-	require.NotNil(t, xml.ResultType, elem.Type())
+	require.NotNil(t, xmpp.ResultType, elem.Type())
 
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
@@ -492,17 +491,6 @@ func tUtilStreamInit() (*inStream, *fakeSocketConn) {
 }
 
 func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
-	modules := map[string]struct{}{}
-	modules["roster"] = struct{}{}
-	modules["last_activity"] = struct{}{}
-	modules["private"] = struct{}{}
-	modules["vcard"] = struct{}{}
-	modules["registration"] = struct{}{}
-	modules["version"] = struct{}{}
-	modules["ping"] = struct{}{}
-	modules["blocking_command"] = struct{}{}
-	modules["offline"] = struct{}{}
-
 	return &streamConfig{
 		connectTimeout:   time.Second,
 		transport:        tr,
@@ -510,12 +498,13 @@ func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
 		resourceConflict: Reject,
 		compression:      CompressConfig{Level: compress.DefaultCompression},
 		sasl:             []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256"},
-		modules: &module.Config{
-			Enabled:      modules,
-			Offline:      offline.Config{QueueSize: 10},
-			Registration: xep0077.Config{AllowRegistration: true, AllowChange: true},
-			Version:      xep0092.Config{ShowOS: true},
-			Ping:         xep0199.Config{SendInterval: 5, Send: true},
-		},
 	}
+}
+
+func tUtilInitModules() {
+	modules := map[string]struct{}{}
+	modules["roster"] = struct{}{}
+	modules["blocking_command"] = struct{}{}
+
+	module.Initialize(&module.Config{Enabled: modules})
 }

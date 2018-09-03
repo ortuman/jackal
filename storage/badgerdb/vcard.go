@@ -7,12 +7,12 @@ package badgerdb
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // InsertOrUpdateVCard inserts a new vCard element into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdateVCard(vCard xml.XElement, username string) error {
+func (b *Storage) InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(vCard, b.vCardKey(username), tx)
 	})
@@ -20,8 +20,8 @@ func (b *Storage) InsertOrUpdateVCard(vCard xml.XElement, username string) error
 
 // FetchVCard retrieves from storage a vCard element associated
 // to a given user.
-func (b *Storage) FetchVCard(username string) (xml.XElement, error) {
-	var vCard xml.Element
+func (b *Storage) FetchVCard(username string) (xmpp.XElement, error) {
+	var vCard xmpp.Element
 	err := b.fetch(&vCard, b.vCardKey(username))
 	switch err {
 	case nil:

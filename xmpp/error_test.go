@@ -3,11 +3,13 @@
  * See the LICENSE file for more information.
  */
 
-package xml
+package xmpp
 
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +35,11 @@ func TestError(t *testing.T) {
 	require.Equal(t, undefinedConditionErrorReason, ErrUndefinedCondition.Error())
 	require.Equal(t, unexpectedConditionErrorReason, ErrUnexpectedCondition.Error())
 
-	e := NewElementName("elem")
+	j, _ := jid.New("", "jackal.im", "", true)
+	e := NewIQType(uuid.New(), GetType)
+	e.SetFromJID(j)
+	e.SetToJID(j)
+
 	require.NotNil(t, e.BadRequestError().Error().Elements().Child(badRequestErrorReason))
 	require.NotNil(t, e.ConflictError().Error().Elements().Child(conflictErrorReason))
 	require.NotNil(t, e.FeatureNotImplementedError().Error().Elements().Child(featureNotImplementedErrorReason))

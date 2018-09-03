@@ -7,12 +7,12 @@ package badgerdb
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/xml"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 // InsertOfflineMessage inserts a new message element into
 // user's offline queue.
-func (b *Storage) InsertOfflineMessage(message xml.XElement, username string) error {
+func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()), tx)
 	})
@@ -30,8 +30,8 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (b *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) {
-	var msgs []xml.Element
+func (b *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
+	var msgs []xmpp.Message
 	if err := b.fetchAll(&msgs, []byte("offlineMessages:"+username)); err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (b *Storage) FetchOfflineMessages(username string) ([]xml.XElement, error) 
 	case 0:
 		return nil, nil
 	default:
-		ret := make([]xml.XElement, len(msgs))
+		ret := make([]*xmpp.Message, len(msgs))
 		for i := 0; i < len(msgs); i++ {
 			ret[i] = &msgs[i]
 		}
