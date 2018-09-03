@@ -52,8 +52,8 @@ script:
   - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
   - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
   - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
-  - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xml
-  - go test -race -coverprofile=jid.coverage.txt -covermode=atomic ./xml/jid
+  - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xmpp
+  - go test -race -coverprofile=jid.coverage.txt -covermode=atomic ./xmpp/jid
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
