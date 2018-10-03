@@ -10,6 +10,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
@@ -18,6 +19,7 @@ import (
 
 type serverProvider struct {
 	mu              sync.RWMutex
+	serverItems     []Item
 	serverFeatures  []Feature
 	accountFeatures []Feature
 }
@@ -40,7 +42,7 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	var itms []Item
 	if toJID.IsServer() {
 		itms = append(itms, Item{Jid: fromJID.ToBareJID().String()})
-		// TODO(ortuman): add component domains
+		itms = append(itms, sp.serverItems...)
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
@@ -68,6 +70,32 @@ func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feat
 			return sp.accountFeatures, nil
 		}
 		return nil, xmpp.ErrSubscriptionRequired
+	}
+}
+
+func (sp *serverProvider) Form(toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError) {
+	return nil, nil
+}
+
+func (sp *serverProvider) registerServerItem(item Item) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+	for _, itm := range sp.serverItems {
+		if itm.Jid == item.Jid && itm.Name == item.Name && itm.Node == item.Node {
+			return // already registered
+		}
+	}
+	sp.serverItems = append(sp.serverItems, item)
+}
+
+func (sp *serverProvider) unregisterServerItem(item Item) {
+	sp.mu.Lock()
+	defer sp.mu.Unlock()
+	for i, itm := range sp.serverItems {
+		if itm.Jid == item.Jid && itm.Name == item.Name && itm.Node == item.Node {
+			sp.serverItems = append(sp.serverItems[:i], sp.serverItems[i+1:]...)
+			return
+		}
 	}
 }
 

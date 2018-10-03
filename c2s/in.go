@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/auth"
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
@@ -385,18 +386,19 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
-	if s.isComponentDomain(stanza.ToJID().Domain()) {
-		s.processComponentStanza(stanza)
+	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
+		switch stanza := stanza.(type) {
+		case *xmpp.IQ:
+			if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
+				di.ProcessIQ(stanza, s)
+				return
+			}
+			break
+		}
+		comp.ProcessStanza(stanza, s)
 	} else {
 		s.processStanza(stanza)
 	}
-}
-
-func (s *inStream) isComponentDomain(domain string) bool {
-	return false
-}
-
-func (s *inStream) processComponentStanza(stanza xmpp.Stanza) {
 }
 
 func (s *inStream) proceedStartTLS(elem xmpp.XElement) {

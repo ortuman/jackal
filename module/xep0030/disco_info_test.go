@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -145,6 +146,10 @@ func (tp *testDiscoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]
 
 func (tp *testDiscoInfoProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
 	return []Feature{"com.jackal.im.feature"}, nil
+}
+
+func (tp *testDiscoInfoProvider) Form(toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError) {
+	return nil, nil
 }
 
 func TestXEP0030_Provider(t *testing.T) {

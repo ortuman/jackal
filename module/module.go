@@ -75,6 +75,7 @@ func Initialize(cfg *Config) {
 }
 
 // Shutdown shuts down module sub system stopping every active module.
+// This method should be used only for testing purposes.
 func Shutdown() {
 	instMu.Lock()
 	defer instMu.Unlock()

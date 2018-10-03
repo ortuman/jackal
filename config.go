@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 
 	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -31,14 +32,15 @@ type TLSConfig struct {
 
 // Config represents a global configuration.
 type Config struct {
-	PIDFile string         `yaml:"pid_path"`
-	Debug   DebugConfig    `yaml:"debug"`
-	Logger  log.Config     `yaml:"logger"`
-	Storage storage.Config `yaml:"storage"`
-	Hosts   []host.Config  `yaml:"hosts"`
-	Modules module.Config  `yaml:"modules"`
-	C2S     []c2s.Config   `yaml:"c2s"`
-	S2S     *s2s.Config    `yaml:"s2s"`
+	PIDFile    string           `yaml:"pid_path"`
+	Debug      DebugConfig      `yaml:"debug"`
+	Logger     log.Config       `yaml:"logger"`
+	Storage    storage.Config   `yaml:"storage"`
+	Hosts      []host.Config    `yaml:"hosts"`
+	Modules    module.Config    `yaml:"modules"`
+	Components component.Config `yaml:"components"`
+	C2S        []c2s.Config     `yaml:"c2s"`
+	S2S        *s2s.Config      `yaml:"s2s"`
 }
 
 // FromFile loads default global configuration from

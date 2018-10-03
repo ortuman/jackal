@@ -15,6 +15,7 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -88,8 +89,9 @@ func main() {
 
 	router.Initialize(&router.Config{GetS2SOut: s2s.GetS2SOut})
 
-	// initialize modules...
+	// initialize modules & components...
 	module.Initialize(&cfg.Modules)
+	component.Initialize(&cfg.Components)
 
 	// create PID file
 	if err := createPIDFile(cfg.PIDFile); err != nil {

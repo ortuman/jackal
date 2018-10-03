@@ -52,6 +52,17 @@ func Shutdown() {
 	}
 }
 
+// HostNames returns current registered domain names.
+func HostNames() []string {
+	instMu.RLock()
+	defer instMu.RUnlock()
+	var ret []string
+	for n, _ := range hosts {
+		ret = append(ret, n)
+	}
+	return ret
+}
+
 // IsLocalHost returns true if domain is a local server domain.
 func IsLocalHost(domain string) bool {
 	instMu.RLock()
