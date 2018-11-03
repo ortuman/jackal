@@ -62,13 +62,13 @@ func TestApplicationPrintVersion(t *testing.T) {
 }
 
 func TestApplication_Run(t *testing.T) {
-	go func() {
-		time.Sleep(time.Second) // wait until initialized
-		syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
-	}()
 	w := newWriterBuffer()
 	args := []string{"./jackal", "--config=../testdata/config_basic.yml"}
 	ap := New(w, args)
+	go func() {
+		time.Sleep(time.Millisecond * 1500) // wait until initialized
+		ap.waitStopCh <- syscall.SIGTERM
+	}()
 	ap.shutDownWaitSecs = time.Duration(2) * time.Second // wait only two seconds
 	c, err := ap.Run()
 	require.Nil(t, err)

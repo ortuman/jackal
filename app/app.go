@@ -92,12 +92,17 @@ type Application struct {
 	s2s              *s2s.S2S
 	c2s              *c2s.C2S
 	debugSrv         *http.Server
+	waitStopCh       chan os.Signal
 	shutDownWaitSecs time.Duration
 }
 
 // New returns a runnable application given an output and a command line arguments array.
 func New(output io.Writer, args []string) *Application {
-	return &Application{output: output, args: args, shutDownWaitSecs: defaultShutDownWaitTime}
+	return &Application{
+		output:           output,
+		args:             args,
+		waitStopCh:       make(chan os.Signal, 1),
+		shutDownWaitSecs: defaultShutDownWaitTime}
 }
 
 // Run runs jackal application until either a stop signal is received or an error occurs.
@@ -247,9 +252,8 @@ func (a *Application) initDebugServer(port int) error {
 }
 
 func (a *Application) waitForStopSignal() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	<-c
+	signal.Notify(a.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	<-a.waitStopCh
 }
 
 func (a *Application) gracefullyShutdown() error {
