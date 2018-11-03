@@ -36,4 +36,5 @@ server.crt
 .vscode/
 
 # Dep
-Gopkg.lock
+vendor/
+
