@@ -32,21 +32,21 @@ type Config struct {
 type Register struct {
 	cfg        *Config
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Register {
+func New(config *Config, disco *xep0030.DiscoInfo) (*Register, chan<- chan bool) {
 	r := &Register{
 		cfg:        config,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go r.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(registerNamespace)
 	}
-	return r
+	return r, r.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -67,7 +67,8 @@ func (x *Register) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -137,9 +138,9 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 		stm.SendElement(iq.BadRequestError())
 		return
 	}
-	exists, err := storage.Instance().UserExists(userEl.Text())
+	exists, err := storage.UserExists(userEl.Text())
 	if err != nil {
-		log.Errorf("%v", err)
+		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
@@ -152,7 +153,7 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 		Password:     passwordEl.Text(),
 		LastPresence: xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
 	}
-	if err := storage.Instance().InsertOrUpdateUser(&user); err != nil {
+	if err := storage.InsertOrUpdateUser(&user); err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
@@ -170,7 +171,7 @@ func (x *Register) cancelRegistration(iq *xmpp.IQ, query xmpp.XElement, stm stre
 		stm.SendElement(iq.BadRequestError())
 		return
 	}
-	if err := storage.Instance().DeleteUser(stm.Username()); err != nil {
+	if err := storage.DeleteUser(stm.Username()); err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
@@ -192,7 +193,7 @@ func (x *Register) changePassword(password string, username string, iq *xmpp.IQ,
 		stm.SendElement(iq.NotAuthorizedError())
 		return
 	}
-	user, err := storage.Instance().FetchUser(username)
+	user, err := storage.FetchUser(username)
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
@@ -204,7 +205,7 @@ func (x *Register) changePassword(password string, username string, iq *xmpp.IQ,
 	}
 	if user.Password != password {
 		user.Password = password
-		if err := storage.Instance().InsertOrUpdateUser(user); err != nil {
+		if err := storage.InsertOrUpdateUser(user); err != nil {
 			log.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return

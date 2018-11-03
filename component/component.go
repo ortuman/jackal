@@ -6,10 +6,11 @@
 package component
 
 import (
+	"context"
 	"fmt"
-	"sync"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -20,80 +21,77 @@ type Component interface {
 	ProcessStanza(stanza xmpp.Stanza, stm stream.C2S)
 }
 
-// singleton interface
-var (
-	instMu      sync.RWMutex
+// Components represents a set of preconfigured components.
+type Components struct {
 	comps       map[string]Component
-	shutdownCh  chan struct{}
-	initialized bool
-)
-
-// Initialize initializes the components manager.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	shutdownCh = make(chan struct{})
-
-	cs := loadComponents(cfg)
-
-	comps = make(map[string]Component)
-	for _, c := range cs {
-		host := c.Host()
-		if _, ok := comps[host]; ok {
-			log.Fatalf("%v", fmt.Errorf("component host name conflict: %s", host))
-		}
-		comps[host] = c
-	}
-	initialized = true
+	shutdownChs []chan<- chan bool
 }
 
-// Shutdown shuts down components manager system.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return
+// New returns a set of components derived from a concrete configuration.
+func New(config *Config, discoInfo *xep0030.DiscoInfo) *Components {
+	comps := &Components{
+		comps: make(map[string]Component),
 	}
-	close(shutdownCh)
-	comps = nil
-	initialized = false
+	cs, shutdownChs := loadComponents(config, discoInfo)
+	for _, c := range cs {
+		host := c.Host()
+		if _, ok := comps.comps[host]; ok {
+			log.Fatal(fmt.Errorf("component host name conflict: %s", host))
+		}
+		comps.comps[host] = c
+	}
+	comps.shutdownChs = shutdownChs
+	return comps
 }
 
 // Get returns a specific component associated to host name.
-func Get(host string) Component {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return nil
-	}
-	return comps[host]
+func (cs *Components) Get(host string) Component {
+	return cs.comps[host]
 }
 
 // GetAll returns all initialized components.
-func GetAll() []Component {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if !initialized {
-		return nil
-	}
+func (cs *Components) GetAll() []Component {
 	var ret []Component
-	for _, comp := range comps {
+	for _, comp := range cs.comps {
 		ret = append(ret, comp)
 	}
 	return ret
 }
 
-func loadComponents(cfg *Config) []Component {
-	var ret []Component
+func (cs *Components) Shutdown(ctx context.Context) error {
+	select {
+	case <-cs.shutdown():
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (cs *Components) shutdown() <-chan bool {
+	c := make(chan bool)
+	go func() {
+		// shutdown components in reverse order
+		for i := len(cs.shutdownChs) - 1; i >= 0; i-- {
+			shutdownCh := cs.shutdownChs[i]
+			wc := make(chan bool, 1)
+			shutdownCh <- wc
+			<-wc
+		}
+		close(c)
+	}()
+	return c
+}
+
+func loadComponents(_ *Config, _ *xep0030.DiscoInfo) ([]Component, []chan<- chan bool) {
+	var comps []Component
+	var shutdownChs []chan<- chan bool
 	/*
 		discoInfo := module.Modules().DiscoInfo
 		if cfg.HttpUpload != nil {
-			ret = append(ret, httpupload.New(cfg.HttpUpload, discoInfo, shutdownCh))
+			comp, shutdownCh := httpupload.New(cfg.HttpUpload, discoInfo)
+			comps = append(comps, comp)
+			shutdownChs = append(shutdownChs, shutdownCh)
 		}
 	*/
-	return ret
+	return comps, shutdownChs
 }

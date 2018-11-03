@@ -14,7 +14,9 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xmpp"
@@ -45,11 +47,14 @@ func (t *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) [
 func (t *fakeTransport) PeerCertificates() []*x509.Certificate                        { return nil }
 
 func TestSession_Open(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("jackal.im", true)
 
 	// test client socket session start
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 
 	require.NotNil(t, sess.Close())
 	_, err1 := sess.Receive()
@@ -66,7 +71,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test server socket session start
 	tr.wrBuf.Reset()
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true}, r)
 	sess.Open()
 	pr = xmpp.NewParser(tr.wrBuf, xmpp.SocketStream, 0)
 	_, _ = pr.ParseElement() // read xml header
@@ -76,7 +81,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test websocket session start
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	pr = xmpp.NewParser(tr.wrBuf, xmpp.WebSocketStream, 0)
 	elem, err = pr.ParseElement()
@@ -86,7 +91,7 @@ func TestSession_Open(t *testing.T) {
 
 	// test unsupported transport type
 	tr = newFakeTransport(transport.TransportType(9999))
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	require.Nil(t, sess.Open())
 
 	// open twice
@@ -94,10 +99,13 @@ func TestSession_Open(t *testing.T) {
 }
 
 func TestSession_Close(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("jackal.im", true)
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	tr.wrBuf.Reset()
 
@@ -105,7 +113,7 @@ func TestSession_Close(t *testing.T) {
 	require.Equal(t, "</stream:stream>", tr.wrBuf.String())
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	tr.wrBuf.Reset()
 
@@ -114,9 +122,12 @@ func TestSession_Close(t *testing.T) {
 }
 
 func TestSession_Send(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	elem := xmpp.NewElementNamespace("open", "urn:ietf:params:xml:ns:xmpp-framing")
 	sess.Open()
 	tr.wrBuf.Reset()
@@ -126,15 +137,18 @@ func TestSession_Send(t *testing.T) {
 }
 
 func TestSession_Receive(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.WebSocket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	_, err := sess.Receive()
 	require.Equal(t, &Error{}, err)
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	open := xmpp.NewElementNamespace("open", "")
 	open.ToXML(tr.rdBuf, true)
@@ -143,7 +157,7 @@ func TestSession_Receive(t *testing.T) {
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, err)
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	open.SetNamespace("urn:ietf:params:xml:ns:xmpp-framing")
 	open.SetVersion("1.0")
@@ -158,7 +172,7 @@ func TestSession_Receive(t *testing.T) {
 	require.Equal(t, "iq", st.Name())
 
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	open.ToXML(tr.rdBuf, true)
 
@@ -171,30 +185,36 @@ func TestSession_Receive(t *testing.T) {
 }
 
 func TestSession_IsValidNamespace(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	iqClient := xmpp.NewElementNamespace("iq", "jabber:client")
 	iqServer := xmpp.NewElementNamespace("iq", "jabber:server")
 
 	j, _ := jid.NewWithString("jackal.im", true)
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	require.Nil(t, sess.validateNamespace(iqClient))
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqServer))
 
 	tr = newFakeTransport(transport.Socket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr, IsServer: true}, r)
 	sess.Open()
 	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqClient))
 	require.Nil(t, sess.validateNamespace(iqServer))
 }
 
 func TestSession_IsValidFrom(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j1, _ := jid.NewWithString("jackal.im", true)                  // server domain
 	j2, _ := jid.NewWithString("ortuman@jackal.im/resource", true) // full jid with user
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j2, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j2, Transport: tr}, r)
 	sess.Open()
 	sess.SetJID(j1)
 	require.False(t, sess.isValidFrom("romeo@jackal.im"))
@@ -204,10 +224,8 @@ func TestSession_IsValidFrom(t *testing.T) {
 }
 
 func TestSession_ValidateStream(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer func() {
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.NewWithString("jackal.im", true) // server domain
 
@@ -218,7 +236,7 @@ func TestSession_ValidateStream(t *testing.T) {
 
 	// try socket
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	err := sess.validateStreamElement(elem1)
 	sess.Open()
 	require.NotNil(t, err)
@@ -248,7 +266,7 @@ func TestSession_ValidateStream(t *testing.T) {
 
 	// try websocket
 	tr = newFakeTransport(transport.WebSocket)
-	sess = New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 	err = sess.validateStreamElement(elem4)
 	require.NotNil(t, err)
@@ -274,6 +292,9 @@ func TestSession_ValidateStream(t *testing.T) {
 }
 
 func TestSession_ExtractAddresses(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j1, _ := jid.NewWithString("jackal.im", true)
 	j2, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 
@@ -282,7 +303,7 @@ func TestSession_ExtractAddresses(t *testing.T) {
 	iq.SetTo("romeo@example.org")
 
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j1, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j1, Transport: tr}, r)
 	sess.Open()
 	from, to, err := sess.extractAddresses(iq)
 	require.Nil(t, err)
@@ -311,9 +332,12 @@ func TestSession_ExtractAddresses(t *testing.T) {
 }
 
 func TestSession_BuildStanza(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 
 	elem := xmpp.NewElementNamespace("n", "ns")
@@ -361,10 +385,13 @@ func TestSession_BuildStanza(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestSession_MapErrorq(t *testing.T) {
+func TestSession_MapError(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j, Transport: tr})
+	sess := New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	sess.Open()
 
 	require.Equal(t, &Error{}, sess.mapErrorToSessionError(nil))
@@ -377,4 +404,15 @@ func TestSession_MapErrorq(t *testing.T) {
 
 	er := errors.New("err")
 	require.Equal(t, &Error{UnderlyingErr: er}, sess.mapErrorToSessionError(er))
+}
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
 }

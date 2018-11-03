@@ -112,3 +112,9 @@ func TestBadPrep(t *testing.T) {
 	require.Nil(t, j3)
 	require.NotNil(t, err)
 }
+
+func TestParseEmptyJID(t *testing.T) {
+	j, err := jid.NewWithString("e@example.net/", false)
+	require.Nil(t, j)
+	require.NotNil(t, err)
+}

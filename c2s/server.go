@@ -6,17 +6,22 @@
 package c2s
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof" // http profile handlers
 	"strconv"
+	"sync"
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/component"
+	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 )
 
@@ -24,10 +29,14 @@ var listenerProvider = net.Listen
 
 type server struct {
 	cfg        *Config
+	mods       *module.Modules
+	comps      *component.Components
+	router     *router.Router
+	inConns    sync.Map
 	ln         net.Listener
 	wsSrv      *http.Server
 	wsUpgrader *websocket.Upgrader
-	stmCounter uint64
+	stmSeq     uint64
 	listening  uint32
 }
 
@@ -72,7 +81,7 @@ func (s *server) listenSocketConn(address string) error {
 func (s *server) listenWebSocketConn(address string) error {
 	http.HandleFunc(s.cfg.Transport.URLPath, s.websocketUpgrade)
 
-	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: host.Certificates()}}
+	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: s.router.Certificates()}}
 	s.wsUpgrader = &websocket.Upgrader{
 		Subprotocols: []string{"xmpp"},
 		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
@@ -96,14 +105,25 @@ func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
-func (s *server) shutdown() error {
+func (s *server) shutdown(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&s.listening, 1, 0) {
+		// stop listening
 		switch s.cfg.Transport.Type {
 		case transport.Socket:
-			return s.ln.Close()
+			if err := s.ln.Close(); err != nil {
+				return err
+			}
 		case transport.WebSocket:
-			return s.wsSrv.Close()
+			if err := s.wsSrv.Shutdown(ctx); err != nil {
+				return err
+			}
 		}
+		// close all connections
+		c, err := closeConnections(&s.inConns, ctx)
+		if err != nil {
+			return err
+		}
+		log.Infof("%s: closed %d connection(s)", s.cfg.ID, c)
 	}
 	return nil
 }
@@ -116,10 +136,47 @@ func (s *server) startStream(tr transport.Transport) {
 		maxStanzaSize:    s.cfg.MaxStanzaSize,
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,
+		onDisconnect:     s.unregisterStream,
 	}
-	newStream(s.nextID(), cfg)
+	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router)
+	s.registerStream(stm)
+}
+
+func (s *server) registerStream(stm stream.C2S) {
+	s.inConns.Store(stm.ID(), stm)
+	log.Infof("registered c2s stream... (id: %s)", stm.ID())
+}
+
+func (s *server) unregisterStream(stm stream.C2S) {
+	s.inConns.Delete(stm.ID())
+	log.Infof("unregistered c2s stream... (id: %s)", stm.ID())
 }
 
 func (s *server) nextID() string {
-	return fmt.Sprintf("c2s:%s:%d", s.cfg.ID, atomic.AddUint64(&s.stmCounter, 1))
+	return fmt.Sprintf("c2s:%s:%d", s.cfg.ID, atomic.AddUint64(&s.stmSeq, 1))
+}
+
+func closeConnections(connections *sync.Map, ctx context.Context) (count int, err error) {
+	connections.Range(func(_, v interface{}) bool {
+		stm := v.(stream.InStream)
+		select {
+		case <-closeConn(stm):
+			count++
+			return true
+		case <-ctx.Done():
+			count = 0
+			err = ctx.Err()
+			return false
+		}
+	})
+	return
+}
+
+func closeConn(stm stream.InStream) <-chan bool {
+	c := make(chan bool, 1)
+	go func() {
+		stm.Disconnect(streamerror.ErrSystemShutdown)
+		c <- true
+	}()
+	return c
 }

@@ -6,9 +6,12 @@
 package xep0054
 
 import (
+	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -19,7 +22,8 @@ import (
 func TestXEP0054_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil)
+	defer close(shutdownCh)
 
 	// test MatchesIQ
 	iqID := uuid.New()
@@ -40,8 +44,8 @@ func TestXEP0054_Matching(t *testing.T) {
 }
 
 func TestXEP0054_Set(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
+	_, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -54,7 +58,8 @@ func TestXEP0054_Set(t *testing.T) {
 	iq.SetToJID(j.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil)
+	defer close(shutdownCh)
 
 	x.ProcessIQ(iq, stm)
 	elem := stm.FetchElement()
@@ -77,8 +82,8 @@ func TestXEP0054_Set(t *testing.T) {
 }
 
 func TestXEP0054_SetError(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
+	_, s, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -86,7 +91,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil)
+	defer close(shutdownCh)
 
 	// set other user vCard...
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -99,8 +105,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	// storage error
-	storage.ActivateMockedError()
-	defer storage.DeactivateMockedError()
+	s.EnableMockedError()
+	defer s.DisableMockedError()
 
 	iq2 := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq2.SetFromJID(j)
@@ -113,8 +119,8 @@ func TestXEP0054_SetError(t *testing.T) {
 }
 
 func TestXEP0054_Get(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
+	_, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -127,7 +133,8 @@ func TestXEP0054_Get(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil)
+	defer close(shutdownCh)
 
 	x.ProcessIQ(iqSet, stm)
 	_ = stm.FetchElement() // wait until set...
@@ -160,8 +167,8 @@ func TestXEP0054_Get(t *testing.T) {
 }
 
 func TestXEP0054_GetError(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
+	_, s, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -173,7 +180,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil)
+	defer close(shutdownCh)
 
 	x.ProcessIQ(iqSet, stm)
 	_ = stm.FetchElement() // wait until set...
@@ -196,8 +204,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqGet2.SetToJID(j.ToBareJID())
 	iqGet2.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 
-	storage.ActivateMockedError()
-	defer storage.DeactivateMockedError()
+	s.EnableMockedError()
+	defer s.DisableMockedError()
 
 	x.ProcessIQ(iqGet2, stm)
 	elem = stm.FetchElement()
@@ -213,4 +221,15 @@ func testVCard() xmpp.XElement {
 	vCard.AppendElement(fn)
 	vCard.AppendElement(org)
 	return vCard
+}
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
 }

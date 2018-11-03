@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
@@ -20,7 +19,7 @@ import (
 func TestAuthPlainAuthentication(t *testing.T) {
 	var err error
 
-	testStm := authTestSetup(&model.User{Username: "mariana", Password: "1234"})
+	testStm, s := authTestSetup(&model.User{Username: "mariana", Password: "1234"})
 	defer authTestTeardown()
 
 	authr := NewPlain(testStm)
@@ -39,11 +38,11 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	// storage error...
-	storage.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, authr.ProcessElement(elem), memstorage.ErrMockedError)
+	s.DisableMockedError()
 
 	// valid credentials...
-	storage.DeactivateMockedError()
 	err = authr.ProcessElement(elem)
 	require.Nil(t, err)
 	require.Equal(t, "mariana", authr.Username())

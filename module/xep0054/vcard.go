@@ -20,21 +20,21 @@ const vCardNamespace = "vcard-temp"
 // VCard represents a vCard server stream module.
 type VCard struct {
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns a vCard IQ handler module.
-func New(disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *VCard {
+func New(disco *xep0030.DiscoInfo) (*VCard, chan<- chan bool) {
 	v := &VCard{
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(vCardNamespace)
 		disco.RegisterAccountFeature(vCardNamespace)
 	}
-	return v
+	return v, v.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -55,7 +55,8 @@ func (x *VCard) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -81,7 +82,7 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 		return
 	}
 	toJID := iq.ToJID()
-	resElem, err := storage.Instance().FetchVCard(toJID.Node())
+	resElem, err := storage.FetchVCard(toJID.Node())
 	if err != nil {
 		log.Errorf("%v", err)
 		stm.SendElement(iq.InternalServerError())
@@ -104,7 +105,7 @@ func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
 	if toJID.IsServer() || (toJID.Node() == stm.Username()) {
 		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
-		err := storage.Instance().InsertOrUpdateVCard(vCard, toJID.Node())
+		err := storage.InsertOrUpdateVCard(vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
 			stm.SendElement(iq.InternalServerError())

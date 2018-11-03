@@ -6,10 +6,13 @@
 package s2s
 
 import (
+	"context"
 	"errors"
-	"sync"
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 )
 
@@ -22,49 +25,46 @@ const (
 	dialbackNamespace = "urn:xmpp:features:dialback"
 )
 
-var (
-	instMu        sync.RWMutex
-	defaultDialer *dialer
-	srv           *server
-	initialized   bool
-)
-
-// Initialize initializes s2s sub system.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	if cfg == nil {
-		log.Infof("s2s disabled")
-		return
-	}
-	defaultDialer = newDialer(cfg)
-	srv = &server{cfg: cfg}
-	go srv.start()
-	initialized = true
+// S2S represents a server-to-server connection manager.
+type S2S struct {
+	srv     *server
+	started uint32
 }
 
-// Shutdown closes every server listener.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		srv.shutdown()
-		srv = nil
-		initialized = false
+// New returns a new instance of an s2s connection manager.
+func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
+	s := &S2S{}
+	if config != nil {
+		s.srv = &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)}
+	}
+	return s
+}
+
+// Enabled returns whether or not s2s sub system is enabled.
+func (s *S2S) Enabled() bool {
+	return s.srv != nil
+}
+
+// GetS2SOut acts as an s2s outgoing stream provider.
+func (s *S2S) GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+	if s.srv == nil {
+		return nil, errors.New("s2s not initialized")
+	}
+	return s.srv.getOrDial(localDomain, remoteDomain)
+}
+
+// Start initializes s2s manager.
+func (s *S2S) Start() {
+	if atomic.CompareAndSwapUint32(&s.started, 0, 1) {
+		go s.srv.start()
 	}
 }
 
-// GetS2SOut returns an outgoing s2s stream given a domain pair.
-func GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
-	instMu.RLock()
-	if !initialized {
-		instMu.RUnlock()
-		return nil, errors.New("s2s not available")
+// Shutdown gracefully shuts down s2s manager.
+func (s *S2S) Shutdown(ctx context.Context) {
+	if atomic.CompareAndSwapUint32(&s.started, 1, 0) {
+		if err := s.srv.shutdown(ctx); err != nil {
+			log.Error(err)
+		}
 	}
-	instMu.RUnlock()
-	return outContainer.getOrDial(localDomain, remoteDomain)
 }

@@ -195,35 +195,35 @@ var tt = []scramAuthTestCase{
 
 func TestScramMechanisms(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()
 
-	authr := NewScram(testStrm, testTr, ScramSHA1, false)
+	authr := NewScram(testStm, testTr, ScramSHA1, false)
 	require.Equal(t, authr.Mechanism(), "SCRAM-SHA-1")
 	require.False(t, authr.UsesChannelBinding())
 
-	authr2 := NewScram(testStrm, testTr, ScramSHA1, true)
+	authr2 := NewScram(testStm, testTr, ScramSHA1, true)
 	require.Equal(t, authr2.Mechanism(), "SCRAM-SHA-1-PLUS")
 	require.True(t, authr2.UsesChannelBinding())
 
-	authr3 := NewScram(testStrm, testTr, ScramSHA256, false)
+	authr3 := NewScram(testStm, testTr, ScramSHA256, false)
 	require.Equal(t, authr3.Mechanism(), "SCRAM-SHA-256")
 	require.False(t, authr3.UsesChannelBinding())
 
-	authr4 := NewScram(testStrm, testTr, ScramSHA256, true)
+	authr4 := NewScram(testStm, testTr, ScramSHA256, true)
 	require.Equal(t, authr4.Mechanism(), "SCRAM-SHA-256-PLUS")
 	require.True(t, authr4.UsesChannelBinding())
 
-	authr5 := NewScram(testStrm, testTr, ScramType(99), true)
+	authr5 := NewScram(testStm, testTr, ScramType(99), true)
 	require.Equal(t, authr5.Mechanism(), "")
 }
 
 func TestScramBadPayload(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()
 
-	authr := NewScram(testStrm, testTr, ScramSHA1, false)
+	authr := NewScram(testStm, testTr, ScramSHA1, false)
 
 	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", authr.Mechanism())
@@ -252,10 +252,10 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	if tc.usesCb {
 		tr.cbBytes = tc.cbBytes
 	}
-	testStrm := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 	defer authTestTeardown()
 
-	authr := NewScram(testStrm, tr, tc.scramType, tc.usesCb)
+	authr := NewScram(testStm, tr, tc.scramType, tc.usesCb)
 
 	auth := xmpp.NewElementNamespace("auth", saslNamespace)
 	auth.SetAttribute("mechanism", authr.Mechanism())
@@ -269,7 +269,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	if err != nil {
 		return err
 	}
-	challenge := testStrm.FetchElement()
+	challenge := testStm.FetchElement()
 	require.NotNil(t, challenge)
 	require.Equal(t, "challenge", challenge.Name())
 
@@ -301,7 +301,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 		return err
 	}
 
-	success := testStrm.FetchElement()
+	success := testStm.FetchElement()
 	require.Equal(t, "success", success.Name())
 
 	vb64, err := base64.StdEncoding.DecodeString(success.Text())

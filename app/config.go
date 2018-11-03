@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package main
+package app
 
 import (
 	"bytes"
@@ -11,32 +11,30 @@ import (
 
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
 	"gopkg.in/yaml.v2"
 )
 
-// DebugConfig represents debug server configuration.
-type DebugConfig struct {
+// debugConfig represents debug server configuration.
+type debugConfig struct {
 	Port int `yaml:"port"`
 }
 
-// TLSConfig represents a server TLS configuration.
-type TLSConfig struct {
-	CertFile    string `yaml:"cert_path"`
-	PrivKeyFile string `yaml:"privkey_path"`
+type loggerConfig struct {
+	Level   string `yaml:"level"`
+	LogPath string `yaml:"log_path"`
 }
 
 // Config represents a global configuration.
 type Config struct {
 	PIDFile    string           `yaml:"pid_path"`
-	Debug      DebugConfig      `yaml:"debug"`
-	Logger     log.Config       `yaml:"logger"`
+	Debug      debugConfig      `yaml:"debug"`
+	Logger     loggerConfig     `yaml:"logger"`
 	Storage    storage.Config   `yaml:"storage"`
-	Hosts      []host.Config    `yaml:"hosts"`
+	Router     router.Config    `yaml:"router"`
 	Modules    module.Config    `yaml:"modules"`
 	Components component.Config `yaml:"components"`
 	C2S        []c2s.Config     `yaml:"c2s"`

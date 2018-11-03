@@ -6,196 +6,166 @@
 package log
 
 import (
+	"bytes"
 	"errors"
-	"io/ioutil"
-	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-type testLogWriter struct {
-	C chan string
+type writerBuffer struct {
+	mu      sync.RWMutex
+	buf     *bytes.Buffer
+	closeCh chan bool
 }
 
-func newTestLogWriter() *testLogWriter {
-	return &testLogWriter{C: make(chan string)}
+func newWriterBuffer() *writerBuffer {
+	return &writerBuffer{buf: bytes.NewBuffer(nil), closeCh: make(chan bool)}
 }
 
-func (tw *testLogWriter) Write(p []byte) (int, error) {
-	tw.C <- string(p)
-	return len(p), nil
+func (wb *writerBuffer) Write(p []byte) (int, error) {
+	wb.mu.Lock()
+	defer wb.mu.Unlock()
+	return wb.buf.Write(p)
+}
+
+func (wb *writerBuffer) String() string {
+	wb.mu.RLock()
+	defer wb.mu.RUnlock()
+	return wb.buf.String()
+}
+
+func (wb *writerBuffer) Reset() {
+	wb.mu.Lock()
+	defer wb.mu.Unlock()
+	wb.buf.Reset()
+}
+
+func (wb *writerBuffer) Close() error {
+	wb.closeCh <- true
+	return nil
+}
+
+func (wb *writerBuffer) Done() <-chan bool {
+	return wb.closeCh
 }
 
 func TestDebugLog(t *testing.T) {
-	Initialize(&Config{Level: DebugLevel})
-	defer Shutdown()
-
-	lw := newTestLogWriter()
-	instance().outWriter = lw
-
-	continueCh := make(chan struct{})
+	bw, _, tearDown := setupTest("debug")
+	defer tearDown()
 
 	Debugf("test debug log!")
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "[DBG]"))
-			require.True(t, strings.Contains(l, "\U0001f50D"))
-			require.True(t, strings.Contains(l, "test debug log!"))
+	time.Sleep(time.Millisecond * 250)
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh)
-	}()
-	<-continueCh
+	l := bw.String()
+
+	require.True(t, strings.Contains(l, "[DBG]"))
+	require.True(t, strings.Contains(l, "\U0001f50D"))
+	require.True(t, strings.Contains(l, "test debug log!"))
 }
 
 func TestInfoLog(t *testing.T) {
-	Initialize(&Config{Level: InfoLevel})
-	defer Shutdown()
-
-	lw := newTestLogWriter()
-	instance().outWriter = lw
-
-	continueCh := make(chan struct{})
+	bw, _, tearDown := setupTest("info")
+	defer tearDown()
 
 	Infof("test info log!")
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "[INF]"))
-			require.True(t, strings.Contains(l, "\u2139\ufe0f"))
-			require.True(t, strings.Contains(l, "test info log!"))
+	time.Sleep(time.Millisecond * 250)
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh)
-	}()
-	<-continueCh
+	l := bw.String()
+	require.True(t, strings.Contains(l, "[INF]"))
+	require.True(t, strings.Contains(l, "\u2139\ufe0f"))
+	require.True(t, strings.Contains(l, "test info log!"))
 }
 
 func TestWarningLog(t *testing.T) {
-	Initialize(&Config{Level: WarningLevel})
-	defer Shutdown()
-
-	lw := newTestLogWriter()
-	instance().outWriter = lw
-
-	continueCh := make(chan struct{})
+	bw, _, tearDown := setupTest("warning")
+	defer tearDown()
 
 	Warnf("test warning log!")
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "[WRN]"))
-			require.True(t, strings.Contains(l, "\u26a0\ufe0f"))
-			require.True(t, strings.Contains(l, "test warning log!"))
+	time.Sleep(time.Millisecond * 250)
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh)
-	}()
-	<-continueCh
+	l := bw.String()
+	require.True(t, strings.Contains(l, "[WRN]"))
+	require.True(t, strings.Contains(l, "\u26a0\ufe0f"))
+	require.True(t, strings.Contains(l, "test warning log!"))
 }
 
 func TestErrorLog(t *testing.T) {
-	Initialize(&Config{Level: ErrorLevel})
-	defer Shutdown()
-
-	lw := newTestLogWriter()
-	instance().outWriter = lw
-
-	continueCh1 := make(chan struct{})
+	bw, _, tearDown := setupTest("error")
+	defer tearDown()
 
 	Errorf("test error log!")
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "[ERR]"))
-			require.True(t, strings.Contains(l, "\U0001f4a5"))
-			require.True(t, strings.Contains(l, "test error log!"))
+	time.Sleep(time.Millisecond * 250)
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh1)
-	}()
-	<-continueCh1
+	l := bw.String()
+	require.True(t, strings.Contains(l, "[ERR]"))
+	require.True(t, strings.Contains(l, "\U0001f4a5"))
+	require.True(t, strings.Contains(l, "test error log!"))
 
-	continueCh2 := make(chan struct{})
-	err := errors.New("some error string")
-	Error(err)
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "some error string"))
+	bw.Reset()
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh2)
-	}()
-	<-continueCh2
+	Error(errors.New("some error string"))
+	time.Sleep(time.Millisecond * 250)
+
+	l = bw.String()
+	require.True(t, strings.Contains(l, "some error string"))
 }
 
 func TestFatalLog(t *testing.T) {
-	Initialize(&Config{Level: FatalLevel})
-	defer Shutdown()
+	var exited bool
+	exitHandler = func() {
+		exited = true
+	}
 
-	lw := newTestLogWriter()
-	instance().outWriter = lw
-	exitHandler = func() {}
+	bw, _, tearDown := setupTest("fatal")
+	defer tearDown()
 
-	continueCh := make(chan struct{})
-
-	go func() {
-		select {
-		case l := <-lw.C:
-			require.True(t, strings.Contains(l, "[FTL]"))
-			require.True(t, strings.Contains(l, "\U0001f480"))
-			require.True(t, strings.Contains(l, "test fatal log!"))
-
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh)
-	}()
 	Fatalf("test fatal log!")
-	<-continueCh
+	time.Sleep(time.Millisecond * 250)
+
+	require.True(t, exited)
+
+	l := bw.String()
+	require.True(t, strings.Contains(l, "[FTL]"))
+	require.True(t, strings.Contains(l, "\U0001f480"))
+	require.True(t, strings.Contains(l, "test fatal log!"))
+
+	bw.Reset()
+	exited = false
+
+	Fatal(errors.New("some error string"))
+	time.Sleep(time.Millisecond * 250)
+
+	l = bw.String()
+	require.True(t, strings.Contains(l, "some error string"))
 }
 
 func TestLogFile(t *testing.T) {
-	logPath := "../testdata/log_file.log"
+	bw, lf, tearDown := setupTest("debug")
 
-	Initialize(&Config{Level: DebugLevel, LogPath: logPath})
-	defer Shutdown()
-	defer os.Remove(logPath)
+	Debugf("test debug log!")
+	time.Sleep(time.Millisecond * 250)
 
-	lw := newTestLogWriter()
-	instance().outWriter = lw
+	require.Equal(t, bw.String(), lf.String())
 
-	continueCh := make(chan struct{})
+	// make sure file is closed
+	tearDown()
 
-	Debugf("test file log!")
-	go func() {
-		select {
-		case <-lw.C:
-			b, _ := ioutil.ReadFile(logPath)
-			l := string(b)
-			require.True(t, strings.Contains(l, "[DBG]"))
-			require.True(t, strings.Contains(l, "\U0001f50D"))
-			require.True(t, strings.Contains(l, "test file log!"))
+	select {
+	case <-lf.Done():
+		require.True(t, true)
+	case <-time.After(time.Second):
+		require.FailNow(t, "log file has not been closed")
+	}
+}
 
-		case <-time.After(time.Millisecond * 200):
-			require.Fail(t, "log fetch timeout")
-		}
-		close(continueCh)
-	}()
-	<-continueCh
+func setupTest(level string) (*writerBuffer, *writerBuffer, func()) {
+	output := newWriterBuffer()
+	logFile := newWriterBuffer()
+	l, _ := New(level, output, logFile)
+	Set(l)
+	return output, logFile, func() { Unset() }
 }

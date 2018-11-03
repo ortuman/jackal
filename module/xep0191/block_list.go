@@ -29,24 +29,26 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
+	router     *router.Router
 	roster     *roster.Roster
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, roster *roster.Roster, shutdownCh <-chan struct{}) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) (*BlockingCommand, chan<- chan bool) {
 	b := &BlockingCommand{
+		router:     router,
 		roster:     roster,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go b.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(blockingCommandNamespace)
 		disco.RegisterAccountFeature(blockingCommandNamespace)
 	}
-	return b
+	return b, b.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -71,7 +73,8 @@ func (x *BlockingCommand) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -92,7 +95,7 @@ func (x *BlockingCommand) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 
 func (x *BlockingCommand) sendBlockList(iq *xmpp.IQ, stm stream.C2S) {
 	fromJID := iq.FromJID()
-	blItms, err := storage.Instance().FetchBlockListItems(fromJID.Node())
+	blItms, err := storage.FetchBlockListItems(fromJID.Node())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
@@ -138,12 +141,12 @@ func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S
 			bl = append(bl, model.BlockListItem{Username: username, JID: j.String()})
 		}
 	}
-	if err := storage.Instance().InsertBlockListItems(bl); err != nil {
+	if err := storage.InsertBlockListItems(bl); err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.ReloadBlockList(username)
+	x.router.ReloadBlockList(username)
 
 	stm.SendElement(iq.ResultIQ())
 	x.pushIQ(block, stm)
@@ -180,19 +183,19 @@ func (x *BlockingCommand) unblock(iq *xmpp.IQ, unblock xmpp.XElement, stm stream
 			}
 		}
 	}
-	if err := storage.Instance().DeleteBlockListItems(bl); err != nil {
+	if err := storage.DeleteBlockListItems(bl); err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
 	}
-	router.ReloadBlockList(username)
+	x.router.ReloadBlockList(username)
 
 	stm.SendElement(iq.ResultIQ())
 	x.pushIQ(unblock, stm)
 }
 
 func (x *BlockingCommand) pushIQ(elem xmpp.XElement, stm stream.C2S) {
-	stms := router.UserStreams(stm.Username())
+	stms := x.router.UserStreams(stm.Username())
 	for _, stm := range stms {
 		if !stm.Context().Bool(xep191RequestedContextKey) {
 			continue
@@ -217,7 +220,7 @@ func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *jid.JID, ris []roste
 		if presenceType == xmpp.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
-		router.MustRoute(p)
+		x.router.MustRoute(p)
 	}
 }
 
@@ -242,11 +245,11 @@ func (x *BlockingCommand) isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) b
 
 func (x *BlockingCommand) fetchBlockListAndRosterItems(stm stream.C2S) ([]model.BlockListItem, []rostermodel.Item, error) {
 	username := stm.Username()
-	blItms, err := storage.Instance().FetchBlockListItems(username)
+	blItms, err := storage.FetchBlockListItems(username)
 	if err != nil {
 		return nil, nil, err
 	}
-	ris, _, err := storage.Instance().FetchRosterItems(username)
+	ris, _, err := storage.FetchRosterItems(username)
 	if err != nil {
 		return nil, nil, err
 	}

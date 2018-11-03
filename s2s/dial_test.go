@@ -6,17 +6,19 @@
 package s2s
 
 import (
+	"errors"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 func TestS2SDial(t *testing.T) {
-	// s2s configuration
-	cfg := Config{
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
+
+	cfg := &Config{
 		ConnectTimeout: time.Second * time.Duration(5),
 		MaxStanzaSize:  8192,
 		Transport: TransportConfig{
@@ -26,46 +28,33 @@ func TestS2SDial(t *testing.T) {
 	}
 
 	// not enabled
-	Initialize(nil)
-	out, err := GetS2SOut("jackal.im", "jabber.org")
-	require.Nil(t, out)
-	require.NotNil(t, err)
-	Shutdown()
-
-	resolver := func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
-		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
-	}
-	mockedErr := errors.New("dialer mocked error")
+	d := newDialer(cfg, r)
 
 	// resolver error...
-	Initialize(&cfg)
-	defaultDialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
+	mockedErr := errors.New("dialer mocked error")
+	d.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", nil, mockedErr
 	}
-	out, err = GetS2SOut("jackal.im", "jabber.org")
+	out, err := d.dial("jackal.im", "jabber.org")
 	require.Nil(t, out)
 	require.Equal(t, mockedErr, err)
-	Shutdown()
 
 	// dialer error...
-	Initialize(&cfg)
-	defaultDialer.srvResolve = resolver
-	defaultDialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
+	d.srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
+		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
+	}
+	d.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
 		return nil, mockedErr
 	}
-	out, err = GetS2SOut("jackal.im", "jabber.org")
+	out, err = d.dial("jackal.im", "jabber.org")
 	require.Nil(t, out)
 	require.Equal(t, mockedErr, err)
-	Shutdown()
 
 	// success
-	Initialize(&cfg)
-	defaultDialer.srvResolve = resolver
-	defaultDialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
+	d.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
 		return newFakeSocketConn(), nil
 	}
-	out, err = GetS2SOut("jackal.im", "jabber.org")
+	out, err = d.dial("jackal.im", "jabber.org")
 	require.NotNil(t, out)
 	require.Nil(t, err)
-	Shutdown()
 }

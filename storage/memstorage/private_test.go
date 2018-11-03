@@ -16,10 +16,10 @@ func TestMockStorageInsertPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	err := s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	err = s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, err)
 }
@@ -30,10 +30,10 @@ func TestMockStorageFetchPrivateXML(t *testing.T) {
 	s := New()
 	s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	elems, _ := s.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Equal(t, 1, len(elems))
 }

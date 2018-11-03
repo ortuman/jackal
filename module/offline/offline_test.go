@@ -6,12 +6,13 @@
 package offline
 
 import (
+	"crypto/tls"
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -20,21 +21,17 @@ import (
 )
 
 func TestOffline_ArchiveMessage(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		storage.Shutdown()
-		router.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
-	router.Bind(stm)
+	r.Bind(stm)
 
-	x := New(&Config{QueueSize: 1}, nil, nil)
+	x, shutdownCh := New(&Config{QueueSize: 1}, nil, r)
+	defer close(shutdownCh)
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, "normal")
@@ -45,7 +42,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	// wait for insertion...
 	time.Sleep(time.Millisecond * 250)
 
-	msgs, err := storage.Instance().FetchOfflineMessages("juliet")
+	msgs, err := storage.FetchOfflineMessages("juliet")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(msgs))
 
@@ -61,12 +58,23 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 
 	// deliver offline messages...
 	stm2 := stream.NewMockC2S("abcd", j2)
-	router.Bind(stm2)
+	r.Bind(stm2)
 
-	x2 := New(&Config{QueueSize: 1}, nil, nil)
+	x2, _ := New(&Config{QueueSize: 1}, nil, r)
 	x2.DeliverOfflineMessages(stm2)
 
 	elem = stm2.FetchElement()
 	require.NotNil(t, elem)
 	require.Equal(t, msgID, elem.ID())
+}
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
 }

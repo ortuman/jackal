@@ -11,7 +11,9 @@ import (
 
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/session"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -31,6 +33,7 @@ type outStream struct {
 	started       uint32
 	id            string
 	cfg           *streamConfig
+	router        *router.Router
 	state         uint32
 	sess          *session.Session
 	secured       uint32
@@ -40,11 +43,13 @@ type outStream struct {
 	verified      chan xmpp.XElement
 	verifyCh      chan bool
 	discCh        chan *streamerror.Error
+	onDisconnect  func(s stream.S2SOut)
 }
 
-func newOutStream() *outStream {
+func newOutStream(router *router.Router) *outStream {
 	return &outStream{
 		id:       nextOutID(),
+		router:   router,
 		actorCh:  make(chan func(), streamMailboxSize),
 		verifyCh: make(chan bool, 1),
 		discCh:   make(chan *streamerror.Error, 1),
@@ -347,7 +352,9 @@ func (s *outStream) disconnectClosingSession(closeSession bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	outContainer.delete(s)
+	if s.cfg.onOutDisconnect != nil {
+		s.cfg.onOutDisconnect(s)
+	}
 
 	s.setState(outDisconnected)
 	s.cfg.transport.Close()
@@ -364,7 +371,7 @@ func (s *outStream) restartSession() {
 		RemoteDomain:  s.cfg.remoteDomain,
 		IsServer:      true,
 		IsInitiating:  true,
-	})
+	}, s.router)
 	s.setState(outConnecting)
 }
 

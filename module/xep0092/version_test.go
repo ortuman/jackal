@@ -24,7 +24,8 @@ func TestXEP0092(t *testing.T) {
 	defer stm.Disconnect(nil)
 
 	cfg := Config{}
-	x := New(&cfg, nil, nil)
+	x, shutdownCh := New(&cfg, nil)
+	defer close(shutdownCh)
 
 	// test MatchesIQ
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -58,7 +59,9 @@ func TestXEP0092(t *testing.T) {
 	// show OS
 	cfg.ShowOS = true
 
-	x = New(&cfg, nil, nil)
+	x, shutdownCh = New(&cfg, nil)
+	defer close(shutdownCh)
+
 	x.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)

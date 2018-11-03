@@ -59,11 +59,12 @@ func New(cfg *Config) *Storage {
 	return b
 }
 
-// Shutdown shuts down BadgerDB storage sub system.
-func (b *Storage) Shutdown() {
+// Close shuts down BadgerDB storage sub system.
+func (b *Storage) Close() error {
 	ch := make(chan bool)
 	b.doneCh <- ch
 	<-ch
+	return nil
 }
 
 func (b *Storage) loop() {

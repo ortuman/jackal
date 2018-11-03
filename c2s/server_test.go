@@ -6,6 +6,7 @@
 package c2s
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -13,18 +14,19 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/component"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
 	"github.com/stretchr/testify/require"
 )
 
 func TestC2SSocketServer(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -37,7 +39,8 @@ func TestC2SSocketServer(t *testing.T) {
 			Port: 9998,
 		},
 	}
-	go Initialize([]Config{cfg})
+	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	go srv.start()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -58,15 +61,12 @@ func TestC2SSocketServer(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
-		Shutdown()
+		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		srv.shutdown(ctx)
 		errCh <- nil
 	}()
 	err := <-errCh
 	require.Nil(t, err)
-
-	router.Shutdown()
-	storage.Shutdown()
-	host.Shutdown()
 }
 
 func TestC2SWebSocketServer(t *testing.T) {
@@ -75,9 +75,12 @@ func TestC2SWebSocketServer(t *testing.T) {
 	cer, err := util.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
-	host.Initialize([]host.Config{{Name: "localhost", Certificate: cer}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	defer storage.Unset()
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -91,7 +94,8 @@ func TestC2SWebSocketServer(t *testing.T) {
 			Port:    9999,
 		},
 	}
-	go Initialize([]Config{cfg})
+	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	go srv.start()
 
 	go func() {
 		time.Sleep(time.Millisecond * 150)
@@ -114,13 +118,10 @@ func TestC2SWebSocketServer(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
-		Shutdown()
+		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		srv.shutdown(ctx)
 		errCh <- nil
 	}()
 	err = <-errCh
 	require.Nil(t, err)
-
-	router.Shutdown()
-	storage.Shutdown()
-	host.Shutdown()
 }

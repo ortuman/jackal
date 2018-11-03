@@ -22,9 +22,9 @@ func TestMockStorageInsertOfflineMessage(t *testing.T) {
 	m, _ := xmpp.NewMessageFromElement(message, j, j)
 
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.InsertOfflineMessage(m, "ortuman"))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.InsertOfflineMessage(m, "ortuman"))
 }
 
@@ -38,10 +38,10 @@ func TestMockStorageCountOfflineMessages(t *testing.T) {
 	s := New()
 	s.InsertOfflineMessage(m, "ortuman")
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.CountOfflineMessages("ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	cnt, _ := s.CountOfflineMessages("ortuman")
 	require.Equal(t, 1, cnt)
 }
@@ -56,10 +56,10 @@ func TestMockStorageFetchOfflineMessages(t *testing.T) {
 	s := New()
 	s.InsertOfflineMessage(m, "ortuman")
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchOfflineMessages("ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	elems, _ := s.FetchOfflineMessages("ortuman")
 	require.Equal(t, 1, len(elems))
 }
@@ -74,9 +74,9 @@ func TestMockStorageDeleteOfflineMessages(t *testing.T) {
 	s := New()
 	s.InsertOfflineMessage(m, "ortuman")
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteOfflineMessages("ortuman"))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.DeleteOfflineMessages("ortuman"))
 
 	elems, _ := s.FetchOfflineMessages("ortuman")

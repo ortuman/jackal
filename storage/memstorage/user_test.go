@@ -15,20 +15,20 @@ import (
 func TestMockStorageInsertUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	err := s.InsertOrUpdateUser(&u)
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	err = s.InsertOrUpdateUser(&u)
 	require.Nil(t, err)
 }
 
 func TestMockStorageUserExists(t *testing.T) {
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	ok, err := s.UserExists("ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	ok, err = s.UserExists("ortuman")
 	require.Nil(t, err)
 	require.False(t, ok)
@@ -39,10 +39,10 @@ func TestMockStorageFetchUser(t *testing.T) {
 	s := New()
 	_ = s.InsertOrUpdateUser(&u)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchUser("ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	usr, _ := s.FetchUser("romeo")
 	require.Nil(t, usr)
 	usr, _ = s.FetchUser("ortuman")
@@ -54,9 +54,9 @@ func TestMockStorageDeleteUser(t *testing.T) {
 	s := New()
 	_ = s.InsertOrUpdateUser(&u)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteUser("ortuman"))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.DeleteUser("ortuman"))
 
 	usr, _ := s.FetchUser("ortuman")

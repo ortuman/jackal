@@ -25,24 +25,26 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
+	router     *router.Router
 	startTime  time.Time
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router *router.Router) (*LastActivity, chan<- chan bool) {
 	x := &LastActivity{
+		router:     router,
 		startTime:  time.Now(),
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go x.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(lastActivityNamespace)
 		disco.RegisterAccountFeature(lastActivityNamespace)
 	}
-	return x
+	return x, x.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -63,7 +65,8 @@ func (x *LastActivity) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -97,11 +100,11 @@ func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, stm stream.C2S) {
 }
 
 func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream.C2S) {
-	if len(router.UserStreams(to.Node())) > 0 { // user is online
+	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
 		x.sendReply(iq, 0, "", stm)
 		return
 	}
-	usr, err := storage.Instance().FetchUser(to.Node())
+	usr, err := storage.FetchUser(to.Node())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
@@ -135,7 +138,7 @@ func (x *LastActivity) isSubscribedTo(contact *jid.JID, userJID *jid.JID) (bool,
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true, nil
 	}
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

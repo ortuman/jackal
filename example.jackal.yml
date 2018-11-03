@@ -18,9 +18,10 @@ storage:
     database: jackal
     pool_size: 16
 
-hosts:
-  - name: localhost
-    tls:
+router:
+  hosts:
+    - name: localhost
+      tls:
         privkey_path: ""
         cert_path: ""
 

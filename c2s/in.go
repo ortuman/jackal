@@ -14,7 +14,6 @@ import (
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -38,6 +37,9 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
+	router         *router.Router
+	mods           *module.Modules
+	comps          *component.Components
 	sess           *session.Session
 	id             string
 	connectTm      *time.Timer
@@ -56,18 +58,20 @@ type inStream struct {
 	presence      *xmpp.Presence
 }
 
-func newStream(id string, cfg *streamConfig) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
 	s := &inStream{
-		cfg:        cfg,
+		cfg:        config,
+		router:     router,
+		mods:       mods,
+		comps:      comps,
 		id:         id,
 		ctx:        stream.NewContext(),
 		actorCh:    make(chan func(), streamMailboxSize),
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
-	inContainer.set(s)
 
 	// initialize stream context
-	secured := !(cfg.transport.Type() == transport.Socket)
+	secured := !(config.transport.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
@@ -77,8 +81,8 @@ func newStream(id string, cfg *streamConfig) stream.C2S {
 	// start c2s session
 	s.restartSession()
 
-	if cfg.connectTimeout > 0 {
-		s.connectTm = time.AfterFunc(cfg.connectTimeout, s.connectTimeout)
+	if config.connectTimeout > 0 {
+		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
 	go s.doRead() // start reading...
@@ -272,7 +276,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 	// allow In-band registration over encrypted stream only
 	allowRegistration := s.IsSecured()
 
-	if reg := module.Modules().Register; reg != nil && allowRegistration {
+	if reg := s.mods.Register; reg != nil && allowRegistration {
 		registerFeature := xmpp.NewElementNamespace("register", "http://jabber.org/features/iq-register")
 		features = append(features, registerFeature)
 	}
@@ -301,7 +305,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	sessElem := xmpp.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 	features = append(features, sessElem)
 
-	if module.Modules().Roster != nil {
+	if s.mods.Roster != nil {
 		ver := xmpp.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
 		features = append(features, ver)
 	}
@@ -318,7 +322,7 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 
 	case "iq":
 		iq := elem.(*xmpp.IQ)
-		if reg := module.Modules().Register; reg != nil && reg.MatchesIQ(iq) {
+		if reg := s.mods.Register; reg != nil && reg.MatchesIQ(iq) {
 			if s.IsSecured() {
 				reg.ProcessIQ(iq, s)
 			} else {
@@ -378,7 +382,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 
 func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 	// reset ping timer deadline
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
 	stanza, ok := elem.(xmpp.Stanza)
@@ -386,10 +390,10 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
-	if comp := component.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
+	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
-			if di := module.Modules().DiscoInfo; di != nil && di.MatchesIQ(stanza) {
+			if di := s.mods.DiscoInfo; di != nil && di.MatchesIQ(stanza) {
 				di.ProcessIQ(stanza, s)
 				return
 			}
@@ -414,7 +418,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 
 	s.writeElement(xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: host.Certificates()}, false)
+	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -524,7 +528,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	}
 	// try binding...
 	var stm stream.C2S
-	stms := router.UserStreams(s.JID().Node())
+	stms := s.router.UserStreams(s.JID().Node())
 	for _, s := range stms {
 		if s.Resource() == resource {
 			stm = s
@@ -553,7 +557,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 	s.sess.SetJID(userJID)
 
-	router.Bind(s)
+	s.router.Bind(s)
 
 	//...notify successful binding
 	result := xmpp.NewIQType(iq.ID(), xmpp.ResultType)
@@ -582,7 +586,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 	s.writeElement(iq.ResultIQ())
 
 	// start pinging...
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
 	s.setState(sessionStarted)
@@ -609,9 +613,9 @@ func (s *inStream) processStanza(elem xmpp.Stanza) {
 func (s *inStream) processIQ(iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && host.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
-		switch router.Route(iq) {
+		switch s.router.Route(iq) {
 		case router.ErrResourceNotFound:
 			s.writeElement(iq.ServiceUnavailableError())
 		case router.ErrFailedRemoteConnect:
@@ -624,12 +628,12 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		}
 		return
 	}
-	module.ProcessIQ(iq, s)
+	s.mods.ProcessIQ(iq, s)
 }
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if presence.ToJID().IsFullWithUser() {
-		router.Route(presence)
+		s.router.Route(presence)
 		return
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
@@ -639,12 +643,12 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 		s.setPresence(presence)
 	}
 	// deliver presence to roster module
-	if r := module.Modules().Roster; r != nil {
+	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
 	// deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
-		if off := module.Modules().Offline; off != nil {
+		if off := s.mods.Offline; off != nil {
 			off.DeliverOfflineMessages(s)
 		}
 	}
@@ -654,7 +658,7 @@ func (s *inStream) processMessage(message *xmpp.Message) {
 	toJID := message.ToJID()
 
 sendMessage:
-	err := router.Route(message)
+	err := s.router.Route(message)
 	switch err {
 	case nil:
 		break
@@ -663,7 +667,7 @@ sendMessage:
 		toJID = toJID.ToBareJID()
 		goto sendMessage
 	case router.ErrNotAuthenticated:
-		if off := module.Modules().Offline; off != nil {
+		if off := s.mods.Offline; off != nil {
 			off.ArchiveMessage(message)
 			return
 		}
@@ -776,12 +780,12 @@ func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 
 func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	// stop pinging...
-	if p := module.Modules().Ping; p != nil {
+	if p := s.mods.Ping; p != nil {
 		p.CancelPing(s)
 	}
 	// send 'unavailable' presence when disconnecting
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
-		if r := module.Modules().Roster; r != nil {
+		if r := s.mods.Roster; r != nil {
 			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
 		}
 	}
@@ -790,19 +794,22 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	}
 	// unregister stream
 	if unbind {
-		router.Unbind(s)
+		s.router.Unbind(s)
 	}
-	inContainer.delete(s)
+	// notify disconnection
+	if s.cfg.onDisconnect != nil {
+		s.cfg.onDisconnect(s)
+	}
 
 	s.setState(disconnected)
 	s.cfg.transport.Close()
 }
 
 func (s *inStream) isBlockedJID(j *jid.JID) bool {
-	if j.IsServer() && host.IsLocalHost(j.Domain()) {
+	if j.IsServer() && s.router.IsLocalHost(j.Domain()) {
 		return false
 	}
-	return router.IsBlockedJID(j, s.Username())
+	return s.router.IsBlockedJID(j, s.Username())
 }
 
 func (s *inStream) restartSession() {
@@ -810,7 +817,7 @@ func (s *inStream) restartSession() {
 		JID:           s.JID(),
 		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
-	})
+	}, s.router)
 	s.setState(connecting)
 }
 

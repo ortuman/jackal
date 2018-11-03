@@ -19,10 +19,10 @@ func TestMockStorageInsertRosterItem(t *testing.T) {
 	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
 
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.InsertOrUpdateRosterItem(&ri)
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	_, err = s.InsertOrUpdateRosterItem(&ri)
 	require.Nil(t, err)
 	ri.Subscription = "to"
@@ -37,10 +37,10 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchRosterItem("user", "contact")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 
 	ri3, _ := s.FetchRosterItem("user", "contact2")
 	require.Nil(t, ri3)
@@ -60,10 +60,10 @@ func TestMockStorageFetchRosterItems(t *testing.T) {
 	s.InsertOrUpdateRosterItem(&ri)
 	s.InsertOrUpdateRosterItem(&ri2)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, _, err := s.FetchRosterItems("user")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	ris, _, _ := s.FetchRosterItems("user")
 	require.Equal(t, 2, len(ris))
 }
@@ -74,10 +74,10 @@ func TestMockStorageDeleteRosterItem(t *testing.T) {
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.DeleteRosterItem("user", "contact")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	_, err = s.DeleteRosterItem("user", "contact")
 	require.Nil(t, err)
 	_, err = s.DeleteRosterItem("user2", "contact")
@@ -94,9 +94,9 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 		&xmpp.Presence{},
 	}
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.InsertOrUpdateRosterNotification(&rn))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.InsertOrUpdateRosterNotification(&rn))
 }
 
@@ -120,10 +120,10 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rn2.Presence = xmpp.NewPresence(from, to, xmpp.SubscribeType)
 	s.InsertOrUpdateRosterNotification(&rn2)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchRosterNotifications("romeo")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	rns, err := s.FetchRosterNotifications("romeo")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(rns))
@@ -140,9 +140,9 @@ func TestMockStorageDeleteRosterNotification(t *testing.T) {
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteRosterNotification("ortuman", "romeo"))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.DeleteRosterNotification("ortuman", "romeo"))
 
 	rns, err := s.FetchRosterNotifications("romeo")

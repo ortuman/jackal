@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/pkg/errors"
@@ -108,14 +109,16 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type streamConfig struct {
-	modConfig      *module.Config
-	keyGen         *keyGen
-	localDomain    string
-	remoteDomain   string
-	connectTimeout time.Duration
-	tls            *tls.Config
-	transport      transport.Transport
-	maxStanzaSize  int
-	dbVerify       xmpp.XElement
-	dialer         *dialer
+	modConfig       *module.Config
+	keyGen          *keyGen
+	localDomain     string
+	remoteDomain    string
+	connectTimeout  time.Duration
+	tls             *tls.Config
+	transport       transport.Transport
+	maxStanzaSize   int
+	dbVerify        xmpp.XElement
+	dialer          *dialer
+	onInDisconnect  func(s stream.S2SIn)
+	onOutDisconnect func(s stream.S2SOut)
 }

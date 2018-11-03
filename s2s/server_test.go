@@ -6,20 +6,17 @@
 package s2s
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	"github.com/stretchr/testify/require"
 )
 
 func TestS2SSocketServer(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -30,8 +27,8 @@ func TestS2SSocketServer(t *testing.T) {
 			KeepAlive: time.Duration(600) * time.Second,
 		},
 	}
-	go Initialize(&cfg)
-
+	srv := server{cfg: &cfg, router: r, dialer: newDialer(&cfg, r)}
+	go srv.start()
 	go func() {
 		time.Sleep(time.Millisecond * 150)
 
@@ -50,13 +47,11 @@ func TestS2SSocketServer(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
-		Shutdown()
+		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		srv.shutdown(ctx)
+
 		errCh <- nil
 	}()
 	err := <-errCh
 	require.Nil(t, err)
-
-	router.Shutdown()
-	storage.Shutdown()
-	host.Shutdown()
 }

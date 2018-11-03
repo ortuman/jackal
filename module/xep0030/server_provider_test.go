@@ -9,9 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -21,15 +19,6 @@ import (
 )
 
 func TestServerProvider_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
-
 	var sp serverProvider
 	sp.registerServerFeature("sf0")
 	sp.registerServerFeature("sf1")
@@ -82,16 +71,11 @@ func TestServerProvider_Identities(t *testing.T) {
 }
 
 func TestServerProvider_Items(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	var sp serverProvider
+	sp.router = r
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	accJID1, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -102,9 +86,9 @@ func TestServerProvider_Items(t *testing.T) {
 	stm2 := stream.NewMockC2S(uuid.New(), accJID2)
 	stm3 := stream.NewMockC2S(uuid.New(), accJID3)
 
-	router.Bind(stm1)
-	router.Bind(stm2)
-	router.Bind(stm3)
+	r.Bind(stm1)
+	r.Bind(stm2)
+	r.Bind(stm3)
 
 	items, sErr := sp.Items(srvJID, accJID1, "node")
 	require.Nil(t, items)
@@ -120,7 +104,7 @@ func TestServerProvider_Items(t *testing.T) {
 	require.Nil(t, items)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 
-	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

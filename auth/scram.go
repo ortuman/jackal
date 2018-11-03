@@ -195,7 +195,7 @@ func (s *Scram) handleStart(elem xmpp.XElement) error {
 	if len(username) == 0 || len(cNonce) == 0 {
 		return ErrSASLMalformedRequest
 	}
-	user, err := storage.Instance().FetchUser(username)
+	user, err := storage.FetchUser(username)
 	if err != nil {
 		return err
 	}

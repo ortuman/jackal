@@ -28,22 +28,24 @@ type Config struct {
 // Offline represents an offline server stream module.
 type Offline struct {
 	cfg        *Config
+	router     *router.Router
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns an offline server stream module.
-func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Offline {
+func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) (*Offline, chan<- chan bool) {
 	r := &Offline{
 		cfg:        config,
+		router:     router,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go r.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(offlineNamespace)
 	}
-	return r
+	return r, r.shutdownCh
 }
 
 // ArchiveMessage archives a new offline messages into the storage.
@@ -63,7 +65,8 @@ func (o *Offline) loop() {
 		select {
 		case f := <-o.actorCh:
 			f()
-		case <-o.shutdownCh:
+		case c := <-o.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -74,20 +77,20 @@ func (o *Offline) archiveMessage(message *xmpp.Message) {
 		return
 	}
 	toJID := message.ToJID()
-	queueSize, err := storage.Instance().CountOfflineMessages(toJID.Node())
+	queueSize, err := storage.CountOfflineMessages(toJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	if queueSize >= o.cfg.QueueSize {
-		router.Route(message.ServiceUnavailableError())
+		o.router.Route(message.ServiceUnavailableError())
 		return
 	}
 	delayed, _ := xmpp.NewMessageFromElement(message, message.FromJID(), message.ToJID())
 	delayed.Delay(message.FromJID().Domain(), "Offline Storage")
-	if err := storage.Instance().InsertOfflineMessage(delayed, toJID.Node()); err != nil {
+	if err := storage.InsertOfflineMessage(delayed, toJID.Node()); err != nil {
 		log.Error(err)
-		router.Route(message.InternalServerError())
+		o.router.Route(message.InternalServerError())
 		return
 	}
 	log.Infof("archived offline message... id: %s", message.ID())
@@ -99,7 +102,7 @@ func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
 	}
 	// deliver offline messages
 	userJID := stm.JID()
-	msgs, err := storage.Instance().FetchOfflineMessages(userJID.Node())
+	msgs, err := storage.FetchOfflineMessages(userJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
@@ -110,9 +113,9 @@ func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
 	log.Infof("delivering offline msgs: %s... count: %d", userJID, len(msgs))
 
 	for _, m := range msgs {
-		router.Route(m)
+		o.router.Route(m)
 	}
-	if err := storage.Instance().DeleteOfflineMessages(userJID.Node()); err != nil {
+	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
 		log.Error(err)
 	}
 	stm.Context().SetBool(true, offlineDeliveredCtxKey)

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package host
+package router
 
 import (
 	"crypto/tls"
@@ -11,26 +11,28 @@ import (
 	"github.com/ortuman/jackal/util"
 )
 
-// TLSConfig represents a host TLS configuration.
-type TLSConfig struct {
+type Config struct {
+	Hosts []HostConfig `yaml:"hosts"`
+}
+
+type tlsConfig struct {
 	CertFile    string `yaml:"cert_path"`
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
-// Config represents a host configuration.
-type Config struct {
+type HostConfig struct {
 	Name        string
 	Certificate tls.Certificate
 }
 
-type configProxy struct {
+type hostConfigProxy struct {
 	Name string    `yaml:"name"`
-	TLS  TLSConfig `yaml:"tls"`
+	TLS  tlsConfig `yaml:"tls"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
-func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	p := configProxy{}
+func (c *HostConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := hostConfigProxy{}
 	if err := unmarshal(&p); err != nil {
 		return err
 	}

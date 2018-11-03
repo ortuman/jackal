@@ -36,6 +36,9 @@ func TestStreamError(t *testing.T) {
 	require.Equal(t, "not-authorized", ErrNotAuthorized.Error())
 	require.Equal(t, "not-authorized", ErrNotAuthorized.Element().Elements().All()[0].Name())
 
+	require.Equal(t, "system-shutdown", ErrSystemShutdown.Error())
+	require.Equal(t, "system-shutdown", ErrSystemShutdown.Element().Elements().All()[0].Name())
+
 	require.Equal(t, "resource-constraint", ErrResourceConstraint.Error())
 	require.Equal(t, "resource-constraint", ErrResourceConstraint.Element().Elements().All()[0].Name())
 

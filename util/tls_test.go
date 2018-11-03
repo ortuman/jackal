@@ -6,10 +6,9 @@
 package util
 
 import (
+	"crypto/tls"
 	"os"
 	"testing"
-
-	"crypto/tls"
 
 	"github.com/stretchr/testify/require"
 )

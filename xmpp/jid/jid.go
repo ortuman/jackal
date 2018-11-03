@@ -93,8 +93,12 @@ func NewWithString(str string, skipStringPrep bool) (*JID, error) {
 	}
 
 	// resource
-	if slashIndex > 0 && slashIndex+1 < len(str) {
-		resource = str[slashIndex+1:]
+	if slashIndex > 0 {
+		if slashIndex+1 < len(str) {
+			resource = str[slashIndex+1:]
+		} else {
+			return nil, errors.New("JID resource must not be empty")
+		}
 	}
 	return New(node, domain, resource, skipStringPrep)
 }

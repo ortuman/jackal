@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -23,7 +24,8 @@ func TestXEP0049_Matching(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
 
-	x := New(nil)
+	x, shutdownCh := New()
+	defer close(shutdownCh)
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -41,7 +43,8 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
 
-	x := New(nil)
+	x, shutdownCh := New()
+	defer close(shutdownCh)
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -85,15 +88,16 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 }
 
 func TestXEP0049_SetAndGetPrivate(t *testing.T) {
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer storage.Shutdown()
+	s, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
 
-	x := New(nil)
+	x, shutdownCh := New()
+	defer close(shutdownCh)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -108,11 +112,11 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	q.AppendElement(exodus2)
 
 	// set error
-	storage.ActivateMockedError()
+	s.EnableMockedError()
 	x.ProcessIQ(iq, stm)
 	elem := stm.FetchElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	storage.DeactivateMockedError()
+	s.DisableMockedError()
 
 	// set success
 	x.ProcessIQ(iq, stm)
@@ -124,11 +128,11 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	q.RemoveElements("exodus2")
 	iq.SetType(xmpp.GetType)
 
-	storage.ActivateMockedError()
+	s.EnableMockedError()
 	x.ProcessIQ(iq, stm)
 	elem = stm.FetchElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	storage.DeactivateMockedError()
+	s.DisableMockedError()
 
 	// get success
 	x.ProcessIQ(iq, stm)
@@ -149,4 +153,12 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	q3 := elem.Elements().ChildNamespace("query", privateNamespace)
 	require.Equal(t, 1, q3.Elements().Count())
 	require.Equal(t, "exodus:ns:2", q3.Elements().All()[0].Namespace())
+}
+
+func setupTest(domain string) (*memstorage.Storage, func()) {
+	s := memstorage.New()
+	storage.Set(s)
+	return s, func() {
+		storage.Unset()
+	}
 }

@@ -11,7 +11,8 @@ storage:
   badgerdb:
     data_dir: ./.data
 
-hosts:
+router:
+  hosts:
   - name: localhost
     tls:
       privkey_path: ""

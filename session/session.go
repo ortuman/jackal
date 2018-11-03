@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -74,6 +74,7 @@ type Config struct {
 // Session represents an XMPP session between the two peers.
 type Session struct {
 	id           string
+	router       *router.Router
 	tr           transport.Transport
 	pr           *xmpp.Parser
 	remoteDomain string
@@ -88,7 +89,7 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(id string, config *Config) *Session {
+func New(id string, config *Config, router *router.Router) *Session {
 	var parsingMode xmpp.ParsingMode
 	switch config.Transport.Type() {
 	case transport.Socket:
@@ -98,6 +99,7 @@ func New(id string, config *Config) *Session {
 	}
 	s := &Session{
 		id:           id,
+		router:       router,
 		tr:           config.Transport,
 		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
 		remoteDomain: config.RemoteDomain,
@@ -340,7 +342,7 @@ func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !host.IsLocalHost(to) {
+	if len(to) > 0 && !s.router.IsLocalHost(to) {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {

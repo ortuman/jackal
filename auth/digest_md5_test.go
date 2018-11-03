@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
@@ -63,23 +62,23 @@ func (h *digestMD5AuthTestHelper) serializeParams(params *digestMD5Parameters) s
 
 func TestDigesMD5Authentication(t *testing.T) {
 	user := &model.User{Username: "mariana", Password: "1234"}
-	testStrm := authTestSetup(user)
+	testStm, s := authTestSetup(user)
 	defer authTestTeardown()
 
-	authr := NewDigestMD5(testStrm)
+	authr := NewDigestMD5(testStm)
 	require.Equal(t, authr.Mechanism(), "DIGEST-MD5")
 	require.False(t, authr.UsesChannelBinding())
 
 	// test garbage input...
 	require.Equal(t, authr.ProcessElement(xmpp.NewElementName("garbage")), ErrSASLNotAuthorized)
 
-	helper := digestMD5AuthTestHelper{t: t, testStrm: testStrm, authr: authr}
+	helper := digestMD5AuthTestHelper{t: t, testStrm: testStm, authr: authr}
 
 	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", "DIGEST-MD5")
 	authr.ProcessElement(auth)
 
-	challenge := testStrm.FetchElement()
+	challenge := testStm.FetchElement()
 	require.Equal(t, challenge.Name(), "challenge")
 	clParams := helper.clientParamsFromChallenge(challenge.Text())
 	clientResp := authr.computeResponse(clParams, user, true)
@@ -137,14 +136,14 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl7))
 
 	// storage error...
-	storage.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, memstorage.ErrMockedError, helper.sendClientParamsResponse(clParams))
+	s.DisableMockedError()
 
 	// successful authentication...
-	storage.DeactivateMockedError()
 	require.Nil(t, helper.sendClientParamsResponse(clParams))
 
-	challenge = testStrm.FetchElement()
+	challenge = testStm.FetchElement()
 
 	serverResp := authr.computeResponse(clParams, user, false)
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("rspauth=%s", serverResp))), challenge.Text())
@@ -152,7 +151,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	response.SetText("")
 	authr.ProcessElement(response)
 
-	success := testStrm.FetchElement()
+	success := testStm.FetchElement()
 	require.Equal(t, "success", success.Name())
 
 	// successfully authenticated

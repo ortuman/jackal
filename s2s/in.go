@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -30,6 +29,8 @@ const (
 type inStream struct {
 	id            string
 	cfg           *streamConfig
+	router        *router.Router
+	mods          *module.Modules
 	localDomain   string
 	remoteDomain  string
 	state         uint32
@@ -40,20 +41,19 @@ type inStream struct {
 	actorCh       chan func()
 }
 
-func newInStream(cfg *streamConfig) *inStream {
+func newInStream(config *streamConfig, mods *module.Modules, router *router.Router) *inStream {
 	s := &inStream{
 		id:      nextInID(),
-		cfg:     cfg,
+		cfg:     config,
+		router:  router,
+		mods:    mods,
 		actorCh: make(chan func(), streamMailboxSize),
 	}
-	// register into stream container
-	inContainer.set(s)
-
 	// start s2s in session
 	s.restartSession()
 
-	if cfg.connectTimeout > 0 {
-		s.connectTm = time.AfterFunc(cfg.connectTimeout, s.connectTimeout)
+	if config.connectTimeout > 0 {
+		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
 	go s.doRead() // start reading transport...
@@ -184,12 +184,12 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 		case xmpp.Stanza:
 			// process roster presence
 			if presence, ok := elem.(*xmpp.Presence); ok && presence.ToJID().IsBare() {
-				if r := module.Modules().Roster; r != nil {
-					module.Modules().Roster.ProcessPresence(presence)
+				if r := s.mods.Roster; r != nil {
+					s.mods.Roster.ProcessPresence(presence)
 				}
 				return
 			}
-			router.Route(elem)
+			s.router.Route(elem)
 		}
 	}
 }
@@ -208,7 +208,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 	s.cfg.transport.StartTLS(&tls.Config{
 		ServerName:   s.localDomain,
 		ClientAuth:   tls.VerifyClientCertIfGiven,
-		Certificates: host.Certificates(),
+		Certificates: s.router.Certificates(),
 	}, false)
 	atomic.StoreUint32(&s.secured, 1)
 
@@ -260,7 +260,7 @@ func (s *inStream) failAuthentication(reason, text string) {
 }
 
 func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !s.router.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -280,7 +280,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 	dbVerify.SetText(elem.Text())
 	outCfg.dbVerify = dbVerify
 
-	outStm := newOutStream()
+	outStm := newOutStream(s.router)
 	outStm.start(outCfg)
 
 	// wait remote server verification
@@ -307,7 +307,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 }
 
 func (s *inStream) verifyDialbackKey(elem xmpp.XElement) {
-	if !host.IsLocalHost(elem.To()) {
+	if !s.router.IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -392,7 +392,9 @@ func (s *inStream) disconnectClosingSession(closeSession bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	inContainer.delete(s)
+	if s.cfg.onInDisconnect != nil {
+		s.cfg.onInDisconnect(s)
+	}
 
 	s.setState(inDisconnected)
 	s.cfg.transport.Close()
@@ -406,7 +408,7 @@ func (s *inStream) restartSession() {
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.remoteDomain,
 		IsServer:      true,
-	})
+	}, s.router)
 	s.setState(inConnecting)
 }
 

@@ -18,6 +18,7 @@ import (
 )
 
 type serverProvider struct {
+	router          *router.Router
 	mu              sync.RWMutex
 	serverItems     []Item
 	serverFeatures  []Feature
@@ -46,7 +47,7 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
-			stms := router.UserStreams(toJID.Node())
+			stms := sp.router.UserStreams(toJID.Node())
 			for _, stm := range stms {
 				itms = append(itms, Item{Jid: stm.JID().String()})
 			}
@@ -147,7 +148,7 @@ func (sp *serverProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) boo
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.Instance().FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false

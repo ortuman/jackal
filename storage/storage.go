@@ -6,9 +6,10 @@
 package storage
 
 import (
+	"fmt"
+	"io"
 	"sync"
 
-	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/storage/badgerdb"
@@ -18,177 +19,223 @@ import (
 )
 
 type userStorage interface {
-	// InsertOrUpdateUser inserts a new user entity into storage,
-	// or updates it in case it's been previously inserted.
 	InsertOrUpdateUser(user *model.User) error
-
-	// DeleteUser deletes a user entity from storage.
 	DeleteUser(username string) error
-
-	// FetchUser retrieves from storage a user entity.
 	FetchUser(username string) (*model.User, error)
-
-	// UserExists returns whether or not a user exists within storage.
 	UserExists(username string) (bool, error)
 }
 
+// InsertOrUpdateUser inserts a new user entity into storage,
+// or updates it in case it's been previously inserted.
+func InsertOrUpdateUser(user *model.User) error {
+	return instance().InsertOrUpdateUser(user)
+}
+
+// DeleteUser deletes a user entity from storage.
+func DeleteUser(username string) error {
+	return instance().DeleteUser(username)
+}
+
+// FetchUser retrieves from storage a user entity.
+func FetchUser(username string) (*model.User, error) {
+	return instance().FetchUser(username)
+}
+
+// UserExists returns whether or not a user exists within storage.
+func UserExists(username string) (bool, error) {
+	return instance().UserExists(username)
+}
+
 type rosterStorage interface {
-	// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
-	// or updates it in case it's been previously inserted.
 	InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error)
-
-	// DeleteRosterItem deletes a roster item entity from storage.
 	DeleteRosterItem(username, jid string) (rostermodel.Version, error)
-
-	// FetchRosterItems retrieves from storage all roster item entities
-	// associated to a given user.
 	FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error)
-
-	// FetchRosterItem retrieves from storage a roster item entity.
 	FetchRosterItem(username, jid string) (*rostermodel.Item, error)
-
-	// InsertOrUpdateRosterNotification inserts a new roster notification entity
-	// into storage, or updates it in case it's been previously inserted.
 	InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error
-
-	// DeleteRosterNotification deletes a roster notification entity from storage.
 	DeleteRosterNotification(contact, jid string) error
-
-	// FetchRosterNotification retrieves from storage a roster notification entity.
 	FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error)
-
-	// FetchRosterNotifications retrieves from storage all roster notifications
-	// associated to a given user.
 	FetchRosterNotifications(contact string) ([]rostermodel.Notification, error)
 }
 
+// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// or updates it in case it's been previously inserted.
+func InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+	return instance().InsertOrUpdateRosterItem(ri)
+}
+
+// DeleteRosterItem deletes a roster item entity from storage.
+func DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
+	return instance().DeleteRosterItem(username, jid)
+}
+
+// FetchRosterItems retrieves from storage all roster item entities
+// associated to a given user.
+func FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
+	return instance().FetchRosterItems(username)
+}
+
+// FetchRosterItem retrieves from storage a roster item entity.
+func FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
+	return instance().FetchRosterItem(username, jid)
+}
+
+// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// into storage, or updates it in case it's been previously inserted.
+func InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
+	return instance().InsertOrUpdateRosterNotification(rn)
+}
+
+// DeleteRosterNotification deletes a roster notification entity from storage.
+func DeleteRosterNotification(contact, jid string) error {
+	return instance().DeleteRosterNotification(contact, jid)
+}
+
+// FetchRosterNotification retrieves from storage a roster notification entity.
+func FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+	return instance().FetchRosterNotification(contact, jid)
+}
+
+// FetchRosterNotifications retrieves from storage all roster notifications
+// associated to a given user.
+func FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+	return instance().FetchRosterNotifications(contact)
+}
+
 type offlineStorage interface {
-	// InsertOfflineMessage inserts a new message element into
-	// user's offline queue.
 	InsertOfflineMessage(message *xmpp.Message, username string) error
-
-	// CountOfflineMessages returns current length of user's offline queue.
 	CountOfflineMessages(username string) (int, error)
-
-	// FetchOfflineMessages retrieves from storage current user offline queue.
 	FetchOfflineMessages(username string) ([]*xmpp.Message, error)
-
-	// DeleteOfflineMessages clears a user offline queue.
 	DeleteOfflineMessages(username string) error
 }
 
-type vCardStorage interface {
-	// InsertOrUpdateVCard inserts a new vCard element into storage,
-	// or updates it in case it's been previously inserted.
-	InsertOrUpdateVCard(vCard xmpp.XElement, username string) error
+// InsertOfflineMessage inserts a new message element into
+// user's offline queue.
+func InsertOfflineMessage(message *xmpp.Message, username string) error {
+	return instance().InsertOfflineMessage(message, username)
+}
 
-	// FetchVCard retrieves from storage a vCard element associated
-	// to a given user.
+// CountOfflineMessages returns current length of user's offline queue.
+func CountOfflineMessages(username string) (int, error) {
+	return instance().CountOfflineMessages(username)
+}
+
+// FetchOfflineMessages retrieves from storage current user offline queue.
+func FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
+	return instance().FetchOfflineMessages(username)
+}
+
+// DeleteOfflineMessages clears a user offline queue.
+func DeleteOfflineMessages(username string) error {
+	return instance().DeleteOfflineMessages(username)
+}
+
+type vCardStorage interface {
+	InsertOrUpdateVCard(vCard xmpp.XElement, username string) error
 	FetchVCard(username string) (xmpp.XElement, error)
 }
 
-type privateStorage interface {
-	// FetchPrivateXML retrieves from storage a private element.
-	FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error)
+// InsertOrUpdateVCard inserts a new vCard element into storage,
+// or updates it in case it's been previously inserted.
+func InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
+	return instance().InsertOrUpdateVCard(vCard, username)
+}
 
-	// InsertOrUpdatePrivateXML inserts a new private element into storage,
-	// or updates it in case it's been previously inserted.
+// FetchVCard retrieves from storage a vCard element associated
+// to a given user.
+func FetchVCard(username string) (xmpp.XElement, error) {
+	return instance().FetchVCard(username)
+}
+
+type privateStorage interface {
+	FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error)
 	InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error
 }
 
+// FetchPrivateXML retrieves from storage a private element.
+func FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
+	return instance().FetchPrivateXML(namespace, username)
+}
+
+// InsertOrUpdatePrivateXML inserts a new private element into storage,
+// or updates it in case it's been previously inserted.
+func InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+	return instance().InsertOrUpdatePrivateXML(privateXML, namespace, username)
+}
+
 type blockListStorage interface {
-	// InsertBlockListItems inserts a set of block list item entities
-	// into storage, only in case they haven't been previously inserted.
 	InsertBlockListItems(items []model.BlockListItem) error
-
-	// DeleteBlockListItems deletes a set of block list item entities from storage.
 	DeleteBlockListItems(items []model.BlockListItem) error
-
-	// FetchBlockListItems retrieves from storage all block list item entities
-	// associated to a given user.
 	FetchBlockListItems(username string) ([]model.BlockListItem, error)
+}
+
+// InsertBlockListItems inserts a set of block list item entities
+// into storage, only in case they haven't been previously inserted.
+func InsertBlockListItems(items []model.BlockListItem) error {
+	return instance().InsertBlockListItems(items)
+}
+
+// DeleteBlockListItems deletes a set of block list item entities from storage.
+func DeleteBlockListItems(items []model.BlockListItem) error {
+	return instance().DeleteBlockListItems(items)
+}
+
+// FetchBlockListItems retrieves from storage all block list item entities
+// associated to a given user.
+func FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+	return instance().FetchBlockListItems(username)
 }
 
 // Storage represents an entity storage interface.
 type Storage interface {
+	io.Closer
+
 	userStorage
 	offlineStorage
 	rosterStorage
 	vCardStorage
 	privateStorage
 	blockListStorage
-
-	// Shutdown shuts down storage sub system.
-	Shutdown()
 }
 
 var (
-	instMu      sync.RWMutex
-	inst        Storage
-	initialized bool
+	instMu sync.RWMutex
+	inst   Storage
 )
 
-// Initialize initializes storage sub system.
-func Initialize(cfg *Config) {
-	instMu.Lock()
-	defer instMu.Unlock()
-	if initialized {
-		return
-	}
-	switch cfg.Type {
-	case BadgerDB:
-		inst = badgerdb.New(cfg.BadgerDB)
-	case MySQL:
-		inst = sql.New(cfg.MySQL)
-	case Memory:
-		inst = memstorage.New()
-	default:
-		// should not be reached
-		break
-	}
-	initialized = true
+var Disabled Storage = &disabledStorage{}
+
+func init() {
+	inst = Disabled
 }
 
-// Instance returns global storage sub system.
-func Instance() Storage {
+func Set(storage Storage) {
+	instMu.Lock()
+	inst.Close()
+	inst = storage
+	instMu.Unlock()
+}
+
+func Unset() {
+	Set(Disabled)
+}
+
+func instance() Storage {
 	instMu.RLock()
-	defer instMu.RUnlock()
-	if inst == nil {
-		log.Fatalf("storage subsystem not initialized")
-	}
-	return inst
+	s := inst
+	instMu.RUnlock()
+	return s
 }
 
-// Shutdown shuts down storage sub system.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	instMu.Lock()
-	defer instMu.Unlock()
-	inst.Shutdown()
-	inst = nil
-	initialized = false
-}
-
-// ActivateMockedError forces the return of ErrMockedError from current storage manager.
-// This method should only be used for testing purposes.
-func ActivateMockedError() {
-	instMu.Lock()
-	defer instMu.Unlock()
-
-	switch inst := inst.(type) {
-	case *memstorage.Storage:
-		inst.ActivateMockedError()
-	}
-}
-
-// DeactivateMockedError disables mocked storage error from a previous activation.
-// This method should only be used for testing purposes.
-func DeactivateMockedError() {
-	instMu.Lock()
-	defer instMu.Unlock()
-
-	switch inst := inst.(type) {
-	case *memstorage.Storage:
-		inst.DeactivateMockedError()
+// Initialize initializes storage sub system.
+func New(config *Config) (Storage, error) {
+	switch config.Type {
+	case BadgerDB:
+		return badgerdb.New(config.BadgerDB), nil
+	case MySQL:
+		return sql.New(config.MySQL), nil
+	case Memory:
+		return memstorage.New(), nil
+	default:
+		return nil, fmt.Errorf("storage: unrecognized storage type: %d", config.Type)
 	}
 }

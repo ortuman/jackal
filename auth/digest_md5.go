@@ -186,7 +186,7 @@ func (d *DigestMD5) handleChallenged(elem xmpp.XElement) error {
 		return ErrSASLNotAuthorized
 	}
 	// validate user
-	user, err := storage.Instance().FetchUser(params.username)
+	user, err := storage.FetchUser(params.username)
 	if err != nil {
 		return err
 	}

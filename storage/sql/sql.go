@@ -88,11 +88,12 @@ func NewMock() (*Storage, sqlmock.Sqlmock) {
 	return s, sqlMock
 }
 
-// Shutdown shuts down SQL storage sub system.
-func (s *Storage) Shutdown() {
+// Close shuts down SQL storage sub system.
+func (s *Storage) Close() error {
 	ch := make(chan bool)
 	s.doneCh <- ch
 	<-ch
+	return nil
 }
 
 func (s *Storage) loop() {

@@ -13,14 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
@@ -32,13 +30,19 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	stm, _ := tUtilInStreamInit(t, false)
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
+
+	stm, _ := tUtilInStreamInit(t, r, false)
 	time.Sleep(time.Millisecond * 1500)
 	require.Equal(t, inDisconnected, stm.getState())
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	stm, conn := tUtilInStreamInit(t, false)
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
+
+	stm, conn := tUtilInStreamInit(t, r, false)
 	stm.Disconnect(nil)
 	require.True(t, conn.waitClose())
 
@@ -46,11 +50,11 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
 	// unsecured features
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 
 	elem := conn.outboundRead()
@@ -62,7 +66,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, inConnected, stm.getState())
 
 	// secured features
-	stm, conn = tUtilInStreamInit(t, false)
+	stm, conn = tUtilInStreamInit(t, r, false)
 	atomic.StoreUint32(&stm.secured, 1)
 	tUtilInStreamOpen(conn)
 
@@ -75,7 +79,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, inConnected, stm.getState())
 
 	// secured features (authenticated)
-	stm, conn = tUtilInStreamInit(t, false)
+	stm, conn = tUtilInStreamInit(t, r, false)
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 	tUtilInStreamOpen(conn)
@@ -90,10 +94,10 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -102,7 +106,7 @@ func TestStream_TLS(t *testing.T) {
 	conn.inboundWriteString(`<starttls xmlns="foo:ns"/>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, false)
+	stm, conn = tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -111,7 +115,7 @@ func TestStream_TLS(t *testing.T) {
 	conn.inboundWriteString(`<foo xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, false)
+	stm, conn = tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -127,10 +131,10 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_Authenticate(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -140,14 +144,14 @@ func TestStream_Authenticate(t *testing.T) {
 	conn.inboundWriteString(`<auth xmlns="foo:ns" mechanism="EXTERNAL">=</auth>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, true)
+	stm, conn = tUtilInStreamInit(t, r, true)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 	atomic.StoreUint32(&stm.secured, 1)
 
 	// failed peer certificate...
-	stm, conn = tUtilInStreamInit(t, false)
+	stm, conn = tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -159,7 +163,7 @@ func TestStream_Authenticate(t *testing.T) {
 	require.Equal(t, saslNamespace, elem.Namespace())
 
 	// invalid mechanism...
-	stm, conn = tUtilInStreamInit(t, true)
+	stm, conn = tUtilInStreamInit(t, r, true)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -178,10 +182,10 @@ func TestStream_Authenticate(t *testing.T) {
 }
 
 func TestStream_DialbackVerify(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -211,10 +215,10 @@ func TestStream_DialbackVerify(t *testing.T) {
 }
 
 func TestStream_DialbackAuthorize(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	defer host.Shutdown()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
 
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -229,11 +233,11 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
 	cfg, conn := tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{}
+	cfg.dialer = &dialer{router: r}
 	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", nil, errors.New("mocked dialer error")
 	}
-	stm = newInStream(cfg)
+	stm = newInStream(cfg, &module.Modules{}, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -249,7 +253,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("remote-server-not-found"))
 
 	cfg, conn = tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}}
+	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}, router: r}
 	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
 	}
@@ -257,7 +261,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	cfg.dialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg)
+	stm = newInStream(cfg, &module.Modules{}, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -275,7 +279,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 
 	// authorize dialback key
 	cfg, conn = tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}}
+	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}, router: r}
 	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
 	}
@@ -283,7 +287,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	cfg.dialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg)
+	stm = newInStream(cfg, &module.Modules{}, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -334,21 +338,16 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 }
 
 func TestStream_SendElement(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest(jackaDomain)
+	defer shutdown()
+
 	fromJID, _ := jid.New("ortuman", "localhost", "garden", true)
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", toJID)
-	router.Bind(stm2)
+	r.Bind(stm2)
 
-	stm, conn := tUtilInStreamInit(t, false)
+	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -372,9 +371,9 @@ func TestStream_SendElement(t *testing.T) {
 	require.True(t, conn.waitClose())
 }
 
-func tUtilInStreamInit(t *testing.T, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
+func tUtilInStreamInit(t *testing.T, router *router.Router, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
 	cfg, conn := tUtilInStreamDefaultConfig(t, loadPeerCertificate)
-	stm := newInStream(cfg)
+	stm := newInStream(cfg, &module.Modules{}, router)
 	return stm, conn
 }
 

@@ -59,24 +59,24 @@ type Ping struct {
 	pings       map[string]*ping
 	activePings map[string]*ping
 	actorCh     chan func()
-	shutdownCh  <-chan struct{}
+	shutdownCh  chan chan bool
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Ping {
+func New(config *Config, disco *xep0030.DiscoInfo) (*Ping, chan<- chan bool) {
 	p := &Ping{
 		cfg:         config,
 		pings:       make(map[string]*ping),
 		activePings: make(map[string]*ping),
 		actorCh:     make(chan func(), mailboxSize),
-		shutdownCh:  shutdownCh,
+		shutdownCh:  make(chan chan bool),
 	}
 	go p.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(pingNamespace)
 		disco.RegisterAccountFeature(pingNamespace)
 	}
-	return p
+	return p, p.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -108,10 +108,11 @@ func (x *Ping) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
 			for _, pi := range x.pings {
 				pi.timer.Stop()
 			}
+			c <- true
 			return
 		}
 	}

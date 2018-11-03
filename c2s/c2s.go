@@ -6,9 +6,14 @@
 package c2s
 
 import (
+	"context"
 	"sync"
+	"sync/atomic"
 
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/router"
 	"github.com/pkg/errors"
 )
 
@@ -27,61 +32,42 @@ const (
 	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
 )
 
-var (
-	mu          sync.RWMutex
-	servers     = make(map[string]*server)
-	shutdownCh  = make(chan chan struct{})
-	initialized bool
-)
-
-// Initialize initializes c2s sub system spawning a connection listener
-// for every server configuration.
-func Initialize(srvConfigurations []Config) {
-	mu.Lock()
-	if initialized {
-		mu.Unlock()
-		return
-	}
-	if len(srvConfigurations) == 0 {
-		log.Error(errors.New("at least one c2s configuration is required"))
-		return
-	}
-	// initialize all servers
-	for i := 0; i < len(srvConfigurations); i++ {
-		if _, err := initializeServer(&srvConfigurations[i]); err != nil {
-			log.Fatalf("%v", err)
-		}
-	}
-	initialized = true
-	mu.Unlock()
-
-	// wait until shutdown...
-	doneCh := <-shutdownCh
-
-	mu.Lock()
-	// close all servers
-	for k, srv := range servers {
-		if err := srv.shutdown(); err != nil {
-			log.Error(err)
-		}
-		delete(servers, k)
-	}
-	close(doneCh)
-	initialized = false
-	mu.Unlock()
+// C2S represents a client-to-server connection manager.
+type C2S struct {
+	mu      sync.RWMutex
+	servers map[string]*server
+	started uint32
 }
 
-// Shutdown closes every server listener.
-// This method should be used only for testing purposes.
-func Shutdown() {
-	ch := make(chan struct{})
-	shutdownCh <- ch
-	<-ch
+// New returns a new instance of a c2s connection manager.
+func New(configs []Config, mods *module.Modules, comps *component.Components, router *router.Router) (*C2S, error) {
+	if len(configs) == 0 {
+		return nil, errors.New("at least one c2s configuration is required")
+	}
+	c := &C2S{servers: make(map[string]*server)}
+	for _, config := range configs {
+		srv := &server{cfg: &config, mods: mods, comps: comps, router: router}
+		c.servers[config.ID] = srv
+	}
+	return c, nil
 }
 
-func initializeServer(cfg *Config) (*server, error) {
-	srv := &server{cfg: cfg}
-	servers[cfg.ID] = srv
-	go srv.start()
-	return srv, nil
+// Start initializes c2s manager spawning every single server.
+func (c *C2S) Start() {
+	if atomic.CompareAndSwapUint32(&c.started, 0, 1) {
+		for _, srv := range c.servers {
+			go srv.start()
+		}
+	}
+}
+
+// Shutdown gracefully shuts down c2s manager.
+func (c *C2S) Shutdown(ctx context.Context) {
+	if atomic.CompareAndSwapUint32(&c.started, 1, 0) {
+		for _, srv := range c.servers {
+			if err := srv.shutdown(ctx); err != nil {
+				log.Error(err)
+			}
+		}
+	}
 }

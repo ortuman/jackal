@@ -8,7 +8,6 @@ package memstorage
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
@@ -17,11 +16,14 @@ import (
 
 // ErrMockedError will be returned by any Storage method
 // when mocked error is activated.
-var ErrMockedError = errors.New("storage mocked error")
+var ErrMockedError = errors.New("memstorage: mocked error")
 
 // Storage represents an in memory storage sub system.
 type Storage struct {
-	mockErr             uint32
+	mockErrMu           sync.Mutex
+	mockingErr          bool
+	invokeLimit         int32
+	invokeCount         int32
 	mu                  sync.RWMutex
 	users               map[string]*model.User
 	rosterItems         map[string][]rostermodel.Item
@@ -47,22 +49,37 @@ func New() *Storage {
 	}
 }
 
-// Shutdown shuts down in memory storage sub system.
-func (m *Storage) Shutdown() {
+// Close shuts down in memory storage sub system.
+func (m *Storage) Close() error {
+	return nil
 }
 
-// ActivateMockedError activates in memory mocked error.
-func (m *Storage) ActivateMockedError() {
-	atomic.StoreUint32(&m.mockErr, 1)
+// EnableMockedError enables in memory mocked error.
+func (m *Storage) EnableMockedError() {
+	m.EnableMockedErrorWithInvokeLimit(1)
 }
 
-// DeactivateMockedError deactivates in memory mocked error.
-func (m *Storage) DeactivateMockedError() {
-	atomic.StoreUint32(&m.mockErr, 0)
+// EnableMockedErrorWithInvokeLimit enables in memory mocked error after a given invocation limit is reached.
+func (m *Storage) EnableMockedErrorWithInvokeLimit(invokeLimit int32) {
+	m.mockErrMu.Lock()
+	defer m.mockErrMu.Unlock()
+	m.mockingErr = true
+	m.invokeLimit = invokeLimit
+	m.invokeCount = 0
+}
+
+// DisableMockedError disables in memory mocked error.
+func (m *Storage) DisableMockedError() {
+	m.mockErrMu.Lock()
+	defer m.mockErrMu.Unlock()
+	m.mockingErr = false
 }
 
 func (m *Storage) inWriteLock(f func() error) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
+	m.mockErrMu.Lock()
+	defer m.mockErrMu.Unlock()
+	m.invokeCount++
+	if m.invokeCount == m.invokeLimit {
 		return ErrMockedError
 	}
 	m.mu.Lock()
@@ -72,7 +89,10 @@ func (m *Storage) inWriteLock(f func() error) error {
 }
 
 func (m *Storage) inReadLock(f func() error) error {
-	if atomic.LoadUint32(&m.mockErr) == 1 {
+	m.mockErrMu.Lock()
+	defer m.mockErrMu.Unlock()
+	m.invokeCount++
+	if m.invokeCount == m.invokeLimit {
 		return ErrMockedError
 	}
 	m.mu.RLock()

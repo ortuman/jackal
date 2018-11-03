@@ -6,12 +6,13 @@
 package xep0030
 
 import (
+	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -20,9 +21,13 @@ import (
 )
 
 func TestXEP0030_Matching(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil)
+	x, shutdownCh := New(r)
+	defer close(shutdownCh)
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -49,21 +54,18 @@ func TestXEP0030_Matching(t *testing.T) {
 }
 
 func TestXEP0030_SendFeatures(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	srvJid, _ := jid.New("", "jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	router.Bind(stm)
+	r.Bind(stm)
 
-	x := New(nil)
+	x, shutdownCh := New(r)
+	defer close(shutdownCh)
+
 	x.RegisterServerFeature("s0")
 	x.RegisterServerFeature("s1")
 	x.RegisterServerFeature("s2")
@@ -105,20 +107,16 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 }
 
 func TestXEP0030_SendItems(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	router.Bind(stm)
+	r.Bind(stm)
 
-	x := New(nil)
+	x, shutdownCh := New(r)
+	defer close(shutdownCh)
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -153,21 +151,17 @@ func (tp *testDiscoInfoProvider) Form(toJID, fromJID *jid.JID, node string) (*xe
 }
 
 func TestXEP0030_Provider(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	compJID, _ := jid.New("", "test.jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	router.Bind(stm)
+	r.Bind(stm)
 
-	x := New(nil)
+	x, shutdownCh := New(r)
+	defer close(shutdownCh)
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -194,4 +188,15 @@ func TestXEP0030_Provider(t *testing.T) {
 	elem = stm.FetchElement()
 	require.True(t, elem.IsError())
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
+}
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
 }

@@ -19,9 +19,9 @@ func TestMockStorageInsertVCard(t *testing.T) {
 	vCard.AppendElement(fn)
 
 	s := New()
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.InsertOrUpdateVCard(vCard, "ortuman"))
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	require.Nil(t, s.InsertOrUpdateVCard(vCard, "ortuman"))
 }
 
@@ -34,10 +34,10 @@ func TestMockStorageFetchVCard(t *testing.T) {
 	s := New()
 	s.InsertOrUpdateVCard(vCard, "ortuman")
 
-	s.ActivateMockedError()
+	s.EnableMockedError()
 	_, err := s.FetchVCard("ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DeactivateMockedError()
+	s.DisableMockedError()
 	elem, _ := s.FetchVCard("ortuman")
 	require.NotNil(t, elem)
 }

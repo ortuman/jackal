@@ -68,7 +68,7 @@ func (p *Plain) ProcessElement(elem xmpp.XElement) error {
 	password := string(s[2])
 
 	// validate user and password
-	user, err := storage.Instance().FetchUser(username)
+	user, err := storage.FetchUser(username)
 	if err != nil {
 		return err
 	}

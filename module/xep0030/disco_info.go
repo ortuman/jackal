@@ -8,7 +8,7 @@ package xep0030
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -24,26 +24,28 @@ const (
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
+	router      *router.Router
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
 	actorCh     chan func()
-	shutdownCh  <-chan struct{}
+	shutdownCh  chan chan bool
 }
 
 // New returns a disco info IQ handler module.
-func New(shutdownCh <-chan struct{}) *DiscoInfo {
+func New(router *router.Router) (*DiscoInfo, chan<- chan bool) {
 	di := &DiscoInfo{
-		srvProvider: &serverProvider{},
+		router:      router,
+		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
-		shutdownCh:  shutdownCh,
+		shutdownCh:  make(chan chan bool),
 	}
 	go di.loop()
 	di.RegisterServerFeature(discoItemsNamespace)
 	di.RegisterServerFeature(discoInfoNamespace)
 	di.RegisterAccountFeature(discoItemsNamespace)
 	di.RegisterAccountFeature(discoInfoNamespace)
-	return di
+	return di, di.shutdownCh
 }
 
 // RegisterServerItem registers a new item associated to server domain.
@@ -112,7 +114,8 @@ func (di *DiscoInfo) loop() {
 		select {
 		case f := <-di.actorCh:
 			f()
-		case <-di.shutdownCh:
+		case c := <-di.shutdownCh:
+			c <- true
 			return
 		}
 	}
@@ -123,7 +126,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if host.IsLocalHost(toJID.Domain()) {
+	if di.router.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
 		prov = di.providers[toJID.Domain()]

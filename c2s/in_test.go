@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -24,31 +24,19 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	stm, _ := tUtilStreamInit()
+	stm, _ := tUtilStreamInit(r)
 	time.Sleep(time.Millisecond * 1500)
 	require.Equal(t, disconnected, stm.getState())
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	stm.Disconnect(nil)
 	require.True(t, conn.waitClose())
 
@@ -56,17 +44,11 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
 	// unsecured features
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 
 	elem := conn.outboundRead()
@@ -79,7 +61,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, connected, stm.getState())
 
 	// secured features
-	stm2, conn2 := tUtilStreamInit()
+	stm2, conn2 := tUtilStreamInit(r)
 	stm2.setSecured(true)
 
 	tUtilStreamOpen(conn2)
@@ -93,18 +75,12 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 
 	_ = conn.outboundRead() // read stream opening...
@@ -121,18 +97,12 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_FailAuthenticate(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	_, conn := tUtilStreamInit()
+	_, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -167,18 +137,12 @@ func TestStream_FailAuthenticate(t *testing.T) {
 }
 
 func TestStream_Compression(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -216,18 +180,12 @@ func TestStream_Compression(t *testing.T) {
 }
 
 func TestStream_StartSession(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -244,20 +202,12 @@ func TestStream_StartSession(t *testing.T) {
 }
 
 func TestStream_SendIQ(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	tUtilInitModules()
-	defer func() {
-		module.Shutdown()
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -288,18 +238,12 @@ func TestStream_SendIQ(t *testing.T) {
 }
 
 func TestStream_SendPresence(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -338,18 +282,12 @@ func TestStream_SendPresence(t *testing.T) {
 }
 
 func TestStream_SendMessage(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -369,7 +307,7 @@ func TestStream_SendMessage(t *testing.T) {
 	jTo, _ := jid.New("ortuman", "localhost", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", jTo)
-	router.Bind(stm2)
+	r.Bind(stm2)
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
@@ -395,18 +333,12 @@ func TestStream_SendMessage(t *testing.T) {
 }
 
 func TestStream_SendToBlockedJID(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "localhost"}})
-	router.Initialize(&router.Config{})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, _, shutdown := setupTest("localhost")
+	defer shutdown()
 
-	storage.Instance().InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit()
+	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -421,7 +353,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	require.Equal(t, sessionStarted, stm.getState())
 
-	storage.Instance().InsertBlockListItems([]model.BlockListItem{{
+	storage.InsertBlockListItems([]model.BlockListItem{{
 		Username: "user",
 		JID:      "hamlet@localhost",
 	}})
@@ -483,10 +415,10 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit() (*inStream, *fakeSocketConn) {
+func tUtilStreamInit(r *router.Router) (*inStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	stm := newStream("abcd1234", tUtilInStreamDefaultConfig(tr))
+	stm := newStream("abcd1234", tUtilInStreamDefaultConfig(tr), tUtilInitModules(r), &component.Components{}, r)
 	return stm.(*inStream), conn
 }
 
@@ -501,10 +433,10 @@ func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
 	}
 }
 
-func tUtilInitModules() {
+func tUtilInitModules(r *router.Router) *module.Modules {
 	modules := map[string]struct{}{}
 	modules["roster"] = struct{}{}
 	modules["blocking_command"] = struct{}{}
 
-	module.Initialize(&module.Config{Enabled: modules})
+	return module.New(&module.Config{Enabled: modules}, r)
 }

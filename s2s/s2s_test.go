@@ -14,8 +14,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/xmpp"
 )
+
+const jackaDomain = "jackal.im"
 
 const unsecuredFeatures = `
 <stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0">
@@ -177,3 +182,14 @@ var (
 
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
+}

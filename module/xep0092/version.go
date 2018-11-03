@@ -36,21 +36,21 @@ type Config struct {
 type Version struct {
 	cfg        *Config
 	actorCh    chan func()
-	shutdownCh <-chan struct{}
+	shutdownCh chan chan bool
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, shutdownCh <-chan struct{}) *Version {
+func New(config *Config, disco *xep0030.DiscoInfo) (*Version, chan<- chan bool) {
 	v := &Version{
 		cfg:        config,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: shutdownCh,
+		shutdownCh: make(chan chan bool),
 	}
 	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(versionNamespace)
 	}
-	return v
+	return v, v.shutdownCh
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -71,7 +71,8 @@ func (x *Version) loop() {
 		select {
 		case f := <-x.actorCh:
 			f()
-		case <-x.shutdownCh:
+		case c := <-x.shutdownCh:
+			c <- true
 			return
 		}
 	}

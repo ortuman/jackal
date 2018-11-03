@@ -12,22 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
 )
 
 type dialer struct {
 	cfg         *Config
+	router      *router.Router
 	srvResolve  func(service, proto, name string) (cname string, addrs []*net.SRV, err error)
 	dialTimeout func(network, address string, timeout time.Duration) (net.Conn, error)
 }
 
-func newDialer(cfg *Config) *dialer {
-	return &dialer{cfg: cfg, srvResolve: net.LookupSRV, dialTimeout: net.DialTimeout}
-}
-
-func newDialerCopy(d *dialer) *dialer {
-	return &dialer{cfg: d.cfg, srvResolve: d.srvResolve, dialTimeout: d.dialTimeout}
+func newDialer(cfg *Config, router *router.Router) *dialer {
+	return &dialer{cfg: cfg, router: router, srvResolve: net.LookupSRV, dialTimeout: net.DialTimeout}
 }
 
 func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
@@ -47,7 +44,7 @@ func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
 	}
 	tlsConfig := &tls.Config{
 		ServerName:   remoteDomain,
-		Certificates: host.Certificates(),
+		Certificates: d.router.Certificates(),
 	}
 	tr := transport.NewSocketTransport(conn, d.cfg.Transport.KeepAlive)
 	return &streamConfig{

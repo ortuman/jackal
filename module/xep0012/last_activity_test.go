@@ -6,13 +6,14 @@
 package xep0012
 
 import (
+	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -21,9 +22,13 @@ import (
 )
 
 func TestXEP0012_Matching(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil, r)
+	defer close(shutdownCh)
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -48,13 +53,17 @@ func TestXEP0012_Matching(t *testing.T) {
 }
 
 func TestXEP0012_GetServerLastActivity(t *testing.T) {
+	r, _, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
 	j1, _ := jid.New("", "jackal.im", "", true)
 	j2, _ := jid.New("ortuman", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j2)
 	defer stm.Disconnect(nil)
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil, r)
+	defer close(shutdownCh)
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -70,21 +79,16 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 }
 
 func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
-	host.Initialize([]host.Config{{Name: "jackal.im"}})
-	storage.Initialize(&storage.Config{Type: storage.Memory})
-	router.Initialize(&router.Config{})
-	defer func() {
-		router.Shutdown()
-		storage.Shutdown()
-		host.Shutdown()
-	}()
+	r, s, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	x := New(nil, nil)
+	x, shutdownCh := New(nil, r)
+	defer close(shutdownCh)
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -100,11 +104,11 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	st.SetText("Gone!")
 	p.AppendElement(st)
 
-	storage.Instance().InsertOrUpdateUser(&model.User{
+	storage.InsertOrUpdateUser(&model.User{
 		Username:     "noelia",
 		LastPresence: p,
 	})
-	storage.Instance().InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -116,7 +120,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	require.True(t, len(secs) > 0)
 
 	// set as online
-	router.Bind(stm2)
+	r.Bind(stm2)
 
 	x.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
@@ -124,9 +128,20 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	secs = q.Attributes().Get("seconds")
 	require.Equal(t, "0", secs)
 
-	storage.ActivateMockedError()
+	s.EnableMockedError()
 	x.ProcessIQ(iq, stm1)
 	elem = stm1.FetchElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	storage.DeactivateMockedError()
+	s.DisableMockedError()
+}
+
+func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+	})
+	s := memstorage.New()
+	storage.Set(s)
+	return r, s, func() {
+		storage.Unset()
+	}
 }
