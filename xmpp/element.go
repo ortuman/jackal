@@ -89,11 +89,6 @@ func (e *Element) Language() string {
 	return e.attrs.Get("xml:lang")
 }
 
-// SetVersion sets 'version' node attribute.
-func (e *Element) SetVersion(version string) {
-	e.attrs.setAttribute("version", version)
-}
-
 // Version returns 'version' node attribute.
 func (e *Element) Version() string {
 	return e.attrs.Get("version")
