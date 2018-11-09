@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2018-11-09
+### Fixed
+- Fixed c2s and s2s message routing.
+
 ## [0.3.4] - 2018-11-03
 ### Added
 - Built-in graceful shutdown support.
