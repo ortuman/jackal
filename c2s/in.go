@@ -655,16 +655,16 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 }
 
 func (s *inStream) processMessage(message *xmpp.Message) {
-	toJID := message.ToJID()
+	msg := message
 
 sendMessage:
-	err := s.router.Route(message)
+	err := s.router.Route(msg)
 	switch err {
 	case nil:
 		break
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
-		toJID = toJID.ToBareJID()
+		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
 		goto sendMessage
 	case router.ErrNotAuthenticated:
 		if off := s.mods.Offline; off != nil {

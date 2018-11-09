@@ -182,15 +182,57 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 	default:
 		switch elem := elem.(type) {
 		case xmpp.Stanza:
-			// process roster presence
-			if presence, ok := elem.(*xmpp.Presence); ok && presence.ToJID().IsBare() {
-				if r := s.mods.Roster; r != nil {
-					s.mods.Roster.ProcessPresence(presence)
-				}
-				return
-			}
-			s.router.Route(elem)
+			s.processStanza(elem)
 		}
+	}
+}
+
+func (s *inStream) processStanza(stanza xmpp.Stanza) {
+	switch stanza := stanza.(type) {
+	case *xmpp.Presence:
+		s.processPresence(stanza)
+	case *xmpp.IQ:
+		s.processIQ(stanza)
+	case *xmpp.Message:
+		s.processMessage(stanza)
+	}
+}
+
+func (s *inStream) processPresence(presence *xmpp.Presence) {
+	// process roster presence
+	if presence.ToJID().IsBare() {
+		if r := s.mods.Roster; r != nil {
+			s.mods.Roster.ProcessPresence(presence)
+		}
+		return
+	}
+	s.router.Route(presence)
+}
+
+func (s *inStream) processIQ(iq *xmpp.IQ) {
+	s.router.Route(iq)
+}
+
+func (s *inStream) processMessage(message *xmpp.Message) {
+	msg := message
+
+sendMessage:
+	err := s.router.Route(msg)
+	switch err {
+	case nil:
+		break
+	case router.ErrResourceNotFound:
+		// treat the stanza as if it were addressed to <node@domain>
+		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
+		goto sendMessage
+	case router.ErrNotAuthenticated:
+		if off := s.mods.Offline; off != nil {
+			off.ArchiveMessage(message)
+			return
+		}
+	default:
+		// silently ignore it...
+		break
 	}
 }
 
