@@ -38,6 +38,3 @@ server.crt
 
 # Dependency 
 vendor/
-go.sum
-
-
