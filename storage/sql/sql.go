@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/go-sql-driver/mysql" // SQL driver
 	"github.com/ortuman/jackal/log"
@@ -72,20 +71,6 @@ func New(cfg *Config) *Storage {
 	go s.loop()
 
 	return s
-}
-
-// NewMock returns a mocked SQL storage instance.
-func NewMock() (*Storage, sqlmock.Sqlmock) {
-	var err error
-	var sqlMock sqlmock.Sqlmock
-	s := &Storage{
-		pool: pool.NewBufferPool(),
-	}
-	s.db, sqlMock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	return s, sqlMock
 }
 
 // Close shuts down SQL storage sub system.
