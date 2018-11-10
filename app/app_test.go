@@ -46,18 +46,16 @@ func TestApplicationEmptyArgs(t *testing.T) {
 
 func TestApplicationShowUsage(t *testing.T) {
 	w := newWriterBuffer()
-	c, err := New(w, []string{"./jackal", "-h"}).Run()
+	err := New(w, []string{"./jackal", "-h"}).Run()
 	require.Nil(t, err)
-	require.Equal(t, successCode, c)
 	require.Equal(t, expectedUsageString(), w.String())
 }
 
 func TestApplicationPrintVersion(t *testing.T) {
 	w := newWriterBuffer()
 	args := []string{"./jackal", "--version"}
-	c, err := New(w, args).Run()
+	err := New(w, args).Run()
 	require.Nil(t, err)
-	require.Equal(t, successCode, c)
 	require.Equal(t, fmt.Sprintf("jackal version: %v\n", version.ApplicationVersion), w.String())
 }
 
@@ -70,9 +68,8 @@ func TestApplication_Run(t *testing.T) {
 		ap.waitStopCh <- syscall.SIGTERM
 	}()
 	ap.shutDownWaitSecs = time.Duration(2) * time.Second // wait only two seconds
-	c, err := ap.Run()
+	err := ap.Run()
 	require.Nil(t, err)
-	require.Equal(t, successCode, c)
 
 	os.RemoveAll(".cert/")
 
