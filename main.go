@@ -6,16 +6,15 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/ortuman/jackal/app"
 )
 
 func main() {
-	exitCode, err := app.New(os.Stdout, os.Args).Run()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+	prg := app.New(os.Stdout, os.Args)
+	if err := prg.Run(); err != nil {
+		log.Fatal(err)
 	}
-	os.Exit(exitCode)
 }

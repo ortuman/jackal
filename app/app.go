@@ -32,8 +32,6 @@ import (
 )
 
 const (
-	successCode             = 0
-	failureCode             = -1
 	defaultShutDownWaitTime = time.Duration(5) * time.Second
 )
 
@@ -106,9 +104,9 @@ func New(output io.Writer, args []string) *Application {
 }
 
 // Run runs jackal application until either a stop signal is received or an error occurs.
-func (a *Application) Run() (int, error) {
+func (a *Application) Run() error {
 	if len(a.args) == 0 {
-		return failureCode, errors.New("empty command-line arguments")
+		return errors.New("empty command-line arguments")
 	}
 	var configFile string
 	var showVersion, showUsage bool
@@ -133,35 +131,35 @@ func (a *Application) Run() (int, error) {
 	// print usage
 	if showUsage {
 		fs.Usage()
-		return successCode, nil
+		return nil
 	}
 	// print version
 	if showVersion {
 		fmt.Fprintf(a.output, "jackal version: %v\n", version.ApplicationVersion)
-		return successCode, nil
+		return nil
 	}
 	// load configuration
 	var cfg Config
 	err := cfg.FromFile(configFile)
 	if err != nil {
-		return failureCode, err
+		return err
 	}
 	// create PID file
 	if err := a.createPIDFile(cfg.PIDFile); err != nil {
-		return failureCode, err
+		return err
 	}
 
 	// initialize logger
 	a.logger, err = initLogger(&cfg.Logger, a.output)
 	if err != nil {
-		return failureCode, err
+		return err
 	}
 	log.Set(a.logger)
 
 	// initialize storage
 	a.storage, err = initStorage(&cfg.Storage)
 	if err != nil {
-		return failureCode, err
+		return err
 	}
 	storage.Set(a.storage)
 
@@ -170,7 +168,7 @@ func (a *Application) Run() (int, error) {
 	// initialize router
 	a.router, err = router.New(&cfg.Router)
 	if err != nil {
-		return failureCode, err
+		return err
 	}
 
 	// initialize modules & components...
@@ -189,23 +187,23 @@ func (a *Application) Run() (int, error) {
 	// start serving c2s...
 	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router)
 	if err != nil {
-		return failureCode, err
+		return err
 	}
 	a.c2s.Start()
 
 	// initialize debug server...
 	if cfg.Debug.Port > 0 {
 		if err := a.initDebugServer(cfg.Debug.Port); err != nil {
-			return failureCode, err
+			return err
 		}
 	}
 	a.waitForStopSignal()
 
 	// shutdown gracefully
 	if err := a.gracefullyShutdown(); err != nil {
-		return failureCode, err
+		return err
 	}
-	return successCode, nil
+	return nil
 }
 
 func (a *Application) showVersion() {
