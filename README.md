@@ -35,13 +35,15 @@ jackal supports the following features:
 
 ### Getting Started
 
-To start using jackal, install Go 1.10+ and run `go get`:
+To start using jackal, install Go 1.11+ and run the following commands:
 
-```sh
-$ go get github.com/ortuman/jackal
+```bash
+$ go get -u github.com/ortuman/jackal
+$ cd $GOPATH/src/github.com/ortuman/jackal
+$ make install
 ```
 
-This will retrieve the code and install the `jackal` server application into your `$GOBIN` path.
+This will retrieve the code and install the `jackal` server application into your `$GOPATH/bin` path.
 
 By default the application will try to read server configuration from `/etc/jackal/jackal.yml` file, but alternatively you can specify a custom configuration path from command line.
 

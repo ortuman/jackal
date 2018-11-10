@@ -35,6 +35,8 @@ server.crt
 .idea/
 .vscode/
 
-# Dep
+# Dependency 
 vendor/
+go.sum
+
 

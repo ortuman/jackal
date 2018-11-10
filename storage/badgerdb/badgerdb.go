@@ -154,7 +154,6 @@ func (b *Storage) fetchAll(v interface{}, prefix []byte) error {
 		s.Set(reflect.Append(s, e))
 		return nil
 	})
-	return nil
 }
 
 func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
@@ -167,7 +166,7 @@ func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
 	default:
 		return nil, err
 	}
-	return item.Value()
+	return item.ValueCopy(nil)
 }
 
 func (b *Storage) forEachKey(prefix []byte, f func(k []byte) error) error {
@@ -194,7 +193,7 @@ func (b *Storage) forEachKeyAndValue(prefix []byte, f func(k, v []byte) error) e
 
 		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
 			it := iter.Item()
-			val, err := it.Value()
+			val, err := it.ValueCopy(nil)
 			if err != nil {
 				return err
 			}

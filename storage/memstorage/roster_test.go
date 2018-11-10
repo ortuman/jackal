@@ -16,7 +16,15 @@ import (
 
 func TestMockStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact",
+		Name:         "a name",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          1,
+		Groups:       g,
+	}
 
 	s := New()
 	s.EnableMockedError()
@@ -32,8 +40,15 @@ func TestMockStorageInsertRosterItem(t *testing.T) {
 
 func TestMockStorageFetchRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
-
+	ri := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact",
+		Name:         "a name",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          1,
+		Groups:       g,
+	}
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 
@@ -53,8 +68,24 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 
 func TestMockStorageFetchRosterItems(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
-	ri2 := rostermodel.Item{"user", "contact2", "a name 2", "both", false, 2, g}
+	ri := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact",
+		Name:         "a name",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          1,
+		Groups:       g,
+	}
+	ri2 := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact2",
+		Name:         "a name 2",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          2,
+		Groups:       g,
+	}
 
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
@@ -70,7 +101,15 @@ func TestMockStorageFetchRosterItems(t *testing.T) {
 
 func TestMockStorageDeleteRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact",
+		Name:         "a name",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          1,
+		Groups:       g,
+	}
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 
@@ -89,9 +128,9 @@ func TestMockStorageDeleteRosterItem(t *testing.T) {
 
 func TestMockStorageInsertRosterNotification(t *testing.T) {
 	rn := rostermodel.Notification{
-		"ortuman",
-		"romeo",
-		&xmpp.Presence{},
+		Contact:  "ortuman",
+		JID:      "romeo@jackal.im",
+		Presence: &xmpp.Presence{},
 	}
 	s := New()
 	s.EnableMockedError()
@@ -102,14 +141,14 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 
 func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	rn1 := rostermodel.Notification{
-		"romeo",
-		"ortuman@jackal.im",
-		&xmpp.Presence{},
+		Contact:  "romeo",
+		JID:      "ortuman@jackal.im",
+		Presence: &xmpp.Presence{},
 	}
 	rn2 := rostermodel.Notification{
-		"romeo",
-		"ortuman2@jackal.im",
-		&xmpp.Presence{},
+		Contact:  "romeo",
+		JID:      "ortuman2@jackal.im",
+		Presence: &xmpp.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)
@@ -133,21 +172,21 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 
 func TestMockStorageDeleteRosterNotification(t *testing.T) {
 	rn1 := rostermodel.Notification{
-		"ortuman",
-		"romeo",
-		&xmpp.Presence{},
+		Contact:  "ortuman",
+		JID:      "romeo@jackal.im",
+		Presence: &xmpp.Presence{},
 	}
 	s := New()
 	s.InsertOrUpdateRosterNotification(&rn1)
 
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteRosterNotification("ortuman", "romeo"))
+	require.Equal(t, ErrMockedError, s.DeleteRosterNotification("ortuman", "romeo@jackal.im"))
 	s.DisableMockedError()
-	require.Nil(t, s.DeleteRosterNotification("ortuman", "romeo"))
+	require.Nil(t, s.DeleteRosterNotification("ortuman", "romeo@jackal.im"))
 
 	rns, err := s.FetchRosterNotifications("romeo")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rns))
 	// delete not existing roster notification...
-	require.Nil(t, s.DeleteRosterNotification("ortuman2", "romeo"))
+	require.Nil(t, s.DeleteRosterNotification("ortuman2", "romeo@jackal.im"))
 }

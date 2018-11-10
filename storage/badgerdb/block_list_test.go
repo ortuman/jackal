@@ -20,9 +20,9 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 	defer tUtilBadgerDBTeardown(h)
 
 	items := []model.BlockListItem{
-		{"ortuman", "juliet@jackal.im"},
-		{"ortuman", "user@jackal.im"},
-		{"ortuman", "romeo@jackal.im"},
+		{Username: "ortuman", JID: "juliet@jackal.im"},
+		{Username: "ortuman", JID: "user@jackal.im"},
+		{Username: "ortuman", JID: "romeo@jackal.im"},
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
 
@@ -35,7 +35,7 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 	require.Equal(t, items, sItems)
 
 	items = append(items[:1], items[2:]...)
-	h.db.DeleteBlockListItems([]model.BlockListItem{{"ortuman", "romeo@jackal.im"}})
+	h.db.DeleteBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "romeo@jackal.im"}})
 
 	sItems, err = h.db.FetchBlockListItems("ortuman")
 	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })

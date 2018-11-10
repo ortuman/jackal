@@ -17,7 +17,15 @@ import (
 
 func TestMySQLStorageInsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
-	ri := rostermodel.Item{"user", "contact", "a name", "both", false, 1, g}
+	ri := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact",
+		Name:         "a name",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          1,
+		Groups:       g,
+	}
 
 	args := []driver.Value{
 		ri.Username,
@@ -132,9 +140,9 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 
 func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 	rn := rostermodel.Notification{
-		"ortuman",
-		"romeo",
-		&xmpp.Presence{},
+		Contact:  "ortuman",
+		JID:      "romeo",
+		Presence: &xmpp.Presence{},
 	}
 	presenceXML := rn.Presence.String()
 

@@ -20,7 +20,7 @@ func TestMySQLStorageInsertBlockListItems(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.InsertBlockListItems([]model.BlockListItem{{"ortuman", "noelia@jackal.im"}})
+	err := s.InsertBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -29,7 +29,7 @@ func TestMySQLStorageInsertBlockListItems(t *testing.T) {
 	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").WillReturnError(errMySQLStorage)
 	mock.ExpectRollback()
 
-	err = s.InsertBlockListItems([]model.BlockListItem{{"ortuman", "noelia@jackal.im"}})
+	err = s.InsertBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
@@ -70,7 +70,7 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	delItems := []model.BlockListItem{{"ortuman", "noelia@jackal.im"}}
+	delItems := []model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}}
 	err := s.DeleteBlockListItems(delItems)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)

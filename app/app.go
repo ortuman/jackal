@@ -260,7 +260,9 @@ func (a *Application) gracefullyShutdown() error {
 	log.Infof("received stop signal... shutting down...")
 
 	// wait until application has been shut down
-	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(a.shutDownWaitSecs))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(a.shutDownWaitSecs))
+	defer cancel()
+
 	select {
 	case <-a.shutdown(ctx):
 		return nil

@@ -61,7 +61,9 @@ func TestC2SSocketServer(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
-		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		defer cancel()
+
 		srv.shutdown(ctx)
 		errCh <- nil
 	}()
@@ -118,7 +120,9 @@ func TestC2SWebSocketServer(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 150) // wait until disconnected
 
-		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
+		defer cancel()
+
 		srv.shutdown(ctx)
 		errCh <- nil
 	}()
