@@ -7,53 +7,8 @@ os:
 go:
   - 1.11.x
 
-env:
-  - DEP_VERSION="0.4.1"
-
-before_install:
-  - mkdir -p $GOPATH/bin
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-darwin-amd64 -o $GOPATH/bin/dep; fi
-  - chmod +x $GOPATH/bin/dep
-
-install:
-  - dep ensure
-
 script:
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
-  - go test -race -coverprofile=app.coverage.txt -covermode=atomic ./app
-  - go test -race -coverprofile=auth.coverage.txt -covermode=atomic ./auth
-  - go test -race -coverprofile=c2s.coverage.txt -covermode=atomic ./c2s
-  - go test -race -coverprofile=errors.coverage.txt -covermode=atomic ./errors
-  - go test -race -coverprofile=log.coverage.txt -covermode=atomic ./log
-  - go test -race -coverprofile=model.coverage.txt -covermode=atomic ./model
-  - go test -race -coverprofile=rostermodel.coverage.txt -covermode=atomic ./model/rostermodel
-  - go test -race -coverprofile=module.coverage.txt -covermode=atomic ./module
-  - go test -race -coverprofile=offline.coverage.txt -covermode=atomic ./module/offline
-  - go test -race -coverprofile=roster.coverage.txt -covermode=atomic ./module/roster
-  - go test -race -coverprofile=xep0012.coverage.txt -covermode=atomic ./module/xep0012
-  - go test -race -coverprofile=xep0030.coverage.txt -covermode=atomic ./module/xep0030
-  - go test -race -coverprofile=xep0049.coverage.txt -covermode=atomic ./module/xep0049
-  - go test -race -coverprofile=xep0054.coverage.txt -covermode=atomic ./module/xep0054
-  - go test -race -coverprofile=xep0077.coverage.txt -covermode=atomic ./module/xep0077
-  - go test -race -coverprofile=xep0092.coverage.txt -covermode=atomic ./module/xep0092
-  - go test -race -coverprofile=xep0191.coverage.txt -covermode=atomic ./module/xep0191
-  - go test -race -coverprofile=xep0199.coverage.txt -covermode=atomic ./module/xep0199
-  - go test -race -coverprofile=pool.coverage.txt -covermode=atomic ./pool
-  - go test -race -coverprofile=router.coverage.txt -covermode=atomic ./router
-  - go test -race -coverprofile=s2s.coverage.txt -covermode=atomic ./s2s
-  - go test -race -coverprofile=session.coverage.txt -covermode=atomic ./session
-  - go test -race -coverprofile=transport.coverage.txt -covermode=atomic ./transport
-  - go test -race -coverprofile=transport.compress.coverage.txt -covermode=atomic ./transport/compress
-  - go test -race -coverprofile=storage.coverage.txt -covermode=atomic ./storage
-  - go test -race -coverprofile=badgerdb.coverage.txt -covermode=atomic ./storage/badgerdb
-  - go test -race -coverprofile=memstorage.coverage.txt -covermode=atomic ./storage/memstorage
-  - go test -race -coverprofile=sql.coverage.txt -covermode=atomic ./storage/sql
-  - go test -race -coverprofile=stream.coverage.txt -covermode=atomic ./stream
-  - go test -race -coverprofile=util.coverage.txt -covermode=atomic ./util
-  - go test -race -coverprofile=version.coverage.txt -covermode=atomic ./version
-  - go test -race -coverprofile=xml.coverage.txt -covermode=atomic ./xmpp
-  - go test -race -coverprofile=jid.coverage.txt -covermode=atomic ./xmpp/jid
+  - make coverage
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

@@ -3,7 +3,10 @@ install:
 
 test:
 	@echo "Running tests..."
-	@go test $$(go list ./...)
+	@go test -race $$(go list ./...)
+
+coverage:
+	@go test -race -coverprofile=coverage.txt -covermode=atomic $$(go list ./...)
 
 vet:
 	@echo "Looking for buggy code..."
