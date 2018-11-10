@@ -1,4 +1,4 @@
-FROM golang:1.10 as buildimage
+FROM golang:1.11 as buildimage
 
 LABEL org.label-schema.version=latest
 LABEL org.label-schema.vcs-url="https://github.com/ortuman/jackal.git"
@@ -8,14 +8,12 @@ LABEL maintainer="Miguel Ángel Ortuño <ortuman@protonmail.com>"
 
 WORKDIR /jackal
 
-RUN curl -L -s https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 -o $GOPATH/bin/dep
-RUN chmod +x $GOPATH/bin/dep
 RUN go get -d github.com/ortuman/jackal
 
-RUN cd $GOPATH/src/github.com/ortuman/jackal && dep ensure
 RUN export CGO_ENABLED=0
 RUN export GOOS=linux
 RUN export GOARCH=amd64
+RUN export GO111MODULE=on
 RUN go build github.com/ortuman/jackal
 
 FROM debian:stretch-slim
