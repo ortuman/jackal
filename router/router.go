@@ -42,10 +42,13 @@ var (
 	ErrFailedRemoteConnect = errors.New("router: failed remote connection")
 )
 
+// S2SOutProvider provides a specific s2s outgoing connection for every single
+// pair of (localdomai, remotedomain) values.
 type S2SOutProvider interface {
 	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
+// Router represents an XMPP stanza router.
 type Router struct {
 	mu             sync.RWMutex
 	s2sOutProvider S2SOutProvider
@@ -56,6 +59,7 @@ type Router struct {
 	blockLists   map[string][]*jid.JID
 }
 
+// New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
 		hosts:        make(map[string]tls.Certificate),
@@ -76,6 +80,7 @@ func New(config *Config) (*Router, error) {
 	return r, nil
 }
 
+// HostNames returns the list of all configured host names.
 func (r *Router) HostNames() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -86,6 +91,7 @@ func (r *Router) HostNames() []string {
 	return ret
 }
 
+// IsLocalHost returns true if domain is a local server domain.
 func (r *Router) IsLocalHost(domain string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -93,6 +99,7 @@ func (r *Router) IsLocalHost(domain string) bool {
 	return ok
 }
 
+// Certificates returns an array of all configured domain certificates.
 func (r *Router) Certificates() []tls.Certificate {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -103,6 +110,7 @@ func (r *Router) Certificates() []tls.Certificate {
 	return certs
 }
 
+// SetS2SOutProvider sets the s2s out provider to be used when routing stanzas remotely.
 func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
