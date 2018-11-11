@@ -166,7 +166,7 @@ func (a *Application) Run() error {
 	a.printLogo()
 
 	// initialize router
-	a.router, err = router.New(&cfg.Router)
+	a.router, err = router.New(&cfg.Router, nil)
 	if err != nil {
 		return err
 	}

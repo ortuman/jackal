@@ -10,6 +10,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -50,6 +51,8 @@ type S2SOutProvider interface {
 
 // Router represents an XMPP stanza router.
 type Router struct {
+	cluster cluster.Cluster
+
 	mu             sync.RWMutex
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
@@ -60,8 +63,9 @@ type Router struct {
 }
 
 // New returns an new empty router instance.
-func New(config *Config) (*Router, error) {
+func New(config *Config, cluster cluster.Cluster) (*Router, error) {
 	r := &Router{
+		cluster:      cluster,
 		hosts:        make(map[string]tls.Certificate),
 		blockLists:   make(map[string][]*jid.JID),
 		localStreams: make(map[string][]stream.C2S),

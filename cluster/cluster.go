@@ -7,19 +7,19 @@ package cluster
 
 import (
 	"github.com/hashicorp/memberlist"
-	"github.com/ortuman/jackal/router"
 )
 
-type Cluster struct {
-	cfg        *Config
-	memberList *memberlist.Memberlist
-	router     *router.Router
+type Cluster interface {
 }
 
-func New(config *Config, router *router.Router) (*Cluster, error) {
-	c := &Cluster{
-		cfg:    config,
-		router: router,
+type cluster struct {
+	cfg        *Config
+	memberList *memberlist.Memberlist
+}
+
+func New(config *Config) (Cluster, error) {
+	c := &cluster{
+		cfg: config,
 	}
 	conf := memberlist.DefaultLocalConfig()
 	conf.Name = config.NodeName
