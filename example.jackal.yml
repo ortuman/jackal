@@ -18,6 +18,11 @@ storage:
     database: jackal
     pool_size: 16
 
+# cluster:
+#   name: node1
+#   port:
+#   hosts: [node2]
+
 router:
   hosts:
     - name: localhost

@@ -5,7 +5,9 @@
 
 package cluster
 
+// Config represents an cluster configuration.
 type Config struct {
-	NodeName string
-	BindPort int
+	Name     string   `json:"name"`
+	BindPort int      `json:"bind_port"`
+	Hosts    []string `json:"hosts"`
 }

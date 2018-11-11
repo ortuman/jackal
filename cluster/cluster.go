@@ -22,7 +22,7 @@ func New(config *Config) (Cluster, error) {
 		cfg: config,
 	}
 	conf := memberlist.DefaultLocalConfig()
-	conf.Name = config.NodeName
+	conf.Name = config.Name
 	conf.BindPort = config.BindPort
 	ml, err := memberlist.Create(conf)
 	if err != nil {
