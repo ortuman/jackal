@@ -1,5 +1,5 @@
 install:
-	@go install github.com/ortuman/jackal
+	@export GO111MODULE=on && go install github.com/ortuman/jackal
 
 test:
 	@echo "Running tests..."
