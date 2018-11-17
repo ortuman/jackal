@@ -7,7 +7,7 @@ package cluster
 
 // Config represents an cluster configuration.
 type Config struct {
-	Name     string   `json:"name"`
-	BindPort int      `json:"bind_port"`
-	Hosts    []string `json:"hosts"`
+	Name     string   `yaml:"name"`
+	BindPort int      `yaml:"port"`
+	Hosts    []string `yaml:"hosts"`
 }

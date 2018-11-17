@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -51,8 +52,6 @@ type S2SOutProvider interface {
 
 // Router represents an XMPP stanza router.
 type Router struct {
-	cluster cluster.Cluster
-
 	mu             sync.RWMutex
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
@@ -63,9 +62,8 @@ type Router struct {
 }
 
 // New returns an new empty router instance.
-func New(config *Config, cluster cluster.Cluster) (*Router, error) {
+func New(config *Config) (*Router, error) {
 	r := &Router{
-		cluster:      cluster,
 		hosts:        make(map[string]tls.Certificate),
 		blockLists:   make(map[string][]*jid.JID),
 		localStreams: make(map[string][]stream.C2S),
@@ -204,6 +202,10 @@ func (r *Router) Route(stanza xmpp.Stanza) error {
 // ignoring blocking lists.
 func (r *Router) MustRoute(stanza xmpp.Stanza) error {
 	return r.route(stanza, true)
+}
+
+func (r *Router) ClusterDelegate() cluster.Delegate {
+	return &clusterDelegate{r: r}
 }
 
 func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {

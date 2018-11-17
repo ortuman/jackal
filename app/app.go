@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -84,6 +85,7 @@ type Application struct {
 	args             []string
 	logger           log.Logger
 	storage          storage.Storage
+	cluster          cluster.Cluster
 	router           *router.Router
 	mods             *module.Modules
 	comps            *component.Components
@@ -163,10 +165,17 @@ func (a *Application) Run() error {
 	}
 	storage.Set(a.storage)
 
+	// show jackal's fancy logo
 	a.printLogo()
 
 	// initialize router
-	a.router, err = router.New(&cfg.Router, nil)
+	a.router, err = router.New(&cfg.Router)
+	if err != nil {
+		return err
+	}
+
+	// initialize cluster
+	a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
 	if err != nil {
 		return err
 	}
@@ -197,9 +206,17 @@ func (a *Application) Run() error {
 			return err
 		}
 	}
-	a.waitForStopSignal()
+	// join to cluster after all subsystems have been properly initialized
+	if a.cluster.Enabled() {
+		if err := a.cluster.Join(); err != nil {
+			log.Warnf("%v", err)
+		}
+	}
 
-	// shutdown gracefully
+	// ...wait for stop signal to shutdown
+	sig := a.waitForStopSignal()
+	log.Infof("received %s signal... shutting down...", sig.String())
+
 	if err := a.gracefullyShutdown(); err != nil {
 		return err
 	}
@@ -249,14 +266,12 @@ func (a *Application) initDebugServer(port int) error {
 	return nil
 }
 
-func (a *Application) waitForStopSignal() {
+func (a *Application) waitForStopSignal() os.Signal {
 	signal.Notify(a.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	<-a.waitStopCh
+	return <-a.waitStopCh
 }
 
 func (a *Application) gracefullyShutdown() error {
-	log.Infof("received stop signal... shutting down...")
-
 	// wait until application has been shut down
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(a.shutDownWaitSecs))
 	defer cancel()
@@ -279,6 +294,11 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 		if a.s2s.Enabled() {
 			a.s2s.Shutdown(ctx)
 		}
+		if a.cluster.Enabled() {
+			a.cluster.Leave()
+		}
+		a.cluster.Shutdown()
+
 		a.comps.Shutdown(ctx)
 		a.mods.Shutdown(ctx)
 

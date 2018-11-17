@@ -18,10 +18,10 @@ storage:
     database: jackal
     pool_size: 16
 
-# cluster:
-#   name: node1
-#   port:
-#   hosts: [node2]
+cluster:
+  name: node1
+  port: 5010
+  hosts: [127.0.0.1:5009]
 
 router:
   hosts:
