@@ -85,7 +85,7 @@ type Application struct {
 	args             []string
 	logger           log.Logger
 	storage          storage.Storage
-	cluster          cluster.Cluster
+	cluster          *cluster.Cluster
 	router           *router.Router
 	mods             *module.Modules
 	comps            *component.Components
@@ -179,6 +179,10 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
+	if a.cluster != nil {
+		a.router.SetCluster(a.cluster)
+		a.cluster.Join()
+	}
 
 	// initialize modules & components...
 	a.mods = module.New(&cfg.Modules, a.router)
@@ -201,12 +205,6 @@ func (a *Application) Run() error {
 	if cfg.Debug.Port > 0 {
 		if err := a.initDebugServer(cfg.Debug.Port); err != nil {
 			return err
-		}
-	}
-	// join to cluster after all subsystems have been properly initialized
-	if a.cluster != nil {
-		if err := a.cluster.Join(); err != nil {
-			log.Warnf("%v", err)
 		}
 	}
 

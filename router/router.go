@@ -50,9 +50,14 @@ type S2SOutProvider interface {
 	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
+type Cluster interface {
+	Send(stanza xmpp.Stanza, toNode string) error
+}
+
 // Router represents an XMPP stanza router.
 type Router struct {
 	mu             sync.RWMutex
+	cluster        Cluster
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
 	localStreams   map[string][]stream.C2S
@@ -117,6 +122,12 @@ func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.s2sOutProvider = s2sOutProvider
+}
+
+func (r *Router) SetCluster(cluster Cluster) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.cluster = cluster
 }
 
 // Bind marks a c2s stream as binded.

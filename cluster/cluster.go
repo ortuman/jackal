@@ -33,24 +33,17 @@ type Delegate interface {
 	NodeLeft(node *Node)
 }
 
-type Cluster interface {
-	Join() error
-	Leave() error
-	Send(stanza xmpp.Stanza, toNode string) error
-	Shutdown() error
-}
-
-type cluster struct {
+type Cluster struct {
 	cfg        *Config
 	delegate   Delegate
 	memberList *memberlist.Memberlist
 }
 
-func New(config *Config, delegate Delegate) (Cluster, error) {
+func New(config *Config, delegate Delegate) (*Cluster, error) {
 	if config == nil {
 		return nil, nil
 	}
-	c := &cluster{}
+	c := &Cluster{}
 	c.cfg = config
 	c.delegate = delegate
 	conf := memberlist.DefaultLocalConfig()
@@ -67,44 +60,40 @@ func New(config *Config, delegate Delegate) (Cluster, error) {
 	return c, nil
 }
 
-func (c *cluster) SetDelegate(delegate Delegate) {
-	c.delegate = delegate
-}
-
-func (c *cluster) Join() error {
+func (c *Cluster) Join() error {
 	_, err := c.memberList.Join(c.cfg.Hosts)
 	return err
 }
 
-func (c *cluster) Leave() error {
+func (c *Cluster) Leave() error {
 	return c.memberList.Leave(leaveTimeout)
 }
 
-func (c *cluster) Send(stanza xmpp.Stanza, toNode string) error {
+func (c *Cluster) Send(stanza xmpp.Stanza, toNode string) error {
 	return nil
 }
 
-func (c *cluster) Shutdown() error {
+func (c *Cluster) Shutdown() error {
 	if c.memberList != nil {
 		return c.memberList.Shutdown()
 	}
 	return nil
 }
 
-func (c *cluster) handleNotifyJoin(n *memberlist.Node) {
+func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
 	if c.delegate != nil {
 		c.delegate.NodeJoined(&Node{Name: n.Name})
 	}
 }
 
-func (c *cluster) handleNotifyLeave(n *memberlist.Node) {
+func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
 	if c.delegate != nil {
 		c.delegate.NodeLeft(&Node{Name: n.Name})
 	}
 }
 
-func (c *cluster) handleNotifyUpdate(n *memberlist.Node) {
+func (c *Cluster) handleNotifyUpdate(n *memberlist.Node) {
 }
 
-func (c *cluster) handleNotifyMsg(msg []byte) {
+func (c *Cluster) handleNotifyMsg(msg []byte) {
 }

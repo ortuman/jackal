@@ -3,7 +3,7 @@ package cluster
 import "github.com/hashicorp/memberlist"
 
 type memberListEventDelegate struct {
-	cluster *cluster
+	cluster *Cluster
 }
 
 func (d *memberListEventDelegate) NotifyJoin(n *memberlist.Node) {

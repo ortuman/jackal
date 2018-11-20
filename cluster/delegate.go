@@ -1,7 +1,7 @@
 package cluster
 
 type memberListDelegate struct {
-	cluster *cluster
+	cluster *Cluster
 }
 
 func (d *memberListDelegate) NodeMeta(limit int) []byte {
