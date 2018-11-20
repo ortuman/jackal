@@ -6,9 +6,8 @@
 package cluster
 
 import (
+	"io/ioutil"
 	"time"
-
-	"github.com/ortuman/jackal/log"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/xmpp"
@@ -35,7 +34,6 @@ type Delegate interface {
 }
 
 type Cluster interface {
-	Enabled() bool
 	Join() error
 	Leave() error
 	Send(stanza xmpp.Stanza, toNode string) error
@@ -49,10 +47,10 @@ type cluster struct {
 }
 
 func New(config *Config, delegate Delegate) (Cluster, error) {
-	c := &cluster{}
 	if config == nil {
-		return c, nil
+		return nil, nil
 	}
+	c := &cluster{}
 	c.cfg = config
 	c.delegate = delegate
 	conf := memberlist.DefaultLocalConfig()
@@ -60,17 +58,13 @@ func New(config *Config, delegate Delegate) (Cluster, error) {
 	conf.BindPort = config.BindPort
 	conf.Delegate = &memberListDelegate{cluster: c}
 	conf.Events = &memberListEventDelegate{cluster: c}
+	conf.LogOutput = ioutil.Discard
 	ml, err := memberlist.Create(conf)
 	if err != nil {
 		return nil, err
 	}
 	c.memberList = ml
 	return c, nil
-}
-
-// Enabled returns whether or not cluster has been enabled.
-func (c *cluster) Enabled() bool {
-	return c.memberList != nil
 }
 
 func (c *cluster) SetDelegate(delegate Delegate) {
@@ -98,7 +92,6 @@ func (c *cluster) Shutdown() error {
 }
 
 func (c *cluster) handleNotifyJoin(n *memberlist.Node) {
-	log.Infof("join notified: %s", n.Name)
 	if c.delegate != nil {
 		c.delegate.NodeJoined(&Node{Name: n.Name})
 	}
@@ -111,7 +104,6 @@ func (c *cluster) handleNotifyLeave(n *memberlist.Node) {
 }
 
 func (c *cluster) handleNotifyUpdate(n *memberlist.Node) {
-	log.Infof("update notified: %s", n.Name)
 }
 
 func (c *cluster) handleNotifyMsg(msg []byte) {

@@ -186,13 +186,10 @@ func (a *Application) Run() error {
 
 	// start serving s2s...
 	a.s2s = s2s.New(cfg.S2S, a.mods, a.router)
-	if a.s2s.Enabled() {
+	if a.s2s != nil {
 		a.router.SetS2SOutProvider(a.s2s)
 		a.s2s.Start()
-	} else {
-		log.Infof("s2s disabled")
 	}
-
 	// start serving c2s...
 	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router)
 	if err != nil {
@@ -207,7 +204,7 @@ func (a *Application) Run() error {
 		}
 	}
 	// join to cluster after all subsystems have been properly initialized
-	if a.cluster.Enabled() {
+	if a.cluster != nil {
 		if err := a.cluster.Join(); err != nil {
 			log.Warnf("%v", err)
 		}
@@ -291,10 +288,10 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 			a.debugSrv.Shutdown(ctx)
 		}
 		a.c2s.Shutdown(ctx)
-		if a.s2s.Enabled() {
+		if a.s2s != nil {
 			a.s2s.Shutdown(ctx)
 		}
-		if a.cluster.Enabled() {
+		if a.cluster != nil {
 			a.cluster.Leave()
 		}
 		a.cluster.Shutdown()

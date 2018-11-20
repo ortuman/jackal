@@ -33,16 +33,12 @@ type S2S struct {
 
 // New returns a new instance of an s2s connection manager.
 func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
-	s := &S2S{}
-	if config != nil {
-		s.srv = &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)}
+	if config == nil {
+		return nil
 	}
-	return s
-}
-
-// Enabled returns whether or not s2s sub system is enabled.
-func (s *S2S) Enabled() bool {
-	return s.srv != nil
+	return &S2S{
+		srv: &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)},
+	}
 }
 
 // GetS2SOut acts as an s2s outgoing stream provider.
