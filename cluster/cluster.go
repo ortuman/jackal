@@ -65,8 +65,8 @@ func (c *Cluster) Join() error {
 	return err
 }
 
-func (c *Cluster) Leave() error {
-	return c.memberList.Leave(leaveTimeout)
+func (c *Cluster) Broadcast(msg []byte) error {
+	return nil
 }
 
 func (c *Cluster) Send(stanza xmpp.Stanza, toNode string) error {
@@ -75,6 +75,9 @@ func (c *Cluster) Send(stanza xmpp.Stanza, toNode string) error {
 
 func (c *Cluster) Shutdown() error {
 	if c.memberList != nil {
+		if err := c.memberList.Leave(leaveTimeout); err != nil {
+			return err
+		}
 		return c.memberList.Shutdown()
 	}
 	return nil
