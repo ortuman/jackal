@@ -55,30 +55,6 @@ Common Options:
     -v, --version          Show version
 `
 
-var initLogger = func(config *loggerConfig, output io.Writer) (log.Logger, error) {
-	var logFiles []io.WriteCloser
-	if len(config.LogPath) > 0 {
-		// create logFile intermediate directories.
-		if err := os.MkdirAll(filepath.Dir(config.LogPath), os.ModePerm); err != nil {
-			return nil, err
-		}
-		f, err := os.OpenFile(config.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			return nil, err
-		}
-		logFiles = append(logFiles, f)
-	}
-	logger, err := log.New(config.Level, output, logFiles...)
-	if err != nil {
-		return nil, err
-	}
-	return logger, nil
-}
-
-var initStorage = func(config *storage.Config) (storage.Storage, error) {
-	return storage.New(config)
-}
-
 // Application encapsulates a jackal server application.
 type Application struct {
 	output           io.Writer
@@ -152,21 +128,19 @@ func (a *Application) Run() error {
 	}
 
 	// initialize logger
-	a.logger, err = initLogger(&cfg.Logger, a.output)
+	err = a.initLogger(&cfg.Logger, a.output)
 	if err != nil {
 		return err
 	}
-	log.Set(a.logger)
-
-	// initialize storage
-	a.storage, err = initStorage(&cfg.Storage)
-	if err != nil {
-		return err
-	}
-	storage.Set(a.storage)
 
 	// show jackal's fancy logo
 	a.printLogo()
+
+	// initialize storage
+	err = a.initStorage(&cfg.Storage)
+	if err != nil {
+		return err
+	}
 
 	// initialize router
 	a.router, err = router.New(&cfg.Router)
@@ -239,6 +213,38 @@ func (a *Application) createPIDFile(pidFile string) error {
 	if _, err := file.WriteString(strconv.FormatInt(int64(currentPid), 10)); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
+	var logFiles []io.WriteCloser
+	if len(config.LogPath) > 0 {
+		// create logFile intermediate directories.
+		if err := os.MkdirAll(filepath.Dir(config.LogPath), os.ModePerm); err != nil {
+			return err
+		}
+		f, err := os.OpenFile(config.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
+		logFiles = append(logFiles, f)
+	}
+	l, err := log.New(config.Level, output, logFiles...)
+	if err != nil {
+		return err
+	}
+	a.logger = l
+	log.Set(a.logger)
+	return nil
+}
+
+func (a *Application) initStorage(config *storage.Config) error {
+	s, err := storage.New(config)
+	if err != nil {
+		return err
+	}
+	a.storage = s
+	storage.Set(a.storage)
 	return nil
 }
 
