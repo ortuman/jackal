@@ -153,7 +153,7 @@ func (r *Router) Bind(stm stream.C2S) {
 	}
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
-	// broadcast bind clusterMessage to the cluster
+	// broadcast 'bind' cluster message
 	if r.cluster != nil {
 		buf := r.pool.Get()
 		defer r.pool.Put(buf)
@@ -195,7 +195,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
-	// broadcast unbind clusterMessage to the cluster
+	// broadcast 'unbind' cluster message
 	if r.cluster != nil {
 		buf := r.pool.Get()
 		defer r.pool.Put(buf)
