@@ -18,7 +18,7 @@ func (d *memberListDelegate) NotifyMsg(msg []byte) {
 }
 
 func (d *memberListDelegate) GetBroadcasts(overhead, limit int) [][]byte {
-	return nil
+	return d.cluster.broadcastQueue.GetBroadcasts(overhead, limit)
 }
 
 func (d *memberListDelegate) LocalState(join bool) []byte {

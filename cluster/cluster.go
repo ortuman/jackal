@@ -7,29 +7,22 @@ package cluster
 
 import (
 	"io/ioutil"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/ortuman/jackal/xmpp"
 )
 
 const leaveTimeout = time.Second * 5
-
-// messageType are the types of gossip messages jackal will send along
-// memberlist.
-type messageType uint8
-
-const (
-	messageBindType messageType = iota
-	messageSendType
-)
 
 type Node struct {
 	Name string
 }
 
 type Delegate interface {
+	NotifyMessage([]byte)
 	NodeJoined(node *Node)
+	NodeUpdated(node *Node)
 	NodeLeft(node *Node)
 }
 
@@ -37,13 +30,20 @@ type Cluster struct {
 	cfg        *Config
 	delegate   Delegate
 	memberList *memberlist.Memberlist
+
+	membersMu sync.RWMutex
+	members   map[string]*memberlist.Node
+
+	broadcastQueue *memberlist.TransmitLimitedQueue
 }
 
 func New(config *Config, delegate Delegate) (*Cluster, error) {
 	if config == nil {
 		return nil, nil
 	}
-	c := &Cluster{}
+	c := &Cluster{
+		members: make(map[string]*memberlist.Node),
+	}
 	c.cfg = config
 	c.delegate = delegate
 	conf := memberlist.DefaultLocalConfig()
@@ -57,6 +57,12 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		return nil, err
 	}
 	c.memberList = ml
+
+	// setup broadcast queue
+	c.broadcastQueue = &memberlist.TransmitLimitedQueue{
+		NumNodes:       c.NumNodes,
+		RetransmitMult: conf.RetransmitMult,
+	}
 	return c, nil
 }
 
@@ -65,11 +71,18 @@ func (c *Cluster) Join() error {
 	return err
 }
 
+func (c *Cluster) LocalNode() string {
+	return c.memberList.LocalNode().Name
+}
+
 func (c *Cluster) Broadcast(msg []byte) error {
+	c.broadcastQueue.QueueBroadcast(&broadcast{
+		msg: msg,
+	})
 	return nil
 }
 
-func (c *Cluster) Send(stanza xmpp.Stanza, toNode string) error {
+func (c *Cluster) Send(msg []byte, toNode string) error {
 	return nil
 }
 
@@ -83,20 +96,41 @@ func (c *Cluster) Shutdown() error {
 	return nil
 }
 
+func (c *Cluster) NumNodes() int {
+	c.membersMu.Lock()
+	defer c.membersMu.Unlock()
+	return len(c.members)
+}
+
 func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
+	c.membersMu.Lock()
+	c.members[n.Name] = n
+	c.membersMu.Unlock()
 	if c.delegate != nil {
 		c.delegate.NodeJoined(&Node{Name: n.Name})
 	}
 }
 
 func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
+	c.membersMu.Lock()
+	delete(c.members, n.Name)
+	c.membersMu.Unlock()
 	if c.delegate != nil {
 		c.delegate.NodeLeft(&Node{Name: n.Name})
 	}
 }
 
 func (c *Cluster) handleNotifyUpdate(n *memberlist.Node) {
+	c.membersMu.Lock()
+	c.members[n.Name] = n
+	c.membersMu.Unlock()
+	if c.delegate != nil {
+		c.delegate.NodeUpdated(&Node{Name: n.Name})
+	}
 }
 
 func (c *Cluster) handleNotifyMsg(msg []byte) {
+	if c.delegate != nil {
+		c.delegate.NotifyMessage(msg)
+	}
 }

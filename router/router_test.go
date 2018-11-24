@@ -131,7 +131,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	elem = stm4.FetchElement()
 	require.Equal(t, iqID, elem.ID())
 
-	// send message to highest priority
+	// send clusterMessage to highest priority
 	p1 := xmpp.NewElementName("presence")
 	p1.SetFrom(j3.String())
 	p1.SetTo(j3.String())

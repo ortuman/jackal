@@ -7,10 +7,12 @@ package router
 
 import (
 	"crypto/tls"
+	"encoding/gob"
 	"errors"
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
+	"github.com/ortuman/jackal/pool"
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
@@ -36,7 +38,7 @@ var (
 	ErrNotAuthenticated = errors.New("router: user not authenticated")
 
 	// ErrBlockedJID will be returned by Route method if
-	// destination JID matches any of the user's blocked JID.
+	// destination jid matches any of the user's blocked jid.
 	ErrBlockedJID = errors.New("router: destination jid is blocked")
 
 	// ErrFailedRemoteConnect will be returned by Route method if
@@ -51,11 +53,15 @@ type S2SOutProvider interface {
 }
 
 type Cluster interface {
-	Send(stanza xmpp.Stanza, toNode string) error
+	LocalNode() string
+	Broadcast(msg []byte) error
+	Send(msg []byte, toNode string) error
 }
 
 // Router represents an XMPP stanza router.
 type Router struct {
+	pool *pool.BufferPool
+
 	mu             sync.RWMutex
 	cluster        Cluster
 	s2sOutProvider S2SOutProvider
@@ -69,6 +75,7 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
+		pool:         pool.NewBufferPool(),
 		hosts:        make(map[string]tls.Certificate),
 		blockLists:   make(map[string][]*jid.JID),
 		localStreams: make(map[string][]stream.C2S),
@@ -145,6 +152,21 @@ func (r *Router) Bind(stm stream.C2S) {
 		r.localStreams[stm.Username()] = []stream.C2S{stm}
 	}
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
+
+	// broadcast bind clusterMessage to the cluster
+	if r.cluster != nil {
+		buf := r.pool.Get()
+		defer r.pool.Put(buf)
+
+		m := &clusterMessage{
+			typ:  messageBindType,
+			node: r.cluster.LocalNode(),
+			jid:  stm.JID(),
+		}
+		enc := gob.NewEncoder(buf)
+		m.toGob(enc)
+		r.cluster.Broadcast(buf.Bytes())
+	}
 	return
 }
 
@@ -172,6 +194,21 @@ func (r *Router) Unbind(stm stream.C2S) {
 		}
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
+
+	// broadcast unbind clusterMessage to the cluster
+	if r.cluster != nil {
+		buf := r.pool.Get()
+		defer r.pool.Put(buf)
+
+		m := &clusterMessage{
+			typ:  messageUnbindType,
+			node: r.cluster.LocalNode(),
+			jid:  stm.JID(),
+		}
+		enc := gob.NewEncoder(buf)
+		m.toGob(enc)
+		r.cluster.Broadcast(buf.Bytes())
+	}
 }
 
 // UserStreams returns all streams associated to a user.
@@ -182,7 +219,7 @@ func (r *Router) UserStreams(username string) []stream.C2S {
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any
-// of a user's blocking list JID.
+// of a user's blocking list jid.
 func (r *Router) IsBlockedJID(jid *jid.JID, username string) bool {
 	bl := r.getBlockList(username)
 	for _, blkJID := range bl {
