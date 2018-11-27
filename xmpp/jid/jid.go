@@ -7,6 +7,7 @@ package jid
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
 	"net"
 	"strings"
@@ -179,6 +180,21 @@ func (j *JID) String() string {
 		buf.WriteString(j.resource)
 	}
 	return buf.String()
+}
+
+// FromGob deserializes a JID entity from it's gob binary representation.
+func (j *JID) FromGob(dec *gob.Decoder) error {
+	dec.Decode(&j.node)
+	dec.Decode(&j.domain)
+	dec.Decode(&j.resource)
+	return nil
+}
+
+// ToGob converts a JID entity to it's gob binary representation.
+func (j *JID) ToGob(enc *gob.Encoder) {
+	enc.Encode(&j.node)
+	enc.Encode(&j.domain)
+	enc.Encode(&j.resource)
 }
 
 func stringPrep(node, domain, resource string) (*JID, error) {

@@ -40,9 +40,7 @@ func (cm *clusterMessage) fromGob(dec *gob.Decoder) {
 		cm.jid, _ = jid.New(node, domain, resource, true)
 
 	case messageSendType:
-		elem := &xmpp.Element{}
-		elem.FromGob(dec)
-		cm.elem = elem
+		cm.elem = xmpp.NewElementFromGob(dec)
 	}
 }
 

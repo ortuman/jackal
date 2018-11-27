@@ -27,8 +27,10 @@ func (u *User) FromGob(dec *gob.Decoder) error {
 	var hasPresence bool
 	dec.Decode(&hasPresence)
 	if hasPresence {
-		p := &xmpp.Presence{}
-		p.FromGob(dec)
+		p, err := xmpp.NewPresenceFromGob(dec)
+		if err != nil {
+			return err
+		}
 		u.LastPresence = p
 		dec.Decode(&u.LastPresenceAt)
 	}
