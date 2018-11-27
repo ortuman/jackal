@@ -16,5 +16,5 @@ type GobSerializer interface {
 
 // GobDeserializer represents a Gob deserializable entity.
 type GobDeserializer interface {
-	FromGob(dec *gob.Decoder)
+	FromGob(dec *gob.Decoder) error
 }

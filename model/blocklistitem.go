@@ -13,11 +13,11 @@ type BlockListItem struct {
 	JID      string
 }
 
-// FromGob deserializes a BlockListItem entity
-// from it's gob binary representation.
-func (bli *BlockListItem) FromGob(dec *gob.Decoder) {
+// FromGob deserializes a BlockListItem entity from it's gob binary representation.
+func (bli *BlockListItem) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&bli.Username)
 	dec.Decode(&bli.JID)
+	return nil
 }
 
 // ToGob converts a BlockListItem entity

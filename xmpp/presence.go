@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"strconv"
@@ -105,6 +106,15 @@ func NewPresence(from *jid.JID, to *jid.JID, presenceType string) *Presence {
 	return p
 }
 
+// NewPresenceFromGob creates and returns a new Presence element from a given gob decoder.
+func NewPresenceFromGob(dec *gob.Decoder) (*Presence, error) {
+	p := &Presence{}
+	if err := p.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 // IsAvailable returns true if this is an 'available' type Presence.
 func (p *Presence) IsAvailable() bool {
 	return p.Type() == AvailableType
@@ -156,6 +166,27 @@ func (p *Presence) ShowState() ShowState {
 // Priority returns presence stanza priority value.
 func (p *Presence) Priority() int8 {
 	return p.priority
+}
+
+// FromGob deserializes an element node from it's gob binary representation.
+func (p *Presence) FromGob(dec *gob.Decoder) error {
+	dec.Decode(&p.name)
+	dec.Decode(&p.text)
+	p.attrs.fromGob(dec)
+	p.elements.fromGob(dec)
+
+	// set from and to JIDs
+	fromJID, err := jid.NewWithString(p.From(), false)
+	if err != nil {
+		return err
+	}
+	toJID, err := jid.NewWithString(p.To(), false)
+	if err != nil {
+		return err
+	}
+	p.SetFromJID(fromJID)
+	p.SetToJID(toJID)
+	return nil
 }
 
 func isPresenceType(presenceType string) bool {

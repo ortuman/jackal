@@ -53,6 +53,13 @@ func NewErrorStanzaFromStanza(stanza Stanza, stanzaErr *StanzaError, errorElemen
 	return e
 }
 
+// NewElementFromGob creates and returns a new Element from a given gob decoder.
+func NewElementFromGob(dec *gob.Decoder) *Element {
+	e := &Element{}
+	e.FromGob(dec)
+	return e
+}
+
 // Domain returns XML node name.
 func (e *Element) Name() string {
 	return e.name
@@ -180,11 +187,12 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 }
 
 // FromGob deserializes an element node from it's gob binary representation.
-func (e *Element) FromGob(dec *gob.Decoder) {
+func (e *Element) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&e.name)
 	dec.Decode(&e.text)
 	e.attrs.fromGob(dec)
 	e.elements.fromGob(dec)
+	return nil
 }
 
 // ToGob serializes an element node to it's gob binary representation.

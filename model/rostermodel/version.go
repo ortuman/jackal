@@ -15,9 +15,10 @@ type Version struct {
 
 // FromGob deserializes a Version entity
 // from it's gob binary representation.
-func (rv *Version) FromGob(dec *gob.Decoder) {
+func (rv *Version) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&rv.Ver)
 	dec.Decode(&rv.DeletionVer)
+	return nil
 }
 
 // ToGob converts a Version entity

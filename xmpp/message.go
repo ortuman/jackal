@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -58,6 +59,15 @@ func NewMessageType(identifier string, messageType string) *Message {
 	return msg
 }
 
+// NewMessageFromGob creates and returns a new Message element from a given gob decoder.
+func NewMessageFromGob(dec *gob.Decoder) (*Message, error) {
+	m := &Message{}
+	if err := m.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // IsNormal returns true if this is a 'normal' type Message.
 func (m *Message) IsNormal() bool {
 	return m.Type() == NormalType || m.Type() == ""
@@ -82,6 +92,27 @@ func (m *Message) IsGroupChat() bool {
 // has a body sub element.
 func (m *Message) IsMessageWithBody() bool {
 	return m.elements.Child("body") != nil
+}
+
+// FromGob deserializes an element node from it's gob binary representation.
+func (m *Message) FromGob(dec *gob.Decoder) error {
+	dec.Decode(&m.name)
+	dec.Decode(&m.text)
+	m.attrs.fromGob(dec)
+	m.elements.fromGob(dec)
+
+	// set from and to JIDs
+	fromJID, err := jid.NewWithString(m.From(), false)
+	if err != nil {
+		return err
+	}
+	toJID, err := jid.NewWithString(m.To(), false)
+	if err != nil {
+		return err
+	}
+	m.SetFromJID(fromJID)
+	m.SetToJID(toJID)
+	return nil
 }
 
 func isMessageType(messageType string) bool {

@@ -20,9 +20,8 @@ type Notification struct {
 	Presence *xmpp.Presence
 }
 
-// FromGob deserializes a Notification entity
-// from it's gob binary representation.
-func (rn *Notification) FromGob(dec *gob.Decoder) {
+// FromGob deserializes a Notification entity from it's gob binary representation.
+func (rn *Notification) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&rn.Contact)
 	dec.Decode(&rn.JID)
 	el := &xmpp.Element{}
@@ -30,6 +29,7 @@ func (rn *Notification) FromGob(dec *gob.Decoder) {
 	fromJID, _ := jid.NewWithString(el.From(), true)
 	toJID, _ := jid.NewWithString(el.To(), true)
 	rn.Presence, _ = xmpp.NewPresenceFromElement(el, fromJID, toJID)
+	return nil
 }
 
 // ToGob converts a Notification entity

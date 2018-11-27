@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"encoding/gob"
 	"errors"
 	"fmt"
 
@@ -68,6 +69,15 @@ func NewIQType(identifier string, iqType string) *IQ {
 	return iq
 }
 
+// NewIQFromGob creates and returns a new IQ element from a given gob decoder.
+func NewIQFromGob(dec *gob.Decoder) (*IQ, error) {
+	iq := &IQ{}
+	if err := iq.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return iq, nil
+}
+
 // IsGet returns true if this is a 'get' type IQ.
 func (iq *IQ) IsGet() bool {
 	return iq.Type() == GetType
@@ -93,6 +103,27 @@ func (iq *IQ) ResultIQ() *IQ {
 	rs.SetFromJID(iq.ToJID())
 	rs.SetToJID(iq.FromJID())
 	return rs
+}
+
+// FromGob deserializes an element node from it's gob binary representation.
+func (iq *IQ) FromGob(dec *gob.Decoder) error {
+	dec.Decode(&iq.name)
+	dec.Decode(&iq.text)
+	iq.attrs.fromGob(dec)
+	iq.elements.fromGob(dec)
+
+	// set from and to JIDs
+	fromJID, err := jid.NewWithString(iq.From(), false)
+	if err != nil {
+		return err
+	}
+	toJID, err := jid.NewWithString(iq.To(), false)
+	if err != nil {
+		return err
+	}
+	iq.SetFromJID(fromJID)
+	iq.SetToJID(toJID)
+	return nil
 }
 
 func isIQType(tp string) bool {
