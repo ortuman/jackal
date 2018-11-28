@@ -48,7 +48,7 @@ var (
 )
 
 // S2SOutProvider provides a specific s2s outgoing connection for every single
-// pair of (localdomai, remotedomain) values.
+// pair of (localdomain, remotedomain) values.
 type S2SOutProvider interface {
 	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
@@ -69,10 +69,12 @@ type Cluster interface {
 type Router struct {
 	pool           *pool.BufferPool
 	mu             sync.RWMutex
-	cluster        Cluster
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
 	userMap        map[string]*userStreamList
+
+	clusterMu sync.RWMutex
+	cluster   Cluster
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -139,12 +141,27 @@ func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 
 // SetCluster sets router cluster interface
 func (r *Router) SetCluster(cluster Cluster) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.clusterMu.Lock()
+	defer r.clusterMu.Unlock()
 	r.cluster = cluster
 }
 
-// ClusterDelegate returns a router cluster delegate interface, so that it can handle cluster events.
+// BroadcastPresence broadcasts a presence associated to a jid to be updated in the whole cluster.
+func (r *Router) BroadcastPresence(presence *xmpp.Presence, jid *jid.JID) {
+	r.clusterMu.RLock()
+	defer r.clusterMu.RUnlock()
+
+	// broadcast cluster 'presence' message
+	if r.cluster != nil {
+		msg := newPresenceMessage(r.cluster.LocalNode(), jid, presence)
+		if err := r.broadcastClusterMessage(msg); err != nil {
+			log.Error(fmt.Errorf("couldn't broadcast cluster presence message: %s", err))
+			return
+		}
+	}
+}
+
+// ClusterDelegate returns a router cluster delegate interface.
 func (r *Router) ClusterDelegate() cluster.Delegate {
 	return &clusterDelegate{r: r}
 }
@@ -167,8 +184,12 @@ func (r *Router) Bind(stm stream.C2S) {
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if r.cluster != nil {
-		if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+		msg := newBindMessage(r.cluster.LocalNode(), stm.JID())
+		if err := r.broadcastClusterMessage(msg); err != nil {
 			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
 			return
 		}
@@ -195,8 +216,12 @@ func (r *Router) Unbind(stm stream.C2S) {
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'unbind' message
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if r.cluster != nil {
-		if err := r.broadcastClusterMessage(newUnbindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+		msg := newUnbindMessage(r.cluster.LocalNode(), stm.JID())
+		if err := r.broadcastClusterMessage(msg); err != nil {
 			log.Error(fmt.Errorf("couldn't broadcast cluster unbind message: %s", err))
 			return
 		}

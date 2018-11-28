@@ -641,6 +641,9 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	// update context presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
+
+		// broadcast presence change in the cluster
+		s.router.BroadcastPresence(presence, s.JID())
 	}
 	// deliver presence to roster module
 	if r := s.mods.Roster; r != nil {

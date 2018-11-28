@@ -60,7 +60,7 @@ type broadcastPresenceMessage struct {
 	presence *xmpp.Presence
 }
 
-func newBroadcastPresenceMessage(node string, jid *jid.JID, presence *xmpp.Presence) *broadcastPresenceMessage {
+func newPresenceMessage(node string, jid *jid.JID, presence *xmpp.Presence) *broadcastPresenceMessage {
 	return &broadcastPresenceMessage{baseMessage{node: node, jid: jid}, presence}
 }
 
