@@ -229,10 +229,10 @@ func (s *outStream) handleSecuring(elem xmpp.XElement) {
 	}
 	s.cfg.transport.StartTLS(s.cfg.tls, true)
 
+	atomic.StoreUint32(&s.secured, 1)
+
 	s.restartSession()
 	s.sess.Open()
-
-	atomic.StoreUint32(&s.secured, 1)
 }
 
 func (s *outStream) handleAuthenticating(elem xmpp.XElement) {
