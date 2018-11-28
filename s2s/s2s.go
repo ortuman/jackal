@@ -41,8 +41,8 @@ func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
 	}
 }
 
-// GetS2SOut acts as an s2s outgoing stream provider.
-func (s *S2S) GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+// GetOut acts as an s2s outgoing stream provider.
+func (s *S2S) GetOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
 	if s.srv == nil {
 		return nil, errors.New("s2s not initialized")
 	}

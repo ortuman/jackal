@@ -47,10 +47,10 @@ var (
 	ErrFailedRemoteConnect = errors.New("router: failed remote connection")
 )
 
-// S2SOutProvider provides a specific s2s outgoing connection for every single
+// OutS2SProvider provides a specific s2s outgoing connection for every single
 // pair of (localdomain, remotedomain) values.
-type S2SOutProvider interface {
-	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
+type OutS2SProvider interface {
+	GetOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
 // Cluster represents the generic cluster interface used by router type.
@@ -69,7 +69,7 @@ type Cluster interface {
 type Router struct {
 	pool           *pool.BufferPool
 	mu             sync.RWMutex
-	s2sOutProvider S2SOutProvider
+	outS2SProvider OutS2SProvider
 	cluster        Cluster
 	hosts          map[string]tls.Certificate
 	streams        map[string][]stream.C2S
@@ -132,11 +132,11 @@ func (r *Router) Certificates() []tls.Certificate {
 	return certs
 }
 
-// SetS2SOutProvider sets the s2s out provider to be used when routing stanzas remotely.
-func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
+// SetOutS2SProvider sets the s2s out provider to be used when routing stanzas remotely.
+func (r *Router) SetOutS2SProvider(s2sOutProvider OutS2SProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.s2sOutProvider = s2sOutProvider
+	r.outS2SProvider = s2sOutProvider
 }
 
 // SetCluster sets router cluster interface.
@@ -368,13 +368,13 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 }
 
 func (r *Router) remoteRoute(elem xmpp.Stanza) error {
-	if r.s2sOutProvider == nil {
+	if r.outS2SProvider == nil {
 		return ErrFailedRemoteConnect
 	}
 	localDomain := elem.FromJID().Domain()
 	remoteDomain := elem.ToJID().Domain()
 
-	out, err := r.s2sOutProvider.GetS2SOut(localDomain, remoteDomain)
+	out, err := r.outS2SProvider.GetOut(localDomain, remoteDomain)
 	if err != nil {
 		log.Error(err)
 		return ErrFailedRemoteConnect

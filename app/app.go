@@ -165,7 +165,7 @@ func (a *Application) Run() error {
 	// start serving s2s...
 	a.s2s = s2s.New(cfg.S2S, a.mods, a.router)
 	if a.s2s != nil {
-		a.router.SetS2SOutProvider(a.s2s)
+		a.router.SetOutS2SProvider(a.s2s)
 		a.s2s.Start()
 	}
 	// start serving c2s...

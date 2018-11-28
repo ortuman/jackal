@@ -27,11 +27,11 @@ func (f *fakeS2SOut) ID() string                     { return uuid.New() }
 func (f *fakeS2SOut) SendElement(elem xmpp.XElement) { f.elems = append(f.elems, elem) }
 func (f *fakeS2SOut) Disconnect(err error)           {}
 
-type fakeS2SProvider struct {
+type fakeOutS2SProvider struct {
 	s2sOut *fakeS2SOut
 }
 
-func (f *fakeS2SProvider) GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+func (f *fakeOutS2SProvider) GetOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
 	return f.s2sOut, nil
 }
 
@@ -75,12 +75,12 @@ func TestC2SManager(t *testing.T) {
 
 func TestC2SManager_Routing(t *testing.T) {
 	outS2S := fakeS2SOut{}
-	s2sOutProvider := fakeS2SProvider{s2sOut: &outS2S}
+	s2sOutProvider := fakeOutS2SProvider{s2sOut: &outS2S}
 
 	r, s, shutdown := setupTest()
 	defer shutdown()
 
-	r.SetS2SOutProvider(&s2sOutProvider)
+	r.SetOutS2SProvider(&s2sOutProvider)
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	j2, _ := jid.NewWithString("ortuman@jackal.im/garden", false)
