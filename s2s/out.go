@@ -174,14 +174,14 @@ func (s *outStream) handleConnected(elem xmpp.XElement) {
 			s.disconnectWithStreamError(streamerror.ErrPolicyViolation)
 			return
 		}
-		s.writeElement(xmpp.NewElementNamespace("starttls", tlsNamespace))
 		s.setState(outSecuring)
+		s.writeElement(xmpp.NewElementNamespace("starttls", tlsNamespace))
 
 	} else {
 		// authorize dialback key
 		if s.cfg.dbVerify != nil {
-			s.writeElement(s.cfg.dbVerify)
 			s.setState(outAuthorizingDialbackKey)
+			s.writeElement(s.cfg.dbVerify)
 			return
 		}
 		if !s.isAuthenticated() {
@@ -195,19 +195,19 @@ func (s *outStream) handleConnected(elem xmpp.XElement) {
 				}
 			}
 			if hasExternalAuth {
+				s.setState(outAuthenticating)
 				auth := xmpp.NewElementNamespace("auth", saslNamespace)
 				auth.SetAttribute("mechanism", "EXTERNAL")
 				auth.SetText("=")
 				s.writeElement(auth)
-				s.setState(outAuthenticating)
 
 			} else if elem.Elements().ChildrenNamespace("dialback", dialbackNamespace) != nil {
+				s.setState(outValidatingDialbackKey)
 				db := xmpp.NewElementName("db:result")
 				db.SetFrom(s.cfg.localDomain)
 				db.SetTo(s.cfg.remoteDomain)
 				db.SetText(s.cfg.keyGen.generate(s.cfg.remoteDomain, s.cfg.localDomain, s.sess.StreamID()))
 				s.writeElement(db)
-				s.setState(outValidatingDialbackKey)
 
 			} else {
 				// no verification mechanism found... do not allow remote connection
