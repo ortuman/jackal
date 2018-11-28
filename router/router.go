@@ -215,13 +215,13 @@ func (r *Router) Unbind(stm stream.C2S) {
 		for i := 0; i < len(usrStreams); i++ {
 			if res == usrStreams[i].Resource() {
 				usrStreams = append(usrStreams[:i], usrStreams[i+1:]...)
+				if len(usrStreams) > 0 {
+					r.streams[stm.Username()] = usrStreams
+				} else {
+					delete(r.streams, stm.Username())
+				}
 				break
 			}
-		}
-		if len(usrStreams) > 0 {
-			r.streams[stm.Username()] = usrStreams
-		} else {
-			delete(r.streams, stm.Username())
 		}
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
