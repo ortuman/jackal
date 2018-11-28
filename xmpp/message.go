@@ -94,27 +94,6 @@ func (m *Message) IsMessageWithBody() bool {
 	return m.elements.Child("body") != nil
 }
 
-// FromGob deserializes an element node from it's gob binary representation.
-func (m *Message) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&m.name)
-	dec.Decode(&m.text)
-	m.attrs.fromGob(dec)
-	m.elements.fromGob(dec)
-
-	// set from and to JIDs
-	fromJID, err := jid.NewWithString(m.From(), false)
-	if err != nil {
-		return err
-	}
-	toJID, err := jid.NewWithString(m.To(), false)
-	if err != nil {
-		return err
-	}
-	m.SetFromJID(fromJID)
-	m.SetToJID(toJID)
-	return nil
-}
-
 func isMessageType(messageType string) bool {
 	switch messageType {
 	case "", ErrorType, NormalType, HeadlineType, ChatType, GroupChatType:

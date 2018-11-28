@@ -20,39 +20,46 @@ const (
 	messageSendType
 )
 
-type clusterMessage struct {
-	typ  messageType
+type baseMessage struct {
 	node string
 	jid  *jid.JID
-	elem xmpp.XElement
 }
 
-func (cm *clusterMessage) fromGob(dec *gob.Decoder) {
-	var node, domain, resource string
-	dec.Decode(&cm.typ)
-	dec.Decode(&cm.node)
-
-	switch cm.typ {
-	case messageBindType, messageUnbindType:
-		dec.Decode(&node)
-		dec.Decode(&domain)
-		dec.Decode(&resource)
-		cm.jid, _ = jid.New(node, domain, resource, true)
-
-	case messageSendType:
-		cm.elem = xmpp.NewElementFromGob(dec)
-	}
+func (bm *baseMessage) FromGob(dec *gob.Decoder) error {
+	return nil
 }
 
-func (cm *clusterMessage) toGob(enc *gob.Encoder) {
-	enc.Encode(cm.typ)
-	enc.Encode(cm.node)
-	switch cm.typ {
-	case messageBindType, messageUnbindType:
-		enc.Encode(cm.jid.Node())
-		enc.Encode(cm.jid.Domain())
-		enc.Encode(cm.jid.Resource())
-	case messageSendType:
-		cm.elem.ToGob(enc)
-	}
+func (bm *baseMessage) ToGob(enc *gob.Encoder) {
+}
+
+type bindMessage struct {
+	baseMessage
+}
+
+type unbindMessage struct {
+	baseMessage
+}
+
+type broadcastPresenceMessage struct {
+	baseMessage
+	presence *xmpp.Presence
+}
+
+func (bpm *broadcastPresenceMessage) FromGob(dec *gob.Decoder) error {
+	return nil
+}
+
+func (bpm *broadcastPresenceMessage) ToGob(enc *gob.Encoder) {
+}
+
+type sendStanzaMessage struct {
+	baseMessage
+	stanza xmpp.Stanza
+}
+
+func (ssm *sendStanzaMessage) FromGob(dec *gob.Decoder) error {
+	return nil
+}
+
+func (ssm *sendStanzaMessage) ToGob(enc *gob.Encoder) {
 }

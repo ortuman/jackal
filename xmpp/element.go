@@ -217,23 +217,41 @@ type stanzaElement struct {
 }
 
 // ToJID returns iq 'from' JID value.
-func (stanza *stanzaElement) ToJID() *jid.JID {
-	return stanza.toJID
+func (s *stanzaElement) ToJID() *jid.JID {
+	return s.toJID
 }
 
 // SetToJID sets the IQ 'to' JID value.
-func (stanza *stanzaElement) SetToJID(j *jid.JID) {
-	stanza.toJID = j
-	stanza.SetTo(j.String())
+func (s *stanzaElement) SetToJID(j *jid.JID) {
+	s.toJID = j
+	s.SetTo(j.String())
 }
 
 // FromJID returns presence 'from' JID value.
-func (stanza *stanzaElement) FromJID() *jid.JID {
-	return stanza.fromJID
+func (s *stanzaElement) FromJID() *jid.JID {
+	return s.fromJID
 }
 
 // SetFromJID sets the IQ 'from' JID value.
-func (stanza *stanzaElement) SetFromJID(j *jid.JID) {
-	stanza.fromJID = j
-	stanza.SetFrom(j.String())
+func (s *stanzaElement) SetFromJID(j *jid.JID) {
+	s.fromJID = j
+	s.SetFrom(j.String())
+}
+
+// FromGob deserializes a stanza element from it's gob binary representation.
+func (s *stanzaElement) FromGob(dec *gob.Decoder) error {
+	s.Element.FromGob(dec)
+
+	// set from and to JIDs
+	fromJID, err := jid.NewWithString(s.From(), false)
+	if err != nil {
+		return err
+	}
+	toJID, err := jid.NewWithString(s.To(), false)
+	if err != nil {
+		return err
+	}
+	s.SetFromJID(fromJID)
+	s.SetToJID(toJID)
+	return nil
 }

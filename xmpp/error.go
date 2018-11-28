@@ -169,132 +169,132 @@ var (
 
 // BadRequestError returns an error copy of the element
 // attaching 'bad-request' error sub element.
-func (stanza *stanzaElement) BadRequestError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrBadRequest, nil)
+func (s *stanzaElement) BadRequestError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrBadRequest, nil)
 }
 
 // ConflictError returns an error copy of the element
 // attaching 'conflict' error sub element.
-func (stanza *stanzaElement) ConflictError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrConflict, nil)
+func (s *stanzaElement) ConflictError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrConflict, nil)
 }
 
 // FeatureNotImplementedError returns an error copy of the element
 // attaching 'feature-not-implemented' error sub element.
-func (stanza *stanzaElement) FeatureNotImplementedError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrFeatureNotImplemented, nil)
+func (s *stanzaElement) FeatureNotImplementedError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrFeatureNotImplemented, nil)
 }
 
 // ForbiddenError returns an error copy of the element
 // attaching 'forbidden' error sub element.
-func (stanza *stanzaElement) ForbiddenError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrForbidden, nil)
+func (s *stanzaElement) ForbiddenError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrForbidden, nil)
 }
 
 // GoneError returns an error copy of the element
 // attaching 'gone' error sub element.
-func (stanza *stanzaElement) GoneError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrGone, nil)
+func (s *stanzaElement) GoneError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrGone, nil)
 }
 
 // InternalServerError returns an error copy of the element
 // attaching 'internal-server-error' error sub element.
-func (stanza *stanzaElement) InternalServerError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrInternalServerError, nil)
+func (s *stanzaElement) InternalServerError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrInternalServerError, nil)
 }
 
 // ItemNotFoundError returns an error copy of the element
 // attaching 'item-not-found' error sub element.
-func (stanza *stanzaElement) ItemNotFoundError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrItemNotFound, nil)
+func (s *stanzaElement) ItemNotFoundError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrItemNotFound, nil)
 }
 
 // JidMalformedError returns an error copy of the element
 // attaching 'jid-malformed' error sub element.
-func (stanza *stanzaElement) JidMalformedError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrJidMalformed, nil)
+func (s *stanzaElement) JidMalformedError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrJidMalformed, nil)
 }
 
 // NotAcceptableError returns an error copy of the element
 // attaching 'not-acceptable' error sub element.
-func (stanza *stanzaElement) NotAcceptableError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrNotAcceptable, nil)
+func (s *stanzaElement) NotAcceptableError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrNotAcceptable, nil)
 }
 
 // NotAllowedError returns an error copy of the element
 // attaching 'not-allowed' error sub element.
-func (stanza *stanzaElement) NotAllowedError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrNotAllowed, nil)
+func (s *stanzaElement) NotAllowedError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrNotAllowed, nil)
 }
 
 // NotAuthorizedError returns an error copy of the element
 // attaching 'not-authorized' error sub element.
-func (stanza *stanzaElement) NotAuthorizedError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrNotAuthorized, nil)
+func (s *stanzaElement) NotAuthorizedError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrNotAuthorized, nil)
 }
 
 // PaymentRequiredError returns an error copy of the element
 // attaching 'payment-required' error sub element.
-func (stanza *stanzaElement) PaymentRequiredError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrPaymentRequired, nil)
+func (s *stanzaElement) PaymentRequiredError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrPaymentRequired, nil)
 }
 
 // RecipientUnavailableError returns an error copy of the element
 // attaching 'recipient-unavailable' error sub element.
-func (stanza *stanzaElement) RecipientUnavailableError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrRecipientUnavailable, nil)
+func (s *stanzaElement) RecipientUnavailableError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrRecipientUnavailable, nil)
 }
 
 // RedirectError returns an error copy of the element
 // attaching 'redirect' error sub element.
-func (stanza *stanzaElement) RedirectError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrRedirect, nil)
+func (s *stanzaElement) RedirectError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrRedirect, nil)
 }
 
 // RegistrationRequiredError returns an error copy of the element
 // attaching 'registration-required' error sub element.
-func (stanza *stanzaElement) RegistrationRequiredError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrRegistrationRequired, nil)
+func (s *stanzaElement) RegistrationRequiredError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrRegistrationRequired, nil)
 }
 
 // RemoteServerNotFoundError returns an error copy of the element
 // attaching 'remote-server-not-found' error sub element.
-func (stanza *stanzaElement) RemoteServerNotFoundError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrRemoteServerNotFound, nil)
+func (s *stanzaElement) RemoteServerNotFoundError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrRemoteServerNotFound, nil)
 }
 
 // RemoteServerTimeoutError returns an error copy of the element
 // attaching 'remote-server-timeout' error sub element.
-func (stanza *stanzaElement) RemoteServerTimeoutError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrRemoteServerTimeout, nil)
+func (s *stanzaElement) RemoteServerTimeoutError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrRemoteServerTimeout, nil)
 }
 
 // ResourceConstraintError returns an error copy of the element
 // attaching 'resource-constraint' error sub element.
-func (stanza *stanzaElement) ResourceConstraintError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrResourceConstraint, nil)
+func (s *stanzaElement) ResourceConstraintError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrResourceConstraint, nil)
 }
 
 // ServiceUnavailableError returns an error copy of the element
 // attaching 'service-unavailable' error sub element.
-func (stanza *stanzaElement) ServiceUnavailableError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrServiceUnavailable, nil)
+func (s *stanzaElement) ServiceUnavailableError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrServiceUnavailable, nil)
 }
 
 // SubscriptionRequiredError returns an error copy of the element
 // attaching 'subscription-required' error sub element.
-func (stanza *stanzaElement) SubscriptionRequiredError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrSubscriptionRequired, nil)
+func (s *stanzaElement) SubscriptionRequiredError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrSubscriptionRequired, nil)
 }
 
 // UndefinedConditionError returns an error copy of the element
 // attaching 'undefined-condition' error sub element.
-func (stanza *stanzaElement) UndefinedConditionError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrUndefinedCondition, nil)
+func (s *stanzaElement) UndefinedConditionError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrUndefinedCondition, nil)
 }
 
 // UnexpectedConditionError returns an error copy of the element
 // attaching 'unexpected-condition' error sub element.
-func (stanza *stanzaElement) UnexpectedConditionError() Stanza {
-	return NewErrorStanzaFromStanza(stanza, ErrUnexpectedCondition, nil)
+func (s *stanzaElement) UnexpectedConditionError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrUnexpectedCondition, nil)
 }

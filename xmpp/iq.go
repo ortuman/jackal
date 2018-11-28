@@ -105,27 +105,6 @@ func (iq *IQ) ResultIQ() *IQ {
 	return rs
 }
 
-// FromGob deserializes an element node from it's gob binary representation.
-func (iq *IQ) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&iq.name)
-	dec.Decode(&iq.text)
-	iq.attrs.fromGob(dec)
-	iq.elements.fromGob(dec)
-
-	// set from and to JIDs
-	fromJID, err := jid.NewWithString(iq.From(), false)
-	if err != nil {
-		return err
-	}
-	toJID, err := jid.NewWithString(iq.To(), false)
-	if err != nil {
-		return err
-	}
-	iq.SetFromJID(fromJID)
-	iq.SetToJID(toJID)
-	return nil
-}
-
 func isIQType(tp string) bool {
 	switch tp {
 	case ErrorType, GetType, SetType, ResultType:

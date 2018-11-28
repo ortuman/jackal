@@ -7,7 +7,6 @@ package router
 
 import (
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"sync"
 
@@ -155,17 +154,6 @@ func (r *Router) Bind(stm stream.C2S) {
 
 	// broadcast 'bind' cluster message
 	if r.cluster != nil {
-		buf := r.pool.Get()
-		defer r.pool.Put(buf)
-
-		m := &clusterMessage{
-			typ:  messageBindType,
-			node: r.cluster.LocalNode(),
-			jid:  stm.JID(),
-		}
-		enc := gob.NewEncoder(buf)
-		m.toGob(enc)
-		r.cluster.Broadcast(buf.Bytes())
 	}
 	return
 }
@@ -197,17 +185,6 @@ func (r *Router) Unbind(stm stream.C2S) {
 
 	// broadcast 'unbind' cluster message
 	if r.cluster != nil {
-		buf := r.pool.Get()
-		defer r.pool.Put(buf)
-
-		m := &clusterMessage{
-			typ:  messageUnbindType,
-			node: r.cluster.LocalNode(),
-			jid:  stm.JID(),
-		}
-		enc := gob.NewEncoder(buf)
-		m.toGob(enc)
-		r.cluster.Broadcast(buf.Bytes())
 	}
 }
 

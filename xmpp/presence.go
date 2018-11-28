@@ -168,27 +168,6 @@ func (p *Presence) Priority() int8 {
 	return p.priority
 }
 
-// FromGob deserializes an element node from it's gob binary representation.
-func (p *Presence) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&p.name)
-	dec.Decode(&p.text)
-	p.attrs.fromGob(dec)
-	p.elements.fromGob(dec)
-
-	// set from and to JIDs
-	fromJID, err := jid.NewWithString(p.From(), false)
-	if err != nil {
-		return err
-	}
-	toJID, err := jid.NewWithString(p.To(), false)
-	if err != nil {
-		return err
-	}
-	p.SetFromJID(fromJID)
-	p.SetToJID(toJID)
-	return nil
-}
-
 func isPresenceType(presenceType string) bool {
 	switch presenceType {
 	case ErrorType, AvailableType, UnavailableType, SubscribeType,
