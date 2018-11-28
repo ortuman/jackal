@@ -589,7 +589,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 
 func (s *inStream) processStanza(elem xmpp.Stanza) {
 	toJID := elem.ToJID()
-	if s.isBlockedJID(toJID) { // blocked JID?
+	if s.isBlockedJID(toJID) { // Blocked JID?
 		blocked := xmpp.NewElementNamespace("blocked", blockedErrorNamespace)
 		resp := xmpp.NewErrorStanzaFromStanza(elem, xmpp.ErrNotAcceptable, []xmpp.XElement{blocked})
 		s.writeElement(resp)
@@ -633,11 +633,11 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
 
-	// Update context presence.
+	// Update presence.
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 
-		// Let the whole cluster note that there has been a change in our presence.
+		// Let the whole cluster know that there has been a change in our presence.
 		s.router.BroadcastClusterPresence(presence, s.JID())
 	}
 	// Deliver presence to roster module.
@@ -661,7 +661,7 @@ sendMessage:
 	case nil:
 		break
 	case router.ErrResourceNotFound:
-		// treat the stanza as if it were addressed to <node@domain>
+		// Treat the stanza as if it were addressed to <node@domain>.
 		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
 		goto sendMessage
 	case router.ErrNotAuthenticated:
@@ -745,7 +745,7 @@ func (s *inStream) readElement(elem xmpp.XElement) {
 		s.handleElement(elem)
 	}
 	if s.getState() != disconnected {
-		go s.doRead() // keep reading...
+		go s.doRead() // Keep reading...
 	}
 }
 
@@ -777,11 +777,11 @@ func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 }
 
 func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
-	// stop pinging...
+	// Stop pinging...
 	if p := s.mods.Ping; p != nil {
 		p.CancelPing(s)
 	}
-	// send 'unavailable' presence when disconnecting
+	// Send 'unavailable' presence when disconnecting.
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
 		if r := s.mods.Roster; r != nil {
 			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
@@ -790,15 +790,14 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	// unregister stream
+	// Unregister stream.
 	if unbind {
 		s.router.Unbind(s)
 	}
-	// notify disconnection
+	// Notify disconnection.
 	if s.cfg.onDisconnect != nil {
 		s.cfg.onDisconnect(s)
 	}
-
 	s.setState(disconnected)
 	s.cfg.transport.Close()
 }
