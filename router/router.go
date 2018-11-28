@@ -72,7 +72,7 @@ type Router struct {
 	cluster        Cluster
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
-	localStreams   map[string]*userStreamList
+	userMap        map[string]*userStreamList
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -81,10 +81,10 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
-		pool:         pool.NewBufferPool(),
-		hosts:        make(map[string]tls.Certificate),
-		blockLists:   make(map[string][]*jid.JID),
-		localStreams: make(map[string]*userStreamList),
+		pool:       pool.NewBufferPool(),
+		hosts:      make(map[string]tls.Certificate),
+		blockLists: make(map[string][]*jid.JID),
+		userMap:    make(map[string]*userStreamList),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -157,10 +157,10 @@ func (r *Router) Bind(stm stream.C2S) {
 	}
 	// bind stream
 	r.mu.Lock()
-	if usrStreams := r.localStreams[stm.Username()]; usrStreams != nil {
+	if usrStreams := r.userMap[stm.Username()]; usrStreams != nil {
 		usrStreams.bind(stm)
 	} else {
-		r.localStreams[stm.Username()] = &userStreamList{streams: []stream.C2S{stm}}
+		r.userMap[stm.Username()] = &userStreamList{streams: []stream.C2S{stm}}
 	}
 	r.mu.Unlock()
 
@@ -184,10 +184,10 @@ func (r *Router) Unbind(stm stream.C2S) {
 	}
 	// unbind stream
 	r.mu.Lock()
-	if usrStreams := r.localStreams[stm.Username()]; usrStreams != nil {
+	if usrStreams := r.userMap[stm.Username()]; usrStreams != nil {
 		stmCount := usrStreams.unbind(stm.Resource())
 		if stmCount == 0 {
-			delete(r.localStreams, stm.Username())
+			delete(r.userMap, stm.Username())
 		}
 	}
 	r.mu.Unlock()
@@ -207,7 +207,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if usrStreams := r.localStreams[username]; usrStreams != nil {
+	if usrStreams := r.userMap[username]; usrStreams != nil {
 		return usrStreams.all()
 	}
 	return nil
