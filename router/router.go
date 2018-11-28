@@ -146,8 +146,8 @@ func (r *Router) SetCluster(cluster Cluster) {
 	r.cluster = cluster
 }
 
-// BroadcastPresence broadcasts a presence associated to a jid to be updated in the whole cluster.
-func (r *Router) BroadcastPresence(presence *xmpp.Presence, jid *jid.JID) {
+// BroadcastClusterPresence updates a presence associated to a jid in the whole cluster.
+func (r *Router) BroadcastClusterPresence(presence *xmpp.Presence, jid *jid.JID) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
