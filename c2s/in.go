@@ -70,22 +70,22 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
 
-	// initialize stream context
+	// Initialize stream context.
 	secured := !(config.transport.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
-	// initialize authenticators
+	// Initialize authenticators.
 	s.initializeAuthenticators()
 
-	// start c2s session
+	// Start c2s session.
 	s.restartSession()
 
 	if config.connectTimeout > 0 {
 		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
-	go s.doRead() // start reading...
+	go s.doRead() // Start reading...
 
 	return s
 }
@@ -122,16 +122,14 @@ func (s *inStream) JID() *jid.JID {
 	return s.jid
 }
 
-// IsAuthenticated returns whether or not the XMPP stream
-// has successfully authenticated.
+// IsAuthenticated returns whether or not the XMPP stream has successfully authenticated.
 func (s *inStream) IsAuthenticated() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.authenticated
 }
 
-// IsSecured returns whether or not the XMPP stream
-// has been secured using SSL/TLS.
+// IsSecured returns whether or not the XMPP stream has been secured using SSL/TLS.
 func (s *inStream) IsSecured() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -161,8 +159,7 @@ func (s *inStream) SendElement(elem xmpp.XElement) {
 	s.actorCh <- func() { s.writeElement(elem) }
 }
 
-// Disconnect disconnects remote peer by closing
-// the underlying TCP socket connection.
+// Disconnect disconnects remote peer by closing the underlying TCP socket connection.
 func (s *inStream) Disconnect(err error) {
 	if s.getState() == disconnected {
 		return
@@ -218,18 +215,18 @@ func (s *inStream) handleElement(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleConnecting(elem xmpp.XElement) {
-	// cancel connection timeout timer
+	// Cancel connection timeout timer.
 	if s.connectTm != nil {
 		s.connectTm.Stop()
 		s.connectTm = nil
 	}
-	// assign stream domain if not set yet
+	// Assign stream domain if not set yet.
 	if len(s.Domain()) == 0 {
 		j, _ := jid.New("", elem.To(), "", true)
 		s.setJID(j)
 	}
 
-	// open stream session
+	// Open stream session.
 	s.sess.SetJID(s.JID())
 	s.sess.Open()
 
@@ -259,8 +256,8 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, startTLS)
 	}
 
-	// attach SASL mechanisms
-	shouldOfferSASL := (!isSocketTr || (isSocketTr && s.IsSecured()))
+	// Attach SASL mechanisms.
+	shouldOfferSASL := !isSocketTr || (isSocketTr && s.IsSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		mechanisms := xmpp.NewElementName("mechanisms")
@@ -273,7 +270,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, mechanisms)
 	}
 
-	// allow In-band registration over encrypted stream only
+	// Allow In-band registration over encrypted stream only.
 	allowRegistration := s.IsSecured()
 
 	if reg := s.mods.Register; reg != nil && allowRegistration {
@@ -288,7 +285,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 
 	isSocketTr := s.cfg.transport.Type() == transport.Socket
 
-	// attach compression feature
+	// Attach compression feature.
 	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
 
 	if !s.IsCompressed() && compressionAvailable {
@@ -326,13 +323,13 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 			if s.IsSecured() {
 				reg.ProcessIQ(iq, s)
 			} else {
-				// channel isn't safe enough to enable a password change
+				// Channel isn't safe enough to enable a password change.
 				s.writeElement(iq.NotAuthorizedError())
 			}
 			return
 
 		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
-			// don't allow non-SASL authentication
+			// Don't allow non-SASL authentication.
 			s.writeElement(iq.ServiceUnavailableError())
 			return
 		}
@@ -371,7 +368,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 		iq := elem.(*xmpp.IQ)
 		if len(s.JID().Resource()) == 0 { // expecting bind
 			s.bindResource(iq)
-		} else { // expecting session
+		} else { // Expecting session
 			s.startSession(iq)
 		}
 
@@ -381,7 +378,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
-	// reset ping timer deadline
+	// Reset ping timer deadline
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -524,7 +521,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	} else {
 		resource = uuid.New()
 	}
-	// try binding...
+	// Try binding...
 	var stm stream.C2S
 	stms := s.router.UserStreams(s.JID().Node())
 	for _, s := range stms {
@@ -535,13 +532,13 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	if stm != nil {
 		switch s.cfg.resourceConflict {
 		case Override:
-			// override the resource with a server-generated resourcepart...
+			// Override the resource with a server-generated resourcepart...
 			resource = uuid.New()
 		case Replace:
-			// terminate the session of the currently connected client...
+			// Terminate the session of the currently connected client...
 			stm.Disconnect(streamerror.ErrResourceConstraint)
 		default:
-			// disallow resource binding attempt...
+			// Disallow resource binding attempt...
 			s.writeElement(iq.ConflictError())
 			return
 		}
@@ -572,7 +569,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 func (s *inStream) startSession(iq *xmpp.IQ) {
 	if len(s.Resource()) == 0 {
-		// not binded yet...
+		// Not binded yet...
 		s.Disconnect(streamerror.ErrNotAuthorized)
 		return
 	}
@@ -583,7 +580,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 	}
 	s.writeElement(iq.ResultIQ())
 
-	// start pinging...
+	// Start pinging...
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -619,7 +616,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		case router.ErrFailedRemoteConnect:
 			s.writeElement(iq.RemoteServerNotFoundError())
 		case router.ErrBlockedJID:
-			// destination user is a blocked JID
+			// Destination user is a blocked JID.
 			if iq.IsGet() || iq.IsSet() {
 				s.writeElement(iq.ServiceUnavailableError())
 			}
@@ -636,18 +633,18 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
 
-	// update context presence
+	// Update context presence.
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 
-		// propagate presence change through the cluster
+		// Let the whole cluster note that there has been a change in our presence.
 		s.router.BroadcastClusterPresence(presence, s.JID())
 	}
-	// deliver presence to roster module
+	// Deliver presence to roster module.
 	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
-	// deliver offline messages
+	// Deliver offline messages.
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
 		if off := s.mods.Offline; off != nil {
 			off.DeliverOfflineMessages(s)
