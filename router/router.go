@@ -12,12 +12,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/model"
-
 	"github.com/ortuman/jackal/cluster"
-	"github.com/ortuman/jackal/pool"
-
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
@@ -55,21 +53,26 @@ type S2SOutProvider interface {
 	GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
+// Cluster represents the generic cluster interface used by router type.
 type Cluster interface {
+	// LocalNode returns local node name.
 	LocalNode() string
+
+	// Broadcast propagates a message to all the cluster.
 	Broadcast(msg []byte) error
+
+	// Send sends a message to a concrete node.
 	Send(msg []byte, toNode string) error
 }
 
 // Router represents an XMPP stanza router.
 type Router struct {
-	pool *pool.BufferPool
-
+	pool           *pool.BufferPool
 	mu             sync.RWMutex
 	cluster        Cluster
 	s2sOutProvider S2SOutProvider
 	hosts          map[string]tls.Certificate
-	localStreams   map[string][]stream.C2S
+	localStreams   map[string]*userStreamList
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -81,7 +84,7 @@ func New(config *Config) (*Router, error) {
 		pool:         pool.NewBufferPool(),
 		hosts:        make(map[string]tls.Certificate),
 		blockLists:   make(map[string][]*jid.JID),
-		localStreams: make(map[string][]stream.C2S),
+		localStreams: make(map[string]*userStreamList),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -134,12 +137,14 @@ func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 	r.s2sOutProvider = s2sOutProvider
 }
 
+// SetCluster sets router cluster interface
 func (r *Router) SetCluster(cluster Cluster) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.cluster = cluster
 }
 
+// ClusterDelegate returns a router cluster delegate interface, so that it can handle cluster events.
 func (r *Router) ClusterDelegate() cluster.Delegate {
 	return &clusterDelegate{r: r}
 }
@@ -150,20 +155,23 @@ func (r *Router) Bind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
+	// bind stream
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if authenticated := r.localStreams[stm.Username()]; authenticated != nil {
-		r.localStreams[stm.Username()] = append(authenticated, stm)
+	if usrStreams := r.localStreams[stm.Username()]; usrStreams != nil {
+		usrStreams.bind(stm)
 	} else {
-		r.localStreams[stm.Username()] = []stream.C2S{stm}
+		r.localStreams[stm.Username()] = &userStreamList{streams: []stream.C2S{stm}}
 	}
+	r.mu.Unlock()
+
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
-	if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
-		log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
-		return
+	if r.cluster != nil {
+		if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
+			return
+		}
 	}
 	return
 }
@@ -174,23 +182,16 @@ func (r *Router) Unbind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
+	// unbind stream
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if resources := r.localStreams[stm.Username()]; resources != nil {
-		res := stm.Resource()
-		for i := 0; i < len(resources); i++ {
-			if res == resources[i].Resource() {
-				resources = append(resources[:i], resources[i+1:]...)
-				break
-			}
-		}
-		if len(resources) > 0 {
-			r.localStreams[stm.Username()] = resources
-		} else {
+	if usrStreams := r.localStreams[stm.Username()]; usrStreams != nil {
+		stmCount := usrStreams.unbind(stm.Resource())
+		if stmCount == 0 {
 			delete(r.localStreams, stm.Username())
 		}
 	}
+	r.mu.Unlock()
+
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'unbind' message
@@ -206,7 +207,10 @@ func (r *Router) Unbind(stm stream.C2S) {
 func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.localStreams[username]
+	if usrStreams := r.localStreams[username]; usrStreams != nil {
+		return usrStreams.all()
+	}
+	return nil
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any of a user's blocking list jid.
@@ -348,10 +352,6 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 }
 
 func (r *Router) broadcastClusterMessage(msg model.GobSerializer) error {
-	if r.cluster == nil {
-		// don't do anything
-		return nil
-	}
 	buf := r.pool.Get()
 	defer r.pool.Put(buf)
 
