@@ -184,8 +184,8 @@ func (r *Router) Bind(stm stream.C2S) {
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.clusterMu.RLock()
+	defer r.clusterMu.RUnlock()
 
 	if r.cluster != nil {
 		msg := newBindMessage(r.cluster.LocalNode(), stm.JID())
@@ -216,8 +216,8 @@ func (r *Router) Unbind(stm stream.C2S) {
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'unbind' message
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.clusterMu.RLock()
+	defer r.clusterMu.RUnlock()
 
 	if r.cluster != nil {
 		msg := newUnbindMessage(r.cluster.LocalNode(), stm.JID())
