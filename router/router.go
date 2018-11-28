@@ -180,15 +180,13 @@ func (r *Router) Bind(stm stream.C2S) {
 		res := stm.Resource()
 		for _, usrStream := range usrStreams {
 			if usrStream.Resource() == res {
-				goto binded // already binded
+				return // already binded
 			}
 		}
 		r.streams[stm.Username()] = append(usrStreams, stm)
 	} else {
 		r.streams[stm.Username()] = []stream.C2S{stm}
 	}
-
-binded:
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
