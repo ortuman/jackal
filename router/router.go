@@ -161,11 +161,9 @@ func (r *Router) Bind(stm stream.C2S) {
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
-	if r.cluster != nil {
-		if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
-			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
-			return
-		}
+	if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+		log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
+		return
 	}
 	return
 }
@@ -350,6 +348,10 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 }
 
 func (r *Router) broadcastClusterMessage(msg model.GobSerializer) error {
+	if r.cluster == nil {
+		// don't do anything
+		return nil
+	}
 	buf := r.pool.Get()
 	defer r.pool.Put(buf)
 
