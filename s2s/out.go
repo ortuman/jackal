@@ -230,7 +230,6 @@ func (s *outStream) handleSecuring(elem xmpp.XElement) {
 	s.cfg.transport.StartTLS(s.cfg.tls, true)
 
 	atomic.StoreUint32(&s.secured, 1)
-
 	s.restartSession()
 	s.sess.Open()
 }
@@ -242,9 +241,9 @@ func (s *outStream) handleAuthenticating(elem xmpp.XElement) {
 	}
 	switch elem.Name() {
 	case "success":
+		atomic.StoreUint32(&s.authenticated, 1)
 		s.restartSession()
 		s.sess.Open()
-		atomic.StoreUint32(&s.authenticated, 1)
 
 	case "failure":
 		s.disconnectWithStreamError(streamerror.ErrRemoteConnectionFailed)
