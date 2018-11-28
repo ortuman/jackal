@@ -73,7 +73,7 @@ type Router struct {
 	cluster        Cluster
 	hosts          map[string]tls.Certificate
 	streams        map[string][]stream.C2S
-	clusterStreams map[string]*clusterC2S
+	clusterStreams map[string][]*clusterC2S
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -86,7 +86,7 @@ func New(config *Config) (*Router, error) {
 		hosts:          make(map[string]tls.Certificate),
 		blockLists:     make(map[string][]*jid.JID),
 		streams:        make(map[string][]stream.C2S),
-		clusterStreams: make(map[string]*clusterC2S),
+		clusterStreams: make(map[string][]*clusterC2S),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
