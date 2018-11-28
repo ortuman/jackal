@@ -210,6 +210,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	found := false
 	if usrStreams := r.streams[stm.Username()]; usrStreams != nil {
 		res := stm.Resource()
 		for i := 0; i < len(usrStreams); i++ {
@@ -220,9 +221,13 @@ func (r *Router) Unbind(stm stream.C2S) {
 				} else {
 					delete(r.streams, stm.Username())
 				}
+				found = true
 				break
 			}
 		}
+	}
+	if !found {
+		return
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
