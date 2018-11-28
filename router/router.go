@@ -72,8 +72,8 @@ type Router struct {
 	s2sOutProvider S2SOutProvider
 	cluster        Cluster
 	hosts          map[string]tls.Certificate
-	userStreams    map[string][]stream.C2S
-	nodeJid        map[string]map[string]*jid.JID
+	streams        map[string][]stream.C2S
+	clusterStreams map[string]*clusterC2S
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -82,10 +82,11 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
-		pool:        pool.NewBufferPool(),
-		hosts:       make(map[string]tls.Certificate),
-		blockLists:  make(map[string][]*jid.JID),
-		userStreams: make(map[string][]stream.C2S),
+		pool:           pool.NewBufferPool(),
+		hosts:          make(map[string]tls.Certificate),
+		blockLists:     make(map[string][]*jid.JID),
+		streams:        make(map[string][]stream.C2S),
+		clusterStreams: make(map[string]*clusterC2S),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -138,7 +139,7 @@ func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 	r.s2sOutProvider = s2sOutProvider
 }
 
-// SetCluster sets router cluster interface
+// SetCluster sets router cluster interface.
 func (r *Router) SetCluster(cluster Cluster) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -175,16 +176,16 @@ func (r *Router) Bind(stm stream.C2S) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if usrStreams := r.userStreams[stm.Username()]; usrStreams != nil {
+	if usrStreams := r.streams[stm.Username()]; usrStreams != nil {
 		res := stm.Resource()
 		for _, usrStream := range usrStreams {
 			if usrStream.Resource() == res {
 				goto binded // already binded
 			}
 		}
-		r.userStreams[stm.Username()] = append(usrStreams, stm)
+		r.streams[stm.Username()] = append(usrStreams, stm)
 	} else {
-		r.userStreams[stm.Username()] = []stream.C2S{stm}
+		r.streams[stm.Username()] = []stream.C2S{stm}
 	}
 
 binded:
@@ -211,7 +212,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if usrStreams := r.userStreams[stm.Username()]; usrStreams != nil {
+	if usrStreams := r.streams[stm.Username()]; usrStreams != nil {
 		res := stm.Resource()
 		for i := 0; i < len(usrStreams); i++ {
 			if res == usrStreams[i].Resource() {
@@ -220,9 +221,9 @@ func (r *Router) Unbind(stm stream.C2S) {
 			}
 		}
 		if len(usrStreams) > 0 {
-			r.userStreams[stm.Username()] = usrStreams
+			r.streams[stm.Username()] = usrStreams
 		} else {
-			delete(r.userStreams, stm.Username())
+			delete(r.streams, stm.Username())
 		}
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
@@ -241,7 +242,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.userStreams[username]
+	return r.streams[username]
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any of a user's blocking list jid.
