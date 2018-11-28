@@ -7,9 +7,21 @@ package xmpp
 
 import (
 	"encoding/gob"
+	"fmt"
 	"io"
 
 	"github.com/ortuman/jackal/xmpp/jid"
+)
+
+const (
+	// MessageName represents "message" stanza name
+	MessageName = "message"
+
+	// PresenceName represents "presence" stanza name
+	PresenceName = "presence"
+
+	// IQName represents "iq" stanza name
+	IQName = "iq"
 )
 
 // Element represents a generic and mutable XML node element.
@@ -214,6 +226,27 @@ type stanzaElement struct {
 	Element
 	fromJID *jid.JID
 	toJID   *jid.JID
+}
+
+// NewStanzaFromElement returns a new stanza instance derived from an XMPP element.
+func NewStanzaFromElement(elem XElement) (Stanza, error) {
+	fromJID, err := jid.NewWithString(elem.From(), false)
+	if err != nil {
+		return nil, err
+	}
+	toJID, err := jid.NewWithString(elem.To(), false)
+	if err != nil {
+		return nil, err
+	}
+	switch elem.Name() {
+	case IQName:
+		return NewIQFromElement(elem, fromJID, toJID)
+	case PresenceName:
+		return NewPresenceFromElement(elem, fromJID, toJID)
+	case MessageName:
+		return NewMessageFromElement(elem, fromJID, toJID)
+	}
+	return nil, fmt.Errorf("unrecognized stanza name: %s", elem.Name())
 }
 
 // ToJID returns iq 'from' JID value.

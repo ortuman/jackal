@@ -7,8 +7,12 @@ package router
 
 import (
 	"crypto/tls"
+	"encoding/gob"
 	"errors"
+	"fmt"
 	"sync"
+
+	"github.com/ortuman/jackal/model"
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/pool"
@@ -136,6 +140,10 @@ func (r *Router) SetCluster(cluster Cluster) {
 	r.cluster = cluster
 }
 
+func (r *Router) ClusterDelegate() cluster.Delegate {
+	return &clusterDelegate{r: r}
+}
+
 // Bind marks a c2s stream as binded.
 // An error will be returned in case no assigned resource is found.
 func (r *Router) Bind(stm stream.C2S) {
@@ -152,8 +160,12 @@ func (r *Router) Bind(stm stream.C2S) {
 	}
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
-	// broadcast 'bind' cluster message
+	// broadcast cluster 'bind' message
 	if r.cluster != nil {
+		if err := r.broadcastClusterMessage(newBindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
+			return
+		}
 	}
 	return
 }
@@ -183,8 +195,12 @@ func (r *Router) Unbind(stm stream.C2S) {
 	}
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
-	// broadcast 'unbind' cluster message
+	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
+		if err := r.broadcastClusterMessage(newUnbindMessage(r.cluster.LocalNode(), stm.JID())); err != nil {
+			log.Error(fmt.Errorf("couldn't broadcast cluster unbind message: %s", err))
+			return
+		}
 	}
 }
 
@@ -195,8 +211,7 @@ func (r *Router) UserStreams(username string) []stream.C2S {
 	return r.localStreams[username]
 }
 
-// IsBlockedJID returns whether or not the passed jid matches any
-// of a user's blocking list jid.
+// IsBlockedJID returns whether or not the passed jid matches any of a user's blocking list jid.
 func (r *Router) IsBlockedJID(jid *jid.JID, username string) bool {
 	bl := r.getBlockList(username)
 	for _, blkJID := range bl {
@@ -207,8 +222,7 @@ func (r *Router) IsBlockedJID(jid *jid.JID, username string) bool {
 	return false
 }
 
-// ReloadBlockList reloads in memory block list for a given user and starts
-// applying it for future stanza routing.
+// ReloadBlockList reloads in memory block list for a given user and starts applying it for future stanza routing.
 func (r *Router) ReloadBlockList(username string) {
 	r.blockListsMu.Lock()
 	defer r.blockListsMu.Unlock()
@@ -227,10 +241,6 @@ func (r *Router) Route(stanza xmpp.Stanza) error {
 // ignoring blocking lists.
 func (r *Router) MustRoute(stanza xmpp.Stanza) error {
 	return r.route(stanza, true)
-}
-
-func (r *Router) ClusterDelegate() cluster.Delegate {
-	return &clusterDelegate{r: r}
 }
 
 func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
@@ -337,4 +347,23 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 	}
 	out.SendElement(elem)
 	return nil
+}
+
+func (r *Router) broadcastClusterMessage(msg model.GobSerializer) error {
+	buf := r.pool.Get()
+	defer r.pool.Put(buf)
+
+	switch msg.(type) {
+	case *bindMessage:
+		buf.WriteByte(msgBindType)
+	case *unbindMessage:
+		buf.WriteByte(msgUnbindType)
+	case *broadcastPresenceMessage:
+		buf.WriteByte(msgBroadcastPresenceType)
+	default:
+		return fmt.Errorf("cannot broadcast message of type: %T", msg)
+	}
+	enc := gob.NewEncoder(buf)
+	msg.ToGob(enc)
+	return r.cluster.Broadcast(buf.Bytes())
 }

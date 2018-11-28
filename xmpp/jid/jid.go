@@ -56,7 +56,11 @@ func New(node, domain, resource string, skipStringPrep bool) (*JID, error) {
 			resource: resource,
 		}, nil
 	}
-	return stringPrep(node, domain, resource)
+	var j JID
+	if err := j.stringPrep(node, domain, resource); err != nil {
+		return nil, err
+	}
+	return &j, nil
 }
 
 // NewWithString constructs a JID from it's string representation.
@@ -102,6 +106,15 @@ func NewWithString(str string, skipStringPrep bool) (*JID, error) {
 		}
 	}
 	return New(node, domain, resource, skipStringPrep)
+}
+
+// NewWithString constructs a JID from it's gob binary representation.
+func NewFromGob(dec *gob.Decoder) (*JID, error) {
+	var j JID
+	if err := j.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return &j, nil
 }
 
 // Node returns the node, or empty string if this JID does not contain node information.
@@ -184,9 +197,13 @@ func (j *JID) String() string {
 
 // FromGob deserializes a JID entity from it's gob binary representation.
 func (j *JID) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&j.node)
-	dec.Decode(&j.domain)
-	dec.Decode(&j.resource)
+	var node, domain, resource string
+	dec.Decode(&node)
+	dec.Decode(&domain)
+	dec.Decode(&resource)
+	if err := j.stringPrep(node, domain, resource); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -197,12 +214,12 @@ func (j *JID) ToGob(enc *gob.Encoder) {
 	enc.Encode(&j.resource)
 }
 
-func stringPrep(node, domain, resource string) (*JID, error) {
+func (j *JID) stringPrep(node, domain, resource string) error {
 	// Ensure that parts are valid UTF-8 (and short circuit the rest of the
 	// process if they're not). We'll check the domain after performing
 	// the IDNA ToUnicode operation.
 	if !utf8.ValidString(node) || !utf8.ValidString(resource) {
-		return nil, errors.New("JID contains invalid UTF-8")
+		return errors.New("JID contains invalid UTF-8")
 	}
 
 	// RFC 7622 §3.2.1.  Preparation
@@ -216,10 +233,10 @@ func stringPrep(node, domain, resource string) (*JID, error) {
 	var err error
 	domain, err = idna.ToUnicode(domain)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !utf8.ValidString(domain) {
-		return nil, errors.New("domain contains invalid UTF-8")
+		return errors.New("domain contains invalid UTF-8")
 	}
 
 	// RFC 7622 §3.2.2.  Enforcement
@@ -229,32 +246,31 @@ func stringPrep(node, domain, resource string) (*JID, error) {
 	//   the normalization, case-mapping, and width-mapping rules defined in
 	//   [RFC5892].
 	//
-	var nodelen int
+	var nodeLen int
 	data := make([]byte, 0, len(node)+len(domain)+len(resource))
 
 	if node != "" {
 		data, err = precis.UsernameCaseMapped.Append(data, []byte(node))
 		if err != nil {
-			return nil, err
+			return err
 		}
-		nodelen = len(data)
+		nodeLen = len(data)
 	}
 	data = append(data, []byte(domain)...)
 
 	if resource != "" {
 		data, err = precis.OpaqueString.Append(data, []byte(resource))
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	if err := commonChecks(data[:nodelen], domain, data[nodelen+len(domain):]); err != nil {
-		return nil, err
+	if err := commonChecks(data[:nodeLen], domain, data[nodeLen+len(domain):]); err != nil {
+		return err
 	}
-	return &JID{
-		node:     string(data[:nodelen]),
-		domain:   string(data[nodelen : nodelen+len(domain)]),
-		resource: string(data[nodelen+len(domain):]),
-	}, nil
+	j.node = string(data[:nodeLen])
+	j.domain = string(data[nodeLen : nodeLen+len(domain)])
+	j.resource = string(data[nodeLen+len(domain):])
+	return nil
 }
 
 func commonChecks(node []byte, domain string, resource []byte) error {

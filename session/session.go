@@ -246,7 +246,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 		return nil, err
 	}
 	switch elem.Name() {
-	case "iq":
+	case xmpp.IQName:
 		iq, err := xmpp.NewIQFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
@@ -254,7 +254,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 		}
 		return iq, nil
 
-	case "presence":
+	case xmpp.PresenceName:
 		presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
@@ -262,7 +262,7 @@ func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
 		}
 		return presence, nil
 
-	case "message":
+	case xmpp.MessageName:
 		message, err := xmpp.NewMessageFromElement(elem, fromJID, toJID)
 		if err != nil {
 			log.Error(err)
