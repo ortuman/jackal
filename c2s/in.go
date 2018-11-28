@@ -642,7 +642,7 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 
-		// broadcast presence change in the cluster
+		// propagate presence change through the cluster
 		s.router.BroadcastPresence(presence, s.JID())
 	}
 	// deliver presence to roster module
