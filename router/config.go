@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/util"
 )
 
+// Config represents a router configuration.
 type Config struct {
 	Hosts []HostConfig `yaml:"hosts"`
 }
@@ -20,6 +21,7 @@ type tlsConfig struct {
 	PrivKeyFile string `yaml:"privkey_path"`
 }
 
+// HostConfig represents a host specific configuration.
 type HostConfig struct {
 	Name        string
 	Certificate tls.Certificate

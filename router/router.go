@@ -70,11 +70,10 @@ type Router struct {
 	pool           *pool.BufferPool
 	mu             sync.RWMutex
 	s2sOutProvider S2SOutProvider
+	cluster        Cluster
 	hosts          map[string]tls.Certificate
-	userMap        map[string]*userStreamList
-
-	clusterMu sync.RWMutex
-	cluster   Cluster
+	userStreams    map[string][]stream.C2S
+	nodeJid        map[string]map[string]*jid.JID
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -83,10 +82,10 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
-		pool:       pool.NewBufferPool(),
-		hosts:      make(map[string]tls.Certificate),
-		blockLists: make(map[string][]*jid.JID),
-		userMap:    make(map[string]*userStreamList),
+		pool:        pool.NewBufferPool(),
+		hosts:       make(map[string]tls.Certificate),
+		blockLists:  make(map[string][]*jid.JID),
+		userStreams: make(map[string][]stream.C2S),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -141,15 +140,15 @@ func (r *Router) SetS2SOutProvider(s2sOutProvider S2SOutProvider) {
 
 // SetCluster sets router cluster interface
 func (r *Router) SetCluster(cluster Cluster) {
-	r.clusterMu.Lock()
-	defer r.clusterMu.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.cluster = cluster
 }
 
 // BroadcastPresence broadcasts a presence associated to a jid to be updated in the whole cluster.
 func (r *Router) BroadcastPresence(presence *xmpp.Presence, jid *jid.JID) {
-	r.clusterMu.RLock()
-	defer r.clusterMu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	// broadcast cluster 'presence' message
 	if r.cluster != nil {
@@ -174,19 +173,24 @@ func (r *Router) Bind(stm stream.C2S) {
 	}
 	// bind stream
 	r.mu.Lock()
-	if usrStreams := r.userMap[stm.Username()]; usrStreams != nil {
-		usrStreams.bind(stm)
-	} else {
-		r.userMap[stm.Username()] = &userStreamList{streams: []stream.C2S{stm}}
-	}
-	r.mu.Unlock()
+	defer r.mu.Unlock()
 
+	if usrStreams := r.userStreams[stm.Username()]; usrStreams != nil {
+		res := stm.Resource()
+		for _, usrStream := range usrStreams {
+			if usrStream.Resource() == res {
+				goto binded // already binded
+			}
+		}
+		r.userStreams[stm.Username()] = append(usrStreams, stm)
+	} else {
+		r.userStreams[stm.Username()] = []stream.C2S{stm}
+	}
+
+binded:
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
-	r.clusterMu.RLock()
-	defer r.clusterMu.RUnlock()
-
 	if r.cluster != nil {
 		msg := newBindMessage(r.cluster.LocalNode(), stm.JID())
 		if err := r.broadcastClusterMessage(msg); err != nil {
@@ -205,20 +209,25 @@ func (r *Router) Unbind(stm stream.C2S) {
 	}
 	// unbind stream
 	r.mu.Lock()
-	if usrStreams := r.userMap[stm.Username()]; usrStreams != nil {
-		stmCount := usrStreams.unbind(stm.Resource())
-		if stmCount == 0 {
-			delete(r.userMap, stm.Username())
+	defer r.mu.Unlock()
+
+	if usrStreams := r.userStreams[stm.Username()]; usrStreams != nil {
+		res := stm.Resource()
+		for i := 0; i < len(usrStreams); i++ {
+			if res == usrStreams[i].Resource() {
+				usrStreams = append(usrStreams[:i], usrStreams[i+1:]...)
+				break
+			}
+		}
+		if len(usrStreams) > 0 {
+			r.userStreams[stm.Username()] = usrStreams
+		} else {
+			delete(r.userStreams, stm.Username())
 		}
 	}
-	r.mu.Unlock()
-
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'unbind' message
-	r.clusterMu.RLock()
-	defer r.clusterMu.RUnlock()
-
 	if r.cluster != nil {
 		msg := newUnbindMessage(r.cluster.LocalNode(), stm.JID())
 		if err := r.broadcastClusterMessage(msg); err != nil {
@@ -232,10 +241,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if usrStreams := r.userMap[username]; usrStreams != nil {
-		return usrStreams.all()
-	}
-	return nil
+	return r.userStreams[username]
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any of a user's blocking list jid.
