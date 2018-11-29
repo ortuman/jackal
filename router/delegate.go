@@ -14,7 +14,7 @@ type clusterDelegate struct {
 	r *Router
 }
 
-func (d *clusterDelegate) NotifyMessage(msg []byte) {
+func (d *clusterDelegate) NotifyMessage(msg interface{}) {
 }
 
 func (d *clusterDelegate) NodeJoined(node *cluster.Node) {

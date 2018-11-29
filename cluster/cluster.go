@@ -6,9 +6,18 @@
 package cluster
 
 import (
+	"encoding/gob"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
+
+	"github.com/ortuman/jackal/xmpp"
+
+	"github.com/ortuman/jackal/xmpp/jid"
+
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/pool"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -20,20 +29,19 @@ type Node struct {
 }
 
 type Delegate interface {
-	NotifyMessage([]byte)
+	NotifyMessage(interface{})
 	NodeJoined(node *Node)
 	NodeUpdated(node *Node)
 	NodeLeft(node *Node)
 }
 
 type Cluster struct {
-	cfg        *Config
-	delegate   Delegate
-	memberList *memberlist.Memberlist
-
-	membersMu sync.RWMutex
-	members   map[string]*memberlist.Node
-
+	cfg            *Config
+	pool           *pool.BufferPool
+	delegate       Delegate
+	memberList     *memberlist.Memberlist
+	membersMu      sync.RWMutex
+	members        map[string]*memberlist.Node
 	broadcastQueue *memberlist.TransmitLimitedQueue
 }
 
@@ -42,6 +50,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		return nil, nil
 	}
 	c := &Cluster{
+		pool:    pool.NewBufferPool(),
 		members: make(map[string]*memberlist.Node),
 	}
 	c.cfg = config
@@ -75,9 +84,51 @@ func (c *Cluster) LocalNode() string {
 	return c.memberList.LocalNode().Name
 }
 
-func (c *Cluster) Broadcast(msg []byte) error {
+func (c *Cluster) BroadcastBindMessage(jid *jid.JID) error {
+	return c.broadcast(&UnbindMessage{baseMessage{
+		Node: c.LocalNode(),
+		JID:  jid},
+	})
+}
+
+func (c *Cluster) BroadcastUnbindMessage(jid *jid.JID) error {
+	return c.broadcast(&UnbindMessage{baseMessage{
+		Node: c.LocalNode(),
+		JID:  jid,
+	},
+	})
+}
+
+func (c *Cluster) BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) error {
+	return c.broadcast(&UpdatePresenceMessage{baseMessage{
+		Node: c.LocalNode(),
+		JID:  jid},
+		presence,
+	})
+}
+
+func (c *Cluster) broadcast(msg model.GobSerializer) error {
+	buf := c.pool.Get()
+	defer c.pool.Put(buf)
+
+	switch msg.(type) {
+	case *BindMessage:
+		buf.WriteByte(msgBindType)
+	case *UnbindMessage:
+		buf.WriteByte(msgUnbindType)
+	case *UpdatePresenceMessage:
+		buf.WriteByte(msgUpdatePresenceType)
+	default:
+		return fmt.Errorf("cannot broadcast message of type: %T", msg)
+	}
+	enc := gob.NewEncoder(buf)
+	msg.ToGob(enc)
+
+	msgBytes := make([]byte, buf.Len(), buf.Len())
+	copy(msgBytes, buf.Bytes())
+
 	c.broadcastQueue.QueueBroadcast(&broadcast{
-		msg: msg,
+		msg: msgBytes,
 	})
 	return nil
 }

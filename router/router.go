@@ -7,15 +7,12 @@ package router
 
 import (
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
@@ -58,22 +55,21 @@ type Cluster interface {
 	// LocalNode returns local node name.
 	LocalNode() string
 
-	// Broadcast propagates a message to all the cluster.
-	Broadcast(msg []byte) error
+	BroadcastBindMessage(jid *jid.JID) error
 
-	// Send sends a message to a concrete node.
-	Send(msg []byte, toNode string) error
+	BroadcastUnbindMessage(jid *jid.JID) error
+
+	BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) error
 }
 
 // Router represents an XMPP stanza router.
 type Router struct {
-	pool           *pool.BufferPool
 	mu             sync.RWMutex
 	outS2SProvider OutS2SProvider
 	cluster        Cluster
 	hosts          map[string]tls.Certificate
 	streams        map[string][]stream.C2S
-	clusterStreams map[string][]*clusterC2S
+	clusterStreams map[string][]*cluster.C2S
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -82,11 +78,10 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
-		pool:           pool.NewBufferPool(),
 		hosts:          make(map[string]tls.Certificate),
 		blockLists:     make(map[string][]*jid.JID),
 		streams:        make(map[string][]stream.C2S),
-		clusterStreams: make(map[string][]*clusterC2S),
+		clusterStreams: make(map[string][]*cluster.C2S),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -153,8 +148,7 @@ func (r *Router) BroadcastClusterPresence(presence *xmpp.Presence, jid *jid.JID)
 
 	// broadcast cluster 'presence' message
 	if r.cluster != nil {
-		msg := newPresenceMessage(r.cluster.LocalNode(), jid, presence)
-		if err := r.broadcastClusterMessage(msg); err != nil {
+		if err := r.cluster.BroadcastUpdatePresenceMessage(jid, presence); err != nil {
 			log.Error(fmt.Errorf("couldn't broadcast cluster presence message: %s", err))
 			return
 		}
@@ -191,8 +185,7 @@ func (r *Router) Bind(stm stream.C2S) {
 
 	// broadcast cluster 'bind' message
 	if r.cluster != nil {
-		msg := newBindMessage(r.cluster.LocalNode(), stm.JID())
-		if err := r.broadcastClusterMessage(msg); err != nil {
+		if err := r.cluster.BroadcastBindMessage(stm.JID()); err != nil {
 			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
 			return
 		}
@@ -233,8 +226,7 @@ func (r *Router) Unbind(stm stream.C2S) {
 
 	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
-		msg := newUnbindMessage(r.cluster.LocalNode(), stm.JID())
-		if err := r.broadcastClusterMessage(msg); err != nil {
+		if err := r.cluster.BroadcastUnbindMessage(stm.JID()); err != nil {
 			log.Error(fmt.Errorf("couldn't broadcast cluster unbind message: %s", err))
 			return
 		}
@@ -384,23 +376,4 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 	}
 	out.SendElement(elem)
 	return nil
-}
-
-func (r *Router) broadcastClusterMessage(msg model.GobSerializer) error {
-	buf := r.pool.Get()
-	defer r.pool.Put(buf)
-
-	switch msg.(type) {
-	case *bindMessage:
-		buf.WriteByte(msgBindType)
-	case *unbindMessage:
-		buf.WriteByte(msgUnbindType)
-	case *broadcastPresenceMessage:
-		buf.WriteByte(msgBroadcastPresenceType)
-	default:
-		return fmt.Errorf("cannot broadcast message of type: %T", msg)
-	}
-	enc := gob.NewEncoder(buf)
-	msg.ToGob(enc)
-	return r.cluster.Broadcast(buf.Bytes())
 }
