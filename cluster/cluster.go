@@ -12,12 +12,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/log"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+const clusterMailboxSize = 4096
 
 const leaveTimeout = time.Second * 5
 
@@ -39,6 +43,7 @@ type Cluster struct {
 	memberList *memberlist.Memberlist
 	membersMu  sync.RWMutex
 	members    map[string]*memberlist.Node
+	actorCh    chan func()
 }
 
 func New(config *Config, delegate Delegate) (*Cluster, error) {
@@ -48,6 +53,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 	c := &Cluster{
 		pool:    pool.NewBufferPool(),
 		members: make(map[string]*memberlist.Node),
+		actorCh: make(chan func(), clusterMailboxSize),
 	}
 	c.cfg = config
 	c.delegate = delegate
@@ -74,41 +80,54 @@ func (c *Cluster) LocalNode() string {
 	return c.memberList.LocalNode().Name
 }
 
-func (c *Cluster) BroadcastBindMessage(jid *jid.JID) error {
-	return c.broadcast(&BindMessage{baseMessage{
-		Node: c.LocalNode(),
-		JID:  jid},
-	})
-}
-
-func (c *Cluster) BroadcastUnbindMessage(jid *jid.JID) error {
-	return c.broadcast(&UnbindMessage{baseMessage{
-		Node: c.LocalNode(),
-		JID:  jid,
-	},
-	})
-}
-
-func (c *Cluster) BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) error {
-	return c.broadcast(&UpdatePresenceMessage{baseMessage{
-		Node: c.LocalNode(),
-		JID:  jid},
-		presence,
-	})
-}
-
 func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
 	return newC2S(identifier, jid, node, c)
 }
 
-func (c *Cluster) Send(msg []byte, toNode string) error {
-	c.membersMu.RLock()
-	node := c.members[toNode]
-	c.membersMu.RUnlock()
-	if node == nil {
-		return nil
+func (c *Cluster) BroadcastBindMessage(jid *jid.JID) {
+	c.actorCh <- func() {
+		err := c.broadcast(&BindMessage{baseMessage{
+			Node: c.LocalNode(),
+			JID:  jid},
+		})
+		if err != nil {
+			log.Error(err)
+		}
 	}
-	return c.memberList.SendReliable(node, msg)
+}
+
+func (c *Cluster) BroadcastUnbindMessage(jid *jid.JID) {
+	c.actorCh <- func() {
+		err := c.broadcast(&UnbindMessage{baseMessage{
+			Node: c.LocalNode(),
+			JID:  jid,
+		},
+		})
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+func (c *Cluster) BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) {
+	c.actorCh <- func() {
+		err := c.broadcast(&UpdatePresenceMessage{baseMessage{
+			Node: c.LocalNode(),
+			JID:  jid},
+			presence,
+		})
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+func (c *Cluster) Send(msg []byte, toNode string) {
+	c.actorCh <- func() {
+		if err := c.send(msg, toNode); err != nil {
+			log.Error(err)
+		}
+	}
 }
 
 func (c *Cluster) Shutdown() error {
@@ -116,9 +135,28 @@ func (c *Cluster) Shutdown() error {
 		if err := c.memberList.Leave(leaveTimeout); err != nil {
 			return err
 		}
-		return c.memberList.Shutdown()
+		if err := c.memberList.Shutdown(); err != nil {
+			return err
+		}
+		close(c.actorCh)
 	}
 	return nil
+}
+
+func (c *Cluster) loop() {
+	for f := range c.actorCh {
+		f()
+	}
+}
+
+func (c *Cluster) send(msg []byte, toNode string) error {
+	c.membersMu.RLock()
+	node := c.members[toNode]
+	c.membersMu.RUnlock()
+	if node == nil {
+		return nil
+	}
+	return c.memberList.SendReliable(node, msg)
 }
 
 func (c *Cluster) broadcast(msg model.GobSerializer) error {

@@ -8,7 +8,6 @@ package router
 import (
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
@@ -55,13 +54,13 @@ type Cluster interface {
 	// LocalNode returns local node name.
 	LocalNode() string
 
-	BroadcastBindMessage(jid *jid.JID) error
-
-	BroadcastUnbindMessage(jid *jid.JID) error
-
-	BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) error
-
 	C2SStream(identifier string, jid *jid.JID, node string) *cluster.C2S
+
+	BroadcastBindMessage(jid *jid.JID)
+
+	BroadcastUnbindMessage(jid *jid.JID)
+
+	BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence)
 }
 
 // Router represents an XMPP stanza router.
@@ -71,6 +70,7 @@ type Router struct {
 	cluster        Cluster
 	hosts          map[string]tls.Certificate
 	streams        map[string][]stream.C2S
+	localJIDs      map[string]*jid.JID
 	clusterStreams map[string][]*cluster.C2S
 
 	blockListsMu sync.RWMutex
@@ -83,6 +83,7 @@ func New(config *Config) (*Router, error) {
 		hosts:          make(map[string]tls.Certificate),
 		blockLists:     make(map[string][]*jid.JID),
 		streams:        make(map[string][]stream.C2S),
+		localJIDs:      make(map[string]*jid.JID),
 		clusterStreams: make(map[string][]*cluster.C2S),
 	}
 	if len(config.Hosts) > 0 {
@@ -143,17 +144,14 @@ func (r *Router) SetCluster(cluster Cluster) {
 	r.cluster = cluster
 }
 
-// BroadcastClusterPresence updates a presence associated to a jid in the whole cluster.
-func (r *Router) BroadcastClusterPresence(presence *xmpp.Presence, jid *jid.JID) {
+// UpdateClusterPresence updates a presence associated to a jid in the whole cluster.
+func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, jid *jid.JID) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	// broadcast cluster 'presence' message
 	if r.cluster != nil {
-		if err := r.cluster.BroadcastUpdatePresenceMessage(jid, presence); err != nil {
-			log.Error(fmt.Errorf("couldn't broadcast cluster presence message: %s", err))
-			return
-		}
+		r.cluster.BroadcastUpdatePresenceMessage(jid, presence)
 	}
 }
 
@@ -183,14 +181,13 @@ func (r *Router) Bind(stm stream.C2S) {
 	} else {
 		r.streams[stm.Username()] = []stream.C2S{stm}
 	}
+	r.localJIDs[stm.JID().String()] = stm.JID()
+
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
 	if r.cluster != nil {
-		if err := r.cluster.BroadcastBindMessage(stm.JID()); err != nil {
-			log.Error(fmt.Errorf("couldn't broadcast cluster bind message: %s", err))
-			return
-		}
+		r.cluster.BroadcastBindMessage(stm.JID())
 	}
 	return
 }
@@ -224,14 +221,13 @@ func (r *Router) Unbind(stm stream.C2S) {
 	if !found {
 		return
 	}
+	delete(r.localJIDs, stm.JID().String())
+
 	log.Infof("unbinded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
-		if err := r.cluster.BroadcastUnbindMessage(stm.JID()); err != nil {
-			log.Error(fmt.Errorf("couldn't broadcast cluster unbind message: %s", err))
-			return
-		}
+		r.cluster.BroadcastUnbindMessage(stm.JID())
 	}
 }
 

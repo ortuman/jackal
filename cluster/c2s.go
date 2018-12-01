@@ -5,13 +5,10 @@ import (
 	"encoding/gob"
 	"sync"
 
-	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
-
-const c2sMailboxSize = 4096
 
 type C2S struct {
 	identifier string
@@ -21,7 +18,6 @@ type C2S struct {
 	jid        *jid.JID
 	presenceMu sync.RWMutex
 	presence   *xmpp.Presence
-	actorCh    chan func()
 }
 
 func newC2S(identifier string, jid *jid.JID, node string, cluster *Cluster) *C2S {
@@ -32,9 +28,7 @@ func newC2S(identifier string, jid *jid.JID, node string, cluster *Cluster) *C2S
 		node:       node,
 		jid:        jid,
 		presence:   xmpp.NewPresence(jid, jid, xmpp.UnavailableType),
-		actorCh:    make(chan func(), c2sMailboxSize),
 	}
-	go s.loop()
 	return s
 }
 
@@ -76,12 +70,6 @@ func (s *C2S) Disconnect(err error) {
 }
 
 func (s *C2S) SendElement(elem xmpp.XElement) {
-	s.actorCh <- func() {
-		s.sendElement(elem)
-	}
-}
-
-func (s *C2S) sendElement(elem xmpp.XElement) {
 	stanza, ok := elem.(xmpp.Stanza)
 	if !ok {
 		return
@@ -95,23 +83,11 @@ func (s *C2S) sendElement(elem xmpp.XElement) {
 	}
 	enc := gob.NewEncoder(s.buf)
 	msg.ToGob(enc)
-	if err := s.cluster.Send(s.buf.Bytes(), s.node); err != nil {
-		log.Error(err)
-	}
-}
-
-func (s *C2S) loop() {
-	for f := range s.actorCh {
-		f()
-	}
+	s.cluster.Send(s.buf.Bytes(), s.node)
 }
 
 func (s *C2S) setPresence(presence *xmpp.Presence) {
 	s.presenceMu.Lock()
 	s.presence = presence
 	s.presenceMu.Unlock()
-}
-
-func (s *C2S) close() {
-	close(s.actorCh)
 }
