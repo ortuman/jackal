@@ -67,12 +67,12 @@ func (bpm *UpdatePresenceMessage) ToGob(enc *gob.Encoder) {
 	bpm.Presence.ToGob(enc)
 }
 
-type sendStanzaMessage struct {
+type StanzaMessage struct {
 	baseMessage
 	Stanza xmpp.Stanza
 }
 
-func (ssm *sendStanzaMessage) FromGob(dec *gob.Decoder) error {
+func (ssm *StanzaMessage) FromGob(dec *gob.Decoder) error {
 	ssm.baseMessage.FromGob(dec)
 	s, err := xmpp.NewStanzaFromElement(xmpp.NewElementFromGob(dec))
 	if err != nil {
@@ -82,7 +82,7 @@ func (ssm *sendStanzaMessage) FromGob(dec *gob.Decoder) error {
 	return nil
 }
 
-func (ssm *sendStanzaMessage) ToGob(enc *gob.Encoder) {
+func (ssm *StanzaMessage) ToGob(enc *gob.Encoder) {
 	ssm.baseMessage.ToGob(enc)
 	ssm.Stanza.ToGob(enc)
 }

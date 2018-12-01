@@ -12,14 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/xmpp"
-
-	"github.com/ortuman/jackal/xmpp/jid"
-
+	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/pool"
-
-	"github.com/hashicorp/memberlist"
+	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 const leaveTimeout = time.Second * 5
@@ -134,7 +131,13 @@ func (c *Cluster) broadcast(msg model.GobSerializer) error {
 }
 
 func (c *Cluster) Send(msg []byte, toNode string) error {
-	return nil
+	c.membersMu.RLock()
+	node := c.members[toNode]
+	c.membersMu.RUnlock()
+	if node == nil {
+		return nil
+	}
+	return c.memberList.SendReliable(node, msg)
 }
 
 func (c *Cluster) Shutdown() error {
