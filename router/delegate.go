@@ -15,6 +15,7 @@ type clusterDelegate struct {
 }
 
 func (d *clusterDelegate) NotifyMessage(msg interface{}) {
+	log.Infof("received message! %T", msg)
 }
 
 func (d *clusterDelegate) NodeJoined(node *cluster.Node) {

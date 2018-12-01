@@ -33,13 +33,12 @@ type Delegate interface {
 }
 
 type Cluster struct {
-	cfg            *Config
-	pool           *pool.BufferPool
-	delegate       Delegate
-	memberList     *memberlist.Memberlist
-	membersMu      sync.RWMutex
-	members        map[string]*memberlist.Node
-	broadcastQueue *memberlist.TransmitLimitedQueue
+	cfg        *Config
+	pool       *pool.BufferPool
+	delegate   Delegate
+	memberList *memberlist.Memberlist
+	membersMu  sync.RWMutex
+	members    map[string]*memberlist.Node
 }
 
 func New(config *Config, delegate Delegate) (*Cluster, error) {
@@ -63,12 +62,6 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		return nil, err
 	}
 	c.memberList = ml
-
-	// setup broadcast queue
-	c.broadcastQueue = &memberlist.TransmitLimitedQueue{
-		NumNodes:       c.NumNodes,
-		RetransmitMult: conf.RetransmitMult,
-	}
 	return c, nil
 }
 
@@ -82,7 +75,7 @@ func (c *Cluster) LocalNode() string {
 }
 
 func (c *Cluster) BroadcastBindMessage(jid *jid.JID) error {
-	return c.broadcast(&UnbindMessage{baseMessage{
+	return c.broadcast(&BindMessage{baseMessage{
 		Node: c.LocalNode(),
 		JID:  jid},
 	})
@@ -104,30 +97,8 @@ func (c *Cluster) BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Pr
 	})
 }
 
-func (c *Cluster) broadcast(msg model.GobSerializer) error {
-	buf := c.pool.Get()
-	defer c.pool.Put(buf)
-
-	switch msg.(type) {
-	case *BindMessage:
-		buf.WriteByte(msgBindType)
-	case *UnbindMessage:
-		buf.WriteByte(msgUnbindType)
-	case *UpdatePresenceMessage:
-		buf.WriteByte(msgUpdatePresenceType)
-	default:
-		return fmt.Errorf("cannot broadcast message of type: %T", msg)
-	}
-	enc := gob.NewEncoder(buf)
-	msg.ToGob(enc)
-
-	msgBytes := make([]byte, buf.Len(), buf.Len())
-	copy(msgBytes, buf.Bytes())
-
-	c.broadcastQueue.QueueBroadcast(&broadcast{
-		msg: msgBytes,
-	})
-	return nil
+func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
+	return newC2S(identifier, jid, node, c)
 }
 
 func (c *Cluster) Send(msg []byte, toNode string) error {
@@ -150,10 +121,34 @@ func (c *Cluster) Shutdown() error {
 	return nil
 }
 
-func (c *Cluster) NumNodes() int {
-	c.membersMu.Lock()
-	defer c.membersMu.Unlock()
-	return len(c.members)
+func (c *Cluster) broadcast(msg model.GobSerializer) error {
+	buf := c.pool.Get()
+	defer c.pool.Put(buf)
+
+	switch msg.(type) {
+	case *BindMessage:
+		buf.WriteByte(msgBindType)
+	case *UnbindMessage:
+		buf.WriteByte(msgUnbindType)
+	case *UpdatePresenceMessage:
+		buf.WriteByte(msgUpdatePresenceType)
+	default:
+		return fmt.Errorf("cannot broadcast message of type: %T", msg)
+	}
+	enc := gob.NewEncoder(buf)
+	msg.ToGob(enc)
+
+	msgBytes := make([]byte, buf.Len(), buf.Len())
+	copy(msgBytes, buf.Bytes())
+
+	c.membersMu.RLock()
+	defer c.membersMu.RUnlock()
+	for _, node := range c.members {
+		if err := c.memberList.SendReliable(node, msgBytes); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
@@ -183,7 +178,7 @@ func (c *Cluster) handleNotifyUpdate(n *memberlist.Node) {
 	}
 }
 
-func (c *Cluster) handleNotifyMsg(msg []byte) {
+func (c *Cluster) handleNotifyMsg(msg interface{}) {
 	if c.delegate != nil {
 		c.delegate.NotifyMessage(msg)
 	}

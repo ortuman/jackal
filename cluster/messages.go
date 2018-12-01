@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	msgBindType byte = 1
-	msgUnbindType
-	msgUpdatePresenceType
-	msgSendStanzaType
+	msgBindType           byte = 1 << 0
+	msgUnbindType         byte = 1 << 2
+	msgUpdatePresenceType byte = 1 << 3
+	msgRouteStanzaType    byte = 1 << 4
 )
 
 type baseMessage struct {
@@ -53,7 +53,7 @@ type UpdatePresenceMessage struct {
 }
 
 func (bpm *UpdatePresenceMessage) FromGob(dec *gob.Decoder) error {
-	bpm.FromGob(dec)
+	bpm.baseMessage.FromGob(dec)
 	p, err := xmpp.NewPresenceFromGob(dec)
 	if err != nil {
 		return err
@@ -67,22 +67,22 @@ func (bpm *UpdatePresenceMessage) ToGob(enc *gob.Encoder) {
 	bpm.Presence.ToGob(enc)
 }
 
-type StanzaMessage struct {
+type RouteStanzaMessage struct {
 	baseMessage
 	Stanza xmpp.Stanza
 }
 
-func (ssm *StanzaMessage) FromGob(dec *gob.Decoder) error {
-	ssm.baseMessage.FromGob(dec)
+func (rsm *RouteStanzaMessage) FromGob(dec *gob.Decoder) error {
+	rsm.baseMessage.FromGob(dec)
 	s, err := xmpp.NewStanzaFromElement(xmpp.NewElementFromGob(dec))
 	if err != nil {
 		return err
 	}
-	ssm.Stanza = s
+	rsm.Stanza = s
 	return nil
 }
 
-func (ssm *StanzaMessage) ToGob(enc *gob.Encoder) {
-	ssm.baseMessage.ToGob(enc)
-	ssm.Stanza.ToGob(enc)
+func (rsm *RouteStanzaMessage) ToGob(enc *gob.Encoder) {
+	rsm.baseMessage.ToGob(enc)
+	rsm.Stanza.ToGob(enc)
 }

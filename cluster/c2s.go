@@ -15,6 +15,7 @@ const c2sMailboxSize = 4096
 
 type C2S struct {
 	identifier string
+	buf        *bytes.Buffer
 	cluster    *Cluster
 	node       string
 	jid        *jid.JID
@@ -24,14 +25,17 @@ type C2S struct {
 }
 
 func newC2S(identifier string, jid *jid.JID, node string, cluster *Cluster) *C2S {
-	return &C2S{
+	s := &C2S{
 		identifier: identifier,
+		buf:        bytes.NewBuffer(nil),
 		cluster:    cluster,
 		node:       node,
 		jid:        jid,
 		presence:   xmpp.NewPresence(jid, jid, xmpp.UnavailableType),
 		actorCh:    make(chan func(), c2sMailboxSize),
 	}
+	go s.loop()
+	return s
 }
 
 func (s *C2S) ID() string {
@@ -72,24 +76,34 @@ func (s *C2S) Disconnect(err error) {
 }
 
 func (s *C2S) SendElement(elem xmpp.XElement) {
+	s.actorCh <- func() {
+		s.sendElement(elem)
+	}
+}
+
+func (s *C2S) sendElement(elem xmpp.XElement) {
 	stanza, ok := elem.(xmpp.Stanza)
 	if !ok {
 		return
 	}
-	msg := &StanzaMessage{baseMessage{
+	defer s.buf.Reset()
+
+	msg := &RouteStanzaMessage{baseMessage{
 		Node: s.cluster.LocalNode(),
 		JID:  stanza.ToJID()},
 		stanza,
 	}
-	buf := bytes.NewBuffer(nil)
-	enc := gob.NewEncoder(buf)
+	enc := gob.NewEncoder(s.buf)
 	msg.ToGob(enc)
-	if err := s.cluster.Send(buf.Bytes(), s.node); err != nil {
+	if err := s.cluster.Send(s.buf.Bytes(), s.node); err != nil {
 		log.Error(err)
 	}
 }
 
 func (s *C2S) loop() {
+	for f := range s.actorCh {
+		f()
+	}
 }
 
 func (s *C2S) setPresence(presence *xmpp.Presence) {

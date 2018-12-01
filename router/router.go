@@ -60,6 +60,8 @@ type Cluster interface {
 	BroadcastUnbindMessage(jid *jid.JID) error
 
 	BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) error
+
+	C2SStream(identifier string, jid *jid.JID, node string) *cluster.C2S
 }
 
 // Router represents an XMPP stanza router.
