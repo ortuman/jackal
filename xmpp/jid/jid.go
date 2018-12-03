@@ -108,7 +108,7 @@ func NewWithString(str string, skipStringPrep bool) (*JID, error) {
 	return New(node, domain, resource, skipStringPrep)
 }
 
-// NewWithString constructs a JID from it's gob binary representation.
+// NewFromGob constructs a JID from it's gob binary representation.
 func NewFromGob(dec *gob.Decoder) (*JID, error) {
 	var j JID
 	if err := j.FromGob(dec); err != nil {

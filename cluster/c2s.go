@@ -76,10 +76,11 @@ func (s *C2S) SendElement(elem xmpp.XElement) {
 	}
 	defer s.buf.Reset()
 
-	msg := &RouteStanzaMessage{baseMessage{
-		Node: s.cluster.LocalNode(),
-		JID:  stanza.ToJID()},
-		stanza,
+	msg := &Message{
+		Type:   MsgRouteStanzaType,
+		Node:   s.cluster.LocalNode(),
+		JIDs:   []*jid.JID{stanza.ToJID()},
+		Stanza: stanza,
 	}
 	enc := gob.NewEncoder(s.buf)
 	msg.ToGob(enc)

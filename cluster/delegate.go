@@ -8,10 +8,8 @@ package cluster
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
 )
 
 type memberListDelegate struct {
@@ -26,23 +24,8 @@ func (d *memberListDelegate) NotifyMsg(msg []byte) {
 	if len(msg) == 0 {
 		return
 	}
-	var m model.GobDeserializer
-
-	msgType := msg[0]
-	switch msgType {
-	case msgBindType:
-		m = &BindMessage{}
-	case msgUnbindType:
-		m = &UnbindMessage{}
-	case msgUpdatePresenceType:
-		m = &UpdatePresenceMessage{}
-	case msgRouteStanzaType:
-		m = &RouteStanzaMessage{}
-	default:
-		log.Error(fmt.Errorf("unrecognized cluster message type: %d", msgType))
-		return
-	}
-	dec := gob.NewDecoder(bytes.NewReader(msg[1:]))
+	var m Message
+	dec := gob.NewDecoder(bytes.NewReader(msg))
 	if err := m.FromGob(dec); err != nil {
 		log.Error(err)
 		return

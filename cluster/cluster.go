@@ -7,7 +7,6 @@ package cluster
 
 import (
 	"encoding/gob"
-	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
@@ -84,38 +83,42 @@ func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
 	return newC2S(identifier, jid, node, c)
 }
 
-func (c *Cluster) BroadcastBindMessage(jid *jid.JID) {
+func (c *Cluster) BroadcastBindMessage(j *jid.JID) {
 	c.actorCh <- func() {
-		err := c.broadcast(&BindMessage{baseMessage{
+		msg := &Message{
+			Type: MsgBindType,
 			Node: c.LocalNode(),
-			JID:  jid},
-		})
+			JIDs: []*jid.JID{j},
+		}
+		err := c.broadcast(msg)
 		if err != nil {
 			log.Error(err)
 		}
 	}
 }
 
-func (c *Cluster) BroadcastUnbindMessage(jid *jid.JID) {
+func (c *Cluster) BroadcastUnbindMessage(j *jid.JID) {
 	c.actorCh <- func() {
-		err := c.broadcast(&UnbindMessage{baseMessage{
+		msg := &Message{
+			Type: MsgUnbindType,
 			Node: c.LocalNode(),
-			JID:  jid,
-		},
-		})
+			JIDs: []*jid.JID{j},
+		}
+		err := c.broadcast(msg)
 		if err != nil {
 			log.Error(err)
 		}
 	}
 }
 
-func (c *Cluster) BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence) {
+func (c *Cluster) BroadcastUpdatePresenceMessage(j *jid.JID, presence *xmpp.Presence) {
 	c.actorCh <- func() {
-		err := c.broadcast(&UpdatePresenceMessage{baseMessage{
+		msg := &Message{
+			Type: MsgUpdatePresenceType,
 			Node: c.LocalNode(),
-			JID:  jid},
-			presence,
-		})
+			JIDs: []*jid.JID{j},
+		}
+		err := c.broadcast(msg)
 		if err != nil {
 			log.Error(err)
 		}
@@ -163,16 +166,6 @@ func (c *Cluster) broadcast(msg model.GobSerializer) error {
 	buf := c.pool.Get()
 	defer c.pool.Put(buf)
 
-	switch msg.(type) {
-	case *BindMessage:
-		buf.WriteByte(msgBindType)
-	case *UnbindMessage:
-		buf.WriteByte(msgUnbindType)
-	case *UpdatePresenceMessage:
-		buf.WriteByte(msgUpdatePresenceType)
-	default:
-		return fmt.Errorf("cannot broadcast message of type: %T", msg)
-	}
 	enc := gob.NewEncoder(buf)
 	msg.ToGob(enc)
 
