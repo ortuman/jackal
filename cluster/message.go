@@ -46,31 +46,32 @@ func (m *Message) FromGob(dec *gob.Decoder) error {
 	}
 	var hasStanza bool
 	dec.Decode(&hasStanza)
-	if hasStanza {
-		var stanzaType int
-		dec.Decode(&stanzaType)
-		switch stanzaType {
-		case messageStanzaType:
-			message, err := xmpp.NewMessageFromGob(dec)
-			if err != nil {
-				return err
-			}
-			m.Stanza = message
-		case presenceStanzaType:
-			presence, err := xmpp.NewMessageFromGob(dec)
-			if err != nil {
-				return err
-			}
-			m.Stanza = presence
-		case iqStanzaType:
-			iq, err := xmpp.NewMessageFromGob(dec)
-			if err != nil {
-				return err
-			}
-			m.Stanza = iq
-		default:
-			return nil
+	if !hasStanza {
+		return nil
+	}
+	var stanzaType int
+	dec.Decode(&stanzaType)
+	switch stanzaType {
+	case messageStanzaType:
+		message, err := xmpp.NewMessageFromGob(dec)
+		if err != nil {
+			return err
 		}
+		m.Stanza = message
+	case presenceStanzaType:
+		presence, err := xmpp.NewMessageFromGob(dec)
+		if err != nil {
+			return err
+		}
+		m.Stanza = presence
+	case iqStanzaType:
+		iq, err := xmpp.NewMessageFromGob(dec)
+		if err != nil {
+			return err
+		}
+		m.Stanza = iq
+	default:
+		break
 	}
 	return nil
 }
@@ -87,18 +88,19 @@ func (m *Message) ToGob(enc *gob.Encoder) {
 	}
 	hasStanza := m.Stanza != nil
 	enc.Encode(&hasStanza)
-	if hasStanza {
-		// store stanza type
-		switch m.Stanza.(type) {
-		case *xmpp.Message:
-			enc.Encode(messageStanzaType)
-		case *xmpp.Presence:
-			enc.Encode(presenceStanzaType)
-		case *xmpp.IQ:
-			enc.Encode(iqStanzaType)
-		default:
-			return
-		}
-		m.Stanza.ToGob(enc)
+	if !hasStanza {
+		return
 	}
+	// store stanza type
+	switch m.Stanza.(type) {
+	case *xmpp.Message:
+		enc.Encode(messageStanzaType)
+	case *xmpp.Presence:
+		enc.Encode(presenceStanzaType)
+	case *xmpp.IQ:
+		enc.Encode(iqStanzaType)
+	default:
+		return
+	}
+	m.Stanza.ToGob(enc)
 }

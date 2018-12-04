@@ -21,6 +21,8 @@ import (
 
 const defaultDomain = "localhost"
 
+const clusterBindBatchSize = 500
+
 var (
 	// ErrNotExistingAccount will be returned by Route method
 	// if destination user does not exist.
@@ -56,11 +58,9 @@ type Cluster interface {
 
 	C2SStream(identifier string, jid *jid.JID, node string) *cluster.C2S
 
-	BroadcastBindMessage(jid *jid.JID)
+	SendMessageTo(node string, msg *cluster.Message)
 
-	BroadcastUnbindMessage(jid *jid.JID)
-
-	BroadcastUpdatePresenceMessage(jid *jid.JID, presence *xmpp.Presence)
+	BroadcastMessage(msg *cluster.Message)
 }
 
 // Router represents an XMPP stanza router.
@@ -145,13 +145,17 @@ func (r *Router) SetCluster(cluster Cluster) {
 }
 
 // UpdateClusterPresence updates a presence associated to a jid in the whole cluster.
-func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, jid *jid.JID) {
+func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, j *jid.JID) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	// broadcast cluster 'presence' message
 	if r.cluster != nil {
-		r.cluster.BroadcastUpdatePresenceMessage(jid, presence)
+		r.cluster.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUpdatePresenceType,
+			Node: r.cluster.LocalNode(),
+			JIDs: []*jid.JID{j},
+		})
 	}
 }
 
@@ -187,7 +191,11 @@ func (r *Router) Bind(stm stream.C2S) {
 
 	// broadcast cluster 'bind' message
 	if r.cluster != nil {
-		r.cluster.BroadcastBindMessage(stm.JID())
+		r.cluster.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgBindType,
+			Node: r.cluster.LocalNode(),
+			JIDs: []*jid.JID{stm.JID()},
+		})
 	}
 	return
 }
@@ -227,7 +235,11 @@ func (r *Router) Unbind(stm stream.C2S) {
 
 	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
-		r.cluster.BroadcastUnbindMessage(stm.JID())
+		r.cluster.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUnbindType,
+			Node: r.cluster.LocalNode(),
+			JIDs: []*jid.JID{stm.JID()},
+		})
 	}
 }
 
@@ -374,4 +386,41 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 	}
 	out.SendElement(elem)
 	return nil
+}
+
+func (r *Router) handleNotifyMessage(msg *cluster.Message) {
+	log.Infof("received message! %T", msg)
+}
+
+func (r *Router) handleNodeJoined(node *cluster.Node) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// generate local JIDs array
+	localJIDs := make([]*jid.JID, 0, len(r.localJIDs))
+	for _, j := range r.localJIDs {
+		localJIDs = append(localJIDs, j)
+	}
+	// send local JIDs in batches to the recently joined node
+	batchCount := len(localJIDs) / clusterBindBatchSize
+	for i := 0; i < batchCount; i++ {
+		var jBatch []*jid.JID
+		for j := 0; j < clusterBindBatchSize; j++ {
+			jBatch = append(jBatch, localJIDs[i*clusterBindBatchSize+j])
+		}
+		r.cluster.SendMessageTo(node.Name, &cluster.Message{
+			Type: cluster.MsgBindType,
+			Node: r.cluster.LocalNode(),
+			JIDs: jBatch,
+		})
+	}
+	log.Infof("join notified: %s", node.Name)
+}
+
+func (r *Router) handleNodeUpdated(node *cluster.Node) {
+	log.Infof("update notified: %s", node.Name)
+}
+
+func (r *Router) handleNodeLeft(node *cluster.Node) {
+	log.Infof("leave notified: %s", node.Name)
 }

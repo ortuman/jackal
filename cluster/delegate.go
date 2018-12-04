@@ -30,7 +30,7 @@ func (d *memberListDelegate) NotifyMsg(msg []byte) {
 		log.Error(err)
 		return
 	}
-	d.cluster.handleNotifyMsg(m)
+	d.cluster.handleNotifyMsg(&m)
 }
 
 func (d *memberListDelegate) GetBroadcasts(overhead, limit int) [][]byte {
