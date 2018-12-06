@@ -18,7 +18,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const clusterMailboxSize = 4096
+const clusterMailboxSize = 32768
 
 const leaveTimeout = time.Second * 5
 
@@ -70,6 +70,8 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 }
 
 func (c *Cluster) Join() error {
+	log.Infof("local node: %s", c.LocalNode())
+
 	c.membersMu.Lock()
 	for _, m := range c.memberList.Members() {
 		if m.Name == c.LocalNode() {
@@ -97,7 +99,7 @@ func (c *Cluster) SendMessageTo(node string, msg *Message) {
 		to := c.members[node]
 		c.membersMu.RUnlock()
 		if to == nil {
-			log.Errorf("cannot send bind message: node %s not found", node)
+			log.Errorf("cannot send message: node %s not found", node)
 			return
 		}
 		msgBytes := c.encodeMessage(msg)
