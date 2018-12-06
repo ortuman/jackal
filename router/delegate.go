@@ -26,5 +26,5 @@ func (d *clusterDelegate) NodeUpdated(node *cluster.Node) {
 }
 
 func (d *clusterDelegate) NodeLeft(node *cluster.Node) {
-	d.r.handleNodeUpdated(node)
+	d.r.handleNodeLeft(node)
 }

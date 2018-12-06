@@ -5,13 +5,6 @@
 
 package cluster
 
-import (
-	"bytes"
-	"encoding/gob"
-
-	"github.com/ortuman/jackal/log"
-)
-
 type memberListDelegate struct {
 	cluster *Cluster
 }
@@ -21,16 +14,7 @@ func (d *memberListDelegate) NodeMeta(limit int) []byte {
 }
 
 func (d *memberListDelegate) NotifyMsg(msg []byte) {
-	if len(msg) == 0 {
-		return
-	}
-	var m Message
-	dec := gob.NewDecoder(bytes.NewReader(msg))
-	if err := m.FromGob(dec); err != nil {
-		log.Error(err)
-		return
-	}
-	d.cluster.handleNotifyMsg(&m)
+	d.cluster.handleNotifyMsg(msg)
 }
 
 func (d *memberListDelegate) GetBroadcasts(overhead, limit int) [][]byte {

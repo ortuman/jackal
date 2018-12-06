@@ -44,8 +44,6 @@ func TestMockC2Stream(t *testing.T) {
 	require.True(t, stm.IsDisconnected())
 	stm.SetSecured(true)
 	require.True(t, stm.IsSecured())
-	stm.SetCompressed(true)
-	require.True(t, stm.IsCompressed())
 	stm.SetAuthenticated(true)
 	require.True(t, stm.IsAuthenticated())
 }

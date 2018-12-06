@@ -41,7 +41,6 @@ type C2S interface {
 
 	IsSecured() bool
 	IsAuthenticated() bool
-	IsCompressed() bool
 
 	Presence() *xmpp.Presence
 }
@@ -156,22 +155,6 @@ func (m *MockC2S) IsAuthenticated() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.isAuthenticated
-}
-
-// SetCompressed sets whether or not the a mocked stream
-// has been compressed.
-func (m *MockC2S) SetCompressed(compressed bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.isCompressed = compressed
-}
-
-// IsCompressed returns whether or not the mocked stream
-// has enabled a compression method.
-func (m *MockC2S) IsCompressed() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.isCompressed
 }
 
 // IsDisconnected returns whether or not the mocked stream has been disconnected.

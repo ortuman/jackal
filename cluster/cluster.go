@@ -6,14 +6,14 @@
 package cluster
 
 import (
+	"bytes"
 	"encoding/gob"
 	"io/ioutil"
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/log"
-
 	"github.com/hashicorp/memberlist"
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -70,12 +70,21 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 }
 
 func (c *Cluster) Join() error {
+	c.membersMu.Lock()
+	for _, m := range c.memberList.Members() {
+		if m.Name == c.LocalNode() {
+			continue
+		}
+		log.Infof("registered cluster node: %s", m.Name)
+		c.members[m.Name] = m
+	}
+	c.membersMu.Unlock()
 	_, err := c.memberList.Join(c.cfg.Hosts)
 	return err
 }
 
 func (c *Cluster) LocalNode() string {
-	return c.memberList.LocalNode().Name
+	return c.cfg.Name
 }
 
 func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
@@ -153,35 +162,59 @@ func (c *Cluster) broadcast(msg *Message) error {
 }
 
 func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
+	if n.Name == c.LocalNode() {
+		return
+	}
 	c.membersMu.Lock()
 	c.members[n.Name] = n
 	c.membersMu.Unlock()
-	if c.delegate != nil {
+
+	log.Infof("registered cluster node: %s", n.Name)
+	if c.delegate != nil && n.Name != c.LocalNode() {
 		c.delegate.NodeJoined(&Node{Name: n.Name})
 	}
 }
 
 func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
+	if n.Name == c.LocalNode() {
+		return
+	}
 	c.membersMu.Lock()
 	delete(c.members, n.Name)
 	c.membersMu.Unlock()
-	if c.delegate != nil {
+
+	log.Infof("unregistered cluster node: %s", n.Name)
+	if c.delegate != nil && n.Name != c.LocalNode() {
 		c.delegate.NodeLeft(&Node{Name: n.Name})
 	}
 }
 
 func (c *Cluster) handleNotifyUpdate(n *memberlist.Node) {
+	if n.Name == c.LocalNode() {
+		return
+	}
 	c.membersMu.Lock()
 	c.members[n.Name] = n
 	c.membersMu.Unlock()
+
+	log.Infof("updated cluster node: %s", n.Name)
 	if c.delegate != nil {
 		c.delegate.NodeUpdated(&Node{Name: n.Name})
 	}
 }
 
-func (c *Cluster) handleNotifyMsg(msg *Message) {
+func (c *Cluster) handleNotifyMsg(msg []byte) {
+	if len(msg) == 0 {
+		return
+	}
+	var m Message
+	dec := gob.NewDecoder(bytes.NewReader(msg))
+	if err := m.FromGob(dec); err != nil {
+		log.Error(err)
+		return
+	}
 	if c.delegate != nil {
-		c.delegate.NotifyMessage(msg)
+		c.delegate.NotifyMessage(&m)
 	}
 }
 

@@ -54,7 +54,6 @@ func (s *C2S) JID() *jid.JID {
 
 func (s *C2S) IsSecured() bool       { return true }
 func (s *C2S) IsAuthenticated() bool { return true }
-func (s *C2S) IsCompressed() bool    { return false }
 
 func (s *C2S) Presence() *xmpp.Presence {
 	s.presenceMu.RLock()

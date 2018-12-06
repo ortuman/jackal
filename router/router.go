@@ -105,7 +105,7 @@ func (r *Router) HostNames() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var ret []string
-	for n, _ := range r.hosts {
+	for n := range r.hosts {
 		ret = append(ret, n)
 	}
 	return ret
@@ -131,10 +131,10 @@ func (r *Router) Certificates() []tls.Certificate {
 }
 
 // SetOutS2SProvider sets the s2s out provider to be used when routing stanzas remotely.
-func (r *Router) SetOutS2SProvider(s2sOutProvider OutS2SProvider) {
+func (r *Router) SetOutS2SProvider(provider OutS2SProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.outS2SProvider = s2sOutProvider
+	r.outS2SProvider = provider
 }
 
 // SetCluster sets router cluster interface.
@@ -152,9 +152,10 @@ func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, j *jid.JID) {
 	// broadcast cluster 'presence' message
 	if r.cluster != nil {
 		r.cluster.BroadcastMessage(&cluster.Message{
-			Type: cluster.MsgUpdatePresenceType,
-			Node: r.cluster.LocalNode(),
-			JIDs: []*jid.JID{j},
+			Type:   cluster.MsgUpdatePresenceType,
+			Node:   r.cluster.LocalNode(),
+			JIDs:   []*jid.JID{j},
+			Stanza: presence,
 		})
 	}
 }
@@ -389,10 +390,22 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 }
 
 func (r *Router) handleNotifyMessage(msg *cluster.Message) {
-	log.Infof("received message! %T", msg)
+	switch msg.Type {
+	case cluster.MsgBindType:
+		log.Infof("received bind message. jids: %v", msg.JIDs)
+	case cluster.MsgUnbindType:
+		log.Infof("received unbind message. jids: %v", msg.JIDs)
+	case cluster.MsgUpdatePresenceType:
+		log.Infof("received update presence message. jids: %v, presence: %v", msg.JIDs, msg.Stanza)
+	case cluster.MsgRouteStanzaType:
+		break
+	}
 }
 
 func (r *Router) handleNodeJoined(node *cluster.Node) {
+	if r.cluster == nil {
+		return
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -403,10 +416,17 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 	}
 	// send local JIDs in batches to the recently joined node
 	batchCount := len(localJIDs) / clusterBindBatchSize
+	if len(localJIDs)%clusterBindBatchSize != 0 {
+		batchCount++
+	}
 	for i := 0; i < batchCount; i++ {
 		var jBatch []*jid.JID
 		for j := 0; j < clusterBindBatchSize; j++ {
-			jBatch = append(jBatch, localJIDs[i*clusterBindBatchSize+j])
+			index := i*clusterBindBatchSize + j
+			if index == len(localJIDs) {
+				return
+			}
+			jBatch = append(jBatch, localJIDs[index])
 		}
 		r.cluster.SendMessageTo(node.Name, &cluster.Message{
 			Type: cluster.MsgBindType,
@@ -414,13 +434,10 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 			JIDs: jBatch,
 		})
 	}
-	log.Infof("join notified: %s", node.Name)
 }
 
 func (r *Router) handleNodeUpdated(node *cluster.Node) {
-	log.Infof("update notified: %s", node.Name)
 }
 
 func (r *Router) handleNodeLeft(node *cluster.Node) {
-	log.Infof("leave notified: %s", node.Name)
 }

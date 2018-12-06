@@ -136,14 +136,6 @@ func (s *inStream) IsSecured() bool {
 	return s.secured
 }
 
-// IsCompressed returns whether or not the XMPP stream
-// has enabled a compression method.
-func (s *inStream) IsCompressed() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.compressed
-}
-
 // Presence returns last sent presence element.
 func (s *inStream) Presence() *xmpp.Presence {
 	s.mu.RLock()
@@ -288,7 +280,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	// Attach compression feature
 	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
 
-	if !s.IsCompressed() && compressionAvailable {
+	if !s.isCompressed() && compressionAvailable {
 		compression := xmpp.NewElementNamespace("compression", "http://jabber.org/features/compress")
 		method := xmpp.NewElementName("method")
 		method.SetText("zlib")
@@ -421,7 +413,7 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 }
 
 func (s *inStream) compress(elem xmpp.XElement) {
-	if s.IsCompressed() {
+	if s.isCompressed() {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
@@ -834,6 +826,12 @@ func (s *inStream) setAuthenticated(authenticated bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.authenticated = authenticated
+}
+
+func (s *inStream) isCompressed() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.compressed
 }
 
 func (s *inStream) setCompressed(compressed bool) {
