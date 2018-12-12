@@ -29,6 +29,7 @@ router:
       tls:
         privkey_path: ""
         cert_path: ""
+  bind_msg_batch_size: 500
 
 modules:
   enabled:

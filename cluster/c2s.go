@@ -55,6 +55,12 @@ func (s *C2S) JID() *jid.JID {
 func (s *C2S) IsSecured() bool       { return true }
 func (s *C2S) IsAuthenticated() bool { return true }
 
+func (s *C2S) SetPresence(presence *xmpp.Presence) {
+	s.presenceMu.Lock()
+	s.presence = presence
+	s.presenceMu.Unlock()
+}
+
 func (s *C2S) Presence() *xmpp.Presence {
 	s.presenceMu.RLock()
 	defer s.presenceMu.RUnlock()
@@ -70,15 +76,9 @@ func (s *C2S) SendElement(elem xmpp.XElement) {
 		return
 	}
 	s.cluster.SendMessageTo(s.node, &Message{
-		Type:   MsgRouteStanzaType,
+		Type:   MsgRouteStanza,
 		Node:   s.cluster.LocalNode(),
-		JIDs:   []*jid.JID{stanza.ToJID()},
+		JID:    stanza.ToJID(),
 		Stanza: stanza,
 	})
-}
-
-func (s *C2S) setPresence(presence *xmpp.Presence) {
-	s.presenceMu.Lock()
-	s.presence = presence
-	s.presenceMu.Unlock()
 }

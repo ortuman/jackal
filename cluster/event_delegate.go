@@ -19,6 +19,4 @@ func (d *memberListEventDelegate) NotifyLeave(n *memberlist.Node) {
 	d.cluster.handleNotifyLeave(n)
 }
 
-func (d *memberListEventDelegate) NotifyUpdate(n *memberlist.Node) {
-	d.cluster.handleNotifyUpdate(n)
-}
+func (d *memberListEventDelegate) NotifyUpdate(n *memberlist.Node) {}

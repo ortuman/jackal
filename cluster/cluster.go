@@ -8,13 +8,13 @@ package cluster
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/pool"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -27,15 +27,15 @@ type Node struct {
 }
 
 type Delegate interface {
-	NotifyMessage(msg *Message)
 	NodeJoined(node *Node)
-	NodeUpdated(node *Node)
 	NodeLeft(node *Node)
+
+	NotifyMessage(msg *Message)
 }
 
 type Cluster struct {
 	cfg        *Config
-	pool       *pool.BufferPool
+	buf        *bytes.Buffer
 	delegate   Delegate
 	memberList *memberlist.Memberlist
 	membersMu  sync.RWMutex
@@ -48,7 +48,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		return nil, nil
 	}
 	c := &Cluster{
-		pool:    pool.NewBufferPool(),
+		buf:     bytes.NewBuffer(nil),
 		members: make(map[string]*memberlist.Node),
 		actorCh: make(chan func(), clusterMailboxSize),
 	}
@@ -95,16 +95,18 @@ func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
 	c.actorCh <- func() {
-		c.membersMu.RLock()
-		to := c.members[node]
-		c.membersMu.RUnlock()
-		if to == nil {
-			log.Errorf("cannot send message: node %s not found", node)
+		if err := c.send(&clusterPackage{messages: []Message{*msg}}, node); err != nil {
+			log.Error(err)
 			return
 		}
-		msgBytes := c.encodeMessage(msg)
-		if err := c.memberList.SendReliable(to, msgBytes); err != nil {
+	}
+}
+
+func (c *Cluster) SendMessagesTo(node string, messages []Message) {
+	c.actorCh <- func() {
+		if err := c.send(&clusterPackage{messages: messages}, node); err != nil {
 			log.Error(err)
+			return
 		}
 	}
 }
@@ -141,21 +143,24 @@ func (c *Cluster) loop() {
 	}
 }
 
-func (c *Cluster) send(msg []byte, toNode string) error {
+func (c *Cluster) send(pkg *clusterPackage, toNode string) error {
 	c.membersMu.RLock()
 	node := c.members[toNode]
 	c.membersMu.RUnlock()
 	if node == nil {
-		return nil
+		return fmt.Errorf("cannot send message: node %s not found", toNode)
 	}
-	return c.memberList.SendReliable(node, msg)
+	return c.memberList.SendReliable(node, c.encodePackage(pkg))
 }
 
 func (c *Cluster) broadcast(msg *Message) error {
-	msgBytes := c.encodeMessage(msg)
+	msgBytes := c.encodePackage(&clusterPackage{messages: []Message{*msg}})
 	c.membersMu.RLock()
 	defer c.membersMu.RUnlock()
 	for _, node := range c.members {
+		if node.Name == c.LocalNode() {
+			continue
+		}
 		if err := c.memberList.SendReliable(node, msgBytes); err != nil {
 			return err
 		}
@@ -191,41 +196,28 @@ func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
 	}
 }
 
-func (c *Cluster) handleNotifyUpdate(n *memberlist.Node) {
-	if n.Name == c.LocalNode() {
-		return
-	}
-	c.membersMu.Lock()
-	c.members[n.Name] = n
-	c.membersMu.Unlock()
-
-	log.Infof("updated cluster node: %s", n.Name)
-	if c.delegate != nil {
-		c.delegate.NodeUpdated(&Node{Name: n.Name})
-	}
-}
-
 func (c *Cluster) handleNotifyMsg(msg []byte) {
 	if len(msg) == 0 {
 		return
 	}
-	var m Message
+	var pkg clusterPackage
 	dec := gob.NewDecoder(bytes.NewReader(msg))
-	if err := m.FromGob(dec); err != nil {
+	if err := pkg.FromGob(dec); err != nil {
 		log.Error(err)
 		return
 	}
 	if c.delegate != nil {
-		c.delegate.NotifyMessage(&m)
+		for _, m := range pkg.messages {
+			c.delegate.NotifyMessage(&m)
+		}
 	}
 }
 
-func (c *Cluster) encodeMessage(msg *Message) []byte {
-	buf := c.pool.Get()
-	enc := gob.NewEncoder(buf)
-	msg.ToGob(enc)
-	msgBytes := make([]byte, buf.Len(), buf.Len())
-	copy(msgBytes, buf.Bytes())
-	c.pool.Put(buf)
+func (c *Cluster) encodePackage(pkg *clusterPackage) []byte {
+	defer c.buf.Reset()
+	enc := gob.NewEncoder(c.buf)
+	pkg.ToGob(enc)
+	msgBytes := make([]byte, c.buf.Len(), c.buf.Len())
+	copy(msgBytes, c.buf.Bytes())
 	return msgBytes
 }

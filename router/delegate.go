@@ -21,10 +21,6 @@ func (d *clusterDelegate) NodeJoined(node *cluster.Node) {
 	d.r.handleNodeJoined(node)
 }
 
-func (d *clusterDelegate) NodeUpdated(node *cluster.Node) {
-	d.r.handleNodeUpdated(node)
-}
-
 func (d *clusterDelegate) NodeLeft(node *cluster.Node) {
 	d.r.handleNodeLeft(node)
 }

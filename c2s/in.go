@@ -784,7 +784,7 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	}
 	// Unregister stream
 	if unbind {
-		s.router.Unbind(s)
+		s.router.Unbind(s.JID())
 	}
 	// Notify disconnection
 	if s.cfg.onDisconnect != nil {
