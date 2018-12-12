@@ -17,13 +17,13 @@ type C2S struct {
 	presence   *xmpp.Presence
 }
 
-func newC2S(identifier string, jid *jid.JID, node string, cluster *Cluster) *C2S {
+func newC2S(identifier string, jid *jid.JID, presence *xmpp.Presence, node string, cluster *Cluster) *C2S {
 	s := &C2S{
 		identifier: identifier,
 		cluster:    cluster,
 		node:       node,
 		jid:        jid,
-		presence:   xmpp.NewPresence(jid, jid, xmpp.UnavailableType),
+		presence:   presence,
 	}
 	return s
 }

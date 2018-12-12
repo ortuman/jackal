@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/xmpp"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -89,8 +91,8 @@ func (c *Cluster) LocalNode() string {
 	return c.cfg.Name
 }
 
-func (c *Cluster) C2SStream(identifier string, jid *jid.JID, node string) *C2S {
-	return newC2S(identifier, jid, node, c)
+func (c *Cluster) C2SStream(identifier string, jid *jid.JID, presence *xmpp.Presence, node string) *C2S {
+	return newC2S(identifier, jid, presence, node, c)
 }
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {

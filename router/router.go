@@ -54,7 +54,7 @@ type Cluster interface {
 	// LocalNode returns local node name.
 	LocalNode() string
 
-	C2SStream(identifier string, jid *jid.JID, node string) *cluster.C2S
+	C2SStream(identifier string, jid *jid.JID, presence *xmpp.Presence, node string) *cluster.C2S
 
 	SendMessageTo(node string, message *cluster.Message)
 
