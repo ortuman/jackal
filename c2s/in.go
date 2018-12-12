@@ -541,8 +541,9 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 		return
 	}
 	s.setJID(userJID)
-
 	s.sess.SetJID(userJID)
+
+	s.setPresence(xmpp.NewPresence(userJID, userJID, xmpp.UnavailableType))
 
 	s.router.Bind(s)
 
