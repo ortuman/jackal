@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/ortuman/jackal/xmpp"
 
 	"github.com/hashicorp/memberlist"
@@ -91,8 +93,8 @@ func (c *Cluster) LocalNode() string {
 	return c.cfg.Name
 }
 
-func (c *Cluster) C2SStream(identifier string, jid *jid.JID, presence *xmpp.Presence, node string) *C2S {
-	return newC2S(identifier, jid, presence, node, c)
+func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, node string) *C2S {
+	return newC2S(uuid.New().String(), jid, presence, node, c)
 }
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
