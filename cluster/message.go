@@ -99,7 +99,7 @@ func (m *Message) FromGob(dec *gob.Decoder) error {
 func (m *Message) ToGob(enc *gob.Encoder) {
 	_ = enc.Encode(m.Type)
 	_ = enc.Encode(m.Node)
-	_ = enc.Encode(m.JID)
+	m.JID.ToGob(enc)
 	hasStanza := m.Stanza != nil
 	_ = enc.Encode(&hasStanza)
 	if !hasStanza {
