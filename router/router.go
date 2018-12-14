@@ -499,7 +499,7 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 	if !ok {
 		return
 	}
-	log.Debugf("updated cluster c2s presence: %s (type: %s)", j.String(), presence.Type())
+	log.Debugf("updated cluster c2s presence: %s\n%v", j.String(), presence)
 
 	var stm *cluster.C2S
 	r.mu.RLock()

@@ -53,13 +53,13 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 		}
 		p.Stanza = message
 	case presenceStanza:
-		presence, err := xmpp.NewMessageFromGob(dec)
+		presence, err := xmpp.NewPresenceFromGob(dec)
 		if err != nil {
 			return err
 		}
 		p.Stanza = presence
 	case iqStanza:
-		iq, err := xmpp.NewMessageFromGob(dec)
+		iq, err := xmpp.NewIQFromGob(dec)
 		if err != nil {
 			return err
 		}
