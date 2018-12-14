@@ -468,8 +468,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 	r.mu.Lock()
 	for _, p := range msg.Payloads {
 		j := p.JID
-		stanza := p.Stanza
-		presence, ok := stanza.(*xmpp.Presence)
+		presence, ok := p.Stanza.(*xmpp.Presence)
 		if !ok {
 			continue
 		}
