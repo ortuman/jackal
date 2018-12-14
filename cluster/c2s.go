@@ -76,9 +76,11 @@ func (s *C2S) SendElement(elem xmpp.XElement) {
 		return
 	}
 	s.cluster.SendMessageTo(s.node, &Message{
-		Type:   MsgRouteStanza,
-		Node:   s.cluster.LocalNode(),
-		JID:    stanza.ToJID(),
-		Stanza: stanza,
+		Type: MsgRouteStanza,
+		Node: s.cluster.LocalNode(),
+		Payloads: []MessagePayload{{
+			JID:    stanza.ToJID(),
+			Stanza: stanza,
+		}},
 	})
 }

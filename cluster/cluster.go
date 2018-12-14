@@ -14,11 +14,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/ortuman/jackal/xmpp"
-
 	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -99,16 +97,7 @@ func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, node string) 
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
 	c.actorCh <- func() {
-		if err := c.send(&clusterPackage{messages: []Message{*msg}}, node); err != nil {
-			log.Error(err)
-			return
-		}
-	}
-}
-
-func (c *Cluster) SendMessagesTo(node string, messages []Message) {
-	c.actorCh <- func() {
-		if err := c.send(&clusterPackage{messages: messages}, node); err != nil {
+		if err := c.send(msg, node); err != nil {
 			log.Error(err)
 			return
 		}
@@ -147,18 +136,18 @@ func (c *Cluster) loop() {
 	}
 }
 
-func (c *Cluster) send(pkg *clusterPackage, toNode string) error {
+func (c *Cluster) send(msg *Message, toNode string) error {
 	c.membersMu.RLock()
 	node := c.members[toNode]
 	c.membersMu.RUnlock()
 	if node == nil {
 		return fmt.Errorf("cannot send message: node %s not found", toNode)
 	}
-	return c.memberList.SendReliable(node, c.encodePackage(pkg))
+	return c.memberList.SendReliable(node, c.encodeMessage(msg))
 }
 
 func (c *Cluster) broadcast(msg *Message) error {
-	msgBytes := c.encodePackage(&clusterPackage{messages: []Message{*msg}})
+	msgBytes := c.encodeMessage(msg)
 	c.membersMu.RLock()
 	defer c.membersMu.RUnlock()
 	for _, node := range c.members {
@@ -204,23 +193,21 @@ func (c *Cluster) handleNotifyMsg(msg []byte) {
 	if len(msg) == 0 {
 		return
 	}
-	var pkg clusterPackage
+	var m Message
 	dec := gob.NewDecoder(bytes.NewReader(msg))
-	if err := pkg.FromGob(dec); err != nil {
+	if err := m.FromGob(dec); err != nil {
 		log.Error(err)
 		return
 	}
 	if c.delegate != nil {
-		for _, m := range pkg.messages {
-			c.delegate.NotifyMessage(&m)
-		}
+		c.delegate.NotifyMessage(&m)
 	}
 }
 
-func (c *Cluster) encodePackage(pkg *clusterPackage) []byte {
+func (c *Cluster) encodeMessage(msg *Message) []byte {
 	defer c.buf.Reset()
 	enc := gob.NewEncoder(c.buf)
-	pkg.ToGob(enc)
+	msg.ToGob(enc)
 	msgBytes := make([]byte, c.buf.Len(), c.buf.Len())
 	copy(msgBytes, c.buf.Bytes())
 	return msgBytes
