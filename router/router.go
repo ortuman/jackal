@@ -472,7 +472,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 		if !ok {
 			continue
 		}
-		log.Debugf("received cluster 'bind' message: %s", j.String())
+		log.Debugf("binded cluster c2s: %s", j.String())
 
 		stm := r.cluster.C2SStream(j, presence, msg.Node)
 		r.bind(stm)
@@ -484,7 +484,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 func (r *Router) processUnbindMessage(msg *cluster.Message) {
 	j := msg.Payloads[0].JID
 
-	log.Debugf("received cluster 'unbind' message: %s", j.String())
+	log.Debugf("unbinded cluster c2s: %s", j.String())
 	r.mu.Lock()
 	r.unbind(j)
 	r.unregisterClusterC2S(j, msg.Node)
@@ -499,7 +499,7 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 	if !ok {
 		return
 	}
-	log.Debugf("received cluster 'update presence' message: %s (type: %s)", j.String(), presence.Type())
+	log.Debugf("updated cluster c2s presence: %s (type: %s)", j.String(), presence.Type())
 
 	var stm *cluster.C2S
 	r.mu.RLock()
@@ -517,7 +517,7 @@ func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
-	log.Debugf("received cluster 'route stanza' message: %s (type: %s)", j.String())
+	log.Debugf("routing cluster stanza: %s (name: %s)", j.String(), stanza.Name())
 	_ = r.route(stanza, false)
 }
 
