@@ -189,8 +189,9 @@ func (s *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
 
 func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {
 	var presenceXML string
-	scanner.Scan(&rn.Contact, &rn.JID, &presenceXML)
-
+	if err := scanner.Scan(&rn.Contact, &rn.JID, &presenceXML); err != nil {
+		return err
+	}
 	parser := xmpp.NewParser(strings.NewReader(presenceXML), xmpp.DefaultMode, 0)
 	elem, err := parser.ParseElement()
 	if err != nil {
