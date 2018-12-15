@@ -17,27 +17,7 @@ const (
 
 // Config represents a router configuration.
 type Config struct {
-	BindMessageBatchSize int          `yaml:"bind_msg_batch_size"`
-	Hosts                []HostConfig `yaml:"hosts"`
-}
-
-// UnmarshalYAML satisfies Unmarshaler interface.
-func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var p configProxy
-	if err := unmarshal(&p); err != nil {
-		return err
-	}
-	c.BindMessageBatchSize = p.BindMessageBatchSize
-	c.Hosts = p.Hosts
-	if c.BindMessageBatchSize == 0 {
-		c.BindMessageBatchSize = defaultBindMessageBatchSize
-	}
-	return nil
-}
-
-type configProxy struct {
-	BindMessageBatchSize int          `yaml:"bind_msg_batch_size"`
-	Hosts                []HostConfig `yaml:"hosts"`
+	Hosts []HostConfig `yaml:"hosts"`
 }
 
 type tlsConfig struct {

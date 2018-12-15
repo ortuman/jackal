@@ -21,6 +21,8 @@ import (
 
 const defaultDomain = "localhost"
 
+const bindMsgBatchSize = 1024
+
 var (
 	// ErrNotExistingAccount will be returned by Route method
 	// if destination user does not exist.
@@ -63,14 +65,13 @@ type Cluster interface {
 
 // Router represents an XMPP stanza router.
 type Router struct {
-	mu               sync.RWMutex
-	outS2SProvider   OutS2SProvider
-	cluster          Cluster
-	bindMsgBatchSize int
-	hosts            map[string]tls.Certificate
-	streams          map[string][]stream.C2S
-	localStreams     map[string]stream.C2S
-	clusterStreams   map[string]map[string]*cluster.C2S
+	mu             sync.RWMutex
+	outS2SProvider OutS2SProvider
+	cluster        Cluster
+	hosts          map[string]tls.Certificate
+	streams        map[string][]stream.C2S
+	localStreams   map[string]stream.C2S
+	clusterStreams map[string]map[string]*cluster.C2S
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -79,12 +80,11 @@ type Router struct {
 // New returns an new empty router instance.
 func New(config *Config) (*Router, error) {
 	r := &Router{
-		bindMsgBatchSize: config.BindMessageBatchSize,
-		hosts:            make(map[string]tls.Certificate),
-		blockLists:       make(map[string][]*jid.JID),
-		streams:          make(map[string][]stream.C2S),
-		localStreams:     make(map[string]stream.C2S),
-		clusterStreams:   make(map[string]map[string]*cluster.C2S),
+		hosts:          make(map[string]tls.Certificate),
+		blockLists:     make(map[string][]*jid.JID),
+		streams:        make(map[string][]stream.C2S),
+		localStreams:   make(map[string]stream.C2S),
+		clusterStreams: make(map[string]map[string]*cluster.C2S),
 	}
 	if len(config.Hosts) > 0 {
 		for _, h := range config.Hosts {
@@ -432,7 +432,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 			Stanza: stm.Presence(),
 		})
 		i++
-		if i == r.bindMsgBatchSize {
+		if i == bindMsgBatchSize {
 			r.cluster.SendMessageTo(node.Name, &cluster.Message{
 				Type:     cluster.MsgBatchBind,
 				Node:     r.cluster.LocalNode(),
