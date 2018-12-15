@@ -517,7 +517,7 @@ func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
-	log.Debugf("routing cluster stanza: %s (name: %s)", j.String(), stanza.Name())
+	log.Debugf("routing cluster stanza: %s\n%v", j.String(), stanza)
 	_ = r.route(stanza, false)
 }
 
