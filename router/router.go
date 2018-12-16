@@ -187,8 +187,9 @@ func (r *Router) Bind(stm stream.C2S) {
 			Type: cluster.MsgBind,
 			Node: r.cluster.LocalNode(),
 			Payloads: []cluster.MessagePayload{{
-				JID:    stm.JID(),
-				Stanza: stm.Presence(),
+				JID:        stm.JID(),
+				Stanza:     stm.Presence(),
+				ContextMap: stm.Context().Map(),
 			}},
 		})
 	}
@@ -428,8 +429,9 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 	var payloads []cluster.MessagePayload
 	for _, stm := range r.localStreams {
 		payloads = append(payloads, cluster.MessagePayload{
-			JID:    stm.JID(),
-			Stanza: stm.Presence(),
+			JID:        stm.JID(),
+			Stanza:     stm.Presence(),
+			ContextMap: stm.Context().Map(),
 		})
 		i++
 		if i == bindMsgBatchSize {

@@ -19,16 +19,14 @@ func NewContext() *Context {
 	return &Context{m: make(map[string]interface{})}
 }
 
-// SetObject stores within the context an object reference.
-func (ctx *Context) SetObject(object interface{}, key string) {
-	ctx.inWriteLock(func() { ctx.m[key] = object })
-}
-
-// Object retrieves from the context a previously stored object reference.
-func (ctx *Context) Object(key string) interface{} {
-	var ret interface{}
-	ctx.inReadLock(func() { ret = ctx.m[key] })
-	return ret
+// NewContextWithMap returns an initialized stream context by copying its values
+// from a map.
+func NewContextWithMap(m map[string]interface{}) *Context {
+	ctxMap := make(map[string]interface{})
+	for k, v := range m {
+		ctxMap[k] = v
+	}
+	return &Context{m: ctxMap}
 }
 
 // SetString stores within the context an string value.
@@ -101,6 +99,17 @@ func (ctx *Context) Bool(key string) bool {
 		}
 	})
 	return ret
+}
+
+// Map returns a stream context map copy.
+func (ctx *Context) Map() map[string]interface{} {
+	m := make(map[string]interface{})
+	ctx.mu.RLock()
+	for k, v := range ctx.m {
+		m[k] = v
+	}
+	ctx.mu.RUnlock()
+	return m
 }
 
 func (ctx *Context) inWriteLock(f func()) {
