@@ -111,7 +111,7 @@ func (x *BlockingCommand) sendBlockList(iq *xmpp.IQ, stm stream.C2S) {
 	reply.AppendElement(blockList)
 	stm.SendElement(reply)
 
-	stm.Context().SetBool(true, xep191RequestedContextKey)
+	stm.SetBool(xep191RequestedContextKey, true)
 }
 
 func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S) {
@@ -197,7 +197,7 @@ func (x *BlockingCommand) unblock(iq *xmpp.IQ, unblock xmpp.XElement, stm stream
 func (x *BlockingCommand) pushIQ(elem xmpp.XElement, stm stream.C2S) {
 	stms := x.router.UserStreams(stm.Username())
 	for _, stm := range stms {
-		if !stm.Context().Bool(xep191RequestedContextKey) {
+		if !stm.GetBool(xep191RequestedContextKey) {
 			continue
 		}
 		iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)

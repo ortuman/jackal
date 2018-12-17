@@ -31,7 +31,19 @@ type InOutStream interface {
 type C2S interface {
 	InOutStream
 
-	Context() *Context
+	Context() map[string]interface{}
+
+	SetString(key string, value string)
+	GetString(key string) string
+
+	SetInt(key string, value int)
+	GetInt(key string) int
+
+	SetFloat(key string, value float64)
+	GetFloat(key string) float64
+
+	SetBool(key string, value bool)
+	GetBool(key string) bool
 
 	Username() string
 	Domain() string
@@ -58,7 +70,6 @@ type S2SOut interface {
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
 	id              string
-	ctx             *Context
 	mu              sync.RWMutex
 	isSecured       bool
 	isAuthenticated bool
@@ -66,6 +77,7 @@ type MockC2S struct {
 	isDisconnected  bool
 	jid             *jid.JID
 	presence        *xmpp.Presence
+	context         map[string]interface{}
 	elemCh          chan xmpp.XElement
 	actorCh         chan func()
 	discCh          chan error
@@ -73,10 +85,9 @@ type MockC2S struct {
 
 // NewMockC2S returns a new mocked stream instance.
 func NewMockC2S(id string, jid *jid.JID) *MockC2S {
-	ctx := NewContext()
 	stm := &MockC2S{
 		id:      id,
-		ctx:     ctx,
+		context: make(map[string]interface{}),
 		elemCh:  make(chan xmpp.XElement, 16),
 		actorCh: make(chan func(), 64),
 		discCh:  make(chan error, 1),
@@ -92,8 +103,8 @@ func (m *MockC2S) ID() string {
 }
 
 // Context returns mocked stream associated context.
-func (m *MockC2S) Context() *Context {
-	return m.ctx
+func (m *MockC2S) Context() map[string]interface{} {
+	return map[string]interface{}{}
 }
 
 // Username returns current mocked stream username.

@@ -97,7 +97,7 @@ func (o *Offline) archiveMessage(message *xmpp.Message) {
 }
 
 func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
-	if stm.Context().Bool(offlineDeliveredCtxKey) {
+	if stm.GetBool(offlineDeliveredCtxKey) {
 		return // already delivered
 	}
 	// deliver offline messages
@@ -118,7 +118,7 @@ func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
 	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
 		log.Error(err)
 	}
-	stm.Context().SetBool(true, offlineDeliveredCtxKey)
+	stm.SetBool(offlineDeliveredCtxKey, true)
 }
 
 func isMessageArchivable(message *xmpp.Message) bool {

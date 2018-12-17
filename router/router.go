@@ -56,7 +56,7 @@ type Cluster interface {
 	// LocalNode returns local node name.
 	LocalNode() string
 
-	C2SStream(jid *jid.JID, presence *xmpp.Presence, node string) *cluster.C2S
+	C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[string]interface{}, node string) *cluster.C2S
 
 	SendMessageTo(node string, message *cluster.Message)
 
@@ -189,7 +189,7 @@ func (r *Router) Bind(stm stream.C2S) {
 			Payloads: []cluster.MessagePayload{{
 				JID:     stm.JID(),
 				Stanza:  stm.Presence(),
-				Context: stm.Context().Map(),
+				Context: stm.Context(),
 			}},
 		})
 	}
@@ -431,7 +431,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 		payloads = append(payloads, cluster.MessagePayload{
 			JID:     stm.JID(),
 			Stanza:  stm.Presence(),
-			Context: stm.Context().Map(),
+			Context: stm.Context(),
 		})
 		i++
 		if i == bindMsgBatchSize {
@@ -476,7 +476,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 		}
 		log.Debugf("binded cluster c2s: %s", j.String())
 
-		stm := r.cluster.C2SStream(j, presence, msg.Node)
+		stm := r.cluster.C2SStream(j, presence, p.Context, msg.Node)
 		r.bind(stm)
 		r.registerClusterC2S(stm, msg.Node)
 	}

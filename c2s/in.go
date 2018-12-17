@@ -44,7 +44,6 @@ type inStream struct {
 	id             string
 	connectTm      *time.Timer
 	state          uint32
-	ctx            *stream.Context
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
 	actorCh        chan func()
@@ -56,6 +55,9 @@ type inStream struct {
 	compressed    bool
 	authenticated bool
 	presence      *xmpp.Presence
+
+	contextMu sync.RWMutex
+	context   map[string]interface{}
 }
 
 func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
@@ -65,7 +67,7 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 		mods:       mods,
 		comps:      comps,
 		id:         id,
-		ctx:        stream.NewContext(),
+		context:    make(map[string]interface{}),
 		actorCh:    make(chan func(), streamMailboxSize),
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
@@ -95,9 +97,79 @@ func (s *inStream) ID() string {
 	return s.id
 }
 
-// context returns stream associated context.
-func (s *inStream) Context() *stream.Context {
-	return s.ctx
+// Context returns a copy of the stream associated context.
+func (s *inStream) Context() map[string]interface{} {
+	m := make(map[string]interface{})
+	s.contextMu.RLock()
+	for k, v := range s.context {
+		m[k] = v
+	}
+	s.contextMu.RUnlock()
+	return m
+}
+
+// SetString associates a string context value to a key.
+func (s *inStream) SetString(key string, value string) {
+	s.setContextValue(key, value)
+}
+
+// GetString returns the context value associated with the key as a string.
+func (s *inStream) GetString(key string) string {
+	var ret string
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if s, ok := s.context[key].(string); ok {
+		ret = s
+	}
+	return ret
+}
+
+// SetInt associates an integer context value to a key.
+func (s *inStream) SetInt(key string, value int) {
+	s.setContextValue(key, value)
+}
+
+// GetInt returns the context value associated with the key as an integer.
+func (s *inStream) GetInt(key string) int {
+	var ret int
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if i, ok := s.context[key].(int); ok {
+		ret = i
+	}
+	return ret
+}
+
+// SetInt associates a float context value to a key.
+func (s *inStream) SetFloat(key string, value float64) {
+	s.setContextValue(key, value)
+}
+
+// GetFloat returns the context value associated with the key as a float64.
+func (s *inStream) GetFloat(key string) float64 {
+	var ret float64
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if f, ok := s.context[key].(float64); ok {
+		ret = f
+	}
+	return ret
+}
+
+// SetBool associates a boolean context value to a key.
+func (s *inStream) SetBool(key string, value bool) {
+	s.setContextValue(key, value)
+}
+
+// GetBool returns the context value associated with the key as a boolean.
+func (s *inStream) GetBool(key string) bool {
+	var ret bool
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if b, ok := s.context[key].(bool); ok {
+		ret = b
+	}
+	return ret
 }
 
 // Username returns current stream username.
@@ -809,6 +881,12 @@ func (s *inStream) restartSession() {
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 	}, s.router)
 	s.setState(connecting)
+}
+
+func (s *inStream) setContextValue(key string, value interface{}) {
+	s.contextMu.Lock()
+	s.context[key] = value
+	s.contextMu.Unlock()
 }
 
 func (s *inStream) setJID(j *jid.JID) {

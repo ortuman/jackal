@@ -8,7 +8,6 @@ package cluster
 import (
 	"sync"
 
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -18,17 +17,26 @@ type C2S struct {
 	cluster    *Cluster
 	node       string
 	jid        *jid.JID
-	presenceMu sync.RWMutex
+	mu         sync.RWMutex
 	presence   *xmpp.Presence
+	contextMu  sync.RWMutex
+	context    map[string]interface{}
 }
 
-func newC2S(identifier string, jid *jid.JID, presence *xmpp.Presence, node string, cluster *Cluster) *C2S {
+func newC2S(
+	identifier string,
+	jid *jid.JID,
+	presence *xmpp.Presence,
+	context map[string]interface{},
+	node string,
+	cluster *Cluster) *C2S {
 	s := &C2S{
 		identifier: identifier,
 		cluster:    cluster,
 		node:       node,
 		jid:        jid,
 		presence:   presence,
+		context:    context,
 	}
 	return s
 }
@@ -37,8 +45,70 @@ func (s *C2S) ID() string {
 	return s.identifier
 }
 
-func (s *C2S) Context() *stream.Context {
-	return nil
+func (s *C2S) Context() map[string]interface{} {
+	m := make(map[string]interface{})
+	s.contextMu.RLock()
+	for k, v := range s.context {
+		m[k] = v
+	}
+	s.contextMu.RUnlock()
+	return m
+}
+
+func (s *C2S) SetString(key string, value string) {}
+
+func (s *C2S) GetString(key string) string {
+	var ret string
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if s, ok := s.context[key].(string); ok {
+		ret = s
+	}
+	return ret
+}
+
+func (s *C2S) SetInt(key string, value int) {}
+
+func (s *C2S) GetInt(key string) int {
+	var ret int
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if i, ok := s.context[key].(int); ok {
+		ret = i
+	}
+	return ret
+}
+
+func (s *C2S) SetFloat(key string, value float64) {}
+
+func (s *C2S) GetFloat(key string) float64 {
+	var ret float64
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if f, ok := s.context[key].(float64); ok {
+		ret = f
+	}
+	return ret
+}
+
+func (s *C2S) SetBool(key string, value bool) {}
+
+func (s *C2S) GetBool(key string) bool {
+	var ret bool
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if b, ok := s.context[key].(bool); ok {
+		ret = b
+	}
+	return ret
+}
+
+func (s *C2S) UpdateContext(m map[string]interface{}) {
+	s.contextMu.Lock()
+	for k, v := range m {
+		s.context[k] = v
+	}
+	s.contextMu.Unlock()
 }
 
 func (s *C2S) Username() string {
@@ -61,14 +131,14 @@ func (s *C2S) IsSecured() bool       { return true }
 func (s *C2S) IsAuthenticated() bool { return true }
 
 func (s *C2S) SetPresence(presence *xmpp.Presence) {
-	s.presenceMu.Lock()
+	s.mu.Lock()
 	s.presence = presence
-	s.presenceMu.Unlock()
+	s.mu.Unlock()
 }
 
 func (s *C2S) Presence() *xmpp.Presence {
-	s.presenceMu.RLock()
-	defer s.presenceMu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.presence
 }
 

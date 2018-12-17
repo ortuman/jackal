@@ -89,7 +89,7 @@ func (x *Register) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 			// ...send registration fields to requester entity...
 			x.sendRegistrationFields(iq, q, stm)
 		} else if iq.IsSet() {
-			if !stm.Context().Bool(xep077RegisteredCtxKey) {
+			if !stm.GetBool(xep077RegisteredCtxKey) {
 				// ...register a new user...
 				x.registerNewUser(iq, q, stm)
 			} else {
@@ -159,7 +159,7 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 		return
 	}
 	stm.SendElement(iq.ResultIQ())
-	stm.Context().SetBool(true, xep077RegisteredCtxKey) // mark as registered
+	stm.SetBool(xep077RegisteredCtxKey, true) // mark as registered
 }
 
 func (x *Register) cancelRegistration(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
