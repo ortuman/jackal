@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/cluster"
+
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
@@ -587,8 +589,8 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	}
 	// Try binding...
 	var stm stream.C2S
-	stms := s.router.UserStreams(s.JID().Node())
-	for _, s := range stms {
+	streams := s.router.UserStreams(s.JID().Node())
+	for _, s := range streams {
 		if s.Resource() == resource {
 			stm = s
 		}
@@ -615,7 +617,9 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	s.setJID(userJID)
 	s.sess.SetJID(userJID)
 
-	s.setPresence(xmpp.NewPresence(userJID, userJID, xmpp.UnavailableType))
+	s.mu.Lock()
+	s.presence = xmpp.NewPresence(userJID, userJID, xmpp.UnavailableType)
+	s.mu.Unlock()
 
 	s.router.Bind(s)
 
@@ -701,9 +705,6 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	// Update presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
-
-		// Let the whole cluster know that there has been a change in our presence
-		s.router.UpdateClusterPresence(presence, s.JID())
 	}
 	// Deliver presence to roster module
 	if r := s.mods.Roster; r != nil {
@@ -885,8 +886,38 @@ func (s *inStream) restartSession() {
 
 func (s *inStream) setContextValue(key string, value interface{}) {
 	s.contextMu.Lock()
+	defer s.contextMu.Unlock()
 	s.context[key] = value
-	s.contextMu.Unlock()
+
+	// Notify the whole roster about the stream context update.
+	if c := s.router.Cluster(); c != nil {
+		c.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUpdateContext,
+			Node: c.LocalNode(),
+			Payloads: []cluster.MessagePayload{{
+				JID:     s.JID(),
+				Context: map[string]interface{}{key: value},
+			}},
+		})
+	}
+}
+
+func (s *inStream) setPresence(presence *xmpp.Presence) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.presence = presence
+
+	// Notify the whole roster about the new stream presence.
+	if c := s.router.Cluster(); c != nil {
+		c.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUpdatePresence,
+			Node: c.LocalNode(),
+			Payloads: []cluster.MessagePayload{{
+				JID:    s.JID(),
+				Stanza: presence,
+			}},
+		})
+	}
 }
 
 func (s *inStream) setJID(j *jid.JID) {
@@ -917,12 +948,6 @@ func (s *inStream) setCompressed(compressed bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.compressed = compressed
-}
-
-func (s *inStream) setPresence(presence *xmpp.Presence) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.presence = presence
 }
 
 func (s *inStream) setState(state uint32) {

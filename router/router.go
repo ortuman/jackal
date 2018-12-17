@@ -144,7 +144,14 @@ func (r *Router) SetCluster(cluster Cluster) {
 	r.cluster = cluster
 }
 
+func (r *Router) Cluster() Cluster {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.cluster
+}
+
 // UpdateClusterPresence updates a presence associated to a jid in the whole cluster.
+/*
 func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, j *jid.JID) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -161,6 +168,7 @@ func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, j *jid.JID) {
 		})
 	}
 }
+*/
 
 // ClusterDelegate returns a router cluster delegate interface.
 func (r *Router) ClusterDelegate() cluster.Delegate {
@@ -491,6 +499,24 @@ func (r *Router) processUnbindMessage(msg *cluster.Message) {
 	r.unbind(j)
 	r.unregisterClusterC2S(j, msg.Node)
 	r.mu.Unlock()
+}
+
+func (r *Router) processUpdateContest(msg *cluster.Message) {
+	j := msg.Payloads[0].JID
+	context := msg.Payloads[0].Context
+
+	log.Debugf("updated cluster c2s context: %s\n%v", j.String(), context)
+
+	var stm *cluster.C2S
+	r.mu.RLock()
+	if streams := r.clusterStreams[msg.Node]; streams != nil {
+		stm = streams[j.String()]
+	}
+	r.mu.RUnlock()
+	if stm == nil {
+		return
+	}
+	stm.UpdateContext(context)
 }
 
 func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {

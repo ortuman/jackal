@@ -17,6 +17,7 @@ const (
 	MsgBatchBind
 	MsgUnbind
 	MsgUpdatePresence
+	MsgUpdateContext
 	MsgRouteStanza
 )
 
