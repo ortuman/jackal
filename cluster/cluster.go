@@ -24,8 +24,13 @@ const clusterMailboxSize = 32768
 
 const leaveTimeout = time.Second * 5
 
+type Metadata struct {
+	Version string
+}
+
 type Node struct {
-	Name string
+	Name     string
+	Metadata Metadata
 }
 
 type Delegate interface {
@@ -96,9 +101,6 @@ func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[s
 }
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
-	if msg.Payloads[0].JID == nil {
-		panic("Oops")
-	}
 	c.actorCh <- func() {
 		if err := c.send(msg, node); err != nil {
 			log.Error(err)
@@ -168,13 +170,21 @@ func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
 	if n.Name == c.LocalNode() {
 		return
 	}
+	var m Metadata
+	if err := gob.NewDecoder(bytes.NewBuffer(n.Meta)).Decode(&m); err != nil {
+		log.Warnf("%s", err)
+		return
+	}
 	c.membersMu.Lock()
 	c.members[n.Name] = n
 	c.membersMu.Unlock()
 
 	log.Infof("registered cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeJoined(&Node{Name: n.Name})
+		c.delegate.NodeJoined(&Node{
+			Name:     n.Name,
+			Metadata: m,
+		})
 	}
 }
 

@@ -10,6 +10,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/ortuman/jackal/version"
+
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
@@ -429,8 +431,11 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 	if r.cluster == nil {
 		return
 	}
+	if node.Metadata.Version != version.ApplicationVersion.String() {
+		log.Warnf("incompatible node version: %s (node: %s)", node.Metadata.Version, node.Name)
+		return
+	}
 	r.mu.RLock()
-	defer r.mu.RUnlock()
 
 	// send local JIDs in batches to the recently joined node
 	i := 0
@@ -460,6 +465,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 			Payloads: payloads,
 		})
 	}
+	r.mu.RUnlock()
 }
 
 func (r *Router) handleNodeLeft(node *cluster.Node) {

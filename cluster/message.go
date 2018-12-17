@@ -79,9 +79,6 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 }
 
 func (p *MessagePayload) ToGob(enc *gob.Encoder) {
-	if p.JID == nil {
-		panic("Oops")
-	}
 	p.JID.ToGob(enc)
 
 	hasContextMap := p.Context != nil
