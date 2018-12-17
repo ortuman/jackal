@@ -7,9 +7,8 @@ package stream
 
 import (
 	"errors"
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"

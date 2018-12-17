@@ -142,8 +142,7 @@ func (s *C2S) Presence() *xmpp.Presence {
 	return s.presence
 }
 
-func (s *C2S) Disconnect(err error) {
-}
+func (s *C2S) Disconnect(err error) {}
 
 func (s *C2S) SendElement(elem xmpp.XElement) {
 	stanza, ok := elem.(xmpp.Stanza)
@@ -154,7 +153,7 @@ func (s *C2S) SendElement(elem xmpp.XElement) {
 		Type: MsgRouteStanza,
 		Node: s.cluster.LocalNode(),
 		Payloads: []MessagePayload{{
-			JID:    stanza.ToJID(),
+			JID:    s.jid,
 			Stanza: stanza,
 		}},
 	})

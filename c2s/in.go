@@ -11,9 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/cluster"
-
 	"github.com/ortuman/jackal/auth"
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"

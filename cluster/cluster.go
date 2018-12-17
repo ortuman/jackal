@@ -96,6 +96,9 @@ func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[s
 }
 
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
+	if msg.Payloads[0].JID == nil {
+		panic("Oops")
+	}
 	c.actorCh <- func() {
 		if err := c.send(msg, node); err != nil {
 			log.Error(err)
