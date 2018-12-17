@@ -25,7 +25,8 @@ const clusterMailboxSize = 32768
 const leaveTimeout = time.Second * 5
 
 type Metadata struct {
-	Version string
+	Version   string
+	GoVersion string
 }
 
 type Node struct {

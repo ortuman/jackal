@@ -8,15 +8,15 @@ package router
 import (
 	"crypto/tls"
 	"errors"
+	"runtime"
 	"sync"
-
-	"github.com/ortuman/jackal/version"
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util"
+	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -432,12 +432,16 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 		return
 	}
 	if node.Metadata.Version != version.ApplicationVersion.String() {
-		log.Warnf("incompatible node version: %s (node: %s)", node.Metadata.Version, node.Name)
+		log.Warnf("incompatible server version: %s (node: %s)", node.Metadata.Version, node.Name)
 		return
 	}
+	if node.Metadata.GoVersion != runtime.Version() {
+		log.Warnf("incompatible runtime version: %s (node: %s)", node.Metadata.GoVersion, node.Name)
+		return
+	}
+	// send local JIDs in batches to the recently joined node
 	r.mu.RLock()
 
-	// send local JIDs in batches to the recently joined node
 	i := 0
 	var payloads []cluster.MessagePayload
 	for _, stm := range r.localStreams {

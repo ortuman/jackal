@@ -8,6 +8,7 @@ package cluster
 import (
 	"bytes"
 	"encoding/gob"
+	"runtime"
 
 	"github.com/ortuman/jackal/version"
 )
@@ -23,6 +24,8 @@ func init() {
 func (d *memberListDelegate) NodeMeta(limit int) []byte {
 	var m Metadata
 	m.Version = version.ApplicationVersion.String()
+	m.GoVersion = runtime.Version()
+
 	buf := bytes.NewBuffer(nil)
 	gob.NewEncoder(buf).Encode(&m)
 	b := make([]byte, buf.Len())

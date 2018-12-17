@@ -11,10 +11,6 @@ import (
 	"github.com/ortuman/jackal/util"
 )
 
-const (
-	defaultBindMessageBatchSize = 1000
-)
-
 // Config represents a router configuration.
 type Config struct {
 	Hosts []HostConfig `yaml:"hosts"`
