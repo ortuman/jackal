@@ -889,7 +889,7 @@ func (s *inStream) setContextValue(key string, value interface{}) {
 	defer s.contextMu.Unlock()
 	s.context[key] = value
 
-	// Notify the whole roster about the stream context update.
+	// Notify the whole roster about the context update.
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdateContext,
@@ -907,13 +907,13 @@ func (s *inStream) setPresence(presence *xmpp.Presence) {
 	defer s.mu.Unlock()
 	s.presence = presence
 
-	// Notify the whole roster about the new stream presence.
+	// Notify the whole roster about the presence update.
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdatePresence,
 			Node: c.LocalNode(),
 			Payloads: []cluster.MessagePayload{{
-				JID:    s.JID(),
+				JID:    s.jid,
 				Stanza: presence,
 			}},
 		})
