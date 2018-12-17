@@ -76,6 +76,7 @@ type MockC2S struct {
 	isDisconnected  bool
 	jid             *jid.JID
 	presence        *xmpp.Presence
+	contextMu       sync.RWMutex
 	context         map[string]interface{}
 	elemCh          chan xmpp.XElement
 	actorCh         chan func()
@@ -101,9 +102,79 @@ func (m *MockC2S) ID() string {
 	return m.id
 }
 
-// Context returns mocked stream associated context.
+// Context returns a copy of the stream associated context.
 func (m *MockC2S) Context() map[string]interface{} {
-	return map[string]interface{}{}
+	ret := make(map[string]interface{})
+	m.contextMu.RLock()
+	for k, v := range m.context {
+		ret[k] = v
+	}
+	m.contextMu.RUnlock()
+	return ret
+}
+
+// SetString associates a string context value to a key.
+func (m *MockC2S) SetString(key string, value string) {
+	m.setContextValue(key, value)
+}
+
+// GetString returns the context value associated with the key as a string.
+func (m *MockC2S) GetString(key string) string {
+	var ret string
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if s, ok := m.context[key].(string); ok {
+		ret = s
+	}
+	return ret
+}
+
+// SetInt associates an integer context value to a key.
+func (m *MockC2S) SetInt(key string, value int) {
+	m.setContextValue(key, value)
+}
+
+// GetInt returns the context value associated with the key as an integer.
+func (m *MockC2S) GetInt(key string) int {
+	var ret int
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if i, ok := m.context[key].(int); ok {
+		ret = i
+	}
+	return ret
+}
+
+// SetInt associates a float context value to a key.
+func (m *MockC2S) SetFloat(key string, value float64) {
+	m.setContextValue(key, value)
+}
+
+// GetFloat returns the context value associated with the key as a float64.
+func (m *MockC2S) GetFloat(key string) float64 {
+	var ret float64
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if f, ok := m.context[key].(float64); ok {
+		ret = f
+	}
+	return ret
+}
+
+// SetBool associates a boolean context value to a key.
+func (m *MockC2S) SetBool(key string, value bool) {
+	m.setContextValue(key, value)
+}
+
+// GetBool returns the context value associated with the key as a boolean.
+func (m *MockC2S) GetBool(key string) bool {
+	var ret bool
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if b, ok := m.context[key].(bool); ok {
+		ret = b
+	}
+	return ret
 }
 
 // Username returns current mocked stream username.
@@ -254,4 +325,10 @@ func (m *MockC2S) disconnect(err error) {
 		m.discCh <- err
 		m.isDisconnected = true
 	}
+}
+
+func (m *MockC2S) setContextValue(key string, value interface{}) {
+	m.contextMu.Lock()
+	defer m.contextMu.Unlock()
+	m.context[key] = value
 }

@@ -106,7 +106,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
-	require.True(t, stm.Context().Bool(rosterRequestedCtxKey))
+	require.True(t, stm.GetBool(rosterRequestedCtxKey))
 
 	// test versioning
 	iq = xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -150,7 +150,7 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
-	stm2.Context().SetBool(true, rosterRequestedCtxKey)
+	stm2.SetBool(rosterRequestedCtxKey, true)
 
 	r, shutdownCh := New(&Config{}, rtr)
 	defer close(shutdownCh)

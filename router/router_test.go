@@ -61,11 +61,11 @@ func TestC2SManager(t *testing.T) {
 	require.Equal(t, 1, len(r.UserStreams("romeo")))
 	require.Equal(t, 1, len(r.UserStreams("juliet")))
 
-	r.Unbind(strm5)
-	r.Unbind(strm4)
-	r.Unbind(strm3)
-	r.Unbind(strm2)
-	r.Unbind(strm1)
+	r.Unbind(strm5.JID())
+	r.Unbind(strm4.JID())
+	r.Unbind(strm3.JID())
+	r.Unbind(strm2.JID())
+	r.Unbind(strm1.JID())
 
 	require.Equal(t, 0, len(r.UserStreams("ortuman")))
 	require.Equal(t, 0, len(r.UserStreams("hamlet")))
