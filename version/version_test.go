@@ -14,7 +14,7 @@ import (
 
 func TestNewVersion(t *testing.T) {
 	v1 := version.NewVersion(1, 9, 2)
-	require.Equal(t, "1.9.2", v1.String())
+	require.Equal(t, "v1.9.2", v1.String())
 }
 
 func TestIsEqual(t *testing.T) {
