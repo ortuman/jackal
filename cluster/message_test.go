@@ -35,9 +35,9 @@ func TestMessageSerialization(t *testing.T) {
 		Type: MsgUpdatePresence,
 		Node: "node1",
 		Payloads: []MessagePayload{{
-			JID:        j,
-			Stanza:     xmpp.NewPresence(j, j, xmpp.UnavailableType),
-			ContextMap: map[string]interface{}{"requested": true},
+			JID:     j,
+			Stanza:  xmpp.NewPresence(j, j, xmpp.UnavailableType),
+			Context: map[string]interface{}{"requested": true},
 		}},
 	}
 	buf.Reset()
@@ -49,9 +49,9 @@ func TestMessageSerialization(t *testing.T) {
 	require.Equal(t, 1, len(m2.Payloads))
 	require.NotNil(t, m2.Payloads[0].JID)
 	require.NotNil(t, m2.Payloads[0].Stanza)
-	require.NotNil(t, m2.Payloads[0].ContextMap)
+	require.NotNil(t, m2.Payloads[0].Context)
 
-	require.Equal(t, m1.Payloads[0].ContextMap, m2.Payloads[0].ContextMap)
+	require.Equal(t, m1.Payloads[0].Context, m2.Payloads[0].Context)
 	require.Equal(t, m1.Payloads[0].JID.String(), m2.Payloads[0].JID.String())
 	require.Equal(t, m1.Payloads[0].Stanza.String(), m2.Payloads[0].Stanza.String())
 	_, ok := m2.Payloads[0].Stanza.(*xmpp.Presence)

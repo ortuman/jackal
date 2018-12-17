@@ -27,9 +27,9 @@ const (
 )
 
 type MessagePayload struct {
-	JID        *jid.JID
-	ContextMap map[string]interface{}
-	Stanza     xmpp.Stanza
+	JID     *jid.JID
+	Context map[string]interface{}
+	Stanza  xmpp.Stanza
 }
 
 func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
@@ -44,7 +44,7 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 	if hasContextMap {
 		var m map[string]interface{}
 		dec.Decode(&m)
-		p.ContextMap = m
+		p.Context = m
 	}
 
 	var hasStanza bool
@@ -80,10 +80,10 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 func (p *MessagePayload) ToGob(enc *gob.Encoder) {
 	p.JID.ToGob(enc)
 
-	hasContextMap := p.ContextMap != nil
+	hasContextMap := p.Context != nil
 	enc.Encode(&hasContextMap)
 	if hasContextMap {
-		enc.Encode(&p.ContextMap)
+		enc.Encode(&p.Context)
 	}
 
 	hasStanza := p.Stanza != nil
