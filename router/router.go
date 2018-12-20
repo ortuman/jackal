@@ -152,26 +152,6 @@ func (r *Router) Cluster() Cluster {
 	return r.cluster
 }
 
-// UpdateClusterPresence updates a presence associated to a jid in the whole cluster.
-/*
-func (r *Router) UpdateClusterPresence(presence *xmpp.Presence, j *jid.JID) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	// broadcast cluster 'presence' message
-	if r.cluster != nil {
-		r.cluster.BroadcastMessage(&cluster.Message{
-			Type: cluster.MsgUpdatePresence,
-			Node: r.cluster.LocalNode(),
-			Payloads: []cluster.MessagePayload{{
-				JID:    j,
-				Stanza: presence,
-			}},
-		})
-	}
-}
-*/
-
 // ClusterDelegate returns a router cluster delegate interface.
 func (r *Router) ClusterDelegate() cluster.Delegate {
 	return &clusterDelegate{r: r}

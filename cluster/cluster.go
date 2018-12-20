@@ -44,7 +44,7 @@ type Delegate interface {
 	NotifyMessage(msg *Message)
 }
 
-// Cluster represents cluster sub system.
+// Cluster represents a cluster sub system.
 type Cluster struct {
 	cfg        *Config
 	buf        *bytes.Buffer

@@ -13,11 +13,22 @@ import (
 )
 
 const (
+	// MsgBind represents a bind cluster message.
 	MsgBind = iota
+
+	// MsgBatchBind represents a batch bind cluster message.
 	MsgBatchBind
+
+	// MsgUnbind represents a unbind cluster message.
 	MsgUnbind
+
+	// MsgUpdatePresence represents an update presence cluster message.
 	MsgUpdatePresence
+
+	// MsgUpdateContext represents a context update cluster message.
 	MsgUpdateContext
+
+	// MsgRouteStanza represents a route stanza cluster message.
 	MsgRouteStanza
 )
 
@@ -27,12 +38,14 @@ const (
 	iqStanza
 )
 
+// MessagePayload represents a message payload type.
 type MessagePayload struct {
 	JID     *jid.JID
 	Context map[string]interface{}
 	Stanza  xmpp.Stanza
 }
 
+// FromGob reads MessagePayload fields from its gob binary representation.
 func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 	j, err := jid.NewFromGob(dec)
 	if err != nil {
@@ -78,6 +91,7 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 	return nil
 }
 
+// ToGob converts a MessagePayload instance to its gob binary representation.
 func (p *MessagePayload) ToGob(enc *gob.Encoder) {
 	p.JID.ToGob(enc)
 
@@ -106,12 +120,15 @@ func (p *MessagePayload) ToGob(enc *gob.Encoder) {
 	p.Stanza.ToGob(enc)
 }
 
+// Message is the cluster message type.
+// A message can contain one or more payloads.
 type Message struct {
 	Type     int
 	Node     string
 	Payloads []MessagePayload
 }
 
+// FromGob reads Message fields from its gob binary representation.
 func (m *Message) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&m.Type)
 	dec.Decode(&m.Node)
@@ -128,6 +145,7 @@ func (m *Message) FromGob(dec *gob.Decoder) error {
 	return nil
 }
 
+// ToGob converts a Message instance to its gob binary representation.
 func (m *Message) ToGob(enc *gob.Encoder) {
 	enc.Encode(m.Type)
 	enc.Encode(m.Node)
