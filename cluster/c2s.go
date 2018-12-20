@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// C2S represents a cluster c2s stream.
 type C2S struct {
 	identifier string
 	cluster    *Cluster

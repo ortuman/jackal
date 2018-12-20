@@ -24,16 +24,19 @@ const clusterMailboxSize = 32768
 
 const leaveTimeout = time.Second * 5
 
+// Metadata type represents all metadata information associated to a node.
 type Metadata struct {
 	Version   string
 	GoVersion string
 }
 
+// Node represents a concrete cluster node and metadata information.
 type Node struct {
 	Name     string
 	Metadata Metadata
 }
 
+// Delegate is the interface that will receive all cluster related events.
 type Delegate interface {
 	NodeJoined(node *Node)
 	NodeLeft(node *Node)
@@ -41,6 +44,7 @@ type Delegate interface {
 	NotifyMessage(msg *Message)
 }
 
+// Cluster represents cluster sub system.
 type Cluster struct {
 	cfg        *Config
 	buf        *bytes.Buffer
@@ -51,6 +55,7 @@ type Cluster struct {
 	actorCh    chan func()
 }
 
+// New returns an initialized cluster instance
 func New(config *Config, delegate Delegate) (*Cluster, error) {
 	if config == nil {
 		return nil, nil
@@ -77,6 +82,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 	return c, nil
 }
 
+// Join tries to join the cluster by contacting all the given hosts.
 func (c *Cluster) Join() error {
 	log.Infof("local node: %s", c.LocalNode())
 
@@ -93,14 +99,17 @@ func (c *Cluster) Join() error {
 	return err
 }
 
+// LocalNode returns the local node identifier.
 func (c *Cluster) LocalNode() string {
 	return c.cfg.Name
 }
 
+// C2SStream returns a cluster C2S stream.
 func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[string]interface{}, node string) *C2S {
 	return newC2S(uuid.New().String(), jid, presence, context, node, c)
 }
 
+// SendMessageTo sends a cluster message to a concrete node.
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
 	c.actorCh <- func() {
 		if err := c.send(msg, node); err != nil {
@@ -110,6 +119,7 @@ func (c *Cluster) SendMessageTo(node string, msg *Message) {
 	}
 }
 
+// BroadcastMessage broadcasts a cluster message to all nodes.
 func (c *Cluster) BroadcastMessage(msg *Message) {
 	c.actorCh <- func() {
 		if err := c.broadcast(msg); err != nil {
@@ -118,6 +128,7 @@ func (c *Cluster) BroadcastMessage(msg *Message) {
 	}
 }
 
+// Shutdown shuts down cluster sub system.
 func (c *Cluster) Shutdown() error {
 	errCh := make(chan error, 1)
 	c.actorCh <- func() {
