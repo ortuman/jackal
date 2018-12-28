@@ -37,6 +37,7 @@ type Node struct {
 // Delegate is the interface that will receive all cluster related events.
 type Delegate interface {
 	NodeJoined(node *Node)
+	NodeUpdated(node *Node)
 	NodeLeft(node *Node)
 
 	NotifyMessage(msg *Message)
@@ -190,6 +191,11 @@ func (c *Cluster) handleNotifyUpdate(n *Node) {
 	c.membersMu.Lock()
 	c.members[n.Name] = n
 	c.membersMu.Unlock()
+
+	log.Infof("updated cluster node: %s", n.Name)
+	if c.delegate != nil && n.Name != c.LocalNode() {
+		c.delegate.NodeUpdated(n)
+	}
 }
 
 func (c *Cluster) handleNotifyLeave(n *Node) {

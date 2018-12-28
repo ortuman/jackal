@@ -15,4 +15,5 @@ type clusterDelegate struct {
 
 func (d *clusterDelegate) NotifyMessage(msg *cluster.Message) { d.r.handleNotifyMessage(msg) }
 func (d *clusterDelegate) NodeJoined(node *cluster.Node)      { d.r.handleNodeJoined(node) }
+func (d *clusterDelegate) NodeUpdated(node *cluster.Node)     {}
 func (d *clusterDelegate) NodeLeft(node *cluster.Node)        { d.r.handleNodeLeft(node) }
