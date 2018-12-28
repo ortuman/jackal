@@ -8,13 +8,9 @@ package cluster
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
-	"io/ioutil"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/memberlist"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -22,7 +18,9 @@ import (
 
 const clusterMailboxSize = 32768
 
-const leaveTimeout = time.Second * 5
+var createMemberList = func(cfg *Config, cluster *Cluster) (MemberList, error) {
+	return newDefaultMemberList(cfg, cluster)
+}
 
 // Metadata type represents all metadata information associated to a node.
 type Metadata struct {
@@ -44,14 +42,24 @@ type Delegate interface {
 	NotifyMessage(msg *Message)
 }
 
+// MemberList interface defines the common cluster member list methods.
+type MemberList interface {
+	Members() []Node
+
+	Join(hosts []string) error
+	Shutdown() error
+
+	SendReliable(node string, msg []byte) error
+}
+
 // Cluster represents a cluster sub system.
 type Cluster struct {
 	cfg        *Config
 	buf        *bytes.Buffer
 	delegate   Delegate
-	memberList *memberlist.Memberlist
+	memberList MemberList
 	membersMu  sync.RWMutex
-	members    map[string]*memberlist.Node
+	members    map[string]*Node
 	actorCh    chan func()
 }
 
@@ -61,19 +69,13 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		return nil, nil
 	}
 	c := &Cluster{
-		buf:     bytes.NewBuffer(nil),
-		members: make(map[string]*memberlist.Node),
-		actorCh: make(chan func(), clusterMailboxSize),
+		cfg:      config,
+		delegate: delegate,
+		buf:      bytes.NewBuffer(nil),
+		members:  make(map[string]*Node),
+		actorCh:  make(chan func(), clusterMailboxSize),
 	}
-	c.cfg = config
-	c.delegate = delegate
-	conf := memberlist.DefaultLocalConfig()
-	conf.Name = config.Name
-	conf.BindPort = config.BindPort
-	conf.Delegate = &memberListDelegate{cluster: c}
-	conf.Events = &memberListEventDelegate{cluster: c}
-	conf.LogOutput = ioutil.Discard
-	ml, err := memberlist.Create(conf)
+	ml, err := createMemberList(config, c)
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +94,10 @@ func (c *Cluster) Join() error {
 			continue
 		}
 		log.Infof("registered cluster node: %s", m.Name)
-		c.members[m.Name] = m
+		c.members[m.Name] = &m
 	}
 	c.membersMu.Unlock()
-	_, err := c.memberList.Join(c.cfg.Hosts)
-	return err
+	return c.memberList.Join(c.cfg.Hosts)
 }
 
 // LocalNode returns the local node identifier.
@@ -134,10 +135,6 @@ func (c *Cluster) Shutdown() error {
 	c.actorCh <- func() {
 		defer close(c.actorCh)
 
-		if err := c.memberList.Leave(leaveTimeout); err != nil {
-			errCh <- err
-			return
-		}
 		if err := c.memberList.Shutdown(); err != nil {
 			errCh <- err
 			return
@@ -154,13 +151,7 @@ func (c *Cluster) loop() {
 }
 
 func (c *Cluster) send(msg *Message, toNode string) error {
-	c.membersMu.RLock()
-	node := c.members[toNode]
-	c.membersMu.RUnlock()
-	if node == nil {
-		return fmt.Errorf("cannot send message: node %s not found", toNode)
-	}
-	return c.memberList.SendReliable(node, c.encodeMessage(msg))
+	return c.memberList.SendReliable(toNode, c.encodeMessage(msg))
 }
 
 func (c *Cluster) broadcast(msg *Message) error {
@@ -171,20 +162,15 @@ func (c *Cluster) broadcast(msg *Message) error {
 		if node.Name == c.LocalNode() {
 			continue
 		}
-		if err := c.memberList.SendReliable(node, msgBytes); err != nil {
+		if err := c.memberList.SendReliable(node.Name, msgBytes); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
+func (c *Cluster) handleNotifyJoin(n *Node) {
 	if n.Name == c.LocalNode() {
-		return
-	}
-	var m Metadata
-	if err := gob.NewDecoder(bytes.NewBuffer(n.Meta)).Decode(&m); err != nil {
-		log.Warnf("%s", err)
 		return
 	}
 	c.membersMu.Lock()
@@ -193,14 +179,11 @@ func (c *Cluster) handleNotifyJoin(n *memberlist.Node) {
 
 	log.Infof("registered cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeJoined(&Node{
-			Name:     n.Name,
-			Metadata: m,
-		})
+		c.delegate.NodeJoined(n)
 	}
 }
 
-func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
+func (c *Cluster) handleNotifyLeave(n *Node) {
 	if n.Name == c.LocalNode() {
 		return
 	}
@@ -210,7 +193,7 @@ func (c *Cluster) handleNotifyLeave(n *memberlist.Node) {
 
 	log.Infof("unregistered cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeLeft(&Node{Name: n.Name})
+		c.delegate.NodeLeft(n)
 	}
 }
 
