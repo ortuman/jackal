@@ -21,25 +21,39 @@ import (
 
 const leaveTimeout = time.Second * 5
 
+var createHashicorpMemberList = func(conf *memberlist.Config) (hashicorpMemberList, error) {
+	return memberlist.Create(conf)
+}
+
+type hashicorpMemberList interface {
+	Join(existing []string) (int, error)
+
+	Leave(timeout time.Duration) error
+	Shutdown() error
+
+	SendReliable(to *memberlist.Node, msg []byte) error
+}
+
 type defaultMemberList struct {
 	cluster *Cluster
-	ml      *memberlist.Memberlist
+	ml      hashicorpMemberList
 	mu      sync.RWMutex
 	members map[string]*memberlist.Node
 }
 
-func newDefaultMemberList(config *Config, c *Cluster) (MemberList, error) {
+func newDefaultMemberList(localName string, bindPort int, c *Cluster) (MemberList, error) {
 	dl := &defaultMemberList{
 		cluster: c,
 		members: make(map[string]*memberlist.Node),
 	}
 	conf := memberlist.DefaultLocalConfig()
-	conf.Name = config.Name
-	conf.BindPort = config.BindPort
+	conf.Name = localName
+	conf.BindPort = bindPort
 	conf.Delegate = dl
 	conf.Events = dl
 	conf.LogOutput = ioutil.Discard
-	ml, err := memberlist.Create(conf)
+
+	ml, err := createHashicorpMemberList(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +115,10 @@ func (d *defaultMemberList) NodeMeta(limit int) []byte {
 	return b
 }
 
-func (d *defaultMemberList) NotifyMsg(msg []byte)                       { d.cluster.handleNotifyMsg(msg) }
+func (d *defaultMemberList) NotifyMsg(msg []byte) {
+	d.cluster.handleNotifyMsg(msg)
+}
+
 func (d *defaultMemberList) GetBroadcasts(overhead, limit int) [][]byte { return nil }
 func (d *defaultMemberList) LocalState(join bool) []byte                { return nil }
 func (d *defaultMemberList) MergeRemoteState(buf []byte, join bool)     {}
@@ -134,7 +151,18 @@ func (d *defaultMemberList) NotifyLeave(n *memberlist.Node) {
 	d.cluster.handleNotifyLeave(cNode)
 }
 
-func (d *defaultMemberList) NotifyUpdate(n *memberlist.Node) {}
+func (d *defaultMemberList) NotifyUpdate(n *memberlist.Node) {
+	d.mu.Lock()
+	d.members[n.Name] = n
+	d.mu.Unlock()
+
+	cNode, err := d.clusterNodeFromMemberListNode(n)
+	if err != nil {
+		log.Warnf("%s", err)
+		return
+	}
+	d.cluster.handleNotifyUpdate(cNode)
+}
 
 func (d *defaultMemberList) clusterNodeFromMemberListNode(n *memberlist.Node) (*Node, error) {
 	var m Metadata

@@ -18,8 +18,8 @@ import (
 
 const clusterMailboxSize = 32768
 
-var createMemberList = func(cfg *Config, cluster *Cluster) (MemberList, error) {
-	return newDefaultMemberList(cfg, cluster)
+var createMemberList = func(localName string, bindPort int, cluster *Cluster) (MemberList, error) {
+	return newDefaultMemberList(localName, bindPort, cluster)
 }
 
 // Metadata type represents all metadata information associated to a node.
@@ -75,7 +75,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		members:  make(map[string]*Node),
 		actorCh:  make(chan func(), clusterMailboxSize),
 	}
-	ml, err := createMemberList(config, c)
+	ml, err := createMemberList(config.Name, config.BindPort, c)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +181,15 @@ func (c *Cluster) handleNotifyJoin(n *Node) {
 	if c.delegate != nil && n.Name != c.LocalNode() {
 		c.delegate.NodeJoined(n)
 	}
+}
+
+func (c *Cluster) handleNotifyUpdate(n *Node) {
+	if n.Name == c.LocalNode() {
+		return
+	}
+	c.membersMu.Lock()
+	c.members[n.Name] = n
+	c.membersMu.Unlock()
 }
 
 func (c *Cluster) handleNotifyLeave(n *Node) {
