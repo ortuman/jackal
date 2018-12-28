@@ -134,13 +134,8 @@ func (c *Cluster) BroadcastMessage(msg *Message) {
 func (c *Cluster) Shutdown() error {
 	errCh := make(chan error, 1)
 	c.actorCh <- func() {
-		defer close(c.actorCh)
-
-		if err := c.memberList.Shutdown(); err != nil {
-			errCh <- err
-			return
-		}
-		close(errCh)
+		errCh <- c.memberList.Shutdown()
+		close(c.actorCh)
 	}
 	return <-errCh
 }
