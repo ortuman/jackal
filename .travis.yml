@@ -1,17 +1,26 @@
 language: go
 
+env:
+  global:
+    - CC_TEST_REPORTER_ID=71266456503f8f3caaae69674d933342c3fce1e2cced98834a2820bfcd6ebe01
+    - GO111MODULE=on
+
 os:
   - linux
   - osx
 
 go:
   - 1.11.x
-  
-env:
-- GO111MODULE=on
+
+before_script:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-darwin-amd64 > ./cc-test-reporter; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter; fi
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
 
 script:
   - make coverage
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+after_script:
+  - mv coverage.txt c.out
+  - ./cc-test-reporter after-build
