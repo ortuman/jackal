@@ -10,7 +10,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"runtime"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,17 +20,17 @@ import (
 
 type fakeHashicorpMemberList struct {
 	err               error
-	joinCalls         int32
-	leaveCalls        int32
-	shutdownCalls     int32
-	sendReliableCalls int32
+	joinCalls         int
+	leaveCalls        int
+	shutdownCalls     int
+	sendReliableCalls int
 }
 
 func (ml *fakeHashicorpMemberList) Join(existing []string) (int, error) {
 	if ml.err != nil {
 		return 0, ml.err
 	}
-	atomic.AddInt32(&ml.joinCalls, 1)
+	ml.joinCalls++
 	return len(existing), nil
 }
 
@@ -39,7 +38,7 @@ func (ml *fakeHashicorpMemberList) Leave(timeout time.Duration) error {
 	if ml.err != nil {
 		return ml.err
 	}
-	atomic.AddInt32(&ml.leaveCalls, 1)
+	ml.leaveCalls++
 	return nil
 }
 
@@ -47,7 +46,7 @@ func (ml *fakeHashicorpMemberList) Shutdown() error {
 	if ml.err != nil {
 		return ml.err
 	}
-	atomic.AddInt32(&ml.shutdownCalls, 1)
+	ml.shutdownCalls++
 	return nil
 }
 
@@ -55,32 +54,21 @@ func (ml *fakeHashicorpMemberList) SendReliable(to *memberlist.Node, msg []byte)
 	if ml.err != nil {
 		return ml.err
 	}
-	atomic.AddInt32(&ml.sendReliableCalls, 1)
+	ml.sendReliableCalls++
 	return nil
 }
 
 type fakeMemberListDelegate struct {
-	notifyMsgCalls    int32
-	notifyJoinCalls   int32
-	notifyUpdateCalls int32
-	notifyLeaveCalls  int32
+	notifyMsgCalls    int
+	notifyJoinCalls   int
+	notifyUpdateCalls int
+	notifyLeaveCalls  int
 }
 
-func (d *fakeMemberListDelegate) handleNotifyMsg(msg []byte) {
-	atomic.AddInt32(&d.notifyMsgCalls, 1)
-}
-
-func (d *fakeMemberListDelegate) handleNotifyJoin(n *Node) {
-	atomic.AddInt32(&d.notifyJoinCalls, 1)
-}
-
-func (d *fakeMemberListDelegate) handleNotifyUpdate(n *Node) {
-	atomic.AddInt32(&d.notifyUpdateCalls, 1)
-}
-
-func (d *fakeMemberListDelegate) handleNotifyLeave(n *Node) {
-	atomic.AddInt32(&d.notifyLeaveCalls, 1)
-}
+func (d *fakeMemberListDelegate) handleNotifyMsg(msg []byte) { d.notifyMsgCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyJoin(n *Node)   { d.notifyJoinCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyUpdate(n *Node) { d.notifyUpdateCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyLeave(n *Node)  { d.notifyLeaveCalls++ }
 
 func TestClusterMemberList_Members(t *testing.T) {
 	var ml fakeHashicorpMemberList
@@ -97,17 +85,17 @@ func TestClusterMemberList_Members(t *testing.T) {
 	// no metadata included... node won't be added
 	cMemberList.NotifyJoin(&memberlist.Node{Name: "node4"})
 
-	require.Equal(t, int32(3), atomic.LoadInt32(&delegate.notifyJoinCalls))
+	require.Equal(t, 3, delegate.notifyJoinCalls)
 
 	cMemberList.NotifyUpdate(&memberlist.Node{Name: "node2"})
 	cMemberList.NotifyUpdate(memberListNode("node2"))
 
-	require.Equal(t, int32(1), atomic.LoadInt32(&delegate.notifyUpdateCalls))
+	require.Equal(t, 1, delegate.notifyUpdateCalls)
 
 	cMemberList.NotifyLeave(&memberlist.Node{Name: "node3"})
 	cMemberList.NotifyLeave(memberListNode("node3"))
 
-	require.Equal(t, int32(1), atomic.LoadInt32(&delegate.notifyLeaveCalls))
+	require.Equal(t, 1, delegate.notifyLeaveCalls)
 
 	require.Equal(t, 2, len(cMemberList.Members()))
 }
@@ -123,12 +111,12 @@ func TestClusterMemberList_Join(t *testing.T) {
 
 	err := cMemberList.Join([]string{"127.0.0.1:7777", "127.0.0.1:8888"})
 	require.Nil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.joinCalls))
+	require.Equal(t, 1, ml.joinCalls)
 
 	ml.err = errors.New("")
 	err = cMemberList.Join([]string{"127.0.0.1:7777", "127.0.0.1:8888"})
 	require.NotNil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.joinCalls))
+	require.Equal(t, 1, ml.joinCalls)
 }
 
 func TestClusterMemberList_Shutdown(t *testing.T) {
@@ -141,14 +129,14 @@ func TestClusterMemberList_Shutdown(t *testing.T) {
 	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
 	err := cMemberList.Shutdown()
 	require.Nil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.leaveCalls))
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.shutdownCalls))
+	require.Equal(t, 1, ml.leaveCalls)
+	require.Equal(t, 1, ml.shutdownCalls)
 
 	ml.err = errors.New("")
 	err = cMemberList.Shutdown()
 	require.NotNil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.leaveCalls))
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.shutdownCalls))
+	require.Equal(t, 1, ml.leaveCalls)
+	require.Equal(t, 1, ml.shutdownCalls)
 }
 
 func TestClusterMemberList_SendReliable(t *testing.T) {
@@ -161,18 +149,18 @@ func TestClusterMemberList_SendReliable(t *testing.T) {
 	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
 	err := cMemberList.SendReliable("node2", []byte{})
 	require.NotNil(t, err) // node2 has not joined
-	require.Equal(t, int32(0), atomic.LoadInt32(&ml.sendReliableCalls))
+	require.Equal(t, 0, ml.sendReliableCalls)
 
 	cMemberList.NotifyJoin(memberListNode("node2")) // node2 joins
 
 	err = cMemberList.SendReliable("node2", []byte{})
 	require.Nil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.sendReliableCalls))
+	require.Equal(t, 1, ml.sendReliableCalls)
 
 	ml.err = errors.New("")
 	err = cMemberList.SendReliable("node2", []byte{})
 	require.NotNil(t, err)
-	require.Equal(t, int32(1), atomic.LoadInt32(&ml.sendReliableCalls))
+	require.Equal(t, 1, ml.sendReliableCalls)
 }
 
 func TestClusterMemberList_NodeMetadata(t *testing.T) {
