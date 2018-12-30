@@ -188,15 +188,12 @@ func TestCluster_Delegate(t *testing.T) {
 	require.NotNil(t, c)
 
 	c.handleNotifyJoin(&Node{Name: "node4"})
-
 	require.Equal(t, 1, delegate.nodeJoinedCalls)
 
 	c.handleNotifyUpdate(&Node{Name: "node4"})
-
 	require.Equal(t, 1, delegate.nodeUpdatedCalls)
 
 	c.handleNotifyLeave(&Node{Name: "node4"})
-
 	require.Equal(t, 1, delegate.nodeLeftCalls)
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/garden", true)
@@ -210,7 +207,6 @@ func TestCluster_Delegate(t *testing.T) {
 	m.ToGob(enc)
 
 	c.handleNotifyMsg(buf.Bytes())
-
 	require.Equal(t, 1, delegate.notifyMessageCalls)
 }
 
