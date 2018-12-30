@@ -4,7 +4,8 @@ An XMPP server written in Go.
 
 [![Build Status](https://travis-ci.org/ortuman/jackal.svg?branch=master)](https://travis-ci.org/ortuman/jackal)
 [![GoDoc](https://godoc.org/github.com/ortuman/jackal?status.svg)](https://godoc.org/github.com/ortuman/jackal)
-[![codecov](https://codecov.io/gh/ortuman/jackal/branch/master/graph/badge.svg)](https://codecov.io/gh/ortuman/jackal)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/e3bcd6e00a2f4493e175/test_coverage)](https://codeclimate.com/github/ortuman/jackal/test_coverage)
+[![Maintainability](https://api.codeclimate.com/v1/badges/e3bcd6e00a2f4493e175/maintainability)](https://codeclimate.com/github/ortuman/jackal/maintainability)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/8e1575d0e64141a8bd4f8656e44052e6)](https://www.codacy.com/app/ortuman/jackal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ortuman/jackal&amp;utm_campaign=Badge_Grade)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ortuman/jackal)](https://goreportcard.com/report/github.com/ortuman/jackal)
 [![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
