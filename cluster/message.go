@@ -13,22 +13,22 @@ import (
 )
 
 const (
-	// MsgBind represents a bind cluster message.
+	// MsgBind represents a bind c2sCluster message.
 	MsgBind = iota
 
-	// MsgBatchBind represents a batch bind cluster message.
+	// MsgBatchBind represents a batch bind c2sCluster message.
 	MsgBatchBind
 
-	// MsgUnbind represents a unbind cluster message.
+	// MsgUnbind represents a unbind c2sCluster message.
 	MsgUnbind
 
-	// MsgUpdatePresence represents an update presence cluster message.
+	// MsgUpdatePresence represents an update presence c2sCluster message.
 	MsgUpdatePresence
 
-	// MsgUpdateContext represents a context update cluster message.
+	// MsgUpdateContext represents a context update c2sCluster message.
 	MsgUpdateContext
 
-	// MsgRouteStanza represents a route stanza cluster message.
+	// MsgRouteStanza represents a route stanza c2sCluster message.
 	MsgRouteStanza
 )
 
@@ -120,7 +120,7 @@ func (p *MessagePayload) ToGob(enc *gob.Encoder) {
 	p.Stanza.ToGob(enc)
 }
 
-// Message is the cluster message type.
+// Message is the c2sCluster message type.
 // A message can contain one or more payloads.
 type Message struct {
 	Type     int

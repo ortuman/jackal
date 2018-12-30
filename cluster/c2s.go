@@ -12,10 +12,15 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// C2S represents a cluster c2s stream.
+type c2sCluster interface {
+	LocalNode() string
+	SendMessageTo(node string, msg *Message)
+}
+
+// C2S represents a c2sCluster c2s stream.
 type C2S struct {
 	identifier string
-	cluster    *Cluster
+	cluster    c2sCluster
 	node       string
 	jid        *jid.JID
 	mu         sync.RWMutex

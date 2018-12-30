@@ -5,7 +5,7 @@
 
 package cluster
 
-// Config represents an cluster configuration.
+// Config represents an c2sCluster configuration.
 type Config struct {
 	Name     string   `yaml:"name"`
 	BindPort int      `yaml:"port"`
