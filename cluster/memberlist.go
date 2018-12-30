@@ -34,17 +34,25 @@ type hashicorpMemberList interface {
 	SendReliable(to *memberlist.Node, msg []byte) error
 }
 
-type clusterMemberList struct {
-	cluster *Cluster
-	ml      hashicorpMemberList
-	mu      sync.RWMutex
-	members map[string]*memberlist.Node
+type memberListDelegate interface {
+	handleNotifyMsg(msg []byte)
+
+	handleNotifyJoin(n *Node)
+	handleNotifyUpdate(n *Node)
+	handleNotifyLeave(n *Node)
 }
 
-func newDefaultMemberList(localName string, bindPort int, c *Cluster) (MemberList, error) {
-	dl := &clusterMemberList{
-		cluster: c,
-		members: make(map[string]*memberlist.Node),
+type defaultMemberList struct {
+	delegate memberListDelegate
+	ml       hashicorpMemberList
+	mu       sync.RWMutex
+	members  map[string]*memberlist.Node
+}
+
+func newDefaultMemberList(localName string, bindPort int, delegate memberListDelegate) (*defaultMemberList, error) {
+	dl := &defaultMemberList{
+		delegate: delegate,
+		members:  make(map[string]*memberlist.Node),
 	}
 	conf := memberlist.DefaultLocalConfig()
 	conf.Name = localName
@@ -61,7 +69,7 @@ func newDefaultMemberList(localName string, bindPort int, c *Cluster) (MemberLis
 	return dl, nil
 }
 
-func (d *clusterMemberList) Members() []Node {
+func (d *defaultMemberList) Members() []Node {
 	var res []Node
 	d.mu.RLock()
 	for _, n := range d.members {
@@ -76,19 +84,19 @@ func (d *clusterMemberList) Members() []Node {
 	return res
 }
 
-func (d *clusterMemberList) Join(hosts []string) error {
+func (d *defaultMemberList) Join(hosts []string) error {
 	_, err := d.ml.Join(hosts)
 	return err
 }
 
-func (d *clusterMemberList) Shutdown() error {
+func (d *defaultMemberList) Shutdown() error {
 	if err := d.ml.Leave(leaveTimeout); err != nil {
 		return err
 	}
 	return d.ml.Shutdown()
 }
 
-func (d *clusterMemberList) SendReliable(toNode string, msg []byte) error {
+func (d *defaultMemberList) SendReliable(toNode string, msg []byte) error {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	node := d.members[toNode]
@@ -100,7 +108,7 @@ func (d *clusterMemberList) SendReliable(toNode string, msg []byte) error {
 
 // memberlist.Delegate
 
-func (d *clusterMemberList) NodeMeta(limit int) []byte {
+func (d *defaultMemberList) NodeMeta(limit int) []byte {
 	var m Metadata
 	m.Version = version.ApplicationVersion.String()
 	m.GoVersion = runtime.Version()
@@ -110,22 +118,26 @@ func (d *clusterMemberList) NodeMeta(limit int) []byte {
 		log.Error(err)
 		return nil
 	}
+	if buf.Len() > limit {
+		log.Errorf("node metadata exceeds length limit of %d bytes", limit)
+		return nil
+	}
 	b := make([]byte, buf.Len())
 	copy(b, buf.Bytes())
 	return b
 }
 
-func (d *clusterMemberList) NotifyMsg(msg []byte) {
-	d.cluster.handleNotifyMsg(msg)
+func (d *defaultMemberList) NotifyMsg(msg []byte) {
+	d.delegate.handleNotifyMsg(msg)
 }
 
-func (d *clusterMemberList) GetBroadcasts(overhead, limit int) [][]byte { return nil }
-func (d *clusterMemberList) LocalState(join bool) []byte                { return nil }
-func (d *clusterMemberList) MergeRemoteState(buf []byte, join bool)     {}
+func (d *defaultMemberList) GetBroadcasts(overhead, limit int) [][]byte { return nil }
+func (d *defaultMemberList) LocalState(join bool) []byte                { return nil }
+func (d *defaultMemberList) MergeRemoteState(buf []byte, join bool)     {}
 
 // memberlist.EventDelegate
 
-func (d *clusterMemberList) NotifyJoin(n *memberlist.Node) {
+func (d *defaultMemberList) NotifyJoin(n *memberlist.Node) {
 	d.mu.Lock()
 	d.members[n.Name] = n
 	d.mu.Unlock()
@@ -135,10 +147,10 @@ func (d *clusterMemberList) NotifyJoin(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.cluster.handleNotifyJoin(cNode)
+	d.delegate.handleNotifyJoin(cNode)
 }
 
-func (d *clusterMemberList) NotifyLeave(n *memberlist.Node) {
+func (d *defaultMemberList) NotifyLeave(n *memberlist.Node) {
 	d.mu.Lock()
 	delete(d.members, n.Name)
 	d.mu.Unlock()
@@ -148,10 +160,10 @@ func (d *clusterMemberList) NotifyLeave(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.cluster.handleNotifyLeave(cNode)
+	d.delegate.handleNotifyLeave(cNode)
 }
 
-func (d *clusterMemberList) NotifyUpdate(n *memberlist.Node) {
+func (d *defaultMemberList) NotifyUpdate(n *memberlist.Node) {
 	d.mu.Lock()
 	d.members[n.Name] = n
 	d.mu.Unlock()
@@ -161,10 +173,10 @@ func (d *clusterMemberList) NotifyUpdate(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.cluster.handleNotifyUpdate(cNode)
+	d.delegate.handleNotifyUpdate(cNode)
 }
 
-func (d *clusterMemberList) clusterNodeFromMemberListNode(n *memberlist.Node) (*Node, error) {
+func (d *defaultMemberList) clusterNodeFromMemberListNode(n *memberlist.Node) (*Node, error) {
 	var m Metadata
 	if err := gob.NewDecoder(bytes.NewBuffer(n.Meta)).Decode(&m); err != nil {
 		return nil, err

@@ -201,7 +201,7 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 	delete(r.localStreams, stmJID.String())
 	r.mu.Unlock()
 
-	log.Infof("unbinded c2s stream... (%s/%s)", stmJID.Node(), stmJID.Resource())
+	log.Infof("unbound c2s stream... (%s/%s)", stmJID.Node(), stmJID.Resource())
 
 	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
@@ -484,7 +484,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 func (r *Router) processUnbindMessage(msg *cluster.Message) {
 	j := msg.Payloads[0].JID
 
-	log.Debugf("unbinded cluster c2s: %s", j.String())
+	log.Debugf("unbound cluster c2s: %s", j.String())
 	r.mu.Lock()
 	r.unbind(j)
 	r.unregisterClusterC2S(j, msg.Node)

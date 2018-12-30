@@ -18,7 +18,7 @@ import (
 
 const clusterMailboxSize = 32768
 
-var createMemberList = func(localName string, bindPort int, cluster *Cluster) (MemberList, error) {
+var createMemberList = func(localName string, bindPort int, cluster *Cluster) (memberList, error) {
 	return newDefaultMemberList(localName, bindPort, cluster)
 }
 
@@ -43,8 +43,8 @@ type Delegate interface {
 	NotifyMessage(msg *Message)
 }
 
-// MemberList interface defines the common cluster member list methods.
-type MemberList interface {
+// memberList interface defines the common cluster member list methods.
+type memberList interface {
 	Members() []Node
 
 	Join(hosts []string) error
@@ -58,7 +58,7 @@ type Cluster struct {
 	cfg        *Config
 	buf        *bytes.Buffer
 	delegate   Delegate
-	memberList MemberList
+	memberList memberList
 	membersMu  sync.RWMutex
 	members    map[string]*Node
 	actorCh    chan func()
