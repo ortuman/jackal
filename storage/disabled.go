@@ -13,6 +13,8 @@ import (
 
 type disabledStorage struct{}
 
+func (_ *disabledStorage) IsClusterCompatible() bool { return false }
+
 func (_ *disabledStorage) InsertOrUpdateUser(user *model.User) error      { return nil }
 func (_ *disabledStorage) DeleteUser(username string) error               { return nil }
 func (_ *disabledStorage) FetchUser(username string) (*model.User, error) { return nil, nil }

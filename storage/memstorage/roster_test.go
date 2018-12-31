@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockStorageInsertRosterItem(t *testing.T) {
+func TestMemoryStorage_InsertRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
 	ri := rostermodel.Item{
 		Username:     "user",
@@ -38,7 +38,7 @@ func TestMockStorageInsertRosterItem(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestMockStorageFetchRosterItem(t *testing.T) {
+func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
 	ri := rostermodel.Item{
 		Username:     "user",
@@ -66,7 +66,7 @@ func TestMockStorageFetchRosterItem(t *testing.T) {
 	require.Equal(t, "contact", ri4.JID)
 }
 
-func TestMockStorageFetchRosterItems(t *testing.T) {
+func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	g := []string{"general", "friends"}
 	ri := rostermodel.Item{
 		Username:     "user",
@@ -99,7 +99,7 @@ func TestMockStorageFetchRosterItems(t *testing.T) {
 	require.Equal(t, 2, len(ris))
 }
 
-func TestMockStorageDeleteRosterItem(t *testing.T) {
+func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 	g := []string{"general", "friends"}
 	ri := rostermodel.Item{
 		Username:     "user",
@@ -126,7 +126,7 @@ func TestMockStorageDeleteRosterItem(t *testing.T) {
 	require.Nil(t, ri2)
 }
 
-func TestMockStorageInsertRosterNotification(t *testing.T) {
+func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
 	rn := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "romeo@jackal.im",
@@ -139,7 +139,7 @@ func TestMockStorageInsertRosterNotification(t *testing.T) {
 	require.Nil(t, s.InsertOrUpdateRosterNotification(&rn))
 }
 
-func TestMockStorageFetchRosterNotifications(t *testing.T) {
+func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 	rn1 := rostermodel.Notification{
 		Contact:  "romeo",
 		JID:      "ortuman@jackal.im",
@@ -170,7 +170,7 @@ func TestMockStorageFetchRosterNotifications(t *testing.T) {
 	require.Equal(t, "ortuman2@jackal.im", rns[1].JID)
 }
 
-func TestMockStorageDeleteRosterNotification(t *testing.T) {
+func TestMemoryStorage_DeleteRosterNotification(t *testing.T) {
 	rn1 := rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      "romeo@jackal.im",

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockStorageInsertOrUpdateBlockListItems(t *testing.T) {
+func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 	items := []model.BlockListItem{
 		{Username: "ortuman", JID: "user@jackal.im"},
 		{Username: "ortuman", JID: "romeo@jackal.im"},
@@ -34,7 +34,7 @@ func TestMockStorageInsertOrUpdateBlockListItems(t *testing.T) {
 	require.Equal(t, items, sItems)
 }
 
-func TestMockStorageDeleteBlockListItems(t *testing.T) {
+func TestMemoryStorage_DeleteBlockListItems(t *testing.T) {
 	items := []model.BlockListItem{
 		{Username: "ortuman", JID: "user@jackal.im"},
 		{Username: "ortuman", JID: "romeo@jackal.im"},

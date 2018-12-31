@@ -7,7 +7,6 @@ package storage
 
 import (
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/ortuman/jackal/model"
@@ -17,6 +16,11 @@ import (
 	"github.com/ortuman/jackal/storage/sql"
 	"github.com/ortuman/jackal/xmpp"
 )
+
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func IsClusterCompatible() bool {
+	return false
+}
 
 type userStorage interface {
 	InsertOrUpdateUser(user *model.User) error
@@ -187,7 +191,9 @@ func FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 
 // Storage represents an entity storage interface.
 type Storage interface {
-	io.Closer
+	Close() error
+
+	IsClusterCompatible() bool
 
 	userStorage
 	offlineStorage
@@ -210,7 +216,7 @@ func init() {
 
 func Set(storage Storage) {
 	instMu.Lock()
-	inst.Close()
+	_ = inst.Close()
 	inst = storage
 	instMu.Unlock()
 }

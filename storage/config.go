@@ -29,6 +29,14 @@ const (
 	Memory
 )
 
+var typeStringMap = map[StorageType]string{
+	MySQL:    "MySQL",
+	BadgerDB: "BadgerDB",
+	Memory:   "Memory",
+}
+
+func (t StorageType) String() string { return typeStringMap[t] }
+
 // Config represents an storage manager configuration.
 type Config struct {
 	Type     StorageType

@@ -149,13 +149,17 @@ func (a *Application) Run() error {
 	}
 
 	// initialize cluster
-	a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
-	if err != nil {
-		return err
-	}
-	if a.cluster != nil {
-		a.router.SetCluster(a.cluster)
-		a.cluster.Join()
+	if cfg.Cluster != nil && storage.IsClusterCompatible() {
+		a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
+		if err != nil {
+			return err
+		}
+		if a.cluster != nil {
+			a.router.SetCluster(a.cluster)
+			a.cluster.Join()
+		}
+	} else {
+		log.Warnf("cluster mode disabled: storage type '%s' is not compatible", cfg.Storage.Type)
 	}
 
 	// initialize modules & components...

@@ -59,6 +59,9 @@ func New(cfg *Config) *Storage {
 	return b
 }
 
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func (b *Storage) IsClusterCompatible() bool { return false }
+
 // Close shuts down BadgerDB storage sub system.
 func (b *Storage) Close() error {
 	ch := make(chan bool)

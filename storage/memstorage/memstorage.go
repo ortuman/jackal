@@ -49,6 +49,9 @@ func New() *Storage {
 	}
 }
 
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func (m *Storage) IsClusterCompatible() bool { return false }
+
 // Close shuts down in memory storage sub system.
 func (m *Storage) Close() error {
 	return nil

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockStorageInsertOfflineMessage(t *testing.T) {
+func TestMemoryStorage_InsertOfflineMessage(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xmpp.NewElementName("message")
 	message.SetID(uuid.New())
@@ -28,7 +28,7 @@ func TestMockStorageInsertOfflineMessage(t *testing.T) {
 	require.Nil(t, s.InsertOfflineMessage(m, "ortuman"))
 }
 
-func TestMockStorageCountOfflineMessages(t *testing.T) {
+func TestMemoryStorage_CountOfflineMessages(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xmpp.NewElementName("message")
 	message.SetID(uuid.New())
@@ -46,7 +46,7 @@ func TestMockStorageCountOfflineMessages(t *testing.T) {
 	require.Equal(t, 1, cnt)
 }
 
-func TestMockStorageFetchOfflineMessages(t *testing.T) {
+func TestMemoryStorage_FetchOfflineMessages(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xmpp.NewElementName("message")
 	message.SetID(uuid.New())
@@ -64,7 +64,7 @@ func TestMockStorageFetchOfflineMessages(t *testing.T) {
 	require.Equal(t, 1, len(elems))
 }
 
-func TestMockStorageDeleteOfflineMessages(t *testing.T) {
+func TestMemoryStorage_DeleteOfflineMessages(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xmpp.NewElementName("message")
 	message.SetID(uuid.New())

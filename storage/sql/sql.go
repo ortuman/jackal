@@ -73,6 +73,9 @@ func New(cfg *Config) *Storage {
 	return s
 }
 
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func (s *Storage) IsClusterCompatible() bool { return true }
+
 // Close shuts down SQL storage sub system.
 func (s *Storage) Close() error {
 	ch := make(chan bool)
