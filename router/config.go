@@ -9,11 +9,28 @@ import (
 	"crypto/tls"
 
 	"github.com/ortuman/jackal/util"
+	"github.com/pkg/errors"
 )
 
 // Config represents a router configuration.
 type Config struct {
+	Hosts []HostConfig
+}
+
+type configProxy struct {
 	Hosts []HostConfig `yaml:"hosts"`
+}
+
+func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := configProxy{}
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
+	if len(p.Hosts) == 0 {
+		return errors.New("empty hosts array")
+	}
+	c.Hosts = p.Hosts
+	return nil
 }
 
 type tlsConfig struct {
