@@ -7,8 +7,10 @@ package router
 
 import (
 	"crypto/tls"
+	"os"
 	"testing"
 
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
@@ -19,6 +21,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type fakeClusterDelegate struct {
+	sendMessageToCalls    int
+	broadcastMessageCalls int
+}
+
+func (d *fakeClusterDelegate) LocalNode() string {
+	return "node1"
+}
+
+func (d *fakeClusterDelegate) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[string]interface{}, node string) *cluster.C2S {
+	return nil
+}
+
+func (d *fakeClusterDelegate) SendMessageTo(node string, message *cluster.Message) {
+	d.sendMessageToCalls++
+}
+
+func (d *fakeClusterDelegate) BroadcastMessage(msg *cluster.Message) {
+	d.broadcastMessageCalls++
+}
+
 type fakeS2SOut struct {
 	elems []xmpp.XElement
 }
@@ -27,45 +50,83 @@ func (f *fakeS2SOut) ID() string                     { return uuid.New() }
 func (f *fakeS2SOut) SendElement(elem xmpp.XElement) { f.elems = append(f.elems, elem) }
 func (f *fakeS2SOut) Disconnect(err error)           {}
 
-type fakeOutS2SProvider struct {
-	s2sOut *fakeS2SOut
-}
+type fakeOutS2SProvider struct{ s2sOut *fakeS2SOut }
 
 func (f *fakeOutS2SProvider) GetOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
 	return f.s2sOut, nil
+}
+
+func TestRouter_EmptyConfig(t *testing.T) {
+	defer os.RemoveAll("./.cert")
+
+	r, _ := New(&Config{})
+	require.True(t, r.IsLocalHost("localhost"))
+	require.Equal(t, 1, len(r.HostNames()))
+	require.Equal(t, 1, len(r.Certificates()))
+}
+
+func TestRouter_SetCluster(t *testing.T) {
+	r, _, shutdown := setupTest()
+	defer shutdown()
+
+	var del fakeClusterDelegate
+	r.SetCluster(&del)
+	require.Equal(t, &del, r.Cluster())
+}
+
+func TestRouter_ClusterDelegate(t *testing.T) {
+	r, _, shutdown := setupTest()
+	defer shutdown()
+
+	del, ok := r.ClusterDelegate().(cluster.Delegate)
+	require.True(t, ok)
+	require.NotNil(t, del)
 }
 
 func TestRouter_Binding(t *testing.T) {
 	r, _, shutdown := setupTest()
 	defer shutdown()
 
+	var del fakeClusterDelegate
+	r.SetCluster(&del)
+
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	j2, _ := jid.NewWithString("ortuman@jackal.im/garden", false)
 	j3, _ := jid.NewWithString("hamlet@jackal.im/balcony", false)
 	j4, _ := jid.NewWithString("romeo@jackal.im/balcony", false)
 	j5, _ := jid.NewWithString("juliet@jackal.im/garden", false)
+	j6, _ := jid.NewWithString("juliet@jackal.im", false)      // empty resource
+	j7, _ := jid.NewWithString("juliet@jackal.im/yard", false) // empty resource
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
 	stm5 := stream.NewMockC2S(uuid.New(), j5)
+	stm6 := stream.NewMockC2S(uuid.New(), j6)
 
 	r.Bind(stm1)
 	r.Bind(stm2)
 	r.Bind(stm3)
 	r.Bind(stm4)
 	r.Bind(stm5)
+	r.Bind(stm6)
+
+	require.Equal(t, 5, del.broadcastMessageCalls)
 
 	require.Equal(t, 2, len(r.UserStreams("ortuman")))
 	require.Equal(t, 1, len(r.UserStreams("hamlet")))
 	require.Equal(t, 1, len(r.UserStreams("romeo")))
 	require.Equal(t, 1, len(r.UserStreams("juliet")))
 
-	r.Unbind(stm5.JID())
-	r.Unbind(stm4.JID())
-	r.Unbind(stm3.JID())
-	r.Unbind(stm2.JID())
-	r.Unbind(stm1.JID())
+	r.Unbind(j7)
+	r.Unbind(j6)
+	r.Unbind(j5)
+	r.Unbind(j4)
+	r.Unbind(j3)
+	r.Unbind(j2)
+	r.Unbind(j1)
+
+	require.Equal(t, 10, del.broadcastMessageCalls)
 
 	require.Equal(t, 0, len(r.UserStreams("ortuman")))
 	require.Equal(t, 0, len(r.UserStreams("hamlet")))

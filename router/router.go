@@ -186,7 +186,7 @@ func (r *Router) Bind(stm stream.C2S) {
 	return
 }
 
-// Unbind unbinds a previously binded c2s.
+// Unbind unbinds a previously bound c2s.
 // An error will be returned in case no assigned resource is found.
 func (r *Router) Unbind(stmJID *jid.JID) {
 	if len(stmJID.Resource()) == 0 {
