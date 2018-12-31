@@ -35,7 +35,7 @@ func (f *fakeOutS2SProvider) GetOut(localDomain, remoteDomain string) (stream.S2
 	return f.s2sOut, nil
 }
 
-func TestC2SManager(t *testing.T) {
+func TestRouter_Binding(t *testing.T) {
 	r, _, shutdown := setupTest()
 	defer shutdown()
 
@@ -44,28 +44,28 @@ func TestC2SManager(t *testing.T) {
 	j3, _ := jid.NewWithString("hamlet@jackal.im/balcony", false)
 	j4, _ := jid.NewWithString("romeo@jackal.im/balcony", false)
 	j5, _ := jid.NewWithString("juliet@jackal.im/garden", false)
-	strm1 := stream.NewMockC2S(uuid.New(), j1)
-	strm2 := stream.NewMockC2S(uuid.New(), j2)
-	strm3 := stream.NewMockC2S(uuid.New(), j3)
-	strm4 := stream.NewMockC2S(uuid.New(), j4)
-	strm5 := stream.NewMockC2S(uuid.New(), j5)
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm3 := stream.NewMockC2S(uuid.New(), j3)
+	stm4 := stream.NewMockC2S(uuid.New(), j4)
+	stm5 := stream.NewMockC2S(uuid.New(), j5)
 
-	r.Bind(strm1)
-	r.Bind(strm2)
-	r.Bind(strm3)
-	r.Bind(strm4)
-	r.Bind(strm5)
+	r.Bind(stm1)
+	r.Bind(stm2)
+	r.Bind(stm3)
+	r.Bind(stm4)
+	r.Bind(stm5)
 
 	require.Equal(t, 2, len(r.UserStreams("ortuman")))
 	require.Equal(t, 1, len(r.UserStreams("hamlet")))
 	require.Equal(t, 1, len(r.UserStreams("romeo")))
 	require.Equal(t, 1, len(r.UserStreams("juliet")))
 
-	r.Unbind(strm5.JID())
-	r.Unbind(strm4.JID())
-	r.Unbind(strm3.JID())
-	r.Unbind(strm2.JID())
-	r.Unbind(strm1.JID())
+	r.Unbind(stm5.JID())
+	r.Unbind(stm4.JID())
+	r.Unbind(stm3.JID())
+	r.Unbind(stm2.JID())
+	r.Unbind(stm1.JID())
 
 	require.Equal(t, 0, len(r.UserStreams("ortuman")))
 	require.Equal(t, 0, len(r.UserStreams("hamlet")))
@@ -73,7 +73,7 @@ func TestC2SManager(t *testing.T) {
 	require.Equal(t, 0, len(r.UserStreams("juliet")))
 }
 
-func TestC2SManager_Routing(t *testing.T) {
+func TestRouter_Routing(t *testing.T) {
 	outS2S := fakeS2SOut{}
 	s2sOutProvider := fakeOutS2SProvider{s2sOut: &outS2S}
 
@@ -111,7 +111,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, memstorage.ErrMockedError, r.Route(iq))
 	s.DisableMockedError()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
+	_ = storage.InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
 	require.Equal(t, ErrNotAuthenticated, r.Route(iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
@@ -160,7 +160,7 @@ func TestC2SManager_Routing(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
-func TestC2SManager_BlockedJID(t *testing.T) {
+func TestRouter_BlockedJID(t *testing.T) {
 	r, _, shutdown := setupTest()
 	defer shutdown()
 
@@ -179,53 +179,53 @@ func TestC2SManager_BlockedJID(t *testing.T) {
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	}}
-	storage.InsertBlockListItems(bl1)
+	_ = storage.InsertBlockListItems(bl1)
 	require.False(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 
-	storage.DeleteBlockListItems(bl1)
+	_ = storage.DeleteBlockListItems(bl1)
 
 	// node + domain
 	bl2 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	}}
-	storage.InsertBlockListItems(bl2)
+	_ = storage.InsertBlockListItems(bl2)
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(j4, "ortuman"))
 
-	storage.DeleteBlockListItems(bl2)
+	_ = storage.DeleteBlockListItems(bl2)
 
 	// domain + resource
 	bl3 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	}}
-	storage.InsertBlockListItems(bl3)
+	_ = storage.InsertBlockListItems(bl3)
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.False(t, r.IsBlockedJID(j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(j4, "ortuman"))
 
-	storage.DeleteBlockListItems(bl3)
+	_ = storage.DeleteBlockListItems(bl3)
 
 	// domain
 	bl4 := []model.BlockListItem{{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	}}
-	storage.InsertBlockListItems(bl4)
+	_ = storage.InsertBlockListItems(bl4)
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 	require.True(t, r.IsBlockedJID(j4, "ortuman"))
 
-	storage.DeleteBlockListItems(bl4)
+	_ = storage.DeleteBlockListItems(bl4)
 
 	// test blocked routing
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
