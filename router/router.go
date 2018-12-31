@@ -69,9 +69,9 @@ type Cluster interface {
 type Router struct {
 	mu             sync.RWMutex
 	outS2SProvider OutS2SProvider
-	cluster        Cluster
 	hosts          map[string]tls.Certificate
 	streams        map[string][]stream.C2S
+	cluster        Cluster
 	localStreams   map[string]stream.C2S
 	clusterStreams map[string]map[string]*cluster.C2S
 
@@ -294,7 +294,7 @@ func (r *Router) bind(stm stream.C2S) {
 		res := stm.Resource()
 		for _, usrStream := range usrStreams {
 			if usrStream.Resource() == res {
-				return // already binded
+				return // already bound
 			}
 		}
 		r.streams[stm.Username()] = append(usrStreams, stm)
@@ -479,7 +479,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 		if !ok {
 			continue
 		}
-		log.Debugf("binded cluster c2s: %s", j.String())
+		log.Debugf("bound cluster c2s: %s", j.String())
 
 		stm := r.cluster.C2SStream(j, presence, p.Context, msg.Node)
 		r.bind(stm)
@@ -493,7 +493,6 @@ func (r *Router) processUnbindMessage(msg *cluster.Message) {
 	if r.cluster == nil {
 		return
 	}
-
 	j := msg.Payloads[0].JID
 
 	log.Debugf("unbound cluster c2s: %s", j.String())
@@ -507,7 +506,6 @@ func (r *Router) processUpdateContext(msg *cluster.Message) {
 	if r.cluster == nil {
 		return
 	}
-
 	j := msg.Payloads[0].JID
 	context := msg.Payloads[0].Context
 
@@ -529,7 +527,6 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 	if r.cluster == nil {
 		return
 	}
-
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
@@ -555,7 +552,6 @@ func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
 	if r.cluster == nil {
 		return
 	}
-
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
