@@ -59,17 +59,17 @@ func TestRoster_FetchRoster(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.GetType)
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
@@ -100,7 +100,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	defer close(shutdownCh)
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
@@ -117,12 +117,12 @@ func TestRoster_FetchRoster(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// expect set item...
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.SetType, elem.Type())
 	query2 = elem.Elements().ChildNamespace("query", rosterNamespace)
@@ -134,7 +134,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r, shutdownCh = New(&Config{}, rtr)
 	defer close(shutdownCh)
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 }
@@ -172,20 +172,20 @@ func TestRoster_Update(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm1)
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	q.AppendElement(item)
 
 	r.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
 	// expecting roster push...
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// update name
@@ -194,7 +194,7 @@ func TestRoster_Update(t *testing.T) {
 	q.AppendElement(item)
 
 	r.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
@@ -246,7 +246,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 
 	ri, err := storage.FetchRosterItem("ortuman", "noelia@jackal.im")
@@ -304,13 +304,13 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	r.ProcessPresence(xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.AvailableType))
 
 	// receive pending approval notification...
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, j3.ToBareJID().String(), elem.From())
 	require.Equal(t, xmpp.SubscribeType, elem.Type())
 
 	// expect user's available presence
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, j1.String(), elem.From())
 	require.Equal(t, xmpp.AvailableType, elem.Type())
@@ -377,7 +377,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	// user doesn't exist...
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, "noelia@jackal.im", elem.From())
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
@@ -389,7 +389,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	// user exists, with no presence subscription...
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
 
 	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
@@ -398,7 +398,7 @@ func TestRoster_Probe(t *testing.T) {
 		Subscription: rostermodel.SubscriptionFrom,
 	})
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
 
 	// test available presence...
@@ -408,7 +408,7 @@ func TestRoster_Probe(t *testing.T) {
 		LastPresence: p2,
 	})
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.AvailableType, elem.Type())
 	require.Equal(t, "noelia@jackal.im/garden", elem.From())
 }

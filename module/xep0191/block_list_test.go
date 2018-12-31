@@ -84,7 +84,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	iq1.AppendElement(xmpp.NewElementNamespace("blocklist", blockingCommandNamespace))
 
 	x.ProcessIQ(iq1, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	bl := elem.Elements().ChildNamespace("blocklist", blockingCommandNamespace)
 	require.NotNil(t, bl)
 	require.Equal(t, 2, len(bl.Elements().Children("item")))
@@ -93,7 +93,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 
 	s.EnableMockedError()
 	x.ProcessIQ(iq1, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 }
@@ -155,7 +155,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	iq.AppendElement(block)
 
 	x.ProcessIQ(iq, stm1)
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	item := xmpp.NewElementName("item")
@@ -167,26 +167,26 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	// TEST BLOCK
 	s.EnableMockedError()
 	x.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
 	x.ProcessIQ(iq, stm1)
 
 	// unavailable presence from *@jackal.im/jail
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	// result IQ
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// block IQ push
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.SetType, elem.Type())
 	block2 := elem.Elements().ChildNamespace("block", blockingCommandNamespace)
@@ -195,12 +195,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// ortuman@jackal.im/yard
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.SetType, elem.Type())
 
@@ -223,26 +223,26 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	s.EnableMockedError()
 	x.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
 	x.ProcessIQ(iq, stm1)
 
 	// receive available presence from *@jackal.im/jail
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xmpp.AvailableType, elem.Type())
 	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	// result IQ
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, iqID, elem.ID())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// unblock IQ push
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.SetType, elem.Type())
 	unblock2 := elem.Elements().ChildNamespace("unblock", blockingCommandNamespace)

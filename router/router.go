@@ -23,7 +23,7 @@ import (
 
 const defaultDomain = "localhost"
 
-const bindMsgBatchSize = 1024
+var bindMsgBatchSize = 1024
 
 var (
 	// ErrNotExistingAccount will be returned by Route method
@@ -333,8 +333,8 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	if !r.IsLocalHost(toJID.Domain()) {
 		return r.remoteRoute(element)
 	}
-	rcps := r.UserStreams(toJID.Node())
-	if len(rcps) == 0 {
+	recipients := r.streams[toJID.Node()]
+	if len(recipients) == 0 {
 		exists, err := storage.UserExists(toJID.Node())
 		if err != nil {
 			return err
@@ -345,7 +345,7 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 		return ErrNotExistingAccount
 	}
 	if toJID.IsFullWithUser() {
-		for _, stm := range rcps {
+		for _, stm := range recipients {
 			if stm.Resource() == toJID.Resource() {
 				stm.SendElement(element)
 				return nil
@@ -356,13 +356,13 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	switch element.(type) {
 	case *xmpp.Message:
 		// send to highest priority stream
-		stm := rcps[0]
+		stm := recipients[0]
 		var highestPriority int8
 		if p := stm.Presence(); p != nil {
 			highestPriority = p.Priority()
 		}
-		for i := 1; i < len(rcps); i++ {
-			rcp := rcps[i]
+		for i := 1; i < len(recipients); i++ {
+			rcp := recipients[i]
 			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
 				stm = rcp
 				highestPriority = p.Priority()
@@ -372,7 +372,7 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 
 	default:
 		// broadcast toJID all streams
-		for _, stm := range rcps {
+		for _, stm := range recipients {
 			stm.SendElement(element)
 		}
 	}
@@ -403,6 +403,8 @@ func (r *Router) handleNotifyMessage(msg *cluster.Message) {
 		r.processUnbindMessage(msg)
 	case cluster.MsgUpdatePresence:
 		r.processUpdatePresenceMessage(msg)
+	case cluster.MsgUpdateContext:
+		r.processUpdateContext(msg)
 	case cluster.MsgRouteStanza:
 		r.processRouteStanzaMessage(msg)
 	}

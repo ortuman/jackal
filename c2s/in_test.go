@@ -320,14 +320,14 @@ func TestStream_SendMessage(t *testing.T) {
 	conn.inboundWrite([]byte(msg.String()))
 
 	// to full jid...
-	elem := stm2.FetchElement()
+	elem := stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
 
 	// to bare jid...
 	msg.SetToJID(jTo.ToBareJID())
 	conn.inboundWrite([]byte(msg.String()))
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
 }

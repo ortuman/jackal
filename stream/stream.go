@@ -277,9 +277,9 @@ func (m *MockC2S) Disconnect(err error) {
 	<-waitCh
 }
 
-// FetchElement waits until a new XML element is sent to
+// ReceiveElement waits until a new XML element is sent to
 // the mocked stream and returns it.
-func (m *MockC2S) FetchElement() xmpp.XElement {
+func (m *MockC2S) ReceiveElement() xmpp.XElement {
 	select {
 	case e := <-m.elemCh:
 		return e

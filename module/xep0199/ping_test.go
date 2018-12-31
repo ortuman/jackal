@@ -49,24 +49,24 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	iq.SetToJID(j2)
 
 	x.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetToJID(j1)
 	x.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	ping := xmpp.NewElementNamespace("ping", pingNamespace)
 	iq.AppendElement(ping)
 
 	x.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.GetType)
 	x.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 }
 
@@ -83,7 +83,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	x.SchedulePing(stm)
 
 	// wait for ping...
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))
@@ -96,7 +96,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 	x.SchedulePing(stm)
 
 	// wait next ping...
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))
@@ -118,7 +118,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	x.SchedulePing(stm)
 
 	// wait next ping...
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, elem.Elements().ChildNamespace("ping", pingNamespace))

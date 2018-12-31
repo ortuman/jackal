@@ -52,7 +52,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 
 	x.ArchiveMessage(msg)
 
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, xmpp.ErrServiceUnavailable.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -63,7 +63,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	x2, _ := New(&Config{QueueSize: 1}, nil, r)
 	x2.DeliverOfflineMessages(stm2)
 
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, msgID, elem.ID())
 }

@@ -269,7 +269,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	if err != nil {
 		return err
 	}
-	challenge := testStm.FetchElement()
+	challenge := testStm.ReceiveElement()
 	require.NotNil(t, challenge)
 	require.Equal(t, "challenge", challenge.Name())
 
@@ -301,7 +301,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 		return err
 	}
 
-	success := testStm.FetchElement()
+	success := testStm.ReceiveElement()
 	require.Equal(t, "success", success.Name())
 
 	vb64, err := base64.StdEncoding.DecodeString(success.Text())

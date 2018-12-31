@@ -44,13 +44,13 @@ func TestXEP0092(t *testing.T) {
 
 	qVer.AppendElement(xmpp.NewElementName("version"))
 	x.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// get version
 	qVer.ClearElements()
 	x.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	ver := elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, "jackal", ver.Elements().Child("name").Text())
 	require.Equal(t, version.ApplicationVersion.String(), ver.Elements().Child("version").Text())
@@ -63,7 +63,7 @@ func TestXEP0092(t *testing.T) {
 	defer close(shutdownCh)
 
 	x.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
 }
