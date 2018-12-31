@@ -29,11 +29,11 @@ func TestXEP0191_Matching(t *testing.T) {
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	r, rosterShutdownCh := roster.New(&roster.Config{}, rtr)
-	defer close(rosterShutdownCh)
+	r := roster.New(&roster.Config{}, rtr)
+	defer r.Shutdown()
 
-	x, shutdownCh := New(nil, r, rtr)
-	defer close(shutdownCh)
+	x := New(nil, r, rtr)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -64,11 +64,11 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	defer stm.Disconnect(nil)
 
-	r, rosterShutdownCh := roster.New(&roster.Config{}, rtr)
-	defer close(rosterShutdownCh)
+	r := roster.New(&roster.Config{}, rtr)
+	defer r.Shutdown()
 
-	x, shutdownCh := New(nil, r, rtr)
-	defer close(shutdownCh)
+	x := New(nil, r, rtr)
+	defer x.Shutdown()
 
 	storage.InsertBlockListItems([]model.BlockListItem{{
 		Username: "ortuman",
@@ -102,11 +102,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rtr, s, shutdown := setupTest("jackal.im")
 	defer shutdown()
 
-	r, rosterShutdownCh := roster.New(&roster.Config{}, rtr)
-	defer close(rosterShutdownCh)
+	r := roster.New(&roster.Config{}, rtr)
+	defer r.Shutdown()
 
-	x, shutdownCh := New(nil, r, rtr)
-	defer close(shutdownCh)
+	x := New(nil, r, rtr)
+	defer x.Shutdown()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)

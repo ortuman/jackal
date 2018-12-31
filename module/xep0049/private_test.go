@@ -24,8 +24,8 @@ func TestXEP0049_Matching(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New()
-	defer close(shutdownCh)
+	x := New()
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -43,8 +43,8 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j1)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New()
-	defer close(shutdownCh)
+	x := New()
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -96,8 +96,8 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New()
-	defer close(shutdownCh)
+	x := New()
+	defer x.Shutdown()
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)

@@ -22,8 +22,8 @@ import (
 func TestXEP0054_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(nil)
-	defer close(shutdownCh)
+	x := New(nil)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iqID := uuid.New()
@@ -58,8 +58,8 @@ func TestXEP0054_Set(t *testing.T) {
 	iq.SetToJID(j.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x, shutdownCh := New(nil)
-	defer close(shutdownCh)
+	x := New(nil)
+	defer x.Shutdown()
 
 	x.ProcessIQ(iq, stm)
 	elem := stm.ReceiveElement()
@@ -91,8 +91,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(nil)
-	defer close(shutdownCh)
+	x := New(nil)
+	defer x.Shutdown()
 
 	// set other user vCard...
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -133,8 +133,8 @@ func TestXEP0054_Get(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x, shutdownCh := New(nil)
-	defer close(shutdownCh)
+	x := New(nil)
+	defer x.Shutdown()
 
 	x.ProcessIQ(iqSet, stm)
 	_ = stm.ReceiveElement() // wait until set...
@@ -180,8 +180,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x, shutdownCh := New(nil)
-	defer close(shutdownCh)
+	x := New(nil)
+	defer x.Shutdown()
 
 	x.ProcessIQ(iqSet, stm)
 	_ = stm.ReceiveElement() // wait until set...

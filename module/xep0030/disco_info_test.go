@@ -26,8 +26,8 @@ func TestXEP0030_Matching(t *testing.T) {
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -63,8 +63,8 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	x.RegisterServerFeature("s0")
 	x.RegisterServerFeature("s1")
@@ -115,8 +115,8 @@ func TestXEP0030_SendItems(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -160,8 +160,8 @@ func TestXEP0030_Provider(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)

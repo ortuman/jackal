@@ -23,8 +23,8 @@ import (
 func TestXEP0077_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -42,8 +42,8 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	defer stm1.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j1)
@@ -65,8 +65,8 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFromJID(j)
@@ -82,8 +82,8 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	// allow registration...
-	x, shutdownCh = New(&Config{AllowRegistration: true}, nil)
-	defer close(shutdownCh)
+	x = New(&Config{AllowRegistration: true}, nil)
+	defer x.Shutdown()
 
 	q := xmpp.NewElementNamespace("query", registerNamespace)
 	q.AppendElement(xmpp.NewElementName("q2"))
@@ -111,8 +111,8 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 
 	stm.SetAuthenticated(true)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFromJID(j)
@@ -140,8 +140,8 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	stm := stream.NewMockC2S("abcd1234", j)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{AllowRegistration: true}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{AllowRegistration: true}, nil)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(srvJid)
@@ -202,8 +202,8 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 
 	stm.SetAuthenticated(true)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	storage.InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -219,8 +219,8 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x, shutdownCh = New(&Config{AllowCancel: true}, nil)
-	defer close(shutdownCh)
+	x = New(&Config{AllowCancel: true}, nil)
+	defer x.Shutdown()
 
 	q.AppendElement(xmpp.NewElementName("remove2"))
 	x.ProcessIQ(iq, stm)
@@ -256,8 +256,8 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 
 	stm.SetAuthenticated(true)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	storage.InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
 
@@ -278,8 +278,8 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
-	x, shutdownCh = New(&Config{AllowChange: true}, nil)
-	defer close(shutdownCh)
+	x = New(&Config{AllowChange: true}, nil)
+	defer x.Shutdown()
 
 	x.ProcessIQ(iq, stm)
 	elem = stm.ReceiveElement()

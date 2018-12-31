@@ -30,8 +30,8 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	r.Bind(stm)
 
-	x, shutdownCh := New(&Config{QueueSize: 1}, nil, r)
-	defer close(shutdownCh)
+	x := New(&Config{QueueSize: 1}, nil, r)
+	defer x.Shutdown()
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, "normal")
@@ -60,7 +60,9 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm2 := stream.NewMockC2S("abcd", j2)
 	r.Bind(stm2)
 
-	x2, _ := New(&Config{QueueSize: 1}, nil, r)
+	x2 := New(&Config{QueueSize: 1}, nil, r)
+	defer x2.Shutdown()
+
 	x2.DeliverOfflineMessages(stm2)
 
 	elem = stm2.ReceiveElement()

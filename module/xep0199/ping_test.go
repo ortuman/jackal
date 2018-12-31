@@ -19,8 +19,8 @@ import (
 func TestXEP0199_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iqID := uuid.New()
@@ -40,8 +40,8 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{}, nil)
+	defer x.Shutdown()
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -77,8 +77,8 @@ func TestXEP0199_SendPing(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{Send: true, SendInterval: time.Second}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{Send: true, SendInterval: time.Second}, nil)
+	defer x.Shutdown()
 
 	x.SchedulePing(stm)
 
@@ -112,8 +112,8 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(&Config{Send: true, SendInterval: time.Second}, nil)
-	defer close(shutdownCh)
+	x := New(&Config{Send: true, SendInterval: time.Second}, nil)
+	defer x.Shutdown()
 
 	x.SchedulePing(stm)
 
