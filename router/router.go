@@ -165,9 +165,10 @@ func (r *Router) Bind(stm stream.C2S) {
 	}
 	// bind stream
 	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.bind(stm)
 	r.localStreams[stm.JID().String()] = stm
-	r.mu.Unlock()
 
 	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
@@ -194,12 +195,13 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 	}
 	// unbind stream
 	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if found := r.unbind(stmJID); !found {
 		r.mu.Unlock()
 		return
 	}
 	delete(r.localStreams, stmJID.String())
-	r.mu.Unlock()
 
 	log.Infof("unbound c2s stream... (%s/%s)", stmJID.Node(), stmJID.Resource())
 
@@ -408,9 +410,12 @@ func (r *Router) handleNotifyMessage(msg *cluster.Message) {
 }
 
 func (r *Router) handleNodeJoined(node *cluster.Node) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	if r.cluster == nil {
 		return
 	}
+
 	if node.Metadata.Version != version.ApplicationVersion.String() {
 		log.Warnf("incompatible server version: %s (node: %s)", node.Metadata.Version, node.Name)
 		return
@@ -420,8 +425,6 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 		return
 	}
 	// send local JIDs in batches to the recently joined node
-	r.mu.RLock()
-
 	i := 0
 	var payloads []cluster.MessagePayload
 	for _, stm := range r.localStreams {
@@ -453,19 +456,25 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 }
 
 func (r *Router) handleNodeLeft(node *cluster.Node) {
-	// unbind node streams
 	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// unbind node streams
 	if streams := r.clusterStreams[node.Name]; streams != nil {
 		for _, stm := range streams {
 			r.unbind(stm.JID())
 		}
 	}
 	delete(r.clusterStreams, node.Name)
-	r.mu.Unlock()
 }
 
 func (r *Router) processBindMessage(msg *cluster.Message) {
 	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cluster == nil {
+		return
+	}
+
 	for _, p := range msg.Payloads {
 		j := p.JID
 		presence, ok := p.Stanza.(*xmpp.Presence)
@@ -478,31 +487,38 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 		r.bind(stm)
 		r.registerClusterC2S(stm, msg.Node)
 	}
-	r.mu.Unlock()
 }
 
 func (r *Router) processUnbindMessage(msg *cluster.Message) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cluster == nil {
+		return
+	}
+
 	j := msg.Payloads[0].JID
 
 	log.Debugf("unbound cluster c2s: %s", j.String())
-	r.mu.Lock()
 	r.unbind(j)
 	r.unregisterClusterC2S(j, msg.Node)
-	r.mu.Unlock()
 }
 
-func (r *Router) processUpdateContest(msg *cluster.Message) {
+func (r *Router) processUpdateContext(msg *cluster.Message) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.cluster == nil {
+		return
+	}
+
 	j := msg.Payloads[0].JID
 	context := msg.Payloads[0].Context
 
 	log.Debugf("updated cluster c2s context: %s\n%v", j.String(), context)
 
 	var stm *cluster.C2S
-	r.mu.RLock()
 	if streams := r.clusterStreams[msg.Node]; streams != nil {
 		stm = streams[j.String()]
 	}
-	r.mu.RUnlock()
 	if stm == nil {
 		return
 	}
@@ -510,6 +526,12 @@ func (r *Router) processUpdateContest(msg *cluster.Message) {
 }
 
 func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.cluster == nil {
+		return
+	}
+
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
@@ -520,11 +542,9 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 	log.Debugf("updated cluster c2s presence: %s\n%v", j.String(), presence)
 
 	var stm *cluster.C2S
-	r.mu.RLock()
 	if streams := r.clusterStreams[msg.Node]; streams != nil {
 		stm = streams[j.String()]
 	}
-	r.mu.RUnlock()
 	if stm == nil {
 		return
 	}
@@ -532,6 +552,12 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 }
 
 func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.cluster == nil {
+		return
+	}
+
 	j := msg.Payloads[0].JID
 	stanza := msg.Payloads[0].Stanza
 
