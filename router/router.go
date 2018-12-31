@@ -170,7 +170,7 @@ func (r *Router) Bind(stm stream.C2S) {
 	r.bind(stm)
 	r.localStreams[stm.JID().String()] = stm
 
-	log.Infof("binded c2s stream... (%s/%s)", stm.Username(), stm.Resource())
+	log.Infof("bound c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 
 	// broadcast cluster 'bind' message
 	if r.cluster != nil {
@@ -198,7 +198,6 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 	defer r.mu.Unlock()
 
 	if found := r.unbind(stmJID); !found {
-		r.mu.Unlock()
 		return
 	}
 	delete(r.localStreams, stmJID.String())
