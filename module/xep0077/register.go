@@ -32,21 +32,21 @@ type Config struct {
 type Register struct {
 	cfg        *Config
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, disco *xep0030.DiscoInfo) (*Register, chan<- chan bool) {
+func New(config *Config, disco *xep0030.DiscoInfo) *Register {
 	r := &Register{
 		cfg:        config,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go r.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(registerNamespace)
 	}
-	return r, r.shutdownCh
+	return r
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -61,6 +61,13 @@ func (x *Register) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down in-band registration module.
+func (x *Register) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (x *Register) loop() {
 	for {
@@ -68,7 +75,7 @@ func (x *Register) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

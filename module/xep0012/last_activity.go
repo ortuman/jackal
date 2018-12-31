@@ -28,35 +28,40 @@ type LastActivity struct {
 	router     *router.Router
 	startTime  time.Time
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router) (*LastActivity, chan<- chan bool) {
+func New(disco *xep0030.DiscoInfo, router *router.Router) *LastActivity {
 	x := &LastActivity{
 		router:     router,
 		startTime:  time.Now(),
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go x.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(lastActivityNamespace)
 		disco.RegisterAccountFeature(lastActivityNamespace)
 	}
-	return x, x.shutdownCh
+	return x
 }
 
-// MatchesIQ returns whether or not an IQ should be
-// processed by the last activity module.
+// MatchesIQ returns whether or not an IQ should be processed by the last activity module.
 func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", lastActivityNamespace) != nil
 }
 
-// ProcessIQ processes a last activity IQ taking
-// according actions over the associated stream.
+// ProcessIQ processes a last activity IQ taking according actions over the associated stream.
 func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
+}
+
+// Shutdown shuts down last activity module.
+func (x *LastActivity) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
 }
 
 // runs on it's own goroutine
@@ -66,7 +71,7 @@ func (x *LastActivity) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

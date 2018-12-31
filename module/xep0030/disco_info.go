@@ -28,24 +28,24 @@ type DiscoInfo struct {
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
 	actorCh     chan func()
-	shutdownCh  chan chan bool
+	shutdownCh  chan chan error
 }
 
 // New returns a disco info IQ handler module.
-func New(router *router.Router) (*DiscoInfo, chan<- chan bool) {
+func New(router *router.Router) *DiscoInfo {
 	di := &DiscoInfo{
 		router:      router,
 		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
-		shutdownCh:  make(chan chan bool),
+		shutdownCh:  make(chan chan error),
 	}
 	go di.loop()
 	di.RegisterServerFeature(discoItemsNamespace)
 	di.RegisterServerFeature(discoInfoNamespace)
 	di.RegisterAccountFeature(discoItemsNamespace)
 	di.RegisterAccountFeature(discoInfoNamespace)
-	return di, di.shutdownCh
+	return di
 }
 
 // RegisterServerItem registers a new item associated to server domain.
@@ -108,6 +108,13 @@ func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	di.actorCh <- func() { di.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down disco info module.
+func (di *DiscoInfo) Shutdown() error {
+	c := make(chan error)
+	di.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (di *DiscoInfo) loop() {
 	for {
@@ -115,7 +122,7 @@ func (di *DiscoInfo) loop() {
 		case f := <-di.actorCh:
 			f()
 		case c := <-di.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

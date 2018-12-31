@@ -36,21 +36,21 @@ type Config struct {
 type Version struct {
 	cfg        *Config
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo) (*Version, chan<- chan bool) {
+func New(config *Config, disco *xep0030.DiscoInfo) *Version {
 	v := &Version{
 		cfg:        config,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(versionNamespace)
 	}
-	return v, v.shutdownCh
+	return v
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -65,6 +65,13 @@ func (x *Version) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down version module.
+func (x *Version) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (x *Version) loop() {
 	for {
@@ -72,7 +79,7 @@ func (x *Version) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

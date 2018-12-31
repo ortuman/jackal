@@ -21,17 +21,17 @@ const privateNamespace = "jabber:iq:private"
 // Private represents a private storage server stream module.
 type Private struct {
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a private storage IQ handler module.
-func New() (*Private, chan<- chan bool) {
+func New() *Private {
 	x := &Private{
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go x.loop()
-	return x, x.shutdownCh
+	return x
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -46,6 +46,13 @@ func (x *Private) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down private storage module.
+func (x *Private) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (x *Private) loop() {
 	for {
@@ -53,7 +60,7 @@ func (x *Private) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

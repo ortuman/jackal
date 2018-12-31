@@ -32,23 +32,23 @@ type BlockingCommand struct {
 	router     *router.Router
 	roster     *roster.Roster
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) (*BlockingCommand, chan<- chan bool) {
+func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) *BlockingCommand {
 	b := &BlockingCommand{
 		router:     router,
 		roster:     roster,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go b.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(blockingCommandNamespace)
 		disco.RegisterAccountFeature(blockingCommandNamespace)
 	}
-	return b, b.shutdownCh
+	return b
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -67,6 +67,13 @@ func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down blocking module.
+func (x *BlockingCommand) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (x *BlockingCommand) loop() {
 	for {
@@ -74,7 +81,7 @@ func (x *BlockingCommand) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}
