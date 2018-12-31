@@ -451,7 +451,6 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 			Payloads: payloads,
 		})
 	}
-	r.mu.RUnlock()
 }
 
 func (r *Router) handleNodeLeft(node *cluster.Node) {
