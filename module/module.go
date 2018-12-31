@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/ortuman/jackal/log"
-
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0012"
@@ -27,6 +26,7 @@ import (
 
 // Module represents a generic XMPP module.
 type Module interface {
+	// Shutdown shuts down the module instance.
 	Shutdown() error
 }
 
