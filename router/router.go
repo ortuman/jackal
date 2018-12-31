@@ -157,7 +157,7 @@ func (r *Router) ClusterDelegate() cluster.Delegate {
 	return &clusterDelegate{r: r}
 }
 
-// Bind marks a c2s stream as binded.
+// Bind marks a c2s stream as bound.
 // An error will be returned in case no assigned resource is found.
 func (r *Router) Bind(stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
