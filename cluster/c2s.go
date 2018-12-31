@@ -35,7 +35,7 @@ func newC2S(
 	presence *xmpp.Presence,
 	context map[string]interface{},
 	node string,
-	cluster *Cluster) *C2S {
+	cluster c2sCluster) *C2S {
 	s := &C2S{
 		identifier: identifier,
 		cluster:    cluster,
