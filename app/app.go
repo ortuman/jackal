@@ -156,7 +156,9 @@ func (a *Application) Run() error {
 		}
 		if a.cluster != nil {
 			a.router.SetCluster(a.cluster)
-			a.cluster.Join()
+			if err := a.cluster.Join(); err != nil {
+				log.Error(err)
+			}
 		}
 	} else {
 		log.Warnf("cluster mode disabled: storage type '%s' is not compatible", cfg.Storage.Type)
