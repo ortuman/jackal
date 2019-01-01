@@ -6,18 +6,23 @@
 package s2s
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"io"
 	"net"
 	"sync/atomic"
+	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/stretchr/testify/require"
 )
 
 const jackaDomain = "jackal.im"
@@ -192,4 +197,68 @@ func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
 	return r, s, func() {
 		storage.Unset()
 	}
+}
+
+type fakeS2SServer struct {
+	startCh     chan struct{}
+	shutdownCh  chan struct{}
+	getOrDialCh chan struct{}
+}
+
+func newFakeS2SServer() *fakeS2SServer {
+	return &fakeS2SServer{
+		startCh:     make(chan struct{}, 1),
+		shutdownCh:  make(chan struct{}, 1),
+		getOrDialCh: make(chan struct{}, 1),
+	}
+}
+
+func (s *fakeS2SServer) start() {
+	s.startCh <- struct{}{}
+}
+
+func (s *fakeS2SServer) shutdown(ctx context.Context) error {
+	s.shutdownCh <- struct{}{}
+	return nil
+}
+
+func (s *fakeS2SServer) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error) {
+	s.getOrDialCh <- struct{}{}
+	return nil, nil
+}
+
+func TestS2S_StartAndShutdown(t *testing.T) {
+	s2s, fakeSrv := setupTestS2S()
+
+	s2s.Start()
+	select {
+	case <-fakeSrv.startCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "s2s start timeout")
+	}
+
+	s2s.GetOut("jackal.im", "jabber.org")
+	select {
+	case <-fakeSrv.getOrDialCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "s2s getOrDial timeout")
+	}
+
+	s2s.Shutdown(context.Background())
+	select {
+	case <-fakeSrv.shutdownCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "s2s shutdown timeout")
+	}
+}
+
+func setupTestS2S() (*S2S, *fakeS2SServer) {
+	srv := newFakeS2SServer()
+	createS2SServer = func(_ *Config, _ *module.Modules, _ *router.Router) s2sServer {
+		return srv
+	}
+	return New(&Config{}, &module.Modules{}, &router.Router{}), srv
 }

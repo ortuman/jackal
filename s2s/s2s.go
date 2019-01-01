@@ -25,9 +25,25 @@ const (
 	dialbackNamespace = "urn:xmpp:features:dialback"
 )
 
+type s2sServer interface {
+	start()
+	shutdown(ctx context.Context) error
+
+	getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error)
+}
+
+var createS2SServer = func(config *Config, mods *module.Modules, router *router.Router) s2sServer {
+	return &server{
+		cfg:    config,
+		router: router,
+		mods:   mods,
+		dialer: newDialer(config, router),
+	}
+}
+
 // S2S represents a server-to-server connection manager.
 type S2S struct {
-	srv     *server
+	srv     s2sServer
 	started uint32
 }
 
@@ -36,9 +52,7 @@ func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
 	if config == nil {
 		return nil
 	}
-	return &S2S{
-		srv: &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)},
-	}
+	return &S2S{srv: createS2SServer(config, mods, router)}
 }
 
 // GetOut acts as an s2s outgoing stream provider.

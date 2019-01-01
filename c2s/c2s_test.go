@@ -6,12 +6,19 @@
 package c2s
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"io"
 	"net"
 	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/ortuman/jackal/component"
+	"github.com/ortuman/jackal/module"
 
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -155,4 +162,54 @@ func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
 	return r, s, func() {
 		storage.Unset()
 	}
+}
+
+type fakeC2SServer struct {
+	startCh    chan struct{}
+	shutdownCh chan struct{}
+}
+
+func newFakeC2SServer() *fakeC2SServer {
+	return &fakeC2SServer{
+		startCh:    make(chan struct{}, 1),
+		shutdownCh: make(chan struct{}, 1),
+	}
+}
+
+func (s *fakeC2SServer) start() {
+	s.startCh <- struct{}{}
+}
+
+func (s *fakeC2SServer) shutdown(ctx context.Context) error {
+	s.shutdownCh <- struct{}{}
+	return nil
+}
+
+func TestC2S_StartAndShutdown(t *testing.T) {
+	c2s, fakeSrv := setupTestC2S()
+
+	c2s.Start()
+	select {
+	case <-fakeSrv.startCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "c2s start timeout")
+	}
+
+	c2s.Shutdown(context.Background())
+	select {
+	case <-fakeSrv.shutdownCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "c2s shutdown timeout")
+	}
+}
+
+func setupTestC2S() (*C2S, *fakeC2SServer) {
+	srv := newFakeC2SServer()
+	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ *router.Router) c2sServer {
+		return srv
+	}
+	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, &router.Router{})
+	return c2s, srv
 }
