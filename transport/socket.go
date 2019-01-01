@@ -56,7 +56,7 @@ func (s *socketTransport) Close() error {
 	return s.conn.Close()
 }
 
-func (s *socketTransport) Type() TransportType {
+func (s *socketTransport) Type() Type {
 	return Socket
 }
 

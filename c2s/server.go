@@ -119,7 +119,7 @@ func (s *server) shutdown(ctx context.Context) error {
 			}
 		}
 		// close all connections
-		c, err := closeConnections(&s.inConns, ctx)
+		c, err := closeConnections(ctx, &s.inConns)
 		if err != nil {
 			return err
 		}
@@ -156,7 +156,7 @@ func (s *server) nextID() string {
 	return fmt.Sprintf("c2s:%s:%d", s.cfg.ID, atomic.AddUint64(&s.stmSeq, 1))
 }
 
-func closeConnections(connections *sync.Map, ctx context.Context) (count int, err error) {
+func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
 	connections.Range(func(_, v interface{}) bool {
 		stm := v.(stream.InStream)
 		select {

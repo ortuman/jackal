@@ -13,19 +13,19 @@ import (
 	"github.com/ortuman/jackal/transport/compress"
 )
 
-// TransportType represents a stream transport type (socket).
-type TransportType int
+// Type represents a stream transport type (socket).
+type Type int
 
 const (
 	// Socket represents a socket transport type.
-	Socket TransportType = iota + 1
+	Socket Type = iota + 1
 
 	// WebSocket represents a websocket transport type.
 	WebSocket
 )
 
 // String returns TransportType string representation.
-func (tt TransportType) String() string {
+func (tt Type) String() string {
 	switch tt {
 	case Socket:
 		return "socket"
@@ -48,7 +48,7 @@ type Transport interface {
 	io.ReadWriteCloser
 
 	// Type returns transport type value.
-	Type() TransportType
+	Type() Type
 
 	// WriteString writes a raw string to the transport.
 	WriteString(s string) (n int, err error)

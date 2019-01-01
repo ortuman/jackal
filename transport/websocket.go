@@ -66,7 +66,7 @@ func (wst *webSocketTransport) Close() error {
 	return wst.conn.Close()
 }
 
-func (wst *webSocketTransport) Type() TransportType {
+func (wst *webSocketTransport) Type() Type {
 	return WebSocket
 }
 

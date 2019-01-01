@@ -1,16 +1,21 @@
 install:
 	@export GO111MODULE=on && go install github.com/ortuman/jackal
 
+install-tools:
+	@export GO111MODULE=on && go get -u -v \
+		golang.org/x/lint/golint
+
 test:
-	@echo "Running tests..."
 	@go test -race $$(go list ./...)
 
 coverage:
 	@go test -race -coverprofile=coverage.txt -covermode=atomic $$(go list ./...)
 
 vet:
-	@echo "Looking for buggy code..."
 	@go vet $$(go list ./...)
+
+lint: install-tools
+	@golint $$(go list ./...)
 
 clean:
 	@go clean
