@@ -19,7 +19,7 @@ import (
 
 // IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
 func IsClusterCompatible() bool {
-	return false
+	return instance().IsClusterCompatible()
 }
 
 type userStorage interface {

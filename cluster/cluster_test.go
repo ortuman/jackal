@@ -100,7 +100,7 @@ func TestCluster_Shutdown(t *testing.T) {
 	case <-ml.shutdownCh:
 		break
 	case <-time.After(clusterOpTimeout):
-		require.Fail(t, "c2sCluster shutdown timeout")
+		require.Fail(t, "cluster shutdown timeout")
 	}
 }
 
@@ -140,7 +140,7 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 	case <-ml.sendCh:
 		break
 	case <-time.After(clusterOpTimeout):
-		require.Fail(t, "c2sCluster send message timeout")
+		require.Fail(t, "cluster send message timeout")
 	}
 
 	c.BroadcastMessage(&Message{})
@@ -150,12 +150,12 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 		case <-ml.sendCh:
 			break
 		case <-time.After(clusterOpTimeout):
-			require.Fail(t, "c2sCluster broadcast message timeout")
+			require.Fail(t, "cluster broadcast message timeout")
 		}
 	}
 
 	// test send error
-	ml.sendErr = errors.New("c2sCluster: send error")
+	ml.sendErr = errors.New("cluster: send error")
 
 	c.SendMessageTo("node3", &Message{})
 	select {

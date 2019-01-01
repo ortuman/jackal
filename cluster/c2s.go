@@ -17,7 +17,7 @@ type c2sCluster interface {
 	SendMessageTo(node string, msg *Message)
 }
 
-// C2S represents a c2sCluster c2s stream.
+// C2S represents a cluster c2s stream.
 type C2S struct {
 	identifier string
 	cluster    c2sCluster

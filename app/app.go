@@ -157,7 +157,7 @@ func (a *Application) Run() error {
 		if a.cluster != nil {
 			a.router.SetCluster(a.cluster)
 			if err := a.cluster.Join(); err != nil {
-				log.Error(err)
+				log.Warnf("%v", err)
 			}
 		}
 	} else {
