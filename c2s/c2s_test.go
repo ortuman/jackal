@@ -15,15 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
-
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/stretchr/testify/require"
 )
 
 var errFakeSockAlreadyClosed = errors.New("fakeSockReaderWriter: already closed")
