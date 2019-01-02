@@ -13,5 +13,5 @@ import (
 
 func TestTypeStrings(t *testing.T) {
 	require.Equal(t, "socket", Socket.String())
-	require.Equal(t, "", TransportType(99).String())
+	require.Equal(t, "", Type(99).String())
 }
