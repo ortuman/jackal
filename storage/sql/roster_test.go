@@ -9,7 +9,7 @@ import (
 	"database/sql/driver"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
@@ -115,7 +115,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
 
-	ri, err := s.FetchRosterItem("ortuman", "romeo")
+	_, err = s.FetchRosterItem("ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -124,7 +124,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns))
 
-	ri, err = s.FetchRosterItem("ortuman", "romeo")
+	ri, _ := s.FetchRosterItem("ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, ri)
 

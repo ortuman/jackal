@@ -192,10 +192,7 @@ func (a *Application) Run() error {
 	sig := a.waitForStopSignal()
 	log.Infof("received %s signal... shutting down...", sig.String())
 
-	if err := a.gracefullyShutdown(); err != nil {
-		return err
-	}
-	return nil
+	return a.gracefullyShutdown()
 }
 
 func (a *Application) showVersion() {

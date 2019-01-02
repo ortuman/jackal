@@ -14,7 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/errors"
+	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
@@ -183,7 +183,7 @@ func (s *Session) Open() error {
 }
 
 // Close closes session sending the proper XMPP payload.
-// Is responsability of the caller to close underlying transport.
+// Is responsibility of the caller to close underlying transport.
 func (s *Session) Close() error {
 	if atomic.LoadUint32(&s.opened) == 0 {
 		return errors.New("session already closed")

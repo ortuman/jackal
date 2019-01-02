@@ -201,10 +201,7 @@ func (j *JID) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&node)
 	dec.Decode(&domain)
 	dec.Decode(&resource)
-	if err := j.stringPrep(node, domain, resource); err != nil {
-		return err
-	}
-	return nil
+	return j.stringPrep(node, domain, resource)
 }
 
 // ToGob converts a JID entity to it's gob binary representation.

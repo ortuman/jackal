@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -85,7 +85,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns))
 
-	usr, err := s.FetchUser("ortuman")
+	usr, _ := s.FetchUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, usr)
 
@@ -93,7 +93,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
-	_, err = s.FetchUser("ortuman")
+	_, err := s.FetchUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 

@@ -26,10 +26,10 @@ func TestMemoryStorage_InsertUser(t *testing.T) {
 func TestMemoryStorage_UserExists(t *testing.T) {
 	s := New()
 	s.EnableMockedError()
-	ok, err := s.UserExists("ortuman")
+	_, err := s.UserExists("ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	ok, err = s.UserExists("ortuman")
+	ok, err := s.UserExists("ortuman")
 	require.Nil(t, err)
 	require.False(t, ok)
 }
