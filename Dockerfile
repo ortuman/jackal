@@ -14,7 +14,7 @@ RUN export CGO_ENABLED=0
 RUN export GOOS=linux
 RUN export GOARCH=amd64
 RUN export GO111MODULE=on
-RUN go build github.com/ortuman/jackal
+RUN go build -ldflags="-s -w" github.com/ortuman/jackal
 
 FROM debian:stretch-slim
 COPY --from=buildimage /jackal/jackal /
