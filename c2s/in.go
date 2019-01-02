@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/errors"
+	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -141,7 +141,7 @@ func (s *inStream) GetInt(key string) int {
 	return ret
 }
 
-// SetInt associates a float context value to a key.
+// SetFloat associates a float context value to a key.
 func (s *inStream) SetFloat(key string, value float64) {
 	s.setContextValue(key, value)
 }
@@ -216,7 +216,7 @@ func (s *inStream) Presence() *xmpp.Presence {
 	return s.presence
 }
 
-// SendElement sends the given XML element.
+// SendElement writes an XMPP element to the stream.
 func (s *inStream) SendElement(elem xmpp.XElement) {
 	if s.getState() == disconnected {
 		return

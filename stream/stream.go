@@ -145,7 +145,7 @@ func (m *MockC2S) GetInt(key string) int {
 	return ret
 }
 
-// SetInt associates a float context value to a key.
+// SetFloat associates a float context value to a key.
 func (m *MockC2S) SetFloat(key string, value float64) {
 	m.setContextValue(key, value)
 }

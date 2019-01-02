@@ -150,6 +150,7 @@ func (m *Modules) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	}
 }
 
+// Shutdown gracefully shuts down modules instance.
 func (m *Modules) Shutdown(ctx context.Context) error {
 	select {
 	case <-m.shutdown():

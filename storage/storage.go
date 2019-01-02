@@ -208,12 +208,14 @@ var (
 	inst   Storage
 )
 
+// Disabled stores a disabled storage instance.
 var Disabled Storage = &disabledStorage{}
 
 func init() {
 	inst = Disabled
 }
 
+// Set sets the global storage.
 func Set(storage Storage) {
 	instMu.Lock()
 	_ = inst.Close()
@@ -221,6 +223,7 @@ func Set(storage Storage) {
 	instMu.Unlock()
 }
 
+// Unset disables a previously set global storage.
 func Unset() {
 	Set(Disabled)
 }
@@ -232,7 +235,7 @@ func instance() Storage {
 	return s
 }
 
-// Initialize initializes storage sub system.
+// New initializes storage sub system.
 func New(config *Config) (Storage, error) {
 	switch config.Type {
 	case BadgerDB:

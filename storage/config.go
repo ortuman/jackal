@@ -15,12 +15,12 @@ import (
 
 const defaultMySQLPoolSize = 16
 
-// StorageType represents a storage manager type.
-type StorageType int
+// Type represents a storage manager type.
+type Type int
 
 const (
 	// MySQL represents a MySQL storage type.
-	MySQL StorageType = iota
+	MySQL Type = iota
 
 	// BadgerDB represents a BadgerDB storage type.
 	BadgerDB
@@ -29,17 +29,17 @@ const (
 	Memory
 )
 
-var typeStringMap = map[StorageType]string{
+var typeStringMap = map[Type]string{
 	MySQL:    "MySQL",
 	BadgerDB: "BadgerDB",
 	Memory:   "Memory",
 }
 
-func (t StorageType) String() string { return typeStringMap[t] }
+func (t Type) String() string { return typeStringMap[t] }
 
 // Config represents an storage manager configuration.
 type Config struct {
-	Type     StorageType
+	Type     Type
 	MySQL    *sql.Config
 	BadgerDB *badgerdb.Config
 }

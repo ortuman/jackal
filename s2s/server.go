@@ -12,7 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ortuman/jackal/errors"
+	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -52,13 +52,13 @@ func (s *server) shutdown(ctx context.Context) error {
 			return err
 		}
 		// close all connections...
-		c, err := closeConnections(&s.outConns, ctx)
+		c, err := closeConnections(ctx, &s.outConns)
 		if err != nil {
 			return err
 		}
 		log.Infof("%s: closed %d out connection(s)", s.cfg.ID, c)
 
-		c, err = closeConnections(&s.inConns, ctx)
+		c, err = closeConnections(ctx, &s.inConns)
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func (s *server) unregisterInStream(stm stream.S2SIn) {
 	log.Infof("unregistered s2s in stream... (id: %s)", stm.ID())
 }
 
-func closeConnections(connections *sync.Map, ctx context.Context) (count int, err error) {
+func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
 	connections.Range(func(_, v interface{}) bool {
 		stm := v.(*inStream)
 		select {

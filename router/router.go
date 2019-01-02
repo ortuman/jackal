@@ -146,6 +146,7 @@ func (r *Router) SetCluster(cluster Cluster) {
 	r.cluster = cluster
 }
 
+// Cluster returns current router cluster.
 func (r *Router) Cluster() Cluster {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

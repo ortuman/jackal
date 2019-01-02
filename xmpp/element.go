@@ -72,7 +72,7 @@ func NewElementFromGob(dec *gob.Decoder) *Element {
 	return e
 }
 
-// Domain returns XML node name.
+// Name returns XML node name.
 func (e *Element) Name() string {
 	return e.name
 }

@@ -2,7 +2,7 @@ install:
 	@export GO111MODULE=on && go install github.com/ortuman/jackal
 
 install-tools:
-	@export GO111MODULE=on && go get -u -v \
+	@export GO111MODULE=on && go get -u \
 		golang.org/x/lint/golint
 
 test:

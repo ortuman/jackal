@@ -21,6 +21,7 @@ type configProxy struct {
 	Hosts []HostConfig `yaml:"hosts"`
 }
 
+// UnmarshalYAML satisfies Unmarshaler interface.
 func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := configProxy{}
 	if err := unmarshal(&p); err != nil {

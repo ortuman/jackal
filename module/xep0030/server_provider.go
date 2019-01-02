@@ -31,9 +31,8 @@ func (sp *serverProvider) Identities(toJID, fromJID *jid.JID, node string) []Ide
 	}
 	if toJID.IsServer() {
 		return []Identity{{Type: "im", Category: "server", Name: "jackal"}}
-	} else {
-		return []Identity{{Type: "registered", Category: "account"}}
 	}
+	return []Identity{{Type: "registered", Category: "account"}}
 }
 
 func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError) {
@@ -66,12 +65,11 @@ func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feat
 	}
 	if toJID.IsServer() {
 		return sp.serverFeatures, nil
-	} else {
-		if sp.isSubscribedTo(toJID, fromJID) {
-			return sp.accountFeatures, nil
-		}
-		return nil, xmpp.ErrSubscriptionRequired
 	}
+	if sp.isSubscribedTo(toJID, fromJID) {
+		return sp.accountFeatures, nil
+	}
+	return nil, xmpp.ErrSubscriptionRequired
 }
 
 func (sp *serverProvider) Form(toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError) {

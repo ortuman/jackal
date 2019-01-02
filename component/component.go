@@ -58,6 +58,7 @@ func (cs *Components) GetAll() []Component {
 	return ret
 }
 
+// Shutdown gracefully shuts down components instance.
 func (cs *Components) Shutdown(ctx context.Context) error {
 	select {
 	case <-cs.shutdown():
