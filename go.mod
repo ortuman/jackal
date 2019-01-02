@@ -37,12 +37,13 @@ require (
 	github.com/stretchr/testify v1.2.2
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	golang.org/x/crypto v0.0.0-20181106171534-e4dc69e5b2fd
-	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc
 	golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8 // indirect
 	golang.org/x/text v0.3.0
-	golang.org/x/tools v0.0.0-20181221235234-d00ac6d27372 // indirect
 	google.golang.org/appengine v1.3.0 // indirect
+	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 
 	gopkg.in/yaml.v2 v2.2.1
+	labix.org/v2/mgo v0.0.0-20140701140051-000000000287 // indirect
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
