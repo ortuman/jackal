@@ -37,19 +37,19 @@ type Roster struct {
 	router     *router.Router
 	onlineJIDs sync.Map
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, router *router.Router) (*Roster, chan<- chan bool) {
+func New(cfg *Config, router *router.Router) *Roster {
 	r := &Roster{
 		cfg:        cfg,
 		router:     router,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go r.loop()
-	return r, r.shutdownCh
+	return r
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -92,6 +92,13 @@ func (r *Roster) OnlinePresencesMatchingJID(j *jid.JID) []*xmpp.Presence {
 	return ret
 }
 
+// Shutdown shuts down roster module.
+func (r *Roster) Shutdown() error {
+	c := make(chan error)
+	r.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (r *Roster) loop() {
 	for {
@@ -99,7 +106,7 @@ func (r *Roster) loop() {
 		case f := <-r.actorCh:
 			f()
 		case c := <-r.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}
@@ -160,7 +167,7 @@ func (r *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) er
 			}
 		}
 	}
-	stm.Context().SetBool(true, rosterRequestedCtxKey)
+	stm.SetBool(rosterRequestedCtxKey, true)
 	return nil
 }
 
@@ -696,7 +703,7 @@ func (r *Roster) pushItem(ri *rostermodel.Item, to *jid.JID) error {
 
 	stms := r.router.UserStreams(to.Node())
 	for _, stm := range stms {
-		if !stm.Context().Bool(rosterRequestedCtxKey) {
+		if !stm.GetBool(rosterRequestedCtxKey) {
 			continue
 		}
 		pushEl := xmpp.NewIQType(uuid.New(), xmpp.SetType)

@@ -159,8 +159,8 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 	dbBack.AppendElement(xmpp.NewElementName("errors"))
 	features.AppendElement(dbBack)
 
-	s.writeElement(features)
 	s.setState(inConnected)
+	s.writeElement(features)
 }
 
 func (s *inStream) handleConnected(elem xmpp.XElement) {

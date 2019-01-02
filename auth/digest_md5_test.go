@@ -78,7 +78,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	auth.SetAttribute("mechanism", "DIGEST-MD5")
 	authr.ProcessElement(auth)
 
-	challenge := testStm.FetchElement()
+	challenge := testStm.ReceiveElement()
 	require.Equal(t, challenge.Name(), "challenge")
 	clParams := helper.clientParamsFromChallenge(challenge.Text())
 	clientResp := authr.computeResponse(clParams, user, true)
@@ -143,7 +143,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	// successful authentication...
 	require.Nil(t, helper.sendClientParamsResponse(clParams))
 
-	challenge = testStm.FetchElement()
+	challenge = testStm.ReceiveElement()
 
 	serverResp := authr.computeResponse(clParams, user, false)
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("rspauth=%s", serverResp))), challenge.Text())
@@ -151,7 +151,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	response.SetText("")
 	authr.ProcessElement(response)
 
-	success := testStm.FetchElement()
+	success := testStm.ReceiveElement()
 	require.Equal(t, "success", success.Name())
 
 	// successfully authenticated

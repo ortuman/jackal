@@ -7,7 +7,6 @@ package storage
 
 import (
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/ortuman/jackal/model"
@@ -17,6 +16,11 @@ import (
 	"github.com/ortuman/jackal/storage/sql"
 	"github.com/ortuman/jackal/xmpp"
 )
+
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func IsClusterCompatible() bool {
+	return instance().IsClusterCompatible()
+}
 
 type userStorage interface {
 	InsertOrUpdateUser(user *model.User) error
@@ -187,7 +191,9 @@ func FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 
 // Storage represents an entity storage interface.
 type Storage interface {
-	io.Closer
+	Close() error
+
+	IsClusterCompatible() bool
 
 	userStorage
 	offlineStorage
@@ -202,19 +208,22 @@ var (
 	inst   Storage
 )
 
+// Disabled stores a disabled storage instance.
 var Disabled Storage = &disabledStorage{}
 
 func init() {
 	inst = Disabled
 }
 
+// Set sets the global storage.
 func Set(storage Storage) {
 	instMu.Lock()
-	inst.Close()
+	_ = inst.Close()
 	inst = storage
 	instMu.Unlock()
 }
 
+// Unset disables a previously set global storage.
 func Unset() {
 	Set(Disabled)
 }
@@ -226,7 +235,7 @@ func instance() Storage {
 	return s
 }
 
-// Initialize initializes storage sub system.
+// New initializes storage sub system.
 func New(config *Config) (Storage, error) {
 	switch config.Type {
 	case BadgerDB:

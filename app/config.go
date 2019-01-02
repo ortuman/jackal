@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"github.com/ortuman/jackal/cluster"
+
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
@@ -34,6 +36,7 @@ type Config struct {
 	Debug      debugConfig      `yaml:"debug"`
 	Logger     loggerConfig     `yaml:"logger"`
 	Storage    storage.Config   `yaml:"storage"`
+	Cluster    *cluster.Config  `yaml:"cluster"`
 	Router     router.Config    `yaml:"router"`
 	Modules    module.Config    `yaml:"modules"`
 	Components component.Config `yaml:"components"`

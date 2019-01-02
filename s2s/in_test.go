@@ -360,7 +360,7 @@ func TestStream_SendElement(t *testing.T) {
 	iq.SetToJID(toJID)
 	conn.inboundWriteString(iq.String())
 
-	elem := stm2.FetchElement()
+	elem := stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())

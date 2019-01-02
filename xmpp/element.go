@@ -7,9 +7,21 @@ package xmpp
 
 import (
 	"encoding/gob"
+	"fmt"
 	"io"
 
 	"github.com/ortuman/jackal/xmpp/jid"
+)
+
+const (
+	// MessageName represents "message" stanza name
+	MessageName = "message"
+
+	// PresenceName represents "presence" stanza name
+	PresenceName = "presence"
+
+	// IQName represents "iq" stanza name
+	IQName = "iq"
 )
 
 // Element represents a generic and mutable XML node element.
@@ -53,7 +65,14 @@ func NewErrorStanzaFromStanza(stanza Stanza, stanzaErr *StanzaError, errorElemen
 	return e
 }
 
-// Domain returns XML node name.
+// NewElementFromGob creates and returns a new Element from a given gob decoder.
+func NewElementFromGob(dec *gob.Decoder) *Element {
+	e := &Element{}
+	e.FromGob(dec)
+	return e
+}
+
+// Name returns XML node name.
 func (e *Element) Name() string {
 	return e.name
 }
@@ -180,11 +199,12 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 }
 
 // FromGob deserializes an element node from it's gob binary representation.
-func (e *Element) FromGob(dec *gob.Decoder) {
+func (e *Element) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&e.name)
 	dec.Decode(&e.text)
 	e.attrs.fromGob(dec)
 	e.elements.fromGob(dec)
+	return nil
 }
 
 // ToGob serializes an element node to it's gob binary representation.
@@ -208,24 +228,63 @@ type stanzaElement struct {
 	toJID   *jid.JID
 }
 
+// NewStanzaFromElement returns a new stanza instance derived from an XMPP element.
+func NewStanzaFromElement(elem XElement) (Stanza, error) {
+	fromJID, err := jid.NewWithString(elem.From(), false)
+	if err != nil {
+		return nil, err
+	}
+	toJID, err := jid.NewWithString(elem.To(), false)
+	if err != nil {
+		return nil, err
+	}
+	switch elem.Name() {
+	case IQName:
+		return NewIQFromElement(elem, fromJID, toJID)
+	case PresenceName:
+		return NewPresenceFromElement(elem, fromJID, toJID)
+	case MessageName:
+		return NewMessageFromElement(elem, fromJID, toJID)
+	}
+	return nil, fmt.Errorf("unrecognized stanza name: %s", elem.Name())
+}
+
 // ToJID returns iq 'from' JID value.
-func (stanza *stanzaElement) ToJID() *jid.JID {
-	return stanza.toJID
+func (s *stanzaElement) ToJID() *jid.JID {
+	return s.toJID
 }
 
 // SetToJID sets the IQ 'to' JID value.
-func (stanza *stanzaElement) SetToJID(j *jid.JID) {
-	stanza.toJID = j
-	stanza.SetTo(j.String())
+func (s *stanzaElement) SetToJID(j *jid.JID) {
+	s.toJID = j
+	s.SetTo(j.String())
 }
 
 // FromJID returns presence 'from' JID value.
-func (stanza *stanzaElement) FromJID() *jid.JID {
-	return stanza.fromJID
+func (s *stanzaElement) FromJID() *jid.JID {
+	return s.fromJID
 }
 
 // SetFromJID sets the IQ 'from' JID value.
-func (stanza *stanzaElement) SetFromJID(j *jid.JID) {
-	stanza.fromJID = j
-	stanza.SetFrom(j.String())
+func (s *stanzaElement) SetFromJID(j *jid.JID) {
+	s.fromJID = j
+	s.SetFrom(j.String())
+}
+
+// FromGob deserializes a stanza element from it's gob binary representation.
+func (s *stanzaElement) FromGob(dec *gob.Decoder) error {
+	s.Element.FromGob(dec)
+
+	// set from and to JIDs
+	fromJID, err := jid.NewWithString(s.From(), false)
+	if err != nil {
+		return err
+	}
+	toJID, err := jid.NewWithString(s.To(), false)
+	if err != nil {
+		return err
+	}
+	s.SetFromJID(fromJID)
+	s.SetToJID(toJID)
+	return nil
 }

@@ -20,21 +20,21 @@ const vCardNamespace = "vcard-temp"
 // VCard represents a vCard server stream module.
 type VCard struct {
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns a vCard IQ handler module.
-func New(disco *xep0030.DiscoInfo) (*VCard, chan<- chan bool) {
+func New(disco *xep0030.DiscoInfo) *VCard {
 	v := &VCard{
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(vCardNamespace)
 		disco.RegisterAccountFeature(vCardNamespace)
 	}
-	return v, v.shutdownCh
+	return v
 }
 
 // MatchesIQ returns whether or not an IQ should be
@@ -49,6 +49,13 @@ func (x *VCard) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
+// Shutdown shuts down vCard module.
+func (x *VCard) Shutdown() error {
+	c := make(chan error)
+	x.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (x *VCard) loop() {
 	for {
@@ -56,7 +63,7 @@ func (x *VCard) loop() {
 		case f := <-x.actorCh:
 			f()
 		case c := <-x.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}

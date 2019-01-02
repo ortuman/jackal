@@ -59,6 +59,9 @@ func New(cfg *Config) *Storage {
 	return b
 }
 
+// IsClusterCompatible returns whether or not the underlying storage subsystem can be used in cluster mode.
+func (b *Storage) IsClusterCompatible() bool { return false }
+
 // Close shuts down BadgerDB storage sub system.
 func (b *Storage) Close() error {
 	ch := make(chan bool)
@@ -129,7 +132,7 @@ func (b *Storage) fetch(entity interface{}, key []byte) error {
 				if !ok {
 					return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 				}
-				gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+				return gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
 			}
 			return nil
 		}
@@ -150,7 +153,9 @@ func (b *Storage) fetchAll(v interface{}, prefix []byte) error {
 		if !ok {
 			return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, i)
 		}
-		gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+		if err := gd.FromGob(gob.NewDecoder(bytes.NewReader(val))); err != nil {
+			return err
+		}
 		s.Set(reflect.Append(s, e))
 		return nil
 	})

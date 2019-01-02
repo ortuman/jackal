@@ -80,6 +80,22 @@ mysql -h localhost -D jackal -u jackal -p < mysql.sql
 
 Your database is now ready to connect with jackal.
 
+### Cluster configuration
+
+The purpose of clustering is to be able to use several servers for fault-tolerance and scalability.
+
+To run `jackal` in clustering mode make sure to add a `cluster` section configuration in each of the cluster nodes.
+
+Here is an example of how this section should look like:
+```yaml
+cluster:
+  name: node1                             
+  port: 5010                              
+  hosts: [node2:5010, node3:5010] 
+```
+
+Do not forget to include all cluster nodes, excluding the local one, in the `hosts` array field. Otherwise the expected behavior will be undefined.   
+
 ## Run jackal in Docker
 
 Set up `jackal` in the cloud in under 5 minutes with zero knowledge of Golang or Linux shell using our [jackal Docker image](https://hub.docker.com/r/ortuman/jackal/).

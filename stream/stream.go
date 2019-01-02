@@ -7,9 +7,8 @@ package stream
 
 import (
 	"errors"
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -31,7 +30,19 @@ type InOutStream interface {
 type C2S interface {
 	InOutStream
 
-	Context() *Context
+	Context() map[string]interface{}
+
+	SetString(key string, value string)
+	GetString(key string) string
+
+	SetInt(key string, value int)
+	GetInt(key string) int
+
+	SetFloat(key string, value float64)
+	GetFloat(key string) float64
+
+	SetBool(key string, value bool)
+	GetBool(key string) bool
 
 	Username() string
 	Domain() string
@@ -41,7 +52,6 @@ type C2S interface {
 
 	IsSecured() bool
 	IsAuthenticated() bool
-	IsCompressed() bool
 
 	Presence() *xmpp.Presence
 }
@@ -59,7 +69,6 @@ type S2SOut interface {
 // MockC2S represents a mocked c2s stream.
 type MockC2S struct {
 	id              string
-	ctx             *Context
 	mu              sync.RWMutex
 	isSecured       bool
 	isAuthenticated bool
@@ -67,6 +76,8 @@ type MockC2S struct {
 	isDisconnected  bool
 	jid             *jid.JID
 	presence        *xmpp.Presence
+	contextMu       sync.RWMutex
+	context         map[string]interface{}
 	elemCh          chan xmpp.XElement
 	actorCh         chan func()
 	discCh          chan error
@@ -74,10 +85,9 @@ type MockC2S struct {
 
 // NewMockC2S returns a new mocked stream instance.
 func NewMockC2S(id string, jid *jid.JID) *MockC2S {
-	ctx := NewContext()
 	stm := &MockC2S{
 		id:      id,
-		ctx:     ctx,
+		context: make(map[string]interface{}),
 		elemCh:  make(chan xmpp.XElement, 16),
 		actorCh: make(chan func(), 64),
 		discCh:  make(chan error, 1),
@@ -92,9 +102,79 @@ func (m *MockC2S) ID() string {
 	return m.id
 }
 
-// Context returns mocked stream associated context.
-func (m *MockC2S) Context() *Context {
-	return m.ctx
+// Context returns a copy of the stream associated context.
+func (m *MockC2S) Context() map[string]interface{} {
+	ret := make(map[string]interface{})
+	m.contextMu.RLock()
+	for k, v := range m.context {
+		ret[k] = v
+	}
+	m.contextMu.RUnlock()
+	return ret
+}
+
+// SetString associates a string context value to a key.
+func (m *MockC2S) SetString(key string, value string) {
+	m.setContextValue(key, value)
+}
+
+// GetString returns the context value associated with the key as a string.
+func (m *MockC2S) GetString(key string) string {
+	var ret string
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if s, ok := m.context[key].(string); ok {
+		ret = s
+	}
+	return ret
+}
+
+// SetInt associates an integer context value to a key.
+func (m *MockC2S) SetInt(key string, value int) {
+	m.setContextValue(key, value)
+}
+
+// GetInt returns the context value associated with the key as an integer.
+func (m *MockC2S) GetInt(key string) int {
+	var ret int
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if i, ok := m.context[key].(int); ok {
+		ret = i
+	}
+	return ret
+}
+
+// SetFloat associates a float context value to a key.
+func (m *MockC2S) SetFloat(key string, value float64) {
+	m.setContextValue(key, value)
+}
+
+// GetFloat returns the context value associated with the key as a float64.
+func (m *MockC2S) GetFloat(key string) float64 {
+	var ret float64
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if f, ok := m.context[key].(float64); ok {
+		ret = f
+	}
+	return ret
+}
+
+// SetBool associates a boolean context value to a key.
+func (m *MockC2S) SetBool(key string, value bool) {
+	m.setContextValue(key, value)
+}
+
+// GetBool returns the context value associated with the key as a boolean.
+func (m *MockC2S) GetBool(key string) bool {
+	var ret bool
+	m.contextMu.RLock()
+	defer m.contextMu.RUnlock()
+	if b, ok := m.context[key].(bool); ok {
+		ret = b
+	}
+	return ret
 }
 
 // Username returns current mocked stream username.
@@ -158,22 +238,6 @@ func (m *MockC2S) IsAuthenticated() bool {
 	return m.isAuthenticated
 }
 
-// SetCompressed sets whether or not the a mocked stream
-// has been compressed.
-func (m *MockC2S) SetCompressed(compressed bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.isCompressed = compressed
-}
-
-// IsCompressed returns whether or not the mocked stream
-// has enabled a compression method.
-func (m *MockC2S) IsCompressed() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.isCompressed
-}
-
 // IsDisconnected returns whether or not the mocked stream has been disconnected.
 func (m *MockC2S) IsDisconnected() bool {
 	m.mu.RLock()
@@ -213,9 +277,9 @@ func (m *MockC2S) Disconnect(err error) {
 	<-waitCh
 }
 
-// FetchElement waits until a new XML element is sent to
+// ReceiveElement waits until a new XML element is sent to
 // the mocked stream and returns it.
-func (m *MockC2S) FetchElement() xmpp.XElement {
+func (m *MockC2S) ReceiveElement() xmpp.XElement {
 	select {
 	case e := <-m.elemCh:
 		return e
@@ -261,4 +325,10 @@ func (m *MockC2S) disconnect(err error) {
 		m.discCh <- err
 		m.isDisconnected = true
 	}
+}
+
+func (m *MockC2S) setContextValue(key string, value interface{}) {
+	m.contextMu.Lock()
+	defer m.contextMu.Unlock()
+	m.context[key] = value
 }

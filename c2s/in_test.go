@@ -176,7 +176,7 @@ func TestStream_Compression(t *testing.T) {
 	require.Equal(t, "compressed", elem.Name())
 	require.Equal(t, "http://jabber.org/protocol/compress", elem.Namespace())
 
-	require.True(t, stm.IsCompressed())
+	require.True(t, stm.isCompressed())
 }
 
 func TestStream_StartSession(t *testing.T) {
@@ -234,7 +234,7 @@ func TestStream_SendIQ(t *testing.T) {
 	require.Equal(t, iqID, elem.ID())
 	require.NotNil(t, elem.Elements().ChildNamespace("query", "jabber:iq:roster"))
 
-	require.True(t, stm.Context().Bool("roster:requested"))
+	require.True(t, stm.GetBool("roster:requested"))
 }
 
 func TestStream_SendPresence(t *testing.T) {
@@ -320,14 +320,14 @@ func TestStream_SendMessage(t *testing.T) {
 	conn.inboundWrite([]byte(msg.String()))
 
 	// to full jid...
-	elem := stm2.FetchElement()
+	elem := stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
 
 	// to bare jid...
 	msg.SetToJID(jTo.ToBareJID())
 	conn.inboundWrite([]byte(msg.String()))
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
 }

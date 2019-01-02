@@ -9,27 +9,25 @@ import (
 	"encoding/gob"
 
 	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// Notification represents a roster subscription
-// pending notification.
+// Notification represents a roster subscription pending notification.
 type Notification struct {
 	Contact  string
 	JID      string
 	Presence *xmpp.Presence
 }
 
-// FromGob deserializes a Notification entity
-// from it's gob binary representation.
-func (rn *Notification) FromGob(dec *gob.Decoder) {
+// FromGob deserializes a Notification entity from it's gob binary representation.
+func (rn *Notification) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&rn.Contact)
 	dec.Decode(&rn.JID)
-	el := &xmpp.Element{}
-	el.FromGob(dec)
-	fromJID, _ := jid.NewWithString(el.From(), true)
-	toJID, _ := jid.NewWithString(el.To(), true)
-	rn.Presence, _ = xmpp.NewPresenceFromElement(el, fromJID, toJID)
+	p, err := xmpp.NewPresenceFromGob(dec)
+	if err != nil {
+		return err
+	}
+	rn.Presence = p
+	return nil
 }
 
 // ToGob converts a Notification entity

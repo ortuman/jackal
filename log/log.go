@@ -47,6 +47,7 @@ const (
 	OffLevel
 )
 
+// Logger represents a common logger interface.
 type Logger interface {
 	io.Closer
 
@@ -118,19 +119,22 @@ var (
 	inst   Logger
 )
 
+// Disabled stores a disabled logger instance.
 var Disabled Logger = &disabledLogger{}
 
 func init() {
 	inst = Disabled
 }
 
+// Set sets the global logger.
 func Set(logger Logger) {
 	instMu.Lock()
-	inst.Close()
+	_ = inst.Close()
 	inst = logger
 	instMu.Unlock()
 }
 
+// Unset disables a previously set global logger.
 func Unset() {
 	Set(Disabled)
 }
@@ -165,6 +169,7 @@ type logger struct {
 	recCh  chan record
 }
 
+// New returns a default logger instance.
 func New(level string, output io.Writer, files ...io.WriteCloser) (Logger, error) {
 	lvl, err := levelFromString(level)
 	if err != nil {

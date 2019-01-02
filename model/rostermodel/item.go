@@ -108,9 +108,8 @@ func (ri *Item) ContactJID() *jid.JID {
 	return j
 }
 
-// FromGob deserializes a RosterItem entity
-// from it's gob binary representation.
-func (ri *Item) FromGob(dec *gob.Decoder) {
+// FromGob deserializes a RosterItem entity from it's gob binary representation.
+func (ri *Item) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&ri.Username)
 	dec.Decode(&ri.JID)
 	dec.Decode(&ri.Name)
@@ -118,6 +117,7 @@ func (ri *Item) FromGob(dec *gob.Decoder) {
 	dec.Decode(&ri.Ask)
 	dec.Decode(&ri.Ver)
 	dec.Decode(&ri.Groups)
+	return nil
 }
 
 // ToGob converts a RosterItem entity

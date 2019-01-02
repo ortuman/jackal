@@ -32,10 +32,19 @@ const (
 	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
 )
 
+type c2sServer interface {
+	start()
+	shutdown(ctx context.Context) error
+}
+
+var createC2SServer = func(config *Config, mods *module.Modules, comps *component.Components, router *router.Router) c2sServer {
+	return &server{cfg: config, mods: mods, comps: comps, router: router}
+}
+
 // C2S represents a client-to-server connection manager.
 type C2S struct {
 	mu      sync.RWMutex
-	servers map[string]*server
+	servers map[string]c2sServer
 	started uint32
 }
 
@@ -44,9 +53,9 @@ func New(configs []Config, mods *module.Modules, comps *component.Components, ro
 	if len(configs) == 0 {
 		return nil, errors.New("at least one c2s configuration is required")
 	}
-	c := &C2S{servers: make(map[string]*server)}
+	c := &C2S{servers: make(map[string]c2sServer)}
 	for _, config := range configs {
-		srv := &server{cfg: &config, mods: mods, comps: comps, router: router}
+		srv := createC2SServer(&config, mods, comps, router)
 		c.servers[config.ID] = srv
 	}
 	return c, nil

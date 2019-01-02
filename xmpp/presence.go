@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"strconv"
@@ -103,6 +104,15 @@ func NewPresence(from *jid.JID, to *jid.JID, presenceType string) *Presence {
 	p.SetToJID(to)
 	p.SetType(presenceType)
 	return p
+}
+
+// NewPresenceFromGob creates and returns a new Presence element from a given gob decoder.
+func NewPresenceFromGob(dec *gob.Decoder) (*Presence, error) {
+	p := &Presence{}
+	if err := p.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 // IsAvailable returns true if this is an 'available' type Presence.

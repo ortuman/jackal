@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"encoding/gob"
 	"fmt"
 
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -56,6 +57,15 @@ func NewMessageType(identifier string, messageType string) *Message {
 	msg.SetID(identifier)
 	msg.SetType(messageType)
 	return msg
+}
+
+// NewMessageFromGob creates and returns a new Message element from a given gob decoder.
+func NewMessageFromGob(dec *gob.Decoder) (*Message, error) {
+	m := &Message{}
+	if err := m.FromGob(dec); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // IsNormal returns true if this is a 'normal' type Message.

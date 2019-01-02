@@ -27,8 +27,8 @@ func TestXEP0012_Matching(t *testing.T) {
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(nil, r)
-	defer close(shutdownCh)
+	x := New(nil, r)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -62,8 +62,8 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j2)
 	defer stm.Disconnect(nil)
 
-	x, shutdownCh := New(nil, r)
-	defer close(shutdownCh)
+	x := New(nil, r)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -71,7 +71,7 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	iq.AppendElement(xmpp.NewElementNamespace("query", lastActivityNamespace))
 
 	x.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	q := elem.Elements().Child("query")
 	require.NotNil(t, q)
 	secs := q.Attributes().Get("seconds")
@@ -87,8 +87,8 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	x, shutdownCh := New(nil, r)
-	defer close(shutdownCh)
+	x := New(nil, r)
+	defer x.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
@@ -96,7 +96,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	iq.AppendElement(xmpp.NewElementNamespace("query", lastActivityNamespace))
 
 	x.ProcessIQ(iq, stm1)
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	p := xmpp.NewPresence(j1, j1, xmpp.UnavailableType)
@@ -114,7 +114,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 		Subscription: "both",
 	})
 	x.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	q := elem.Elements().ChildNamespace("query", lastActivityNamespace)
 	secs := q.Attributes().Get("seconds")
 	require.True(t, len(secs) > 0)
@@ -123,14 +123,14 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	r.Bind(stm2)
 
 	x.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	q = elem.Elements().ChildNamespace("query", lastActivityNamespace)
 	secs = q.Attributes().Get("seconds")
 	require.Equal(t, "0", secs)
 
 	s.EnableMockedError()
 	x.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 }

@@ -26,12 +26,8 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	rtr, _, shutdown := setupTest("jackal.im")
 	defer shutdown()
 
-	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-
-	stm := stream.NewMockC2S("abcd", j1)
-
-	r, _ := New(&Config{}, rtr)
-	defer stm.Disconnect(nil)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.AppendElement(xmpp.NewElementNamespace("query", rosterNamespace))
@@ -48,8 +44,8 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	defer stm.Disconnect(nil)
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFromJID(j1)
@@ -59,17 +55,17 @@ func TestRoster_FetchRoster(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.GetType)
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
@@ -96,17 +92,17 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	storage.InsertOrUpdateRosterItem(ri2)
 
-	r, shutdownCh = New(&Config{Versioning: true}, rtr)
-	defer close(shutdownCh)
+	r = New(&Config{Versioning: true}, rtr)
+	defer r.Shutdown()
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
-	require.True(t, stm.Context().Bool(rosterRequestedCtxKey))
+	require.True(t, stm.GetBool(rosterRequestedCtxKey))
 
 	// test versioning
 	iq = xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -117,12 +113,12 @@ func TestRoster_FetchRoster(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// expect set item...
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.SetType, elem.Type())
 	query2 = elem.Elements().ChildNamespace("query", rosterNamespace)
@@ -131,10 +127,11 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	s.EnableMockedError()
-	r, shutdownCh = New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r = New(&Config{}, rtr)
+	defer r.Shutdown()
+
 	r.ProcessIQ(iq, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 }
@@ -150,10 +147,10 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
-	stm2.Context().SetBool(true, rosterRequestedCtxKey)
+	stm2.SetBool(rosterRequestedCtxKey, true)
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	rtr.Bind(stm1)
 	rtr.Bind(stm2)
@@ -172,20 +169,20 @@ func TestRoster_Update(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm1)
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	q.AppendElement(item)
 
 	r.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
 
 	// expecting roster push...
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// update name
@@ -194,7 +191,7 @@ func TestRoster_Update(t *testing.T) {
 	q.AppendElement(item)
 
 	r.ProcessIQ(iq, stm1)
-	elem = stm1.FetchElement()
+	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 	require.Equal(t, iqID, elem.ID())
@@ -229,8 +226,8 @@ func TestRoster_RemoveItem(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	defer stm.Disconnect(nil)
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	// remove item
 	iqID := uuid.New()
@@ -246,7 +243,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	iq.AppendElement(q)
 
 	r.ProcessIQ(iq, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 
 	ri, err := storage.FetchRosterItem("ortuman", "noelia@jackal.im")
@@ -297,20 +294,20 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
 	})
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	// online presence...
 	r.ProcessPresence(xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.AvailableType))
 
 	// receive pending approval notification...
-	elem := stm1.FetchElement()
+	elem := stm1.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, j3.ToBareJID().String(), elem.From())
 	require.Equal(t, xmpp.SubscribeType, elem.Type())
 
 	// expect user's available presence
-	elem = stm2.FetchElement()
+	elem = stm2.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, j1.String(), elem.From())
 	require.Equal(t, xmpp.AvailableType, elem.Type())
@@ -372,12 +369,12 @@ func TestRoster_Probe(t *testing.T) {
 
 	rtr.Bind(stm)
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	// user doesn't exist...
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, "noelia@jackal.im", elem.From())
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
@@ -389,7 +386,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	// user exists, with no presence subscription...
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
 
 	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
@@ -398,7 +395,7 @@ func TestRoster_Probe(t *testing.T) {
 		Subscription: rostermodel.SubscriptionFrom,
 	})
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
 
 	// test available presence...
@@ -408,7 +405,7 @@ func TestRoster_Probe(t *testing.T) {
 		LastPresence: p2,
 	})
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.AvailableType, elem.Type())
 	require.Equal(t, "noelia@jackal.im/garden", elem.From())
 }
@@ -420,8 +417,8 @@ func TestRoster_Subscription(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 
-	r, shutdownCh := New(&Config{}, rtr)
-	defer close(shutdownCh)
+	r := New(&Config{}, rtr)
+	defer r.Shutdown()
 
 	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))
 	time.Sleep(time.Millisecond * 150) // wait until processed...

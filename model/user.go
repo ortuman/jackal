@@ -21,17 +21,20 @@ type User struct {
 }
 
 // FromGob deserializes a User entity from it's gob binary representation.
-func (u *User) FromGob(dec *gob.Decoder) {
+func (u *User) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&u.Username)
 	dec.Decode(&u.Password)
 	var hasPresence bool
 	dec.Decode(&hasPresence)
 	if hasPresence {
-		p := &xmpp.Presence{}
-		p.FromGob(dec)
+		p, err := xmpp.NewPresenceFromGob(dec)
+		if err != nil {
+			return err
+		}
 		u.LastPresence = p
 		dec.Decode(&u.LastPresenceAt)
 	}
+	return nil
 }
 
 // ToGob converts a User entity to it's gob binary representation.

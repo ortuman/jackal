@@ -25,28 +25,38 @@ const (
 	dialbackNamespace = "urn:xmpp:features:dialback"
 )
 
+type s2sServer interface {
+	start()
+	shutdown(ctx context.Context) error
+
+	getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error)
+}
+
+var createS2SServer = func(config *Config, mods *module.Modules, router *router.Router) s2sServer {
+	return &server{
+		cfg:    config,
+		router: router,
+		mods:   mods,
+		dialer: newDialer(config, router),
+	}
+}
+
 // S2S represents a server-to-server connection manager.
 type S2S struct {
-	srv     *server
+	srv     s2sServer
 	started uint32
 }
 
 // New returns a new instance of an s2s connection manager.
 func New(config *Config, mods *module.Modules, router *router.Router) *S2S {
-	s := &S2S{}
-	if config != nil {
-		s.srv = &server{cfg: config, router: router, mods: mods, dialer: newDialer(config, router)}
+	if config == nil {
+		return nil
 	}
-	return s
+	return &S2S{srv: createS2SServer(config, mods, router)}
 }
 
-// Enabled returns whether or not s2s sub system is enabled.
-func (s *S2S) Enabled() bool {
-	return s.srv != nil
-}
-
-// GetS2SOut acts as an s2s outgoing stream provider.
-func (s *S2S) GetS2SOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+// GetOut acts as an s2s outgoing stream provider.
+func (s *S2S) GetOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
 	if s.srv == nil {
 		return nil, errors.New("s2s not initialized")
 	}

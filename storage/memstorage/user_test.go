@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockStorageInsertUser(t *testing.T) {
+func TestMemoryStorage_InsertUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
 	s.EnableMockedError()
@@ -23,7 +23,7 @@ func TestMockStorageInsertUser(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestMockStorageUserExists(t *testing.T) {
+func TestMemoryStorage_UserExists(t *testing.T) {
 	s := New()
 	s.EnableMockedError()
 	ok, err := s.UserExists("ortuman")
@@ -34,7 +34,7 @@ func TestMockStorageUserExists(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestMockStorageFetchUser(t *testing.T) {
+func TestMemoryStorage_FetchUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
 	_ = s.InsertOrUpdateUser(&u)
@@ -49,7 +49,7 @@ func TestMockStorageFetchUser(t *testing.T) {
 	require.NotNil(t, usr)
 }
 
-func TestMockStorageDeleteUser(t *testing.T) {
+func TestMemoryStorage_DeleteUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
 	_ = s.InsertOrUpdateUser(&u)

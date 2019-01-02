@@ -30,22 +30,22 @@ type Offline struct {
 	cfg        *Config
 	router     *router.Router
 	actorCh    chan func()
-	shutdownCh chan chan bool
+	shutdownCh chan chan error
 }
 
 // New returns an offline server stream module.
-func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) (*Offline, chan<- chan bool) {
+func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Offline {
 	r := &Offline{
 		cfg:        config,
 		router:     router,
 		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan bool),
+		shutdownCh: make(chan chan error),
 	}
 	go r.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(offlineNamespace)
 	}
-	return r, r.shutdownCh
+	return r
 }
 
 // ArchiveMessage archives a new offline messages into the storage.
@@ -59,6 +59,13 @@ func (o *Offline) DeliverOfflineMessages(stm stream.C2S) {
 	o.actorCh <- func() { o.deliverOfflineMessages(stm) }
 }
 
+// Shutdown shuts down offline module.
+func (o *Offline) Shutdown() error {
+	c := make(chan error)
+	o.shutdownCh <- c
+	return <-c
+}
+
 // runs on it's own goroutine
 func (o *Offline) loop() {
 	for {
@@ -66,7 +73,7 @@ func (o *Offline) loop() {
 		case f := <-o.actorCh:
 			f()
 		case c := <-o.shutdownCh:
-			c <- true
+			c <- nil
 			return
 		}
 	}
@@ -97,7 +104,7 @@ func (o *Offline) archiveMessage(message *xmpp.Message) {
 }
 
 func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
-	if stm.Context().Bool(offlineDeliveredCtxKey) {
+	if stm.GetBool(offlineDeliveredCtxKey) {
 		return // already delivered
 	}
 	// deliver offline messages
@@ -118,7 +125,7 @@ func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
 	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
 		log.Error(err)
 	}
-	stm.Context().SetBool(true, offlineDeliveredCtxKey)
+	stm.SetBool(offlineDeliveredCtxKey, true)
 }
 
 func isMessageArchivable(message *xmpp.Message) bool {

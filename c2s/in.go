@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/auth"
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/errors"
+	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -44,7 +45,6 @@ type inStream struct {
 	id             string
 	connectTm      *time.Timer
 	state          uint32
-	ctx            *stream.Context
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
 	actorCh        chan func()
@@ -56,6 +56,9 @@ type inStream struct {
 	compressed    bool
 	authenticated bool
 	presence      *xmpp.Presence
+
+	contextMu sync.RWMutex
+	context   map[string]interface{}
 }
 
 func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
@@ -65,27 +68,27 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 		mods:       mods,
 		comps:      comps,
 		id:         id,
-		ctx:        stream.NewContext(),
+		context:    make(map[string]interface{}),
 		actorCh:    make(chan func(), streamMailboxSize),
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
 
-	// initialize stream context
+	// Initialize stream context
 	secured := !(config.transport.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
-	// initialize authenticators
+	// Initialize authenticators
 	s.initializeAuthenticators()
 
-	// start c2s session
+	// Start c2s session
 	s.restartSession()
 
 	if config.connectTimeout > 0 {
 		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
-	go s.doRead() // start reading...
+	go s.doRead() // Start reading...
 
 	return s
 }
@@ -95,9 +98,79 @@ func (s *inStream) ID() string {
 	return s.id
 }
 
-// context returns stream associated context.
-func (s *inStream) Context() *stream.Context {
-	return s.ctx
+// Context returns a copy of the stream associated context.
+func (s *inStream) Context() map[string]interface{} {
+	m := make(map[string]interface{})
+	s.contextMu.RLock()
+	for k, v := range s.context {
+		m[k] = v
+	}
+	s.contextMu.RUnlock()
+	return m
+}
+
+// SetString associates a string context value to a key.
+func (s *inStream) SetString(key string, value string) {
+	s.setContextValue(key, value)
+}
+
+// GetString returns the context value associated with the key as a string.
+func (s *inStream) GetString(key string) string {
+	var ret string
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if s, ok := s.context[key].(string); ok {
+		ret = s
+	}
+	return ret
+}
+
+// SetInt associates an integer context value to a key.
+func (s *inStream) SetInt(key string, value int) {
+	s.setContextValue(key, value)
+}
+
+// GetInt returns the context value associated with the key as an integer.
+func (s *inStream) GetInt(key string) int {
+	var ret int
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if i, ok := s.context[key].(int); ok {
+		ret = i
+	}
+	return ret
+}
+
+// SetFloat associates a float context value to a key.
+func (s *inStream) SetFloat(key string, value float64) {
+	s.setContextValue(key, value)
+}
+
+// GetFloat returns the context value associated with the key as a float64.
+func (s *inStream) GetFloat(key string) float64 {
+	var ret float64
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if f, ok := s.context[key].(float64); ok {
+		ret = f
+	}
+	return ret
+}
+
+// SetBool associates a boolean context value to a key.
+func (s *inStream) SetBool(key string, value bool) {
+	s.setContextValue(key, value)
+}
+
+// GetBool returns the context value associated with the key as a boolean.
+func (s *inStream) GetBool(key string) bool {
+	var ret bool
+	s.contextMu.RLock()
+	defer s.contextMu.RUnlock()
+	if b, ok := s.context[key].(bool); ok {
+		ret = b
+	}
+	return ret
 }
 
 // Username returns current stream username.
@@ -122,28 +195,18 @@ func (s *inStream) JID() *jid.JID {
 	return s.jid
 }
 
-// IsAuthenticated returns whether or not the XMPP stream
-// has successfully authenticated.
+// IsAuthenticated returns whether or not the XMPP stream has successfully authenticated.
 func (s *inStream) IsAuthenticated() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.authenticated
 }
 
-// IsSecured returns whether or not the XMPP stream
-// has been secured using SSL/TLS.
+// IsSecured returns whether or not the XMPP stream has been secured using SSL/TLS.
 func (s *inStream) IsSecured() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.secured
-}
-
-// IsCompressed returns whether or not the XMPP stream
-// has enabled a compression method.
-func (s *inStream) IsCompressed() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.compressed
 }
 
 // Presence returns last sent presence element.
@@ -153,7 +216,7 @@ func (s *inStream) Presence() *xmpp.Presence {
 	return s.presence
 }
 
-// SendElement sends the given XML element.
+// SendElement writes an XMPP element to the stream.
 func (s *inStream) SendElement(elem xmpp.XElement) {
 	if s.getState() == disconnected {
 		return
@@ -161,8 +224,7 @@ func (s *inStream) SendElement(elem xmpp.XElement) {
 	s.actorCh <- func() { s.writeElement(elem) }
 }
 
-// Disconnect disconnects remote peer by closing
-// the underlying TCP socket connection.
+// Disconnect disconnects remote peer by closing the underlying TCP socket connection.
 func (s *inStream) Disconnect(err error) {
 	if s.getState() == disconnected {
 		return
@@ -218,18 +280,18 @@ func (s *inStream) handleElement(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleConnecting(elem xmpp.XElement) {
-	// cancel connection timeout timer
+	// Cancel connection timeout timer
 	if s.connectTm != nil {
 		s.connectTm.Stop()
 		s.connectTm = nil
 	}
-	// assign stream domain if not set yet
+	// Assign stream domain if not set yet
 	if len(s.Domain()) == 0 {
 		j, _ := jid.New("", elem.To(), "", true)
 		s.setJID(j)
 	}
 
-	// open stream session
+	// Open stream session
 	s.sess.SetJID(s.JID())
 	s.sess.Open()
 
@@ -259,8 +321,8 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, startTLS)
 	}
 
-	// attach SASL mechanisms
-	shouldOfferSASL := (!isSocketTr || (isSocketTr && s.IsSecured()))
+	// Attach SASL mechanisms
+	shouldOfferSASL := !isSocketTr || (isSocketTr && s.IsSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		mechanisms := xmpp.NewElementName("mechanisms")
@@ -273,7 +335,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, mechanisms)
 	}
 
-	// allow In-band registration over encrypted stream only
+	// Allow In-band registration over encrypted stream only
 	allowRegistration := s.IsSecured()
 
 	if reg := s.mods.Register; reg != nil && allowRegistration {
@@ -288,10 +350,10 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 
 	isSocketTr := s.cfg.transport.Type() == transport.Socket
 
-	// attach compression feature
+	// Attach compression feature
 	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
 
-	if !s.IsCompressed() && compressionAvailable {
+	if !s.isCompressed() && compressionAvailable {
 		compression := xmpp.NewElementNamespace("compression", "http://jabber.org/features/compress")
 		method := xmpp.NewElementName("method")
 		method.SetText("zlib")
@@ -326,13 +388,13 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 			if s.IsSecured() {
 				reg.ProcessIQ(iq, s)
 			} else {
-				// channel isn't safe enough to enable a password change
+				// Channel isn't safe enough to enable a password change
 				s.writeElement(iq.NotAuthorizedError())
 			}
 			return
 
 		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
-			// don't allow non-SASL authentication
+			// Don't allow non-SASL authentication
 			s.writeElement(iq.ServiceUnavailableError())
 			return
 		}
@@ -369,9 +431,9 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 
 	case "iq":
 		iq := elem.(*xmpp.IQ)
-		if len(s.JID().Resource()) == 0 { // expecting bind
+		if len(s.JID().Resource()) == 0 { // Expecting bind
 			s.bindResource(iq)
-		} else { // expecting session
+		} else { // Expecting session
 			s.startSession(iq)
 		}
 
@@ -381,7 +443,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
-	// reset ping timer deadline
+	// Reset ping timer deadline
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -414,18 +476,17 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
 	}
-	s.setSecured(true)
-
 	s.writeElement(xmpp.NewElementNamespace("proceed", tlsNamespace))
 
 	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
+	s.setSecured(true)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
 }
 
 func (s *inStream) compress(elem xmpp.XElement) {
-	if s.IsCompressed() {
+	if s.isCompressed() {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
@@ -442,11 +503,10 @@ func (s *inStream) compress(elem xmpp.XElement) {
 		s.writeElement(failure)
 		return
 	}
-	s.setCompressed(true)
-
 	s.writeElement(xmpp.NewElementNamespace("compressed", compressProtocolNamespace))
 
 	s.cfg.transport.EnableCompression(s.cfg.compression.Level)
+	s.setCompressed(true)
 
 	log.Infof("compressed stream... id: %s", s.id)
 
@@ -526,10 +586,10 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	} else {
 		resource = uuid.New()
 	}
-	// try binding...
+	// Try binding...
 	var stm stream.C2S
-	stms := s.router.UserStreams(s.JID().Node())
-	for _, s := range stms {
+	streams := s.router.UserStreams(s.JID().Node())
+	for _, s := range streams {
 		if s.Resource() == resource {
 			stm = s
 		}
@@ -537,13 +597,13 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	if stm != nil {
 		switch s.cfg.resourceConflict {
 		case Override:
-			// override the resource with a server-generated resourcepart...
+			// Override the resource with a server-generated resourcepart...
 			resource = uuid.New()
 		case Replace:
-			// terminate the session of the currently connected client...
+			// Terminate the session of the currently connected client...
 			stm.Disconnect(streamerror.ErrResourceConstraint)
 		default:
-			// disallow resource binding attempt...
+			// Disallow resource binding attempt...
 			s.writeElement(iq.ConflictError())
 			return
 		}
@@ -554,8 +614,11 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 		return
 	}
 	s.setJID(userJID)
-
 	s.sess.SetJID(userJID)
+
+	s.mu.Lock()
+	s.presence = xmpp.NewPresence(userJID, userJID, xmpp.UnavailableType)
+	s.mu.Unlock()
 
 	s.router.Bind(s)
 
@@ -574,7 +637,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 func (s *inStream) startSession(iq *xmpp.IQ) {
 	if len(s.Resource()) == 0 {
-		// not binded yet...
+		// Not binded yet...
 		s.Disconnect(streamerror.ErrNotAuthorized)
 		return
 	}
@@ -585,7 +648,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 	}
 	s.writeElement(iq.ResultIQ())
 
-	// start pinging...
+	// Start pinging...
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -594,7 +657,7 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 
 func (s *inStream) processStanza(elem xmpp.Stanza) {
 	toJID := elem.ToJID()
-	if s.isBlockedJID(toJID) { // blocked JID?
+	if s.isBlockedJID(toJID) { // Blocked JID?
 		blocked := xmpp.NewElementNamespace("blocked", blockedErrorNamespace)
 		resp := xmpp.NewErrorStanzaFromStanza(elem, xmpp.ErrNotAcceptable, []xmpp.XElement{blocked})
 		s.writeElement(resp)
@@ -621,7 +684,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		case router.ErrFailedRemoteConnect:
 			s.writeElement(iq.RemoteServerNotFoundError())
 		case router.ErrBlockedJID:
-			// destination user is a blocked JID
+			// Destination user is a blocked JID
 			if iq.IsGet() || iq.IsSet() {
 				s.writeElement(iq.ServiceUnavailableError())
 			}
@@ -638,15 +701,15 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
 
-	// update context presence
+	// Update presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 	}
-	// deliver presence to roster module
+	// Deliver presence to roster module
 	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
-	// deliver offline messages
+	// Deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
 		if off := s.mods.Offline; off != nil {
 			off.DeliverOfflineMessages(s)
@@ -663,7 +726,7 @@ sendMessage:
 	case nil:
 		break
 	case router.ErrResourceNotFound:
-		// treat the stanza as if it were addressed to <node@domain>
+		// Treat the stanza as if it were addressed to <node@domain>
 		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
 		goto sendMessage
 	case router.ErrNotAuthenticated:
@@ -681,7 +744,7 @@ sendMessage:
 	}
 }
 
-// runs on it's own goroutine
+// Runs on it's own goroutine
 func (s *inStream) loop() {
 	for {
 		select {
@@ -698,7 +761,7 @@ func (s *inStream) loop() {
 	}
 }
 
-// runs on it's own goroutine
+// Runs on it's own goroutine
 func (s *inStream) doRead() {
 	elem, sErr := s.sess.Receive()
 	if sErr == nil {
@@ -747,7 +810,7 @@ func (s *inStream) readElement(elem xmpp.XElement) {
 		s.handleElement(elem)
 	}
 	if s.getState() != disconnected {
-		go s.doRead() // keep reading...
+		go s.doRead() // Keep reading...
 	}
 }
 
@@ -779,11 +842,11 @@ func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 }
 
 func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
-	// stop pinging...
+	// Stop pinging...
 	if p := s.mods.Ping; p != nil {
 		p.CancelPing(s)
 	}
-	// send 'unavailable' presence when disconnecting
+	// Send 'unavailable' presence when disconnecting
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
 		if r := s.mods.Roster; r != nil {
 			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
@@ -792,15 +855,14 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	// unregister stream
+	// Unregister stream
 	if unbind {
-		s.router.Unbind(s)
+		s.router.Unbind(s.JID())
 	}
-	// notify disconnection
+	// Notify disconnection
 	if s.cfg.onDisconnect != nil {
 		s.cfg.onDisconnect(s)
 	}
-
 	s.setState(disconnected)
 	s.cfg.transport.Close()
 }
@@ -821,6 +883,42 @@ func (s *inStream) restartSession() {
 	s.setState(connecting)
 }
 
+func (s *inStream) setContextValue(key string, value interface{}) {
+	s.contextMu.Lock()
+	defer s.contextMu.Unlock()
+	s.context[key] = value
+
+	// Notify the whole roster about the context update.
+	if c := s.router.Cluster(); c != nil {
+		c.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUpdateContext,
+			Node: c.LocalNode(),
+			Payloads: []cluster.MessagePayload{{
+				JID:     s.JID(),
+				Context: map[string]interface{}{key: value},
+			}},
+		})
+	}
+}
+
+func (s *inStream) setPresence(presence *xmpp.Presence) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.presence = presence
+
+	// Notify the whole roster about the presence update.
+	if c := s.router.Cluster(); c != nil {
+		c.BroadcastMessage(&cluster.Message{
+			Type: cluster.MsgUpdatePresence,
+			Node: c.LocalNode(),
+			Payloads: []cluster.MessagePayload{{
+				JID:    s.jid,
+				Stanza: presence,
+			}},
+		})
+	}
+}
+
 func (s *inStream) setJID(j *jid.JID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -839,16 +937,16 @@ func (s *inStream) setAuthenticated(authenticated bool) {
 	s.authenticated = authenticated
 }
 
+func (s *inStream) isCompressed() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.compressed
+}
+
 func (s *inStream) setCompressed(compressed bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.compressed = compressed
-}
-
-func (s *inStream) setPresence(presence *xmpp.Presence) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.presence = presence
 }
 
 func (s *inStream) setState(state uint32) {

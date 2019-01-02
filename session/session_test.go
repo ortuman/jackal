@@ -13,7 +13,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ortuman/jackal/errors"
+	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
@@ -27,19 +27,19 @@ import (
 )
 
 type fakeTransport struct {
-	typ   transport.TransportType
+	typ   transport.Type
 	rdBuf *bytes.Buffer
 	wrBuf *bytes.Buffer
 }
 
-func newFakeTransport(typ transport.TransportType) *fakeTransport {
+func newFakeTransport(typ transport.Type) *fakeTransport {
 	return &fakeTransport{typ: typ, rdBuf: new(bytes.Buffer), wrBuf: new(bytes.Buffer)}
 }
 
 func (t *fakeTransport) Read(p []byte) (n int, err error)                             { return t.rdBuf.Read(p) }
 func (t *fakeTransport) Write(p []byte) (n int, err error)                            { return t.wrBuf.Write(p) }
 func (t *fakeTransport) Close() error                                                 { return nil }
-func (t *fakeTransport) Type() transport.TransportType                                { return t.typ }
+func (t *fakeTransport) Type() transport.Type                                         { return t.typ }
 func (t *fakeTransport) WriteString(s string) (n int, err error)                      { return t.wrBuf.WriteString(s) }
 func (t *fakeTransport) StartTLS(cfg *tls.Config, asClient bool)                      {}
 func (t *fakeTransport) EnableCompression(compress.Level)                             {}
@@ -90,7 +90,7 @@ func TestSession_Open(t *testing.T) {
 	require.Equal(t, "urn:ietf:params:xml:ns:xmpp-framing", elem.Attributes().Get("xmlns"))
 
 	// test unsupported transport type
-	tr = newFakeTransport(transport.TransportType(9999))
+	tr = newFakeTransport(transport.Type(9999))
 	sess = New(uuid.New(), &Config{JID: j, Transport: tr}, r)
 	require.Nil(t, sess.Open())
 

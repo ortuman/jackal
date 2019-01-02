@@ -69,7 +69,7 @@ func (c *CompressConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 // TransportConfig represents an XMPP stream transport configuration.
 type TransportConfig struct {
-	Type        transport.TransportType
+	Type        transport.Type
 	BindAddress string
 	Port        int
 	KeepAlive   time.Duration

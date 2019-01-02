@@ -36,7 +36,7 @@ func TestMockC2Stream(t *testing.T) {
 
 	elem := xmpp.NewElementName("elem1234")
 	stm.SendElement(elem)
-	fetch := stm.FetchElement()
+	fetch := stm.ReceiveElement()
 	require.NotNil(t, fetch)
 	require.Equal(t, "elem1234", fetch.Name())
 
@@ -44,8 +44,6 @@ func TestMockC2Stream(t *testing.T) {
 	require.True(t, stm.IsDisconnected())
 	stm.SetSecured(true)
 	require.True(t, stm.IsSecured())
-	stm.SetCompressed(true)
-	require.True(t, stm.IsCompressed())
 	stm.SetAuthenticated(true)
 	require.True(t, stm.IsAuthenticated())
 }

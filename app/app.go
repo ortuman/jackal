@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/c2s"
+	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -54,36 +55,13 @@ Common Options:
     -v, --version          Show version
 `
 
-var initLogger = func(config *loggerConfig, output io.Writer) (log.Logger, error) {
-	var logFiles []io.WriteCloser
-	if len(config.LogPath) > 0 {
-		// create logFile intermediate directories.
-		if err := os.MkdirAll(filepath.Dir(config.LogPath), os.ModePerm); err != nil {
-			return nil, err
-		}
-		f, err := os.OpenFile(config.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-		if err != nil {
-			return nil, err
-		}
-		logFiles = append(logFiles, f)
-	}
-	logger, err := log.New(config.Level, output, logFiles...)
-	if err != nil {
-		return nil, err
-	}
-	return logger, nil
-}
-
-var initStorage = func(config *storage.Config) (storage.Storage, error) {
-	return storage.New(config)
-}
-
 // Application encapsulates a jackal server application.
 type Application struct {
 	output           io.Writer
 	args             []string
 	logger           log.Logger
 	storage          storage.Storage
+	cluster          *cluster.Cluster
 	router           *router.Router
 	mods             *module.Modules
 	comps            *component.Components
@@ -150,25 +128,40 @@ func (a *Application) Run() error {
 	}
 
 	// initialize logger
-	a.logger, err = initLogger(&cfg.Logger, a.output)
+	err = a.initLogger(&cfg.Logger, a.output)
 	if err != nil {
 		return err
 	}
-	log.Set(a.logger)
+
+	// show jackal's fancy logo
+	a.printLogo()
 
 	// initialize storage
-	a.storage, err = initStorage(&cfg.Storage)
+	err = a.initStorage(&cfg.Storage)
 	if err != nil {
 		return err
 	}
-	storage.Set(a.storage)
-
-	a.printLogo()
 
 	// initialize router
 	a.router, err = router.New(&cfg.Router)
 	if err != nil {
 		return err
+	}
+
+	// initialize cluster
+	if cfg.Cluster != nil && storage.IsClusterCompatible() {
+		a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
+		if err != nil {
+			return err
+		}
+		if a.cluster != nil {
+			a.router.SetCluster(a.cluster)
+			if err := a.cluster.Join(); err != nil {
+				log.Warnf("%v", err)
+			}
+		}
+	} else {
+		log.Warnf("cluster mode disabled: storage type '%s' is not compatible", cfg.Storage.Type)
 	}
 
 	// initialize modules & components...
@@ -177,13 +170,10 @@ func (a *Application) Run() error {
 
 	// start serving s2s...
 	a.s2s = s2s.New(cfg.S2S, a.mods, a.router)
-	if a.s2s.Enabled() {
-		a.router.SetS2SOutProvider(a.s2s)
+	if a.s2s != nil {
+		a.router.SetOutS2SProvider(a.s2s)
 		a.s2s.Start()
-	} else {
-		log.Infof("s2s disabled")
 	}
-
 	// start serving c2s...
 	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router)
 	if err != nil {
@@ -197,9 +187,11 @@ func (a *Application) Run() error {
 			return err
 		}
 	}
-	a.waitForStopSignal()
 
-	// shutdown gracefully
+	// ...wait for stop signal to shutdown
+	sig := a.waitForStopSignal()
+	log.Infof("received %s signal... shutting down...", sig.String())
+
 	if err := a.gracefullyShutdown(); err != nil {
 		return err
 	}
@@ -230,6 +222,38 @@ func (a *Application) createPIDFile(pidFile string) error {
 	return nil
 }
 
+func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
+	var logFiles []io.WriteCloser
+	if len(config.LogPath) > 0 {
+		// create logFile intermediate directories.
+		if err := os.MkdirAll(filepath.Dir(config.LogPath), os.ModePerm); err != nil {
+			return err
+		}
+		f, err := os.OpenFile(config.LogPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
+		logFiles = append(logFiles, f)
+	}
+	l, err := log.New(config.Level, output, logFiles...)
+	if err != nil {
+		return err
+	}
+	a.logger = l
+	log.Set(a.logger)
+	return nil
+}
+
+func (a *Application) initStorage(config *storage.Config) error {
+	s, err := storage.New(config)
+	if err != nil {
+		return err
+	}
+	a.storage = s
+	storage.Set(a.storage)
+	return nil
+}
+
 func (a *Application) printLogo() {
 	for i := range logoStr {
 		log.Infof("%s", logoStr[i])
@@ -249,14 +273,12 @@ func (a *Application) initDebugServer(port int) error {
 	return nil
 }
 
-func (a *Application) waitForStopSignal() {
+func (a *Application) waitForStopSignal() os.Signal {
 	signal.Notify(a.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	<-a.waitStopCh
+	return <-a.waitStopCh
 }
 
 func (a *Application) gracefullyShutdown() error {
-	log.Infof("received stop signal... shutting down...")
-
 	// wait until application has been shut down
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(a.shutDownWaitSecs))
 	defer cancel()
@@ -276,8 +298,11 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 			a.debugSrv.Shutdown(ctx)
 		}
 		a.c2s.Shutdown(ctx)
-		if a.s2s.Enabled() {
+		if a.s2s != nil {
 			a.s2s.Shutdown(ctx)
+		}
+		if a.cluster != nil {
+			a.cluster.Shutdown()
 		}
 		a.comps.Shutdown(ctx)
 		a.mods.Shutdown(ctx)

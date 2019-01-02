@@ -8,13 +8,13 @@ package sql
 import (
 	"errors"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 )
 
 var (
-	errMySQLStorage = errors.New("MySQL storage error")
+	errMySQLStorage = errors.New("mysql: storage error")
 )
 
 // NewMock returns a mocked SQL storage instance.

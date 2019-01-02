@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMockStorageInsertPrivateXML(t *testing.T) {
+func TestMemoryStorage_InsertPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
 	s := New()
@@ -24,7 +24,7 @@ func TestMockStorageInsertPrivateXML(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestMockStorageFetchPrivateXML(t *testing.T) {
+func TestMemoryStorage_FetchPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
 	s := New()

@@ -26,8 +26,8 @@ func TestXEP0030_Matching(t *testing.T) {
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -63,8 +63,8 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	x.RegisterServerFeature("s0")
 	x.RegisterServerFeature("s1")
@@ -78,7 +78,7 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	iq1.AppendElement(xmpp.NewElementNamespace("query", discoInfoNamespace))
 
 	x.ProcessIQ(iq1, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	q := elem.Elements().ChildNamespace("query", discoInfoNamespace)
 
@@ -91,7 +91,7 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	x.UnregisterAccountFeature("af1")
 
 	x.ProcessIQ(iq1, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	q = elem.Elements().ChildNamespace("query", discoInfoNamespace)
 
 	require.NotNil(t, q)
@@ -99,7 +99,7 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 
 	iq1.SetToJID(j.ToBareJID())
 	x.ProcessIQ(iq1, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	q = elem.Elements().ChildNamespace("query", discoInfoNamespace)
 
 	require.NotNil(t, q)
@@ -115,8 +115,8 @@ func TestXEP0030_SendItems(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -124,7 +124,7 @@ func TestXEP0030_SendItems(t *testing.T) {
 	iq1.AppendElement(xmpp.NewElementNamespace("query", discoItemsNamespace))
 
 	x.ProcessIQ(iq1, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	q := elem.Elements().ChildNamespace("query", discoItemsNamespace)
 
@@ -160,8 +160,8 @@ func TestXEP0030_Provider(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	x, shutdownCh := New(r)
-	defer close(shutdownCh)
+	x := New(r)
+	defer x.Shutdown()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -169,14 +169,14 @@ func TestXEP0030_Provider(t *testing.T) {
 	iq1.AppendElement(xmpp.NewElementNamespace("query", discoItemsNamespace))
 
 	x.ProcessIQ(iq1, stm)
-	elem := stm.FetchElement()
+	elem := stm.ReceiveElement()
 	require.True(t, elem.IsError())
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 
 	x.RegisterProvider(compJID.String(), &testDiscoInfoProvider{})
 
 	x.ProcessIQ(iq1, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	q := elem.Elements().ChildNamespace("query", discoItemsNamespace)
 	require.NotNil(t, q)
 
@@ -185,7 +185,7 @@ func TestXEP0030_Provider(t *testing.T) {
 	x.UnregisterProvider(compJID.String())
 
 	x.ProcessIQ(iq1, stm)
-	elem = stm.FetchElement()
+	elem = stm.ReceiveElement()
 	require.True(t, elem.IsError())
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
