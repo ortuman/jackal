@@ -19,6 +19,7 @@ before_script:
   - ./cc-test-reporter before-build
 
 script:
+  - make fmt
   - make coverage
 
 after_script:
