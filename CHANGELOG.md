@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.4.0] - 2019-01-01
 ### Added
-- Cluster mode support.
+- Cluster mode support. 🥳
 
 ## [0.3.6] - 2018-12-15
 ### Fixed
