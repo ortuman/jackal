@@ -22,10 +22,19 @@ func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace
 	}
 	rawXML := buf.String()
 
+	var suffix string
+
+	switch s.engine {
+	case "mysql":
+		suffix = "ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()"
+	case "postgresql":
+		suffix = "ON CONFLICT (username) DO UPDATE SET data = $4, updated_at = NOW()"
+	}
+
 	q := sq.Insert("private_storage").
 		Columns("username", "namespace", "data", "updated_at", "created_at").
 		Values(username, namespace, rawXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()", rawXML)
+		Suffix(suffix, rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err

@@ -7,6 +7,7 @@ package sql
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -29,19 +30,39 @@ func (s *Storage) InsertOrUpdateUser(u *model.User) error {
 	columns := []string{"username", "password", "updated_at", "created_at"}
 	values := []interface{}{u.Username, u.Password, nowExpr, nowExpr}
 
+	// PostgreSQL driver requires explicit argument index and since Squirrel does that for us, we need to keep
+	// track of the index manually for the suffix part of the query.
+	suffixIdx := 3
+
 	if len(presenceXML) > 0 {
 		columns = append(columns, []string{"last_presence", "last_presence_at"}...)
 		values = append(values, []interface{}{presenceXML, nowExpr}...)
+		suffixIdx++
 	}
+
 	var suffix string
 	var suffixArgs []interface{}
+
 	if len(presenceXML) > 0 {
-		suffix = "ON DUPLICATE KEY UPDATE password = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
+		switch s.engine {
+		case "mysql":
+			suffix = "ON DUPLICATE KEY UPDATE password = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
+		case "postgresql":
+			suffix = fmt.Sprintf("ON CONFLICT (username) DO UPDATE SET password = $%d, last_presence = $%d, last_presence_at = NOW(), updated_at = NOW()", suffixIdx, suffixIdx+1)
+		}
+
 		suffixArgs = []interface{}{u.Password, presenceXML}
 	} else {
-		suffix = "ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()"
+		switch s.engine {
+		case "mysql":
+			suffix = "ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()"
+		case "postgresql":
+			suffix = fmt.Sprintf("ON CONFLICT (username) DO UPDATE SET password = $%d, updated_at = NOW()", suffixIdx)
+		}
+
 		suffixArgs = []interface{}{u.Password}
 	}
+
 	q := sq.Insert("users").
 		Columns(columns...).
 		Values(values...).

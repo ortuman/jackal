@@ -16,11 +16,21 @@ import (
 // InsertOrUpdateVCard inserts a new vCard element into storage,
 // or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
+	var suffix string
+
 	rawXML := vCard.String()
+
+	switch s.engine {
+	case "mysql":
+		suffix = "ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()"
+	case "postgresql":
+		suffix = "ON CONFLICT (username) DO UPDATE SET vcard = $3, updated_at = NOW()"
+	}
+
 	q := sq.Insert("vcards").
 		Columns("username", "vcard", "updated_at", "created_at").
 		Values(username, rawXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()", rawXML)
+		Suffix(suffix, rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err

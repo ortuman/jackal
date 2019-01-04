@@ -11,7 +11,8 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	_ "github.com/go-sql-driver/mysql" // SQL driver
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	_ "github.com/lib/pq"              // PostgreSQL driver
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/pool"
 )
@@ -42,32 +43,50 @@ type Config struct {
 type Storage struct {
 	db     *sql.DB
 	pool   *pool.BufferPool
+	engine string
 	doneCh chan chan bool
 }
 
 // New returns a SQL storage instance.
-func New(cfg *Config) *Storage {
+func New(engine string, cfg *Config) *Storage {
 	var err error
+
 	s := &Storage{
 		pool:   pool.NewBufferPool(),
 		doneCh: make(chan chan bool),
 	}
+
 	host := cfg.Host
 	user := cfg.User
 	pass := cfg.Password
 	db := cfg.Database
 	poolSize := cfg.PoolSize
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", user, pass, host, db)
-	s.db, err = sql.Open("mysql", dsn)
+	var dsn, driver string
+
+	switch engine {
+	case "mysql":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", user, pass, host, db)
+		driver = "mysql"
+	case "postgresql":
+		dsn = fmt.Sprintf("postgres://%s:%s@%s/%s", user, pass, host, db)
+		driver = "postgres"
+		sq.StatementBuilder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+	}
+
+	s.engine = engine
+	s.db, err = sql.Open(driver, dsn)
+
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+
 	s.db.SetMaxOpenConns(poolSize) // set max opened connection count
 
 	if err := s.db.Ping(); err != nil {
 		log.Fatalf("%v", err)
 	}
+
 	go s.loop()
 
 	return s

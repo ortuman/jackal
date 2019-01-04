@@ -17,11 +17,17 @@ import (
 func (s *Storage) InsertBlockListItems(items []model.BlockListItem) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		for _, item := range items {
-			_, err := sq.Insert("blocklist_items").
-				Options("IGNORE").
+			q := sq.Insert("blocklist_items").
 				Columns("username", "jid", "created_at").
 				Values(item.Username, item.JID, nowExpr).
-				RunWith(tx).Exec()
+				RunWith(tx)
+
+			if s.engine == "mysql" {
+				q = q.Options("IGNORE")
+			}
+
+			_, err := q.Exec()
+
 			if err != nil {
 				return err
 			}

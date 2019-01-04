@@ -22,7 +22,8 @@ func NewMock() (*Storage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
 	s := &Storage{
-		pool: pool.NewBufferPool(),
+		engine: "mysql",
+		pool:   pool.NewBufferPool(),
 	}
 	s.db, sqlMock, err = sqlmock.New()
 	if err != nil {

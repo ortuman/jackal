@@ -241,7 +241,9 @@ func New(config *Config) (Storage, error) {
 	case BadgerDB:
 		return badgerdb.New(config.BadgerDB), nil
 	case MySQL:
-		return sql.New(config.MySQL), nil
+		return sql.New("mysql", config.MySQL), nil
+	case PostgreSQL:
+		return sql.New("postgresql", config.PostgreSQL), nil
 	case Memory:
 		return memstorage.New(), nil
 	default:

@@ -19,10 +19,25 @@ import (
 // or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
+		var suffix string
+
+		groupsCol := "groups"
+
+		if s.engine == "mysql" {
+			groupsCol = "`groups`"
+		}
+
+		switch s.engine {
+		case "mysql":
+			suffix = "ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()"
+		case "postgresql":
+			suffix = "ON CONFLICT (username) DO UPDATE SET ver = ver + 1, updated_at = NOW()"
+		}
+
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
 			Values(ri.Username, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()")
+			Suffix(suffix)
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
@@ -30,10 +45,18 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 		groups := strings.Join(ri.Groups, ";")
 
 		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.Username)
+
+		switch s.engine {
+		case "mysql":
+			suffix = "ON DUPLICATE KEY UPDATE name = ?, subscription = ?, `groups` = ?, ask = ?, ver = ver + 1, updated_at = NOW()"
+		case "postgresql":
+			suffix = "ON CONFLICT (username) DO UPDATE SET name = $7, subscription = $8, groups = $9, ask = $10, ver = ver + 1, updated_at = NOW()"
+		}
+
 		q = sq.Insert("roster_items").
-			Columns("username", "jid", "name", "subscription", "`groups`", "ask", "ver", "created_at", "updated_at").
+			Columns("username", "jid", "name", "subscription", groupsCol, "ask", "ver", "created_at", "updated_at").
 			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, `groups` = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
+			Suffix(suffix, ri.Name, ri.Subscription, groups, ri.Ask)
 
 		_, err := q.RunWith(tx).Exec()
 		return err
@@ -47,10 +70,19 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 // DeleteRosterItem deletes a roster item entity from storage.
 func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
+		var suffix string
+
+		switch s.engine {
+		case "mysql":
+			suffix = "ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()"
+		case "postgresql":
+			suffix = "ON CONFLICT (username) DO UPDATE SET ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()"
+		}
+
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
 			Values(username, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()")
+			Suffix(suffix)
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
@@ -69,7 +101,13 @@ func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, e
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
 func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
+	groupsCol := "groups"
+
+	if s.engine == "mysql" {
+		groupsCol = "`groups`"
+	}
+
+	q := sq.Select("username", "jid", "name", "subscription", groupsCol, "ask", "ver").
 		From("roster_items").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at DESC")
@@ -93,7 +131,13 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 
 // FetchRosterItem retrieves from storage a roster item entity.
 func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
+	groupsCol := "groups"
+
+	if s.engine == "mysql" {
+		groupsCol = "`groups`"
+	}
+
+	q := sq.Select("username", "jid", "name", "subscription", groupsCol, "ask", "ver").
 		From("roster_items").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}})
 
@@ -113,10 +157,20 @@ func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, erro
 // into storage, or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
 	presenceXML := rn.Presence.String()
+
+	var suffix string
+
+	switch s.engine {
+	case "mysql":
+		suffix = "ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()"
+	case "postgresql":
+		suffix = "ON CONFLICT (username) DO UPDATE SET elements = $4, updated_at = NOW()"
+	}
+
 	q := sq.Insert("roster_notifications").
 		Columns("contact", "jid", "elements", "updated_at", "created_at").
 		Values(rn.Contact, rn.JID, presenceXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", presenceXML)
+		Suffix(suffix, presenceXML)
 	_, err := q.RunWith(s.db).Exec()
 	return err
 }
@@ -172,7 +226,17 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 }
 
 func (s *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
-	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
+
+	var selectArgs []string
+
+	switch s.engine {
+	case "mysql":
+		selectArgs = []string{"IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)"}
+	case "postgresql":
+		selectArgs = []string{"COALESCE(MAX(ver), 0)", "COALESCE(MAX(last_deletion_ver), 0)"}
+	}
+
+	q := sq.Select(selectArgs...).
 		From("roster_versions").
 		Where(sq.Eq{"username": username})
 

@@ -13,7 +13,10 @@ import (
 	"github.com/ortuman/jackal/storage/sql"
 )
 
-const defaultMySQLPoolSize = 16
+const (
+	defaultMySQLPoolSize      = 16
+	defaultPostgreSQLPoolSize = 16
+)
 
 // Type represents a storage manager type.
 type Type int
@@ -27,27 +30,33 @@ const (
 
 	// Memory represents a in-memstorage storage type.
 	Memory
+
+	// PostgreSQL represents a PostgreSQL storage type.
+	PostgreSQL
 )
 
 var typeStringMap = map[Type]string{
-	MySQL:    "MySQL",
-	BadgerDB: "BadgerDB",
-	Memory:   "Memory",
+	MySQL:      "MySQL",
+	BadgerDB:   "BadgerDB",
+	Memory:     "Memory",
+	PostgreSQL: "PostgreSQL",
 }
 
 func (t Type) String() string { return typeStringMap[t] }
 
 // Config represents an storage manager configuration.
 type Config struct {
-	Type     Type
-	MySQL    *sql.Config
-	BadgerDB *badgerdb.Config
+	Type       Type
+	MySQL      *sql.Config
+	PostgreSQL *sql.Config
+	BadgerDB   *badgerdb.Config
 }
 
 type storageProxyType struct {
-	Type     string           `yaml:"type"`
-	MySQL    *sql.Config      `yaml:"mysql"`
-	BadgerDB *badgerdb.Config `yaml:"badgerdb"`
+	Type       string           `yaml:"type"`
+	MySQL      *sql.Config      `yaml:"mysql"`
+	PostgreSQL *sql.Config      `yaml:"postgresql"`
+	BadgerDB   *badgerdb.Config `yaml:"badgerdb"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -67,6 +76,18 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		c.MySQL = p.MySQL
 		if c.MySQL != nil && c.MySQL.PoolSize == 0 {
 			c.MySQL.PoolSize = defaultMySQLPoolSize
+		}
+
+	case "postgresql":
+		if p.PostgreSQL == nil {
+			return errors.New("storage.Config: couldn't read PostgreSQL configuration")
+		}
+		c.Type = PostgreSQL
+
+		// assign storage defaults
+		c.PostgreSQL = p.PostgreSQL
+		if c.PostgreSQL != nil && c.PostgreSQL.PoolSize == 0 {
+			c.PostgreSQL.PoolSize = defaultPostgreSQLPoolSize
 		}
 
 	case "badgerdb":
