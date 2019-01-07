@@ -8,6 +8,8 @@ package storage
 import (
 	"testing"
 
+	"github.com/ortuman/jackal/storage/badgerdb"
+	"github.com/ortuman/jackal/storage/mysql"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -52,7 +54,7 @@ func TestStorageConfig(t *testing.T) {
 	err = yaml.Unmarshal([]byte(mySQLCfg2), &cfg)
 	require.Nil(t, err)
 	require.Equal(t, MySQL, cfg.Type)
-	require.Equal(t, defaultMySQLPoolSize, cfg.MySQL.PoolSize)
+	require.Equal(t, mysql.DefaultPoolSize, cfg.MySQL.PoolSize)
 
 	invalidMySQLCfg := `
   type: mysql
@@ -65,6 +67,17 @@ func TestStorageConfig(t *testing.T) {
 `
 	err = yaml.Unmarshal([]byte(invalidCfg), &cfg)
 	require.NotNil(t, err)
+
+	// Test if BadgerDB config unmarshaller sets defaults
+	badgerCfg := `
+  type: badgerdb
+  badgerdb: {}
+`
+
+	err = yaml.Unmarshal([]byte(badgerCfg), &cfg)
+	require.Nil(t, err)
+	require.NotNil(t, cfg.BadgerDB)
+	require.Equal(t, cfg.BadgerDB.DataDir, badgerdb.DefaultDataDir)
 }
 
 func TestStorageBadConfig(t *testing.T) {

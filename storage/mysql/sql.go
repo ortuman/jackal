@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package sql
+package mysql
 
 import (
 	"database/sql"
@@ -29,15 +29,6 @@ type rowsScanner interface {
 	Next() bool
 }
 
-// Config represents SQL storage configuration.
-type Config struct {
-	Host     string `yaml:"host"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Database string `yaml:"database"`
-	PoolSize int    `yaml:"pool_size"`
-}
-
 // Storage represents a SQL storage sub system.
 type Storage struct {
 	db     *sql.DB
@@ -45,7 +36,7 @@ type Storage struct {
 	doneCh chan chan bool
 }
 
-// New returns a SQL storage instance.
+// New instantiates a SQL storage instance.
 func New(cfg *Config) *Storage {
 	var err error
 	s := &Storage{

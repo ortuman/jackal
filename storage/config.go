@@ -10,10 +10,8 @@ import (
 	"fmt"
 
 	"github.com/ortuman/jackal/storage/badgerdb"
-	"github.com/ortuman/jackal/storage/sql"
+	"github.com/ortuman/jackal/storage/mysql"
 )
-
-const defaultMySQLPoolSize = 16
 
 // Type represents a storage manager type.
 type Type int
@@ -40,45 +38,40 @@ func (t Type) String() string { return typeStringMap[t] }
 // Config represents an storage manager configuration.
 type Config struct {
 	Type     Type
-	MySQL    *sql.Config
+	MySQL    *mysql.Config
 	BadgerDB *badgerdb.Config
 }
 
 type storageProxyType struct {
 	Type     string           `yaml:"type"`
-	MySQL    *sql.Config      `yaml:"mysql"`
+	MySQL    *mysql.Config    `yaml:"mysql"`
 	BadgerDB *badgerdb.Config `yaml:"badgerdb"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
 func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := storageProxyType{}
+
 	if err := unmarshal(&p); err != nil {
 		return err
 	}
+
 	switch p.Type {
 	case "mysql":
 		if p.MySQL == nil {
 			return errors.New("storage.Config: couldn't read MySQL configuration")
 		}
-		c.Type = MySQL
 
-		// assign storage defaults
+		c.Type = MySQL
 		c.MySQL = p.MySQL
-		if c.MySQL != nil && c.MySQL.PoolSize == 0 {
-			c.MySQL.PoolSize = defaultMySQLPoolSize
-		}
 
 	case "badgerdb":
 		if p.BadgerDB == nil {
 			return errors.New("storage.Config: couldn't read BadgerDB configuration")
 		}
-		c.Type = BadgerDB
 
+		c.Type = BadgerDB
 		c.BadgerDB = p.BadgerDB
-		if len(c.BadgerDB.DataDir) == 0 {
-			c.BadgerDB.DataDir = "./data"
-		}
 
 	case "memory":
 		c.Type = Memory
@@ -89,5 +82,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	default:
 		return fmt.Errorf("storage.Config: unrecognized storage type: %s", p.Type)
 	}
+
 	return nil
 }
