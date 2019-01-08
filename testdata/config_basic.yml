@@ -3,7 +3,7 @@
 pid_path: test.jackal.pid
 
 debug:
-  port: 6060
+  port: 16060
 
 logger:
   level: debug
@@ -15,4 +15,4 @@ storage:
 c2s:
   - id: default
     transport:
-      port: 5222
+      port: 15222
