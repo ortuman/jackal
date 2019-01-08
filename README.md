@@ -80,6 +80,35 @@ mysql -h localhost -D jackal -u jackal -p < mysql.sql
 
 Your database is now ready to connect with jackal.
 
+### Using PostgreSQL
+
+Create a user and a database for that user:
+
+```sql
+CREATE ROLE jackal WITH LOGIN PASSWORD 'password';
+CREATE DATABASE jackal WITH OWNER jackal;
+```
+
+Run the postgres script file to create database schema. In jackal's root directory run:
+
+```sh
+psql --user tester --password -f sql/postgres.up.psql
+```
+
+Configure jackal to use PostgreSQL by editing the configuration file:
+
+```yaml
+storage:
+  type: pgsql
+  pgsql:
+    host: 127.0.0.1:5432
+    user: jackal
+    password: password
+    database: jackal
+```
+
+That's it!
+
 ### Cluster configuration
 
 The purpose of clustering is to be able to use several servers for fault-tolerance and scalability.
