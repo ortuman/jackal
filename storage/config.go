@@ -11,6 +11,7 @@ import (
 
 	"github.com/ortuman/jackal/storage/badgerdb"
 	"github.com/ortuman/jackal/storage/mysql"
+	"github.com/ortuman/jackal/storage/pgsql"
 )
 
 // Type represents a storage manager type.
@@ -20,6 +21,9 @@ const (
 	// MySQL represents a MySQL storage type.
 	MySQL Type = iota
 
+	// PostgreSQL represents a PostgreSQL storage type.
+	PostgreSQL
+
 	// BadgerDB represents a BadgerDB storage type.
 	BadgerDB
 
@@ -28,24 +32,27 @@ const (
 )
 
 var typeStringMap = map[Type]string{
-	MySQL:    "MySQL",
-	BadgerDB: "BadgerDB",
-	Memory:   "Memory",
+	MySQL:      "MySQL",
+	PostgreSQL: "PostgreSQL",
+	BadgerDB:   "BadgerDB",
+	Memory:     "Memory",
 }
 
 func (t Type) String() string { return typeStringMap[t] }
 
 // Config represents an storage manager configuration.
 type Config struct {
-	Type     Type
-	MySQL    *mysql.Config
-	BadgerDB *badgerdb.Config
+	Type       Type
+	MySQL      *mysql.Config
+	PostgreSQL *pgsql.Config
+	BadgerDB   *badgerdb.Config
 }
 
 type storageProxyType struct {
-	Type     string           `yaml:"type"`
-	MySQL    *mysql.Config    `yaml:"mysql"`
-	BadgerDB *badgerdb.Config `yaml:"badgerdb"`
+	Type       string           `yaml:"type"`
+	MySQL      *mysql.Config    `yaml:"mysql"`
+	PostgreSQL *pgsql.Config    `yaml:"pgsql"`
+	BadgerDB   *badgerdb.Config `yaml:"badgerdb"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -64,6 +71,14 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 		c.Type = MySQL
 		c.MySQL = p.MySQL
+
+	case "pgsql":
+		if p.PostgreSQL == nil {
+			return errors.New("storage.Config: couldn't read PostgreSQL configuration")
+		}
+
+		c.Type = PostgreSQL
+		c.PostgreSQL = p.PostgreSQL
 
 	case "badgerdb":
 		if p.BadgerDB == nil {

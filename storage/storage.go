@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/storage/badgerdb"
 	"github.com/ortuman/jackal/storage/memstorage"
 	"github.com/ortuman/jackal/storage/mysql"
+	"github.com/ortuman/jackal/storage/pgsql"
 )
 
 // Storage represents an entity storage interface.
@@ -47,6 +48,8 @@ func New(config *Config) (Storage, error) {
 		return badgerdb.New(config.BadgerDB), nil
 	case MySQL:
 		return mysql.New(config.MySQL), nil
+	case PostgreSQL:
+		return pgsql.New(config.PostgreSQL), nil
 	case Memory:
 		return memstorage.New(), nil
 	default:
