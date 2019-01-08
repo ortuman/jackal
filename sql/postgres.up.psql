@@ -57,8 +57,6 @@ CREATE TABLE IF NOT EXISTS roster_notifications (
     PRIMARY KEY (contact, jid)
 );
 
-CREATE INDEX IF NOT EXISTS i_roster_notifications_jid ON roster_notifications(jid);
-
 SELECT enable_updated_at('roster_notifications');
 
 -- roster_items
@@ -76,9 +74,6 @@ CREATE TABLE IF NOT EXISTS roster_items (
     
     PRIMARY KEY (username, jid)
 );
-
-CREATE INDEX IF NOT EXISTS i_roster_items_username ON roster_items(username);
-CREATE INDEX IF NOT EXISTS i_roster_items_jid ON roster_items(jid);
 
 SELECT enable_updated_at('roster_items');
 
@@ -106,8 +101,6 @@ CREATE TABLE IF NOT EXISTS blocklist_items (
     PRIMARY KEY(username, jid)
 );
 
-CREATE INDEX IF NOT EXISTS i_blocklist_items_username ON blocklist_items(username);
-
 -- private_storage
 
 CREATE TABLE IF NOT EXISTS private_storage (
@@ -119,8 +112,6 @@ CREATE TABLE IF NOT EXISTS private_storage (
     
     PRIMARY KEY (username, namespace)
 );
-
-CREATE INDEX IF NOT EXISTS i_private_storage_username ON private_storage(username);
 
 SELECT enable_updated_at('private_storage');
 
