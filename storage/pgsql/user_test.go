@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMySQLStorageInsertUser(t *testing.T) {
+func TestInsertUser(t *testing.T) {
 	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
 	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
@@ -35,14 +35,14 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	err = s.InsertOrUpdateUser(&user)
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
-func TestMySQLStorageDeleteUser(t *testing.T) {
+func TestDeleteUser(t *testing.T) {
 	s, mock := NewMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
@@ -66,15 +66,15 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
-		WithArgs("ortuman").WillReturnError(errMySQLStorage)
+		WithArgs("ortuman").WillReturnError(errGeneric)
 	mock.ExpectRollback()
 
 	err = s.DeleteUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }
 
-func TestMySQLStorageFetchUser(t *testing.T) {
+func TestFetchUser(t *testing.T) {
 	from, _ := jid.NewWithString("ortuman@jackal.im/Psi+", true)
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
 	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
@@ -100,13 +100,13 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
-		WithArgs("ortuman").WillReturnError(errMySQLStorage)
+		WithArgs("ortuman").WillReturnError(errGeneric)
 	_, err = s.FetchUser("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }
 
-func TestMySQLStorageUserExists(t *testing.T) {
+func TestUserExists(t *testing.T) {
 	countColums := []string{"count"}
 
 	s, mock := NewMock()
@@ -122,8 +122,8 @@ func TestMySQLStorageUserExists(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("romeo").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 	_, err = s.UserExists("romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }

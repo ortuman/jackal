@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMySQLStorageInsertOfflineMessages(t *testing.T) {
+func TestInsertOfflineMessages(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	message := xmpp.NewElementName("message")
 	message.SetID(uuid.New())
@@ -35,14 +35,14 @@ func TestMySQLStorageInsertOfflineMessages(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectExec("INSERT INTO offline_messages (.+)").
 		WithArgs("ortuman", messageXML).
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	err = s.InsertOfflineMessage(m, "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 }
 
-func TestMySQLStorageCountOfflineMessages(t *testing.T) {
+func TestCountOfflineMessages(t *testing.T) {
 	countColums := []string{"count"}
 
 	s, mock := NewMock()
@@ -66,14 +66,14 @@ func TestMySQLStorageCountOfflineMessages(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	_, err := s.CountOfflineMessages("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }
 
-func TestMySQLStorageFetchOfflineMessages(t *testing.T) {
+func TestFetchOfflineMessages(t *testing.T) {
 	var offlineMessagesColumns = []string{"data"}
 
 	s, mock := NewMock()
@@ -106,14 +106,14 @@ func TestMySQLStorageFetchOfflineMessages(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	_, err = s.FetchOfflineMessages("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }
 
-func TestMySQLStorageDeleteOfflineMessages(t *testing.T) {
+func TestDeleteOfflineMessages(t *testing.T) {
 	s, mock := NewMock()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -124,9 +124,9 @@ func TestMySQLStorageDeleteOfflineMessages(t *testing.T) {
 
 	s, mock = NewMock()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
-		WithArgs("ortuman").WillReturnError(errMySQLStorage)
+		WithArgs("ortuman").WillReturnError(errGeneric)
 
 	err = s.DeleteOfflineMessages("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }

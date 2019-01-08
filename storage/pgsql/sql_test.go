@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	errMySQLStorage = errors.New("mysql: storage error")
+	errGeneric = errors.New("pgsql: generic storage error")
 )
 
 // NewMock returns a mocked SQL storage instance.
@@ -27,10 +27,10 @@ func NewMock() (*Storage, sqlmock.Sqlmock) {
 	}
 
 	s.db, sqlMock, err = sqlmock.New()
-	
+
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	
+
 	return s, sqlMock
 }

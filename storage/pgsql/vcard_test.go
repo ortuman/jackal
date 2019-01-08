@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMySQLStorageInsertVCard(t *testing.T) {
+func TestInsertVCard(t *testing.T) {
 	vCard := xmpp.NewElementName("vCard")
 	rawXML := vCard.String()
 
@@ -30,14 +30,14 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectExec("INSERT INTO vcards (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs("ortuman", rawXML, rawXML).
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	err = s.InsertOrUpdateVCard(vCard, "ortuman")
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
-func TestMySQLStorageFetchVCard(t *testing.T) {
+func TestFetchVCard(t *testing.T) {
 	var vCardColumns = []string{"vcard"}
 
 	s, mock := NewMock()
@@ -63,7 +63,7 @@ func TestMySQLStorageFetchVCard(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM vcards (.+)").
 		WithArgs("ortuman").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	vCard, _ = s.FetchVCard("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())

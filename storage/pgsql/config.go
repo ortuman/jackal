@@ -1,9 +1,9 @@
 package pgsql
 
-// DefaultPoolSize defines the default size of MySQL connection pool
+// DefaultPoolSize defines the default size of the database connection pool
 const DefaultPoolSize = 16
 
-// Config represents MySQL storage configuration.
+// Config represents PostgreSQL storage configuration.
 type Config struct {
 	Host     string `yaml:"host"`
 	User     string `yaml:"user"`

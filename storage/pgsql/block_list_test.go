@@ -45,14 +45,14 @@ func TestInsertDoubleBlockListItem(t *testing.T) {
 
 	// Second insertion will fail
 	mock.ExpectBegin()
-	mock.ExpectExec(blockListInsert).WillReturnError(errMySQLStorage)
+	mock.ExpectExec(blockListInsert).WillReturnError(errGeneric)
 	mock.ExpectRollback()
 
 	err := s.InsertBlockListItems(items)
 	require.Nil(t, err)
 
 	err = s.InsertBlockListItems(items)
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
@@ -75,10 +75,10 @@ func TestFetchBlockListItemsError(t *testing.T) {
 
 	mock.ExpectQuery(blockListSelect).
 		WithArgs("ortuman").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	_, err := s.FetchBlockListItems("ortuman")
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
@@ -104,10 +104,10 @@ func TestDeleteBlockListItemsError(t *testing.T) {
 	items := []model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}}
 
 	mock.ExpectBegin()
-	mock.ExpectExec(blockListDelete).WillReturnError(errMySQLStorage)
+	mock.ExpectExec(blockListDelete).WillReturnError(errGeneric)
 	mock.ExpectRollback()
 
 	err := s.DeleteBlockListItems(items)
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
