@@ -19,4 +19,3 @@ func InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
 func FetchVCard(username string) (xmpp.XElement, error) {
 	return instance().FetchVCard(username)
 }
-
