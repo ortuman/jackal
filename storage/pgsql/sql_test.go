@@ -21,12 +21,16 @@ var (
 func NewMock() (*Storage, sqlmock.Sqlmock) {
 	var err error
 	var sqlMock sqlmock.Sqlmock
+
 	s := &Storage{
 		pool: pool.NewBufferPool(),
 	}
+
 	s.db, sqlMock, err = sqlmock.New()
+	
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	
 	return s, sqlMock
 }
