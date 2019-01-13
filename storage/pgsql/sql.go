@@ -17,11 +17,11 @@ import (
 	"github.com/ortuman/jackal/pool"
 )
 
-// PingInterval defines how often to check the connection
-var PingInterval = 15 * time.Second
+// pingInterval defines how often to check the connection
+var pingInterval = 15 * time.Second
 
-// PingTimeout defines how long to wait for pong from server
-var PingTimeout = 10 * time.Second
+// pingTimeout defines how long to wait for pong from server
+var pingTimeout = 10 * time.Second
 
 var (
 	nowExpr = sq.Expr("NOW()")
@@ -84,7 +84,7 @@ func (s *Storage) Close() error {
 
 // pingLoop periodically pings the server to check connection status
 func (s *Storage) pingLoop(ctx context.Context) {
-	tick := time.NewTicker(PingInterval)
+	tick := time.NewTicker(pingInterval)
 	defer tick.Stop()
 
 	for {
@@ -99,7 +99,7 @@ func (s *Storage) pingLoop(ctx context.Context) {
 
 // ping sends a ping request to the server and outputs any error to log
 func (s *Storage) ping(ctx context.Context) {
-	pingCtx, cancel := context.WithDeadline(ctx, time.Now().Add(PingTimeout))
+	pingCtx, cancel := context.WithDeadline(ctx, time.Now().Add(pingTimeout))
 	defer cancel()
 
 	err := s.db.PingContext(pingCtx)
