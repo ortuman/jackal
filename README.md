@@ -86,7 +86,8 @@ Create a user and a database for that user:
 
 ```sql
 CREATE ROLE jackal WITH LOGIN PASSWORD 'password';
-CREATE DATABASE jackal WITH OWNER jackal;
+CREATE DATABASE jackal;
+GRANT ALL PRIVILEGES ON DATABASE jackal TO jackal;
 ```
 
 Run the postgres script file to create database schema. In jackal's root directory run:
