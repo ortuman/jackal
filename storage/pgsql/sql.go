@@ -53,7 +53,7 @@ func New(c *Config) *Storage {
 		pool: pool.NewBufferPool(),
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s", c.User, c.Password, c.Host, c.Database)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", c.User, c.Password, c.Host, c.Database, c.SSLMode)
 
 	s.db, err = sql.Open("postgres", dsn)
 
