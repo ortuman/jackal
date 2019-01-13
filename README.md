@@ -92,7 +92,7 @@ CREATE DATABASE jackal WITH OWNER jackal;
 Run the postgres script file to create database schema. In jackal's root directory run:
 
 ```sh
-psql --user tester --password -f sql/postgres.up.psql
+psql --user jackal --password -f sql/postgres.up.psql
 ```
 
 Configure jackal to use PostgreSQL by editing the configuration file:
