@@ -11,11 +11,6 @@ storage:
   badgerdb:
     data_dir: ./.data
 
-# cluster:
-#   name: node1
-#   port:
-#   hosts: [node2]
-
 router:
   hosts:
   - name: localhost
@@ -52,16 +47,6 @@ modules:
   mod_ping:
     send: no
     send_interval: 60
-
-components:
-#  http_upload:
-#    host: upload.jackal.im
-#    base_url: https://jackal.im:4430/upload
-#    port: 4430
-#    upload_path: /var/lib/jackal/httpupload
-#    size_limit: 1048576
-#    quota: 0
-#    expire_after: 600 # secs.
 
 c2s:
   - id: c2s:1

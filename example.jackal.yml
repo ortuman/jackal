@@ -18,10 +18,10 @@ storage:
     database: jackal
     pool_size: 16
 
-cluster:
-  name: node1
-  port: 5010
-  hosts: [127.0.0.1:5009, 127.0.0.1:5011]
+#  cluster:
+#  name: node1
+#  port: 5010
+#  hosts: [127.0.0.1:5009, 127.0.0.1:5011]
 
 router:
   hosts:
@@ -59,16 +59,6 @@ modules:
   mod_ping:
     send: no
     send_interval: 60
-
-components:
-#  http_upload:
-#    host: upload.jackal.im
-#    base_url: https://jackal.im:4430/upload
-#    port: 4430
-#    upload_path: /var/lib/jackal/httpupload
-#    size_limit: 1048576
-#    quota: 0
-#    expire_after: 600 # secs.
 
 c2s:
   - id: default
