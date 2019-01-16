@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package sql
+package mysql
 
 import (
 	"database/sql"

@@ -29,7 +29,7 @@ jackal supports the following features:
 - Customizable
 - Enforced SSL/TLS
 - Stream compression (zlib)
-- Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+)
+- Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+, PostgreSQL 9.5+)
 - Cross-platform (OS X, Linux)
 
 ## Installing
@@ -79,6 +79,36 @@ mysql -h localhost -D jackal -u jackal -p < mysql.sql
 ```
 
 Your database is now ready to connect with jackal.
+
+### Using PostgreSQL
+
+Create a user and a database for that user:
+
+```sql
+CREATE ROLE jackal WITH LOGIN PASSWORD 'password';
+CREATE DATABASE jackal;
+GRANT ALL PRIVILEGES ON DATABASE jackal TO jackal;
+```
+
+Run the postgres script file to create database schema. In jackal's root directory run:
+
+```sh
+psql --user jackal --password -f sql/postgres.up.psql
+```
+
+Configure jackal to use PostgreSQL by editing the configuration file:
+
+```yaml
+storage:
+  type: pgsql
+  pgsql:
+    host: 127.0.0.1:5432
+    user: jackal
+    password: password
+    database: jackal
+```
+
+That's it!
 
 ### Cluster configuration
 

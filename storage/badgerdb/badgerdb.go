@@ -26,11 +26,6 @@ var (
 	errBadgerDBEntityNotFound  = errors.New("badgerdb: entity not found")
 )
 
-// Config represents BadgerDB storage configuration.
-type Config struct {
-	DataDir string `yaml:"data_dir"`
-}
-
 // Storage represents a BadgerDB storage sub system.
 type Storage struct {
 	db     *badger.DB

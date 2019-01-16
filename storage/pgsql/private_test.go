@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package sql
+package pgsql
 
 import (
 	"testing"
@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMySQLStorageInsertPrivateXML(t *testing.T) {
+func TestInsertPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 	rawXML := private.String()
 
 	s, mock := NewMock()
-	mock.ExpectExec("INSERT INTO private_storage (.+) ON DUPLICATE KEY UPDATE (.+)").
+	mock.ExpectExec("INSERT INTO private_storage (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -27,16 +27,16 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 	require.Nil(t, err)
 
 	s, mock = NewMock()
-	mock.ExpectExec("INSERT INTO private_storage (.+) ON DUPLICATE KEY UPDATE (.+)").
+	mock.ExpectExec("INSERT INTO private_storage (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	err = s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 }
 
-func TestMySQLStorageFetchPrivateXML(t *testing.T) {
+func TestFetchPrivateXML(t *testing.T) {
 	var privateColumns = []string{"data"}
 
 	s, mock := NewMock()
@@ -82,10 +82,10 @@ func TestMySQLStorageFetchPrivateXML(t *testing.T) {
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM private_storage (.+)").
 		WithArgs("ortuman", "exodus:ns").
-		WillReturnError(errMySQLStorage)
+		WillReturnError(errGeneric)
 
 	elems, err = s.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errMySQLStorage, err)
+	require.Equal(t, errGeneric, err)
 	require.Equal(t, 0, len(elems))
 }

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package sql
+package pgsql
 
 import (
 	"database/sql"
@@ -20,22 +20,25 @@ import (
 func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
-			Columns("username", "created_at", "updated_at").
-			Values(ri.Username, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, updated_at = NOW()")
+			Columns("username").
+			Values(ri.Username).
+			Suffix("ON CONFLICT (username) DO UPDATE SET ver = roster_versions.ver + 1")
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
+
 		groups := strings.Join(ri.Groups, ";")
 
 		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.Username)
+
 		q = sq.Insert("roster_items").
-			Columns("username", "jid", "name", "subscription", "`groups`", "ask", "ver", "created_at", "updated_at").
-			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE name = ?, subscription = ?, `groups` = ?, ask = ?, ver = ver + 1, updated_at = NOW()", ri.Name, ri.Subscription, groups, ri.Ask)
+			Columns("username", "jid", "name", "subscription", "groups", "ask", "ver").
+			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr).
+			Suffix("ON CONFLICT (username, jid) DO UPDATE SET name = $3, subscription = $4, groups = $5, ask = $6, ver = roster_items.ver + 1")
 
 		_, err := q.RunWith(tx).Exec()
+
 		return err
 	})
 	if err != nil {
@@ -48,9 +51,9 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
-			Columns("username", "created_at", "updated_at").
-			Values(username, nowExpr, nowExpr).
-			Suffix("ON DUPLICATE KEY UPDATE ver = ver + 1, last_deletion_ver = ver, updated_at = NOW()")
+			Columns("username").
+			Values(username).
+			Suffix("ON CONFLICT (username) DO UPDATE SET ver = roster_versions.ver + 1, last_deletion_ver = roster_versions.ver")
 
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
@@ -69,7 +72,7 @@ func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, e
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
 func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
+	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at DESC")
@@ -93,7 +96,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 
 // FetchRosterItem retrieves from storage a roster item entity.
 func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
-	q := sq.Select("username", "jid", "name", "subscription", "`groups`", "ask", "ver").
+	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").
 		From("roster_items").
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}})
 
@@ -113,11 +116,14 @@ func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, erro
 // into storage, or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
 	presenceXML := rn.Presence.String()
+
 	q := sq.Insert("roster_notifications").
-		Columns("contact", "jid", "elements", "updated_at", "created_at").
-		Values(rn.Contact, rn.JID, presenceXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE elements = ?, updated_at = NOW()", presenceXML)
+		Columns("contact", "jid", "elements").
+		Values(rn.Contact, rn.JID, presenceXML).
+		Suffix("ON CONFLICT (contact, jid) DO UPDATE SET elements = $4", presenceXML)
+
 	_, err := q.RunWith(s.db).Exec()
+
 	return err
 }
 
@@ -172,7 +178,7 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 }
 
 func (s *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
-	q := sq.Select("IFNULL(MAX(ver), 0)", "IFNULL(MAX(last_deletion_ver), 0)").
+	q := sq.Select("COALESCE(MAX(ver), 0)", "COALESCE(MAX(last_deletion_ver), 0)").
 		From("roster_versions").
 		Where(sq.Eq{"username": username})
 

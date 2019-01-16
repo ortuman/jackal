@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package sql
+package pgsql
 
 import (
 	"database/sql"
@@ -17,17 +17,20 @@ import (
 func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
+
 	for _, elem := range privateXML {
 		elem.ToXML(buf, true)
 	}
+
 	rawXML := buf.String()
 
 	q := sq.Insert("private_storage").
-		Columns("username", "namespace", "data", "updated_at", "created_at").
-		Values(username, namespace, rawXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE data = ?, updated_at = NOW()", rawXML)
+		Columns("username", "namespace", "data").
+		Values(username, namespace, rawXML).
+		Suffix("ON CONFLICT (username) DO UPDATE SET data = $4", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
+
 	return err
 }
 

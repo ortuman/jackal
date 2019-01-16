@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2018 robzon.
+ * See the LICENSE file for more information.
+ *
+ * Notes:
+ *
+ * As per https://tools.ietf.org/html/rfc6122#page-4
+ *
+ * - Username MUST NOT be zero bytes in length and MUST NOT be more than 1023 bytes in length
+ * - JIDs total length cannot be more than 3071 bytes
+ *
+ */
+
+-- Functions to manage updated_at timestamps
+
+CREATE OR REPLACE FUNCTION enable_updated_at(_tbl regclass) RETURNS VOID AS $$
+BEGIN
+    EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s
+                    FOR EACH ROW EXECUTE PROCEDURE set_updated_at()', _tbl);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+BEGIN
+    IF (
+        NEW IS DISTINCT FROM OLD AND
+        NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at
+    ) THEN
+        NEW.updated_at := current_timestamp;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- users
+
+CREATE TABLE IF NOT EXISTS users (
+    username            VARCHAR(1023) PRIMARY KEY,
+    password            TEXT NOT NULL,
+    last_presence       TEXT NOT NULL,
+    last_presence_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+SELECT enable_updated_at('users');
+
+-- roster_notifications
+
+CREATE TABLE IF NOT EXISTS roster_notifications (
+    contact     VARCHAR(1023) NOT NULL,
+    jid         TEXT NOT NULL,
+    elements    TEXT NOT NULL,
+    updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (contact, jid)
+);
+
+SELECT enable_updated_at('roster_notifications');
+
+-- roster_items
+
+CREATE TABLE IF NOT EXISTS roster_items (
+    username        VARCHAR(1023) NOT NULL,
+    jid             TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    subscription    TEXT NOT NULL,
+    groups          TEXT NOT NULL,
+    ask BOOL        NOT NULL,
+    ver             INT NOT NULL DEFAULT 0,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    PRIMARY KEY (username, jid)
+);
+
+SELECT enable_updated_at('roster_items');
+
+-- roster_versions
+
+CREATE TABLE IF NOT EXISTS roster_versions (
+    username            VARCHAR(1023) NOT NULL,
+    ver                 INT NOT NULL DEFAULT 0,
+    last_deletion_ver   INT NOT NULL DEFAULT 0,
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    PRIMARY KEY (username)
+);
+
+SELECT enable_updated_at('roster_versions');
+
+-- blocklist_items
+
+CREATE TABLE IF NOT EXISTS blocklist_items (
+    username        VARCHAR(1023) NOT NULL,
+    jid             TEXT NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    PRIMARY KEY(username, jid)
+);
+
+-- private_storage
+
+CREATE TABLE IF NOT EXISTS private_storage (
+    username        VARCHAR(1023) NOT NULL,
+    namespace       VARCHAR(512) NOT NULL,
+    data            TEXT NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    PRIMARY KEY (username, namespace)
+);
+
+SELECT enable_updated_at('private_storage');
+
+-- vcards
+
+CREATE TABLE IF NOT EXISTS vcards (
+    username        VARCHAR(1023) PRIMARY KEY,
+    vcard           TEXT NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+SELECT enable_updated_at('vcards');
+
+-- offline_messages
+
+CREATE TABLE IF NOT EXISTS offline_messages (
+    username        VARCHAR(1023) NOT NULL,
+    data            TEXT NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_offline_messages_username ON offline_messages(username);
