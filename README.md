@@ -173,4 +173,4 @@ license text.
 
 If you have any suggestion or question:
 
-Miguel Ángel Ortuño, <ortuman@pm.me>
+Miguel Ángel Ortuño, JID: ortuman@jackal.im, email: <ortuman@pm.me>
