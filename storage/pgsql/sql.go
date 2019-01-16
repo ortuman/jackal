@@ -52,11 +52,9 @@ func New(c *Config) *Storage {
 	s := &Storage{
 		pool: pool.NewBufferPool(),
 	}
-
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", c.User, c.Password, c.Host, c.Database, c.SSLMode)
 
 	s.db, err = sql.Open("postgres", dsn)
-
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -120,8 +118,5 @@ func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
 		tx.Rollback()
 		return err
 	}
-
-	tx.Commit()
-
-	return nil
+	return tx.Commit()
 }

@@ -24,7 +24,6 @@ func (s *Storage) InsertOrUpdateVCard(vCard xmpp.XElement, username string) erro
 		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = ?", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
-
 	return err
 }
 

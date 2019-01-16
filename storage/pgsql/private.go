@@ -30,7 +30,6 @@ func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace
 		Suffix("ON CONFLICT (username) DO UPDATE SET data = $4", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
-
 	return err
 }
 

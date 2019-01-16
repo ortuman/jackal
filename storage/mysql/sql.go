@@ -102,6 +102,5 @@ func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
 		tx.Rollback()
 		return err
 	}
-	tx.Commit()
-	return nil
+	return tx.Commit()
 }

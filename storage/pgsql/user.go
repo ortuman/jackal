@@ -39,9 +39,7 @@ func (s *Storage) InsertOrUpdateUser(u *model.User) error {
 			Values(u.Username, u.Password).
 			Suffix("ON CONFLICT (username) DO UPDATE SET password = $2")
 	}
-
 	_, err := q.RunWith(s.db).Exec()
-
 	return err
 }
 

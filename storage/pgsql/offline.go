@@ -51,7 +51,6 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	buf := s.pool.Get()
@@ -74,7 +73,6 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 	elems := rootEl.Elements().All()
 
 	var msgs []*xmpp.Message
-
 	for _, el := range elems {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
@@ -82,7 +80,6 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 		if err != nil {
 			return nil, err
 		}
-
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
