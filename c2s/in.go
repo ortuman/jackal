@@ -293,7 +293,6 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 
 	// Open stream session
 	s.sess.SetJID(s.JID())
-	s.sess.Open()
 
 	features := xmpp.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
@@ -306,7 +305,7 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 		features.AppendElements(s.authenticatedFeatures())
 		s.setState(authenticated)
 	}
-	s.writeElement(features)
+	s.sess.Open(features)
 }
 
 func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
@@ -833,7 +832,7 @@ func (s *inStream) disconnect(err error) {
 
 func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == connecting {
-		s.sess.Open()
+		s.sess.Open(nil)
 	}
 	s.writeElement(err.Element())
 

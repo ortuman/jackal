@@ -135,7 +135,7 @@ func (s *Session) SetRemoteDomain(remoteDomain string) {
 }
 
 // Open initializes a sending the proper XMPP payload.
-func (s *Session) Open() error {
+func (s *Session) Open(featuresElem xmpp.XElement) error {
 	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
 		return errors.New("session already opened")
 	}
@@ -175,6 +175,9 @@ func (s *Session) Open() error {
 	ops.SetAttribute("version", "1.0")
 	ops.ToXML(buf, includeClosing)
 
+	if featuresElem != nil {
+		featuresElem.ToXML(buf, true)
+	}
 	openStr := buf.String()
 	log.Debugf("SEND(%s): %s", s.id, openStr)
 

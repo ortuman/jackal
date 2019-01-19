@@ -80,6 +80,7 @@ type fakeSocketConn struct {
 	rd        *fakeSockReaderWriter
 	wr        *fakeSockReaderWriter
 	wrCh      chan []byte
+	p         *xmpp.Parser
 	closeCh   chan struct{}
 	closed    uint32
 	peerCerts []*x509.Certificate
@@ -97,6 +98,7 @@ func newFakeSocketConnWithPeerCerts(peerCerts []*x509.Certificate) *fakeSocketCo
 		closeCh:   make(chan struct{}, 1),
 		peerCerts: peerCerts,
 	}
+	fc.p = xmpp.NewParser(fc.wr, xmpp.SocketStream, 0)
 	go fc.loop()
 	return fc
 }
@@ -148,9 +150,8 @@ func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error)       { retur
 func (c *fakeSocketConn) outboundRead() xmpp.XElement {
 	var elem xmpp.XElement
 	var err error
-	p := xmpp.NewParser(c.wr, xmpp.SocketStream, 0)
 	for err == nil {
-		elem, err = p.ParseElement()
+		elem, err = c.p.ParseElement()
 		if elem != nil {
 			return elem
 		}

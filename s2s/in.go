@@ -132,8 +132,6 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 	j, _ := jid.New("", s.localDomain, "", true)
 	s.sess.SetJID(j)
 
-	s.sess.Open()
-
 	features := xmpp.NewElementName("stream:features")
 	features.SetAttribute("xmlns:stream", streamNamespace)
 	features.SetAttribute("version", "1.0")
@@ -143,9 +141,12 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 		starttls.AppendElement(xmpp.NewElementName("required"))
 		features.AppendElement(starttls)
 		s.setState(inConnected)
-		s.writeElement(features)
+		s.sess.Open(features)
 		return
 	}
+
+	s.sess.Open(nil)
+
 	if !s.isAuthenticated() {
 		// offer external authentication
 		mechanisms := xmpp.NewElementName("mechanisms")
@@ -424,7 +425,7 @@ func (s *inStream) disconnect(err error) {
 
 func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == inConnecting {
-		s.sess.Open()
+		s.sess.Open(nil)
 	}
 	s.writeElement(err.Element())
 	s.disconnectClosingSession(true)

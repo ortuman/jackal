@@ -55,6 +55,7 @@ func (frw *fakeSockReaderWriter) Close() error {
 type fakeSocketConn struct {
 	rd      *fakeSockReaderWriter
 	wr      *fakeSockReaderWriter
+	p       *xmpp.Parser
 	wrCh    chan []byte
 	closeCh chan struct{}
 	closed  uint32
@@ -67,6 +68,7 @@ func newFakeSocketConn() *fakeSocketConn {
 		wrCh:    make(chan []byte, 256),
 		closeCh: make(chan struct{}, 1),
 	}
+	fc.p = xmpp.NewParser(fc.wr, xmpp.SocketStream, 0)
 	go fc.loop()
 	return fc
 }
@@ -111,9 +113,8 @@ func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) {
 func (c *fakeSocketConn) outboundRead() xmpp.XElement {
 	var elem xmpp.XElement
 	var err error
-	p := xmpp.NewParser(c.wr, xmpp.SocketStream, 0)
 	for err == nil {
-		elem, err = p.ParseElement()
+		elem, err = c.p.ParseElement()
 		if elem != nil {
 			return elem
 		}

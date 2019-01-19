@@ -102,7 +102,7 @@ func (s *outStream) start(cfg *streamConfig) error {
 	go s.doRead() // start reading transport...
 
 	s.actorCh <- func() {
-		s.sess.Open()
+		s.sess.Open(nil)
 	}
 	return nil
 }
@@ -231,7 +231,7 @@ func (s *outStream) handleSecuring(elem xmpp.XElement) {
 
 	atomic.StoreUint32(&s.secured, 1)
 	s.restartSession()
-	s.sess.Open()
+	s.sess.Open(nil)
 }
 
 func (s *outStream) handleAuthenticating(elem xmpp.XElement) {
@@ -243,7 +243,7 @@ func (s *outStream) handleAuthenticating(elem xmpp.XElement) {
 	case "success":
 		atomic.StoreUint32(&s.authenticated, 1)
 		s.restartSession()
-		s.sess.Open()
+		s.sess.Open(nil)
 
 	case "failure":
 		s.disconnectWithStreamError(streamerror.ErrRemoteConnectionFailed)
