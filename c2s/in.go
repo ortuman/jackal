@@ -255,6 +255,10 @@ func (s *inStream) initializeAuthenticators() {
 		case "scram_sha_256":
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, false))
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true))
+
+		case "scram_sha_512":
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, false))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true))
 		}
 	}
 	s.authenticators = authenticators

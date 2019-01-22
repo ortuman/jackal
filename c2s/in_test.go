@@ -429,7 +429,7 @@ func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
 		maxStanzaSize:    8192,
 		resourceConflict: Reject,
 		compression:      CompressConfig{Level: compress.DefaultCompression},
-		sasl:             []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256"},
+		sasl:             []string{"plain", "digest_md5", "scram_sha_1", "scram_sha_256", "scram_sha_512"},
 	}
 }
 

@@ -40,7 +40,7 @@ type IQHandler interface {
 
 	// ProcessIQ processes a module IQ taking according actions
 	// over the associated stream.
-	ProcessIQ(iq *xmpp.IQ, stm stream.C2S)
+	ProcessIQ(iq *xmpp.IQ, stm stream.Stream)
 }
 
 // Modules structure keeps reference to a set of preconfigured modules.
@@ -135,7 +135,7 @@ func New(config *Config, router *router.Router) *Modules {
 
 // ProcessIQ process a module IQ returning 'service unavailable'
 // in case it can't be properly handled.
-func (m *Modules) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (m *Modules) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
 	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue

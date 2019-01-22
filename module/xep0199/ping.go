@@ -86,8 +86,14 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
-func (x *Ping) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *Ping) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	cStm, ok := stm.(stream.C2S)
+	if !ok {
+		return
+	}
+	x.actorCh <- func() {
+		x.processIQ(iq, cStm)
+	}
 }
 
 // SchedulePing schedules a new ping in a 'send interval' period, cancelling previous scheduled ping.

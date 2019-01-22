@@ -104,7 +104,7 @@ func (di *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
-func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
 	di.actorCh <- func() { di.processIQ(iq, stm) }
 }
 
@@ -128,7 +128,7 @@ func (di *DiscoInfo) loop() {
 	}
 }
 
-func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.Stream) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 
@@ -161,7 +161,7 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	stm.SendElement(iq.BadRequestError())
 }
 
-func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.Stream) {
 	features, sErr := prov.Features(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
@@ -202,7 +202,7 @@ func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, n
 	stm.SendElement(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.C2S) {
+func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.Stream) {
 	items, sErr := prov.Items(toJID, fromJID, node)
 	if sErr != nil {
 		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))

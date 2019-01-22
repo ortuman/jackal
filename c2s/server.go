@@ -158,7 +158,7 @@ func (s *server) nextID() string {
 
 func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
 	connections.Range(func(_, v interface{}) bool {
-		stm := v.(stream.InStream)
+		stm := v.(stream.Stream)
 		select {
 		case <-closeConn(stm):
 			count++
@@ -172,7 +172,7 @@ func closeConnections(ctx context.Context, connections *sync.Map) (count int, er
 	return
 }
 
-func closeConn(stm stream.InStream) <-chan bool {
+func closeConn(stm stream.Stream) <-chan bool {
 	c := make(chan bool, 1)
 	go func() {
 		stm.Disconnect(streamerror.ErrSystemShutdown)

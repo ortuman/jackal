@@ -64,6 +64,14 @@ func (s *inStream) ID() string {
 	return s.id
 }
 
+// SendElement writes an XMPP element to the stream.
+func (s *inStream) SendElement(elem xmpp.XElement) {
+	if s.getState() == inDisconnected {
+		return
+	}
+	s.actorCh <- func() { s.writeElement(elem) }
+}
+
 func (s *inStream) Disconnect(err error) {
 	if s.getState() == inDisconnected {
 		return
@@ -211,7 +219,24 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 }
 
 func (s *inStream) processIQ(iq *xmpp.IQ) {
-	s.router.Route(iq)
+	toJID := iq.ToJID()
+
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
+	if !replyOnBehalf {
+		switch s.router.Route(iq) {
+		case router.ErrResourceNotFound:
+			s.writeElement(iq.ServiceUnavailableError())
+		case router.ErrFailedRemoteConnect:
+			s.writeElement(iq.RemoteServerNotFoundError())
+		case router.ErrBlockedJID:
+			// Destination user is a blocked JID
+			if iq.IsGet() || iq.IsSet() {
+				s.writeElement(iq.ServiceUnavailableError())
+			}
+		}
+		return
+	}
+	s.mods.ProcessIQ(iq, s)
 }
 
 func (s *inStream) processMessage(message *xmpp.Message) {

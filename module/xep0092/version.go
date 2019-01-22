@@ -61,8 +61,10 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
-func (x *Version) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *Version) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	x.actorCh <- func() {
+		x.processIQ(iq, stm)
+	}
 }
 
 // Shutdown shuts down version module.
@@ -85,7 +87,7 @@ func (x *Version) loop() {
 	}
 }
 
-func (x *Version) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *Version) processIQ(iq *xmpp.IQ, stm stream.Stream) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q == nil || q.Elements().Count() != 0 {
 		stm.SendElement(iq.BadRequestError())
@@ -94,8 +96,8 @@ func (x *Version) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	x.sendSoftwareVersion(iq, stm)
 }
 
-func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.C2S) {
-	userJID := stm.JID()
+func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.Stream) {
+	userJID := iq.FromJID()
 	username := userJID.Node()
 	resource := userJID.Resource()
 	log.Infof("retrieving software version: %v (%s/%s)", version.ApplicationVersion, username, resource)

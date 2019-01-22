@@ -180,7 +180,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// validate SASL mechanisms
 	for _, sasl := range p.SASL {
 		switch sasl {
-		case "plain", "digest_md5", "scram_sha_1", "scram_sha_256":
+		case "plain", "digest_md5", "scram_sha_1", "scram_sha_256", "scram_sha_512":
 			continue
 		default:
 			return fmt.Errorf("c2s.Config: unrecognized SASL mechanism: %s", sasl)

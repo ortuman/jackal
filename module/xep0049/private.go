@@ -42,8 +42,14 @@ func (x *Private) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a private storage IQ
 // taking according actions over the associated stream
-func (x *Private) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *Private) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	cStm, ok := stm.(stream.C2S)
+	if !ok {
+		return
+	}
+	x.actorCh <- func() {
+		x.processIQ(iq, cStm)
+	}
 }
 
 // Shutdown shuts down private storage module.

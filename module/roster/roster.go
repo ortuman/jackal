@@ -60,9 +60,13 @@ func (r *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a roster IQ taking according actions
 // over the associated stream.
-func (r *Roster) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (r *Roster) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	cStm, ok := stm.(stream.C2S)
+	if !ok {
+		return
+	}
 	r.actorCh <- func() {
-		if err := r.processIQ(iq, stm); err != nil {
+		if err := r.processIQ(iq, cStm); err != nil {
 			log.Error(err)
 		}
 	}

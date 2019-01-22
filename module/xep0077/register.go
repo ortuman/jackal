@@ -57,8 +57,14 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes an in-band registration IQ
 // taking according actions over the associated stream.
-func (x *Register) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *Register) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	cStm, ok := stm.(stream.C2S)
+	if !ok {
+		return
+	}
+	x.actorCh <- func() {
+		x.processIQ(iq, cStm)
+	}
 }
 
 // Shutdown shuts down in-band registration module.

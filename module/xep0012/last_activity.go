@@ -53,7 +53,7 @@ func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 }
 
 // ProcessIQ processes a last activity IQ taking according actions over the associated stream.
-func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
 	x.actorCh <- func() { x.processIQ(iq, stm) }
 }
 
@@ -77,7 +77,7 @@ func (x *LastActivity) loop() {
 	}
 }
 
-func (x *LastActivity) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *LastActivity) processIQ(iq *xmpp.IQ, stm stream.Stream) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 	if toJID.IsServer() {
@@ -99,12 +99,12 @@ func (x *LastActivity) processIQ(iq *xmpp.IQ, stm stream.C2S) {
 	}
 }
 
-func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, stm stream.C2S) {
+func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, stm stream.Stream) {
 	secs := int(time.Duration(time.Now().UnixNano()-x.startTime.UnixNano()) / time.Second)
 	x.sendReply(iq, secs, "", stm)
 }
 
-func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream.C2S) {
+func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream.Stream) {
 	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
 		x.sendReply(iq, 0, "", stm)
 		return
@@ -130,7 +130,7 @@ func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream
 	x.sendReply(iq, secs, status, stm)
 }
 
-func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string, stm stream.C2S) {
+func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string, stm stream.Stream) {
 	q := xmpp.NewElementNamespace("query", lastActivityNamespace)
 	q.SetText(status)
 	q.SetAttribute("seconds", strconv.Itoa(secs))

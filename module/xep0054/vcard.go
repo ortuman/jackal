@@ -45,8 +45,10 @@ func (x *VCard) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a vCard IQ taking according actions
 // over the associated stream.
-func (x *VCard) ProcessIQ(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *VCard) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+	x.actorCh <- func() {
+		x.processIQ(iq, stm)
+	}
 }
 
 // Shutdown shuts down vCard module.
@@ -69,21 +71,25 @@ func (x *VCard) loop() {
 	}
 }
 
-func (x *VCard) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *VCard) processIQ(iq *xmpp.IQ, stm stream.Stream) {
 	vCard := iq.Elements().ChildNamespace("vCard", vCardNamespace)
 	if vCard != nil {
 		if iq.IsGet() {
 			x.getVCard(vCard, iq, stm)
 			return
 		} else if iq.IsSet() {
-			x.setVCard(vCard, iq, stm)
+			cStm, ok := stm.(stream.C2S)
+			if !ok {
+				return
+			}
+			x.setVCard(vCard, iq, cStm)
 			return
 		}
 	}
 	stm.SendElement(iq.BadRequestError())
 }
 
-func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.C2S) {
+func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ, stm stream.Stream) {
 	if vCard.Elements().Count() > 0 {
 		stm.SendElement(iq.BadRequestError())
 		return

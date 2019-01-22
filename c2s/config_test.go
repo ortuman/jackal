@@ -76,11 +76,11 @@ func TestConfig(t *testing.T) {
 	authCfg := `
 connect_timeout: 5
 resource_conflict: reject
-sasl: [plain, digest_md5, scram_sha_1, scram_sha_256]
+sasl: [plain, digest_md5, scram_sha_1, scram_sha_256, scram_sha_512]
 `
 	err = yaml.Unmarshal([]byte(authCfg), &s)
 	require.Nil(t, err)
-	require.Equal(t, 4, len(s.SASL))
+	require.Equal(t, 5, len(s.SASL))
 
 	// invalid auth mechanism...
 	err = yaml.Unmarshal([]byte("{id: default, type: c2s, sasl: [invalid]}"), &s)
