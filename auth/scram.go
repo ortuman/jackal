@@ -30,7 +30,7 @@ import (
 type ScramType int
 
 const (
-	// ScramSHA1 represents SCRAM-SHA1 authentication method.
+	// ScramSHA1 represents SCRAM-SHA-1 authentication method.
 	ScramSHA1 ScramType = iota
 
 	// ScramSHA256 represents SCRAM-SHA-256 authentication method.
