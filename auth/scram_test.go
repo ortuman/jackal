@@ -121,7 +121,7 @@ var tt = []scramAuthTestCase{
 		password:    "1234",
 	},
 	{
-		// SCRAM-SHA-256-PLUS
+		// SCRAM-SHA-512-PLUS
 		id:          6,
 		scramType:   ScramSHA512,
 		usesCb:      true,
