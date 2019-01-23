@@ -14,7 +14,6 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -53,8 +52,10 @@ func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 }
 
 // ProcessIQ processes a last activity IQ taking according actions over the associated stream.
-func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
-	x.actorCh <- func() { x.processIQ(iq, stm) }
+func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+	x.actorCh <- func() {
+		x.processIQ(iq, r)
+	}
 }
 
 // Shutdown shuts down last activity module.
@@ -77,46 +78,46 @@ func (x *LastActivity) loop() {
 	}
 }
 
-func (x *LastActivity) processIQ(iq *xmpp.IQ, stm stream.Stream) {
+func (x *LastActivity) processIQ(iq *xmpp.IQ, r *router.Router) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 	if toJID.IsServer() {
-		x.sendServerUptime(iq, stm)
+		x.sendServerUptime(iq, r)
 	} else if toJID.IsBare() {
 		ok, err := x.isSubscribedTo(toJID, fromJID)
 		if err != nil {
 			log.Error(err)
-			stm.SendElement(iq.InternalServerError())
+			_ = r.Route(iq.InternalServerError())
 			return
 		}
 		if ok {
-			x.sendUserLastActivity(iq, toJID, stm)
+			x.sendUserLastActivity(iq, toJID, r)
 		} else {
-			stm.SendElement(iq.ForbiddenError())
+			_ = r.Route(iq.ForbiddenError())
 		}
 	} else {
-		stm.SendElement(iq.BadRequestError())
+		_ = r.Route(iq.BadRequestError())
 	}
 }
 
-func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, stm stream.Stream) {
+func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, r *router.Router) {
 	secs := int(time.Duration(time.Now().UnixNano()-x.startTime.UnixNano()) / time.Second)
-	x.sendReply(iq, secs, "", stm)
+	x.sendReply(iq, secs, "", r)
 }
 
-func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream.Stream) {
+func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, r *router.Router) {
 	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
-		x.sendReply(iq, 0, "", stm)
+		x.sendReply(iq, 0, "", r)
 		return
 	}
 	usr, err := storage.FetchUser(to.Node())
 	if err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		_ = r.Route(iq.InternalServerError())
 		return
 	}
 	if usr == nil {
-		stm.SendElement(iq.ItemNotFoundError())
+		_ = r.Route(iq.ItemNotFoundError())
 		return
 	}
 	var secs int
@@ -127,16 +128,16 @@ func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, stm stream
 			status = st.Text()
 		}
 	}
-	x.sendReply(iq, secs, status, stm)
+	x.sendReply(iq, secs, status, r)
 }
 
-func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string, stm stream.Stream) {
+func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string, r *router.Router) {
 	q := xmpp.NewElementNamespace("query", lastActivityNamespace)
 	q.SetText(status)
 	q.SetAttribute("seconds", strconv.Itoa(secs))
 	res := iq.ResultIQ()
 	res.AppendElement(q)
-	stm.SendElement(res)
+	_ = r.Route(res)
 }
 
 func (x *LastActivity) isSubscribedTo(contact *jid.JID, userJID *jid.JID) (bool, error) {

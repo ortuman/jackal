@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ortuman/jackal/router"
+
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -86,13 +88,13 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
-func (x *Ping) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
-	cStm, ok := stm.(stream.C2S)
-	if !ok {
-		return
-	}
+func (x *Ping) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
 	x.actorCh <- func() {
-		x.processIQ(iq, cStm)
+		stm := r.UserStream(iq.FromJID())
+		if stm == nil {
+			return
+		}
+		x.processIQ(iq, stm)
 	}
 }
 

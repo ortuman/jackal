@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -34,7 +33,6 @@ type DiscoInfo struct {
 // New returns a disco info IQ handler module.
 func New(router *router.Router) *DiscoInfo {
 	di := &DiscoInfo{
-		router:      router,
 		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
@@ -104,8 +102,10 @@ func (di *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
-func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
-	di.actorCh <- func() { di.processIQ(iq, stm) }
+func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+	di.actorCh <- func() {
+		di.processIQ(iq, r)
+	}
 }
 
 // Shutdown shuts down disco info module.
@@ -128,22 +128,22 @@ func (di *DiscoInfo) loop() {
 	}
 }
 
-func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.Stream) {
+func (di *DiscoInfo) processIQ(iq *xmpp.IQ, r *router.Router) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if di.router.IsLocalHost(toJID.Domain()) {
+	if r.IsLocalHost(toJID.Domain()) {
 		prov = di.srvProvider
 	} else {
 		prov = di.providers[toJID.Domain()]
 		if prov == nil {
-			stm.SendElement(iq.ItemNotFoundError())
+			_ = r.Route(iq.ItemNotFoundError())
 			return
 		}
 	}
 	if prov == nil {
-		stm.SendElement(iq.ItemNotFoundError())
+		_ = r.Route(iq.ItemNotFoundError())
 		return
 	}
 	q := iq.Elements().Child("query")
@@ -151,23 +151,23 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, stm stream.Stream) {
 	if q != nil {
 		switch q.Namespace() {
 		case discoInfoNamespace:
-			di.sendDiscoInfo(prov, toJID, fromJID, node, iq, stm)
+			di.sendDiscoInfo(prov, toJID, fromJID, node, iq, r)
 			return
 		case discoItemsNamespace:
-			di.sendDiscoItems(prov, toJID, fromJID, node, iq, stm)
+			di.sendDiscoItems(prov, toJID, fromJID, node, iq, r)
 			return
 		}
 	}
-	stm.SendElement(iq.BadRequestError())
+	_ = r.Route(iq.BadRequestError())
 }
 
-func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.Stream) {
+func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, r *router.Router) {
 	features, sErr := prov.Features(toJID, fromJID, node)
 	if sErr != nil {
-		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	} else if len(features) == 0 {
-		stm.SendElement(iq.ItemNotFoundError())
+		_ = r.Route(iq.ItemNotFoundError())
 		return
 	}
 	result := iq.ResultIQ()
@@ -192,20 +192,20 @@ func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, n
 	}
 	form, sErr := prov.Form(toJID, fromJID, node)
 	if sErr != nil {
-		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	}
 	if form != nil {
 		query.AppendElement(form.Element())
 	}
 	result.AppendElement(query)
-	stm.SendElement(result)
+	_ = r.Route(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, stm stream.Stream) {
+func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, r *router.Router) {
 	items, sErr := prov.Items(toJID, fromJID, node)
 	if sErr != nil {
-		stm.SendElement(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	}
 	result := iq.ResultIQ()
@@ -222,5 +222,5 @@ func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, 
 		query.AppendElement(itemEl)
 	}
 	result.AppendElement(query)
-	stm.SendElement(result)
+	_ = r.Route(result)
 }

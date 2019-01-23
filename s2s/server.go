@@ -146,7 +146,7 @@ func closeConnections(ctx context.Context, connections *sync.Map) (count int, er
 	return
 }
 
-func closeConn(stm stream.Stream) <-chan bool {
+func closeConn(stm stream.InStream) <-chan bool {
 	c := make(chan bool, 1)
 	go func() {
 		stm.Disconnect(streamerror.ErrSystemShutdown)

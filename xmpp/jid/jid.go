@@ -35,6 +35,9 @@ const (
 
 	// MatchesBare indicates that left and right operand has same node and domain value.
 	MatchesBare = MatchesNode | MatchesDomain
+
+	// MatchesFull indicates that left and right operand has same node, domain and resource value.
+	MatchesFull = MatchesNode | MatchesDomain | MatchesResource
 )
 
 // JID represents an XMPP address (JID).

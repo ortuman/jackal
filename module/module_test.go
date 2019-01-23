@@ -7,6 +7,7 @@ package module
 
 import (
 	"context"
+	"crypto/tls"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -44,13 +45,15 @@ func TestModules_ProcessIQ(t *testing.T) {
 
 	j0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
 	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	stm := stream.NewMockC2S(uuid.New().String(), j1)
+
+	stm := stream.NewMockC2S(uuid.New().String(), j0)
+	mods.router.Bind(stm)
 
 	iqID := uuid.New().String()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.SetFromJID(j0)
 	iq.SetToJID(j1)
-	mods.ProcessIQ(iq, stm)
+	mods.ProcessIQ(iq)
 
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
@@ -83,5 +86,8 @@ func setupModules(t *testing.T) *Modules {
 	err = yaml.Unmarshal(b, &config)
 	require.Nil(t, err)
 
-	return New(&config, &router.Router{})
+	r, _ := router.New(&router.Config{
+		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+	})
+	return New(&config, r)
 }

@@ -65,12 +65,14 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	x := New(nil, r)
 	defer x.Shutdown()
 
+	r.Bind(stm)
+
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
-	iq.SetFromJID(j1)
+	iq.SetFromJID(j2)
 	iq.SetToJID(j1)
 	iq.AppendElement(xmpp.NewElementNamespace("query", lastActivityNamespace))
 
-	x.ProcessIQ(iq, stm)
+	x.ProcessIQ(iq, r)
 	elem := stm.ReceiveElement()
 	q := elem.Elements().Child("query")
 	require.NotNil(t, q)
@@ -90,12 +92,14 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	x := New(nil, r)
 	defer x.Shutdown()
 
+	r.Bind(stm1)
+
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j2.ToBareJID())
 	iq.AppendElement(xmpp.NewElementNamespace("query", lastActivityNamespace))
 
-	x.ProcessIQ(iq, stm1)
+	x.ProcessIQ(iq, r)
 	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -113,7 +117,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
-	x.ProcessIQ(iq, stm1)
+	x.ProcessIQ(iq, r)
 	elem = stm1.ReceiveElement()
 	q := elem.Elements().ChildNamespace("query", lastActivityNamespace)
 	secs := q.Attributes().Get("seconds")
@@ -122,14 +126,14 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	// set as online
 	r.Bind(stm2)
 
-	x.ProcessIQ(iq, stm1)
+	x.ProcessIQ(iq, r)
 	elem = stm1.ReceiveElement()
 	q = elem.Elements().ChildNamespace("query", lastActivityNamespace)
 	secs = q.Attributes().Get("seconds")
 	require.Equal(t, "0", secs)
 
 	s.EnableMockedError()
-	x.ProcessIQ(iq, stm1)
+	x.ProcessIQ(iq, r)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()

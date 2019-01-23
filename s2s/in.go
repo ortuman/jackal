@@ -64,14 +64,6 @@ func (s *inStream) ID() string {
 	return s.id
 }
 
-// SendElement writes an XMPP element to the stream.
-func (s *inStream) SendElement(elem xmpp.XElement) {
-	if s.getState() == inDisconnected {
-		return
-	}
-	s.actorCh <- func() { s.writeElement(elem) }
-}
-
 func (s *inStream) Disconnect(err error) {
 	if s.getState() == inDisconnected {
 		return
@@ -236,7 +228,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		}
 		return
 	}
-	s.mods.ProcessIQ(iq, s)
+	s.mods.ProcessIQ(iq)
 }
 
 func (s *inStream) processMessage(message *xmpp.Message) {

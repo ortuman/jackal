@@ -9,6 +9,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -57,13 +58,11 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes an in-band registration IQ
 // taking according actions over the associated stream.
-func (x *Register) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
-	cStm, ok := stm.(stream.C2S)
-	if !ok {
-		return
-	}
+func (x *Register) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
 	x.actorCh <- func() {
-		x.processIQ(iq, cStm)
+		if stm := r.UserStream(iq.FromJID()); stm != nil {
+			x.processIQ(iq, stm)
+		}
 	}
 }
 

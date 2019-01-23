@@ -42,7 +42,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
-	defer stm.Disconnect(nil)
+	rtr.Bind(stm)
 
 	r := New(&Config{}, rtr)
 	defer r.Shutdown()
@@ -54,17 +54,17 @@ func TestRoster_FetchRoster(t *testing.T) {
 	q.AppendElement(xmpp.NewElementName("q2"))
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.GetType)
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -95,7 +95,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r = New(&Config{Versioning: true}, rtr)
 	defer r.Shutdown()
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -112,7 +112,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	q.SetAttribute("ver", "v1")
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem = stm.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -130,7 +130,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	r = New(&Config{}, rtr)
 	defer r.Shutdown()
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
@@ -168,14 +168,14 @@ func TestRoster_Update(t *testing.T) {
 	q.AppendElement(item)
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq, stm1)
+	r.ProcessIQ(iq, rtr)
 	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	q.AppendElement(item)
 
-	r.ProcessIQ(iq, stm1)
+	r.ProcessIQ(iq, rtr)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -190,7 +190,7 @@ func TestRoster_Update(t *testing.T) {
 	q.ClearElements()
 	q.AppendElement(item)
 
-	r.ProcessIQ(iq, stm1)
+	r.ProcessIQ(iq, rtr)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -224,7 +224,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	defer stm.Disconnect(nil)
+	rtr.Bind(stm)
 
 	r := New(&Config{}, rtr)
 	defer r.Shutdown()
@@ -242,7 +242,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	q.AppendElement(item)
 	iq.AppendElement(q)
 
-	r.ProcessIQ(iq, stm)
+	r.ProcessIQ(iq, rtr)
 	elem := stm.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 

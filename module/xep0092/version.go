@@ -9,9 +9,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ortuman/jackal/router"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -61,9 +62,9 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
-func (x *Version) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+func (x *Version) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
 	x.actorCh <- func() {
-		x.processIQ(iq, stm)
+		x.processIQ(iq, r)
 	}
 }
 
@@ -87,16 +88,16 @@ func (x *Version) loop() {
 	}
 }
 
-func (x *Version) processIQ(iq *xmpp.IQ, stm stream.Stream) {
+func (x *Version) processIQ(iq *xmpp.IQ, r *router.Router) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q == nil || q.Elements().Count() != 0 {
-		stm.SendElement(iq.BadRequestError())
+		_ = r.Route(iq.BadRequestError())
 		return
 	}
-	x.sendSoftwareVersion(iq, stm)
+	x.sendSoftwareVersion(iq, r)
 }
 
-func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.Stream) {
+func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, r *router.Router) {
 	userJID := iq.FromJID()
 	username := userJID.Node()
 	resource := userJID.Resource()
@@ -119,5 +120,5 @@ func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, stm stream.Stream) {
 		query.AppendElement(os)
 	}
 	result.AppendElement(query)
-	stm.SendElement(result)
+	_ = r.Route(result)
 }

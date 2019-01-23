@@ -217,6 +217,20 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 	}
 }
 
+// UserStreams returns the stream associated to a user jid.
+func (r *Router) UserStream(j *jid.JID) stream.C2S {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	stms := r.streams[j.Node()]
+
+	for _, stm := range stms {
+		if j.Matches(stm.JID(), jid.MatchesFull) {
+			return stm
+		}
+	}
+	return nil
+}
+
 // UserStreams returns all streams associated to a user.
 func (r *Router) UserStreams(username string) []stream.C2S {
 	r.mu.Lock()

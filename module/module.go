@@ -20,7 +20,6 @@ import (
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -40,7 +39,7 @@ type IQHandler interface {
 
 	// ProcessIQ processes a module IQ taking according actions
 	// over the associated stream.
-	ProcessIQ(iq *xmpp.IQ, stm stream.Stream)
+	ProcessIQ(iq *xmpp.IQ, router *router.Router)
 }
 
 // Modules structure keeps reference to a set of preconfigured modules.
@@ -56,13 +55,14 @@ type Modules struct {
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
 
+	router     *router.Router
 	iqHandlers []IQHandler
 	all        []Module
 }
 
 // New returns a set of modules derived from a concrete configuration.
 func New(config *Config, router *router.Router) *Modules {
-	m := &Modules{}
+	m := &Modules{router: router}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	m.DiscoInfo = xep0030.New(router)
@@ -135,18 +135,18 @@ func New(config *Config, router *router.Router) *Modules {
 
 // ProcessIQ process a module IQ returning 'service unavailable'
 // in case it can't be properly handled.
-func (m *Modules) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
+func (m *Modules) ProcessIQ(iq *xmpp.IQ) {
 	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
-		handler.ProcessIQ(iq, stm)
+		handler.ProcessIQ(iq, m.router)
 		return
 	}
 
 	// ...IQ not handled...
 	if iq.IsGet() || iq.IsSet() {
-		stm.SendElement(iq.ServiceUnavailableError())
+		_ = m.router.Route(iq.ServiceUnavailableError())
 	}
 }
 

@@ -8,9 +8,10 @@ package xep0049
 import (
 	"strings"
 
+	"github.com/ortuman/jackal/router"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -42,13 +43,9 @@ func (x *Private) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a private storage IQ
 // taking according actions over the associated stream
-func (x *Private) ProcessIQ(iq *xmpp.IQ, stm stream.Stream) {
-	cStm, ok := stm.(stream.C2S)
-	if !ok {
-		return
-	}
+func (x *Private) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
 	x.actorCh <- func() {
-		x.processIQ(iq, cStm)
+		x.processIQ(iq, r)
 	}
 }
 
@@ -72,27 +69,28 @@ func (x *Private) loop() {
 	}
 }
 
-func (x *Private) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *Private) processIQ(iq *xmpp.IQ, r *router.Router) {
 	q := iq.Elements().ChildNamespace("query", privateNamespace)
+	fromJid := iq.FromJID()
 	toJid := iq.ToJID()
-	validTo := toJid.IsServer() || toJid.Node() == stm.Username()
+	validTo := toJid.IsServer() || toJid.Node() == fromJid.Node()
 	if !validTo {
-		stm.SendElement(iq.ForbiddenError())
+		_ = r.Route(iq.ForbiddenError())
 		return
 	}
 	if iq.IsGet() {
-		x.getPrivate(iq, q, stm)
+		x.getPrivate(iq, q, r)
 	} else if iq.IsSet() {
-		x.setPrivate(iq, q, stm)
+		x.setPrivate(iq, q, r)
 	} else {
-		stm.SendElement(iq.BadRequestError())
+		_ = r.Route(iq.BadRequestError())
 		return
 	}
 }
 
-func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
+func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, r *router.Router) {
 	if q.Elements().Count() != 1 {
-		stm.SendElement(iq.NotAcceptableError())
+		_ = r.Route(iq.NotAcceptableError())
 		return
 	}
 	privElem := q.Elements().All()[0]
@@ -100,15 +98,16 @@ func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 	isValidNS := x.isValidNamespace(privNS)
 
 	if privElem.Elements().Count() > 0 || !isValidNS {
-		stm.SendElement(iq.NotAcceptableError())
+		_ = r.Route(iq.NotAcceptableError())
 		return
 	}
-	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, stm.Username(), stm.Resource())
+	fromJID := iq.FromJID()
+	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, fromJID.Node(), fromJID.Resource())
 
-	privElements, err := storage.FetchPrivateXML(privNS, stm.Username())
+	privElements, err := storage.FetchPrivateXML(privNS, fromJID.Node())
 	if err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		_ = r.Route(iq.InternalServerError())
 		return
 	}
 	res := iq.ResultIQ()
@@ -120,20 +119,20 @@ func (x *Private) getPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 	}
 	res.AppendElement(query)
 
-	stm.SendElement(res)
+	_ = r.Route(res)
 }
 
-func (x *Private) setPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
+func (x *Private) setPrivate(iq *xmpp.IQ, q xmpp.XElement, r *router.Router) {
 	nsElements := map[string][]xmpp.XElement{}
 
 	for _, privElement := range q.Elements().All() {
 		ns := privElement.Namespace()
 		if len(ns) == 0 {
-			stm.SendElement(iq.BadRequestError())
+			_ = r.Route(iq.BadRequestError())
 			return
 		}
 		if !x.isValidNamespace(privElement.Namespace()) {
-			stm.SendElement(iq.NotAcceptableError())
+			_ = r.Route(iq.NotAcceptableError())
 			return
 		}
 		elems := nsElements[ns]
@@ -144,16 +143,17 @@ func (x *Private) setPrivate(iq *xmpp.IQ, q xmpp.XElement, stm stream.C2S) {
 		}
 		nsElements[ns] = elems
 	}
+	fromJID := iq.FromJID()
 	for ns, elements := range nsElements {
-		log.Infof("saving private element. ns: %s... (%s/%s)", ns, stm.Username(), stm.Resource())
+		log.Infof("saving private element. ns: %s... (%s/%s)", ns, fromJID.Node(), fromJID.Resource())
 
-		if err := storage.InsertOrUpdatePrivateXML(elements, ns, stm.Username()); err != nil {
+		if err := storage.InsertOrUpdatePrivateXML(elements, ns, fromJID.Node()); err != nil {
 			log.Error(err)
-			stm.SendElement(iq.InternalServerError())
+			_ = r.Route(iq.InternalServerError())
 			return
 		}
 	}
-	stm.SendElement(iq.ResultIQ())
+	_ = r.Route(iq.ResultIQ())
 }
 
 func (x *Private) isValidNamespace(ns string) bool {
