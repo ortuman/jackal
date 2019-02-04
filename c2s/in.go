@@ -32,7 +32,7 @@ const (
 	connected
 	authenticating
 	authenticated
-	sessionStarted
+	bound
 	disconnected
 )
 
@@ -278,8 +278,8 @@ func (s *inStream) handleElement(elem xmpp.XElement) {
 		s.handleAuthenticated(elem)
 	case authenticating:
 		s.handleAuthenticating(elem)
-	case sessionStarted:
-		s.handleSessionStarted(elem)
+	case bound:
+		s.handleBound(elem)
 	}
 }
 
@@ -436,8 +436,6 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 		iq := elem.(*xmpp.IQ)
 		if len(s.JID().Resource()) == 0 { // Expecting bind
 			s.bindResource(iq)
-		} else { // Expecting session
-			s.startSession(iq)
 		}
 
 	default:
@@ -445,7 +443,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 	}
 }
 
-func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
+func (s *inStream) handleBound(elem xmpp.XElement) {
 	// Reset ping timer deadline
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
@@ -453,6 +451,11 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 	stanza, ok := elem.(xmpp.Stanza)
 	if !ok {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
+		return
+	}
+	if stanza.Elements().ChildNamespace("session", sessionNamespace) != nil {
+		iq, _ := stanza.(*xmpp.IQ)
+		s.startSession(iq)
 		return
 	}
 	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
@@ -636,6 +639,8 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	result.AppendElement(binded)
 
 	s.writeElement(result)
+	s.setState(bound)
+	s.startPing()
 }
 
 func (s *inStream) startSession(iq *xmpp.IQ) {
@@ -650,12 +655,13 @@ func (s *inStream) startSession(iq *xmpp.IQ) {
 		return
 	}
 	s.writeElement(iq.ResultIQ())
+}
 
+func (s *inStream) startPing() {
 	// Start pinging...
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
-	s.setState(sessionStarted)
 }
 
 func (s *inStream) processStanza(elem xmpp.Stanza) {
