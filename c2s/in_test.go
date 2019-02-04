@@ -196,9 +196,10 @@ func TestStream_StartSession(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
+	tUtilStreamBind(conn, t)
 	tUtilStreamStartSession(conn, t)
 
-	require.Equal(t, sessionStarted, stm.getState())
+	require.Equal(t, bound, stm.getState())
 }
 
 func TestStream_SendIQ(t *testing.T) {
@@ -218,9 +219,10 @@ func TestStream_SendIQ(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
+	tUtilStreamBind(conn, t)
 	tUtilStreamStartSession(conn, t)
 
-	require.Equal(t, sessionStarted, stm.getState())
+	require.Equal(t, bound, stm.getState())
 
 	// request roster...
 	iqID := uuid.New()
@@ -254,9 +256,10 @@ func TestStream_SendPresence(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
+	tUtilStreamBind(conn, t)
 	tUtilStreamStartSession(conn, t)
 
-	require.Equal(t, sessionStarted, stm.getState())
+	require.Equal(t, bound, stm.getState())
 
 	conn.inboundWrite([]byte(`
 <presence>
@@ -298,9 +301,9 @@ func TestStream_SendMessage(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
-	tUtilStreamStartSession(conn, t)
+	tUtilStreamBind(conn, t)
 
-	require.Equal(t, sessionStarted, stm.getState())
+	require.Equal(t, bound, stm.getState())
 
 	// define a second stream...
 	jFrom, _ := jid.New("user", "localhost", "balcony", true)
@@ -349,9 +352,10 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
+	tUtilStreamBind(conn, t)
 	tUtilStreamStartSession(conn, t)
 
-	require.Equal(t, sessionStarted, stm.getState())
+	require.Equal(t, bound, stm.getState())
 
 	storage.InsertBlockListItems([]model.BlockListItem{{
 		Username: "user",
@@ -392,7 +396,8 @@ func tUtilStreamAuthenticate(conn *fakeSocketConn, t *testing.T) {
 	require.Equal(t, "success", elem.Name())
 }
 
-func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
+func tUtilStreamBind(conn *fakeSocketConn, t *testing.T) {
+	// bind a resource
 	conn.inboundWrite([]byte(`<iq type="set" id="bind_1">
 <bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
 <resource>balcony</resource>
@@ -402,13 +407,15 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	elem := conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, elem.Elements().Child("bind"))
+}
 
+func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	// open session
 	conn.inboundWrite([]byte(`<iq type="set" id="aab8a">
 <session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
 </iq>`))
 
-	elem = conn.outboundRead()
+	elem := conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
 	require.NotNil(t, xmpp.ResultType, elem.Type())
 
