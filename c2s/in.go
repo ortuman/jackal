@@ -367,6 +367,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	bind.AppendElement(xmpp.NewElementName("required"))
 	features = append(features, bind)
 
+	// [rfc6121] for backward compatibility we'll offer offer session feature
 	sessElem := xmpp.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 	features = append(features, sessElem)
 
@@ -452,13 +453,6 @@ func (s *inStream) handleBound(elem xmpp.XElement) {
 	if !ok {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
-	}
-	switch iq := stanza.(type) {
-	case *xmpp.IQ:
-		if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
-			s.startSession(iq)
-			return
-		}
 	}
 	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
@@ -642,24 +636,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 	s.setState(bound)
 	s.writeElement(result)
-	s.startPing()
-}
 
-func (s *inStream) startSession(iq *xmpp.IQ) {
-	if len(s.Resource()) == 0 {
-		// Not bound yet...
-		s.Disconnect(streamerror.ErrNotAuthorized)
-		return
-	}
-	sess := iq.Elements().ChildNamespace("session", sessionNamespace)
-	if sess == nil {
-		s.writeElement(iq.NotAllowedError())
-		return
-	}
-	s.writeElement(iq.ResultIQ())
-}
-
-func (s *inStream) startPing() {
 	// Start pinging...
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
@@ -700,6 +677,10 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 				s.writeElement(iq.ServiceUnavailableError())
 			}
 		}
+		return
+	}
+	if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
+		s.writeElement(iq.ResultIQ())
 		return
 	}
 	s.mods.ProcessIQ(iq)
