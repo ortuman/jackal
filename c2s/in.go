@@ -484,10 +484,10 @@ func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
 	}
+	s.setSecured(true)
 	s.writeElement(xmpp.NewElementNamespace("proceed", tlsNamespace))
 
 	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
-	s.setSecured(true)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
