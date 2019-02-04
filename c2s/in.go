@@ -453,10 +453,12 @@ func (s *inStream) handleBound(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
-	if stanza.Elements().ChildNamespace("session", sessionNamespace) != nil {
-		iq, _ := stanza.(*xmpp.IQ)
-		s.startSession(iq)
-		return
+	switch iq := stanza.(type) {
+	case *xmpp.IQ:
+		if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
+			s.startSession(iq)
+			return
+		}
 	}
 	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
@@ -632,20 +634,20 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	result := xmpp.NewIQType(iq.ID(), xmpp.ResultType)
 	result.SetNamespace(iq.Namespace())
 
-	binded := xmpp.NewElementNamespace("bind", bindNamespace)
+	boundElem := xmpp.NewElementNamespace("bind", bindNamespace)
 	j := xmpp.NewElementName("jid")
 	j.SetText(s.Username() + "@" + s.Domain() + "/" + s.Resource())
-	binded.AppendElement(j)
-	result.AppendElement(binded)
+	boundElem.AppendElement(j)
+	result.AppendElement(boundElem)
 
-	s.writeElement(result)
 	s.setState(bound)
+	s.writeElement(result)
 	s.startPing()
 }
 
 func (s *inStream) startSession(iq *xmpp.IQ) {
 	if len(s.Resource()) == 0 {
-		// Not binded yet...
+		// Not bound yet...
 		s.Disconnect(streamerror.ErrNotAuthorized)
 		return
 	}
