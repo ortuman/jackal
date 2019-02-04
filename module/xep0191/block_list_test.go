@@ -273,8 +273,8 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	blItms, _ := storage.FetchBlockListItems("ortuman")
-	require.Equal(t, 0, len(blItms))
+	blItems, _ := storage.FetchBlockListItems("ortuman")
+	require.Equal(t, 0, len(blItems))
 }
 
 func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {

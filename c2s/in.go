@@ -55,6 +55,7 @@ type inStream struct {
 	secured       bool
 	compressed    bool
 	authenticated bool
+	sessStarted   bool
 	presence      *xmpp.Presence
 
 	contextMu sync.RWMutex
@@ -454,6 +455,18 @@ func (s *inStream) handleBound(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrUnsupportedStanzaType)
 		return
 	}
+	// handle session IQ
+	if iq, ok := stanza.(*xmpp.IQ); ok && iq.IsSet() {
+		if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
+			if !s.isSessionStarted() {
+				s.setSessionStarted(true)
+				s.writeElement(iq.ResultIQ())
+			} else {
+				s.writeElement(iq.NotAllowedError())
+			}
+			return
+		}
+	}
 	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
@@ -464,9 +477,9 @@ func (s *inStream) handleBound(elem xmpp.XElement) {
 			break
 		}
 		comp.ProcessStanza(stanza, s)
-	} else {
-		s.processStanza(stanza)
+		return
 	}
+	s.processStanza(stanza)
 }
 
 func (s *inStream) proceedStartTLS(elem xmpp.XElement) {
@@ -645,7 +658,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 
 func (s *inStream) processStanza(elem xmpp.Stanza) {
 	toJID := elem.ToJID()
-	if s.isBlockedJID(toJID) { // Blocked JID?
+	if s.isBlockedJID(toJID) { // blocked JID?
 		blocked := xmpp.NewElementNamespace("blocked", blockedErrorNamespace)
 		resp := xmpp.NewErrorStanzaFromStanza(elem, xmpp.ErrNotAcceptable, []xmpp.XElement{blocked})
 		s.writeElement(resp)
@@ -677,10 +690,6 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 				s.writeElement(iq.ServiceUnavailableError())
 			}
 		}
-		return
-	}
-	if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
-		s.writeElement(iq.ResultIQ())
 		return
 	}
 	s.mods.ProcessIQ(iq)
@@ -939,6 +948,18 @@ func (s *inStream) setCompressed(compressed bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.compressed = compressed
+}
+
+func (s *inStream) isSessionStarted() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.sessStarted
+}
+
+func (s *inStream) setSessionStarted(sessStarted bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sessStarted = sessStarted
 }
 
 func (s *inStream) setState(state uint32) {
