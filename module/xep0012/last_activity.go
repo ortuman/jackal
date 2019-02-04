@@ -52,9 +52,9 @@ func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 }
 
 // ProcessIQ processes a last activity IQ taking according actions over the associated stream.
-func (x *LastActivity) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *LastActivity) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
-		x.processIQ(iq, r)
+		x.processIQ(iq)
 	}
 }
 
@@ -78,46 +78,46 @@ func (x *LastActivity) loop() {
 	}
 }
 
-func (x *LastActivity) processIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *LastActivity) processIQ(iq *xmpp.IQ) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 	if toJID.IsServer() {
-		x.sendServerUptime(iq, r)
+		x.sendServerUptime(iq)
 	} else if toJID.IsBare() {
 		ok, err := x.isSubscribedTo(toJID, fromJID)
 		if err != nil {
 			log.Error(err)
-			_ = r.Route(iq.InternalServerError())
+			_ = x.router.Route(iq.InternalServerError())
 			return
 		}
 		if ok {
-			x.sendUserLastActivity(iq, toJID, r)
+			x.sendUserLastActivity(iq, toJID)
 		} else {
-			_ = r.Route(iq.ForbiddenError())
+			_ = x.router.Route(iq.ForbiddenError())
 		}
 	} else {
-		_ = r.Route(iq.BadRequestError())
+		_ = x.router.Route(iq.BadRequestError())
 	}
 }
 
-func (x *LastActivity) sendServerUptime(iq *xmpp.IQ, r *router.Router) {
+func (x *LastActivity) sendServerUptime(iq *xmpp.IQ) {
 	secs := int(time.Duration(time.Now().UnixNano()-x.startTime.UnixNano()) / time.Second)
-	x.sendReply(iq, secs, "", r)
+	x.sendReply(iq, secs, "")
 }
 
-func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, r *router.Router) {
+func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID) {
 	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
-		x.sendReply(iq, 0, "", r)
+		x.sendReply(iq, 0, "")
 		return
 	}
 	usr, err := storage.FetchUser(to.Node())
 	if err != nil {
 		log.Error(err)
-		_ = r.Route(iq.InternalServerError())
+		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
 	if usr == nil {
-		_ = r.Route(iq.ItemNotFoundError())
+		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	var secs int
@@ -128,16 +128,16 @@ func (x *LastActivity) sendUserLastActivity(iq *xmpp.IQ, to *jid.JID, r *router.
 			status = st.Text()
 		}
 	}
-	x.sendReply(iq, secs, status, r)
+	x.sendReply(iq, secs, status)
 }
 
-func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string, r *router.Router) {
+func (x *LastActivity) sendReply(iq *xmpp.IQ, secs int, status string) {
 	q := xmpp.NewElementNamespace("query", lastActivityNamespace)
 	q.SetText(status)
 	q.SetAttribute("seconds", strconv.Itoa(secs))
 	res := iq.ResultIQ()
 	res.AppendElement(q)
-	_ = r.Route(res)
+	_ = x.router.Route(res)
 }
 
 func (x *LastActivity) isSubscribedTo(contact *jid.JID, userJID *jid.JID) (bool, error) {

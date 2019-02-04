@@ -33,6 +33,7 @@ type DiscoInfo struct {
 // New returns a disco info IQ handler module.
 func New(router *router.Router) *DiscoInfo {
 	di := &DiscoInfo{
+		router:      router,
 		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
 		actorCh:     make(chan func(), mailboxSize),
@@ -47,52 +48,52 @@ func New(router *router.Router) *DiscoInfo {
 }
 
 // RegisterServerItem registers a new item associated to server domain.
-func (di *DiscoInfo) RegisterServerItem(item Item) {
-	di.srvProvider.registerServerItem(item)
+func (x *DiscoInfo) RegisterServerItem(item Item) {
+	x.srvProvider.registerServerItem(item)
 }
 
 // UnregisterServerItem unregisters a previously registered server item.
-func (di *DiscoInfo) UnregisterServerItem(item Item) {
-	di.srvProvider.unregisterServerItem(item)
+func (x *DiscoInfo) UnregisterServerItem(item Item) {
+	x.srvProvider.unregisterServerItem(item)
 }
 
 // RegisterServerFeature registers a new feature associated to server domain.
-func (di *DiscoInfo) RegisterServerFeature(feature string) {
-	di.srvProvider.registerServerFeature(feature)
+func (x *DiscoInfo) RegisterServerFeature(feature string) {
+	x.srvProvider.registerServerFeature(feature)
 }
 
 // UnregisterServerFeature unregisters a previously registered server feature.
-func (di *DiscoInfo) UnregisterServerFeature(feature string) {
-	di.srvProvider.unregisterServerFeature(feature)
+func (x *DiscoInfo) UnregisterServerFeature(feature string) {
+	x.srvProvider.unregisterServerFeature(feature)
 }
 
 // RegisterAccountFeature registers a new feature associated to all account domains.
-func (di *DiscoInfo) RegisterAccountFeature(feature string) {
-	di.srvProvider.registerAccountFeature(feature)
+func (x *DiscoInfo) RegisterAccountFeature(feature string) {
+	x.srvProvider.registerAccountFeature(feature)
 }
 
 // UnregisterAccountFeature unregisters a previously registered account feature.
-func (di *DiscoInfo) UnregisterAccountFeature(feature string) {
-	di.srvProvider.unregisterAccountFeature(feature)
+func (x *DiscoInfo) UnregisterAccountFeature(feature string) {
+	x.srvProvider.unregisterAccountFeature(feature)
 }
 
 // RegisterProvider registers a new disco info provider associated to a domain.
-func (di *DiscoInfo) RegisterProvider(domain string, provider InfoProvider) {
-	di.mu.Lock()
-	defer di.mu.Unlock()
-	di.providers[domain] = provider
+func (x *DiscoInfo) RegisterProvider(domain string, provider InfoProvider) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.providers[domain] = provider
 }
 
 // UnregisterProvider unregisters a previously registered disco info provider.
-func (di *DiscoInfo) UnregisterProvider(domain string) {
-	di.mu.Lock()
-	defer di.mu.Unlock()
-	delete(di.providers, domain)
+func (x *DiscoInfo) UnregisterProvider(domain string) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	delete(x.providers, domain)
 }
 
 // MatchesIQ returns whether or not an IQ should be
 // processed by the disco info module.
-func (di *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
+func (x *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 	q := iq.Elements().Child("query")
 	if q == nil {
 		return false
@@ -102,48 +103,48 @@ func (di *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
-func (di *DiscoInfo) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
-	di.actorCh <- func() {
-		di.processIQ(iq, r)
+func (x *DiscoInfo) ProcessIQ(iq *xmpp.IQ) {
+	x.actorCh <- func() {
+		x.processIQ(iq)
 	}
 }
 
 // Shutdown shuts down disco info module.
-func (di *DiscoInfo) Shutdown() error {
+func (x *DiscoInfo) Shutdown() error {
 	c := make(chan error)
-	di.shutdownCh <- c
+	x.shutdownCh <- c
 	return <-c
 }
 
 // runs on it's own goroutine
-func (di *DiscoInfo) loop() {
+func (x *DiscoInfo) loop() {
 	for {
 		select {
-		case f := <-di.actorCh:
+		case f := <-x.actorCh:
 			f()
-		case c := <-di.shutdownCh:
+		case c := <-x.shutdownCh:
 			c <- nil
 			return
 		}
 	}
 }
 
-func (di *DiscoInfo) processIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *DiscoInfo) processIQ(iq *xmpp.IQ) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if r.IsLocalHost(toJID.Domain()) {
-		prov = di.srvProvider
+	if x.router.IsLocalHost(toJID.Domain()) {
+		prov = x.srvProvider
 	} else {
-		prov = di.providers[toJID.Domain()]
+		prov = x.providers[toJID.Domain()]
 		if prov == nil {
-			_ = r.Route(iq.ItemNotFoundError())
+			_ = x.router.Route(iq.ItemNotFoundError())
 			return
 		}
 	}
 	if prov == nil {
-		_ = r.Route(iq.ItemNotFoundError())
+		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	q := iq.Elements().Child("query")
@@ -151,23 +152,23 @@ func (di *DiscoInfo) processIQ(iq *xmpp.IQ, r *router.Router) {
 	if q != nil {
 		switch q.Namespace() {
 		case discoInfoNamespace:
-			di.sendDiscoInfo(prov, toJID, fromJID, node, iq, r)
+			x.sendDiscoInfo(prov, toJID, fromJID, node, iq)
 			return
 		case discoItemsNamespace:
-			di.sendDiscoItems(prov, toJID, fromJID, node, iq, r)
+			x.sendDiscoItems(prov, toJID, fromJID, node, iq)
 			return
 		}
 	}
-	_ = r.Route(iq.BadRequestError())
+	_ = x.router.Route(iq.BadRequestError())
 }
 
-func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, r *router.Router) {
+func (x *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ) {
 	features, sErr := prov.Features(toJID, fromJID, node)
 	if sErr != nil {
-		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	} else if len(features) == 0 {
-		_ = r.Route(iq.ItemNotFoundError())
+		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	result := iq.ResultIQ()
@@ -192,20 +193,20 @@ func (di *DiscoInfo) sendDiscoInfo(prov InfoProvider, toJID, fromJID *jid.JID, n
 	}
 	form, sErr := prov.Form(toJID, fromJID, node)
 	if sErr != nil {
-		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	}
 	if form != nil {
 		query.AppendElement(form.Element())
 	}
 	result.AppendElement(query)
-	_ = r.Route(result)
+	_ = x.router.Route(result)
 }
 
-func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ, r *router.Router) {
+func (x *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ) {
 	items, sErr := prov.Items(toJID, fromJID, node)
 	if sErr != nil {
-		_ = r.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
+		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
 	}
 	result := iq.ResultIQ()
@@ -222,5 +223,5 @@ func (di *DiscoInfo) sendDiscoItems(prov InfoProvider, toJID, fromJID *jid.JID, 
 		query.AppendElement(itemEl)
 	}
 	result.AppendElement(query)
-	_ = r.Route(result)
+	_ = x.router.Route(result)
 }

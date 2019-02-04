@@ -86,7 +86,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	iq1.SetToJID(j)
 	iq1.AppendElement(xmpp.NewElementNamespace("blocklist", blockingCommandNamespace))
 
-	x.ProcessIQ(iq1, rtr)
+	x.ProcessIQ(iq1)
 	elem := stm.ReceiveElement()
 	bl := elem.Elements().ChildNamespace("blocklist", blockingCommandNamespace)
 	require.NotNil(t, bl)
@@ -95,7 +95,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	require.True(t, stm.GetBool(xep191RequestedContextKey))
 
 	s.EnableMockedError()
-	x.ProcessIQ(iq1, rtr)
+	x.ProcessIQ(iq1)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
@@ -157,7 +157,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	block := xmpp.NewElementNamespace("block", blockingCommandNamespace)
 	iq.AppendElement(block)
 
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -169,12 +169,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	// TEST BLOCK
 	s.EnableMockedError()
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 
 	// unavailable presence from *@jackal.im/jail
 	elem = stm1.ReceiveElement()
@@ -225,12 +225,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	iq.AppendElement(unblock)
 
 	s.EnableMockedError()
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 
 	// receive available presence from *@jackal.im/jail
 	elem = stm1.ReceiveElement()
@@ -269,7 +269,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	unblock = xmpp.NewElementNamespace("unblock", blockingCommandNamespace)
 	iq.AppendElement(unblock)
 
-	x.ProcessIQ(iq, rtr)
+	x.ProcessIQ(iq)
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 

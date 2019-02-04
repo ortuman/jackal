@@ -30,7 +30,7 @@ func TestXEP0092(t *testing.T) {
 	r.Bind(stm)
 
 	cfg := Config{}
-	x := New(&cfg, nil)
+	x := New(&cfg, nil, r)
 	defer x.Shutdown()
 
 	// test MatchesIQ
@@ -49,13 +49,13 @@ func TestXEP0092(t *testing.T) {
 	require.True(t, x.MatchesIQ(iq))
 
 	qVer.AppendElement(xmpp.NewElementName("version"))
-	x.ProcessIQ(iq, r)
+	x.ProcessIQ(iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// get version
 	qVer.ClearElements()
-	x.ProcessIQ(iq, r)
+	x.ProcessIQ(iq)
 	elem = stm.ReceiveElement()
 	ver := elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, "jackal", ver.Elements().Child("name").Text())
@@ -65,10 +65,10 @@ func TestXEP0092(t *testing.T) {
 	// show OS
 	cfg.ShowOS = true
 
-	x = New(&cfg, nil)
+	x = New(&cfg, nil, r)
 	defer x.Shutdown()
 
-	x.ProcessIQ(iq, r)
+	x.ProcessIQ(iq)
 	elem = stm.ReceiveElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, osString, ver.Elements().Child("os").Text())

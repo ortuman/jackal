@@ -22,7 +22,7 @@ import (
 func TestXEP0054_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil)
+	x := New(nil, nil)
 	defer x.Shutdown()
 
 	// test MatchesIQ
@@ -58,10 +58,10 @@ func TestXEP0054_Set(t *testing.T) {
 	iq.SetToJID(j.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x := New(nil)
+	x := New(nil, r)
 	defer x.Shutdown()
 
-	x.ProcessIQ(iq, r)
+	x.ProcessIQ(iq)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -74,7 +74,7 @@ func TestXEP0054_Set(t *testing.T) {
 	iq2.SetToJID(j.ToBareJID())
 	iq2.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 
-	x.ProcessIQ(iq2, r)
+	x.ProcessIQ(iq2)
 	elem = stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -91,7 +91,7 @@ func TestXEP0054_SetError(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j)
 	r.Bind(stm)
 
-	x := New(nil)
+	x := New(nil, r)
 	defer x.Shutdown()
 
 	// set other user vCard...
@@ -100,7 +100,7 @@ func TestXEP0054_SetError(t *testing.T) {
 	iq.SetToJID(j2.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x.ProcessIQ(iq, r)
+	x.ProcessIQ(iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -113,7 +113,7 @@ func TestXEP0054_SetError(t *testing.T) {
 	iq2.SetToJID(j.ToBareJID())
 	iq2.AppendElement(testVCard())
 
-	x.ProcessIQ(iq2, r)
+	x.ProcessIQ(iq2)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 }
@@ -133,10 +133,10 @@ func TestXEP0054_Get(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil)
+	x := New(nil, r)
 	defer x.Shutdown()
 
-	x.ProcessIQ(iqSet, r)
+	x.ProcessIQ(iqSet)
 	_ = stm.ReceiveElement() // wait until set...
 
 	iqGetID := uuid.New()
@@ -145,7 +145,7 @@ func TestXEP0054_Get(t *testing.T) {
 	iqGet.SetToJID(j.ToBareJID())
 	iqGet.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 
-	x.ProcessIQ(iqGet, r)
+	x.ProcessIQ(iqGet)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	vCard := elem.Elements().ChildNamespace("vCard", vCardNamespace)
@@ -159,7 +159,7 @@ func TestXEP0054_Get(t *testing.T) {
 	iqGet2.SetToJID(j2.ToBareJID())
 	iqGet2.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 
-	x.ProcessIQ(iqGet2, r)
+	x.ProcessIQ(iqGet2)
 	elem = stm.ReceiveElement()
 	require.NotNil(t, elem)
 	vCard = elem.Elements().ChildNamespace("vCard", vCardNamespace)
@@ -180,10 +180,10 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil)
+	x := New(nil, r)
 	defer x.Shutdown()
 
-	x.ProcessIQ(iqSet, r)
+	x.ProcessIQ(iqSet)
 	_ = stm.ReceiveElement() // wait until set...
 
 	iqGetID := uuid.New()
@@ -194,7 +194,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	vCard.AppendElement(xmpp.NewElementName("FN"))
 	iqGet.AppendElement(vCard)
 
-	x.ProcessIQ(iqGet, r)
+	x.ProcessIQ(iqGet)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -207,7 +207,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	s.EnableMockedError()
 	defer s.DisableMockedError()
 
-	x.ProcessIQ(iqGet2, r)
+	x.ProcessIQ(iqGet2)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 }

@@ -63,9 +63,9 @@ func (x *BlockingCommand) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a blocking command IQ
 // taking according actions over the associated stream.
-func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
-		stm := r.UserStream(iq.FromJID())
+		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
 		}

@@ -36,14 +36,16 @@ type Config struct {
 // Version represents a version module.
 type Version struct {
 	cfg        *Config
+	router     *router.Router
 	actorCh    chan func()
 	shutdownCh chan chan error
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo) *Version {
+func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Version {
 	v := &Version{
 		cfg:        config,
+		router:     router,
 		actorCh:    make(chan func(), mailboxSize),
 		shutdownCh: make(chan chan error),
 	}
@@ -62,9 +64,9 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
-func (x *Version) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *Version) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
-		x.processIQ(iq, r)
+		x.processIQ(iq)
 	}
 }
 
@@ -88,16 +90,16 @@ func (x *Version) loop() {
 	}
 }
 
-func (x *Version) processIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *Version) processIQ(iq *xmpp.IQ) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q == nil || q.Elements().Count() != 0 {
-		_ = r.Route(iq.BadRequestError())
+		_ = x.router.Route(iq.BadRequestError())
 		return
 	}
-	x.sendSoftwareVersion(iq, r)
+	x.sendSoftwareVersion(iq)
 }
 
-func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, r *router.Router) {
+func (x *Version) sendSoftwareVersion(iq *xmpp.IQ) {
 	userJID := iq.FromJID()
 	username := userJID.Node()
 	resource := userJID.Resource()
@@ -120,5 +122,5 @@ func (x *Version) sendSoftwareVersion(iq *xmpp.IQ, r *router.Router) {
 		query.AppendElement(os)
 	}
 	result.AppendElement(query)
-	_ = r.Route(result)
+	_ = x.router.Route(result)
 }

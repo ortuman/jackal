@@ -58,6 +58,7 @@ type ping struct {
 // Ping represents a ping server stream module.
 type Ping struct {
 	cfg         *Config
+	router      *router.Router
 	pings       map[string]*ping
 	activePings map[string]*ping
 	actorCh     chan func()
@@ -65,9 +66,10 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo) *Ping {
+func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Ping {
 	p := &Ping{
 		cfg:         config,
+		router:      router,
 		pings:       make(map[string]*ping),
 		activePings: make(map[string]*ping),
 		actorCh:     make(chan func(), mailboxSize),
@@ -88,9 +90,9 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
-func (x *Ping) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *Ping) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
-		stm := r.UserStream(iq.FromJID())
+		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
 		}

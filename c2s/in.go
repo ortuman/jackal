@@ -389,7 +389,7 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 		iq := elem.(*xmpp.IQ)
 		if reg := s.mods.Register; reg != nil && reg.MatchesIQ(iq) {
 			if s.IsSecured() {
-				reg.ProcessIQ(iq, s.router)
+				reg.ProcessIQ(iq)
 			} else {
 				// Channel isn't safe enough to enable a password change
 				s.writeElement(iq.NotAuthorizedError())
@@ -459,7 +459,7 @@ func (s *inStream) handleSessionStarted(elem xmpp.XElement) {
 		switch stanza := stanza.(type) {
 		case *xmpp.IQ:
 			if di := s.mods.DiscoInfo; di != nil && di.MatchesIQ(stanza) {
-				di.ProcessIQ(stanza, s.router)
+				di.ProcessIQ(stanza)
 				return
 			}
 			break

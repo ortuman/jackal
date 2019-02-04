@@ -39,7 +39,7 @@ type IQHandler interface {
 
 	// ProcessIQ processes a module IQ taking according actions
 	// over the associated stream.
-	ProcessIQ(iq *xmpp.IQ, router *router.Router)
+	ProcessIQ(iq *xmpp.IQ)
 }
 
 // Modules structure keeps reference to a set of preconfigured modules.
@@ -85,28 +85,28 @@ func New(config *Config, router *router.Router) *Modules {
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := config.Enabled["private"]; ok {
-		m.Private = xep0049.New()
+		m.Private = xep0049.New(router)
 		m.iqHandlers = append(m.iqHandlers, m.Private)
 		m.all = append(m.all, m.Private)
 	}
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := config.Enabled["vcard"]; ok {
-		m.VCard = xep0054.New(m.DiscoInfo)
+		m.VCard = xep0054.New(m.DiscoInfo, router)
 		m.iqHandlers = append(m.iqHandlers, m.VCard)
 		m.all = append(m.all, m.VCard)
 	}
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := config.Enabled["registration"]; ok {
-		m.Register = xep0077.New(&config.Registration, m.DiscoInfo)
+		m.Register = xep0077.New(&config.Registration, m.DiscoInfo, router)
 		m.iqHandlers = append(m.iqHandlers, m.Register)
 		m.all = append(m.all, m.Register)
 	}
 
 	// XEP-0092: Software Version (https://xmpp.org/extensions/xep-0092.html)
 	if _, ok := config.Enabled["version"]; ok {
-		m.Version = xep0092.New(&config.Version, m.DiscoInfo)
+		m.Version = xep0092.New(&config.Version, m.DiscoInfo, router)
 		m.iqHandlers = append(m.iqHandlers, m.Version)
 		m.all = append(m.all, m.Version)
 	}
@@ -126,7 +126,7 @@ func New(config *Config, router *router.Router) *Modules {
 
 	// XEP-0199: XMPP Ping (https://xmpp.org/extensions/xep-0199.html)
 	if _, ok := config.Enabled["ping"]; ok {
-		m.Ping = xep0199.New(&config.Ping, m.DiscoInfo)
+		m.Ping = xep0199.New(&config.Ping, m.DiscoInfo, router)
 		m.iqHandlers = append(m.iqHandlers, m.Ping)
 		m.all = append(m.all, m.Ping)
 	}
@@ -140,7 +140,7 @@ func (m *Modules) ProcessIQ(iq *xmpp.IQ) {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
-		handler.ProcessIQ(iq, m.router)
+		handler.ProcessIQ(iq)
 		return
 	}
 

@@ -32,14 +32,16 @@ type Config struct {
 // Register represents an in-band server stream module.
 type Register struct {
 	cfg        *Config
+	router     *router.Router
 	actorCh    chan func()
 	shutdownCh chan chan error
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, disco *xep0030.DiscoInfo) *Register {
+func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Register {
 	r := &Register{
 		cfg:        config,
+		router:     router,
 		actorCh:    make(chan func(), mailboxSize),
 		shutdownCh: make(chan chan error),
 	}
@@ -58,9 +60,9 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes an in-band registration IQ
 // taking according actions over the associated stream.
-func (x *Register) ProcessIQ(iq *xmpp.IQ, r *router.Router) {
+func (x *Register) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
-		if stm := r.UserStream(iq.FromJID()); stm != nil {
+		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
 			x.processIQ(iq, stm)
 		}
 	}
