@@ -74,22 +74,22 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
 	}
 
-	// Initialize stream context
+	// initialize stream context
 	secured := !(config.transport.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
-	// Initialize authenticators
+	// initialize authenticators
 	s.initializeAuthenticators()
 
-	// Start c2s session
+	// start c2s session
 	s.restartSession()
 
 	if config.connectTimeout > 0 {
 		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
 	go s.loop()
-	go s.doRead() // Start reading...
+	go s.doRead() // start reading...
 
 	return s
 }
@@ -285,18 +285,18 @@ func (s *inStream) handleElement(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleConnecting(elem xmpp.XElement) {
-	// Cancel connection timeout timer
+	// cancel connection timeout timer
 	if s.connectTm != nil {
 		s.connectTm.Stop()
 		s.connectTm = nil
 	}
-	// Assign stream domain if not set yet
+	// assign stream domain if not set yet
 	if len(s.Domain()) == 0 {
 		j, _ := jid.New("", elem.To(), "", true)
 		s.setJID(j)
 	}
 
-	// Open stream session
+	// open stream session
 	s.sess.SetJID(s.JID())
 
 	features := xmpp.NewElementName("stream:features")
@@ -325,7 +325,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, startTLS)
 	}
 
-	// Attach SASL mechanisms
+	// attach SASL mechanisms
 	shouldOfferSASL := !isSocketTr || (isSocketTr && s.IsSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
@@ -339,7 +339,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 		features = append(features, mechanisms)
 	}
 
-	// Allow In-band registration over encrypted stream only
+	// allow In-band registration over encrypted stream only
 	allowRegistration := s.IsSecured()
 
 	if reg := s.mods.Register; reg != nil && allowRegistration {
@@ -354,7 +354,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 
 	isSocketTr := s.cfg.transport.Type() == transport.Socket
 
-	// Attach compression feature
+	// attach compression feature
 	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
 
 	if !s.isCompressed() && compressionAvailable {
@@ -368,7 +368,7 @@ func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	bind.AppendElement(xmpp.NewElementName("required"))
 	features = append(features, bind)
 
-	// [rfc6121] for backward compatibility we'll offer offer session feature
+	// [rfc6121] offer session feature for backward compatibility
 	sessElem := xmpp.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
 	features = append(features, sessElem)
 
@@ -393,13 +393,13 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 			if s.IsSecured() {
 				reg.ProcessIQ(iq)
 			} else {
-				// Channel isn't safe enough to enable a password change
+				// channel isn't safe enough to enable a password change
 				s.writeElement(iq.NotAuthorizedError())
 			}
 			return
 
 		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
-			// Don't allow non-SASL authentication
+			// don't allow non-SASL authentication
 			s.writeElement(iq.ServiceUnavailableError())
 			return
 		}
@@ -446,7 +446,7 @@ func (s *inStream) handleAuthenticated(elem xmpp.XElement) {
 }
 
 func (s *inStream) handleBound(elem xmpp.XElement) {
-	// Reset ping timer deadline
+	// reset ping timer deadline
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -534,15 +534,15 @@ func (s *inStream) startAuthentication(elem xmpp.XElement) {
 		return
 	}
 	mechanism := elem.Attributes().Get("mechanism")
-	for _, authr := range s.authenticators {
-		if authr.Mechanism() == mechanism {
-			if err := s.continueAuthentication(elem, authr); err != nil {
+	for _, authenticator := range s.authenticators {
+		if authenticator.Mechanism() == mechanism {
+			if err := s.continueAuthentication(elem, authenticator); err != nil {
 				return
 			}
-			if authr.Authenticated() {
-				s.finishAuthentication(authr.Username())
+			if authenticator.Authenticated() {
+				s.finishAuthentication(authenticator.Username())
 			} else {
-				s.activeAuth = authr
+				s.activeAuth = authenticator
 				s.setState(authenticating)
 			}
 			return
@@ -601,7 +601,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	} else {
 		resource = uuid.New()
 	}
-	// Try binding...
+	// try binding...
 	var stm stream.C2S
 	streams := s.router.UserStreams(s.JID().Node())
 	for _, s := range streams {
@@ -612,13 +612,13 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	if stm != nil {
 		switch s.cfg.resourceConflict {
 		case Override:
-			// Override the resource with a server-generated resourcepart...
+			// override the resource with a server-generated resourcepart...
 			resource = uuid.New()
 		case Replace:
-			// Terminate the session of the currently connected client...
+			// terminate the session of the currently connected client...
 			stm.Disconnect(streamerror.ErrResourceConstraint)
 		default:
-			// Disallow resource binding attempt...
+			// disallow resource binding attempt...
 			s.writeElement(iq.ConflictError())
 			return
 		}
@@ -650,7 +650,7 @@ func (s *inStream) bindResource(iq *xmpp.IQ) {
 	s.setState(bound)
 	s.writeElement(result)
 
-	// Start pinging...
+	// start pinging...
 	if p := s.mods.Ping; p != nil {
 		p.SchedulePing(s)
 	}
@@ -685,7 +685,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		case router.ErrFailedRemoteConnect:
 			s.writeElement(iq.RemoteServerNotFoundError())
 		case router.ErrBlockedJID:
-			// Destination user is a blocked JID
+			// destination user is a blocked JID
 			if iq.IsGet() || iq.IsSet() {
 				s.writeElement(iq.ServiceUnavailableError())
 			}
@@ -702,15 +702,15 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
 
-	// Update presence
+	// update presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 	}
-	// Deliver presence to roster module
+	// deliver presence to roster module
 	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
-	// Deliver offline messages
+	// deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
 		if off := s.mods.Offline; off != nil {
 			off.DeliverOfflineMessages(s)
@@ -727,7 +727,7 @@ sendMessage:
 	case nil:
 		break
 	case router.ErrResourceNotFound:
-		// Treat the stanza as if it were addressed to <node@domain>
+		// treat the stanza as if it were addressed to <node@domain>
 		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
 		goto sendMessage
 	case router.ErrNotAuthenticated:
@@ -843,11 +843,11 @@ func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 }
 
 func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
-	// Stop pinging...
+	// stop pinging...
 	if p := s.mods.Ping; p != nil {
 		p.CancelPing(s)
 	}
-	// Send 'unavailable' presence when disconnecting
+	// send 'unavailable' presence when disconnecting
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
 		if r := s.mods.Roster; r != nil {
 			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
@@ -856,11 +856,11 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	if closeSession {
 		s.sess.Close()
 	}
-	// Unregister stream
+	// unregister stream
 	if unbind {
 		s.router.Unbind(s.JID())
 	}
-	// Notify disconnection
+	// notify disconnection
 	if s.cfg.onDisconnect != nil {
 		s.cfg.onDisconnect(s)
 	}
@@ -889,7 +889,7 @@ func (s *inStream) setContextValue(key string, value interface{}) {
 	defer s.contextMu.Unlock()
 	s.context[key] = value
 
-	// Notify the whole roster about the context update.
+	// notify the whole roster about the context update.
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdateContext,
@@ -907,7 +907,7 @@ func (s *inStream) setPresence(presence *xmpp.Presence) {
 	defer s.mu.Unlock()
 	s.presence = presence
 
-	// Notify the whole roster about the presence update.
+	// notify the whole roster about the presence update.
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdatePresence,
