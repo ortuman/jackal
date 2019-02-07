@@ -391,7 +391,7 @@ func (s *inStream) handleConnected(elem xmpp.XElement) {
 		iq := elem.(*xmpp.IQ)
 		if reg := s.mods.Register; reg != nil && reg.MatchesIQ(iq) {
 			if s.IsSecured() {
-				reg.ProcessIQ(iq)
+				reg.ProcessIQWithStream(iq, s)
 			} else {
 				// channel isn't safe enough to enable a password change
 				s.writeElement(iq.NotAuthorizedError())

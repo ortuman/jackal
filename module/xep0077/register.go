@@ -58,13 +58,21 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.Elements().ChildNamespace("query", registerNamespace) != nil
 }
 
-// ProcessIQ processes an in-band registration IQ
-// taking according actions over the associated stream.
+// ProcessIQ processes an in-band registration IQ taking according actions over
+// the associated stream.
 func (x *Register) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
 		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
 			x.processIQ(iq, stm)
 		}
+	}
+}
+
+// ProcessIQWithStream processes an in-band registration IQ taking according
+// actions over a referenced stream.
+func (x *Register) ProcessIQWithStream(iq *xmpp.IQ, stm stream.C2S) {
+	x.actorCh <- func() {
+		x.processIQ(iq, stm)
 	}
 }
 
