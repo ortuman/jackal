@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
+	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
@@ -52,6 +53,7 @@ type Modules struct {
 	VCard        *xep0054.VCard
 	Register     *xep0077.Register
 	Version      *xep0092.Version
+	Pep          *xep0163.Pep
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
 
@@ -115,6 +117,13 @@ func New(config *Config, router *router.Router) *Modules {
 	if _, ok := config.Enabled["offline"]; ok {
 		m.Offline = offline.New(&config.Offline, m.DiscoInfo, router)
 		m.all = append(m.all, m.Offline)
+	}
+
+	// XEP-0163: Personal Eventing Protocol (https://xmpp.org/extensions/xep-0163.html)
+	if _, ok := config.Enabled["pep"]; ok {
+		m.Pep = xep0163.New(m.DiscoInfo, router)
+		m.iqHandlers = append(m.iqHandlers, m.Pep)
+		m.all = append(m.all, m.Pep)
 	}
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
