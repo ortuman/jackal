@@ -11,6 +11,8 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+const pepNamespace = "http://jabber.org/protocol/pubsub"
+
 const mailboxSize = 2048
 
 var discoInfoFeatures = []string{
@@ -41,7 +43,7 @@ func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
 	}
 	go p.loop()
 
-	// register account features
+	// register account identity and features
 	if disco != nil {
 		for _, feature := range discoInfoFeatures {
 			disco.RegisterAccountFeature(feature)
@@ -50,14 +52,12 @@ func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
 	return p
 }
 
-// MatchesIQ returns whether or not an IQ should be
-// processed by the version module.
+// MatchesIQ returns whether or not an IQ should be processed by the PEP module.
 func (x *Pep) MatchesIQ(iq *xmpp.IQ) bool {
-	return false
+	return iq.Elements().ChildNamespace("pubsub", pepNamespace) != nil
 }
 
-// ProcessIQ processes a version IQ taking according actions
-// over the associated stream.
+// ProcessIQ processes a version IQ taking according actions over the associated stream.
 func (x *Pep) ProcessIQ(iq *xmpp.IQ) {
 	x.actorCh <- func() {
 		x.processIQ(iq)
