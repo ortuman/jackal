@@ -43,7 +43,7 @@ func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
 	}
 	go p.loop()
 
-	// register account features
+	// register account identity and features
 	if disco != nil {
 		for _, feature := range discoInfoFeatures {
 			disco.RegisterAccountFeature(feature)
