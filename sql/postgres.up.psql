@@ -149,3 +149,66 @@ CREATE TABLE IF NOT EXISTS offline_messages (
 );
 
 CREATE INDEX IF NOT EXISTS i_offline_messages_username ON offline_messages(username);
+
+-- pubsub_nodes
+
+CREATE TABLE IF NOT EXISTS pubsub_nodes (
+    id              BIGSERIAL,
+    host            VARCHAR(512) NOT NULL,
+    name            TEXT NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_nodes_host_name ON pubsub_nodes(host, name);
+
+SELECT enable_updated_at('pubsub_nodes');
+
+-- pubsub_node_options
+
+CREATE TABLE IF NOT EXISTS pubsub_node_options (
+    node_id         BIGINT NOT NULL,
+    name            TEXT NOT NULL,
+    value           TEXT NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_node_options_node_id ON pubsub_node_options(node_id);
+
+SELECT enable_updated_at('pubsub_node_options');
+
+-- pubsub_affiliations
+
+CREATE TABLE IF NOT EXISTS pubsub_affiliations (
+    node_id          BIGINT NOT NULL,
+    jid              TEXT NOT NULL,
+    affiliation      TEXT NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_affiliations_jid ON pubsub_affiliations(jid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_affiliations_node_id_jid ON pubsub_affiliations(node_id, jid);
+
+SELECT enable_updated_at('pubsub_affiliations');
+
+-- pubsub_items
+
+CREATE TABLE IF NOT EXISTS pubsub_items (
+    node_id          BIGINT NOT NULL,
+    item_id          TEXT NOT NULL,
+    payload          TEXT NOT NULL,
+    publisher        TEXT NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_items_item_id ON pubsub_items(item_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_items_node_id_item_id ON pubsub_items(node_id, item_id);
+
+SELECT enable_updated_at('pubsub_items');
