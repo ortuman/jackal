@@ -83,16 +83,28 @@ CREATE TABLE IF NOT EXISTS offline_messages (
 
 CREATE INDEX i_offline_messages_username ON offline_messages(username);
 
-CREATE TABLE IF NOT EXISTS pep_nodes (
-    jid VARCHAR(512) NOT NULL,
-    last_published_item TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS pubsub_nodes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    host VARCHAR(512) NOT NULL,
+    name TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS pep_subscriptions (
-    updated_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL
+CREATE UNIQUE INDEX i_pubsub_nodes_jid_node ON pubsub_nodes(host(256), name(512));
+
+CREATE TABLE pubsub_node_options (
+  node_id BIGINT NOT NULL,
+  name TEXT NOT NULL,
+  value TEXT NOT NULL
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE INDEX i_pubsub_node_options_node_id ON pubsub_node_options(node_id);
+
+CREATE TABLE pubsub_affiliations (
+  node_id BIGINT,
+  jid TEXT NOT NULL,
+  affiliation TEXT NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- pubsub_nodes
@@ -145,3 +157,4 @@ CREATE TABLE IF NOT EXISTS pubsub_items (
     UNIQUE INDEX i_pubsub_items_node_id_item_id (node_id, item_id(36))
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
