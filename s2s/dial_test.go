@@ -36,8 +36,8 @@ func TestS2SDial(t *testing.T) {
 		return "", nil, mockedErr
 	}
 	out, err := d.dial("jackal.im", "jabber.org")
-	require.Nil(t, out)
-	require.Equal(t, mockedErr, err)
+	require.NotNil(t, out)
+	require.Nil(t, err)
 
 	// dialer error...
 	d.srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {

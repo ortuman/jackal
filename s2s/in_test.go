@@ -25,7 +25,6 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -233,26 +232,6 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
 	cfg, conn := tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{router: r}
-	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
-		return "", nil, errors.New("mocked dialer error")
-	}
-	stm = newInStream(cfg, &module.Modules{}, r)
-
-	tUtilInStreamOpen(conn)
-	_ = conn.outboundRead() // read stream opening...
-	_ = conn.outboundRead() // read stream features...
-	atomic.StoreUint32(&stm.secured, 1)
-	atomic.StoreUint32(&stm.authenticated, 1)
-
-	conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
-	elem = conn.outboundRead()
-	require.Equal(t, "db:result", elem.Name())
-	require.Equal(t, xmpp.ErrorType, elem.Type())
-	require.NotNil(t, elem.Elements().Child("error"))
-	require.NotNil(t, elem.Elements().Child("error").Elements().Child("remote-server-not-found"))
-
-	cfg, conn = tUtilInStreamDefaultConfig(t, false)
 	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}, router: r}
 	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
