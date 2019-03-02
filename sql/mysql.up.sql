@@ -123,4 +123,3 @@ CREATE TABLE pubsub_items (
 CREATE INDEX i_pubsub_items_item_id ON pubsub_items(item_id(36));
 
 CREATE UNIQUE INDEX i_pubsub_items_node_id_item_id ON pubsub_items(node_id, item_id(36));
-:x
