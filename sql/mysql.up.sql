@@ -91,20 +91,20 @@ CREATE TABLE IF NOT EXISTS pubsub_nodes (
     created_at DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE UNIQUE INDEX i_pubsub_nodes_jid_node ON pubsub_nodes(host(256), name(512));
+CREATE UNIQUE INDEX i_pubsub_nodes_host_name ON pubsub_nodes(host(256), name(512));
 
 CREATE TABLE pubsub_node_options (
-  node_id BIGINT NOT NULL,
-  name TEXT NOT NULL,
-  value TEXT NOT NULL
+    node_id BIGINT NOT NULL,
+    name TEXT NOT NULL,
+    value TEXT NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_pubsub_node_options_node_id ON pubsub_node_options(node_id);
 
 CREATE TABLE pubsub_affiliations (
-  node_id BIGINT,
-  jid TEXT NOT NULL,
-  affiliation TEXT NOT NULL
+    node_id BIGINT,
+    jid TEXT NOT NULL,
+    affiliation TEXT NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_pubsub_affiliations_jid ON pubsub_affiliations(jid(512));
@@ -112,14 +112,15 @@ CREATE INDEX i_pubsub_affiliations_jid ON pubsub_affiliations(jid(512));
 CREATE UNIQUE INDEX i_pubsub_affiliations_node_id_jid ON pubsub_affiliations(node_id, jid(512));
 
 CREATE TABLE pubsub_items (
-  node_id BIGINT,
-  item_id TEXT NOT NULL,
-  payload TEXT NOT NULL,
-  publisher TEXT NOT NULL,
-  updated_at DATETIME NOT NULL,
-  created_at DATETIME NOT NULL
+    node_id BIGINT,
+    item_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    publisher TEXT NOT NULL,
+    updated_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE INDEX i_pubsub_items_item_id ON pubsub_items(item_id(36));
 
 CREATE UNIQUE INDEX i_pubsub_items_node_id_item_id ON pubsub_items(node_id, item_id(36));
+:x
