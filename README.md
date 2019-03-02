@@ -36,7 +36,7 @@ jackal supports the following features:
 
 ### Getting Started
 
-To start using jackal, install Go 1.11+ and run the following commands:
+To start using jackal, install Go 1.12+ and run the following commands:
 
 ```bash
 $ go get -d github.com/ortuman/jackal
