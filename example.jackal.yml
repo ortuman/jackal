@@ -10,9 +10,16 @@ logger:
   log_path: jackal.log
 
 storage:
-  type: mysql
-  mysql:
-    host: 127.0.0.1:3306
+  type: pgsql
+#  type: mysql
+#  mysql:
+#    host: 127.0.0.1:3306
+#    user: jackal
+#    password: password
+#    database: jackal
+#    pool_size: 16
+  pgsql:
+    host: 127.0.0.1:5432
     user: jackal
     password: password
     database: jackal

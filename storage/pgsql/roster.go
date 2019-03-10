@@ -7,6 +7,7 @@ package pgsql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
@@ -27,19 +28,38 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
-
-		groups := strings.Join(ri.Groups, ";")
+		groupsBytes, err := json.Marshal(ri.Groups)
+		if err != nil {
+			return err
+		}
 
 		verExpr := sq.Expr("(SELECT ver FROM roster_versions WHERE username = ?)", ri.Username)
-
 		q = sq.Insert("roster_items").
 			Columns("username", "jid", "name", "subscription", "groups", "ask", "ver").
-			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groups, ri.Ask, verExpr).
+			Values(ri.Username, ri.JID, ri.Name, ri.Subscription, groupsBytes, ri.Ask, verExpr).
 			Suffix("ON CONFLICT (username, jid) DO UPDATE SET name = $3, subscription = $4, groups = $5, ask = $6, ver = roster_items.ver + 1")
-
-		_, err := q.RunWith(tx).Exec()
-
-		return err
+		_, err = q.RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete previous groups
+		_, err = sq.Delete("roster_groups").
+			Where(sq.And{sq.Eq{"username": ri.Username}, sq.Eq{"jid": ri.JID}}).
+			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// insert groups
+		for _, group := range ri.Groups {
+			q = sq.Insert("roster_groups").
+				Columns("username", "jid", `"group"`, "created_at", "updated_at").
+				Values(ri.Username, ri.JID, group, nowExpr, nowExpr)
+			_, err := q.RunWith(tx).Exec()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return rostermodel.Version{}, err
@@ -58,7 +78,15 @@ func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, e
 		if _, err := q.RunWith(tx).Exec(); err != nil {
 			return err
 		}
-		_, err := sq.Delete("roster_items").
+		// delete groups
+		_, err := sq.Delete("roster_groups").
+			Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}}).
+			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete items
+		_, err = sq.Delete("roster_items").
 			Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}}).
 			RunWith(tx).Exec()
 		return err
@@ -210,11 +238,15 @@ func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, sca
 }
 
 func (s *Storage) scanRosterItemEntity(ri *rostermodel.Item, scanner rowScanner) error {
-	var groups string
-	if err := scanner.Scan(&ri.Username, &ri.JID, &ri.Name, &ri.Subscription, &groups, &ri.Ask, &ri.Ver); err != nil {
+	var groupsBytes string
+	if err := scanner.Scan(&ri.Username, &ri.JID, &ri.Name, &ri.Subscription, &groupsBytes, &ri.Ask, &ri.Ver); err != nil {
 		return err
 	}
-	ri.Groups = strings.Split(groups, ";")
+	if len(groupsBytes) > 0 {
+		if err := json.NewDecoder(strings.NewReader(groupsBytes)).Decode(&ri.Groups); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

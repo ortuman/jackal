@@ -7,6 +7,7 @@ package pgsql
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -16,23 +17,24 @@ import (
 )
 
 func TestInsertRosterItem(t *testing.T) {
-	g := []string{"general", "friends"}
+	groups := []string{"Buddies", "Family"}
 	ri := rostermodel.Item{
 		Username:     "user",
-		JID:          "contact",
+		JID:          "contact@jid",
 		Name:         "a name",
 		Subscription: "both",
 		Ask:          false,
 		Ver:          1,
-		Groups:       g,
+		Groups:       groups,
 	}
 
+	groupsBytes, _ := json.Marshal(groups)
 	args := []driver.Value{
 		ri.Username,
 		ri.JID,
 		ri.Name,
 		ri.Subscription,
-		"general;friends",
+		groupsBytes,
 		ri.Ask,
 		ri.Username,
 	}
@@ -47,6 +49,18 @@ func TestInsertRosterItem(t *testing.T) {
 
 	mock.ExpectExec("INSERT INTO roster_items (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(args...).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM roster_groups (.+)").
+		WithArgs("user", "contact@jid").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	mock.ExpectExec("INSERT INTO roster_groups (.+)").
+		WithArgs("user", "contact@jid", "Buddies").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec("INSERT INTO roster_groups (.+)").
+		WithArgs("user", "contact@jid", "Family").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.ExpectCommit()
@@ -65,6 +79,8 @@ func TestDeleteRosterItem(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM roster_groups (.+)").
+		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM roster_items (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()

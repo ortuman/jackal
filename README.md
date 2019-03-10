@@ -66,7 +66,7 @@ Create 'jackal' database (using previously created password).
 echo "CREATE DATABASE jackal;" | mysql -h localhost -u jackal -p
 ```
 
-Download lastest version of the [MySQL schema](./sql/mysql.sql) from jackal Github repository.
+Download lastest version of the [MySQL schema](sql/mysql.up.sql) from jackal Github repository.
 
 ```sh
 wget https://raw.githubusercontent.com/ortuman/jackal/master/sql/mysql.sql
