@@ -63,11 +63,11 @@ func TestInsertRosterItem(t *testing.T) {
 		WithArgs("user", "contact@jid", "Family").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	mock.ExpectCommit()
-
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
 		WithArgs(ri.Username).
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
+
+	mock.ExpectCommit()
 
 	_, err := s.InsertOrUpdateRosterItem(&ri)
 	require.Nil(t, err)
@@ -83,10 +83,10 @@ func TestDeleteRosterItem(t *testing.T) {
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM roster_items (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
 		WithArgs("user").
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
+	mock.ExpectCommit()
 
 	_, err := s.DeleteRosterItem("user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())

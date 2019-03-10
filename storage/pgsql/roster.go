@@ -19,6 +19,8 @@ import (
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
 func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+	var ver rostermodel.Version
+
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username").
@@ -59,16 +61,20 @@ func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Ve
 				return err
 			}
 		}
-		return nil
+		// fetch new roster version
+		ver, err = fetchRosterVer(ri.Username, tx)
+		return err
 	})
 	if err != nil {
 		return rostermodel.Version{}, err
 	}
-	return s.fetchRosterVer(ri.Username)
+	return ver, nil
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
 func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
+	var ver rostermodel.Version
+
 	err := s.inTransaction(func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username").
@@ -89,12 +95,18 @@ func (s *Storage) DeleteRosterItem(username, jid string) (rostermodel.Version, e
 		_, err = sq.Delete("roster_items").
 			Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}}).
 			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+
+		// fetch new roster version
+		ver, err = fetchRosterVer(username, tx)
 		return err
 	})
 	if err != nil {
 		return rostermodel.Version{}, err
 	}
-	return s.fetchRosterVer(username)
+	return ver, nil
 }
 
 // FetchRosterItems retrieves from storage all roster item entities
@@ -115,7 +127,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 	if err != nil {
 		return nil, rostermodel.Version{}, err
 	}
-	ver, err := s.fetchRosterVer(username)
+	ver, err := fetchRosterVer(username, s.db)
 	if err != nil {
 		return nil, rostermodel.Version{}, err
 	}
@@ -205,22 +217,6 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 	return err
 }
 
-func (s *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
-	q := sq.Select("COALESCE(MAX(ver), 0)", "COALESCE(MAX(last_deletion_ver), 0)").
-		From("roster_versions").
-		Where(sq.Eq{"username": username})
-
-	var ver rostermodel.Version
-	row := q.RunWith(s.db).QueryRow()
-	err := row.Scan(&ver.Ver, &ver.DeletionVer)
-	switch err {
-	case nil:
-		return ver, nil
-	default:
-		return rostermodel.Version{}, err
-	}
-}
-
 func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {
 	var presenceXML string
 	if err := scanner.Scan(&rn.Contact, &rn.JID, &presenceXML); err != nil {
@@ -260,4 +256,20 @@ func (s *Storage) scanRosterItemEntities(scanner rowsScanner) ([]rostermodel.Ite
 		ret = append(ret, ri)
 	}
 	return ret, nil
+}
+
+func fetchRosterVer(username string, runner sq.BaseRunner) (rostermodel.Version, error) {
+	q := sq.Select("COALESCE(MAX(ver), 0)", "COALESCE(MAX(last_deletion_ver), 0)").
+		From("roster_versions").
+		Where(sq.Eq{"username": username})
+
+	var ver rostermodel.Version
+	row := q.RunWith(runner).QueryRow()
+	err := row.Scan(&ver.Ver, &ver.DeletionVer)
+	switch err {
+	case nil:
+		return ver, nil
+	default:
+		return rostermodel.Version{}, err
+	}
 }
