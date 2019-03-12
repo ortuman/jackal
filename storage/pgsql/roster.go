@@ -134,6 +134,13 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 	return items, ver, nil
 }
 
+// FetchRosterItemsInGroups retrieves from storage all roster item entities
+// associated to a given user and a set of groups.
+func (s *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	// TODO(ortuman): Implement me!
+	return nil, rostermodel.Version{}, nil
+}
+
 // FetchRosterItem retrieves from storage a roster item entity.
 func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask", "ver").

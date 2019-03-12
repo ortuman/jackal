@@ -42,6 +42,13 @@ func (b *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel
 	return ris, ver, err
 }
 
+// FetchRosterItemsInGroups retrieves from storage all roster item entities
+// associated to a given user and a set of groups.
+func (b *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	// TODO(ortuman): Implement me!
+	return nil, rostermodel.Version{}, nil
+}
+
 // FetchRosterItem retrieves from storage a roster item entity.
 func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
 	var ri rostermodel.Item

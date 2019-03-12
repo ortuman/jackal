@@ -7,6 +7,7 @@ type rosterStorage interface {
 	InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error)
 	DeleteRosterItem(username, jid string) (rostermodel.Version, error)
 	FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error)
+	FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error)
 	FetchRosterItem(username, jid string) (*rostermodel.Item, error)
 	InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error
 	DeleteRosterNotification(contact, jid string) error
@@ -29,6 +30,12 @@ func DeleteRosterItem(username, jid string) (rostermodel.Version, error) {
 // associated to a given user.
 func FetchRosterItems(username string) ([]rostermodel.Item, rostermodel.Version, error) {
 	return instance().FetchRosterItems(username)
+}
+
+// FetchRosterItemsInGroups retrieves from storage all roster item entities
+// associated to a given user and a set of groups.
+func FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	return instance().FetchRosterItemsInGroups(username, groups)
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.

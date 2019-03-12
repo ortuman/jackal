@@ -120,7 +120,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 	if err != nil {
 		return nil, rostermodel.Version{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items, err := s.scanRosterItemEntities(rows)
 	if err != nil {
@@ -131,6 +131,13 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 		return nil, rostermodel.Version{}, err
 	}
 	return items, ver, nil
+}
+
+// FetchRosterItemsInGroups retrieves from storage all roster item entities
+// associated to a given user and a set of groups.
+func (s *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	// TODO(ortuman): Implement me!
+	return nil, rostermodel.Version{}, nil
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
