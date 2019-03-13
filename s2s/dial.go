@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"
 )
@@ -30,15 +31,16 @@ func newDialer(cfg *Config, router *router.Router) *dialer {
 func (d *dialer) dial(localDomain, remoteDomain string) (*streamConfig, error) {
 	_, addrs, err := d.srvResolve("xmpp-server", "tcp", remoteDomain)
 	if err != nil {
-		return nil, err
+		log.Warnf("srv lookup error: %v", err)
 	}
 	var target string
-	if len(addrs) == 1 && addrs[0].Target == "." {
+
+	if err != nil || len(addrs) == 1 && addrs[0].Target == "." {
 		target = remoteDomain + ":5269"
 	} else {
-		target = strings.TrimSuffix(addrs[0].Target, ".")
+		target = strings.TrimSuffix(addrs[0].Target, ".") + ":" + strconv.Itoa(int(addrs[0].Port))
 	}
-	conn, err := d.dialTimeout("tcp", target+":"+strconv.Itoa(int(addrs[0].Port)), d.cfg.DialTimeout)
+	conn, err := d.dialTimeout("tcp", target, d.cfg.DialTimeout)
 	if err != nil {
 		return nil, err
 	}
