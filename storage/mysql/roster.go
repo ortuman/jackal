@@ -136,8 +136,27 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 // FetchRosterItemsInGroups retrieves from storage all roster item entities
 // associated to a given user and a set of groups.
 func (s *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
-	// TODO(ortuman): Implement me!
-	return nil, rostermodel.Version{}, nil
+	q := sq.Select("ris.username", "ris.jid", "ris.name", "ris.subscription", "ris.`groups`", "ris.ask", "ris.ver").
+		From("roster_items ris").
+		LeftJoin("roster_groups g on ris.username = g.username").
+		Where(sq.And{sq.Eq{"ris.username": username}, sq.Eq{"g.group": groups}}).
+		OrderBy("ris.created_at DESC")
+
+	rows, err := q.RunWith(s.db).Query()
+	if err != nil {
+		return nil, rostermodel.Version{}, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	items, err := s.scanRosterItemEntities(rows)
+	if err != nil {
+		return nil, rostermodel.Version{}, err
+	}
+	ver, err := fetchRosterVer(username, s.db)
+	if err != nil {
+		return nil, rostermodel.Version{}, err
+	}
+	return items, ver, nil
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
