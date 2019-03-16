@@ -68,7 +68,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if p.MySQL == nil {
 			return errors.New("storage.Config: couldn't read MySQL configuration")
 		}
-
 		c.Type = MySQL
 		c.MySQL = p.MySQL
 
@@ -76,7 +75,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if p.PostgreSQL == nil {
 			return errors.New("storage.Config: couldn't read PostgreSQL configuration")
 		}
-
 		c.Type = PostgreSQL
 		c.PostgreSQL = p.PostgreSQL
 
@@ -84,7 +82,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if p.BadgerDB == nil {
 			return errors.New("storage.Config: couldn't read BadgerDB configuration")
 		}
-
 		c.Type = BadgerDB
 		c.BadgerDB = p.BadgerDB
 
