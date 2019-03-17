@@ -30,6 +30,10 @@ func (*disabledStorage) FetchRosterItems(username string) ([]rostermodel.Item, r
 	return nil, rostermodel.Version{}, nil
 }
 
+func (*disabledStorage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	return nil, rostermodel.Version{}, nil
+}
+
 func (*disabledStorage) FetchRosterItem(username, jid string) (*rostermodel.Item, error) {
 	return nil, nil
 }

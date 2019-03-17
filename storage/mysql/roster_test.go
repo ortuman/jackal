@@ -7,51 +7,70 @@ package mysql
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"testing"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLStorageInsertRosterItem(t *testing.T) {
-	g := []string{"general", "friends"}
+	groups := []string{"Buddies", "Family"}
 	ri := rostermodel.Item{
 		Username:     "user",
-		JID:          "contact",
+		JID:          "contact@jid",
 		Name:         "a name",
 		Subscription: "both",
 		Ask:          false,
 		Ver:          1,
-		Groups:       g,
+		Groups:       groups,
 	}
 
+	groupsBytes, _ := json.Marshal(groups)
 	args := []driver.Value{
 		ri.Username,
 		ri.JID,
 		ri.Name,
 		ri.Subscription,
-		"general;friends",
+		groupsBytes,
 		ri.Ask,
 		ri.Username,
 		ri.Name,
 		ri.Subscription,
-		"general;friends",
+		groupsBytes,
 		ri.Ask,
 	}
 
 	s, mock := NewMock()
 	mock.ExpectBegin()
+
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
+		WithArgs("user").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
 	mock.ExpectExec("INSERT INTO roster_items (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(args...).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec("DELETE FROM roster_groups (.+)").
+		WithArgs("user", "contact@jid").
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	mock.ExpectExec("INSERT INTO roster_groups (.+)").
+		WithArgs("user", "contact@jid", "Buddies").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectExec("INSERT INTO roster_groups (.+)").
+		WithArgs("user", "contact@jid", "Family").
 		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
+
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
 		WithArgs("user").
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
+
+	mock.ExpectCommit()
 
 	_, err := s.InsertOrUpdateRosterItem(&ri)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -63,12 +82,14 @@ func TestMySQLStorageDeleteRosterItem(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM roster_groups (.+)").
+		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM roster_items (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
 		WithArgs("user").
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
+	mock.ExpectCommit()
 
 	_, err := s.DeleteRosterItem("user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -136,6 +157,28 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	_, err = s.FetchRosterItem("ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
+
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
+		WithArgs("ortuman").
+		WillReturnError(errMySQLStorage)
+
+	_, _, err = s.FetchRosterItems("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Equal(t, errMySQLStorage, err)
+
+	var riColumns2 = []string{"ris.user", "ris.contact", "ris.name", "ris.subscription", "ris.`groups`", "ris.ask", "ris.ver"}
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g on ris.username = g.username (.+)").
+		WithArgs("ortuman", "Family").
+		WillReturnRows(sqlmock.NewRows(riColumns2).AddRow("ortuman", "romeo", "Romeo", "both", `["Family"]`, false, 0))
+	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
+		WithArgs("ortuman").
+		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(0, 0))
+
+	_, _, err = s.FetchRosterItemsInGroups("ortuman", []string{"Family"})
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
 }
 
 func TestMySQLStorageInsertRosterNotification(t *testing.T) {

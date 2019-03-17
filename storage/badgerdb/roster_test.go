@@ -21,34 +21,58 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 
 	ri1 := &rostermodel.Item{
 		Username:     "ortuman",
-		JID:          "juliet",
+		JID:          "juliet@jackal.im",
 		Subscription: "both",
+		Groups:       []string{"general", "friends"},
 	}
 	ri2 := &rostermodel.Item{
 		Username:     "ortuman",
-		JID:          "romeo",
+		JID:          "romeo@jackal.im",
 		Subscription: "both",
+		Groups:       []string{"general", "buddies"},
+	}
+	ri3 := &rostermodel.Item{
+		Username:     "ortuman",
+		JID:          "hamlet@jackal.im",
+		Subscription: "both",
+		Groups:       []string{"family", "friends"},
 	}
 	_, err := h.db.InsertOrUpdateRosterItem(ri1)
 	require.NoError(t, err)
 	_, err = h.db.InsertOrUpdateRosterItem(ri2)
 	require.NoError(t, err)
+	_, err = h.db.InsertOrUpdateRosterItem(ri3)
+	require.NoError(t, err)
 
 	ris, _, err := h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)
+	require.Equal(t, 3, len(ris))
+
+	ris, _, err = h.db.FetchRosterItemsInGroups("ortuman", []string{"friends"})
+	require.Nil(t, err)
 	require.Equal(t, 2, len(ris))
+
+	ris, _, err = h.db.FetchRosterItemsInGroups("ortuman", []string{"general"})
+	require.Nil(t, err)
+	require.Equal(t, 2, len(ris))
+
+	ris, _, err = h.db.FetchRosterItemsInGroups("ortuman", []string{"buddies"})
+	require.Nil(t, err)
+	require.Equal(t, 1, len(ris))
 
 	ris2, _, err := h.db.FetchRosterItems("ortuman2")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(ris2))
 
-	ri3, err := h.db.FetchRosterItem("ortuman", "juliet")
+	ri4, err := h.db.FetchRosterItem("ortuman", "juliet@jackal.im")
 	require.Nil(t, err)
-	require.Equal(t, ri1, ri3)
+	require.Equal(t, ri1, ri4)
 
-	_, err = h.db.DeleteRosterItem("ortuman", "juliet")
+	_, err = h.db.DeleteRosterItem("ortuman", "juliet@jackal.im")
 	require.NoError(t, err)
-	_, err = h.db.DeleteRosterItem("ortuman", "romeo")
+	_, err = h.db.DeleteRosterItem("ortuman", "romeo@jackal.im")
+	require.NoError(t, err)
+	_, err = h.db.DeleteRosterItem("ortuman", "hamlet@jackal.im")
 	require.NoError(t, err)
 
 	ris, _, err = h.db.FetchRosterItems("ortuman")

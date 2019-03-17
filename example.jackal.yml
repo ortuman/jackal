@@ -18,6 +18,14 @@ storage:
     database: jackal
     pool_size: 16
 
+#  type: pgsql
+#  pgsql:
+#    host: 127.0.0.1:5432
+#    user: jackal
+#    password: password
+#    database: jackal
+#    pool_size: 16
+
 #  cluster:
 #  name: node1
 #  port: 5010

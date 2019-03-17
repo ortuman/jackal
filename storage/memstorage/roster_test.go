@@ -67,36 +67,49 @@ func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 }
 
 func TestMemoryStorage_FetchRosterItems(t *testing.T) {
-	g := []string{"general", "friends"}
 	ri := rostermodel.Item{
 		Username:     "user",
-		JID:          "contact",
+		JID:          "contact@jackal.im",
 		Name:         "a name",
 		Subscription: "both",
 		Ask:          false,
 		Ver:          1,
-		Groups:       g,
+		Groups:       []string{"general", "friends"},
 	}
 	ri2 := rostermodel.Item{
 		Username:     "user",
-		JID:          "contact2",
+		JID:          "contact2@jackal.im",
 		Name:         "a name 2",
 		Subscription: "both",
 		Ask:          false,
 		Ver:          2,
-		Groups:       g,
+		Groups:       []string{"general", "buddies"},
+	}
+	ri3 := rostermodel.Item{
+		Username:     "user",
+		JID:          "contact3@jackal.im",
+		Name:         "a name 3",
+		Subscription: "both",
+		Ask:          false,
+		Ver:          2,
+		Groups:       []string{"family", "friends"},
 	}
 
 	s := New()
 	s.InsertOrUpdateRosterItem(&ri)
 	s.InsertOrUpdateRosterItem(&ri2)
+	s.InsertOrUpdateRosterItem(&ri3)
 
 	s.EnableMockedError()
 	_, _, err := s.FetchRosterItems("user")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
 	ris, _, _ := s.FetchRosterItems("user")
+	require.Equal(t, 3, len(ris))
+	ris, _, _ = s.FetchRosterItemsInGroups("user", []string{"friends"})
 	require.Equal(t, 2, len(ris))
+	ris, _, _ = s.FetchRosterItemsInGroups("user", []string{"buddies"})
+	require.Equal(t, 1, len(ris))
 }
 
 func TestMemoryStorage_DeleteRosterItem(t *testing.T) {

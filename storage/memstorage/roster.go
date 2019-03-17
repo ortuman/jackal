@@ -72,6 +72,31 @@ func (m *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel
 	return ris, v, err
 }
 
+// FetchRosterItemsInGroups retrieves from storage all roster item entities
+// associated to a given user and a set of groups.
+func (m *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+	var ris []rostermodel.Item
+	var v rostermodel.Version
+
+	groupSet := make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		groupSet[group] = struct{}{}
+	}
+	err := m.inReadLock(func() error {
+		for _, ri := range m.rosterItems[username] {
+			for _, riGroup := range ri.Groups {
+				if _, ok := groupSet[riGroup]; ok {
+					ris = append(ris, ri)
+					break
+				}
+			}
+		}
+		v = m.rosterVersions[username]
+		return nil
+	})
+	return ris, v, err
+}
+
 // FetchRosterItem retrieves from storage a roster item entity.
 func (m *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
 	var ret *rostermodel.Item

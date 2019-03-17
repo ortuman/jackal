@@ -77,6 +77,20 @@ CREATE TABLE IF NOT EXISTS roster_items (
 
 SELECT enable_updated_at('roster_items');
 
+-- roster_groups
+
+CREATE TABLE IF NOT EXISTS roster_groups (
+    username     VARCHAR(1023) NOT NULL,
+    jid          TEXT NOT NULL,
+    "group"      TEXT NOT NULL,
+    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (username, jid)
+);
+
+SELECT enable_updated_at('roster_groups');
+
 -- roster_versions
 
 CREATE TABLE IF NOT EXISTS roster_versions (
