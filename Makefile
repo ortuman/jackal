@@ -32,7 +32,9 @@ lint: install-tools
 	@echo "Running linter..."
 	@golint $$(go list ./...)
 
-dockerimage: build
+dockerimage:
+	@echo "Building binary..."
+	@env GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w"
 	@echo "Building docker image..."
 	@docker build -f dockerfiles/Dockerfile -t ortuman/jackal .
 
