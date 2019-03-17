@@ -1,4 +1,4 @@
-FROM golang:1.11 as buildimage
+FROM golang:1.12 as buildimage
 
 LABEL org.label-schema.version=latest
 LABEL org.label-schema.vcs-url="https://github.com/ortuman/jackal.git"
@@ -18,6 +18,7 @@ RUN go build -ldflags="-s -w" github.com/ortuman/jackal
 
 FROM debian:stretch-slim
 COPY --from=buildimage /jackal/jackal /
-ADD docker.jackal.yml /etc/jackal/jackal.yml
+ADD dockerfiles/jackal.yml /etc/jackal/jackal.yml
+ADD jackal /
 EXPOSE 5222
 CMD ["./jackal"]
