@@ -8,8 +8,6 @@ LABEL maintainer="Miguel Ángel Ortuño <ortuman@protonmail.com>"
 
 WORKDIR /jackal
 
-RUN go get -d github.com/ortuman/jackal
-
 RUN export CGO_ENABLED=0
 RUN export GOOS=linux
 RUN export GOARCH=amd64

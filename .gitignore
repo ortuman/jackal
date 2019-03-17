@@ -38,3 +38,6 @@ server.crt
 
 # Dependency 
 vendor/
+
+# Binary 
+jackal
