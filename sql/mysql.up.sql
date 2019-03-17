@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS roster_notifications (
     elements   TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (contact, jid)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE INDEX IF NOT EXISTS i_roster_notifications_jid ON roster_notifications(jid);
+    PRIMARY KEY (contact, jid),
+
+    INDEX i_roster_notifications_jid (jid)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- roster_items
 
@@ -39,11 +41,26 @@ CREATE TABLE IF NOT EXISTS roster_items (
     ver          INT NOT NULL DEFAULT 0,
     updated_at   DATETIME NOT NULL,
     created_at   DATETIME NOT NULL,
-    PRIMARY KEY (username, jid)
+
+    PRIMARY KEY (username, jid),
+
+    INDEX i_roster_items_username(username),
+    INDEX i_roster_items_jid     (jid)
+
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE INDEX IF NOT EXISTS i_roster_items_username ON roster_items(username);
-CREATE INDEX IF NOT EXISTS i_roster_items_jid ON roster_items(jid);
+-- roster_groups
+
+CREATE TABLE IF NOT EXISTS roster_groups (
+    username     VARCHAR(256) NOT NULL,
+    jid          VARCHAR(512) NOT NULL,
+    `group`      TEXT NOT NULL,
+    updated_at   DATETIME NOT NULL,
+    created_at   DATETIME NOT NULL,
+
+    INDEX i_roster_groups_username_jid (username, jid)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- roster_versions
 
@@ -62,10 +79,11 @@ CREATE TABLE IF NOT EXISTS blocklist_items (
     username   VARCHAR(256) NOT NULL,
     jid        VARCHAR(512) NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY(username, jid)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    PRIMARY KEY(username, jid),
 
-CREATE INDEX IF NOT EXISTS i_blocklist_items_username ON blocklist_items(username);
+    INDEX i_blocklist_items_username (username)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- private_storage
 
@@ -75,10 +93,11 @@ CREATE TABLE IF NOT EXISTS private_storage (
     data       MEDIUMTEXT NOT NULL,
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    PRIMARY KEY (username, namespace)
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    PRIMARY KEY (username, namespace),
 
-CREATE INDEX IF NOT EXISTS i_private_storage_username ON private_storage(username);
+    INDEX i_private_storage_username (username)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- vcards
 
@@ -94,10 +113,11 @@ CREATE TABLE IF NOT EXISTS vcards (
 CREATE TABLE IF NOT EXISTS offline_messages (
     username   VARCHAR(256) NOT NULL,
     data       MEDIUMTEXT NOT NULL,
-    created_at DATETIME NOT NULL
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    created_at DATETIME NOT NULL,
 
-CREATE INDEX IF NOT EXISTS i_offline_messages_username ON offline_messages(username);
+    INDEX i_offline_messages_username (username)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- pubsub_nodes
 
@@ -106,28 +126,29 @@ CREATE TABLE IF NOT EXISTS pubsub_nodes (
     host       TEXT NOT NULL,
     name       TEXT NOT NULL,
     updated_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    created_at DATETIME NOT NULL,
 
-CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_nodes_host_name ON pubsub_nodes(host(256), name(512));
+    INDEX i_pubsub_nodes_host_name (host(256), name(512))
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- pubsub_node_options
 
 CREATE TABLE IF NOT EXISTS pubsub_node_options (
     node_id BIGINT NOT NULL,
     name    TEXT NOT NULL,
-    value   TEXT NOT NULL
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    value   TEXT NOT NULL,
 
-CREATE INDEX IF NOT EXISTS i_pubsub_node_options_node_id ON pubsub_node_options(node_id);
+    INDEX i_pubsub_node_options_node_id (node_id)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- pubsub_affiliations
 
 CREATE TABLE IF NOT EXISTS pubsub_affiliations (
     node_id     BIGINT NOT NULL,
     jid         TEXT NOT NULL,
-    affiliation TEXT NOT NULL
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    affiliation TEXT NOT NULL,
 
 -- pubsub_nodes
 
