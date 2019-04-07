@@ -27,7 +27,7 @@ func (s *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace
 	q := sq.Insert("private_storage").
 		Columns("username", "namespace", "data").
 		Values(username, namespace, rawXML).
-		Suffix("ON CONFLICT (username) DO UPDATE SET data = $4", rawXML)
+		Suffix("ON CONFLICT (username, namespace) DO UPDATE SET data = $4", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err
