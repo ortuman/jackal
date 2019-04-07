@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ortuman/jackal/model"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
@@ -663,8 +665,11 @@ func (x *Roster) broadcastPresence(presence *xmpp.Presence) error {
 	if usr, err := storage.FetchUser(fromJID.Node()); err != nil {
 		return err
 	} else if usr != nil {
-		usr.LastPresence = presence
-		return storage.InsertOrUpdateUser(usr)
+		return storage.InsertOrUpdateUser(&model.User{
+			Username:     usr.Username,
+			Password:     usr.Password,
+			LastPresence: presence,
+		})
 	}
 	return nil
 }
