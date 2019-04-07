@@ -8,7 +8,6 @@ env:
 os:
   - linux
   - osx
-  - windows
 
 go:
   - 1.12.x
