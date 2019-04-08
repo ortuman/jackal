@@ -5,12 +5,16 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/pkg/errors"
-
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeReadCloser struct{}
+
+func (rc *fakeReadCloser) Read(p []byte) (n int, err error) { return 0, nil }
+func (rc *fakeReadCloser) Close() error                     { return nil }
 
 type fakeHTTPClient struct {
 	do func(req *http.Request) (*http.Response, error)
@@ -38,7 +42,7 @@ func TestHttpGateway_Route(t *testing.T) {
 
 		b, _ := ioutil.ReadAll(req.Body)
 		reqBody = string(b)
-		return &http.Response{StatusCode: http.StatusOK}, nil
+		return &http.Response{StatusCode: http.StatusOK, Body: &fakeReadCloser{}}, nil
 	}
 
 	err := g.Route(msg)
@@ -46,7 +50,7 @@ func TestHttpGateway_Route(t *testing.T) {
 	require.Equal(t, msg.String(), reqBody)
 
 	fakeClient.do = func(req *http.Request) (response *http.Response, e error) {
-		return &http.Response{StatusCode: http.StatusInternalServerError}, nil
+		return &http.Response{StatusCode: http.StatusInternalServerError, Body: &fakeReadCloser{}}, nil
 	}
 	require.NotNil(t, g.Route(msg))
 

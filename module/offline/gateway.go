@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/sony/gobreaker"
 )
 
 type gateway interface {
@@ -19,8 +20,9 @@ type httpClient interface {
 type httpGateway struct {
 	url       string
 	authToken string
-	client    httpClient
 	reqBuf    *bytes.Buffer
+	cb        *gobreaker.CircuitBreaker
+	client    httpClient
 }
 
 func newHTTPGateway(url string, authToken string) gateway {
@@ -28,6 +30,7 @@ func newHTTPGateway(url string, authToken string) gateway {
 		url:       url,
 		authToken: authToken,
 		reqBuf:    bytes.NewBuffer(nil),
+		cb:        gobreaker.NewCircuitBreaker(gobreaker.Settings{}),
 		client:    &http.Client{},
 	}
 }
@@ -43,12 +46,17 @@ func (g *httpGateway) Route(msg *xmpp.Message) error {
 	req.Header.Set("Content-Type", "application/xml")
 	req.Header.Set("Authorization", g.authToken)
 
-	resp, err := g.client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("response status code: %d", resp.StatusCode)
-	}
-	return nil
+	_, err = g.cb.Execute(func() (i interface{}, e error) {
+		resp, err := g.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("response status code: %d", resp.StatusCode)
+		}
+		return nil, nil
+	})
+	return err
 }
