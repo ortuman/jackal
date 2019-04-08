@@ -36,7 +36,7 @@ jackal supports the following features:
 
 Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`. 
 
-However there's a chance to forward offline messages to an external service by configuring offline module as follows:
+However there's a chance to forward offline messages to some external service by configuring offline module as follows:
 
 ```yaml
   mod_offline:
