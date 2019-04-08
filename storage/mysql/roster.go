@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )

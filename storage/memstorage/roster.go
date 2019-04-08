@@ -6,7 +6,7 @@
 package memstorage
 
 import (
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/model/serializer"
 )
 

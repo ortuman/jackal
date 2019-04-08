@@ -7,7 +7,7 @@ package badgerdb
 
 import (
 	"github.com/dgraph-io/badger"
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 )
 
 // InsertOrUpdateRosterItem inserts a new roster item entity into storage,

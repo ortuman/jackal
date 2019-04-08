@@ -1,6 +1,6 @@
 package storage
 
-import "github.com/ortuman/jackal/model/rostermodel"
+import rostermodel "github.com/ortuman/jackal/model/roster"
 
 // rosterStorage defines storage oprations for user's roster
 type rosterStorage interface {
