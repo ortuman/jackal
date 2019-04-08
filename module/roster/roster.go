@@ -10,9 +10,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/ortuman/jackal/model"
-
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
