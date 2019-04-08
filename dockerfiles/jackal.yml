@@ -35,6 +35,9 @@ modules:
 
   mod_offline:
     queue_size: 2500
+#    gateway:
+#      type: http
+#      pass: http://127.0.0.1:6666
 
   mod_registration:
     allow_registration: yes

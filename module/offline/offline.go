@@ -20,11 +20,6 @@ const offlineNamespace = "msgoffline"
 
 const offlineDeliveredCtxKey = "offline:delivered"
 
-// Config represents Offline Storage module configuration.
-type Config struct {
-	QueueSize int `yaml:"queue_size"`
-}
-
 // Offline represents an offline server stream module.
 type Offline struct {
 	cfg        *Config
@@ -101,6 +96,12 @@ func (o *Offline) archiveMessage(message *xmpp.Message) {
 		return
 	}
 	log.Infof("archived offline message... id: %s", message.ID())
+
+	if o.cfg.Gateway != nil {
+		if err := o.cfg.Gateway.Route(message); err != nil {
+			log.Errorf("bad offline gateway: %v", err)
+		}
+	}
 }
 
 func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
@@ -109,17 +110,17 @@ func (o *Offline) deliverOfflineMessages(stm stream.C2S) {
 	}
 	// deliver offline messages
 	userJID := stm.JID()
-	msgs, err := storage.FetchOfflineMessages(userJID.Node())
+	messages, err := storage.FetchOfflineMessages(userJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	if len(msgs) == 0 {
+	if len(messages) == 0 {
 		return
 	}
-	log.Infof("delivering offline msgs: %s... count: %d", userJID, len(msgs))
+	log.Infof("delivering offline messages: %s... count: %d", userJID, len(messages))
 
-	for _, m := range msgs {
+	for _, m := range messages {
 		o.router.Route(m)
 	}
 	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
