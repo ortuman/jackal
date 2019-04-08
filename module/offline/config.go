@@ -16,6 +16,7 @@ type configProxy struct {
 	QueueSize int `yaml:"queue_size"`
 	Gateway   *struct {
 		Type string `yaml:"type"`
+		Auth string `yaml:"auth"`
 		Pass string `yaml:"pass"`
 	} `yaml:"gateway"`
 }
@@ -30,7 +31,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if p.Gateway != nil {
 		switch p.Gateway.Type {
 		case httpGatewayType:
-			cfg.Gateway = newHTTPGateway(p.Gateway.Pass)
+			cfg.Gateway = newHTTPGateway(p.Gateway.Pass, p.Gateway.Auth)
 		default:
 			return fmt.Errorf("unrecognized offline gateway type: %s", p.Gateway.Type)
 		}

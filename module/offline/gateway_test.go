@@ -21,7 +21,7 @@ func (c *fakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func TestHttpGateway_Route(t *testing.T) {
-	g := newHTTPGateway("http://127.0.0.1:6666").(*httpGateway)
+	g := newHTTPGateway("http://127.0.0.1:6666", "a-secret-key").(*httpGateway)
 	fakeClient := &fakeHTTPClient{}
 	g.client = fakeClient
 
@@ -33,6 +33,7 @@ func TestHttpGateway_Route(t *testing.T) {
 	var reqBody string
 	fakeClient.do = func(req *http.Request) (response *http.Response, e error) {
 		require.Equal(t, http.MethodPost, req.Method)
+		require.Equal(t, "a-secret-key", req.Header.Get("Authorization"))
 		require.Equal(t, "application/xml", req.Header.Get("Content-Type"))
 
 		b, _ := ioutil.ReadAll(req.Body)

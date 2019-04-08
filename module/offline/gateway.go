@@ -17,16 +17,18 @@ type httpClient interface {
 }
 
 type httpGateway struct {
-	url    string
-	client httpClient
-	reqBuf *bytes.Buffer
+	url       string
+	authToken string
+	client    httpClient
+	reqBuf    *bytes.Buffer
 }
 
-func newHTTPGateway(url string) gateway {
+func newHTTPGateway(url string, authToken string) gateway {
 	return &httpGateway{
-		url:    url,
-		reqBuf: bytes.NewBuffer(nil),
-		client: &http.Client{},
+		url:       url,
+		authToken: authToken,
+		reqBuf:    bytes.NewBuffer(nil),
+		client:    &http.Client{},
 	}
 }
 
@@ -39,6 +41,7 @@ func (g *httpGateway) Route(msg *xmpp.Message) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/xml")
+	req.Header.Set("Authorization", g.authToken)
 
 	resp, err := g.client.Do(req)
 	if err != nil {
