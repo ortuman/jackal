@@ -6,6 +6,7 @@ type Option struct {
 }
 
 type Node struct {
-	Host string
-	Name string
+	Host    string
+	Name    string
+	Options []Option
 }
