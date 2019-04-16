@@ -150,37 +150,6 @@ CREATE TABLE IF NOT EXISTS pubsub_affiliations (
     jid         TEXT NOT NULL,
     affiliation TEXT NOT NULL,
 
--- pubsub_nodes
-
-CREATE TABLE IF NOT EXISTS pubsub_nodes (
-    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
-    host       TEXT NOT NULL,
-    name       TEXT NOT NULL,
-    updated_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL,
-
-    INDEX i_pubsub_nodes_host_name (host(256), name(512))
-
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- pubsub_node_options
-
-CREATE TABLE IF NOT EXISTS pubsub_node_options (
-    node_id BIGINT NOT NULL,
-    name    TEXT NOT NULL,
-    value   TEXT NOT NULL,
-
-    INDEX i_pubsub_node_options_node_id (node_id)
-
-) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- pubsub_affiliations
-
-CREATE TABLE IF NOT EXISTS pubsub_affiliations (
-    node_id     BIGINT NOT NULL,
-    jid         TEXT NOT NULL,
-    affiliation TEXT NOT NULL,
-
     INDEX i_pubsub_affiliations_jid (jid(512)),
     UNIQUE INDEX i_pubsub_affiliations_node_id_jid (node_id, jid(512))
 
@@ -200,4 +169,3 @@ CREATE TABLE IF NOT EXISTS pubsub_items (
     UNIQUE INDEX i_pubsub_items_node_id_item_id (node_id, item_id(36))
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
