@@ -27,6 +27,7 @@ type Storage interface {
 	vCardStorage
 	privateStorage
 	blockListStorage
+	pubSubStorage
 }
 
 var (

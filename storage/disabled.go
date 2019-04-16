@@ -7,6 +7,7 @@ package storage
 
 import (
 	"github.com/ortuman/jackal/model"
+	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -96,6 +97,10 @@ func (*disabledStorage) DeleteBlockListItems(items []model.BlockListItem) error 
 
 func (*disabledStorage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	return nil, nil
+}
+
+func (*disabledStorage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
+	return nil
 }
 
 func (*disabledStorage) IsClusterCompatible() bool {
