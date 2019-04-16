@@ -104,11 +104,11 @@ func (x *BlockingCommand) sendBlockList(iq *xmpp.IQ, stm stream.C2S) {
 		itElem.SetAttribute("jid", blItm.JID)
 		blockList.AppendElement(itElem)
 	}
+	stm.SetBool(xep191RequestedContextKey, true)
+
 	reply := iq.ResultIQ()
 	reply.AppendElement(blockList)
 	stm.SendElement(reply)
-
-	stm.SetBool(xep191RequestedContextKey, true)
 }
 
 func (x *BlockingCommand) block(iq *xmpp.IQ, block xmpp.XElement, stm stream.C2S) {

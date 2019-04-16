@@ -220,7 +220,7 @@ func (l *logger) loop() {
 			if !ok {
 				// close log files
 				for _, w := range l.files {
-					w.Close()
+					_ = w.Close()
 				}
 				return
 			}
@@ -246,9 +246,9 @@ func (l *logger) loop() {
 
 			line := l.b.String()
 
-			fmt.Fprintf(l.output, line)
+			_, _ = fmt.Fprintf(l.output, line)
 			for _, w := range l.files {
-				fmt.Fprintf(w, line)
+				_, _ = fmt.Fprintf(w, line)
 			}
 			if rec.level == FatalLevel {
 				exitHandler()
