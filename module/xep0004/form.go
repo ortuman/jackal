@@ -27,21 +27,6 @@ const (
 	Result = "result"
 )
 
-type Fields []Field
-
-func (f Fields) ValueForField(fieldName string) string {
-	return f.ValueForFieldOfType(fieldName, "")
-}
-
-func (f Fields) ValueForFieldOfType(fieldName, typ string) string {
-	for _, field := range f {
-		if field.Var == fieldName && field.Type == typ && len(field.Values) > 0 {
-			return field.Values[0]
-		}
-	}
-	return ""
-}
-
 // DataForm represents a form that could be use for gathering data
 // as well as for reporting data returned from a search.
 type DataForm struct {
