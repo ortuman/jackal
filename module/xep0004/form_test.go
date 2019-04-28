@@ -80,7 +80,7 @@ func TestDataForm_Element(t *testing.T) {
 	require.Equal(t, "A set of instructions", instElem.Text())
 
 	form.Reported = []Field{{Var: "var1"}}
-	form.Items = [][]Field{{{Var: "var2"}}}
+	form.Items = []Fields{{{Var: "var2"}}}
 
 	elem = form.Element()
 	require.NotNil(t, elem.Elements().Child("reported"))
