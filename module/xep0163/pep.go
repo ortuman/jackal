@@ -6,8 +6,11 @@
 package xep0163
 
 import (
+	"github.com/ortuman/jackal/log"
+	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -27,6 +30,10 @@ var discoInfoFeatures = []string{
 	"http://jabber.org/protocol/pubsub#publish",
 	"http://jabber.org/protocol/pubsub#retrieve-items",
 	"http://jabber.org/protocol/pubsub#subscribe",
+}
+
+var defaultNodeOptions = []pubsubmodel.Option{
+	{},
 }
 
 type Pep struct {
@@ -85,4 +92,36 @@ func (x *Pep) loop() {
 }
 
 func (x *Pep) processIQ(iq *xmpp.IQ) {
+	pubSub := iq.Elements().ChildNamespace("pubsub", pepNamespace)
+
+	if createNode := pubSub.Elements().Child("create"); createNode != nil {
+		nodeCfg := pubSub.Elements().Child("configure")
+
+		x.createNode(iq, createNode, nodeCfg)
+	}
+}
+
+func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XElement) {
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(iq.BadRequestError())
+		return
+	}
+	node := &pubsubmodel.Node{
+		Host: iq.FromJID().ToBareJID().String(),
+		Name: nodeName,
+	}
+	if configEl != nil {
+		// TODO(ortuman): attach node options
+	} else {
+		// apply default configuration
+		node.Options = defaultNodeOptions
+	}
+	if err := storage.InsertOrUpdatePubSubNode(node); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+
+	_ = x.router.Route(iq.ResultIQ())
 }

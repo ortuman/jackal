@@ -100,11 +100,11 @@ func (a *Application) Run() error {
 	fs.StringVar(&configFile, "c", "/etc/jackal/jackal.yml", "Configuration file path.")
 	fs.Usage = func() {
 		for i := range logoStr {
-			fmt.Fprintf(a.output, "%s\n", logoStr[i])
+			_, _ = fmt.Fprintf(a.output, "%s\n", logoStr[i])
 		}
-		fmt.Fprintf(a.output, "%s\n", usageStr)
+		_, _ = fmt.Fprintf(a.output, "%s\n", usageStr)
 	}
-	fs.Parse(a.args[1:])
+	_ = fs.Parse(a.args[1:])
 
 	// print usage
 	if showUsage {
@@ -113,7 +113,7 @@ func (a *Application) Run() error {
 	}
 	// print version
 	if showVersion {
-		fmt.Fprintf(a.output, "jackal version: %v\n", version.ApplicationVersion)
+		_, _ = fmt.Fprintf(a.output, "jackal version: %v\n", version.ApplicationVersion)
 		return nil
 	}
 	// load configuration
@@ -198,7 +198,7 @@ func (a *Application) Run() error {
 }
 
 func (a *Application) showVersion() {
-	fmt.Fprintf(a.output, "jackal version: %v\n", version.ApplicationVersion)
+	_, _ = fmt.Fprintf(a.output, "jackal version: %v\n", version.ApplicationVersion)
 }
 
 func (a *Application) createPIDFile(pidFile string) error {
@@ -212,7 +212,7 @@ func (a *Application) createPIDFile(pidFile string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	currentPid := os.Getpid()
 	if _, err := file.WriteString(strconv.FormatInt(int64(currentPid), 10)); err != nil {
@@ -267,7 +267,7 @@ func (a *Application) initDebugServer(port int) error {
 	if err != nil {
 		return err
 	}
-	go a.debugSrv.Serve(ln)
+	go func() { _ = a.debugSrv.Serve(ln) }()
 	log.Infof("debug server listening at %d...", port)
 	return nil
 }
@@ -294,17 +294,17 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 	c := make(chan bool, 1)
 	go func() {
 		if a.debugSrv != nil {
-			a.debugSrv.Shutdown(ctx)
+			_ = a.debugSrv.Shutdown(ctx)
 		}
 		a.c2s.Shutdown(ctx)
 		if a.s2s != nil {
 			a.s2s.Shutdown(ctx)
 		}
 		if a.cluster != nil {
-			a.cluster.Shutdown()
+			_ = a.cluster.Shutdown()
 		}
-		a.comps.Shutdown(ctx)
-		a.mods.Shutdown(ctx)
+		_ = a.comps.Shutdown(ctx)
+		_ = a.mods.Shutdown(ctx)
 
 		storage.Unset()
 		log.Unset()
