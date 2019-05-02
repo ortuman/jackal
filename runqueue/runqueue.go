@@ -41,7 +41,7 @@ func (m *RunQueue) Stop() {
 	if atomic.CompareAndSwapInt32(&m.stopped, 0, 1) {
 	check:
 		if atomic.LoadInt32(&m.messageCount) > 0 {
-			time.Sleep(time.Millisecond)
+			time.Sleep(time.Millisecond * 50)
 			goto check
 		}
 	}

@@ -9,29 +9,25 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
 )
-
-const mailboxSize = 2048
 
 const vCardNamespace = "vcard-temp"
 
 // VCard represents a vCard server stream module.
 type VCard struct {
-	router     *router.Router
-	actorCh    chan func()
-	shutdownCh chan chan error
+	router   *router.Router
+	runQueue *runqueue.RunQueue
 }
 
 // New returns a vCard IQ handler module.
 func New(disco *xep0030.DiscoInfo, router *router.Router) *VCard {
 	v := &VCard{
-		router:     router,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		router:   router,
+		runQueue: runqueue.New("xep0054"),
 	}
-	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(vCardNamespace)
 		disco.RegisterAccountFeature(vCardNamespace)
@@ -48,29 +44,15 @@ func (x *VCard) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a vCard IQ taking according actions
 // over the associated stream.
 func (x *VCard) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Post(func() {
 		x.processIQ(iq)
-	}
+	})
 }
 
 // Shutdown shuts down vCard module.
 func (x *VCard) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *VCard) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	x.runQueue.Stop()
+	return nil
 }
 
 func (x *VCard) processIQ(iq *xmpp.IQ) {

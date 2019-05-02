@@ -14,14 +14,13 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 )
-
-const mailboxSize = 2048
 
 const rosterNamespace = "jabber:iq:roster"
 
@@ -37,19 +36,16 @@ type Roster struct {
 	cfg        *Config
 	router     *router.Router
 	onlineJIDs sync.Map
-	actorCh    chan func()
-	shutdownCh chan chan error
+	runQueue   *runqueue.RunQueue
 }
 
 // New returns a roster server stream module.
 func New(cfg *Config, router *router.Router) *Roster {
 	r := &Roster{
-		cfg:        cfg,
-		router:     router,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		cfg:      cfg,
+		router:   router,
+		runQueue: runqueue.New("roster"),
 	}
-	go r.loop()
 	return r
 }
 
@@ -62,7 +58,7 @@ func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a roster IQ taking according actions
 // over the associated stream.
 func (x *Roster) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Post(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
@@ -70,16 +66,16 @@ func (x *Roster) ProcessIQ(iq *xmpp.IQ) {
 		if err := x.processIQ(iq, stm); err != nil {
 			log.Error(err)
 		}
-	}
+	})
 }
 
 // ProcessPresence process an incoming roster presence.
 func (x *Roster) ProcessPresence(presence *xmpp.Presence) {
-	x.actorCh <- func() {
+	x.runQueue.Post(func() {
 		if err := x.processPresence(presence); err != nil {
 			log.Error(err)
 		}
-	}
+	})
 }
 
 // OnlinePresencesMatchingJID returns current online presences matching a given JID.
@@ -99,22 +95,8 @@ func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []*xmpp.Presence {
 
 // Shutdown shuts down roster module.
 func (x *Roster) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *Roster) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	x.runQueue.Stop()
+	return nil
 }
 
 func (x *Roster) processIQ(iq *xmpp.IQ, stm stream.C2S) error {

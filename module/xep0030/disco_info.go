@@ -9,11 +9,10 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
-
-const mailboxSize = 2048
 
 const (
 	discoInfoNamespace  = "http://jabber.org/protocol/disco#info"
@@ -26,8 +25,7 @@ type DiscoInfo struct {
 	router      *router.Router
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
-	actorCh     chan func()
-	shutdownCh  chan chan error
+	runQueue    *runqueue.RunQueue
 }
 
 // New returns a disco info IQ handler module.
@@ -36,10 +34,8 @@ func New(router *router.Router) *DiscoInfo {
 		router:      router,
 		srvProvider: &serverProvider{router: router},
 		providers:   make(map[string]InfoProvider),
-		actorCh:     make(chan func(), mailboxSize),
-		shutdownCh:  make(chan chan error),
+		runQueue:    runqueue.New("xep0030"),
 	}
-	go di.loop()
 	di.RegisterServerFeature(discoItemsNamespace)
 	di.RegisterServerFeature(discoInfoNamespace)
 	di.RegisterAccountFeature(discoItemsNamespace)
@@ -104,29 +100,15 @@ func (x *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
 func (x *DiscoInfo) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Post(func() {
 		x.processIQ(iq)
-	}
+	})
 }
 
 // Shutdown shuts down disco info module.
 func (x *DiscoInfo) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *DiscoInfo) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	x.runQueue.Stop()
+	return nil
 }
 
 func (x *DiscoInfo) processIQ(iq *xmpp.IQ) {
