@@ -80,6 +80,11 @@ func (wst *webSocketTransport) WriteString(str string) (int, error) {
 	return int(n), err
 }
 
+// Flush writes any buffered data to the underlying io.Writer.
+func (wst *webSocketTransport) Flush() error {
+	return nil
+}
+
 func (wst *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {
 }
 

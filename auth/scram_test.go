@@ -37,6 +37,7 @@ func (ft *fakeTransport) Read(p []byte) (n int, err error)        { return 0, ni
 func (ft *fakeTransport) Write(p []byte) (n int, err error)       { return 0, nil }
 func (ft *fakeTransport) Close() error                            { return nil }
 func (ft *fakeTransport) Type() transport.Type                    { return transport.Socket }
+func (ft *fakeTransport) Flush() error                            { return nil }
 func (ft *fakeTransport) WriteString(s string) (n int, err error) { return 0, nil }
 func (ft *fakeTransport) StartTLS(*tls.Config, bool)              { return }
 func (ft *fakeTransport) EnableCompression(compress.Level)        { return }

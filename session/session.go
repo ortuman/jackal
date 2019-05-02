@@ -6,7 +6,6 @@
 package session
 
 import (
-	"bytes"
 	stdxml "encoding/xml"
 	"fmt"
 	"io"
@@ -76,7 +75,6 @@ type Config struct {
 type Session struct {
 	id           string
 	router       *router.Router
-	wrBuff       *bytes.Buffer
 	tr           transport.Transport
 	pr           *xmpp.Parser
 	remoteDomain string
@@ -104,7 +102,6 @@ func New(id string, config *Config, router *router.Router) *Session {
 		router:       router,
 		tr:           config.Transport,
 		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
-		wrBuff:       bytes.NewBuffer(make([]byte, 0, 1024)),
 		remoteDomain: config.RemoteDomain,
 		isServer:     config.IsServer,
 		isInitiating: config.IsInitiating,
@@ -185,6 +182,7 @@ func (s *Session) Open(featuresElem xmpp.XElement) error {
 	log.Debugf("SEND(%s): %s", s.id, openStr)
 
 	_, err := io.Copy(s.tr, strings.NewReader(openStr))
+	_ = s.tr.Flush()
 	return err
 }
 
@@ -200,6 +198,8 @@ func (s *Session) Close() error {
 	case transport.WebSocket:
 		io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
+	_ = s.tr.Flush()
+
 	return nil
 }
 
@@ -211,12 +211,8 @@ func (s *Session) Send(elem xmpp.XElement) {
 	}
 	log.Debugf("SEND(%s): %v", s.id, elem)
 
-	elem.ToXML(s.wrBuff, true)
-	_, err := io.Copy(s.tr, s.wrBuff)
-	if err != nil {
-		log.Warnf("%v", err)
-	}
-	s.wrBuff.Reset()
+	elem.ToXML(s.tr, true)
+	_ = s.tr.Flush()
 }
 
 // Receive returns next incoming session element.
