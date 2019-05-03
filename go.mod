@@ -33,7 +33,6 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.9.2 // indirect
-	github.com/rubyist/circuitbreaker v2.2.1+incompatible // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sony/gobreaker v0.0.0-20180905101324-b2a34562d02c
 	github.com/stretchr/testify v1.2.2
