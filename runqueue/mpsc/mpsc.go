@@ -18,14 +18,15 @@ type node struct {
 }
 
 type Queue struct {
-	head, tail *node
+	head *node
+	tail *node
+	stub node
 }
 
 func New() *Queue {
 	q := &Queue{}
-	stub := &node{}
-	q.head = stub
-	q.tail = stub
+	q.head = &q.stub
+	q.tail = &q.stub
 	return q
 }
 
@@ -38,7 +39,7 @@ func (q *Queue) Push(x interface{}) {
 	prev := (*node)(atomic.SwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(n)))
 
 	// release node to consumer
-	prev.next = n
+	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&prev.next)), unsafe.Pointer(n))
 }
 
 // Pop removes the item from the front of the queue or nil if the queue is empty

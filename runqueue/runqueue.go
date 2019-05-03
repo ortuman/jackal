@@ -2,7 +2,6 @@ package runqueue
 
 import (
 	"sync/atomic"
-	"time"
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/runqueue/mpsc"
@@ -19,12 +18,14 @@ type RunQueue struct {
 	messageCount int32
 	state        int32
 	stopped      int32
+	stopCh       chan struct{}
 }
 
 func New(name string) *RunQueue {
 	return &RunQueue{
-		name:  name,
-		queue: mpsc.New(),
+		name:   name,
+		queue:  mpsc.New(),
+		stopCh: make(chan struct{}),
 	}
 }
 
@@ -39,10 +40,8 @@ func (m *RunQueue) Post(fn func()) {
 
 func (m *RunQueue) Stop() {
 	if atomic.CompareAndSwapInt32(&m.stopped, 0, 1) {
-	check:
 		if atomic.LoadInt32(&m.messageCount) > 0 {
-			time.Sleep(time.Millisecond * 50)
-			goto check
+			<-m.stopCh
 		}
 	}
 }
@@ -64,6 +63,11 @@ process:
 		if atomic.CompareAndSwapInt32(&m.state, idle, running) {
 			goto process
 		}
+	}
+	select {
+	case m.stopCh <- struct{}{}:
+	default:
+		break
 	}
 }
 

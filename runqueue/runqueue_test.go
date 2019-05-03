@@ -30,3 +30,13 @@ func TestRunQueueConsistency(t *testing.T) {
 
 	require.Equal(t, int32(2000), i)
 }
+
+func TestRunQueueStop(t *testing.T) {
+	fn := func() {
+		time.Sleep(time.Second)
+	}
+	rq := New("test")
+	rq.Post(fn)
+
+	rq.Stop()
+}
