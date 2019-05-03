@@ -18,11 +18,6 @@ import (
 )
 
 const (
-	streamMailboxSize   = 64
-	iqResultMailboxSize = 32
-)
-
-const (
 	streamNamespace           = "http://etherx.jabber.org/streams"
 	tlsNamespace              = "urn:ietf:params:xml:ns:xmpp-tls"
 	compressProtocolNamespace = "http://jabber.org/protocol/compress"

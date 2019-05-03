@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ortuman/jackal/runqueue"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model/rostermodel"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -18,27 +20,22 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const mailboxSize = 2048
-
 const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	router     *router.Router
-	startTime  time.Time
-	actorCh    chan func()
-	shutdownCh chan chan error
+	router    *router.Router
+	startTime time.Time
+	runQueue  *runqueue.RunQueue
 }
 
 // New returns a last activity IQ handler module.
 func New(disco *xep0030.DiscoInfo, router *router.Router) *LastActivity {
 	x := &LastActivity{
-		router:     router,
-		startTime:  time.Now(),
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		router:    router,
+		startTime: time.Now(),
+		runQueue:  runqueue.New("xep0012"),
 	}
-	go x.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(lastActivityNamespace)
 		disco.RegisterAccountFeature(lastActivityNamespace)
@@ -53,29 +50,17 @@ func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a last activity IQ taking according actions over the associated stream.
 func (x *LastActivity) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
-	}
+	})
 }
 
 // Shutdown shuts down last activity module.
 func (x *LastActivity) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *LastActivity) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
+	return nil
 }
 
 func (x *LastActivity) processIQ(iq *xmpp.IQ) {

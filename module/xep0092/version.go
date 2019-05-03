@@ -9,15 +9,13 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/ortuman/jackal/router"
-
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
 )
-
-const mailboxSize = 2048
 
 const versionNamespace = "jabber:iq:version"
 
@@ -35,21 +33,18 @@ type Config struct {
 
 // Version represents a version module.
 type Version struct {
-	cfg        *Config
-	router     *router.Router
-	actorCh    chan func()
-	shutdownCh chan chan error
+	cfg      *Config
+	router   *router.Router
+	runQueue *runqueue.RunQueue
 }
 
 // New returns a version IQ handler module.
 func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Version {
 	v := &Version{
-		cfg:        config,
-		router:     router,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		cfg:      config,
+		router:   router,
+		runQueue: runqueue.New("xep0092"),
 	}
-	go v.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(versionNamespace)
 	}
@@ -65,29 +60,17 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
 func (x *Version) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
-	}
+	})
 }
 
 // Shutdown shuts down version module.
 func (x *Version) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *Version) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
+	return nil
 }
 
 func (x *Version) processIQ(iq *xmpp.IQ) {

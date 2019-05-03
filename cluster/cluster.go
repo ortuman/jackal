@@ -10,6 +10,8 @@ import (
 	"encoding/gob"
 	"sync"
 
+	"github.com/ortuman/jackal/runqueue"
+
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xmpp"
@@ -61,7 +63,7 @@ type Cluster struct {
 	memberList memberList
 	membersMu  sync.RWMutex
 	members    map[string]*Node
-	actorCh    chan func()
+	runQueue   *runqueue.RunQueue
 }
 
 // New returns an initialized c2s instance
@@ -74,14 +76,13 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		delegate: delegate,
 		buf:      bytes.NewBuffer(nil),
 		members:  make(map[string]*Node),
-		actorCh:  make(chan func(), clusterMailboxSize),
+		runQueue: runqueue.New("cluster"),
 	}
 	ml, err := createMemberList(config.Name, config.BindPort, c)
 	if err != nil {
 		return nil, err
 	}
 	c.memberList = ml
-	go c.loop()
 	return c, nil
 }
 
@@ -113,37 +114,30 @@ func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[s
 
 // SendMessageTo sends a cluster message to a concrete node.
 func (c *Cluster) SendMessageTo(node string, msg *Message) {
-	c.actorCh <- func() {
+	c.runQueue.Run(func() {
 		if err := c.send(msg, node); err != nil {
 			log.Error(err)
 			return
 		}
-	}
+	})
 }
 
 // BroadcastMessage broadcasts a cluster message to all nodes.
 func (c *Cluster) BroadcastMessage(msg *Message) {
-	c.actorCh <- func() {
+	c.runQueue.Run(func() {
 		if err := c.broadcast(msg); err != nil {
 			log.Error(err)
 		}
-	}
+	})
 }
 
 // Shutdown shuts down cluster sub system.
 func (c *Cluster) Shutdown() error {
 	errCh := make(chan error, 1)
-	c.actorCh <- func() {
+	c.runQueue.Stop(func() {
 		errCh <- c.memberList.Shutdown()
-		close(c.actorCh)
-	}
+	})
 	return <-errCh
-}
-
-func (c *Cluster) loop() {
-	for f := range c.actorCh {
-		f()
-	}
 }
 
 func (c *Cluster) send(msg *Message, toNode string) error {

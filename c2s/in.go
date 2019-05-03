@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/runqueue"
+
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
@@ -47,8 +49,7 @@ type inStream struct {
 	state          uint32
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
-	actorCh        chan func()
-	iqResultCh     chan xmpp.Stanza
+	runQueue       *runqueue.RunQueue
 
 	mu            sync.RWMutex
 	jid           *jid.JID
@@ -64,14 +65,13 @@ type inStream struct {
 
 func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
 	s := &inStream{
-		cfg:        config,
-		router:     router,
-		mods:       mods,
-		comps:      comps,
-		id:         id,
-		context:    make(map[string]interface{}),
-		actorCh:    make(chan func(), streamMailboxSize),
-		iqResultCh: make(chan xmpp.Stanza, iqResultMailboxSize),
+		cfg:      config,
+		router:   router,
+		mods:     mods,
+		comps:    comps,
+		id:       id,
+		context:  make(map[string]interface{}),
+		runQueue: runqueue.New(id),
 	}
 
 	// initialize stream context
@@ -88,7 +88,6 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 	if config.connectTimeout > 0 {
 		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
 	}
-	go s.loop()
 	go s.doRead() // start reading...
 
 	return s
@@ -222,7 +221,7 @@ func (s *inStream) SendElement(elem xmpp.XElement) {
 	if s.getState() == disconnected {
 		return
 	}
-	s.actorCh <- func() { s.writeElement(elem) }
+	s.runQueue.Run(func() { s.writeElement(elem) })
 }
 
 // Disconnect disconnects remote peer by closing the underlying TCP socket connection.
@@ -231,10 +230,10 @@ func (s *inStream) Disconnect(err error) {
 		return
 	}
 	waitCh := make(chan struct{})
-	s.actorCh <- func() {
+	s.runQueue.Run(func() {
 		s.disconnect(err)
 		close(waitCh)
-	}
+	})
 	<-waitCh
 }
 
@@ -266,7 +265,7 @@ func (s *inStream) initializeAuthenticators() {
 }
 
 func (s *inStream) connectTimeout() {
-	s.actorCh <- func() { s.disconnect(streamerror.ErrConnectionTimeout) }
+	s.runQueue.Run(func() { s.disconnect(streamerror.ErrConnectionTimeout) })
 }
 
 func (s *inStream) handleElement(elem xmpp.XElement) {
@@ -310,7 +309,7 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 		features.AppendElements(s.authenticatedFeatures())
 		s.setState(authenticated)
 	}
-	s.sess.Open(features)
+	_ = s.sess.Open(features)
 }
 
 func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
@@ -331,9 +330,9 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		mechanisms := xmpp.NewElementName("mechanisms")
 		mechanisms.SetNamespace(saslNamespace)
-		for _, athr := range s.authenticators {
+		for _, ath := range s.authenticators {
 			mechanism := xmpp.NewElementName("mechanism")
-			mechanism.SetText(athr.Mechanism())
+			mechanism.SetText(ath.Mechanism())
 			mechanisms.AppendElement(mechanism)
 		}
 		features = append(features, mechanisms)
@@ -418,10 +417,10 @@ func (s *inStream) handleAuthenticating(elem xmpp.XElement) {
 		s.disconnectWithStreamError(streamerror.ErrInvalidNamespace)
 		return
 	}
-	authr := s.activeAuth
-	s.continueAuthentication(elem, authr)
-	if authr.Authenticated() {
-		s.finishAuthentication(authr.Username())
+	ath := s.activeAuth
+	_ = s.continueAuthentication(elem, ath)
+	if ath.Authenticated() {
+		s.finishAuthentication(ath.Username())
 	}
 }
 
@@ -697,7 +696,7 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if presence.ToJID().IsFullWithUser() {
-		s.router.Route(presence)
+		_ = s.router.Route(presence)
 		return
 	}
 	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
@@ -746,36 +745,17 @@ sendMessage:
 }
 
 // Runs on it's own goroutine
-func (s *inStream) loop() {
-	for {
-		select {
-		case f := <-s.actorCh:
-			f()
-			if s.getState() == disconnected {
-				return
-			}
-		case resIQ := <-s.iqResultCh:
-			if resIQ != nil {
-				s.writeElement(resIQ)
-			}
-		}
-	}
-}
-
-// Runs on it's own goroutine
 func (s *inStream) doRead() {
 	elem, sErr := s.sess.Receive()
 	if sErr == nil {
-		s.actorCh <- func() {
-			s.readElement(elem)
-		}
+		s.runQueue.Run(func() { s.readElement(elem) })
 	} else {
-		s.actorCh <- func() {
+		s.runQueue.Run(func() {
 			if s.getState() == disconnected {
 				return
 			}
 			s.handleSessionError(sErr)
-		}
+		})
 	}
 }
 
@@ -834,7 +814,7 @@ func (s *inStream) disconnect(err error) {
 
 func (s *inStream) disconnectWithStreamError(err *streamerror.Error) {
 	if s.getState() == connecting {
-		s.sess.Open(nil)
+		_ = s.sess.Open(nil)
 	}
 	s.writeElement(err.Element())
 
@@ -854,7 +834,7 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 		}
 	}
 	if closeSession {
-		s.sess.Close()
+		_ = s.sess.Close()
 	}
 	// unregister stream
 	if unbind {
@@ -865,7 +845,9 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 		s.cfg.onDisconnect(s)
 	}
 	s.setState(disconnected)
-	s.cfg.transport.Close()
+	_ = s.cfg.transport.Close()
+
+	s.runQueue.Stop(nil) // stop processing messages
 }
 
 func (s *inStream) isBlockedJID(j *jid.JID) bool {

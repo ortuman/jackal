@@ -57,6 +57,7 @@ func TestSocket(t *testing.T) {
 
 	el1 := xmpp.NewElementNamespace("elem", "exodus:ns")
 	el1.ToXML(st, true)
+	_ = st.Flush()
 	require.Equal(t, 0, bytes.Compare([]byte(el1.String()), conn.w.Bytes()))
 
 	el2 := xmpp.NewElementNamespace("elem2", "exodus2:ns")

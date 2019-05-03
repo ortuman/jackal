@@ -16,8 +16,6 @@ import (
 	"github.com/ortuman/jackal/stream"
 )
 
-const streamMailboxSize = 256
-
 const (
 	streamNamespace   = "http://etherx.jabber.org/streams"
 	tlsNamespace      = "urn:ietf:params:xml:ns:xmpp-tls"

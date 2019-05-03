@@ -10,13 +10,12 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
-
-const mailboxSize = 2048
 
 const registerNamespace = "jabber:iq:register"
 
@@ -31,21 +30,18 @@ type Config struct {
 
 // Register represents an in-band server stream module.
 type Register struct {
-	cfg        *Config
-	router     *router.Router
-	actorCh    chan func()
-	shutdownCh chan chan error
+	cfg      *Config
+	router   *router.Router
+	runQueue *runqueue.RunQueue
 }
 
 // New returns an in-band registration IQ handler.
 func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Register {
 	r := &Register{
-		cfg:        config,
-		router:     router,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		cfg:      config,
+		router:   router,
+		runQueue: runqueue.New("xep0077"),
 	}
-	go r.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(registerNamespace)
 	}
@@ -61,39 +57,27 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes an in-band registration IQ taking according actions over
 // the associated stream.
 func (x *Register) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
 			x.processIQ(iq, stm)
 		}
-	}
+	})
 }
 
 // ProcessIQWithStream processes an in-band registration IQ taking according
 // actions over a referenced stream.
 func (x *Register) ProcessIQWithStream(iq *xmpp.IQ, stm stream.C2S) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq, stm)
-	}
+	})
 }
 
 // Shutdown shuts down in-band registration module.
 func (x *Register) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *Register) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
+	return nil
 }
 
 func (x *Register) processIQ(iq *xmpp.IQ, stm stream.C2S) {

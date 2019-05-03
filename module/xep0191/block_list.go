@@ -12,14 +12,13 @@ import (
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 )
-
-const mailboxSize = 2048
 
 const blockingCommandNamespace = "urn:xmpp:blocking"
 
@@ -29,21 +28,18 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
-	router     *router.Router
-	roster     *roster.Roster
-	actorCh    chan func()
-	shutdownCh chan chan error
+	router   *router.Router
+	roster   *roster.Roster
+	runQueue *runqueue.RunQueue
 }
 
 // New returns a blocking command IQ handler module.
 func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) *BlockingCommand {
 	b := &BlockingCommand{
-		router:     router,
-		roster:     roster,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		router:   router,
+		roster:   roster,
+		runQueue: runqueue.New("xep0191"),
 	}
-	go b.loop()
 	if disco != nil {
 		disco.RegisterServerFeature(blockingCommandNamespace)
 		disco.RegisterAccountFeature(blockingCommandNamespace)
@@ -64,33 +60,21 @@ func (x *BlockingCommand) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a blocking command IQ
 // taking according actions over the associated stream.
 func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
 		}
 		x.processIQ(iq, stm)
-	}
+	})
 }
 
 // Shutdown shuts down blocking module.
 func (x *BlockingCommand) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *BlockingCommand) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
+	return nil
 }
 
 func (x *BlockingCommand) processIQ(iq *xmpp.IQ, stm stream.C2S) {

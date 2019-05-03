@@ -40,6 +40,7 @@ func (t *fakeTransport) Read(p []byte) (n int, err error)                       
 func (t *fakeTransport) Write(p []byte) (n int, err error)                            { return t.wrBuf.Write(p) }
 func (t *fakeTransport) Close() error                                                 { return nil }
 func (t *fakeTransport) Type() transport.Type                                         { return t.typ }
+func (t *fakeTransport) Flush() error                                                 { return nil }
 func (t *fakeTransport) WriteString(s string) (n int, err error)                      { return t.wrBuf.WriteString(s) }
 func (t *fakeTransport) StartTLS(cfg *tls.Config, asClient bool)                      {}
 func (t *fakeTransport) EnableCompression(compress.Level)                             {}

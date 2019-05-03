@@ -53,6 +53,9 @@ type Transport interface {
 	// WriteString writes a raw string to the transport.
 	WriteString(s string) (n int, err error)
 
+	// Flush writes any buffered data to the underlying io.Writer.
+	Flush() error
+
 	// StartTLS secures the transport using SSL/TLS
 	StartTLS(cfg *tls.Config, asClient bool)
 

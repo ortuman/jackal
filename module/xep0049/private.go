@@ -8,32 +8,27 @@ package xep0049
 import (
 	"strings"
 
-	"github.com/ortuman/jackal/router"
-
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
 )
-
-const mailboxSize = 2048
 
 const privateNamespace = "jabber:iq:private"
 
 // Private represents a private storage server stream module.
 type Private struct {
-	router     *router.Router
-	actorCh    chan func()
-	shutdownCh chan chan error
+	router   *router.Router
+	runQueue *runqueue.RunQueue
 }
 
 // New returns a private storage IQ handler module.
 func New(router *router.Router) *Private {
 	x := &Private{
-		router:     router,
-		actorCh:    make(chan func(), mailboxSize),
-		shutdownCh: make(chan chan error),
+		router:   router,
+		runQueue: runqueue.New("xep0049"),
 	}
-	go x.loop()
 	return x
 }
 
@@ -46,29 +41,17 @@ func (x *Private) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a private storage IQ
 // taking according actions over the associated stream
 func (x *Private) ProcessIQ(iq *xmpp.IQ) {
-	x.actorCh <- func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
-	}
+	})
 }
 
 // Shutdown shuts down private storage module.
 func (x *Private) Shutdown() error {
-	c := make(chan error)
-	x.shutdownCh <- c
-	return <-c
-}
-
-// runs on it's own goroutine
-func (x *Private) loop() {
-	for {
-		select {
-		case f := <-x.actorCh:
-			f()
-		case c := <-x.shutdownCh:
-			c <- nil
-			return
-		}
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
+	return nil
 }
 
 func (x *Private) processIQ(iq *xmpp.IQ) {
