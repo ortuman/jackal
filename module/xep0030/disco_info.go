@@ -100,14 +100,16 @@ func (x *DiscoInfo) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a disco info IQ taking according actions
 // over the associated stream.
 func (x *DiscoInfo) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
 	})
 }
 
 // Shutdown shuts down disco info module.
 func (x *DiscoInfo) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

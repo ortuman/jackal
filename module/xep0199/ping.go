@@ -86,7 +86,7 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a ping IQ taking according actions
 // over the associated stream.
 func (x *Ping) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
@@ -97,20 +97,24 @@ func (x *Ping) ProcessIQ(iq *xmpp.IQ) {
 
 // SchedulePing schedules a new ping in a 'send interval' period, cancelling previous scheduled ping.
 func (x *Ping) SchedulePing(stm stream.C2S) {
-	x.runQueue.Post(func() { x.schedulePing(stm) })
+	x.runQueue.Run(func() { x.schedulePing(stm) })
 }
 
 // CancelPing cancels a previous scheduled ping.
 func (x *Ping) CancelPing(stm stream.C2S) {
-	x.runQueue.Post(func() { x.cancelPing(stm) })
+	x.runQueue.Run(func() { x.cancelPing(stm) })
 }
 
 // Shutdown shuts down ping module.
 func (x *Ping) Shutdown() error {
-	x.runQueue.Stop()
-	for _, pi := range x.pings {
-		pi.timer.Stop()
-	}
+	c := make(chan struct{})
+	x.runQueue.Stop(func() {
+		for _, pi := range x.pings {
+			pi.timer.Stop()
+		}
+		close(c)
+	})
+	<-c
 	return nil
 }
 
@@ -175,7 +179,7 @@ func (x *Ping) schedulePingTimer(stm stream.C2S) {
 		stm:        stm,
 	}
 	pi.timer = time.AfterFunc(x.cfg.SendInterval, func() {
-		x.runQueue.Post(func() { x.sendPing(pi) })
+		x.runQueue.Run(func() { x.sendPing(pi) })
 	})
 	x.pings[stm.JID().String()] = pi
 }
@@ -203,7 +207,7 @@ func (x *Ping) sendPing(pi *ping) {
 	log.Infof("sent ping... id: %s", pi.identifier)
 
 	pi.timer = time.AfterFunc(x.cfg.SendInterval/3, func() {
-		x.runQueue.Post(func() { x.disconnectStream(pi) })
+		x.runQueue.Run(func() { x.disconnectStream(pi) })
 	})
 	x.activePings[pi.identifier] = pi
 }

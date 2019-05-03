@@ -60,7 +60,7 @@ func (x *BlockingCommand) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a blocking command IQ
 // taking according actions over the associated stream.
 func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
@@ -71,7 +71,9 @@ func (x *BlockingCommand) ProcessIQ(iq *xmpp.IQ) {
 
 // Shutdown shuts down blocking module.
 func (x *BlockingCommand) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

@@ -41,18 +41,20 @@ func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Offli
 
 // ArchiveMessage archives a new offline messages into the storage.
 func (x *Offline) ArchiveMessage(message *xmpp.Message) {
-	x.runQueue.Post(func() { x.archiveMessage(message) })
+	x.runQueue.Run(func() { x.archiveMessage(message) })
 }
 
 // DeliverOfflineMessages delivers every archived offline messages to the peer
 // deleting them from storage.
 func (x *Offline) DeliverOfflineMessages(stm stream.C2S) {
-	x.runQueue.Post(func() { x.deliverOfflineMessages(stm) })
+	x.runQueue.Run(func() { x.deliverOfflineMessages(stm) })
 }
 
 // Shutdown shuts down offline module.
 func (x *Offline) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

@@ -58,7 +58,7 @@ func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a roster IQ taking according actions
 // over the associated stream.
 func (x *Roster) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
@@ -71,7 +71,7 @@ func (x *Roster) ProcessIQ(iq *xmpp.IQ) {
 
 // ProcessPresence process an incoming roster presence.
 func (x *Roster) ProcessPresence(presence *xmpp.Presence) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		if err := x.processPresence(presence); err != nil {
 			log.Error(err)
 		}
@@ -95,7 +95,9 @@ func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []*xmpp.Presence {
 
 // Shutdown shuts down roster module.
 func (x *Roster) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

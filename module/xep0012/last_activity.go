@@ -50,14 +50,16 @@ func (x *LastActivity) MatchesIQ(iq *xmpp.IQ) bool {
 
 // ProcessIQ processes a last activity IQ taking according actions over the associated stream.
 func (x *LastActivity) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
 	})
 }
 
 // Shutdown shuts down last activity module.
 func (x *LastActivity) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

@@ -60,14 +60,16 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a version IQ taking according actions
 // over the associated stream.
 func (x *Version) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
 	})
 }
 
 // Shutdown shuts down version module.
 func (x *Version) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

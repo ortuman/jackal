@@ -57,7 +57,7 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes an in-band registration IQ taking according actions over
 // the associated stream.
 func (x *Register) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
 			x.processIQ(iq, stm)
 		}
@@ -67,14 +67,16 @@ func (x *Register) ProcessIQ(iq *xmpp.IQ) {
 // ProcessIQWithStream processes an in-band registration IQ taking according
 // actions over a referenced stream.
 func (x *Register) ProcessIQWithStream(iq *xmpp.IQ, stm stream.C2S) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq, stm)
 	})
 }
 
 // Shutdown shuts down in-band registration module.
 func (x *Register) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

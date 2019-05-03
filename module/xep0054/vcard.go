@@ -44,14 +44,16 @@ func (x *VCard) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a vCard IQ taking according actions
 // over the associated stream.
 func (x *VCard) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
 	})
 }
 
 // Shutdown shuts down vCard module.
 func (x *VCard) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 

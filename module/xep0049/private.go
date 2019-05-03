@@ -41,14 +41,16 @@ func (x *Private) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a private storage IQ
 // taking according actions over the associated stream
 func (x *Private) ProcessIQ(iq *xmpp.IQ) {
-	x.runQueue.Post(func() {
+	x.runQueue.Run(func() {
 		x.processIQ(iq)
 	})
 }
 
 // Shutdown shuts down private storage module.
 func (x *Private) Shutdown() error {
-	x.runQueue.Stop()
+	c := make(chan struct{})
+	x.runQueue.Stop(func() { close(c) })
+	<-c
 	return nil
 }
 
