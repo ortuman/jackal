@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"errors"
 
 	sq "github.com/Masterminds/squirrel"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
@@ -41,4 +42,8 @@ func (s *Storage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
 		}
 		return nil
 	})
+}
+
+func (s *Storage) GetPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+	return nil, errors.New("unimplemented method")
 }

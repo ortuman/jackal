@@ -103,6 +103,10 @@ func (*disabledStorage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
 	return nil
 }
 
+func (*disabledStorage) GetPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) IsClusterCompatible() bool {
 	return false
 }

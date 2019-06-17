@@ -2,7 +2,6 @@ package xep0163
 
 import (
 	"crypto/tls"
-	"fmt"
 	"testing"
 
 	"github.com/ortuman/jackal/router"
@@ -45,7 +44,8 @@ func TestXEP163_CreateNode(t *testing.T) {
 
 	p := New(nil, r)
 
-	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
+	iqID := uuid.New()
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
 	iq.SetFromJID(j)
 	iq.SetToJID(j)
 
@@ -57,7 +57,9 @@ func TestXEP163_CreateNode(t *testing.T) {
 
 	p.ProcessIQ(iq)
 	elem := stm.ReceiveElement()
-	fmt.Println(elem)
+	require.NotNil(t, elem)
+	require.Equal(t, iqID, elem.ID())
+	require.Equal(t, xmpp.ResultType, elem.Type())
 }
 
 func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {

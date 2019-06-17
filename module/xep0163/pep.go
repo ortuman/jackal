@@ -17,8 +17,6 @@ import (
 
 const pepNamespace = "http://jabber.org/protocol/pubsub"
 
-const mailboxSize = 2048
-
 var discoInfoFeatures = []string{
 	"http://jabber.org/protocol/pubsub#access-presence",
 	"http://jabber.org/protocol/pubsub#auto-create",
