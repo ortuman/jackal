@@ -32,12 +32,6 @@ func TestStorageInsertPubSubNode(t *testing.T) {
 		WithArgs("1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	for _, optArg := range optionArgs {
-		mock.ExpectExec("INSERT INTO pubsub_node_options (.+) VALUES (.+)").
-			WithArgs(optArg.name, optArg.value).
-			WillReturnResult(sqlmock.NewResult(0, 1))
-	}
-
 	node := pubsubmodel.Node{Host: "host", Name: "name", Options: pubsubmodel.Options{}}
 	err := s.InsertOrUpdatePubSubNode(&node)
 
