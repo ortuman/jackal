@@ -9,6 +9,35 @@ import (
 )
 
 func TestMySQLStorageInsertPubSubNode(t *testing.T) {
+	s, mock := NewMock()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO pubsub_nodes (.+) ON DUPLICATE KEY UPDATE (.+)").
+		WithArgs("host", "name").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
+		WithArgs("host", "name").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("1"))
+
+	mock.ExpectExec("DELETE FROM pubsub_node_options WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	opts := pubsubmodel.Options{}
+
+	for i := 0; i < len(opts.Map()); i++ {
+		mock.ExpectExec("INSERT INTO pubsub_node_options (.+)").
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	mock.ExpectCommit()
+
+	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
+	err := s.InsertOrUpdatePubSubNode(&node)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
 }
 
 func TestMySQLStorageGetPubSubNode(t *testing.T) {

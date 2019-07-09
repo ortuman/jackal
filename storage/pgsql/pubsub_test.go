@@ -8,15 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type optionArg struct {
-	name  string
-	value string
-}
-
-var optionArgs = []optionArg{
-	{"pubsub#presence_based_delivery", "false"},
-}
-
 func TestStorageInsertPubSubNode(t *testing.T) {
 	s, mock := NewMock()
 	mock.ExpectBegin()
@@ -32,7 +23,16 @@ func TestStorageInsertPubSubNode(t *testing.T) {
 		WithArgs("1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	node := pubsubmodel.Node{Host: "host", Name: "name", Options: pubsubmodel.Options{}}
+	opts := pubsubmodel.Options{}
+
+	for i := 0; i < len(opts.Map()); i++ {
+		mock.ExpectExec("INSERT INTO pubsub_node_options (.+)").
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	mock.ExpectCommit()
+
+	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
 	err := s.InsertOrUpdatePubSubNode(&node)
 
 	require.Nil(t, mock.ExpectationsWereMet())
