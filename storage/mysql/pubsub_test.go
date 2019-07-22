@@ -78,3 +78,54 @@ func TestMySQLStorageGetPubSubNodeError(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errMySQLStorage, err)
 }
+
+func TestMySQLUpsertPubSubNodeAffiliation(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("1"))
+
+	mock.ExpectExec("INSERT INTO pubsub_affiliations (.+) VALUES (.+) ON DUPLICATE KEY UPDATE affiliation = (.+), updated_at = (.+)").
+		WithArgs("1", "ortuman@jackal.im", "owner", "owner").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err := s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+		JID:         "ortuman@jackal.im",
+		Affiliation: "owner",
+	}, "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+}
+
+func TestMySQLFetchPubSubNodeAffiliations(t *testing.T) {
+	s, mock := NewMock()
+	rows := sqlmock.NewRows([]string{"jid", "affiliation"})
+	rows.AddRow("ortuman@jackal.im", "owner")
+	rows.AddRow("noelia@jackal.im", "publisher")
+
+	mock.ExpectQuery("SELECT jid, affiliation FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings").
+		WillReturnRows(rows)
+
+	affiliations, err := s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+	require.Equal(t, 2, len(affiliations))
+
+	// error case
+	mock.ExpectQuery("SELECT jid, affiliation FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings").
+		WillReturnError(errMySQLStorage)
+
+	affiliations, err = s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errMySQLStorage, err)
+}
