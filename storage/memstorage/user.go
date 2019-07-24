@@ -5,7 +5,9 @@
 
 package memstorage
 
-import "github.com/ortuman/jackal/model"
+import (
+	"github.com/ortuman/jackal/model"
+)
 
 // InsertOrUpdateUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.

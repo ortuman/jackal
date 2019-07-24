@@ -5,7 +5,10 @@
 
 package rostermodel
 
-import "encoding/gob"
+import (
+	"bytes"
+	"encoding/gob"
+)
 
 // Version represents a roster version info.
 type Version struct {
@@ -13,17 +16,20 @@ type Version struct {
 	DeletionVer int
 }
 
-// FromGob deserializes a Version entity
-// from it's gob binary representation.
-func (rv *Version) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&rv.Ver)
-	dec.Decode(&rv.DeletionVer)
-	return nil
+// FromBytes deserializes a Version entity from its binary representation.
+func (rv *Version) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&rv.Ver); err != nil {
+		return err
+	}
+	return dec.Decode(&rv.DeletionVer)
 }
 
-// ToGob converts a Version entity
-// to it's gob binary representation.
-func (rv *Version) ToGob(enc *gob.Encoder) {
-	enc.Encode(&rv.Ver)
-	enc.Encode(&rv.DeletionVer)
+// ToBytes converts a Version entity to its binary representation.
+func (rv *Version) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&rv.Ver); err != nil {
+		return err
+	}
+	return enc.Encode(&rv.DeletionVer)
 }

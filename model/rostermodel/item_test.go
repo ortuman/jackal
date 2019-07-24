@@ -7,7 +7,6 @@ package rostermodel
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -81,8 +80,8 @@ func TestItem_Serialize(t *testing.T) {
 		Groups:       []string{"friends", "family"},
 	}
 	buf := new(bytes.Buffer)
-	ri1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, ri1.ToBytes(buf))
 	ri2 := &Item{}
-	ri2.FromGob(gob.NewDecoder(buf))
+	require.Nil(t, ri2.FromBytes(buf))
 	require.Equal(t, ri1, *ri2)
 }

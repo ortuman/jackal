@@ -7,7 +7,6 @@ package xmpp
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,14 +32,12 @@ func TestAttributeSet_Gob(t *testing.T) {
 	as.setAttribute("a", "1234")
 	as.setAttribute("b", "5678")
 	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-	as.toGob(enc)
+	require.Nil(t, as.ToBytes(buf))
 
 	expected := []byte{3, 4, 0, 4, 4, 12, 0, 1, 97, 7, 12, 0, 4, 49, 50, 51, 52, 4, 12, 0, 1, 98, 7, 12, 0, 4, 53, 54, 55, 56}
 	require.Equal(t, 0, bytes.Compare(expected, buf.Bytes()))
 
-	dec := gob.NewDecoder(buf)
 	as2 := attributeSet{}
-	as2.fromGob(dec)
+	require.Nil(t, as2.FromBytes(buf))
 	require.Equal(t, as, as2)
 }

@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"bytes"
 	"encoding/gob"
 )
 
@@ -118,19 +119,33 @@ func (es *elementSet) copyFrom(from elementSet) {
 	*es = set
 }
 
-func (es *elementSet) fromGob(dec *gob.Decoder) {
+func (es *elementSet) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
 	var c int
-	dec.Decode(&c)
+	if err := dec.Decode(&c); err != nil {
+		return err
+	}
 	set := make([]XElement, c)
 	for i := 0; i < c; i++ {
-		set[i] = NewElementFromGob(dec)
+		el, err := NewElementFromBytes(buf)
+		if err != nil {
+			return err
+		}
+		set[i] = el
 	}
 	*es = set
+	return nil
 }
 
-func (es elementSet) toGob(enc *gob.Encoder) {
-	enc.Encode(len(es))
-	for _, el := range es {
-		el.ToGob(enc)
+func (es elementSet) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(len(es)); err != nil {
+		return err
 	}
+	for _, el := range es {
+		if err := el.ToBytes(buf); err != nil {
+			return err
+		}
+	}
+	return nil
 }

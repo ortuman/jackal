@@ -23,7 +23,7 @@ func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 	require.Equal(t, ErrMockedError, s.InsertBlockListItems(items))
 	s.DisableMockedError()
 
-	s.InsertBlockListItems(items)
+	_ = s.InsertBlockListItems(items)
 
 	s.EnableMockedError()
 	_, err := s.FetchBlockListItems("ortuman")

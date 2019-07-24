@@ -7,7 +7,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/gob"
 	"sync"
 
 	"github.com/ortuman/jackal/runqueue"
@@ -146,8 +145,10 @@ func (c *Cluster) send(msg *Message, toNode string) error {
 
 func (c *Cluster) broadcast(msg *Message) error {
 	msgBytes := c.encodeMessage(msg)
+
 	c.membersMu.RLock()
 	defer c.membersMu.RUnlock()
+
 	for _, node := range c.members {
 		if node.Name == c.LocalNode() {
 			continue
@@ -206,8 +207,8 @@ func (c *Cluster) handleNotifyMsg(msg []byte) {
 		return
 	}
 	var m Message
-	dec := gob.NewDecoder(bytes.NewReader(msg))
-	if err := m.FromGob(dec); err != nil {
+	buf := bytes.NewBuffer(msg)
+	if err := m.FromBytes(buf); err != nil {
 		log.Error(err)
 		return
 	}
@@ -218,8 +219,8 @@ func (c *Cluster) handleNotifyMsg(msg []byte) {
 
 func (c *Cluster) encodeMessage(msg *Message) []byte {
 	defer c.buf.Reset()
-	enc := gob.NewEncoder(c.buf)
-	msg.ToGob(enc)
+
+	_ = msg.ToBytes(c.buf)
 	msgBytes := make([]byte, c.buf.Len(), c.buf.Len())
 	copy(msgBytes, c.buf.Bytes())
 	return msgBytes

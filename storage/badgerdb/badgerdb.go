@@ -6,8 +6,6 @@
 package badgerdb
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"os"
@@ -17,7 +15,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/serializer"
 	"github.com/ortuman/jackal/pool"
 )
 
@@ -71,9 +69,13 @@ func (b *Storage) loop() {
 	for {
 		select {
 		case <-tc.C:
-			b.db.RunValueLogGC(0.5)
+			if err := b.db.RunValueLogGC(0.5); err != nil {
+				log.Warnf("%s", err)
+			}
 		case ch := <-b.doneCh:
-			b.db.Close()
+			if err := b.db.Close(); err != nil {
+				log.Warnf("%s", err)
+			}
 			close(ch)
 			return
 		}
@@ -81,15 +83,14 @@ func (b *Storage) loop() {
 }
 
 func (b *Storage) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn) error {
-	gs, ok := entity.(model.GobSerializer)
+	gs, ok := entity.(serializer.Serializer)
 	if !ok {
 		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 	}
-	buf := b.pool.Get()
-	defer b.pool.Put(buf)
-
-	gs.ToGob(gob.NewEncoder(buf))
-	bts := buf.Bytes()
+	bts, err := serializer.Serialize(gs)
+	if err != nil {
+		return err
+	}
 	val := make([]byte, len(bts))
 	copy(val, bts)
 	return tx.Set(key, val)
@@ -123,11 +124,11 @@ func (b *Storage) fetch(entity interface{}, key []byte) error {
 		}
 		if val != nil {
 			if entity != nil {
-				gd, ok := entity.(model.GobDeserializer)
+				gd, ok := entity.(serializer.Deserializer)
 				if !ok {
 					return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 				}
-				return gd.FromGob(gob.NewDecoder(bytes.NewReader(val)))
+				return serializer.Deserialize(val, gd)
 			}
 			return nil
 		}
@@ -144,11 +145,11 @@ func (b *Storage) fetchAll(v interface{}, prefix []byte) error {
 	return b.forEachKeyAndValue(prefix, func(k, val []byte) error {
 		e := reflect.New(t.Elem()).Elem()
 		i := e.Addr().Interface()
-		gd, ok := i.(model.GobDeserializer)
+		gd, ok := i.(serializer.Deserializer)
 		if !ok {
 			return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, i)
 		}
-		if err := gd.FromGob(gob.NewDecoder(bytes.NewReader(val))); err != nil {
+		if err := serializer.Deserialize(val, gd); err != nil {
 			return err
 		}
 		s.Set(reflect.Append(s, e))

@@ -27,6 +27,6 @@ func tUtilBadgerDBSetup() *testBadgerDBHelper {
 }
 
 func tUtilBadgerDBTeardown(h *testBadgerDBHelper) {
-	h.db.Close()
-	os.RemoveAll(h.dataDir)
+	_ = h.db.Close()
+	_ = os.RemoveAll(h.dataDir)
 }

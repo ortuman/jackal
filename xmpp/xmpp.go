@@ -6,7 +6,7 @@
 package xmpp
 
 import (
-	"encoding/gob"
+	"bytes"
 	"fmt"
 	"io"
 
@@ -43,7 +43,7 @@ type XElement interface {
 	Error() XElement
 
 	ToXML(w io.Writer, includeClosing bool)
-	ToGob(enc *gob.Encoder)
+	ToBytes(buf *bytes.Buffer) error
 }
 
 // Stanza represents an XMPP stanza element.

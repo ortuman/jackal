@@ -111,10 +111,10 @@ func NewWithString(str string, skipStringPrep bool) (*JID, error) {
 	return New(node, domain, resource, skipStringPrep)
 }
 
-// NewFromGob constructs a JID from it's gob binary representation.
-func NewFromGob(dec *gob.Decoder) (*JID, error) {
+// NewFromBytes constructs a JID from it's gob binary representation.
+func NewFromBytes(buf *bytes.Buffer) (*JID, error) {
 	var j JID
-	if err := j.FromGob(dec); err != nil {
+	if err := j.FromBytes(buf); err != nil {
 		return nil, err
 	}
 	return &j, nil
@@ -198,20 +198,35 @@ func (j *JID) String() string {
 	return buf.String()
 }
 
-// FromGob deserializes a JID entity from it's gob binary representation.
-func (j *JID) FromGob(dec *gob.Decoder) error {
+// FromBytes deserializes a JID entity from it's gob binary representation.
+func (j *JID) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
 	var node, domain, resource string
-	dec.Decode(&node)
-	dec.Decode(&domain)
-	dec.Decode(&resource)
+	if err := dec.Decode(&node); err != nil {
+		return err
+	}
+	if err := dec.Decode(&domain); err != nil {
+		return err
+	}
+	if err := dec.Decode(&resource); err != nil {
+		return err
+	}
 	return j.stringPrep(node, domain, resource)
 }
 
-// ToGob converts a JID entity to it's gob binary representation.
-func (j *JID) ToGob(enc *gob.Encoder) {
-	enc.Encode(&j.node)
-	enc.Encode(&j.domain)
-	enc.Encode(&j.resource)
+// ToBytes converts a JID entity to it's gob binary representation.
+func (j *JID) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&j.node); err != nil {
+		return err
+	}
+	if err := enc.Encode(&j.domain); err != nil {
+		return err
+	}
+	if err := enc.Encode(&j.resource); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (j *JID) stringPrep(node, domain, resource string) error {

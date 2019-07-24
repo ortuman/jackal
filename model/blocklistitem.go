@@ -5,7 +5,10 @@
 
 package model
 
-import "encoding/gob"
+import (
+	"bytes"
+	"encoding/gob"
+)
 
 // BlockListItem represents block list item storage entity.
 type BlockListItem struct {
@@ -13,16 +16,21 @@ type BlockListItem struct {
 	JID      string
 }
 
-// FromGob deserializes a BlockListItem entity from it's gob binary representation.
-func (bli *BlockListItem) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&bli.Username)
-	dec.Decode(&bli.JID)
-	return nil
+// FromBytes deserializes a BlockListItem entity from it's gob binary representation.
+func (bli *BlockListItem) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&bli.Username); err != nil {
+		return err
+	}
+	return dec.Decode(&bli.JID)
 }
 
-// ToGob converts a BlockListItem entity
+// ToBytes converts a BlockListItem entity
 // to it's gob binary representation.
-func (bli *BlockListItem) ToGob(enc *gob.Encoder) {
-	enc.Encode(&bli.Username)
-	enc.Encode(&bli.JID)
+func (bli *BlockListItem) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&bli.Username); err != nil {
+		return err
+	}
+	return enc.Encode(&bli.JID)
 }

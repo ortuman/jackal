@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -65,11 +66,13 @@ func NewErrorStanzaFromStanza(stanza Stanza, stanzaErr *StanzaError, errorElemen
 	return e
 }
 
-// NewElementFromGob creates and returns a new Element from a given gob decoder.
-func NewElementFromGob(dec *gob.Decoder) *Element {
+// NewElementFromBytes creates and returns a new Element from its byte representation.
+func NewElementFromBytes(buf *bytes.Buffer) (*Element, error) {
 	e := &Element{}
-	e.FromGob(dec)
-	return e
+	if err := e.FromBytes(buf); err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 // Name returns XML node name.
@@ -198,21 +201,34 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 	}
 }
 
-// FromGob deserializes an element node from it's gob binary representation.
-func (e *Element) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&e.name)
-	dec.Decode(&e.text)
-	e.attrs.fromGob(dec)
-	e.elements.fromGob(dec)
-	return nil
+// FromBytes deserializes an element node from it's gob binary representation.
+func (e *Element) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&e.name); err != nil {
+		return err
+	}
+	if err := dec.Decode(&e.text); err != nil {
+		return err
+	}
+	if err := e.attrs.FromBytes(buf); err != nil {
+		return err
+	}
+	return e.elements.FromBytes(buf)
 }
 
-// ToGob serializes an element node to it's gob binary representation.
-func (e *Element) ToGob(enc *gob.Encoder) {
-	enc.Encode(&e.name)
-	enc.Encode(&e.text)
-	e.attrs.toGob(enc)
-	e.elements.toGob(enc)
+// ToBytes serializes an element node to it's gob binary representation.
+func (e *Element) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&e.name); err != nil {
+		return err
+	}
+	if err := enc.Encode(&e.text); err != nil {
+		return err
+	}
+	if err := e.attrs.ToBytes(buf); err != nil {
+		return err
+	}
+	return e.elements.ToBytes(buf)
 }
 
 func (e *Element) copyFrom(el XElement) {
@@ -271,9 +287,11 @@ func (s *stanzaElement) SetFromJID(j *jid.JID) {
 	s.SetFrom(j.String())
 }
 
-// FromGob deserializes a stanza element from it's gob binary representation.
-func (s *stanzaElement) FromGob(dec *gob.Decoder) error {
-	s.Element.FromGob(dec)
+// FromBytes deserializes a stanza element from it's gob binary representation.
+func (s *stanzaElement) FromBytes(buf *bytes.Buffer) error {
+	if err := s.Element.FromBytes(buf); err != nil {
+		return err
+	}
 
 	// set from and to JIDs
 	fromJID, err := jid.NewWithString(s.From(), false)
