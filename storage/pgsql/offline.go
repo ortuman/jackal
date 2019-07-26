@@ -40,7 +40,7 @@ func (s *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
+func (s *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
 	q := sq.Select("data").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -51,7 +51,7 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
@@ -59,7 +59,9 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 	buf.WriteString("<r>")
 	for rows.Next() {
 		var msg string
-		rows.Scan(&msg)
+		if err := rows.Scan(&msg); err != nil {
+			return nil, err
+		}
 		buf.WriteString(msg)
 	}
 	buf.WriteString("</r>")
@@ -72,7 +74,7 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 
 	elems := rootEl.Elements().All()
 
-	var msgs []*xmpp.Message
+	var msgs []xmpp.Message
 	for _, el := range elems {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
@@ -80,7 +82,7 @@ func (s *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error)
 		if err != nil {
 			return nil, err
 		}
-		msgs = append(msgs, msg)
+		msgs = append(msgs, *msg)
 	}
 	return msgs, nil
 }

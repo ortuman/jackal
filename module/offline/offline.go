@@ -105,7 +105,7 @@ func (x *Offline) deliverOfflineMessages(stm stream.C2S) {
 	log.Infof("delivering offline messages: %s... count: %d", userJID, len(messages))
 
 	for _, m := range messages {
-		x.router.Route(m)
+		_ = x.router.Route(&m)
 	}
 	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
 		log.Error(err)

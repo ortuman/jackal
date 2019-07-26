@@ -31,7 +31,7 @@ type Storage struct {
 	rosterNotifications map[string][]rostermodel.Notification
 	vCards              map[string]xmpp.XElement
 	privateXML          map[string][]xmpp.XElement
-	offlineMessages     map[string][]*xmpp.Message
+	offlineMessages     map[string][]xmpp.Message
 	blockListItems      map[string][]model.BlockListItem
 
 	bytes map[string][]byte
@@ -46,7 +46,7 @@ func New() *Storage {
 		rosterNotifications: make(map[string][]rostermodel.Notification),
 		vCards:              make(map[string]xmpp.XElement),
 		privateXML:          make(map[string][]xmpp.XElement),
-		offlineMessages:     make(map[string][]*xmpp.Message),
+		offlineMessages:     make(map[string][]xmpp.Message),
 		blockListItems:      make(map[string][]model.BlockListItem),
 		bytes:               make(map[string][]byte),
 	}

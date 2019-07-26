@@ -7,13 +7,12 @@ package memstorage
 
 import "github.com/ortuman/jackal/xmpp"
 
-// InsertOfflineMessage inserts a new message element into
-// user's offline queue.
+// InsertOfflineMessage inserts a new message element into user's offline queue.
 func (m *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	return m.inWriteLock(func() error {
 		msg, _ := xmpp.NewMessageFromElement(message, message.FromJID(), message.ToJID())
 		msgs := m.offlineMessages[username]
-		msgs = append(msgs, msg)
+		msgs = append(msgs, *msg)
 		m.offlineMessages[username] = msgs
 		return nil
 	})
@@ -30,8 +29,8 @@ func (m *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (m *Storage) FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
-	var ret []*xmpp.Message
+func (m *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
+	var ret []xmpp.Message
 	err := m.inReadLock(func() error {
 		ret = m.offlineMessages[username]
 		return nil
@@ -45,4 +44,22 @@ func (m *Storage) DeleteOfflineMessages(username string) error {
 		delete(m.offlineMessages, username)
 		return nil
 	})
+}
+
+/*
+func (m *Storage) fetchUserOfflineMessages(username string) ([]*xmpp.Message, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[offlineMessageKey(username)]
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+}*/
+
+func offlineMessageKey(username string) string {
+	return "offlineMessages:" + username
 }

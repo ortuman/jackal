@@ -6,7 +6,7 @@ import "github.com/ortuman/jackal/xmpp"
 type offlineStorage interface {
 	InsertOfflineMessage(message *xmpp.Message, username string) error
 	CountOfflineMessages(username string) (int, error)
-	FetchOfflineMessages(username string) ([]*xmpp.Message, error)
+	FetchOfflineMessages(username string) ([]xmpp.Message, error)
 	DeleteOfflineMessages(username string) error
 }
 
@@ -22,7 +22,7 @@ func CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
+func FetchOfflineMessages(username string) ([]xmpp.Message, error) {
 	return instance().FetchOfflineMessages(username)
 }
 
