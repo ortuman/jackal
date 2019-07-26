@@ -33,6 +33,8 @@ type Storage struct {
 	privateXML          map[string][]xmpp.XElement
 	offlineMessages     map[string][]*xmpp.Message
 	blockListItems      map[string][]model.BlockListItem
+
+	bytes map[string][]byte
 }
 
 // New returns a new in memory storage instance.
@@ -46,6 +48,7 @@ func New() *Storage {
 		privateXML:          make(map[string][]xmpp.XElement),
 		offlineMessages:     make(map[string][]*xmpp.Message),
 		blockListItems:      make(map[string][]model.BlockListItem),
+		bytes:               make(map[string][]byte),
 	}
 }
 

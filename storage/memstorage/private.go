@@ -5,27 +5,53 @@
 
 package memstorage
 
-import "github.com/ortuman/jackal/xmpp"
+import (
+	"github.com/ortuman/jackal/model/serializer"
+	"github.com/ortuman/jackal/xmpp"
+)
 
 // InsertOrUpdatePrivateXML inserts a new private element into storage,
 // or updates it in case it's been previously inserted.
 func (m *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+	var priv []xmpp.Element
+
+	// convert to concrete type
+	for _, el := range privateXML {
+		priv = append(priv, *xmpp.NewElementFromElement(el))
+	}
+	b, err := serializer.SerializeSlice(&priv)
+	if err != nil {
+		return err
+	}
 	return m.inWriteLock(func() error {
-		var elems []xmpp.XElement
-		for _, prv := range privateXML {
-			elems = append(elems, xmpp.NewElementFromElement(prv))
-		}
-		m.privateXML[username+":"+namespace] = elems
+		m.bytes[privateStorageKey(username, namespace)] = b
 		return nil
 	})
 }
 
 // FetchPrivateXML retrieves from storage a private element.
 func (m *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
-	var ret []xmpp.XElement
-	err := m.inReadLock(func() error {
-		ret = m.privateXML[username+":"+namespace]
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[privateStorageKey(username, namespace)]
 		return nil
-	})
-	return ret, err
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	var priv []xmpp.Element
+	if err := serializer.DeserializeSlice(b, &priv); err != nil {
+		return nil, err
+	}
+	var ret []xmpp.XElement
+	for _, e := range priv {
+		ret = append(ret, &e)
+	}
+	return ret, nil
+}
+
+func privateStorageKey(username, namespace string) string {
+	return "privateElements:" + username + ":" + namespace
 }

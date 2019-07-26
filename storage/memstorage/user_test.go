@@ -43,8 +43,10 @@ func TestMemoryStorage_FetchUser(t *testing.T) {
 	_, err := s.FetchUser("ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
+
 	usr, _ := s.FetchUser("romeo")
 	require.Nil(t, usr)
+
 	usr, _ = s.FetchUser("ortuman")
 	require.NotNil(t, usr)
 }

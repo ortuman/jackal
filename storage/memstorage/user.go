@@ -7,13 +7,18 @@ package memstorage
 
 import (
 	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/model/serializer"
 )
 
 // InsertOrUpdateUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
 func (m *Storage) InsertOrUpdateUser(user *model.User) error {
+	b, err := serializer.Serialize(user)
+	if err != nil {
+		return err
+	}
 	return m.inWriteLock(func() error {
-		m.users[user.Username] = user
+		m.bytes[userKey(user.Username)] = b
 		return nil
 	})
 }
@@ -21,27 +26,42 @@ func (m *Storage) InsertOrUpdateUser(user *model.User) error {
 // DeleteUser deletes a user entity from storage.
 func (m *Storage) DeleteUser(username string) error {
 	return m.inWriteLock(func() error {
-		delete(m.users, username)
+		delete(m.bytes, userKey(username))
 		return nil
 	})
 }
 
 // FetchUser retrieves from storage a user entity.
 func (m *Storage) FetchUser(username string) (*model.User, error) {
-	var ret *model.User
-	err := m.inReadLock(func() error {
-		ret = m.users[username]
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[userKey(username)]
 		return nil
-	})
-	return ret, err
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	var usr model.User
+	if err := serializer.Deserialize(b, &usr); err != nil {
+		return nil, err
+	}
+	return &usr, nil
 }
 
 // UserExists returns whether or not a user exists within storage.
 func (m *Storage) UserExists(username string) (bool, error) {
-	var ret bool
-	err := m.inReadLock(func() error {
-		ret = m.users[username] != nil
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[userKey(username)]
 		return nil
-	})
-	return ret, err
+	}); err != nil {
+		return false, err
+	}
+	return b != nil, nil
+}
+
+func userKey(username string) string {
+	return "users:" + username
 }
