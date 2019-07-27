@@ -295,10 +295,12 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	})
 
 	r := New(&Config{}, rtr)
-	defer r.Shutdown()
+	defer func() { _ = r.Shutdown() }()
 
 	// online presence...
 	r.ProcessPresence(xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.AvailableType))
+
+	time.Sleep(time.Millisecond * 150) // wait until processed...
 
 	// receive pending approval notification...
 	elem := stm1.ReceiveElement()

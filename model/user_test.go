@@ -7,7 +7,6 @@ package model
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 	"time"
 
@@ -27,9 +26,9 @@ func TestModelUser(t *testing.T) {
 	usr1.LastPresence = xmpp.NewPresence(j1, j2, xmpp.AvailableType)
 
 	buf := new(bytes.Buffer)
-	usr1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, usr1.ToBytes(buf))
 	usr2 := User{}
-	usr2.FromGob(gob.NewDecoder(buf))
+	require.Nil(t, usr2.FromBytes(buf))
 	require.Equal(t, usr1.Username, usr2.Username)
 	require.Equal(t, usr1.Password, usr2.Password)
 	require.Equal(t, usr1.LastPresence.String(), usr2.LastPresence.String())

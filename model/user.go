@@ -6,6 +6,7 @@
 package model
 
 import (
+	"bytes"
 	"encoding/gob"
 	"time"
 
@@ -20,32 +21,51 @@ type User struct {
 	LastPresenceAt time.Time
 }
 
-// FromGob deserializes a User entity from it's gob binary representation.
-func (u *User) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&u.Username)
-	dec.Decode(&u.Password)
+// FromBytes deserializes a User entity from it's gob binary representation.
+func (u *User) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&u.Username); err != nil {
+		return err
+	}
+	if err := dec.Decode(&u.Password); err != nil {
+		return err
+	}
 	var hasPresence bool
-	dec.Decode(&hasPresence)
+	if err := dec.Decode(&hasPresence); err != nil {
+		return err
+	}
 	if hasPresence {
-		p, err := xmpp.NewPresenceFromGob(dec)
+		p, err := xmpp.NewPresenceFromBytes(buf)
 		if err != nil {
 			return err
 		}
 		u.LastPresence = p
-		dec.Decode(&u.LastPresenceAt)
+		if err := dec.Decode(&u.LastPresenceAt); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-// ToGob converts a User entity to it's gob binary representation.
-func (u *User) ToGob(enc *gob.Encoder) {
-	enc.Encode(&u.Username)
-	enc.Encode(&u.Password)
-	hasPresence := u.LastPresence != nil
-	enc.Encode(&hasPresence)
-	if hasPresence {
-		u.LastPresence.ToGob(enc)
-		u.LastPresenceAt = time.Now()
-		enc.Encode(&u.LastPresenceAt)
+// ToBytes converts a User entity to it's gob binary representation.
+func (u *User) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&u.Username); err != nil {
+		return err
 	}
+	if err := enc.Encode(&u.Password); err != nil {
+		return err
+	}
+	hasPresence := u.LastPresence != nil
+	if err := enc.Encode(&hasPresence); err != nil {
+		return err
+	}
+	if hasPresence {
+		if err := u.LastPresence.ToBytes(buf); err != nil {
+			return err
+		}
+		u.LastPresenceAt = time.Now()
+		return enc.Encode(&u.LastPresenceAt)
+	}
+	return nil
 }

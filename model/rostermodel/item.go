@@ -6,6 +6,7 @@
 package rostermodel
 
 import (
+	"bytes"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -108,26 +109,50 @@ func (ri *Item) ContactJID() *jid.JID {
 	return j
 }
 
-// FromGob deserializes a RosterItem entity from it's gob binary representation.
-func (ri *Item) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&ri.Username)
-	dec.Decode(&ri.JID)
-	dec.Decode(&ri.Name)
-	dec.Decode(&ri.Subscription)
-	dec.Decode(&ri.Ask)
-	dec.Decode(&ri.Ver)
-	dec.Decode(&ri.Groups)
-	return nil
+// FromBytes deserializes a RosterItem entity from its representation.
+func (ri *Item) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&ri.Username); err != nil {
+		return err
+	}
+	if err := dec.Decode(&ri.JID); err != nil {
+		return err
+	}
+	if err := dec.Decode(&ri.Name); err != nil {
+		return err
+	}
+	if err := dec.Decode(&ri.Subscription); err != nil {
+		return err
+	}
+	if err := dec.Decode(&ri.Ask); err != nil {
+		return err
+	}
+	if err := dec.Decode(&ri.Ver); err != nil {
+		return err
+	}
+	return dec.Decode(&ri.Groups)
 }
 
-// ToGob converts a RosterItem entity
-// to it's gob binary representation.
-func (ri *Item) ToGob(enc *gob.Encoder) {
-	enc.Encode(&ri.Username)
-	enc.Encode(&ri.JID)
-	enc.Encode(&ri.Name)
-	enc.Encode(&ri.Subscription)
-	enc.Encode(&ri.Ask)
-	enc.Encode(&ri.Ver)
-	enc.Encode(&ri.Groups)
+// ToBytes converts a RosterItem entity to its binary representation.
+func (ri *Item) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(&ri.Username); err != nil {
+		return err
+	}
+	if err := enc.Encode(&ri.JID); err != nil {
+		return err
+	}
+	if err := enc.Encode(&ri.Name); err != nil {
+		return err
+	}
+	if err := enc.Encode(&ri.Subscription); err != nil {
+		return err
+	}
+	if err := enc.Encode(&ri.Ask); err != nil {
+		return err
+	}
+	if err := enc.Encode(&ri.Ver); err != nil {
+		return err
+	}
+	return enc.Encode(&ri.Groups)
 }

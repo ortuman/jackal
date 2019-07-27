@@ -6,7 +6,7 @@
 package xmpp
 
 import (
-	"encoding/gob"
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -69,10 +69,10 @@ func NewIQType(identifier string, iqType string) *IQ {
 	return iq
 }
 
-// NewIQFromGob creates and returns a new IQ element from a given gob decoder.
-func NewIQFromGob(dec *gob.Decoder) (*IQ, error) {
+// NewIQFromBytes creates and returns a new IQ element from its bytes representation.
+func NewIQFromBytes(buf *bytes.Buffer) (*IQ, error) {
 	iq := &IQ{}
-	if err := iq.FromGob(dec); err != nil {
+	if err := iq.FromBytes(buf); err != nil {
 		return nil, err
 	}
 	return iq, nil

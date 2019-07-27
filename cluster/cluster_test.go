@@ -7,7 +7,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"testing"
 	"time"
@@ -203,8 +202,7 @@ func TestCluster_Delegate(t *testing.T) {
 	m.Payloads = []MessagePayload{{JID: j}}
 
 	buf := bytes.NewBuffer(nil)
-	enc := gob.NewEncoder(buf)
-	m.ToGob(enc)
+	require.Nil(t, m.ToBytes(buf))
 
 	c.handleNotifyMsg(buf.Bytes())
 	require.Equal(t, 1, delegate.notifyMessageCalls)

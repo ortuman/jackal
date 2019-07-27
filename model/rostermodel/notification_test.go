@@ -7,7 +7,6 @@ package rostermodel
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -27,8 +26,8 @@ func TestModelRosterNotification(t *testing.T) {
 		Presence: xmpp.NewPresence(j1, j2, xmpp.AvailableType),
 	}
 	buf := new(bytes.Buffer)
-	rn1.ToGob(gob.NewEncoder(buf))
-	rn2.FromGob(gob.NewDecoder(buf))
+	require.Nil(t, rn1.ToBytes(buf))
+	require.Nil(t, rn2.FromBytes(buf))
 	require.Equal(t, "ortuman@jackal.im", rn2.JID)
 	require.Equal(t, "noelia", rn2.Contact)
 	require.NotNil(t, rn1.Presence)

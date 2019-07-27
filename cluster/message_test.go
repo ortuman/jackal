@@ -7,7 +7,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/google/uuid"
@@ -24,9 +23,9 @@ func TestMessageSerialization(t *testing.T) {
 		Type: MsgBatchBind,
 		Node: "node1",
 	}
-	m1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, m1.ToBytes(buf))
 
-	require.Nil(t, m2.FromGob(gob.NewDecoder(buf)))
+	require.Nil(t, m2.FromBytes(buf))
 	require.Equal(t, m1.Type, m2.Type)
 	require.Equal(t, m1.Node, m2.Node)
 
@@ -41,9 +40,9 @@ func TestMessageSerialization(t *testing.T) {
 		}},
 	}
 	buf.Reset()
-	m1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, m1.ToBytes(buf))
 
-	require.Nil(t, m2.FromGob(gob.NewDecoder(buf)))
+	require.Nil(t, m2.FromBytes(buf))
 	require.Equal(t, m1.Type, m2.Type)
 	require.Equal(t, m1.Node, m2.Node)
 	require.Equal(t, 1, len(m2.Payloads))
@@ -59,17 +58,17 @@ func TestMessageSerialization(t *testing.T) {
 
 	m1.Payloads[0].Stanza = xmpp.NewIQType(uuid.New().String(), xmpp.GetType)
 	buf.Reset()
-	m1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, m1.ToBytes(buf))
 
-	require.Nil(t, m2.FromGob(gob.NewDecoder(buf)))
+	require.Nil(t, m2.FromBytes(buf))
 	_, ok = m2.Payloads[0].Stanza.(*xmpp.IQ)
 	require.True(t, ok)
 
 	m1.Payloads[0].Stanza = xmpp.NewMessageType(uuid.New().String(), xmpp.NormalType)
 	buf.Reset()
-	m1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, m1.ToBytes(buf))
 
-	require.Nil(t, m2.FromGob(gob.NewDecoder(buf)))
+	require.Nil(t, m2.FromBytes(buf))
 	_, ok = m2.Payloads[0].Stanza.(*xmpp.Message)
 	require.True(t, ok)
 }

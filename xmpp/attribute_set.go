@@ -6,6 +6,7 @@
 package xmpp
 
 import (
+	"bytes"
 	"encoding/gob"
 )
 
@@ -60,21 +61,37 @@ func (as *attributeSet) copyFrom(from attributeSet) {
 	copy(*as, from)
 }
 
-func (as *attributeSet) fromGob(dec *gob.Decoder) {
+func (as *attributeSet) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
 	var c int
-	dec.Decode(&c)
+	if err := dec.Decode(&c); err != nil {
+		return err
+	}
 	for i := 0; i < c; i++ {
 		var attr Attribute
-		dec.Decode(&attr.Label)
-		dec.Decode(&attr.Value)
+		if err := dec.Decode(&attr.Label); err != nil {
+			return err
+		}
+		if err := dec.Decode(&attr.Value); err != nil {
+			return err
+		}
 		*as = append(*as, attr)
 	}
+	return nil
 }
 
-func (as attributeSet) toGob(enc *gob.Encoder) {
-	enc.Encode(len(as))
-	for _, attr := range as {
-		enc.Encode(&attr.Label)
-		enc.Encode(&attr.Value)
+func (as attributeSet) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(len(as)); err != nil {
+		return err
 	}
+	for _, attr := range as {
+		if err := enc.Encode(&attr.Label); err != nil {
+			return err
+		}
+		if err := enc.Encode(&attr.Value); err != nil {
+			return err
+		}
+	}
+	return nil
 }

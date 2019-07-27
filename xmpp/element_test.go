@@ -7,7 +7,6 @@ package xmpp
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -40,9 +39,9 @@ func TestElement_NewError(t *testing.T) {
 func TestElement_Gob(t *testing.T) {
 	e1 := NewElementNamespace("n", "ns")
 	buf := new(bytes.Buffer)
-	e1.ToGob(gob.NewEncoder(buf))
+	require.Nil(t, e1.ToBytes(buf))
 	var e2 Element
-	e2.FromGob(gob.NewDecoder(buf))
+	require.Nil(t, e2.FromBytes(buf))
 	require.Equal(t, e1.String(), e2.String())
 }
 

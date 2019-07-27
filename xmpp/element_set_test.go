@@ -7,7 +7,6 @@ package xmpp
 
 import (
 	"bytes"
-	"encoding/gob"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -86,8 +85,8 @@ func TestElementSet_Gob(t *testing.T) {
 	es0.append(a1, a2, a3)
 
 	buf := new(bytes.Buffer)
-	es0.toGob(gob.NewEncoder(buf))
-	es1.fromGob(gob.NewDecoder(buf))
+	require.Nil(t, es0.ToBytes(buf))
+	require.Nil(t, es1.FromBytes(buf))
 	require.Equal(t, es0.Count(), es1.Count())
 	for i, el := range es0 {
 		require.Equal(t, el.String(), es1[i].String())

@@ -6,6 +6,7 @@
 package cluster
 
 import (
+	"bytes"
 	"encoding/gob"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -45,9 +46,10 @@ type MessagePayload struct {
 	Stanza  xmpp.Stanza
 }
 
-// FromGob reads MessagePayload fields from its gob binary representation.
-func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
-	j, err := jid.NewFromGob(dec)
+// FromBytes reads MessagePayload fields from its binary representation.
+func (p *MessagePayload) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	j, err := jid.NewFromBytes(buf)
 	if err != nil {
 		return err
 	}
@@ -70,19 +72,19 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 	dec.Decode(&stanzaType)
 	switch stanzaType {
 	case messageStanza:
-		message, err := xmpp.NewMessageFromGob(dec)
+		message, err := xmpp.NewMessageFromBytes(buf)
 		if err != nil {
 			return err
 		}
 		p.Stanza = message
 	case presenceStanza:
-		presence, err := xmpp.NewPresenceFromGob(dec)
+		presence, err := xmpp.NewPresenceFromBytes(buf)
 		if err != nil {
 			return err
 		}
 		p.Stanza = presence
 	case iqStanza:
-		iq, err := xmpp.NewIQFromGob(dec)
+		iq, err := xmpp.NewIQFromBytes(buf)
 		if err != nil {
 			return err
 		}
@@ -91,33 +93,48 @@ func (p *MessagePayload) FromGob(dec *gob.Decoder) error {
 	return nil
 }
 
-// ToGob converts a MessagePayload instance to its gob binary representation.
-func (p *MessagePayload) ToGob(enc *gob.Encoder) {
-	p.JID.ToGob(enc)
+// ToBytes converts a MessagePayload instance to its binary representation.
+func (p *MessagePayload) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := p.JID.ToBytes(buf); err != nil {
+		return err
+	}
 
 	hasContextMap := p.Context != nil
-	enc.Encode(&hasContextMap)
+	if err := enc.Encode(&hasContextMap); err != nil {
+		return err
+	}
 	if hasContextMap {
-		enc.Encode(&p.Context)
+		if err := enc.Encode(&p.Context); err != nil {
+			return err
+		}
 	}
 
 	hasStanza := p.Stanza != nil
-	enc.Encode(&hasStanza)
+	if err := enc.Encode(&hasStanza); err != nil {
+		return err
+	}
 	if !hasStanza {
-		return
+		return nil
 	}
 	// store stanza type
 	switch p.Stanza.(type) {
 	case *xmpp.Message:
-		enc.Encode(messageStanza)
+		if err := enc.Encode(messageStanza); err != nil {
+			return err
+		}
 	case *xmpp.Presence:
-		enc.Encode(presenceStanza)
+		if err := enc.Encode(presenceStanza); err != nil {
+			return err
+		}
 	case *xmpp.IQ:
-		enc.Encode(iqStanza)
+		if err := enc.Encode(iqStanza); err != nil {
+			return err
+		}
 	default:
-		return
+		return nil
 	}
-	p.Stanza.ToGob(enc)
+	return p.Stanza.ToBytes(buf)
 }
 
 // Message is the c2s message type.
@@ -128,29 +145,48 @@ type Message struct {
 	Payloads []MessagePayload
 }
 
-// FromGob reads Message fields from its gob binary representation.
-func (m *Message) FromGob(dec *gob.Decoder) error {
-	dec.Decode(&m.Type)
-	dec.Decode(&m.Node)
+// FromBytes reads Message fields from its binary representation.
+func (m *Message) FromBytes(buf *bytes.Buffer) error {
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&m.Type); err != nil {
+		return err
+	}
+	if err := dec.Decode(&m.Node); err != nil {
+		return err
+	}
 
 	var pLen int
-	dec.Decode(&pLen)
+	if err := dec.Decode(&pLen); err != nil {
+		return err
+	}
 
 	m.Payloads = nil
 	for i := 0; i < pLen; i++ {
 		var p MessagePayload
-		p.FromGob(dec)
+		if err := p.FromBytes(buf); err != nil {
+			return err
+		}
 		m.Payloads = append(m.Payloads, p)
 	}
 	return nil
 }
 
-// ToGob converts a Message instance to its gob binary representation.
-func (m *Message) ToGob(enc *gob.Encoder) {
-	enc.Encode(m.Type)
-	enc.Encode(m.Node)
-	enc.Encode(len(m.Payloads))
-	for _, p := range m.Payloads {
-		p.ToGob(enc)
+// ToBytes converts a Message instance to its binary representation.
+func (m *Message) ToBytes(buf *bytes.Buffer) error {
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(m.Type); err != nil {
+		return err
 	}
+	if err := enc.Encode(m.Node); err != nil {
+		return err
+	}
+	if err := enc.Encode(len(m.Payloads)); err != nil {
+		return err
+	}
+	for _, p := range m.Payloads {
+		if err := p.ToBytes(buf); err != nil {
+			return err
+		}
+	}
+	return nil
 }

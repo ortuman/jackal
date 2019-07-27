@@ -607,7 +607,7 @@ func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
 		fromJID, _ := jid.NewWithString(rn.JID, true)
 		p := xmpp.NewPresence(fromJID, userJID, xmpp.SubscribeType)
 		p.AppendElements(rn.Presence.Elements().All())
-		x.router.Route(p)
+		_ = x.router.Route(p)
 	}
 
 	// deliver roster online presences
@@ -620,7 +620,7 @@ func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
 		case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 			contactJID := item.ContactJID()
 			if !x.router.IsLocalHost(contactJID.Domain()) {
-				x.router.Route(xmpp.NewPresence(userJID, contactJID, xmpp.ProbeType))
+				_ = x.router.Route(xmpp.NewPresence(userJID, contactJID, xmpp.ProbeType))
 				continue
 			}
 			x.routePresencesFrom(contactJID, userJID, xmpp.AvailableType)
@@ -631,16 +631,16 @@ func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
 
 func (x *Roster) broadcastPresence(presence *xmpp.Presence) error {
 	fromJID := presence.FromJID()
-	itms, _, err := storage.FetchRosterItems(fromJID.Node())
+	items, _, err := storage.FetchRosterItems(fromJID.Node())
 	if err != nil {
 		return err
 	}
-	for _, itm := range itms {
+	for _, itm := range items {
 		switch itm.Subscription {
 		case rostermodel.SubscriptionFrom, rostermodel.SubscriptionBoth:
 			p := xmpp.NewPresence(fromJID, itm.ContactJID(), presence.Type())
 			p.AppendElements(presence.Elements().All())
-			x.router.Route(p)
+			_ = x.router.Route(p)
 		}
 	}
 

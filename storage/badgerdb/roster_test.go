@@ -38,11 +38,11 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 		Groups:       []string{"family", "friends"},
 	}
 	_, err := h.db.InsertOrUpdateRosterItem(ri1)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	_, err = h.db.InsertOrUpdateRosterItem(ri2)
-	require.NoError(t, err)
+	require.Nil(t, err)
 	_, err = h.db.InsertOrUpdateRosterItem(ri3)
-	require.NoError(t, err)
+	require.Nil(t, err)
 
 	ris, _, err := h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)

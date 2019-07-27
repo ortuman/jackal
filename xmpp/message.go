@@ -6,7 +6,7 @@
 package xmpp
 
 import (
-	"encoding/gob"
+	"bytes"
 	"fmt"
 
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -59,10 +59,10 @@ func NewMessageType(identifier string, messageType string) *Message {
 	return msg
 }
 
-// NewMessageFromGob creates and returns a new Message element from a given gob decoder.
-func NewMessageFromGob(dec *gob.Decoder) (*Message, error) {
+// NewMessageFromBytes creates and returns a new Message element from its bytes representation.
+func NewMessageFromBytes(buf *bytes.Buffer) (*Message, error) {
 	m := &Message{}
-	if err := m.FromGob(dec); err != nil {
+	if err := m.FromBytes(buf); err != nil {
 		return nil, err
 	}
 	return m, nil

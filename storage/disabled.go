@@ -62,7 +62,7 @@ func (*disabledStorage) CountOfflineMessages(username string) (int, error) {
 	return 0, nil
 }
 
-func (*disabledStorage) FetchOfflineMessages(username string) ([]*xmpp.Message, error) {
+func (*disabledStorage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
 	return nil, nil
 }
 
