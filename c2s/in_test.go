@@ -78,7 +78,7 @@ func TestStream_TLS(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -86,7 +86,7 @@ func TestStream_TLS(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
-	conn.inboundWrite([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
+	_, _ = conn.inboundWrite([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
 
 	elem := conn.outboundRead()
 
@@ -100,7 +100,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	_, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -140,7 +140,7 @@ func TestStream_Compression(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -183,7 +183,7 @@ func TestStream_StartSession(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -206,7 +206,7 @@ func TestStream_SendIQ(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -243,7 +243,7 @@ func TestStream_SendPresence(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -288,7 +288,7 @@ func TestStream_SendMessage(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -339,7 +339,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)

@@ -159,7 +159,7 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 		Password:     passwordEl.Text(),
 		LastPresence: xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
 	}
-	if err := storage.InsertOrUpdateUser(&user); err != nil {
+	if err := storage.UpsertUser(&user); err != nil {
 		log.Error(err)
 		stm.SendElement(iq.InternalServerError())
 		return
@@ -211,7 +211,7 @@ func (x *Register) changePassword(password string, username string, iq *xmpp.IQ,
 	}
 	if user.Password != password {
 		user.Password = password
-		if err := storage.InsertOrUpdateUser(user); err != nil {
+		if err := storage.UpsertUser(user); err != nil {
 			log.Error(err)
 			stm.SendElement(iq.InternalServerError())
 			return

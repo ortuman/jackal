@@ -20,7 +20,7 @@ func TestBadgerDB_User(t *testing.T) {
 
 	usr := model.User{Username: "ortuman", Password: "1234"}
 
-	err := h.db.InsertOrUpdateUser(&usr)
+	err := h.db.UpsertUser(&usr)
 	require.Nil(t, err)
 
 	usr2, err := h.db.FetchUser("ortuman")

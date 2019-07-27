@@ -22,7 +22,7 @@ func TestInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateVCard(vCard, "ortuman")
+	err := s.UpsertVCard(vCard, "ortuman")
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -32,7 +32,7 @@ func TestInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnError(errGeneric)
 
-	err = s.InsertOrUpdateVCard(vCard, "ortuman")
+	err = s.UpsertVCard(vCard, "ortuman")
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }

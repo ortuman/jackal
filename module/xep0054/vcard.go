@@ -101,7 +101,7 @@ func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
 	if toJID.IsServer() || (toJID.Node() == fromJID.Node()) {
 		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
 
-		err := storage.InsertOrUpdateVCard(vCard, toJID.Node())
+		err := storage.UpsertVCard(vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())

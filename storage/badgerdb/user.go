@@ -10,9 +10,9 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-// InsertOrUpdateUser inserts a new user entity into storage,
+// UpsertUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdateUser(user *model.User) error {
+func (b *Storage) UpsertUser(user *model.User) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(user, b.userKey(user.Username), tx)
 	})

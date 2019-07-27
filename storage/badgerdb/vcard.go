@@ -10,9 +10,9 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// InsertOrUpdateVCard inserts a new vCard element into storage,
+// UpsertVCard inserts a new vCard element into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
+func (b *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.insertOrUpdate(vCard, b.vCardKey(username), tx)
 	})

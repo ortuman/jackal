@@ -5,18 +5,41 @@
 
 package storage
 
-import pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+import (
+	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+)
 
 type pubSubStorage interface {
-	InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error
+	UpsertPubSubNode(node *pubsubmodel.Node) error
+	FetchPubSubNode(host, name string) (*pubsubmodel.Node, error)
 
-	GetPubSubNode(host, name string) (*pubsubmodel.Node, error)
+	UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
+	FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error)
+
+	UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
+	FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
 }
 
-func InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
-	return inst.InsertOrUpdatePubSubNode(node)
+func UpsertPubSubNode(node *pubsubmodel.Node) error {
+	return inst.UpsertPubSubNode(node)
 }
 
-func GetPubSubNode(host, name string) (*pubsubmodel.Node, error) {
-	return inst.GetPubSubNode(host, name)
+func FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+	return inst.FetchPubSubNode(host, name)
+}
+
+func UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+	return inst.UpsertPubSubNodeItem(item, host, name, maxNodeItems)
+}
+
+func FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+	return inst.FetchPubSubNodeItems(host, name)
+}
+
+func UpsertPubSubNodeAffiliation(affiliatiaon *pubsubmodel.Affiliation, host, name string) error {
+	return inst.UpsertPubSubNodeAffiliation(affiliatiaon, host, name)
+}
+
+func FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+	return inst.FetchPubSubNodeAffiliations(host, name)
 }

@@ -8,6 +8,7 @@ package xep0163
 import (
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
@@ -31,8 +32,11 @@ var discoInfoFeatures = []string{
 	"http://jabber.org/protocol/pubsub#subscribe",
 }
 
-var defaultNodeOptions = []pubsubmodel.Option{
-	{},
+var defaultNodeOptions = pubsubmodel.Options{
+	AccessModel:           pubsubmodel.Presence,
+	PublishModel:          pubsubmodel.Publishers,
+	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
+	MaxItems:              1,
 }
 
 type Pep struct {
@@ -96,12 +100,22 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		Name: nodeName,
 	}
 	if configEl != nil {
-		// TODO(ortuman): attach node options
+		form, err := xep0004.NewFormFromElement(configEl)
+		if err != nil {
+			_ = x.router.Route(iq.BadRequestError())
+			return
+		}
+		opts, err := pubsubmodel.NewOptionsFromForm(form)
+		if err != nil {
+			_ = x.router.Route(iq.BadRequestError())
+			return
+		}
+		node.Options = *opts
 	} else {
 		// apply default configuration
 		node.Options = defaultNodeOptions
 	}
-	if err := storage.InsertOrUpdatePubSubNode(node); err != nil {
+	if err := storage.UpsertPubSubNode(node); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return

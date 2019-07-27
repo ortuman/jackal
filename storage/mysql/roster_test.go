@@ -72,7 +72,7 @@ func TestMySQLStorageInsertRosterItem(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	_, err := s.InsertOrUpdateRosterItem(&ri)
+	_, err := s.UpsertRosterItem(&ri)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
@@ -200,7 +200,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateRosterNotification(&rn)
+	err := s.UpsertRosterNotification(&rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -209,7 +209,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertOrUpdateRosterNotification(&rn)
+	err = s.UpsertRosterNotification(&rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

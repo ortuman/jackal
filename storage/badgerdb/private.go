@@ -10,9 +10,9 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// InsertOrUpdatePrivateXML inserts a new private element into storage,
+// UpsertPrivateXML inserts a new private element into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
 	return b.db.Update(func(tx *badger.Txn) error {

@@ -108,11 +108,11 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	st.SetText("Gone!")
 	p.AppendElement(st)
 
-	storage.InsertOrUpdateUser(&model.User{
+	_ = storage.UpsertUser(&model.User{
 		Username:     "noelia",
 		LastPresence: p,
 	})
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

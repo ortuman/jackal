@@ -28,7 +28,7 @@ func TestInsertUser(t *testing.T) {
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateUser(&user)
+	err := s.UpsertUser(&user)
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -37,7 +37,7 @@ func TestInsertUser(t *testing.T) {
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnError(errGeneric)
 
-	err = s.InsertOrUpdateUser(&user)
+	err = s.UpsertUser(&user)
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }

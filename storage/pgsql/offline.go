@@ -74,7 +74,7 @@ func (s *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 
 	elems := rootEl.Elements().All()
 
-	var msgs []xmpp.Message
+	var messages []xmpp.Message
 	for _, el := range elems {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
@@ -82,9 +82,9 @@ func (s *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 		if err != nil {
 			return nil, err
 		}
-		msgs = append(msgs, *msg)
+		messages = append(messages, *msg)
 	}
-	return msgs, nil
+	return messages, nil
 }
 
 // DeleteOfflineMessages clears a user offline queue.

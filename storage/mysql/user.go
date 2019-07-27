@@ -16,9 +16,9 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// InsertOrUpdateUser inserts a new user entity into storage,
+// UpsertUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateUser(u *model.User) error {
+func (s *Storage) UpsertUser(u *model.User) error {
 	var presenceXML string
 	if u.LastPresence != nil {
 		buf := s.pool.Get()

@@ -182,7 +182,7 @@ func TestRouter_Routing(t *testing.T) {
 	require.Equal(t, memstorage.ErrMockedError, r.Route(iq))
 	s.DisableMockedError()
 
-	_ = storage.InsertOrUpdateUser(&model.User{Username: "hamlet", Password: ""})
+	_ = storage.UpsertUser(&model.User{Username: "hamlet", Password: ""})
 	require.Equal(t, ErrNotAuthenticated, r.Route(iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)

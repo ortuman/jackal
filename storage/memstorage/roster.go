@@ -10,9 +10,9 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// UpsertRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (m *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+func (m *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	err := m.inWriteLock(func() error {
 		ris, fnErr := m.fetchRosterItems(ri.Username)
@@ -146,9 +146,9 @@ func (m *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, erro
 	return ret, err
 }
 
-// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// UpsertRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (m *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
+func (m *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(rn.Contact)
 		if fnErr != nil {

@@ -80,7 +80,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 		Ask:          true,
 		Groups:       []string{"people", "friends"},
 	}
-	storage.InsertOrUpdateRosterItem(ri1)
+	storage.UpsertRosterItem(ri1)
 
 	ri2 := &rostermodel.Item{
 		Username:     "ortuman",
@@ -90,7 +90,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 		Ask:          true,
 		Groups:       []string{"others"},
 	}
-	storage.InsertOrUpdateRosterItem(ri2)
+	storage.UpsertRosterItem(ri2)
 
 	r = New(&Config{Versioning: true}, rtr)
 	defer r.Shutdown()
@@ -209,13 +209,13 @@ func TestRoster_RemoveItem(t *testing.T) {
 	defer shutdown()
 
 	// insert contact's roster item
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Name:         "My Juliet",
 		Subscription: rostermodel.SubscriptionBoth,
 	})
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Name:         "My Romeo",
@@ -270,25 +270,25 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	rtr.Bind(stm2)
 
 	// user entity
-	storage.InsertOrUpdateUser(&model.User{
+	storage.UpsertUser(&model.User{
 		Username:     "ortuman",
 		LastPresence: xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType),
 	})
 
 	// roster items
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: rostermodel.SubscriptionBoth,
 	})
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: rostermodel.SubscriptionBoth,
 	})
 
 	// pending notification
-	storage.InsertOrUpdateRosterNotification(&rostermodel.Notification{
+	storage.UpsertRosterNotification(&rostermodel.Notification{
 		Contact:  "ortuman",
 		JID:      j3.ToBareJID().String(),
 		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
@@ -381,7 +381,7 @@ func TestRoster_Probe(t *testing.T) {
 	require.Equal(t, "noelia@jackal.im", elem.From())
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
 
-	storage.InsertOrUpdateUser(&model.User{
+	_ = storage.UpsertUser(&model.User{
 		Username:     "noelia",
 		LastPresence: xmpp.NewPresence(j2.ToBareJID(), j2.ToBareJID(), xmpp.UnavailableType),
 	})
@@ -391,7 +391,7 @@ func TestRoster_Probe(t *testing.T) {
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
 
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: rostermodel.SubscriptionFrom,
@@ -402,7 +402,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	// test available presence...
 	p2 := xmpp.NewPresence(j2, j2.ToBareJID(), xmpp.AvailableType)
-	storage.InsertOrUpdateUser(&model.User{
+	_ = storage.UpsertUser(&model.User{
 		Username:     "noelia",
 		LastPresence: p2,
 	})

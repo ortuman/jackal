@@ -28,13 +28,13 @@ func TestMemoryStorage_InsertRosterItem(t *testing.T) {
 
 	s := New()
 	s.EnableMockedError()
-	_, err := s.InsertOrUpdateRosterItem(&ri)
+	_, err := s.UpsertRosterItem(&ri)
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	_, err = s.InsertOrUpdateRosterItem(&ri)
+	_, err = s.UpsertRosterItem(&ri)
 	require.Nil(t, err)
 	ri.Subscription = "to"
-	_, err = s.InsertOrUpdateRosterItem(&ri)
+	_, err = s.UpsertRosterItem(&ri)
 	require.Nil(t, err)
 }
 
@@ -50,7 +50,7 @@ func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 		Groups:       g,
 	}
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri)
 
 	s.EnableMockedError()
 	_, err := s.FetchRosterItem("user", "contact")
@@ -96,9 +96,9 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	}
 
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
-	_, _ = s.InsertOrUpdateRosterItem(&ri2)
-	_, _ = s.InsertOrUpdateRosterItem(&ri3)
+	_, _ = s.UpsertRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri2)
+	_, _ = s.UpsertRosterItem(&ri3)
 
 	s.EnableMockedError()
 	_, _, err := s.FetchRosterItems("user")
@@ -125,7 +125,7 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 		Groups:       g,
 	}
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri)
 
 	s.EnableMockedError()
 	_, err := s.DeleteRosterItem("user", "contact")
@@ -149,9 +149,9 @@ func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
 	}
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOrUpdateRosterNotification(&rn))
+	require.Equal(t, ErrMockedError, s.UpsertRosterNotification(&rn))
 	s.DisableMockedError()
-	require.Nil(t, s.InsertOrUpdateRosterNotification(&rn))
+	require.Nil(t, s.UpsertRosterNotification(&rn))
 }
 
 func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
@@ -166,13 +166,13 @@ func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 		Presence: &xmpp.Presence{},
 	}
 	s := New()
-	_ = s.InsertOrUpdateRosterNotification(&rn1)
-	_ = s.InsertOrUpdateRosterNotification(&rn2)
+	_ = s.UpsertRosterNotification(&rn1)
+	_ = s.UpsertRosterNotification(&rn2)
 
 	from, _ := jid.NewWithString("ortuman2@jackal.im", true)
 	to, _ := jid.NewWithString("romeo@jackal.im", true)
 	rn2.Presence = xmpp.NewPresence(from, to, xmpp.SubscribeType)
-	_ = s.InsertOrUpdateRosterNotification(&rn2)
+	_ = s.UpsertRosterNotification(&rn2)
 
 	s.EnableMockedError()
 	_, err := s.FetchRosterNotifications("romeo")
@@ -192,7 +192,7 @@ func TestMemoryStorage_DeleteRosterNotification(t *testing.T) {
 		Presence: &xmpp.Presence{},
 	}
 	s := New()
-	_ = s.InsertOrUpdateRosterNotification(&rn1)
+	_ = s.UpsertRosterNotification(&rn1)
 
 	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteRosterNotification("ortuman", "romeo@jackal.im"))

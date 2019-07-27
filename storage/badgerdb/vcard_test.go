@@ -23,7 +23,7 @@ func TestBadgerDB_VCard(t *testing.T) {
 	fn.SetText("Miguel Ángel Ortuño")
 	vcard.AppendElement(fn)
 
-	err := h.db.InsertOrUpdateVCard(vcard, "ortuman")
+	err := h.db.UpsertVCard(vcard, "ortuman")
 	require.Nil(t, err)
 
 	vcard2, err := h.db.FetchVCard("ortuman")

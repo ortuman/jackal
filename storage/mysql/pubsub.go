@@ -9,10 +9,11 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-func (s *Storage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
+func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
+
 		// if not existing, insert new node
-		res, err := sq.Insert("pubsub_nodes").
+		_, err := sq.Insert("pubsub_nodes").
 			Columns("host", "name", "updated_at", "created_at").
 			Suffix("ON DUPLICATE KEY UPDATE updated_at = NOW()").
 			Values(node.Host, node.Name, nowExpr, nowExpr).
@@ -20,7 +21,14 @@ func (s *Storage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
 		if err != nil {
 			return err
 		}
-		nodeIdentifier, err := res.LastInsertId()
+
+		// fetch node identifier
+		var nodeIdentifier string
+
+		err = sq.Select("id").
+			From("pubsub_nodes").
+			Where(sq.And{sq.Eq{"host": node.Host}, sq.Eq{"name": node.Name}}).
+			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
 		if err != nil {
 			return err
 		}
@@ -32,10 +40,10 @@ func (s *Storage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
 			return err
 		}
 		// insert new option set
-		for _, opt := range node.Options {
+		for name, value := range node.Options.Map() {
 			_, err = sq.Insert("pubsub_node_options").
-				Columns("node_id", "name", "value").
-				Values(nodeIdentifier, opt.Name, opt.Value).
+				Columns("node_id", "name", "value", "updated_at", "created_at").
+				Values(nodeIdentifier, name, value, nowExpr, nowExpr).
 				RunWith(tx).Exec()
 			if err != nil {
 				return err
@@ -45,7 +53,7 @@ func (s *Storage) InsertOrUpdatePubSubNode(node *pubsubmodel.Node) error {
 	})
 }
 
-func (s *Storage) GetPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	rows, err := sq.Select("name", "value").
 		From("pubsub_node_options").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
@@ -74,7 +82,7 @@ func (s *Storage) GetPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	}, nil
 }
 
-func (s *Storage) InsertOrUpdatePubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
@@ -99,7 +107,7 @@ func (s *Storage) InsertOrUpdatePubSubNodeItem(item *pubsubmodel.Item, host, nam
 			Columns("node_id", "item_id", "payload", "publisher", "updated_at", "created_at").
 			Values(nodeIdentifier, item.ID, rawPayload, item.Publisher, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE payload = ?, publisher = ?, updated_at = NOW()", rawPayload, item.Publisher).
-			RunWith(s.db).Exec()
+			RunWith(tx).Exec()
 
 		// get total items count
 		var itemsCount int
@@ -127,7 +135,7 @@ func (s *Storage) InsertOrUpdatePubSubNodeItem(item *pubsubmodel.Item, host, nam
 			// delete oldest item
 			_, err = sq.Delete("pubsub_items").
 				Where(sq.And{sq.Eq{"node_id": nodeIdentifier}, sq.Eq{"created_at": oldestCreatedAt}}).
-				Exec()
+				RunWith(tx).Exec()
 			if err != nil {
 				return err
 			}
@@ -136,7 +144,7 @@ func (s *Storage) InsertOrUpdatePubSubNodeItem(item *pubsubmodel.Item, host, nam
 	})
 }
 
-func (s *Storage) GetPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
@@ -163,7 +171,7 @@ func (s *Storage) GetPubSubNodeItems(host, name string) ([]pubsubmodel.Item, err
 	return items, nil
 }
 
-func (s *Storage) InsertOrUpdatePubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
+func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 
 		// fetch node identifier
@@ -187,12 +195,12 @@ func (s *Storage) InsertOrUpdatePubSubNodeAffiliation(affiliation *pubsubmodel.A
 			Columns("node_id", "jid", "affiliation", "updated_at", "created_at").
 			Values(nodeIdentifier, affiliation.JID, affiliation.Affiliation, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE affiliation = ?, updated_at = NOW()", affiliation.Affiliation).
-			RunWith(s.db).Exec()
+			RunWith(tx).Exec()
 		return err
 	})
 }
 
-func (s *Storage) GetPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	rows, err := sq.Select("jid", "affiliation").
 		From("pubsub_affiliations").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).

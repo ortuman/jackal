@@ -31,17 +31,17 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
 func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
-	var msgs []xmpp.Message
-	if err := b.fetchAll(&msgs, []byte("offlineMessages:"+username)); err != nil {
+	var messages []xmpp.Message
+	if err := b.fetchAll(&messages, []byte("offlineMessages:"+username)); err != nil {
 		return nil, err
 	}
-	switch len(msgs) {
+	switch len(messages) {
 	case 0:
 		return nil, nil
 	default:
-		ret := make([]xmpp.Message, len(msgs))
-		for i := 0; i < len(msgs); i++ {
-			ret[i] = msgs[i]
+		ret := make([]xmpp.Message, len(messages))
+		for i := 0; i < len(messages); i++ {
+			ret[i] = messages[i]
 		}
 		return ret, nil
 	}

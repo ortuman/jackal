@@ -16,9 +16,9 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// UpsertRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+func (s *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	var ver rostermodel.Version
 
 	err := s.inTransaction(func(tx *sql.Tx) error {
@@ -177,9 +177,9 @@ func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, erro
 	}
 }
 
-// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// UpsertRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
+func (s *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
 	presenceXML := rn.Presence.String()
 	q := sq.Insert("roster_notifications").
 		Columns("contact", "jid", "elements", "updated_at", "created_at").

@@ -21,7 +21,7 @@ func TestBadgerDB_PrivateXML(t *testing.T) {
 	pv1 := xmpp.NewElementNamespace("ex1", "exodus:ns")
 	pv2 := xmpp.NewElementNamespace("ex2", "exodus:ns")
 
-	require.NoError(t, h.db.InsertOrUpdatePrivateXML([]xmpp.XElement{pv1, pv2}, "exodus:ns", "ortuman"))
+	require.NoError(t, h.db.UpsertPrivateXML([]xmpp.XElement{pv1, pv2}, "exodus:ns", "ortuman"))
 
 	prvs, err := h.db.FetchPrivateXML("exodus:ns", "ortuman")
 	require.Nil(t, err)

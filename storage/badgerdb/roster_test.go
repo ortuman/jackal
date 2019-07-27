@@ -37,11 +37,11 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 		Subscription: "both",
 		Groups:       []string{"family", "friends"},
 	}
-	_, err := h.db.InsertOrUpdateRosterItem(ri1)
+	_, err := h.db.UpsertRosterItem(ri1)
 	require.Nil(t, err)
-	_, err = h.db.InsertOrUpdateRosterItem(ri2)
+	_, err = h.db.UpsertRosterItem(ri2)
 	require.Nil(t, err)
-	_, err = h.db.InsertOrUpdateRosterItem(ri3)
+	_, err = h.db.UpsertRosterItem(ri3)
 	require.Nil(t, err)
 
 	ris, _, err := h.db.FetchRosterItems("ortuman")
@@ -96,8 +96,8 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 		JID:      "romeo@jackal.im",
 		Presence: &xmpp.Presence{},
 	}
-	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn1))
-	require.NoError(t, h.db.InsertOrUpdateRosterNotification(&rn2))
+	require.NoError(t, h.db.UpsertRosterNotification(&rn1))
+	require.NoError(t, h.db.UpsertRosterNotification(&rn2))
 
 	rns, err := h.db.FetchRosterNotifications("ortuman")
 	require.Nil(t, err)

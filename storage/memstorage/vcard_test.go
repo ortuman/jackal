@@ -20,9 +20,9 @@ func TestMemoryStorage_InsertVCard(t *testing.T) {
 
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOrUpdateVCard(vCard, "ortuman"))
+	require.Equal(t, ErrMockedError, s.UpsertVCard(vCard, "ortuman"))
 	s.DisableMockedError()
-	require.Nil(t, s.InsertOrUpdateVCard(vCard, "ortuman"))
+	require.Nil(t, s.UpsertVCard(vCard, "ortuman"))
 }
 
 func TestMemoryStorage_FetchVCard(t *testing.T) {
@@ -32,7 +32,7 @@ func TestMemoryStorage_FetchVCard(t *testing.T) {
 	vCard.AppendElement(fn)
 
 	s := New()
-	_ = s.InsertOrUpdateVCard(vCard, "ortuman")
+	_ = s.UpsertVCard(vCard, "ortuman")
 
 	s.EnableMockedError()
 	_, err := s.FetchVCard("ortuman")
