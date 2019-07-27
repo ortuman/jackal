@@ -37,6 +37,7 @@ func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 func (m *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return nil
 }
+
 func (m *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	return nil, nil
 }
