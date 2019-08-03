@@ -125,15 +125,17 @@ func (es *elementSet) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&c); err != nil {
 		return err
 	}
-	set := make([]XElement, c)
-	for i := 0; i < c; i++ {
-		el, err := NewElementFromBytes(buf)
-		if err != nil {
-			return err
+	if c > 0 {
+		set := make([]XElement, c)
+		for i := 0; i < c; i++ {
+			el, err := NewElementFromBytes(buf)
+			if err != nil {
+				return err
+			}
+			set[i] = el
 		}
-		set[i] = el
+		*es = set
 	}
-	*es = set
 	return nil
 }
 
