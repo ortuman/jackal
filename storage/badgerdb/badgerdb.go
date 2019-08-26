@@ -102,8 +102,8 @@ func (b *Storage) delete(key []byte, txn *badger.Txn) error {
 
 func (b *Storage) deletePrefix(prefix []byte, txn *badger.Txn) error {
 	var keys [][]byte
-	if err := b.forEachKey(prefix, txn, func(key []byte) error {
-		keys = append(keys, key)
+	if err := b.forEachKey(prefix, txn, func(it *badger.Item) error {
+		keys = append(keys, it.Key())
 		return nil
 	}); err != nil {
 		return err
@@ -169,7 +169,7 @@ func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
 	return item.ValueCopy(nil)
 }
 
-func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(k []byte) error) error {
+func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(it *badger.Item) error) error {
 	opts := badger.DefaultIteratorOptions
 	opts.PrefetchValues = false
 	iter := txn.NewIterator(opts)
@@ -177,7 +177,7 @@ func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(k []byte) er
 
 	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
 		it := iter.Item()
-		if err := f(it.Key()); err != nil {
+		if err := f(it); err != nil {
 			return err
 		}
 	}

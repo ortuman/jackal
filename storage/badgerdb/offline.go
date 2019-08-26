@@ -23,7 +23,7 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 	cnt := 0
 	prefix := []byte("offlineMessages:" + username)
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.forEachKey(prefix, txn, func(key []byte) error {
+		return b.forEachKey(prefix, txn, func(_ *badger.Item) error {
 			cnt++
 			return nil
 		})
