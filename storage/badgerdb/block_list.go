@@ -15,7 +15,7 @@ import (
 func (b *Storage) InsertBlockListItems(items []model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		for _, item := range items {
-			if err := b.insertOrUpdate(&item, b.blockListItemKey(item.Username, item.JID), tx); err != nil {
+			if err := b.upsert(&item, b.blockListItemKey(item.Username, item.JID), tx); err != nil {
 				return err
 			}
 		}
@@ -39,7 +39,10 @@ func (b *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 // associated to a given user.
 func (b *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	var blItems []model.BlockListItem
-	if err := b.fetchAll(&blItems, []byte("blockListItems:"+username)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchAll(&blItems, []byte("blockListItems:"+username), txn)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return blItems, nil

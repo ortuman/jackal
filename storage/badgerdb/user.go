@@ -14,7 +14,7 @@ import (
 // or updates it in case it's been previously inserted.
 func (b *Storage) UpsertUser(user *model.User) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(user, b.userKey(user.Username), tx)
+		return b.upsert(user, b.userKey(user.Username), tx)
 	})
 }
 
@@ -28,7 +28,9 @@ func (b *Storage) DeleteUser(username string) error {
 // FetchUser retrieves from storage a user entity.
 func (b *Storage) FetchUser(username string) (*model.User, error) {
 	var usr model.User
-	err := b.fetch(&usr, b.userKey(username))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&usr, b.userKey(username), txn)
+	})
 	switch err {
 	case nil:
 		return &usr, nil
@@ -41,7 +43,9 @@ func (b *Storage) FetchUser(username string) (*model.User, error) {
 
 // UserExists returns whether or not a user exists within storage.
 func (b *Storage) UserExists(username string) (bool, error) {
-	err := b.fetch(nil, b.userKey(username))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(nil, b.userKey(username), txn)
+	})
 	switch err {
 	case nil:
 		return true, nil

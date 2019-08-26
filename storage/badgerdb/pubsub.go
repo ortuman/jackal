@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package badgerdb
 
 import (
@@ -7,13 +12,15 @@ import (
 
 func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(node, b.pubSubStorageKey(node.Host, node.Name), tx)
+		return b.upsert(node, b.pubSubStorageKey(node.Host, node.Name), tx)
 	})
 }
 
 func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	var node pubsubmodel.Node
-	err := b.fetch(&node, b.pubSubStorageKey(host, name))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&node, b.pubSubStorageKey(host, name), txn)
+	})
 	switch err {
 	case nil:
 		return &node, nil
@@ -41,5 +48,5 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 }
 
 func (b *Storage) pubSubStorageKey(host, name string) []byte {
-	return []byte("pubsub:" + host + ":" + name)
+	return []byte("pubSubNodes:" + host + ":" + name)
 }

@@ -14,7 +14,7 @@ import (
 // user's offline queue.
 func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(message, b.offlineMessageKey(username, message.ID()), tx)
+		return b.upsert(message, b.offlineMessageKey(username, message.ID()), tx)
 	})
 }
 
@@ -22,9 +22,11 @@ func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) e
 func (b *Storage) CountOfflineMessages(username string) (int, error) {
 	cnt := 0
 	prefix := []byte("offlineMessages:" + username)
-	err := b.forEachKey(prefix, func(key []byte) error {
-		cnt++
-		return nil
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.forEachKey(prefix, txn, func(key []byte) error {
+			cnt++
+			return nil
+		})
 	})
 	return cnt, err
 }
@@ -32,7 +34,10 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 // FetchOfflineMessages retrieves from storage current user offline queue.
 func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
 	var messages []xmpp.Message
-	if err := b.fetchAll(&messages, []byte("offlineMessages:"+username)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchAll(&messages, []byte("offlineMessages:"+username), txn)
+	})
+	if err != nil {
 		return nil, err
 	}
 	switch len(messages) {

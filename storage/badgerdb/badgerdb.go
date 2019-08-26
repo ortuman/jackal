@@ -82,7 +82,7 @@ func (b *Storage) loop() {
 	}
 }
 
-func (b *Storage) insertOrUpdate(entity interface{}, key []byte, tx *badger.Txn) error {
+func (b *Storage) upsert(entity interface{}, key []byte, tx *badger.Txn) error {
 	gs, ok := entity.(serializer.Serializer)
 	if !ok {
 		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
@@ -102,7 +102,7 @@ func (b *Storage) delete(key []byte, txn *badger.Txn) error {
 
 func (b *Storage) deletePrefix(prefix []byte, txn *badger.Txn) error {
 	var keys [][]byte
-	if err := b.forEachKey(prefix, func(key []byte) error {
+	if err := b.forEachKey(prefix, txn, func(key []byte) error {
 		keys = append(keys, key)
 		return nil
 	}); err != nil {
@@ -116,33 +116,32 @@ func (b *Storage) deletePrefix(prefix []byte, txn *badger.Txn) error {
 	return nil
 }
 
-func (b *Storage) fetch(entity interface{}, key []byte) error {
-	return b.db.View(func(tx *badger.Txn) error {
-		val, err := b.getVal(key, tx)
-		if err != nil {
-			return err
-		}
-		if val != nil {
-			if entity != nil {
-				gd, ok := entity.(serializer.Deserializer)
-				if !ok {
-					return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
-				}
-				return serializer.Deserialize(val, gd)
+func (b *Storage) fetch(entity interface{}, key []byte, txn *badger.Txn) error {
+	val, err := b.getVal(key, txn)
+	if err != nil {
+		return err
+	}
+	if val != nil {
+		if entity != nil {
+			gd, ok := entity.(serializer.Deserializer)
+			if !ok {
+				return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 			}
-			return nil
+			return serializer.Deserialize(val, gd)
 		}
-		return errBadgerDBEntityNotFound
-	})
+		return nil
+	}
+	return errBadgerDBEntityNotFound
 }
 
-func (b *Storage) fetchAll(v interface{}, prefix []byte) error {
+func (b *Storage) fetchAll(v interface{}, prefix []byte, txn *badger.Txn) error {
 	t := reflect.TypeOf(v).Elem()
 	if t.Kind() != reflect.Slice {
 		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, v)
 	}
 	s := reflect.ValueOf(v).Elem()
-	return b.forEachKeyAndValue(prefix, func(k, val []byte) error {
+
+	return b.forEachKeyAndValue(prefix, txn, func(k, val []byte) error {
 		e := reflect.New(t.Elem()).Elem()
 		i := e.Addr().Interface()
 		gd, ok := i.(serializer.Deserializer)
@@ -170,38 +169,34 @@ func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
 	return item.ValueCopy(nil)
 }
 
-func (b *Storage) forEachKey(prefix []byte, f func(k []byte) error) error {
-	return b.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = false
-		iter := txn.NewIterator(opts)
-		defer iter.Close()
+func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(k []byte) error) error {
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	iter := txn.NewIterator(opts)
+	defer iter.Close()
 
-		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-			it := iter.Item()
-			if err := f(it.Key()); err != nil {
-				return err
-			}
+	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+		it := iter.Item()
+		if err := f(it.Key()); err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
-func (b *Storage) forEachKeyAndValue(prefix []byte, f func(k, v []byte) error) error {
-	return b.db.View(func(txn *badger.Txn) error {
-		iter := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer iter.Close()
+func (b *Storage) forEachKeyAndValue(prefix []byte, txn *badger.Txn, f func(k, v []byte) error) error {
+	iter := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer iter.Close()
 
-		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-			it := iter.Item()
-			val, err := it.ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			if err := f(it.Key(), val); err != nil {
-				return err
-			}
+	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+		it := iter.Item()
+		val, err := it.ValueCopy(nil)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		if err := f(it.Key(), val); err != nil {
+			return err
+		}
+	}
+	return nil
 }

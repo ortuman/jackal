@@ -14,7 +14,7 @@ import (
 // or updates it in case it's been previously inserted.
 func (b *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	if err := b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
+		return b.upsert(ri, b.rosterItemKey(ri.Username, ri.JID), tx)
 	}); err != nil {
 		return rostermodel.Version{}, err
 	}
@@ -35,7 +35,10 @@ func (b *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, e
 // associated to a given user.
 func (b *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
-	if err := b.fetchAll(&ris, []byte("rosterItems:"+user)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchAll(&ris, []byte("rosterItems:"+user), txn)
+	})
+	if err != nil {
 		return nil, rostermodel.Version{}, err
 	}
 	ver, err := b.fetchRosterVer(user)
@@ -51,7 +54,10 @@ func (b *Storage) FetchRosterItemsInGroups(user string, groups []string) ([]rost
 	}
 	// fetch all items
 	var ris []rostermodel.Item
-	if err := b.fetchAll(&ris, []byte("rosterItems:"+user)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchAll(&ris, []byte("rosterItems:"+user), txn)
+	})
+	if err != nil {
 		return nil, rostermodel.Version{}, err
 	}
 	var res []rostermodel.Item
@@ -70,7 +76,9 @@ func (b *Storage) FetchRosterItemsInGroups(user string, groups []string) ([]rost
 // FetchRosterItem retrieves from storage a roster item entity.
 func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
 	var ri rostermodel.Item
-	err := b.fetch(&ri, b.rosterItemKey(user, contact))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&ri, b.rosterItemKey(user, contact), txn)
+	})
 	switch err {
 	case nil:
 		return &ri, nil
@@ -85,7 +93,7 @@ func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, erro
 // into storage, or updates it in case it's been previously inserted.
 func (b *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
+		return b.upsert(rn, b.rosterNotificationKey(rn.Contact, rn.JID), tx)
 	})
 }
 
@@ -99,7 +107,9 @@ func (b *Storage) DeleteRosterNotification(contact, jid string) error {
 // FetchRosterNotification retrieves from storage a roster notification entity.
 func (b *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
 	var rn rostermodel.Notification
-	err := b.fetch(&rn, b.rosterNotificationKey(contact, jid))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&rn, b.rosterNotificationKey(contact, jid), txn)
+	})
 	switch err {
 	case nil:
 		return &rn, nil
@@ -114,7 +124,10 @@ func (b *Storage) FetchRosterNotification(contact string, jid string) (*rostermo
 // associated to a given user.
 func (b *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
-	if err := b.fetchAll(&rns, []byte("rosterNotifications:"+contact)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchAll(&rns, []byte("rosterNotifications:"+contact), txn)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return rns, nil
@@ -130,7 +143,7 @@ func (b *Storage) updateRosterVer(username string, isDeletion bool) (rostermodel
 		v.DeletionVer = v.Ver
 	}
 	if err := b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(&v, b.rosterVersionKey(username), tx)
+		return b.upsert(&v, b.rosterVersionKey(username), tx)
 	}); err != nil {
 		return rostermodel.Version{}, err
 	}
@@ -139,7 +152,9 @@ func (b *Storage) updateRosterVer(username string, isDeletion bool) (rostermodel
 
 func (b *Storage) fetchRosterVer(username string) (rostermodel.Version, error) {
 	var ver rostermodel.Version
-	err := b.fetch(&ver, b.rosterVersionKey(username))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&ver, b.rosterVersionKey(username), txn)
+	})
 	switch err {
 	case nil, errBadgerDBEntityNotFound:
 		return ver, nil
