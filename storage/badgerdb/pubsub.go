@@ -6,45 +6,10 @@
 package badgerdb
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/dgraph-io/badger"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	"github.com/ortuman/jackal/model/serializer"
 )
-
-type itemSet struct {
-	items []pubsubmodel.Item
-}
-
-func (s itemSet) ToBytes(buf *bytes.Buffer) error {
-	enc := gob.NewEncoder(buf)
-	if err := enc.Encode(len(s.items)); err != nil {
-		return err
-	}
-	for _, itm := range s.items {
-		if err := itm.ToBytes(buf); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s itemSet) FromBytes(buf *bytes.Buffer) error {
-	var ln int
-	dec := gob.NewDecoder(buf)
-	if err := dec.Decode(&ln); err != nil {
-		return err
-	}
-	for i := 0; i < ln; i++ {
-		var itm pubsubmodel.Item
-		if err := itm.FromBytes(buf); err != nil {
-			return err
-		}
-		s.items = append(s.items, itm)
-	}
-	return nil
-}
 
 func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
@@ -69,32 +34,44 @@ func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 
 func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		var s itemSet
-		if err := b.fetch(&s, b.pubSubItemsStorageKey(host, name), tx); err != nil {
+		val, err := b.getVal(b.pubSubItemsStorageKey(host, name), tx)
+		if err != nil {
+			return err
+		}
+		var items []pubsubmodel.Item
+		if err := serializer.DeserializeSlice(val, &items); err != nil {
 			return err
 		}
 		var updated bool
-		for i, itm := range s.items {
+		for i, itm := range items {
 			if itm.ID == item.ID {
-				s.items[i] = *item
+				items[i] = *item
 				updated = true
 				break
 			}
 		}
 		if !updated {
-			s.items = append(s.items, *item)
+			items = append(items, *item)
 		}
-		if len(s.items) > maxNodeItems {
-			s.items = s.items[1:] // remove oldest element
+		if len(items) > maxNodeItems {
+			items = items[1:] // remove oldest element
 		}
-		return b.upsert(s, b.pubSubItemsStorageKey(host, name), tx)
+		bts, err := serializer.SerializeSlice(&items)
+		if err != nil {
+			return err
+		}
+		return b.setVal(b.pubSubItemsStorageKey(host, name), bts, tx)
 	})
 }
 
 func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	var items []pubsubmodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetchAll(&items, []byte("pubSubItems:"+host+":"+name), txn)
+		val, err := b.getVal(b.pubSubItemsStorageKey(host, name), txn)
+		if err != nil {
+			return err
+		}
+		return serializer.DeserializeSlice(val, &items)
 	})
 	if err != nil {
 		return nil, err

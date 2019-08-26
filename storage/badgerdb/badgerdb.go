@@ -87,13 +87,11 @@ func (b *Storage) upsert(entity interface{}, key []byte, tx *badger.Txn) error {
 	if !ok {
 		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 	}
-	bts, err := serializer.Serialize(gs)
+	val, err := serializer.Serialize(gs)
 	if err != nil {
 		return err
 	}
-	val := make([]byte, len(bts))
-	copy(val, bts)
-	return tx.Set(key, val)
+	return b.setVal(key, val, tx)
 }
 
 func (b *Storage) delete(key []byte, txn *badger.Txn) error {
@@ -167,6 +165,12 @@ func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
 		return nil, err
 	}
 	return item.ValueCopy(nil)
+}
+
+func (b *Storage) setVal(key []byte, bts []byte, tx *badger.Txn) error {
+	val := make([]byte, len(bts))
+	copy(val, bts)
+	return tx.Set(key, val)
 }
 
 func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(it *badger.Item) error) error {
