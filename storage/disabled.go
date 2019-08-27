@@ -111,6 +111,10 @@ func (*disabledStorage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name 
 	return nil
 }
 
+func (*disabledStorage) DeletePubSubNode(host, name string) error {
+	return nil
+}
+
 func (*disabledStorage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	return nil, nil
 }

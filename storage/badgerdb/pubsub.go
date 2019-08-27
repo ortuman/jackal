@@ -12,14 +12,14 @@ import (
 
 func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(node, b.pubSubNodeKey(node.Host, node.Name), tx)
+		return b.upsert(node, b.pubSubNodesKey(node.Host, node.Name), tx)
 	})
 }
 
 func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	var node pubsubmodel.Node
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetch(&node, b.pubSubNodeKey(host, name), txn)
+		return b.fetch(&node, b.pubSubNodesKey(host, name), txn)
 	})
 	switch err {
 	case nil:
@@ -29,6 +29,18 @@ func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	default:
 		return nil, err
 	}
+}
+
+func (b *Storage) DeletePubSubNode(host, name string) error {
+	return b.db.Update(func(tx *badger.Txn) error {
+		if err := b.delete(b.pubSubNodesKey(host, name), tx); err != nil {
+			return err
+		}
+		if err := b.delete(b.pubSubItemsKey(host, name), tx); err != nil {
+			return err
+		}
+		return b.delete(b.pubSubAffiliationsKey(host, name), tx)
+	})
 }
 
 func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
@@ -88,7 +100,7 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
-func (b *Storage) pubSubNodeKey(host, name string) []byte {
+func (b *Storage) pubSubNodesKey(host, name string) []byte {
 	return []byte("pubSubNodes:" + host + ":" + name)
 }
 

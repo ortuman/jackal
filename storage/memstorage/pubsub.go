@@ -16,7 +16,7 @@ func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 		return err
 	}
 	return m.inWriteLock(func() error {
-		m.bytes[pubSubNodeKey(node.Host, node.Name)] = b
+		m.bytes[pubSubNodesKey(node.Host, node.Name)] = b
 		return nil
 	})
 }
@@ -24,7 +24,7 @@ func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubNodeKey(host, name)]
+		b = m.bytes[pubSubNodesKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -37,6 +37,15 @@ func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 		return nil, err
 	}
 	return &node, nil
+}
+
+func (m *Storage) DeletePubSubNode(host, name string) error {
+	return m.inReadLock(func() error {
+		delete(m.bytes, pubSubNodesKey(host, name))
+		delete(m.bytes, pubSubItemsKey(host, name))
+		delete(m.bytes, pubSubAffiliationsKey(host, name))
+		return nil
+	})
 }
 
 func (m *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
@@ -140,7 +149,7 @@ func (m *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
-func pubSubNodeKey(host, name string) string {
+func pubSubNodesKey(host, name string) string {
 	return "pubSubNodes:" + host + ":" + name
 }
 

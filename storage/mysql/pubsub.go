@@ -82,6 +82,52 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	}, nil
 }
 
+func (s *Storage) DeletePubSubNode(host, name string) error {
+	return s.inTransaction(func(tx *sql.Tx) error {
+		// fetch node identifier
+		var nodeIdentifier string
+
+		err := sq.Select("id").
+			From("pubsub_nodes").
+			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
+			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+		switch err {
+		case nil:
+			break
+		case sql.ErrNoRows:
+			return nil
+		default:
+			return err
+		}
+		// delete node
+		_, err = sq.Delete("pubsub_nodes").
+			Where(sq.Eq{"id": nodeIdentifier}).
+			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete options
+		_, err = sq.Delete("pubsub_node_options").
+			Where(sq.Eq{"node_id": nodeIdentifier}).
+			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete items
+		_, err = sq.Delete("pubsub_items").
+			Where(sq.Eq{"node_id": nodeIdentifier}).
+			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete affiliations
+		_, err = sq.Delete("pubsub_affiliations").
+			Where(sq.Eq{"node_id": nodeIdentifier}).
+			RunWith(tx).Exec()
+		return err
+	})
+}
+
 func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
