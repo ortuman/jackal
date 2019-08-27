@@ -49,7 +49,7 @@ func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 			items = append(items, *item)
 		}
 		if len(items) > maxNodeItems {
-			items = items[1:] // remove oldest element
+			items = items[len(items)-maxNodeItems:] // remove oldest elements
 		}
 		return b.upsertSlice(&items, b.pubSubItemsKey(host, name), tx)
 	})
@@ -73,7 +73,7 @@ func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 			return err
 		}
 		affiliations = append(affiliations, *affiliation)
-		return b.upsertSlice(&affiliation, b.pubSubAffiliationsKey(host, name), txn)
+		return b.upsertSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn)
 	})
 }
 

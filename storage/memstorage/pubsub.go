@@ -62,7 +62,7 @@ func (m *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 			items = append(items, *item)
 		}
 		if len(items) > maxNodeItems {
-			items = items[1:] // remove oldest element
+			items = items[len(items)-maxNodeItems:] // remove oldest elements
 		}
 		b, err := serializer.SerializeSlice(&items)
 		if err != nil {

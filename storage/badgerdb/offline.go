@@ -14,11 +14,11 @@ import (
 func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var messages []xmpp.Message
-		if err := b.fetchSlice(&messages, b.offlineMessageKey(username), tx); err != nil {
+		if err := b.fetchSlice(&messages, b.offlineMessagesKey(username), tx); err != nil {
 			return err
 		}
 		messages = append(messages, *message)
-		return b.upsertSlice(&messages, b.offlineMessageKey(username), tx)
+		return b.upsertSlice(&messages, b.offlineMessagesKey(username), tx)
 	})
 }
 
@@ -27,7 +27,7 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 	var cnt int
 	err := b.db.View(func(tx *badger.Txn) error {
 		var messages []xmpp.Message
-		if err := b.fetchSlice(&messages, b.offlineMessageKey(username), tx); err != nil {
+		if err := b.fetchSlice(&messages, b.offlineMessagesKey(username), tx); err != nil {
 			return err
 		}
 		cnt = len(messages)
@@ -43,7 +43,7 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
 	var messages []xmpp.Message
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetchSlice(&messages, b.offlineMessageKey(username), txn)
+		return b.fetchSlice(&messages, b.offlineMessagesKey(username), txn)
 	})
 	if err != nil {
 		return nil, err
@@ -54,10 +54,10 @@ func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 // DeleteOfflineMessages clears a user offline queue.
 func (b *Storage) DeleteOfflineMessages(username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.delete(b.offlineMessageKey(username), tx)
+		return b.delete(b.offlineMessagesKey(username), tx)
 	})
 }
 
-func (b *Storage) offlineMessageKey(username string) []byte {
+func (b *Storage) offlineMessagesKey(username string) []byte {
 	return []byte("offlineMessages:" + username)
 }

@@ -15,7 +15,7 @@ func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string,
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(r, b.privateStorageKey(username, namespace), tx)
+		return b.upsert(r, b.privateElementsKey(username, namespace), tx)
 	})
 }
 
@@ -23,7 +23,7 @@ func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string,
 func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
 	var r xmpp.Element
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetch(&r, b.privateStorageKey(username, namespace), txn)
+		return b.fetch(&r, b.privateElementsKey(username, namespace), txn)
 	})
 	switch err {
 	case nil:
@@ -35,6 +35,6 @@ func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XEl
 	}
 }
 
-func (b *Storage) privateStorageKey(username, namespace string) []byte {
+func (b *Storage) privateElementsKey(username, namespace string) []byte {
 	return []byte("privateElements:" + username + ":" + namespace)
 }
