@@ -10,51 +10,46 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// InsertBlockListItems inserts a set of block list item entities
+// InsertBlockListItem a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (m *Storage) InsertBlockListItems(items []model.BlockListItem) error {
+func (m *Storage) InsertBlockListItem(item *model.BlockListItem) error {
 	return m.inWriteLock(func() error {
-		for _, item := range items {
-			blItems, err := m.fetchUserBlockListItems(item.Username)
-			if err != nil {
-				return err
-			}
-			if blItems != nil {
-				for _, blItem := range blItems {
-					if blItem.JID == item.JID {
-						goto done
-					}
+		blItems, err := m.fetchUserBlockListItems(item.Username)
+		if err != nil {
+			return err
+		}
+		if blItems != nil {
+			for _, blItem := range blItems {
+				if blItem.JID == item.JID {
+					return nil
 				}
-				blItems = append(blItems, item)
-			} else {
-				blItems = []model.BlockListItem{item}
 			}
-			if err := m.upsertBlockListItems(blItems, item.Username); err != nil {
-				return err
-			}
-		done:
+			blItems = append(blItems, *item)
+		} else {
+			blItems = []model.BlockListItem{*item}
+		}
+		if err := m.upsertBlockListItems(blItems, item.Username); err != nil {
+			return err
 		}
 		return nil
 	})
 }
 
-// DeleteBlockListItems deletes a set of block list item entities from storage.
-func (m *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
+// DeleteBlockListItem deletes a of block list item entity from storage.
+func (m *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
 	return m.inWriteLock(func() error {
-		for _, itm := range items {
-			blItems, err := m.fetchUserBlockListItems(itm.Username)
-			if err != nil {
-				return err
-			}
-			for i, blItem := range blItems {
-				if blItem.JID == itm.JID {
-					// delete item
-					blItems = append(blItems[:i], blItems[i+1:]...)
-					if err := m.upsertBlockListItems(blItems, itm.Username); err != nil {
-						return err
-					}
-					break
+		blItems, err := m.fetchUserBlockListItems(item.Username)
+		if err != nil {
+			return err
+		}
+		for i, blItem := range blItems {
+			if blItem.JID == item.JID {
+				// delete item
+				blItems = append(blItems[:i], blItems[i+1:]...)
+				if err := m.upsertBlockListItems(blItems, item.Username); err != nil {
+					return err
 				}
+				break
 			}
 		}
 		return nil

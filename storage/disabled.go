@@ -87,11 +87,11 @@ func (*disabledStorage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace s
 	return nil
 }
 
-func (*disabledStorage) InsertBlockListItems(items []model.BlockListItem) error {
+func (*disabledStorage) InsertBlockListItem(item *model.BlockListItem) error {
 	return nil
 }
 
-func (*disabledStorage) DeleteBlockListItems(items []model.BlockListItem) error {
+func (*disabledStorage) DeleteBlockListItem(item *model.BlockListItem) error {
 	return nil
 }
 

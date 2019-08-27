@@ -246,57 +246,65 @@ func TestRouter_BlockedJID(t *testing.T) {
 	r.Bind(stm2)
 
 	// node + domain + resource
-	bl1 := []model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}}
-	_ = storage.InsertBlockListItems(bl1)
+	})
 	require.False(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 
-	_ = storage.DeleteBlockListItems(bl1)
+	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+		Username: "ortuman",
+		JID:      "hamlet@jackal.im/garden",
+	})
 
 	// node + domain
-	bl2 := []model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
-	}}
-	_ = storage.InsertBlockListItems(bl2)
+	})
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItems(bl2)
+	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+		Username: "ortuman",
+		JID:      "hamlet@jackal.im",
+	})
 
 	// domain + resource
-	bl3 := []model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
-	}}
-	_ = storage.InsertBlockListItems(bl3)
+	})
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.False(t, r.IsBlockedJID(j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItems(bl3)
+	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+		Username: "ortuman",
+		JID:      "jackal.im/balcony",
+	})
 
 	// domain
-	bl4 := []model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
-	}}
-	_ = storage.InsertBlockListItems(bl4)
+	})
 	r.ReloadBlockList("ortuman")
 
 	require.True(t, r.IsBlockedJID(j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(j3, "ortuman"))
 	require.True(t, r.IsBlockedJID(j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItems(bl4)
+	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+		Username: "ortuman",
+		JID:      "jackal.im",
+	})
 
 	// test blocked routing
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)

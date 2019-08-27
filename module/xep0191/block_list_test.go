@@ -33,10 +33,10 @@ func TestXEP0191_Matching(t *testing.T) {
 	rtr.Bind(stm)
 
 	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	defer func() { _ = r.Shutdown() }()
 
 	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -68,18 +68,19 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	rtr.Bind(stm)
 
 	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	defer func() { _ = r.Shutdown() }()
 
 	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
-	storage.InsertBlockListItems([]model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}, {
+	})
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
-	}})
+	})
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -106,10 +107,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	defer shutdown()
 
 	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	defer func() { _ = r.Shutdown() }()
 
 	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
@@ -144,7 +145,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm1.SetBool(xep191RequestedContextKey, true)
 	stm2.SetBool(xep191RequestedContextKey, true)
 
-	storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",
@@ -254,13 +255,14 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	storage.InsertBlockListItems([]model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}, {
+	})
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
-	}})
+	})
 
 	iqID = uuid.New()
 	iq = xmpp.NewIQType(iqID, xmpp.SetType)

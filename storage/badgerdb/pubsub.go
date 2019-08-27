@@ -8,19 +8,18 @@ package badgerdb
 import (
 	"github.com/dgraph-io/badger"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
-	"github.com/ortuman/jackal/model/serializer"
 )
 
 func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(node, b.pubSubNodeStorageKey(node.Host, node.Name), tx)
+		return b.upsert(node, b.pubSubNodeKey(node.Host, node.Name), tx)
 	})
 }
 
 func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	var node pubsubmodel.Node
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetch(&node, b.pubSubNodeStorageKey(host, name), txn)
+		return b.fetch(&node, b.pubSubNodeKey(host, name), txn)
 	})
 	switch err {
 	case nil:
@@ -34,12 +33,8 @@ func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 
 func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		val, err := b.getVal(b.pubSubItemsStorageKey(host, name), tx)
-		if err != nil {
-			return err
-		}
 		var items []pubsubmodel.Item
-		if err := serializer.DeserializeSlice(val, &items); err != nil {
+		if err := b.fetchSlice(&items, b.pubSubItemsKey(host, name), tx); err != nil {
 			return err
 		}
 		var updated bool
@@ -56,22 +51,14 @@ func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 		if len(items) > maxNodeItems {
 			items = items[1:] // remove oldest element
 		}
-		bts, err := serializer.SerializeSlice(&items)
-		if err != nil {
-			return err
-		}
-		return b.setVal(b.pubSubItemsStorageKey(host, name), bts, tx)
+		return b.upsertSlice(&items, b.pubSubItemsKey(host, name), tx)
 	})
 }
 
 func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	var items []pubsubmodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
-		val, err := b.getVal(b.pubSubItemsStorageKey(host, name), txn)
-		if err != nil {
-			return err
-		}
-		return serializer.DeserializeSlice(val, &items)
+		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
 	})
 	if err != nil {
 		return nil, err
@@ -80,15 +67,20 @@ func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 }
 
 func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
-	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(affiliation, b.pubSubAffiliationStorageKey(host, name, affiliation.JID), tx)
+	return b.db.Update(func(txn *badger.Txn) error {
+		var affiliations []pubsubmodel.Affiliation
+		if err := b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn); err != nil {
+			return err
+		}
+		affiliations = append(affiliations, *affiliation)
+		return b.upsertSlice(&affiliation, b.pubSubAffiliationsKey(host, name), txn)
 	})
 }
 
 func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	var affiliations []pubsubmodel.Affiliation
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetchAll(&affiliations, []byte("pubSubAffiliations:"+host+":"+name), txn)
+		return b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn)
 	})
 	if err != nil {
 		return nil, err
@@ -96,14 +88,14 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
-func (b *Storage) pubSubNodeStorageKey(host, name string) []byte {
+func (b *Storage) pubSubNodeKey(host, name string) []byte {
 	return []byte("pubSubNodes:" + host + ":" + name)
 }
 
-func (b *Storage) pubSubItemsStorageKey(host, name string) []byte {
+func (b *Storage) pubSubItemsKey(host, name string) []byte {
 	return []byte("pubSubItems:" + host + ":" + name)
 }
 
-func (b *Storage) pubSubAffiliationStorageKey(host, name, jid string) []byte {
-	return []byte("pubSubAffiliations:" + host + ":" + name + ":" + jid)
+func (b *Storage) pubSubAffiliationsKey(host, name string) []byte {
+	return []byte("pubSubAffiliations:" + host + ":" + name)
 }

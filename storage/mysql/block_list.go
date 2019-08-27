@@ -6,43 +6,27 @@
 package mysql
 
 import (
-	"database/sql"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
 )
 
-// InsertBlockListItems inserts a set of block list item entities
+// InsertBlockListItem inserts a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (s *Storage) InsertBlockListItems(items []model.BlockListItem) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
-		for _, item := range items {
-			_, err := sq.Insert("blocklist_items").
-				Options("IGNORE").
-				Columns("username", "jid", "created_at").
-				Values(item.Username, item.JID, nowExpr).
-				RunWith(tx).Exec()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+func (s *Storage) InsertBlockListItem(item *model.BlockListItem) error {
+	_, err := sq.Insert("blocklist_items").
+		Options("IGNORE").
+		Columns("username", "jid", "created_at").
+		Values(item.Username, item.JID, nowExpr).
+		RunWith(s.db).Exec()
+	return err
 }
 
 // DeleteBlockListItems deletes a set of block list item entities from storage.
-func (s *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
-		for _, item := range items {
-			_, err := sq.Delete("blocklist_items").
-				Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
-				RunWith(tx).Exec()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+func (s *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
+	_, err := sq.Delete("blocklist_items").
+		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
+		RunWith(s.db).Exec()
+	return err
 }
 
 // FetchBlockListItems retrieves from storage all block list item entities
@@ -57,7 +41,7 @@ func (s *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return s.scanBlockListItemEntities(rows)
 }
 
@@ -65,7 +49,9 @@ func (s *Storage) scanBlockListItemEntities(scanner rowsScanner) ([]model.BlockL
 	var ret []model.BlockListItem
 	for scanner.Next() {
 		var it model.BlockListItem
-		scanner.Scan(&it.Username, &it.JID)
+		if err := scanner.Scan(&it.Username, &it.JID); err != nil {
+			return nil, err
+		}
 		ret = append(ret, it)
 	}
 	return ret, nil

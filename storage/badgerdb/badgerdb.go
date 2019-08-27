@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -82,36 +81,23 @@ func (b *Storage) loop() {
 	}
 }
 
-func (b *Storage) upsert(entity interface{}, key []byte, tx *badger.Txn) error {
-	gs, ok := entity.(serializer.Serializer)
-	if !ok {
-		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
+func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
+	item, err := txn.Get(key)
+	switch err {
+	case nil:
+		break
+	case badger.ErrKeyNotFound:
+		return nil, nil
+	default:
+		return nil, err
 	}
-	val, err := serializer.Serialize(gs)
-	if err != nil {
-		return err
-	}
-	return b.setVal(key, val, tx)
+	return item.ValueCopy(nil)
 }
 
-func (b *Storage) delete(key []byte, txn *badger.Txn) error {
-	return txn.Delete(key)
-}
-
-func (b *Storage) deletePrefix(prefix []byte, txn *badger.Txn) error {
-	var keys [][]byte
-	if err := b.forEachKey(prefix, txn, func(it *badger.Item) error {
-		keys = append(keys, it.Key())
-		return nil
-	}); err != nil {
-		return err
-	}
-	for _, k := range keys {
-		if err := txn.Delete(k); err != nil {
-			return err
-		}
-	}
-	return nil
+func (b *Storage) setVal(key []byte, bts []byte, tx *badger.Txn) error {
+	val := make([]byte, len(bts))
+	copy(val, bts)
+	return tx.Set(key, val)
 }
 
 func (b *Storage) fetch(entity interface{}, key []byte, txn *badger.Txn) error {
@@ -132,75 +118,37 @@ func (b *Storage) fetch(entity interface{}, key []byte, txn *badger.Txn) error {
 	return errBadgerDBEntityNotFound
 }
 
-func (b *Storage) fetchAll(v interface{}, prefix []byte, txn *badger.Txn) error {
-	t := reflect.TypeOf(v).Elem()
-	if t.Kind() != reflect.Slice {
-		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, v)
+func (b *Storage) upsert(entity interface{}, key []byte, tx *badger.Txn) error {
+	gs, ok := entity.(serializer.Serializer)
+	if !ok {
+		return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, entity)
 	}
-	s := reflect.ValueOf(v).Elem()
+	val, err := serializer.Serialize(gs)
+	if err != nil {
+		return err
+	}
+	return b.setVal(key, val, tx)
+}
 
-	return b.forEachKeyAndValue(prefix, txn, func(k, val []byte) error {
-		e := reflect.New(t.Elem()).Elem()
-		i := e.Addr().Interface()
-		gd, ok := i.(serializer.Deserializer)
-		if !ok {
-			return fmt.Errorf("%v: %T", errBadgerDBWrongEntityType, i)
-		}
-		if err := serializer.Deserialize(val, gd); err != nil {
-			return err
-		}
-		s.Set(reflect.Append(s, e))
+func (b *Storage) fetchSlice(slice interface{}, key []byte, tx *badger.Txn) error {
+	val, err := b.getVal(key, tx)
+	if err != nil {
+		return err
+	}
+	if val == nil {
 		return nil
-	})
-}
-
-func (b *Storage) getVal(key []byte, txn *badger.Txn) ([]byte, error) {
-	item, err := txn.Get(key)
-	switch err {
-	case nil:
-		break
-	case badger.ErrKeyNotFound:
-		return nil, nil
-	default:
-		return nil, err
 	}
-	return item.ValueCopy(nil)
+	return serializer.DeserializeSlice(val, slice)
 }
 
-func (b *Storage) setVal(key []byte, bts []byte, tx *badger.Txn) error {
-	val := make([]byte, len(bts))
-	copy(val, bts)
-	return tx.Set(key, val)
-}
-
-func (b *Storage) forEachKey(prefix []byte, txn *badger.Txn, f func(it *badger.Item) error) error {
-	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
-	iter := txn.NewIterator(opts)
-	defer iter.Close()
-
-	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-		it := iter.Item()
-		if err := f(it); err != nil {
-			return err
-		}
+func (b *Storage) upsertSlice(slice interface{}, key []byte, tx *badger.Txn) error {
+	val, err := serializer.SerializeSlice(slice)
+	if err != nil {
+		return err
 	}
-	return nil
+	return b.setVal(key, val, tx)
 }
 
-func (b *Storage) forEachKeyAndValue(prefix []byte, txn *badger.Txn, f func(k, v []byte) error) error {
-	iter := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer iter.Close()
-
-	for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
-		it := iter.Item()
-		val, err := it.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		if err := f(it.Key(), val); err != nil {
-			return err
-		}
-	}
-	return nil
+func (b *Storage) delete(key []byte, txn *badger.Txn) error {
+	return txn.Delete(key)
 }

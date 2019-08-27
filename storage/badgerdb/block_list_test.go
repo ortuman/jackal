@@ -6,7 +6,7 @@
 package badgerdb
 
 import (
-	"sort"
+	"reflect"
 	"testing"
 
 	"github.com/ortuman/jackal/model"
@@ -24,26 +24,27 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 		{Username: "ortuman", JID: "user@jackal.im"},
 		{Username: "ortuman", JID: "romeo@jackal.im"},
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
 
-	err := h.db.InsertBlockListItems(items)
-	require.Nil(t, err)
+	require.Nil(t, h.db.InsertBlockListItem(&items[0]))
+	require.Nil(t, h.db.InsertBlockListItem(&items[1]))
+	require.Nil(t, h.db.InsertBlockListItem(&items[2]))
 
 	sItems, err := h.db.FetchBlockListItems("ortuman")
-	sort.Slice(sItems, func(i, j int) bool { return sItems[i].JID < sItems[j].JID })
 	require.Nil(t, err)
-	require.Equal(t, items, sItems)
+	require.True(t, reflect.DeepEqual(items, sItems))
+
+	err = h.db.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"})
+	require.Nil(t, err)
 
 	items = append(items[:1], items[2:]...)
-	h.db.DeleteBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "romeo@jackal.im"}})
 
 	sItems, err = h.db.FetchBlockListItems("ortuman")
-	sort.Slice(items, func(i, j int) bool { return items[i].JID < items[j].JID })
 	require.Nil(t, err)
 	require.Equal(t, items, sItems)
 
-	err = h.db.DeleteBlockListItems(items)
-	require.Nil(t, err)
+	require.Nil(t, h.db.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
+	require.Nil(t, h.db.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+
 	sItems, _ = h.db.FetchBlockListItems("ortuman")
 	require.Equal(t, 0, len(sItems))
 }

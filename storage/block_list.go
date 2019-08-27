@@ -9,20 +9,20 @@ import "github.com/ortuman/jackal/model"
 
 // blockListStorage defines storage operations for user's block list
 type blockListStorage interface {
-	InsertBlockListItems(items []model.BlockListItem) error
-	DeleteBlockListItems(items []model.BlockListItem) error
+	InsertBlockListItem(item *model.BlockListItem) error
+	DeleteBlockListItem(item *model.BlockListItem) error
+
 	FetchBlockListItems(username string) ([]model.BlockListItem, error)
 }
 
-// InsertBlockListItems inserts a set of block list item entities
-// into storage, only in case they haven't been previously inserted.
-func InsertBlockListItems(items []model.BlockListItem) error {
-	return instance().InsertBlockListItems(items)
+// InsertBlockListItem inserts a block list item entity into storage, only in case they haven't been previously inserted.
+func InsertBlockListItem(item *model.BlockListItem) error {
+	return instance().InsertBlockListItem(item)
 }
 
-// DeleteBlockListItems deletes a set of block list item entities from storage.
-func DeleteBlockListItems(items []model.BlockListItem) error {
-	return instance().DeleteBlockListItems(items)
+// DeleteBlockListItem deletes a block list item entity from storage.
+func DeleteBlockListItem(item *model.BlockListItem) error {
+	return instance().DeleteBlockListItem(item)
 }
 
 // FetchBlockListItems retrieves from storage all block list item entities
