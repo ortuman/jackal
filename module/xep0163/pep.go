@@ -128,10 +128,11 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 	}
 	nodeName := nodeEl.Attributes().Get("node")
 	if len(nodeName) == 0 {
-		errorElements := []xmpp.XElement{xmpp.NewElementNamespace("node-id", pepErrorNamespace)}
+		errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pepErrorNamespace)}
 		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, xmpp.ErrNotAcceptable, errorElements))
 		return
 	}
+	// TODO(ortuman): check wether or not the node exists
 
 	node := &pubsubmodel.Node{
 		Host: host,
@@ -153,6 +154,8 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		// apply default configuration
 		node.Options = defaultNodeOptions
 	}
+	// TODO(ortuman): include owner JID!!!
+
 	if err := storage.UpsertPubSubNode(node); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
