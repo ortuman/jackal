@@ -82,10 +82,19 @@ func (x *Pep) Shutdown() error {
 func (x *Pep) processIQ(iq *xmpp.IQ) {
 	pubSub := iq.Elements().ChildNamespace("pubsub", pepNamespace)
 
+	// Create node
+	// https://xmpp.org/extensions/xep-0060.html#owner-create
 	if createNode := pubSub.Elements().Child("create"); createNode != nil {
 		nodeCfg := pubSub.Elements().Child("configure")
-
 		x.createNode(iq, createNode, nodeCfg)
+		return
+	}
+
+	// Delete node
+	// https://xmpp.org/extensions/xep-0060.html#owner-delete
+	if deleteNode := pubSub.Elements().Child("delete"); deleteNode != nil {
+		x.deleteNode(iq, deleteNode)
+		return
 	}
 }
 
@@ -95,8 +104,9 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		_ = x.router.Route(iq.BadRequestError())
 		return
 	}
+	host := iq.FromJID().ToBareJID().String()
 	node := &pubsubmodel.Node{
-		Host: iq.FromJID().ToBareJID().String(),
+		Host: host,
 		Name: nodeName,
 	}
 	if configEl != nil {
@@ -118,6 +128,22 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 	if err := storage.UpsertPubSubNode(node); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+
+	_ = x.router.Route(iq.ResultIQ())
+}
+
+func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(iq.BadRequestError())
+		return
+	}
+	host := iq.FromJID().ToBareJID().String()
+
+	if err := storage.DeletePubSubNode(host, nodeName); err != nil {
+		_ = x.router.Route(iq.BadRequestError())
 		return
 	}
 
