@@ -16,6 +16,18 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// <feature var='http://jabber.org/protocol/pubsub#access-presence'/>          [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#auto-create'/>              [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#auto-subscribe'/>           [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [PENDING] - Next
+// <feature var='http://jabber.org/protocol/pubsub#create-and-configure'/>     [DONE]
+// <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
+// <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [PENDING]
+
 const pepNamespace = "http://jabber.org/protocol/pubsub"
 
 var discoInfoFeatures = []string{
@@ -96,6 +108,12 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 		x.deleteNode(iq, deleteNode)
 		return
 	}
+
+	// Publish
+
+	// Retrieve items
+
+	_ = x.router.Route(iq.FeatureNotImplementedError())
 }
 
 func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XElement) {
