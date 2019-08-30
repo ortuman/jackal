@@ -28,7 +28,11 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [PENDING]
 
-const pepNamespace = "http://jabber.org/protocol/pubsub"
+const (
+	pepNamespace = "http://jabber.org/protocol/pubsub"
+
+	pepErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
+)
 
 var discoInfoFeatures = []string{
 	"http://jabber.org/protocol/pubsub#access-presence",
@@ -117,12 +121,18 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 }
 
 func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XElement) {
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
-		_ = x.router.Route(iq.BadRequestError())
+	host := iq.FromJID().ToBareJID().String()
+	if host != iq.ToJID().Node() {
+		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
-	host := iq.FromJID().ToBareJID().String()
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		errorElements := []xmpp.XElement{xmpp.NewElementNamespace("node-id", pepErrorNamespace)}
+		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, xmpp.ErrNotAcceptable, errorElements))
+		return
+	}
+
 	node := &pubsubmodel.Node{
 		Host: host,
 		Name: nodeName,
@@ -153,12 +163,17 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 }
 
 func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
-		_ = x.router.Route(iq.BadRequestError())
+	host := iq.FromJID().ToBareJID().String()
+	if host != iq.ToJID().Node() {
+		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
-	host := iq.FromJID().ToBareJID().String()
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(iq.NotAcceptableError())
+		return
+	}
+	// TODO(ortuman): check wether or not the node exists
 
 	if err := storage.DeletePubSubNode(host, nodeName); err != nil {
 		_ = x.router.Route(iq.BadRequestError())
