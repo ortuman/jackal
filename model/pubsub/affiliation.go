@@ -10,6 +10,11 @@ import (
 	"encoding/gob"
 )
 
+// affiliation definitions
+const (
+	Owner = "owner"
+)
+
 type Affiliation struct {
 	JID         string
 	Affiliation string

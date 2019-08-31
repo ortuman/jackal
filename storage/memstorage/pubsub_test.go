@@ -22,6 +22,9 @@ func TestStorage_PubSubNode(t *testing.T) {
 	}
 	require.Nil(t, s.UpsertPubSubNode(node))
 
+	exists, err := s.PubSubNodeExists("ortuman@jackal.im", "princely_musings")
+	require.True(t, exists)
+
 	n, err := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, n)

@@ -121,8 +121,7 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 }
 
 func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XElement) {
-	host := iq.FromJID().ToBareJID().String()
-	if host != iq.ToJID().Node() {
+	if iq.FromJID().Node() != iq.ToJID().Node() {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
@@ -132,7 +131,19 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, xmpp.ErrNotAcceptable, errorElements))
 		return
 	}
-	// TODO(ortuman): check wether or not the node exists
+	host := iq.FromJID().ToBareJID().String()
+
+	// check whether or not the node exists
+	exists, err := storage.PubSubNodeExists(host, nodeName)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	if exists {
+		_ = x.router.Route(iq.ConflictError())
+		return
+	}
 
 	node := &pubsubmodel.Node{
 		Host: host,
@@ -154,9 +165,19 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		// apply default configuration
 		node.Options = defaultNodeOptions
 	}
-	// TODO(ortuman): include owner JID!!!
 
+	// create node
 	if err := storage.UpsertPubSubNode(node); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	// create owner affiliation
+	ownerAffiliation := &pubsubmodel.Affiliation{
+		JID:         host,
+		Affiliation: pubsubmodel.Owner,
+	}
+	if err := storage.UpsertPubSubNodeAffiliation(ownerAffiliation, host, nodeName); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
@@ -166,8 +187,7 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 }
 
 func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
-	host := iq.FromJID().ToBareJID().String()
-	if host != iq.ToJID().Node() {
+	if iq.FromJID().Node() != iq.ToJID().Node() {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
@@ -176,10 +196,23 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 		_ = x.router.Route(iq.NotAcceptableError())
 		return
 	}
-	// TODO(ortuman): check wether or not the node exists
+	host := iq.FromJID().ToBareJID().String()
 
+	// check whether or not the node exists
+	exists, err := storage.PubSubNodeExists(host, nodeName)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	if !exists {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	// delete node
 	if err := storage.DeletePubSubNode(host, nodeName); err != nil {
-		_ = x.router.Route(iq.BadRequestError())
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
 

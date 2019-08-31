@@ -48,6 +48,18 @@ func (m *Storage) DeletePubSubNode(host, name string) error {
 	})
 }
 
+func (m *Storage) PubSubNodeExists(host, name string) (bool, error) {
+	var exists bool
+	if err := m.inReadLock(func() error {
+		b := m.bytes[pubSubNodesKey(host, name)]
+		exists = b != nil
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (m *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return m.inWriteLock(func() error {
 		var b []byte
