@@ -16,25 +16,19 @@ import (
 const nodeConfigNamespace = "http://jabber.org/protocol/pubsub#node_config"
 
 const (
-	titleOptField                 = "pubsub#title"
-	deliverNotificationsOptField  = "pubsub#deliver_notifications"
-	deliverPayloadsOptField       = "pubsub#deliver_payloads"
-	persistItemsOptField          = "pubsub#persist_items"
-	maxItemsOptField              = "pubsub#max_items"
-	itemExpireOptField            = "pubsub#item_expire"
-	accessModelOptField           = "pubsub#access_model"
-	publishModelOptField          = "pubsub#publish_model"
-	purgeOfflineOptField          = "pubsub#purge_offline"
-	sendLastPublishedItemOptField = "pubsub#send_last_published_item"
-	presenceBasedDeliveryOptField = "pubsub#presence_based_delivery"
-	notificationTypeOptField      = "pubsub#notification_type"
-	notifyConfigOptField          = "pubsub#notify_config"
-	notifyDeleteOptField          = "pubsub#notify_delete"
-	notifyRetractOptField         = "pubsub#notify_retract"
-	notifySubOptField             = "pubsub#notify_sub"
-	maxPayloadSizeOptField        = "pubsub#max_payload_size"
-	typeOptField                  = "pubsub#type"
-	bodyXSLTOptField              = "pubsub#body_xslt"
+	titleFieldVar                 = "pubsub#title"
+	deliverNotificationsFieldVar  = "pubsub#deliver_notifications"
+	deliverPayloadsFieldVar       = "pubsub#deliver_payloads"
+	persistItemsFieldVar          = "pubsub#persist_items"
+	maxItemsFieldVar              = "pubsub#max_items"
+	accessModelFieldVar           = "pubsub#access_model"
+	publishModelFieldVar          = "pubsub#publish_model"
+	sendLastPublishedItemFieldVar = "pubsub#send_last_published_item"
+	notificationTypeFieldVar      = "pubsub#notification_type"
+	notifyConfigFieldVar          = "pubsub#notify_config"
+	notifyDeleteFieldVar          = "pubsub#notify_delete"
+	notifyRetractFieldVar         = "pubsub#notify_retract"
+	notifySubFieldVar             = "pubsub#notify_sub"
 )
 
 const (
@@ -54,45 +48,33 @@ type Options struct {
 	DeliverPayloads       bool
 	PersistItems          bool
 	MaxItems              int64
-	ItemExpire            int64
 	AccessModel           string
 	PublishModel          string
-	PurgeOffline          bool
 	SendLastPublishedItem string
-	PresenceBasedDelivery bool
 	NotificationType      string
 	NotifyConfig          bool
 	NotifyDelete          bool
 	NotifyRetract         bool
 	NotifySub             bool
-	MaxPayloadSize        int64
-	Type                  string
-	BodyXSLT              string
 }
 
 func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	opt := &Options{}
 
 	// extract options values
-	opt.Title = m[titleOptField]
-	opt.DeliverNotifications, _ = strconv.ParseBool(m[deliverNotificationsOptField])
-	opt.DeliverPayloads, _ = strconv.ParseBool(m[deliverPayloadsOptField])
-	opt.PersistItems, _ = strconv.ParseBool(m[persistItemsOptField])
-	opt.MaxItems, _ = strconv.ParseInt(m[maxItemsOptField], 10, 32)
-	opt.ItemExpire, _ = strconv.ParseInt(m[itemExpireOptField], 10, 32)
-	opt.PurgeOffline, _ = strconv.ParseBool(m[purgeOfflineOptField])
-	opt.PresenceBasedDelivery, _ = strconv.ParseBool(m[presenceBasedDeliveryOptField])
-	opt.NotificationType = m[notificationTypeOptField]
-	opt.NotifyConfig, _ = strconv.ParseBool(m[notifyConfigOptField])
-	opt.NotifyDelete, _ = strconv.ParseBool(m[notifyDeleteOptField])
-	opt.NotifyRetract, _ = strconv.ParseBool(m[notifyRetractOptField])
-	opt.NotifySub, _ = strconv.ParseBool(m[notifySubOptField])
-	opt.MaxPayloadSize, _ = strconv.ParseInt(m[maxPayloadSizeOptField], 10, 32)
-	opt.Type = m[typeOptField]
-	opt.BodyXSLT = m[bodyXSLTOptField]
+	opt.Title = m[titleFieldVar]
+	opt.DeliverNotifications, _ = strconv.ParseBool(m[deliverNotificationsFieldVar])
+	opt.DeliverPayloads, _ = strconv.ParseBool(m[deliverPayloadsFieldVar])
+	opt.PersistItems, _ = strconv.ParseBool(m[persistItemsFieldVar])
+	opt.MaxItems, _ = strconv.ParseInt(m[maxItemsFieldVar], 10, 32)
+	opt.NotificationType = m[notificationTypeFieldVar]
+	opt.NotifyConfig, _ = strconv.ParseBool(m[notifyConfigFieldVar])
+	opt.NotifyDelete, _ = strconv.ParseBool(m[notifyDeleteFieldVar])
+	opt.NotifyRetract, _ = strconv.ParseBool(m[notifyRetractFieldVar])
+	opt.NotifySub, _ = strconv.ParseBool(m[notifySubFieldVar])
 
 	// extract options values
-	accessModel := m[accessModelOptField]
+	accessModel := m[accessModelFieldVar]
 	switch accessModel {
 	case Open, Presence, Roster, WhiteList:
 		opt.AccessModel = accessModel
@@ -100,7 +82,7 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 		return nil, fmt.Errorf("invalid access_model value: %s", accessModel)
 	}
 
-	publishModel := m[publishModelOptField]
+	publishModel := m[publishModelFieldVar]
 	switch publishModel {
 	case Open, Publishers:
 		opt.PublishModel = publishModel
@@ -108,7 +90,7 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 		return nil, fmt.Errorf("invalid publish_model value: %s", publishModel)
 	}
 
-	sendLastPublishedItem := m[sendLastPublishedItemOptField]
+	sendLastPublishedItem := m[sendLastPublishedItemFieldVar]
 	switch sendLastPublishedItem {
 	case Never, OnSub, OnSubAndPresence:
 		opt.SendLastPublishedItem = sendLastPublishedItem
@@ -130,7 +112,7 @@ func NewOptionsFromForm(form *xep0004.DataForm) (*Options, error) {
 		return nil, errors.New("invalid form type")
 	}
 	// extract options values
-	accessModel := fields.ValueForField(accessModelOptField)
+	accessModel := fields.ValueForField(accessModelFieldVar)
 	switch accessModel {
 	case Open, Presence, Roster, WhiteList:
 		opt.AccessModel = accessModel
@@ -138,7 +120,7 @@ func NewOptionsFromForm(form *xep0004.DataForm) (*Options, error) {
 		return nil, fmt.Errorf("invalid access_model value: %s", accessModel)
 	}
 
-	publishModel := fields.ValueForField(publishModelOptField)
+	publishModel := fields.ValueForField(publishModelFieldVar)
 	switch publishModel {
 	case Open, Publishers:
 		opt.PublishModel = publishModel
@@ -146,7 +128,7 @@ func NewOptionsFromForm(form *xep0004.DataForm) (*Options, error) {
 		return nil, fmt.Errorf("invalid publish_model value: %s", publishModel)
 	}
 
-	sendLastPublishedItem := fields.ValueForField(sendLastPublishedItemOptField)
+	sendLastPublishedItem := fields.ValueForField(sendLastPublishedItemFieldVar)
 	switch sendLastPublishedItem {
 	case Never, OnSub, OnSubAndPresence:
 		opt.SendLastPublishedItem = sendLastPublishedItem
@@ -154,51 +136,139 @@ func NewOptionsFromForm(form *xep0004.DataForm) (*Options, error) {
 		return nil, fmt.Errorf("invalid send_last_published_item value: %s", sendLastPublishedItem)
 	}
 
-	opt.Title = fields.ValueForField(titleOptField)
-	opt.DeliverNotifications, _ = strconv.ParseBool(fields.ValueForField(deliverNotificationsOptField))
-	opt.DeliverPayloads, _ = strconv.ParseBool(fields.ValueForField(deliverPayloadsOptField))
-	opt.PersistItems, _ = strconv.ParseBool(fields.ValueForField(persistItemsOptField))
-	opt.MaxItems, _ = strconv.ParseInt(fields.ValueForField(maxItemsOptField), 10, 32)
-	opt.ItemExpire, _ = strconv.ParseInt(fields.ValueForField(itemExpireOptField), 10, 32)
-	opt.PurgeOffline, _ = strconv.ParseBool(fields.ValueForField(purgeOfflineOptField))
-	opt.PresenceBasedDelivery, _ = strconv.ParseBool(fields.ValueForField(presenceBasedDeliveryOptField))
-	opt.NotificationType = fields.ValueForField(notificationTypeOptField)
-	opt.NotifyConfig, _ = strconv.ParseBool(fields.ValueForField(notifyConfigOptField))
-	opt.NotifyDelete, _ = strconv.ParseBool(fields.ValueForField(notifyDeleteOptField))
-	opt.NotifyRetract, _ = strconv.ParseBool(fields.ValueForField(notifyRetractOptField))
-	opt.NotifySub, _ = strconv.ParseBool(fields.ValueForField(notifySubOptField))
-	opt.MaxPayloadSize, _ = strconv.ParseInt(fields.ValueForField(maxPayloadSizeOptField), 10, 32)
-	opt.Type = fields.ValueForField(typeOptField)
-	opt.BodyXSLT = fields.ValueForField(bodyXSLTOptField)
+	opt.Title = fields.ValueForField(titleFieldVar)
+	opt.DeliverNotifications, _ = strconv.ParseBool(fields.ValueForField(deliverNotificationsFieldVar))
+	opt.DeliverPayloads, _ = strconv.ParseBool(fields.ValueForField(deliverPayloadsFieldVar))
+	opt.PersistItems, _ = strconv.ParseBool(fields.ValueForField(persistItemsFieldVar))
+	opt.MaxItems, _ = strconv.ParseInt(fields.ValueForField(maxItemsFieldVar), 10, 32)
+	opt.NotificationType = fields.ValueForField(notificationTypeFieldVar)
+	opt.NotifyConfig, _ = strconv.ParseBool(fields.ValueForField(notifyConfigFieldVar))
+	opt.NotifyDelete, _ = strconv.ParseBool(fields.ValueForField(notifyDeleteFieldVar))
+	opt.NotifyRetract, _ = strconv.ParseBool(fields.ValueForField(notifyRetractFieldVar))
+	opt.NotifySub, _ = strconv.ParseBool(fields.ValueForField(notifySubFieldVar))
 
 	return opt, nil
 }
 
 func (opt *Options) Map() map[string]string {
 	m := make(map[string]string)
-	m[titleOptField] = opt.Title
-	m[deliverNotificationsOptField] = strconv.FormatBool(opt.DeliverNotifications)
-	m[deliverPayloadsOptField] = strconv.FormatBool(opt.DeliverPayloads)
-	m[persistItemsOptField] = strconv.FormatBool(opt.PersistItems)
-	m[maxItemsOptField] = strconv.Itoa(int(opt.MaxItems))
-	m[itemExpireOptField] = strconv.Itoa(int(opt.ItemExpire))
-	m[accessModelOptField] = string(opt.AccessModel)
-	m[publishModelOptField] = string(opt.PublishModel)
-	m[purgeOfflineOptField] = strconv.FormatBool(opt.PurgeOffline)
-	m[sendLastPublishedItemOptField] = opt.SendLastPublishedItem
-	m[presenceBasedDeliveryOptField] = strconv.FormatBool(opt.PresenceBasedDelivery)
-	m[notificationTypeOptField] = opt.NotificationType
-	m[notifyConfigOptField] = strconv.FormatBool(opt.NotifyConfig)
-	m[notifyDeleteOptField] = strconv.FormatBool(opt.NotifyDelete)
-	m[notifyRetractOptField] = strconv.FormatBool(opt.NotifyRetract)
-	m[notifySubOptField] = strconv.FormatBool(opt.NotifySub)
-	m[maxPayloadSizeOptField] = strconv.Itoa(int(opt.MaxPayloadSize))
-	m[typeOptField] = opt.Type
-	m[bodyXSLTOptField] = opt.BodyXSLT
+	m[titleFieldVar] = opt.Title
+	m[deliverNotificationsFieldVar] = strconv.FormatBool(opt.DeliverNotifications)
+	m[deliverPayloadsFieldVar] = strconv.FormatBool(opt.DeliverPayloads)
+	m[persistItemsFieldVar] = strconv.FormatBool(opt.PersistItems)
+	m[maxItemsFieldVar] = strconv.Itoa(int(opt.MaxItems))
+	m[accessModelFieldVar] = string(opt.AccessModel)
+	m[publishModelFieldVar] = string(opt.PublishModel)
+	m[sendLastPublishedItemFieldVar] = opt.SendLastPublishedItem
+	m[notificationTypeFieldVar] = opt.NotificationType
+	m[notifyConfigFieldVar] = strconv.FormatBool(opt.NotifyConfig)
+	m[notifyDeleteFieldVar] = strconv.FormatBool(opt.NotifyDelete)
+	m[notifyRetractFieldVar] = strconv.FormatBool(opt.NotifyRetract)
+	m[notifySubFieldVar] = strconv.FormatBool(opt.NotifySub)
 	return m
 }
 
 func (opt *Options) Form() *xep0004.DataForm {
+	form := xep0004.DataForm{
+		Type: xep0004.Form,
+	}
+	// include form type
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    xep0004.FormType,
+		Type:   xep0004.Hidden,
+		Values: []string{nodeConfigNamespace},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    titleFieldVar,
+		Type:   xep0004.TextSingle,
+		Label:  "Node title",
+		Values: []string{opt.Title},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    deliverNotificationsFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Whether to deliver event notifications",
+		Values: []string{strconv.FormatBool(opt.DeliverNotifications)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    deliverPayloadsFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Whether to deliver payloads with event notifications",
+		Values: []string{strconv.FormatBool(opt.DeliverPayloads)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    persistItemsFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Whether to persist items to storage",
+		Values: []string{strconv.FormatBool(opt.PersistItems)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    maxItemsFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Max number of items to persist",
+		Values: []string{strconv.FormatInt(opt.MaxItems, 10)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    accessModelFieldVar,
+		Type:   xep0004.ListSingle,
+		Values: []string{opt.AccessModel},
+		Label:  "Specify the subscriber model",
+		Options: []xep0004.Option{
+			{Label: "Open", Value: Open},
+			{Label: "Presence Sharing", Value: Presence},
+			{Label: "Roster Groups", Value: Roster},
+			{Label: "Whitelist", Value: WhiteList},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    publishModelFieldVar,
+		Type:   xep0004.ListSingle,
+		Label:  "Specify the publisher model",
+		Values: []string{opt.PublishModel},
+		Options: []xep0004.Option{
+			{Label: "Only publishers may publish", Value: Publishers},
+			{Label: "Anyone may publish", Value: Open},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    sendLastPublishedItemFieldVar,
+		Type:   xep0004.ListSingle,
+		Label:  "When to send the last published item",
+		Values: []string{opt.SendLastPublishedItem},
+		Options: []xep0004.Option{
+			{Label: "Never", Value: Never},
+			{Label: "When a new subscription is processed", Value: OnSub},
+			{Label: "When a new subscription is processed and whenever a subscriber comes online", Value: OnSubAndPresence},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    notifyConfigFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Notify subscribers when the node configuration changes",
+		Values: []string{strconv.FormatBool(opt.NotifyConfig)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    notifyDeleteFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Notify subscribers when the node is deleted",
+		Values: []string{strconv.FormatBool(opt.NotifyDelete)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    notifyRetractFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Notify subscribers when items are removed from the node",
+		Values: []string{strconv.FormatBool(opt.NotifyRetract)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    notifySubFieldVar,
+		Type:   xep0004.Boolean,
+		Label:  "Notify owners about new subscribers and unsubscribes",
+		Values: []string{strconv.FormatBool(opt.NotifySub)},
+	})
+	return &form
+}
+
+func (opt *Options) SubmitForm() *xep0004.DataForm {
 	form := xep0004.DataForm{
 		Type: xep0004.Submit,
 	}
@@ -209,84 +279,60 @@ func (opt *Options) Form() *xep0004.DataForm {
 		Values: []string{nodeConfigNamespace},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    titleOptField,
+		Var:    titleFieldVar,
 		Values: []string{opt.Title},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    deliverNotificationsOptField,
+		Var:    deliverNotificationsFieldVar,
 		Values: []string{strconv.FormatBool(opt.DeliverNotifications)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    deliverPayloadsOptField,
+		Var:    deliverPayloadsFieldVar,
 		Values: []string{strconv.FormatBool(opt.DeliverPayloads)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    persistItemsOptField,
+		Var:    persistItemsFieldVar,
 		Values: []string{strconv.FormatBool(opt.PersistItems)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    maxItemsOptField,
+		Var:    maxItemsFieldVar,
 		Values: []string{strconv.Itoa(int(opt.MaxItems))},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    itemExpireOptField,
-		Values: []string{strconv.Itoa(int(opt.ItemExpire))},
+		Var:    accessModelFieldVar,
+		Values: []string{opt.AccessModel},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    accessModelOptField,
-		Values: []string{string(opt.AccessModel)},
+		Var:    accessModelFieldVar,
+		Values: []string{opt.AccessModel},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    accessModelOptField,
-		Values: []string{string(opt.AccessModel)},
+		Var:    publishModelFieldVar,
+		Values: []string{opt.PublishModel},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    publishModelOptField,
-		Values: []string{string(opt.PublishModel)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    purgeOfflineOptField,
-		Values: []string{strconv.FormatBool(opt.PurgeOffline)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    sendLastPublishedItemOptField,
+		Var:    sendLastPublishedItemFieldVar,
 		Values: []string{opt.SendLastPublishedItem},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    presenceBasedDeliveryOptField,
-		Values: []string{strconv.FormatBool(opt.PresenceBasedDelivery)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notificationTypeOptField,
+		Var:    notificationTypeFieldVar,
 		Values: []string{opt.NotificationType},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifyConfigOptField,
+		Var:    notifyConfigFieldVar,
 		Values: []string{strconv.FormatBool(opt.NotifyConfig)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifyDeleteOptField,
+		Var:    notifyDeleteFieldVar,
 		Values: []string{strconv.FormatBool(opt.NotifyDelete)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifyRetractOptField,
+		Var:    notifyRetractFieldVar,
 		Values: []string{strconv.FormatBool(opt.NotifyRetract)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifySubOptField,
+		Var:    notifySubFieldVar,
 		Values: []string{strconv.FormatBool(opt.NotifySub)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    maxPayloadSizeOptField,
-		Values: []string{strconv.Itoa(int(opt.MaxPayloadSize))},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    typeOptField,
-		Values: []string{opt.Type},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    bodyXSLTOptField,
-		Values: []string{opt.BodyXSLT},
 	})
 	return &form
 }

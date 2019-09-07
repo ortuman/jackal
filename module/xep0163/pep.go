@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -29,9 +29,11 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [PENDING]
 
 const (
-	pepNamespace = "http://jabber.org/protocol/pubsub"
+	pepOwnerNamespace = "http://jabber.org/protocol/pubsub#owner"
 
 	pepErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
+
+	pepNodeConfigNamespace = "http://jabber.org/protocol/pubsub#node_config"
 )
 
 var discoInfoFeatures = []string{
@@ -77,7 +79,12 @@ func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
 
 // MatchesIQ returns whether or not an IQ should be processed by the PEP module.
 func (x *Pep) MatchesIQ(iq *xmpp.IQ) bool {
-	return iq.Elements().ChildNamespace("pubsub", pepNamespace) != nil
+	pubSub := iq.Elements().Child("pubsub")
+	switch pubSub.Namespace() {
+	case pepOwnerNamespace:
+		return true
+	}
+	return false
 }
 
 // ProcessIQ processes a version IQ taking according actions over the associated stream.
@@ -96,26 +103,42 @@ func (x *Pep) Shutdown() error {
 }
 
 func (x *Pep) processIQ(iq *xmpp.IQ) {
-	pubSub := iq.Elements().ChildNamespace("pubsub", pepNamespace)
+	pubSub := iq.Elements().Child("pubsub")
+	switch pubSub.Namespace() {
+	case pepOwnerNamespace:
+		x.processOwnerRequest(iq, pubSub)
+		return
+	}
+}
 
+func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Create node
 	// https://xmpp.org/extensions/xep-0060.html#owner-create
-	if createNode := pubSub.Elements().Child("create"); createNode != nil {
+	if createNode := pubSub.Elements().Child("create"); createNode != nil && iq.IsSet() {
 		nodeCfg := pubSub.Elements().Child("configure")
 		x.createNode(iq, createNode, nodeCfg)
 		return
 	}
 
-	// Delete node
-	// https://xmpp.org/extensions/xep-0060.html#owner-delete
-	if deleteNode := pubSub.Elements().Child("delete"); deleteNode != nil {
-		x.deleteNode(iq, deleteNode)
+	// Configure node
+	// https://xmpp.org/extensions/xep-0060.html#owner-configure
+	if configureNode := pubSub.Elements().Child("configure"); configureNode != nil {
+		if iq.IsGet() {
+			// send configuration form
+			x.sendConfigurationForm(iq, configureNode)
+		} else if iq.IsSet() {
+			// update node configuration
+			x.configureNode(iq, configureNode)
+		}
 		return
 	}
 
-	// Publish
-
-	// Retrieve items
+	// Delete node
+	// https://xmpp.org/extensions/xep-0060.html#owner-delete
+	if deleteNode := pubSub.Elements().Child("delete"); deleteNode != nil && iq.IsSet() {
+		x.deleteNode(iq, deleteNode)
+		return
+	}
 
 	_ = x.router.Route(iq.FeatureNotImplementedError())
 }
@@ -127,8 +150,7 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 	}
 	nodeName := nodeEl.Attributes().Get("node")
 	if len(nodeName) == 0 {
-		errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pepErrorNamespace)}
-		_ = x.router.Route(xmpp.NewErrorStanzaFromStanza(iq, xmpp.ErrNotAcceptable, errorElements))
+		_ = x.router.Route(nodeIDRequiredError(iq))
 		return
 	}
 	host := iq.FromJID().ToBareJID().String()
@@ -186,7 +208,45 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
+func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, nodeEl xmpp.XElement) {
+	if iq.FromJID().Node() != iq.ToJID().Node() {
+		_ = x.router.Route(iq.ForbiddenError())
+		return
+	}
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(nodeIDRequiredError(iq))
+		return
+	}
+	host := iq.FromJID().ToBareJID().String()
+
+	// fetch node configuration
+	node, err := storage.FetchPubSubNode(host, nodeName)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	// compose response
+	configureNode := xmpp.NewElementName("configure")
+	configureNode.SetAttribute("node", nodeName)
+	configureNode.AppendElement(node.Options.Form().Element())
+
+	pubSubNode := xmpp.NewElementNamespace("pubsub", pepOwnerNamespace)
+	pubSubNode.AppendElement(configureNode)
+
+	res := iq.ResultIQ()
+	res.AppendElement(pubSubNode)
+
+	// reply
+	_ = x.router.Route(res)
+}
+
+func (x *Pep) configureNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	if iq.FromJID().Node() != iq.ToJID().Node() {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
@@ -194,6 +254,19 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	nodeName := nodeEl.Attributes().Get("node")
 	if len(nodeName) == 0 {
 		_ = x.router.Route(iq.NotAcceptableError())
+		return
+	}
+	//host := iq.FromJID().ToBareJID().String()
+}
+
+func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
+	if iq.FromJID().Node() != iq.ToJID().Node() {
+		_ = x.router.Route(iq.ForbiddenError())
+		return
+	}
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(nodeIDRequiredError(iq))
 		return
 	}
 	host := iq.FromJID().ToBareJID().String()
@@ -217,4 +290,9 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	}
 
 	_ = x.router.Route(iq.ResultIQ())
+}
+
+func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pepErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAcceptable, errorElements)
 }

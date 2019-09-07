@@ -20,7 +20,6 @@ func TestNode_Serialization(t *testing.T) {
 
 	n.Options.Title = "Playing lists"
 	n.Options.NotifySub = true
-	n.Options.MaxPayloadSize = 1024
 
 	buf := bytes.NewBuffer(nil)
 	require.Nil(t, n.ToBytes(buf))

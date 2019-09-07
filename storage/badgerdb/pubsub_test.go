@@ -22,7 +22,7 @@ func TestBadgerDB_PubSubNodes(t *testing.T) {
 	node := pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
-		Options: pubsubmodel.Options{PurgeOffline: true},
+		Options: pubsubmodel.Options{NotifySub: true},
 	}
 	err := h.db.UpsertPubSubNode(&node)
 	require.Nil(t, err)

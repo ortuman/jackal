@@ -14,7 +14,7 @@ import (
 const formNamespace = "jabber:x:data"
 
 const (
-	// Form represents a 'form' data form.
+	// SubmitForm represents a 'form' data form.
 	Form = "form"
 
 	// Submit represents a 'submit' data form.

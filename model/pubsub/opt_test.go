@@ -27,80 +27,56 @@ func TestOptions_New(t *testing.T) {
 				Values: []string{nodeConfigNamespace},
 			},
 			{
-				Var:    titleOptField,
+				Var:    titleFieldVar,
 				Values: []string{"Princely Musings (Atom)"},
 			},
 			{
-				Var:    deliverNotificationsOptField,
+				Var:    deliverNotificationsFieldVar,
 				Values: []string{"1"},
 			},
 			{
-				Var:    deliverPayloadsOptField,
+				Var:    deliverPayloadsFieldVar,
 				Values: []string{"1"},
 			},
 			{
-				Var:    persistItemsOptField,
+				Var:    persistItemsFieldVar,
 				Values: []string{"1"},
 			},
 			{
-				Var:    maxItemsOptField,
+				Var:    maxItemsFieldVar,
 				Values: []string{"10"},
 			},
 			{
-				Var:    itemExpireOptField,
-				Values: []string{"604800"},
-			},
-			{
-				Var:    accessModelOptField,
+				Var:    accessModelFieldVar,
 				Values: []string{"open"},
 			},
 			{
-				Var:    publishModelOptField,
+				Var:    publishModelFieldVar,
 				Values: []string{"publishers"},
 			},
 			{
-				Var:    purgeOfflineOptField,
-				Values: []string{"true"},
-			},
-			{
-				Var:    sendLastPublishedItemOptField,
+				Var:    sendLastPublishedItemFieldVar,
 				Values: []string{"never"},
 			},
 			{
-				Var:    presenceBasedDeliveryOptField,
-				Values: []string{"true"},
-			},
-			{
-				Var:    notificationTypeOptField,
+				Var:    notificationTypeFieldVar,
 				Values: []string{"headline"},
 			},
 			{
-				Var:    notifyConfigOptField,
+				Var:    notifyConfigFieldVar,
 				Values: []string{"1"},
 			},
 			{
-				Var:    notifyDeleteOptField,
+				Var:    notifyDeleteFieldVar,
 				Values: []string{"TRUE"},
 			},
 			{
-				Var:    notifyRetractOptField,
+				Var:    notifyRetractFieldVar,
 				Values: []string{"TRUE"},
 			},
 			{
-				Var:    notifySubOptField,
+				Var:    notifySubFieldVar,
 				Values: []string{"TRUE"},
-			},
-			{
-				Var:    maxPayloadSizeOptField,
-				Values: []string{"1024"},
-			},
-			{
-				Var:    typeOptField,
-				Values: []string{"http://www.w3.org/2005/Atom"},
-			},
-			{
-				Var:    bodyXSLTOptField,
-				Values: []string{"http://jabxslt.jabberstudio.org/atom_body.xslt"},
 			},
 		},
 	}
@@ -113,22 +89,18 @@ func TestOptions_New(t *testing.T) {
 	require.True(t, opt.DeliverPayloads)
 	require.True(t, opt.PersistItems)
 	require.Equal(t, int64(10), opt.MaxItems)
-	require.Equal(t, int64(604800), opt.ItemExpire)
 	require.Equal(t, Open, opt.AccessModel)
 	require.Equal(t, Publishers, opt.PublishModel)
-	require.True(t, opt.PurgeOffline)
 	require.Equal(t, Never, opt.SendLastPublishedItem)
-	require.True(t, opt.PresenceBasedDelivery)
 	require.Equal(t, "headline", opt.NotificationType)
 	require.True(t, opt.NotifyConfig)
 	require.True(t, opt.NotifyDelete)
 	require.True(t, opt.NotifyRetract)
 	require.True(t, opt.NotifySub)
-	require.Equal(t, int64(1024), opt.MaxPayloadSize)
-	require.Equal(t, "http://www.w3.org/2005/Atom", opt.Type)
-	require.Equal(t, "http://jabxslt.jabberstudio.org/atom_body.xslt", opt.BodyXSLT)
 
-	opt2, err := NewOptionsFromForm(opt.Form())
+	form2 := opt.SubmitForm()
+
+	opt2, err := NewOptionsFromForm(form2)
 	require.NotNil(t, opt2)
 	require.Nil(t, err)
 
