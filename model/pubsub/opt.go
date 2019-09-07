@@ -100,7 +100,7 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	return opt, nil
 }
 
-func NewOptionsFromForm(form *xep0004.DataForm) (*Options, error) {
+func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	opt := &Options{}
 	fields := form.Fields
 	if len(fields) == 0 {

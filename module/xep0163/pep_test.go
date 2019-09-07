@@ -35,7 +35,7 @@ func TestXEP0163_Matching(t *testing.T) {
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j)
 	iq.SetToJID(j)
-	iq.AppendElement(xmpp.NewElementNamespace("pubsub", pepOwnerNamespace))
+	iq.AppendElement(xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace))
 	require.True(t, p.MatchesIQ(iq))
 }
 
@@ -55,7 +55,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	iq.SetFromJID(j)
 	iq.SetToJID(j)
 
-	pubSub := xmpp.NewElementNamespace("pubsub", pepOwnerNamespace)
+	pubSub := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
 	create := xmpp.NewElementName("create")
 	create.SetAttribute("node", "princely_musings")
 	pubSub.AppendElement(create)
@@ -96,7 +96,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	iq.SetFromJID(j)
 	iq.SetToJID(j)
 
-	pubSub := xmpp.NewElementNamespace("pubsub", pepOwnerNamespace)
+	pubSub := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	create := xmpp.NewElementName("delete")
 	create.SetAttribute("node", "princely_musings")
 	pubSub.AppendElement(create)

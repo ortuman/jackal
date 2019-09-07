@@ -19,7 +19,7 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#access-presence'/>          [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#auto-create'/>              [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#auto-subscribe'/>           [PENDING]
-// <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [PENDING] - Next
+// <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-and-configure'/>     [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
@@ -29,11 +29,10 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [PENDING]
 
 const (
-	pepOwnerNamespace = "http://jabber.org/protocol/pubsub#owner"
+	pubSubNamespace      = "http://jabber.org/protocol/pubsub"
+	pubSubOwnerNamespace = "http://jabber.org/protocol/pubsub#owner"
 
-	pepErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
-
-	pepNodeConfigNamespace = "http://jabber.org/protocol/pubsub#node_config"
+	pubSubErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
 )
 
 var discoInfoFeatures = []string{
@@ -80,8 +79,11 @@ func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
 // MatchesIQ returns whether or not an IQ should be processed by the PEP module.
 func (x *Pep) MatchesIQ(iq *xmpp.IQ) bool {
 	pubSub := iq.Elements().Child("pubsub")
+	if pubSub == nil {
+		return false
+	}
 	switch pubSub.Namespace() {
-	case pepOwnerNamespace:
+	case pubSubNamespace, pubSubOwnerNamespace:
 		return true
 	}
 	return false
@@ -105,13 +107,14 @@ func (x *Pep) Shutdown() error {
 func (x *Pep) processIQ(iq *xmpp.IQ) {
 	pubSub := iq.Elements().Child("pubsub")
 	switch pubSub.Namespace() {
-	case pepOwnerNamespace:
+	case pubSubNamespace:
+		x.processRequest(iq, pubSub)
+	case pubSubOwnerNamespace:
 		x.processOwnerRequest(iq, pubSub)
-		return
 	}
 }
 
-func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
+func (x *Pep) processRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Create node
 	// https://xmpp.org/extensions/xep-0060.html#owner-create
 	if createNode := pubSub.Elements().Child("create"); createNode != nil && iq.IsSet() {
@@ -120,6 +123,10 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		return
 	}
 
+	_ = x.router.Route(iq.FeatureNotImplementedError())
+}
+
+func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Configure node
 	// https://xmpp.org/extensions/xep-0060.html#owner-configure
 	if configureNode := pubSub.Elements().Child("configure"); configureNode != nil {
@@ -129,6 +136,8 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		} else if iq.IsSet() {
 			// update node configuration
 			x.configureNode(iq, configureNode)
+		} else {
+			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
 		return
 	}
@@ -177,7 +186,7 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 			_ = x.router.Route(iq.BadRequestError())
 			return
 		}
-		opts, err := pubsubmodel.NewOptionsFromForm(form)
+		opts, err := pubsubmodel.NewOptionsFromSubmitForm(form)
 		if err != nil {
 			_ = x.router.Route(iq.BadRequestError())
 			return
@@ -194,6 +203,8 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
+	log.Infof("pep: created node (host: %s, name: %s)", host, nodeName)
+
 	// create owner affiliation
 	ownerAffiliation := &pubsubmodel.Affiliation{
 		JID:         host,
@@ -205,6 +216,7 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		return
 	}
 
+	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
@@ -236,7 +248,7 @@ func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	configureNode.SetAttribute("node", nodeName)
 	configureNode.AppendElement(node.Options.Form().Element())
 
-	pubSubNode := xmpp.NewElementNamespace("pubsub", pepOwnerNamespace)
+	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubNode.AppendElement(configureNode)
 
 	res := iq.ResultIQ()
@@ -251,12 +263,52 @@ func (x *Pep) configureNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
+	formEl := nodeEl.Elements().ChildNamespace("x", xep0004.FormNamespace)
+	if formEl == nil {
 		_ = x.router.Route(iq.NotAcceptableError())
 		return
 	}
-	//host := iq.FromJID().ToBareJID().String()
+	configForm, err := xep0004.NewFormFromElement(formEl)
+	if err != nil {
+		_ = x.router.Route(iq.NotAcceptableError())
+		return
+	}
+	nodeName := nodeEl.Attributes().Get("node")
+	if len(nodeName) == 0 {
+		_ = x.router.Route(nodeIDRequiredError(iq))
+		return
+	}
+	host := iq.FromJID().ToBareJID().String()
+
+	node, err := storage.FetchPubSubNode(host, nodeName)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	nodeOpts, err := pubsubmodel.NewOptionsFromSubmitForm(configForm)
+	if err != nil {
+		_ = x.router.Route(iq.NotAcceptableError())
+		return
+	}
+	node.Options = *nodeOpts
+
+	// update node
+	if err := storage.UpsertPubSubNode(node); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	log.Infof("pep: node configuration updated (host: %s, name: %s)", host, nodeName)
+
+	// TODO(ortuman): notify config update
+
+	// reply
+	_ = x.router.Route(iq.ResultIQ())
 }
 
 func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
@@ -288,11 +340,13 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
+	log.Infof("pep: deleted node (host: %s, name: %s)", host, nodeName)
 
+	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
-	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pepErrorNamespace)}
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pubSubErrorNamespace)}
 	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAcceptable, errorElements)
 }

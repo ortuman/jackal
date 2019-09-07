@@ -14,7 +14,7 @@ import (
 )
 
 func TestOptions_New(t *testing.T) {
-	opt, err := NewOptionsFromForm(&xep0004.DataForm{})
+	opt, err := NewOptionsFromSubmitForm(&xep0004.DataForm{})
 	require.Nil(t, opt)
 	require.NotNil(t, err)
 
@@ -80,7 +80,7 @@ func TestOptions_New(t *testing.T) {
 			},
 		},
 	}
-	opt, err = NewOptionsFromForm(form)
+	opt, err = NewOptionsFromSubmitForm(form)
 	require.NotNil(t, opt)
 	require.Nil(t, err)
 
@@ -100,7 +100,7 @@ func TestOptions_New(t *testing.T) {
 
 	form2 := opt.SubmitForm()
 
-	opt2, err := NewOptionsFromForm(form2)
+	opt2, err := NewOptionsFromSubmitForm(form2)
 	require.NotNil(t, opt2)
 	require.Nil(t, err)
 
