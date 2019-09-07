@@ -115,8 +115,8 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Create node
 	// https://xmpp.org/extensions/xep-0060.html#owner-create
 	if createNode := pubSub.Elements().Child("create"); createNode != nil && iq.IsSet() {
-		nodeCfg := pubSub.Elements().Child("configure")
-		x.createNode(iq, createNode, nodeCfg)
+		configureNode := pubSub.Elements().Child("configure")
+		x.createNode(iq, createNode, configureNode)
 		return
 	}
 
