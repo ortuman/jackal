@@ -128,20 +128,6 @@ func (s *Storage) DeletePubSubNode(host, name string) error {
 	})
 }
 
-func (s *Storage) PubSubNodeExists(host, name string) (bool, error) {
-	var count int
-	err := sq.Select("COUNT(*)").
-		From("pubsub_nodes").
-		Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-		RunWith(s.db).QueryRow().Scan(&count)
-	switch err {
-	case nil:
-		return count > 0, nil
-	default:
-		return false, err
-	}
-}
-
 func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier

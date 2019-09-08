@@ -14,8 +14,6 @@ type pubSubStorage interface {
 	FetchPubSubNode(host, name string) (*pubsubmodel.Node, error)
 	DeletePubSubNode(host, name string) error
 
-	PubSubNodeExists(host, name string) (bool, error)
-
 	UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
 	FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error)
 
@@ -33,10 +31,6 @@ func FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 
 func DeletePubSubNode(host, name string) error {
 	return inst.DeletePubSubNode(host, name)
-}
-
-func PubSubNodeExists(host, name string) (bool, error) {
-	return inst.PubSubNodeExists(host, name)
 }
 
 func UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {

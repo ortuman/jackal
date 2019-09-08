@@ -30,10 +30,6 @@ func TestBadgerDB_PubSubNodes(t *testing.T) {
 	sNode, err := h.db.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.True(t, reflect.DeepEqual(sNode, &node))
-
-	exists, err := h.db.PubSubNodeExists("ortuman@jackal.im", "princely_musings")
-	require.Nil(t, err)
-	require.True(t, exists)
 }
 
 func TestBadgerDB_PubSubItems(t *testing.T) {

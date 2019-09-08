@@ -299,7 +299,7 @@ func (x *Pep) notify(notificationElem xmpp.XElement, host, name string) error {
 		if affiliation.Affiliation != pubsubmodel.Owner && affiliation.Affiliation != pubsubmodel.Subscriber {
 			continue
 		}
-		msg := xmpp.NewMessageType(uuid.New().String(), "")
+		msg := xmpp.NewMessageType(uuid.New().String(), xmpp.HeadlineType)
 		msg.SetFrom(host)
 		msg.SetTo(affiliation.JID)
 		eventElem := xmpp.NewElementNamespace("event", pubSubEventNamespace)

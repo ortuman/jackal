@@ -43,22 +43,6 @@ func (b *Storage) DeletePubSubNode(host, name string) error {
 	})
 }
 
-func (b *Storage) PubSubNodeExists(host, name string) (bool, error) {
-	var exists bool
-	err := b.db.Update(func(tx *badger.Txn) error {
-		v, err := b.getVal(b.pubSubNodesKey(host, name), tx)
-		if err != nil {
-			return err
-		}
-		exists = v != nil
-		return nil
-	})
-	if err != nil {
-		return false, err
-	}
-	return exists, nil
-}
-
 func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var items []pubsubmodel.Item

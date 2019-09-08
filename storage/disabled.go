@@ -111,10 +111,6 @@ func (*disabledStorage) DeletePubSubNode(host, name string) error {
 	return nil
 }
 
-func (*disabledStorage) PubSubNodeExists(host, name string) (bool, error) {
-	return false, nil
-}
-
 func (*disabledStorage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return nil
 }

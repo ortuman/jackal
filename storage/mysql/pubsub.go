@@ -53,20 +53,6 @@ func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	})
 }
 
-func (s *Storage) PubSubNodeExists(host, name string) (bool, error) {
-	var count int
-	err := sq.Select("COUNT(*)").
-		From("pubsub_nodes").
-		Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-		RunWith(s.db).QueryRow().Scan(&count)
-	switch err {
-	case nil:
-		return count > 0, nil
-	default:
-		return false, err
-	}
-}
-
 func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	rows, err := sq.Select("name", "value").
 		From("pubsub_node_options").

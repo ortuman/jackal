@@ -79,22 +79,6 @@ func TestPgSQLFetchPubSubNode(t *testing.T) {
 	require.Equal(t, node.Options.SendLastPublishedItem, pubsubmodel.OnSubAndPresence)
 }
 
-func TestPgSQLUpsertPubSubNodeExists(t *testing.T) {
-	s, mock := NewMock()
-
-	mock.ExpectQuery("SELECT COUNT(.+) FROM pubsub_nodes WHERE (.+)").
-		WithArgs("ortuman@jackal.im", "princely_musings").
-		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow("1"))
-
-	exists, err := s.PubSubNodeExists("ortuman@jackal.im", "princely_musings")
-	require.Nil(t, err)
-	require.True(t, exists)
-
-	require.Nil(t, mock.ExpectationsWereMet())
-
-	require.Nil(t, err)
-}
-
 func TestPgSQLUpsertPubSubNodeItem(t *testing.T) {
 	payload := xmpp.NewIQType(uuid.New().String(), xmpp.GetType)
 
