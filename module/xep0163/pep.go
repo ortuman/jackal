@@ -210,7 +210,7 @@ func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node 
 		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
-	// compose response
+	// compose config form response
 	configureNode := xmpp.NewElementName("configure")
 	configureNode.SetAttribute("node", name)
 	configureNode.AppendElement(node.Options.Form().Element())
