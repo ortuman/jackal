@@ -268,9 +268,9 @@ func (opt *Options) Form() *xep0004.DataForm {
 	return &form
 }
 
-func (opt *Options) SubmitForm() *xep0004.DataForm {
+func (opt *Options) ResultForm() *xep0004.DataForm {
 	form := xep0004.DataForm{
-		Type: xep0004.Submit,
+		Type: xep0004.Result,
 	}
 	// include form type
 	form.Fields = append(form.Fields, xep0004.Field{

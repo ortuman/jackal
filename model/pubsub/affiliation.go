@@ -12,7 +12,8 @@ import (
 
 // affiliation definitions
 const (
-	Owner = "owner"
+	Owner      = "owner"
+	Subscriber = "subscriber"
 )
 
 type Affiliation struct {

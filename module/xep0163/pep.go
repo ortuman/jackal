@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -31,6 +32,7 @@ import (
 const (
 	pubSubNamespace      = "http://jabber.org/protocol/pubsub"
 	pubSubOwnerNamespace = "http://jabber.org/protocol/pubsub#owner"
+	pubSubEventNamespace = "http://jabber.org/protocol/pubsub#event"
 
 	pubSubErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
 )
@@ -50,6 +52,8 @@ var discoInfoFeatures = []string{
 }
 
 var defaultNodeOptions = pubsubmodel.Options{
+	DeliverNotifications:  true,
+	DeliverPayloads:       true,
 	AccessModel:           pubsubmodel.Presence,
 	PublishModel:          pubsubmodel.Publishers,
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
@@ -117,9 +121,8 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 func (x *Pep) processRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Create node
 	// https://xmpp.org/extensions/xep-0060.html#owner-create
-	if createNode := pubSub.Elements().Child("create"); createNode != nil && iq.IsSet() {
-		configureNode := pubSub.Elements().Child("configure")
-		x.createNode(iq, createNode, configureNode)
+	if createCmd := pubSub.Elements().Child("create"); createCmd != nil && iq.IsSet() {
+		x.withNode(iq, pubSub, createCmd, true, x.createNode)
 		return
 	}
 
@@ -129,13 +132,13 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Configure node
 	// https://xmpp.org/extensions/xep-0060.html#owner-configure
-	if configureNode := pubSub.Elements().Child("configure"); configureNode != nil {
+	if configureCmd := pubSub.Elements().Child("configure"); configureCmd != nil {
 		if iq.IsGet() {
 			// send configuration form
-			x.sendConfigurationForm(iq, configureNode)
+			x.withNode(iq, pubSub, configureCmd, true, x.sendConfigurationForm)
 		} else if iq.IsSet() {
 			// update node configuration
-			x.configureNode(iq, configureNode)
+			x.withNode(iq, pubSub, configureCmd, true, x.configureNode)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -144,43 +147,24 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 
 	// Delete node
 	// https://xmpp.org/extensions/xep-0060.html#owner-delete
-	if deleteNode := pubSub.Elements().Child("delete"); deleteNode != nil && iq.IsSet() {
-		x.deleteNode(iq, deleteNode)
+	if deleteCmd := pubSub.Elements().Child("delete"); deleteCmd != nil && iq.IsSet() {
+		x.withNode(iq, pubSub, deleteCmd, true, x.deleteNode)
 		return
 	}
 
 	_ = x.router.Route(iq.FeatureNotImplementedError())
 }
 
-func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XElement) {
-	if iq.FromJID().Node() != iq.ToJID().Node() {
-		_ = x.router.Route(iq.ForbiddenError())
-		return
-	}
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
-		_ = x.router.Route(nodeIDRequiredError(iq))
-		return
-	}
-	host := iq.FromJID().ToBareJID().String()
-
-	// check whether or not the node exists
-	exists, err := storage.PubSubNodeExists(host, nodeName)
-	if err != nil {
-		log.Error(err)
-		_ = x.router.Route(iq.InternalServerError())
-		return
-	}
-	if exists {
+func (x *Pep) createNode(iq *xmpp.IQ, pubSubEl, _ xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
+	if node != nil {
 		_ = x.router.Route(iq.ConflictError())
 		return
 	}
-
-	node := &pubsubmodel.Node{
+	node = &pubsubmodel.Node{
 		Host: host,
-		Name: nodeName,
+		Name: nodeID,
 	}
-	if configEl != nil {
+	if configEl := pubSubEl.Elements().Child("configure"); configEl != nil {
 		form, err := xep0004.NewFormFromElement(configEl)
 		if err != nil {
 			_ = x.router.Route(iq.BadRequestError())
@@ -203,14 +187,14 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("pep: created node (host: %s, name: %s)", host, nodeName)
+	log.Infof("pep: created node (host: %s, node_id: %s)", host, nodeID)
 
 	// create owner affiliation
 	ownerAffiliation := &pubsubmodel.Affiliation{
 		JID:         host,
 		Affiliation: pubsubmodel.Owner,
 	}
-	if err := storage.UpsertPubSubNodeAffiliation(ownerAffiliation, host, nodeName); err != nil {
+	if err := storage.UpsertPubSubNodeAffiliation(ownerAffiliation, host, nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
@@ -220,32 +204,14 @@ func (x *Pep) createNode(iq *xmpp.IQ, nodeEl xmpp.XElement, configEl xmpp.XEleme
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, nodeEl xmpp.XElement) {
-	if iq.FromJID().Node() != iq.ToJID().Node() {
-		_ = x.router.Route(iq.ForbiddenError())
-		return
-	}
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
-		_ = x.router.Route(nodeIDRequiredError(iq))
-		return
-	}
-	host := iq.FromJID().ToBareJID().String()
-
-	// fetch node configuration
-	node, err := storage.FetchPubSubNode(host, nodeName)
-	if err != nil {
-		log.Error(err)
-		_ = x.router.Route(iq.InternalServerError())
-		return
-	}
+func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, name string) {
 	if node == nil {
 		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	// compose response
 	configureNode := xmpp.NewElementName("configure")
-	configureNode.SetAttribute("node", nodeName)
+	configureNode.SetAttribute("node", name)
 	configureNode.AppendElement(node.Options.Form().Element())
 
 	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
@@ -258,12 +224,12 @@ func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	_ = x.router.Route(res)
 }
 
-func (x *Pep) configureNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
-	if iq.FromJID().Node() != iq.ToJID().Node() {
-		_ = x.router.Route(iq.ForbiddenError())
+func (x *Pep) configureNode(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
-	formEl := nodeEl.Elements().ChildNamespace("x", xep0004.FormNamespace)
+	formEl := cmdElem.Elements().ChildNamespace("x", xep0004.FormNamespace)
 	if formEl == nil {
 		_ = x.router.Route(iq.NotAcceptableError())
 		return
@@ -271,23 +237,6 @@ func (x *Pep) configureNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 	configForm, err := xep0004.NewFormFromElement(formEl)
 	if err != nil {
 		_ = x.router.Route(iq.NotAcceptableError())
-		return
-	}
-	nodeName := nodeEl.Attributes().Get("node")
-	if len(nodeName) == 0 {
-		_ = x.router.Route(nodeIDRequiredError(iq))
-		return
-	}
-	host := iq.FromJID().ToBareJID().String()
-
-	node, err := storage.FetchPubSubNode(host, nodeName)
-	if err != nil {
-		log.Error(err)
-		_ = x.router.Route(iq.InternalServerError())
-		return
-	}
-	if node == nil {
-		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	nodeOpts, err := pubsubmodel.NewOptionsFromSubmitForm(configForm)
@@ -303,47 +252,86 @@ func (x *Pep) configureNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("pep: node configuration updated (host: %s, name: %s)", host, nodeName)
+	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", host, nodeID)
 
-	// TODO(ortuman): notify config update
+	// notify config update
+	if node.Options.DeliverNotifications && node.Options.NotifyConfig {
+		configElem := xmpp.NewElementName("configuration")
+		configElem.SetAttribute("node", nodeID)
+
+		if node.Options.DeliverPayloads {
+			configElem.AppendElement(node.Options.ResultForm().Element())
+		}
+		if err := x.notify(configElem, host, nodeID); err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+	}
 
 	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) deleteNode(iq *xmpp.IQ, nodeEl xmpp.XElement) {
-	if iq.FromJID().Node() != iq.ToJID().Node() {
+func (x *Pep) deleteNode(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	// delete node
+	if err := storage.DeletePubSubNode(host, nodeID); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	log.Infof("pep: deleted node (host: %s, node_id: %s)", host, nodeID)
+
+	// reply
+	_ = x.router.Route(iq.ResultIQ())
+}
+
+func (x *Pep) notify(notificationElem xmpp.XElement, host, name string) error {
+	affiliations, err := storage.FetchPubSubNodeAffiliations(host, name)
+	if err != nil {
+		return err
+	}
+	for _, affiliation := range affiliations {
+		if affiliation.Affiliation != pubsubmodel.Owner && affiliation.Affiliation != pubsubmodel.Subscriber {
+			continue
+		}
+		msg := xmpp.NewMessageType(uuid.New().String(), "")
+		msg.SetFrom(host)
+		msg.SetTo(affiliation.JID)
+		eventElem := xmpp.NewElementNamespace("event", pubSubEventNamespace)
+		eventElem.AppendElement(notificationElem)
+		msg.AppendElement(eventElem)
+
+		_ = x.router.Route(msg)
+	}
+	return nil
+}
+
+func (x *Pep) withNode(iq *xmpp.IQ, pubSubEl, cmdElem xmpp.XElement, asOwner bool, fn func(iq *xmpp.IQ, pubSubEl, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, nodeID string)) {
+	if asOwner && iq.FromJID().ToBareJID().String() != iq.ToJID().ToBareJID().String() {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
-	nodeName := nodeEl.Attributes().Get("node")
+	nodeName := cmdElem.Attributes().Get("node")
 	if len(nodeName) == 0 {
 		_ = x.router.Route(nodeIDRequiredError(iq))
 		return
 	}
 	host := iq.FromJID().ToBareJID().String()
 
-	// check whether or not the node exists
-	exists, err := storage.PubSubNodeExists(host, nodeName)
+	// fetch node from storage
+	node, err := storage.FetchPubSubNode(host, nodeName)
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	if !exists {
-		_ = x.router.Route(iq.ItemNotFoundError())
-		return
-	}
-	// delete node
-	if err := storage.DeletePubSubNode(host, nodeName); err != nil {
-		log.Error(err)
-		_ = x.router.Route(iq.InternalServerError())
-		return
-	}
-	log.Infof("pep: deleted node (host: %s, name: %s)", host, nodeName)
-
-	// reply
-	_ = x.router.Route(iq.ResultIQ())
+	fn(iq, pubSubEl, cmdElem, node, host, nodeName)
+	return
 }
 
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {

@@ -98,7 +98,8 @@ func TestOptions_New(t *testing.T) {
 	require.True(t, opt.NotifyRetract)
 	require.True(t, opt.NotifySub)
 
-	form2 := opt.SubmitForm()
+	form2 := opt.ResultForm()
+	form2.Type = xep0004.Submit
 
 	opt2, err := NewOptionsFromSubmitForm(form2)
 	require.NotNil(t, opt2)

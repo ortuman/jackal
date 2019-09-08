@@ -41,7 +41,7 @@ type InfoProvider interface {
 	// A proper stanza error should be returned in case an error occurs.
 	Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError)
 
-	// SubmitForm returns the data form associated to the provider.
+	// ResultForm returns the data form associated to the provider.
 	// A proper stanza error should be returned in case an error occurs.
 	Form(toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError)
 }
