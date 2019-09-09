@@ -159,6 +159,21 @@ CREATE TABLE IF NOT EXISTS pubsub_affiliations (
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- pubsub_subscriptions
+
+CREATE TABLE IF NOT EXISTS pubsub_subscriptions (
+    node_id      BIGINT NOT NULL,
+    subid        TEXT NOT NULL,
+    jid          TEXT NOT NULL,
+    subscription TEXT NOT NULL,
+    updated_at   DATETIME NOT NULL,
+    created_at   DATETIME NOT NULL,
+
+    INDEX i_pubsub_subscriptions_jid (jid(512)),
+    UNIQUE INDEX i_pubsub_subscriptions_node_id_jid (node_id, jid(512))
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- pubsub_items
 
 CREATE TABLE IF NOT EXISTS pubsub_items (

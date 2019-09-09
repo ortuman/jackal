@@ -196,6 +196,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_affiliations_node_id_jid ON pubsub_af
 
 SELECT enable_updated_at('pubsub_affiliations');
 
+-- pubsub_subscriptions
+
+CREATE TABLE IF NOT EXISTS pubsub_subscriptions (
+    node_id          BIGINT NOT NULL,
+    subid            TEXT NOT NULL,
+    jid              TEXT NOT NULL,
+    subscription     TEXT NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_subscriptions_jid ON pubsub_subscriptions(jid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_subscriptions_node_id_jid ON pubsub_subscriptions(node_id, jid);
+
+SELECT enable_updated_at('pubsub_subscriptions');
+
 -- pubsub_items
 
 CREATE TABLE IF NOT EXISTS pubsub_items (

@@ -4,6 +4,7 @@
  */
 
 DROP TABLE IF EXISTS pubsub_items;
+DROP TABLE IF EXISTS pubsub_subscriptions;
 DROP TABLE IF EXISTS pubsub_affiliations;
 DROP TABLE IF EXISTS pubsub_node_options;
 DROP TABLE IF EXISTS pubsub_nodes;
