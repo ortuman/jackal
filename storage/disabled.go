@@ -127,6 +127,14 @@ func (*disabledStorage) FetchPubSubNodeAffiliations(host, name string) ([]pubsub
 	return nil, nil
 }
 
+func (*disabledStorage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+	return nil
+}
+
+func (*disabledStorage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) IsClusterCompatible() bool {
 	return false
 }

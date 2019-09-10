@@ -149,12 +149,24 @@ func (m *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
+func (m *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+	return nil
+}
+
+func (m *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+	return nil, nil
+}
+
 func pubSubNodesKey(host, name string) string {
 	return "pubSubNodes:" + host + ":" + name
 }
 
 func pubSubAffiliationsKey(host, name string) string {
 	return "pubSubAffiliations:" + host + ":" + name
+}
+
+func pubSubSubscriptionsKey(host, name string) string {
+	return "pubSubSubscriptions:" + host + ":" + name
 }
 
 func pubSubItemsKey(host, name string) string {

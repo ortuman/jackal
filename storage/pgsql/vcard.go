@@ -21,7 +21,7 @@ func (s *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
 	q := sq.Insert("vcards").
 		Columns("username", "vcard").
 		Values(username, rawXML).
-		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = ?", rawXML)
+		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = $3", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err

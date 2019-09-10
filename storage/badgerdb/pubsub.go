@@ -100,14 +100,26 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
+func (b *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+	return nil
+}
+
+func (b *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+	return nil, nil
+}
+
 func (b *Storage) pubSubNodesKey(host, name string) []byte {
 	return []byte("pubSubNodes:" + host + ":" + name)
 }
 
-func (b *Storage) pubSubItemsKey(host, name string) []byte {
-	return []byte("pubSubItems:" + host + ":" + name)
-}
-
 func (b *Storage) pubSubAffiliationsKey(host, name string) []byte {
 	return []byte("pubSubAffiliations:" + host + ":" + name)
+}
+
+func (b *Storage) pubSubSubscriptionsKey(host, name string) []byte {
+	return []byte("pubSubSubscriptions:" + host + ":" + name)
+}
+
+func (b *Storage) pubSubItemsKey(host, name string) []byte {
+	return []byte("pubSubItems:" + host + ":" + name)
 }

@@ -79,6 +79,37 @@ func TestMySQLFetchPubSubNode(t *testing.T) {
 	require.Equal(t, errMySQLStorage, err)
 }
 
+func TestMySQLDeletePubSubNode(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("1"))
+
+	mock.ExpectExec("DELETE FROM pubsub_nodes WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM pubsub_node_options WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM pubsub_items WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	err := s.DeletePubSubNode("ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+}
+
 func TestMySQLUpsertPubSubNodeItem(t *testing.T) {
 	payload := xmpp.NewIQType(uuid.New().String(), xmpp.GetType)
 

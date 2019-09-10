@@ -124,6 +124,13 @@ func (s *Storage) DeletePubSubNode(host, name string) error {
 		_, err = sq.Delete("pubsub_affiliations").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
 			RunWith(tx).Exec()
+		if err != nil {
+			return err
+		}
+		// delete subscriptions
+		_, err = sq.Delete("pubsub_subscriptions").
+			Where(sq.Eq{"node_id": nodeIdentifier}).
+			RunWith(tx).Exec()
 		return err
 	})
 }
@@ -265,4 +272,53 @@ func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 		affiliations = append(affiliations, affiliation)
 	}
 	return affiliations, nil
+}
+
+func (s *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+	return s.inTransaction(func(tx *sql.Tx) error {
+		// fetch node identifier
+		var nodeIdentifier string
+
+		err := sq.Select("id").
+			From("pubsub_nodes").
+			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
+			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+		switch err {
+		case nil:
+			break
+		case sql.ErrNoRows:
+			return nil
+		default:
+			return err
+		}
+
+		// upsert subscription
+		_, err = sq.Insert("pubsub_subscriptions").
+			Columns("node_id", "subid", "jid", "subscription").
+			Values(nodeIdentifier, subscription.SubID, subscription.JID, subscription.Subscription).
+			Suffix("ON DUPLICATE KEY UPDATE subid = ?, subscription = ?, updated_at = NOW()", subscription.SubID, subscription.Subscription).
+			RunWith(tx).Exec()
+		return err
+	})
+}
+
+func (s *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+	rows, err := sq.Select("subid", "jid", "subscription").
+		From("pubsub_subscriptions").
+		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
+		RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var subscriptions []pubsubmodel.Subscription
+	for rows.Next() {
+		var subscription pubsubmodel.Subscription
+		if err := rows.Scan(&subscription.SubID, &subscription.JID, &subscription.Subscription); err != nil {
+			return nil, err
+		}
+		subscriptions = append(subscriptions, subscription)
+	}
+	return subscriptions, nil
 }
