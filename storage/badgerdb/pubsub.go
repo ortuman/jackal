@@ -101,11 +101,25 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 }
 
 func (b *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
-	return nil
+	return b.db.Update(func(txn *badger.Txn) error {
+		var subscriptions []pubsubmodel.Subscription
+		if err := b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn); err != nil {
+			return err
+		}
+		subscriptions = append(subscriptions, *subscription)
+		return b.upsertSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn)
+	})
 }
 
 func (b *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
-	return nil, nil
+	var subscriptions []pubsubmodel.Subscription
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return subscriptions, nil
 }
 
 func (b *Storage) pubSubNodesKey(host, name string) []byte {

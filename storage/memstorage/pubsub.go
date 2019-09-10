@@ -150,11 +150,52 @@ func (m *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 }
 
 func (m *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
-	return nil
+	return m.inWriteLock(func() error {
+		var b []byte
+		var subscriptions []pubsubmodel.Subscription
+
+		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		if b != nil {
+			if err := serializer.DeserializeSlice(b, &subscriptions); err != nil {
+				return err
+			}
+		}
+		var updated bool
+		for i, sub := range subscriptions {
+			if sub.JID == subscription.JID {
+				subscriptions[i] = *subscription
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			subscriptions = append(subscriptions, *subscription)
+		}
+		b, err := serializer.SerializeSlice(&subscriptions)
+		if err != nil {
+			return err
+		}
+		m.bytes[pubSubAffiliationsKey(host, name)] = b
+		return nil
+	})
 }
 
 func (m *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
-	return nil, nil
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	var subscriptions []pubsubmodel.Subscription
+	if err := serializer.DeserializeSlice(b, &subscriptions); err != nil {
+		return nil, err
+	}
+	return subscriptions, nil
 }
 
 func pubSubNodesKey(host, name string) string {
