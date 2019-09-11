@@ -190,7 +190,7 @@ func (x *Pep) createNode(iq *xmpp.IQ, pubSubEl, _ xmpp.XElement, node *pubsubmod
 	}
 	log.Infof("pep: created node (host: %s, node_id: %s)", host, nodeID)
 
-	// create owner affiliation
+	// create owner affiliation and subscription
 	ownerAffiliation := &pubsubmodel.Affiliation{
 		JID:         host,
 		Affiliation: pubsubmodel.Owner,
