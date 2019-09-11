@@ -6,6 +6,8 @@
 package xep0163
 
 import (
+	"crypto/sha256"
+
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
@@ -190,12 +192,23 @@ func (x *Pep) createNode(iq *xmpp.IQ, pubSubEl, _ xmpp.XElement, node *pubsubmod
 	}
 	log.Infof("pep: created node (host: %s, node_id: %s)", host, nodeID)
 
-	// create owner affiliation and subscription
+	// create owner affiliation
 	ownerAffiliation := &pubsubmodel.Affiliation{
 		JID:         host,
 		Affiliation: pubsubmodel.Owner,
 	}
 	if err := storage.UpsertPubSubNodeAffiliation(ownerAffiliation, host, nodeID); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	// create owner subscription
+	ownerSub := &pubsubmodel.Subscription{
+		SubID:        subscriptionID(host, pubsubmodel.Subscribed, host, nodeID),
+		JID:          host,
+		Subscription: pubsubmodel.Subscribed,
+	}
+	if err := storage.UpsertPubSubNodeSubscription(ownerSub, host, nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
@@ -352,4 +365,10 @@ func (x *Pep) withNode(iq *xmpp.IQ, pubSubEl, cmdElem xmpp.XElement, asOwner boo
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
 	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pubSubErrorNamespace)}
 	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAcceptable, errorElements)
+}
+
+func subscriptionID(jid, subscription, host, name string) string {
+	h := sha256.New()
+	h.Write([]byte(jid + subscription + host + name))
+	return string(h.Sum(nil))
 }

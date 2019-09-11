@@ -16,6 +16,12 @@ const (
 	Subscriber = "subscriber"
 )
 
+// subscriptio definitions
+const (
+	None       = "none"
+	Subscribed = "subscribed"
+)
+
 type Affiliation struct {
 	JID         string
 	Affiliation string
