@@ -78,3 +78,28 @@ func TestBadgerDB_PubSubAffiliations(t *testing.T) {
 	require.Equal(t, "ortuman@jackal.im", affiliations[0].JID)
 	require.Equal(t, "noelia@jackal.im", affiliations[1].JID)
 }
+
+func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
+	t.Parallel()
+
+	h := tUtilBadgerDBSetup()
+	defer tUtilBadgerDBTeardown(h)
+
+	require.Nil(t, h.db.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		SubID:        "1234",
+		JID:          "ortuman@jackal.im",
+		Subscription: "subscribed",
+	}, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, h.db.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		SubID:        "5678",
+		JID:          "noelia@jackal.im",
+		Subscription: "unsubscribed",
+	}, "ortuman@jackal.im", "princely_musings"))
+
+	subscriptions, err := h.db.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	require.Len(t, subscriptions, 2)
+	require.Equal(t, "ortuman@jackal.im", subscriptions[0].JID)
+	require.Equal(t, "noelia@jackal.im", subscriptions[1].JID)
+}

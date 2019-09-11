@@ -175,7 +175,7 @@ func (m *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscri
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubAffiliationsKey(host, name)] = b
+		m.bytes[pubSubSubscriptionsKey(host, name)] = b
 		return nil
 	})
 }

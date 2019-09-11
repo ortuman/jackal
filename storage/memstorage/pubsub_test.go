@@ -100,3 +100,43 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 	}
 	require.Fail(t, "affiliation for 'noelia@jackal.im' not found")
 }
+
+func TestStorage_PubSubNodeSubscription(t *testing.T) {
+	s := New()
+	sub1 := &pubsubmodel.Subscription{
+		SubID:        "1234",
+		JID:          "ortuman@jackal.im",
+		Subscription: "subscribed",
+	}
+	sub2 := &pubsubmodel.Subscription{
+		SubID:        "5678",
+		JID:          "noelia@jackal.im",
+		Subscription: "unsubscribed",
+	}
+	require.Nil(t, s.UpsertPubSubNodeSubscription(sub1, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertPubSubNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
+
+	subscriptions, err := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+	require.NotNil(t, subscriptions)
+
+	require.Len(t, subscriptions, 2)
+
+	// update affiliation
+	sub2.Subscription = "subscribed"
+	require.Nil(t, s.UpsertPubSubNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
+
+	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+	require.NotNil(t, subscriptions)
+
+	require.Len(t, subscriptions, 2)
+
+	for _, sub := range subscriptions {
+		if sub.JID == "noelia@jackal.im" {
+			require.Equal(t, "subscribed", sub.Subscription)
+			return
+		}
+	}
+	require.Fail(t, "subscription for 'noelia@jackal.im' not found")
+}
