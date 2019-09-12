@@ -16,7 +16,7 @@ const (
 	Subscriber = "subscriber"
 )
 
-// subscriptio definitions
+// subscription definitions
 const (
 	None       = "none"
 	Subscribed = "subscribed"

@@ -146,15 +146,15 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
-		JID:         "ortuman@jackal.im",
-		Affiliation: pubsubmodel.Owner,
+	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		JID:          "ortuman@jackal.im",
+		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
-	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
-		JID:         "noelia@jackal.im",
-		Affiliation: pubsubmodel.Subscriber,
+	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		JID:          "noelia@jackal.im",
+		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
@@ -232,15 +232,15 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
-		JID:         "ortuman@jackal.im",
-		Affiliation: pubsubmodel.Owner,
+	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		JID:          "ortuman@jackal.im",
+		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
-	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
-		JID:         "noelia@jackal.im",
-		Affiliation: pubsubmodel.Subscriber,
+	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		JID:          "noelia@jackal.im",
+		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 

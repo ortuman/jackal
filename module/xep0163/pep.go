@@ -148,6 +148,19 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		return
 	}
 
+	// Manage affiliations
+	// https://xmpp.org/extensions/xep-0060.html#owner-affiliations
+	if affiliationsCmd := pubSub.Elements().Child("affiliations"); affiliationsCmd != nil {
+		if iq.IsGet() {
+			// TODO(ortuman): retrieve affiliation list
+		} else if iq.IsSet() {
+			// TODO(ortuman): modify affiliation
+		} else {
+			_ = x.router.Route(iq.ServiceUnavailableError())
+		}
+		return
+	}
+
 	// Delete node
 	// https://xmpp.org/extensions/xep-0060.html#owner-delete
 	if deleteCmd := pubSub.Elements().Child("delete"); deleteCmd != nil && iq.IsSet() {
@@ -274,14 +287,14 @@ func (x *Pep) configureNode(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubm
 		if node.Options.DeliverPayloads {
 			configElem.AppendElement(node.Options.ResultForm().Element())
 		}
-		// fetch affiliations
-		affiliations, err := storage.FetchPubSubNodeAffiliations(host, nodeID)
+		// fetch subscriptions
+		subscriptions, err := storage.FetchPubSubNodeSubscriptions(host, nodeID)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
 			return
 		}
-		x.notify(configElem, affiliations, host)
+		x.notify(configElem, subscriptions, host)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", host, nodeID)
 
@@ -294,8 +307,8 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node
 		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
-	// fetch affiliations
-	affiliations, err := storage.FetchPubSubNodeAffiliations(host, nodeID)
+	// fetch subscriptions
+	subscriptions, err := storage.FetchPubSubNodeSubscriptions(host, nodeID)
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
@@ -312,7 +325,7 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", nodeID)
 
-		x.notify(deleteElem, affiliations, host)
+		x.notify(deleteElem, subscriptions, host)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", host, nodeID)
 
@@ -320,13 +333,13 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) notify(notificationElem xmpp.XElement, affiliations []pubsubmodel.Affiliation, host string) {
+func (x *Pep) notify(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host string) {
 	hostJID, _ := jid.NewWithString(host, true)
-	for _, affiliation := range affiliations {
-		if affiliation.Affiliation != pubsubmodel.Owner && affiliation.Affiliation != pubsubmodel.Subscriber {
+	for _, subscription := range subscriptions {
+		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
-		toJID, _ := jid.NewWithString(affiliation.JID, true)
+		toJID, _ := jid.NewWithString(subscription.JID, true)
 
 		msg := xmpp.NewMessageType(uuid.New().String(), xmpp.HeadlineType)
 		msg.SetFromJID(hostJID)
