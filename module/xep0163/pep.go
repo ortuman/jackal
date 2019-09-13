@@ -152,9 +152,9 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// https://xmpp.org/extensions/xep-0060.html#owner-affiliations
 	if affiliationsCmd := pubSub.Elements().Child("affiliations"); affiliationsCmd != nil {
 		if iq.IsGet() {
-			// TODO(ortuman): retrieve affiliation list
+			x.withNode(iq, pubSub, affiliationsCmd, true, x.retrieveAffiliations)
 		} else if iq.IsSet() {
-			// TODO(ortuman): modify affiliation
+			x.withNode(iq, pubSub, affiliationsCmd, true, x.updateAffiliations)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -329,6 +329,63 @@ func (x *Pep) deleteNode(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", host, nodeID)
 
+	// reply
+	_ = x.router.Route(iq.ResultIQ())
+}
+
+func (x *Pep) retrieveAffiliations(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	// fetch affiliations
+	affiliations, err := storage.FetchPubSubNodeAffiliations(host, nodeID)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	// compose response
+	affiliationsElem := xmpp.NewElementName("affiliations")
+	affiliationsElem.SetAttribute("node", nodeID)
+
+	for _, aff := range affiliations {
+		affElem := xmpp.NewElementName("affiliation")
+		affElem.SetAttribute("jid", aff.JID)
+		affElem.SetAttribute("affiliation", aff.Affiliation)
+	}
+	iqRes := iq.ResultIQ()
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem.AppendElement(affiliationsElem)
+	iqRes.AppendElement(pubSubElem)
+
+	// reply
+	_ = x.router.Route(iqRes)
+}
+
+func (x *Pep) updateAffiliations(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
+	if node == nil {
+		_ = x.router.Route(iq.ItemNotFoundError())
+		return
+	}
+	// update affiliations
+	for _, affElem := range cmdElem.Elements().Children("affiliation") {
+		var aff pubsubmodel.Affiliation
+		aff.JID = affElem.Attributes().Get("jid")
+		aff.Affiliation = affElem.Attributes().Get("affiliation")
+
+		var err error
+		if aff.Affiliation != pubsubmodel.None {
+			err = storage.UpsertPubSubNodeAffiliation(&aff, host, nodeID)
+		} else {
+			err = storage.DeletePubSubNodeAffiliation(aff.JID, host, nodeID)
+		}
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+	}
 	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
