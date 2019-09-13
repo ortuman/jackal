@@ -27,6 +27,15 @@ type Affiliation struct {
 	Affiliation string
 }
 
+func (a Affiliation) IsOwner() bool { return a.Affiliation == Owner }
+func (a Affiliation) IsValid() bool {
+	switch a.Affiliation {
+	case Owner, Subscriber:
+		return true
+	}
+	return false
+}
+
 // FromBytes deserializes a Affiliation entity from its binary representation.
 func (a *Affiliation) FromBytes(buf *bytes.Buffer) error {
 	dec := gob.NewDecoder(buf)
