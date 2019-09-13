@@ -84,7 +84,17 @@ func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 		if err := b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn); err != nil {
 			return err
 		}
-		affiliations = append(affiliations, *affiliation)
+		var updated bool
+		for i, aff := range affiliations {
+			if aff.JID == affiliation.JID {
+				affiliations[i] = *affiliation
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			affiliations = append(affiliations, *affiliation)
+		}
 		return b.upsertSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn)
 	})
 }
@@ -100,13 +110,44 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
+func (b *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+	return b.db.Update(func(txn *badger.Txn) error {
+		var affiliations []pubsubmodel.Affiliation
+		if err := b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn); err != nil {
+			return err
+		}
+		var deleted bool
+		for i, aff := range affiliations {
+			if aff.JID == jid {
+				affiliations = append(affiliations[:i], affiliations[i+1:]...)
+				deleted = true
+				break
+			}
+		}
+		if !deleted {
+			return nil
+		}
+		return b.upsertSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn)
+	})
+}
+
 func (b *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var subscriptions []pubsubmodel.Subscription
 		if err := b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn); err != nil {
 			return err
 		}
-		subscriptions = append(subscriptions, *subscription)
+		var updated bool
+		for i, sub := range subscriptions {
+			if sub.JID == subscription.JID {
+				subscriptions[i] = *subscription
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			subscriptions = append(subscriptions, *subscription)
+		}
 		return b.upsertSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn)
 	})
 }
@@ -120,6 +161,27 @@ func (b *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 		return nil, err
 	}
 	return subscriptions, nil
+}
+
+func (b *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
+	return b.db.Update(func(txn *badger.Txn) error {
+		var subscriptions []pubsubmodel.Subscription
+		if err := b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn); err != nil {
+			return err
+		}
+		var deleted bool
+		for i, sub := range subscriptions {
+			if sub.JID == jid {
+				subscriptions = append(subscriptions[:i], subscriptions[i+1:]...)
+				deleted = true
+				break
+			}
+		}
+		if !deleted {
+			return nil
+		}
+		return b.upsertSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn)
+	})
 }
 
 func (b *Storage) pubSubNodesKey(host, name string) []byte {

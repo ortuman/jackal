@@ -123,6 +123,10 @@ func (*disabledStorage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Aff
 	return nil
 }
 
+func (*disabledStorage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+	return nil
+}
+
 func (*disabledStorage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	return nil, nil
 }
@@ -133,6 +137,10 @@ func (*disabledStorage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.S
 
 func (*disabledStorage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
 	return nil, nil
+}
+
+func (*disabledStorage) DeletePubSubNodeSubscription(jid, host, name string) error {
+	return nil
 }
 
 func (*disabledStorage) IsClusterCompatible() bool {

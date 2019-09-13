@@ -149,6 +149,37 @@ func (m *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
+func (m *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+	return m.inWriteLock(func() error {
+		var b []byte
+		var affiliations []pubsubmodel.Affiliation
+
+		b = m.bytes[pubSubAffiliationsKey(host, name)]
+		if b != nil {
+			if err := serializer.DeserializeSlice(b, &affiliations); err != nil {
+				return err
+			}
+		}
+		var deleted bool
+		for i, aff := range affiliations {
+			if aff.JID == jid {
+				affiliations = append(affiliations[:i], affiliations[i+1:]...)
+				deleted = true
+				break
+			}
+		}
+		if !deleted {
+			return nil
+		}
+		b, err := serializer.SerializeSlice(&affiliations)
+		if err != nil {
+			return err
+		}
+		m.bytes[pubSubAffiliationsKey(host, name)] = b
+		return nil
+	})
+}
+
 func (m *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
@@ -196,6 +227,37 @@ func (m *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 		return nil, err
 	}
 	return subscriptions, nil
+}
+
+func (m *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
+	return m.inWriteLock(func() error {
+		var b []byte
+		var subscriptions []pubsubmodel.Subscription
+
+		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		if b != nil {
+			if err := serializer.DeserializeSlice(b, &subscriptions); err != nil {
+				return err
+			}
+		}
+		var deleted bool
+		for i, sub := range subscriptions {
+			if sub.JID == jid {
+				subscriptions = append(subscriptions[:i], subscriptions[i+1:]...)
+				deleted = true
+				break
+			}
+		}
+		if !deleted {
+			return nil
+		}
+		b, err := serializer.SerializeSlice(&subscriptions)
+		if err != nil {
+			return err
+		}
+		m.bytes[pubSubSubscriptionsKey(host, name)] = b
+		return nil
+	})
 }
 
 func pubSubNodesKey(host, name string) string {
