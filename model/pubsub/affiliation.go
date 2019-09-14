@@ -12,8 +12,8 @@ import (
 
 // affiliation definitions
 const (
-	Owner      = "owner"
-	Subscriber = "subscriber"
+	Owner  = "owner"
+	Member = "member"
 )
 
 // subscription definitions
@@ -25,15 +25,6 @@ const (
 type Affiliation struct {
 	JID         string
 	Affiliation string
-}
-
-func (a Affiliation) IsOwner() bool { return a.Affiliation == Owner }
-func (a Affiliation) IsValid() bool {
-	switch a.Affiliation {
-	case Owner, Subscriber:
-		return true
-	}
-	return false
 }
 
 // FromBytes deserializes a Affiliation entity from its binary representation.

@@ -374,15 +374,18 @@ func (x *Pep) updateAffiliations(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pu
 		aff.JID = affElem.Attributes().Get("jid")
 		aff.Affiliation = affElem.Attributes().Get("affiliation")
 
-		if aff.IsOwner() || !aff.IsValid() { // invalid affiliation
-			_ = x.router.Route(iq.NotAcceptableError())
-			return
-		}
 		var err error
-		if aff.Affiliation != pubsubmodel.None {
+		switch aff.Affiliation {
+		case pubsubmodel.Owner:
+			// ignore owner affiliation modification
+			break
+		case pubsubmodel.Member:
 			err = storage.UpsertPubSubNodeAffiliation(&aff, host, nodeID)
-		} else {
+		case pubsubmodel.None:
 			err = storage.DeletePubSubNodeAffiliation(aff.JID, host, nodeID)
+		default:
+			_ = x.router.Route(iq.BadRequestError())
+			return
 		}
 		if err != nil {
 			log.Error(err)
