@@ -231,14 +231,14 @@ func (x *Pep) createNode(iq *xmpp.IQ, pubSubEl, _ xmpp.XElement, node *pubsubmod
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, name string) {
+func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pubsubmodel.Node, host, nodeID string) {
 	if node == nil {
 		_ = x.router.Route(iq.ItemNotFoundError())
 		return
 	}
 	// compose config form response
 	configureNode := xmpp.NewElementName("configure")
-	configureNode.SetAttribute("node", name)
+	configureNode.SetAttribute("node", nodeID)
 	configureNode.AppendElement(node.Options.Form().Element())
 
 	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
@@ -246,6 +246,8 @@ func (x *Pep) sendConfigurationForm(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node 
 
 	res := iq.ResultIQ()
 	res.AppendElement(pubSubNode)
+
+	log.Infof("pep: sent configuration form (host: %s, node_id: %s)", host, nodeID)
 
 	// reply
 	_ = x.router.Route(res)
@@ -359,6 +361,8 @@ func (x *Pep) retrieveAffiliations(iq *xmpp.IQ, _, _ xmpp.XElement, node *pubsub
 	pubSubElem.AppendElement(affiliationsElem)
 	iqRes.AppendElement(pubSubElem)
 
+	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", host, nodeID)
+
 	// reply
 	_ = x.router.Route(iqRes)
 }
@@ -379,7 +383,7 @@ func (x *Pep) updateAffiliations(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pu
 		case pubsubmodel.Owner:
 			// ignore owner affiliation modification
 			break
-		case pubsubmodel.Member:
+		case pubsubmodel.Member, pubsubmodel.Publishers:
 			err = storage.UpsertPubSubNodeAffiliation(&aff, host, nodeID)
 		case pubsubmodel.None:
 			err = storage.DeletePubSubNodeAffiliation(aff.JID, host, nodeID)
@@ -393,6 +397,8 @@ func (x *Pep) updateAffiliations(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pu
 			return
 		}
 	}
+	log.Infof("pep: modified affiliations (host: %s, node_id: %s)", host, nodeID)
+
 	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }

@@ -12,8 +12,9 @@ import (
 
 // affiliation definitions
 const (
-	Owner  = "owner"
-	Member = "member"
+	Owner     = "owner"
+	Member    = "member"
+	Publisher = "publisher"
 )
 
 // subscription definitions
