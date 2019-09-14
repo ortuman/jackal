@@ -378,12 +378,13 @@ func (x *Pep) updateAffiliations(iq *xmpp.IQ, _, cmdElem xmpp.XElement, node *pu
 		aff.JID = affElem.Attributes().Get("jid")
 		aff.Affiliation = affElem.Attributes().Get("affiliation")
 
+		if aff.JID == iq.FromJID().ToBareJID().String() && aff.Affiliation == pubsubmodel.None {
+			// ignore node owner resign
+			continue
+		}
 		var err error
 		switch aff.Affiliation {
-		case pubsubmodel.Owner:
-			// ignore owner affiliation modification
-			break
-		case pubsubmodel.Member, pubsubmodel.Publishers:
+		case pubsubmodel.Owner, pubsubmodel.Member, pubsubmodel.Publishers:
 			err = storage.UpsertPubSubNodeAffiliation(&aff, host, nodeID)
 		case pubsubmodel.None:
 			err = storage.DeletePubSubNodeAffiliation(aff.JID, host, nodeID)
