@@ -120,7 +120,7 @@ func NewFromBytes(buf *bytes.Buffer) (*JID, error) {
 	return &j, nil
 }
 
-// Node returns the node, or empty string if this JID does not contain node information.
+// node returns the node, or empty string if this JID does not contain node information.
 func (j *JID) Node() string {
 	return j.node
 }

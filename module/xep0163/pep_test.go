@@ -91,6 +91,12 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+		JID:         "ortuman@jackal.im",
+		Affiliation: pubsubmodel.Owner,
+	}, "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
 	p := New(nil, r)
 
 	iqID := uuid.New()
@@ -144,6 +150,12 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
+	require.Nil(t, err)
+
+	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+		JID:         "ortuman@jackal.im",
+		Affiliation: pubsubmodel.Owner,
+	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
 	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
@@ -230,6 +242,12 @@ func TestXEP163_DeleteNode(t *testing.T) {
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
+	require.Nil(t, err)
+
+	err = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+		JID:         "ortuman@jackal.im",
+		Affiliation: pubsubmodel.Owner,
+	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
 	err = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
