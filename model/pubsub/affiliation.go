@@ -15,6 +15,7 @@ const (
 	Owner     = "owner"
 	Member    = "member"
 	Publisher = "publisher"
+	Outcast   = "outcast"
 )
 
 // subscription definitions
