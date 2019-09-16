@@ -77,6 +77,16 @@ func TestBadgerDB_PubSubAffiliations(t *testing.T) {
 	require.Len(t, affiliations, 2)
 	require.Equal(t, "ortuman@jackal.im", affiliations[0].JID)
 	require.Equal(t, "noelia@jackal.im", affiliations[1].JID)
+
+	// delete affiliation
+	err = h.db.DeletePubSubNodeAffiliation("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	affiliations, err = h.db.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	require.Len(t, affiliations, 1)
+	require.Equal(t, "ortuman@jackal.im", affiliations[0].JID)
 }
 
 func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
@@ -102,4 +112,14 @@ func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
 	require.Len(t, subscriptions, 2)
 	require.Equal(t, "ortuman@jackal.im", subscriptions[0].JID)
 	require.Equal(t, "noelia@jackal.im", subscriptions[1].JID)
+
+	// delete subscription
+	err = h.db.DeletePubSubNodeSubscription("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	subscriptions, err = h.db.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	require.Len(t, subscriptions, 1)
+	require.Equal(t, "ortuman@jackal.im", subscriptions[0].JID)
 }

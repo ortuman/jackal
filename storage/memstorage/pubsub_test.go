@@ -92,13 +92,27 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 
 	require.Len(t, affiliations, 2)
 
+	var updated bool
 	for _, aff := range affiliations {
 		if aff.JID == "noelia@jackal.im" {
 			require.Equal(t, "owner", aff.Affiliation)
-			return
+			updated = true
+			break
 		}
 	}
-	require.Fail(t, "affiliation for 'noelia@jackal.im' not found")
+	if !updated {
+		require.Fail(t, "affiliation for 'noelia@jackal.im' not found")
+	}
+
+	// delete affiliation
+	err = s.DeletePubSubNodeAffiliation("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	affiliations, err = s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+	require.NotNil(t, affiliations)
+
+	require.Len(t, affiliations, 1)
 }
 
 func TestStorage_PubSubNodeSubscription(t *testing.T) {
@@ -132,11 +146,25 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 
 	require.Len(t, subscriptions, 2)
 
+	var updated bool
 	for _, sub := range subscriptions {
 		if sub.JID == "noelia@jackal.im" {
 			require.Equal(t, "subscribed", sub.Subscription)
-			return
+			updated = true
+			break
 		}
 	}
-	require.Fail(t, "subscription for 'noelia@jackal.im' not found")
+	if !updated {
+		require.Fail(t, "subscription for 'noelia@jackal.im' not found")
+	}
+
+	// delete subscription
+	err = s.DeletePubSubNodeSubscription("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+	require.NotNil(t, subscriptions)
+
+	require.Len(t, subscriptions, 1)
 }

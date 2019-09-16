@@ -232,6 +232,33 @@ func TestMySQLFetchPubSubNodeAffiliations(t *testing.T) {
 	require.Equal(t, errMySQLStorage, err)
 }
 
+func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err := s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+
+	// error case
+	s, mock = NewMock()
+	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnError(errMySQLStorage)
+
+	err = s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errMySQLStorage, err)
+}
+
 func TestMySQLUpsertPubSubNodeSubscription(t *testing.T) {
 	s, mock := NewMock()
 
@@ -278,6 +305,33 @@ func TestMySQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WillReturnError(errMySQLStorage)
 
 	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errMySQLStorage, err)
+}
+
+func TestMySQLDeletePubSubNodeSubscription(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err := s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+
+	// error case
+	s, mock = NewMock()
+	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnError(errMySQLStorage)
+
+	err = s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)

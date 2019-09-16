@@ -9,12 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ortuman/jackal/runqueue"
-
 	"github.com/ortuman/jackal/log"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"

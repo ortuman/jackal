@@ -251,7 +251,7 @@ func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 
 func (s *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
 	_, err := sq.Delete("pubsub_affiliations").
-		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
+		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
 		RunWith(s.db).Exec()
 	return err
 }
@@ -307,7 +307,7 @@ func (s *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 
 func (s *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
 	_, err := sq.Delete("pubsub_subscriptions").
-		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
+		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
 		RunWith(s.db).Exec()
 	return err
 }

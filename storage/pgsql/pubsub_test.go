@@ -224,6 +224,33 @@ func TestPgSQLFetchPubSubNodeAffiliations(t *testing.T) {
 	require.Equal(t, errGeneric, err)
 }
 
+func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err := s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+
+	// error case
+	s, mock = NewMock()
+	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnError(errGeneric)
+
+	err = s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errGeneric, err)
+}
+
 func TestPgSQLUpsertPubSubNodeSubscription(t *testing.T) {
 	s, mock := NewMock()
 
@@ -270,6 +297,33 @@ func TestPgSQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WillReturnError(errGeneric)
 
 	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errGeneric, err)
+}
+
+func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
+	s, mock := NewMock()
+
+	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err := s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+
+	// error case
+	s, mock = NewMock()
+	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
+		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
+		WillReturnError(errGeneric)
+
+	err = s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)
