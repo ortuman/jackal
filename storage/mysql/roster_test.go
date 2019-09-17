@@ -169,7 +169,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 
 	var riColumns2 = []string{"ris.user", "ris.contact", "ris.name", "ris.subscription", "ris.`groups`", "ris.ask", "ris.ver"}
 	s, mock = NewMock()
-	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g on ris.username = g.username (.+)").
+	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g ON ris.username = g.username (.+)").
 		WithArgs("ortuman", "Family").
 		WillReturnRows(sqlmock.NewRows(riColumns2).AddRow("ortuman", "romeo", "Romeo", "both", `["Family"]`, false, 0))
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").

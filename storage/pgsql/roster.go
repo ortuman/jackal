@@ -139,7 +139,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 func (s *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	q := sq.Select("ris.username", "ris.jid", "ris.name", "ris.subscription", "ris.groups", "ris.ask", "ris.ver").
 		From("roster_items ris").
-		LeftJoin("roster_groups g on ris.username = g.username").
+		LeftJoin("roster_groups g ON ris.username = g.username").
 		Where(sq.And{sq.Eq{"ris.username": username}, sq.Eq{"g.group": groups}}).
 		OrderBy("ris.created_at DESC")
 
