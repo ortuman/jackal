@@ -6,9 +6,11 @@
 package pubsubmodel
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ortuman/jackal/module/xep0004"
 )
@@ -24,6 +26,7 @@ const (
 	accessModelFieldVar           = "pubsub#access_model"
 	publishModelFieldVar          = "pubsub#publish_model"
 	sendLastPublishedItemFieldVar = "pubsub#send_last_published_item"
+	rosterGroupsAllowedFieldVar   = "pubsub#roster_groups_allowed"
 	notificationTypeFieldVar      = "pubsub#notification_type"
 	notifyConfigFieldVar          = "pubsub#notify_config"
 	notifyDeleteFieldVar          = "pubsub#notify_delete"
@@ -51,6 +54,7 @@ type Options struct {
 	AccessModel           string
 	PublishModel          string
 	SendLastPublishedItem string
+	RosterGroupsAllowed   []string
 	NotificationType      string
 	NotifyConfig          bool
 	NotifyDelete          bool
@@ -72,6 +76,14 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	opt.NotifyDelete, _ = strconv.ParseBool(m[notifyDeleteFieldVar])
 	opt.NotifyRetract, _ = strconv.ParseBool(m[notifyRetractFieldVar])
 	opt.NotifySub, _ = strconv.ParseBool(m[notifySubFieldVar])
+
+	// extract roster allowed groups
+	allowedRosterGroupsJSON := m[rosterGroupsAllowedFieldVar]
+	if len(allowedRosterGroupsJSON) > 0 {
+		if err := json.NewDecoder(strings.NewReader(allowedRosterGroupsJSON)).Decode(&opt.RosterGroupsAllowed); err != nil {
+			return nil, err
+		}
+	}
 
 	// extract options values
 	accessModel := m[accessModelFieldVar]
@@ -140,6 +152,7 @@ func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	opt.DeliverNotifications, _ = strconv.ParseBool(fields.ValueForField(deliverNotificationsFieldVar))
 	opt.DeliverPayloads, _ = strconv.ParseBool(fields.ValueForField(deliverPayloadsFieldVar))
 	opt.PersistItems, _ = strconv.ParseBool(fields.ValueForField(persistItemsFieldVar))
+	opt.RosterGroupsAllowed = fields.ValuesForField(rosterGroupsAllowedFieldVar)
 	opt.MaxItems, _ = strconv.ParseInt(fields.ValueForField(maxItemsFieldVar), 10, 32)
 	opt.NotificationType = fields.ValueForField(notificationTypeFieldVar)
 	opt.NotifyConfig, _ = strconv.ParseBool(fields.ValueForField(notifyConfigFieldVar))
@@ -150,25 +163,31 @@ func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	return opt, nil
 }
 
-func (opt *Options) Map() map[string]string {
+func (opt *Options) Map() (map[string]string, error) {
+	// marshall roster allowed groups
+	b, err := json.Marshal(&opt.RosterGroupsAllowed)
+	if err != nil {
+		return nil, err
+	}
 	m := make(map[string]string)
 	m[titleFieldVar] = opt.Title
 	m[deliverNotificationsFieldVar] = strconv.FormatBool(opt.DeliverNotifications)
 	m[deliverPayloadsFieldVar] = strconv.FormatBool(opt.DeliverPayloads)
 	m[persistItemsFieldVar] = strconv.FormatBool(opt.PersistItems)
 	m[maxItemsFieldVar] = strconv.Itoa(int(opt.MaxItems))
-	m[accessModelFieldVar] = string(opt.AccessModel)
-	m[publishModelFieldVar] = string(opt.PublishModel)
+	m[accessModelFieldVar] = opt.AccessModel
+	m[publishModelFieldVar] = opt.PublishModel
+	m[rosterGroupsAllowedFieldVar] = string(b)
 	m[sendLastPublishedItemFieldVar] = opt.SendLastPublishedItem
 	m[notificationTypeFieldVar] = opt.NotificationType
 	m[notifyConfigFieldVar] = strconv.FormatBool(opt.NotifyConfig)
 	m[notifyDeleteFieldVar] = strconv.FormatBool(opt.NotifyDelete)
 	m[notifyRetractFieldVar] = strconv.FormatBool(opt.NotifyRetract)
 	m[notifySubFieldVar] = strconv.FormatBool(opt.NotifySub)
-	return m
+	return m, nil
 }
 
-func (opt *Options) Form() *xep0004.DataForm {
+func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 	form := xep0004.DataForm{
 		Type: xep0004.Form,
 	}
@@ -219,6 +238,18 @@ func (opt *Options) Form() *xep0004.DataForm {
 			{Label: "Roster Groups", Value: Roster},
 			{Label: "Whitelist", Value: WhiteList},
 		},
+	})
+	// roster groups allowed
+	var rosterGroupOpts []xep0004.Option
+	for _, rg := range rosterGroups {
+		rosterGroupOpts = append(rosterGroupOpts, xep0004.Option{Label: rg, Value: rg})
+	}
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:     rosterGroupsAllowedFieldVar,
+		Type:    xep0004.ListMulti,
+		Values:  opt.RosterGroupsAllowed,
+		Label:   "Roster groups allowed to subscribe",
+		Options: rosterGroupOpts,
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    publishModelFieldVar,

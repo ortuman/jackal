@@ -27,7 +27,8 @@ func TestMySQLUpsertPubSubNode(t *testing.T) {
 
 	opts := pubsubmodel.Options{}
 
-	for i := 0; i < len(opts.Map()); i++ {
+	optMap, _ := opts.Map()
+	for i := 0; i < len(optMap); i++ {
 		mock.ExpectExec("INSERT INTO pubsub_node_options (.+)").
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnResult(sqlmock.NewResult(0, 1))

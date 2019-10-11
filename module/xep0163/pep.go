@@ -144,6 +144,16 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 		return
 	}
 
+	// Subscribe
+	// https://xmpp.org/extensions/xep-0060.html#subscriber-subscribe
+	if cmdEl := pubSubEl.Elements().Child("subscribe"); cmdEl != nil && iq.IsSet() {
+		opts := nodeContextFetchOptions{
+			failOnNotFound: true,
+		}
+		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, pubSubEl, iq) }, opts, cmdEl, iq)
+		return
+	}
+
 	_ = x.router.Route(iq.FeatureNotImplementedError())
 }
 
@@ -294,7 +304,9 @@ func (x *Pep) sendConfigurationForm(nCtx *nodeContext, iq *xmpp.IQ) {
 	// compose config form response
 	configureNode := xmpp.NewElementName("configure")
 	configureNode.SetAttribute("node", nCtx.nodeID)
-	configureNode.AppendElement(nCtx.node.Options.Form().Element())
+
+	rosterGroups := []string{}
+	configureNode.AppendElement(nCtx.node.Options.Form(rosterGroups).Element())
 
 	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubNode.AppendElement(configureNode)
@@ -366,6 +378,20 @@ func (x *Pep) deleteNode(nCtx *nodeContext, iq *xmpp.IQ) {
 
 	// reply
 	_ = x.router.Route(iq.ResultIQ())
+}
+
+func (x *Pep) subscribe(nCtx *nodeContext, pubSubEl xmpp.XElement, iq *xmpp.IQ) {
+	// check access model
+	switch nCtx.node.Options.AccessModel {
+	case pubsubmodel.Open:
+		break
+	case pubsubmodel.Presence:
+		break
+	case pubsubmodel.Roster:
+		break
+	case pubsubmodel.WhiteList:
+		break
+	}
 }
 
 func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {

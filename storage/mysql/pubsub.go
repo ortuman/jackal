@@ -40,7 +40,11 @@ func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 			return err
 		}
 		// insert new option set
-		for name, value := range node.Options.Map() {
+		optionSetMap, err := node.Options.Map()
+		if err != nil {
+			return err
+		}
+		for name, value := range optionSetMap {
 			_, err = sq.Insert("pubsub_node_options").
 				Columns("node_id", "name", "value", "updated_at", "created_at").
 				Values(nodeIdentifier, name, value, nowExpr, nowExpr).
