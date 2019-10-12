@@ -201,7 +201,7 @@ func (s *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var ret []rostermodel.Notification
 	for rows.Next() {
@@ -237,6 +237,30 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
 	_, err := q.RunWith(s.db).Exec()
 	return err
+}
+
+// FetchRosterGroups retrieves all groups associated to a user roster
+func (s *Storage) FetchRosterGroups(username string) ([]string, error) {
+	q := sq.Select("`group`").
+		From("roster_groups").
+		Where(sq.Eq{"username": username}).
+		GroupBy("`group`")
+
+	rows, err := q.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var groups []string
+	for rows.Next() {
+		var group string
+		if err := rows.Scan(&group); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
 }
 
 func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {

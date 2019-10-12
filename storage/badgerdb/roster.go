@@ -6,6 +6,9 @@
 package badgerdb
 
 import (
+	"bytes"
+	"encoding/gob"
+
 	"github.com/dgraph-io/badger"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 )
@@ -34,8 +37,12 @@ func (b *Storage) UpsertRosterItem(rItem *rostermodel.Item) (rostermodel.Version
 		if err := b.upsertSlice(&ris, b.rosterItemsKey(rItem.Username), tx); err != nil {
 			return err
 		}
+		// update roster groups
+		if err := b.upsertRosterGroups(rItem.Username, ris, tx); err != nil {
+			return err
+		}
 		// update roster version
-		v, err := b.updateRosterVer(rItem.Username, false, tx)
+		v, err := b.upsertRosterVer(rItem.Username, false, tx)
 		if err != nil {
 			return err
 		}
@@ -65,14 +72,17 @@ func (b *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, e
 				}
 				break
 			}
-			// update roster version
-			v, err := b.updateRosterVer(user, true, tx)
-			if err != nil {
-				return err
-			}
-			ver = v
-			return nil
 		}
+		// update roster groups
+		if err := b.upsertRosterGroups(user, ris, tx); err != nil {
+			return err
+		}
+		// update roster version
+		v, err := b.upsertRosterVer(user, true, tx)
+		if err != nil {
+			return err
+		}
+		ver = v
 		return nil
 	})
 	if err != nil {
@@ -164,7 +174,7 @@ func (b *Storage) UpsertRosterNotification(rNotification *rostermodel.Notificati
 	return b.db.Update(func(tx *badger.Txn) error {
 		var rns []rostermodel.Notification
 		if err := b.fetchSlice(&rns, b.rosterNotificationsKey(rNotification.Contact), tx); err != nil {
-			return nil
+			return err
 		}
 		var updated bool
 		for i, rn := range rns {
@@ -186,7 +196,7 @@ func (b *Storage) DeleteRosterNotification(contact, jid string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var rns []rostermodel.Notification
 		if err := b.fetchSlice(&rns, b.rosterNotificationsKey(contact), tx); err != nil {
-			return nil
+			return err
 		}
 		for i, rn := range rns {
 			if rn.JID == jid {
@@ -228,7 +238,21 @@ func (b *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	return rns, nil
 }
 
-func (b *Storage) updateRosterVer(username string, isDeletion bool, txn *badger.Txn) (rostermodel.Version, error) {
+// FetchRosterGroups retrieves all groups associated to a user roster
+func (b *Storage) FetchRosterGroups(username string) ([]string, error) {
+	var groups []string
+	err := b.db.View(func(txn *badger.Txn) error {
+		var fnErr error
+		groups, fnErr = b.fetchRosterGroups(username, txn)
+		return fnErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+func (b *Storage) upsertRosterVer(username string, isDeletion bool, txn *badger.Txn) (rostermodel.Version, error) {
 	v, err := b.fetchRosterVer(username, txn)
 	if err != nil {
 		return rostermodel.Version{}, err
@@ -254,6 +278,56 @@ func (b *Storage) fetchRosterVer(username string, txn *badger.Txn) (rostermodel.
 	}
 }
 
+func (b *Storage) upsertRosterGroups(user string, ris []rostermodel.Item, tx *badger.Txn) error {
+	var groupsSet = make(map[string]struct{})
+	// remove duplicates
+	for _, ri := range ris {
+		for _, group := range ri.Groups {
+			groupsSet[group] = struct{}{}
+		}
+	}
+	var groups []string
+	for group := range groupsSet {
+		groups = append(groups, group)
+	}
+	// encode groups
+	buf := bytes.NewBuffer(nil)
+
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(len(groups)); err != nil {
+		return err
+	}
+	for _, group := range groups {
+		if err := enc.Encode(group); err != nil {
+			return err
+		}
+	}
+	return b.setVal(b.rosterGroupsKey(user), buf.Bytes(), tx)
+}
+
+func (b *Storage) fetchRosterGroups(user string, txn *badger.Txn) ([]string, error) {
+	var ln int
+	var groups []string
+
+	val, err := b.getVal(b.rosterGroupsKey(user), txn)
+	if err != nil {
+		return nil, err
+	}
+	// decode groups
+	dec := gob.NewDecoder(bytes.NewReader(val))
+	if err := dec.Decode(&ln); err != nil {
+		return nil, err
+	}
+	for i := 0; i < ln; i++ {
+		var group string
+		if err := dec.Decode(&group); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
 func (b *Storage) rosterItemsKey(user string) []byte {
 	return []byte("rosterItems:" + user)
 }
@@ -264,4 +338,8 @@ func (b *Storage) rosterNotificationsKey(contact string) []byte {
 
 func (b *Storage) rosterVersionsKey(username string) []byte {
 	return []byte("rosterVersions:" + username)
+}
+
+func (b *Storage) rosterGroupsKey(username string) []byte {
+	return []byte("rosterGroups:" + username)
 }

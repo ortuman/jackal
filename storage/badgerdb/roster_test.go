@@ -68,6 +68,14 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, ri1, ri4)
 
+	gr, err := h.db.FetchRosterGroups("ortuman")
+	require.Len(t, gr, 4)
+
+	require.Contains(t, gr, "general")
+	require.Contains(t, gr, "friends")
+	require.Contains(t, gr, "family")
+	require.Contains(t, gr, "buddies")
+
 	_, err = h.db.DeleteRosterItem("ortuman", "juliet@jackal.im")
 	require.NoError(t, err)
 	_, err = h.db.DeleteRosterItem("ortuman", "romeo@jackal.im")
@@ -78,6 +86,9 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	ris, _, err = h.db.FetchRosterItems("ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(ris))
+
+	gr, err = h.db.FetchRosterGroups("ortuman")
+	require.Len(t, gr, 0)
 }
 
 func TestBadgerDB_RosterNotifications(t *testing.T) {

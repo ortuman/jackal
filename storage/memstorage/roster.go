@@ -6,6 +6,9 @@
 package memstorage
 
 import (
+	"bytes"
+	"encoding/gob"
+
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/model/serializer"
 )
@@ -32,6 +35,9 @@ func (m *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, e
 		}
 
 	done:
+		if fnErr := m.upsertRosterGroups(ri.Username, ris); fnErr != nil {
+			return fnErr
+		}
 		rv, fnErr = m.fetchRosterVersion(ri.Username)
 		if fnErr != nil {
 			return fnErr
@@ -64,6 +70,9 @@ func (m *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, e
 			}
 		}
 	done:
+		if fnErr := m.upsertRosterGroups(user, ris); fnErr != nil {
+			return fnErr
+		}
 		rv, fnErr = m.fetchRosterVersion(user)
 		if fnErr != nil {
 			return fnErr
@@ -219,6 +228,19 @@ func (m *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	return rns, nil
 }
 
+// FetchRosterGroups retrieves all groups associated to a user roster
+func (m *Storage) FetchRosterGroups(username string) ([]string, error) {
+	var groups []string
+	if err := m.inReadLock(func() error {
+		var fnErr error
+		groups, fnErr = m.fetchRosterGroups(username)
+		return fnErr
+	}); err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
 func (m *Storage) upsertRosterItems(ris []rostermodel.Item, user string) error {
 	b, err := serializer.SerializeSlice(&ris)
 	if err != nil {
@@ -282,6 +304,57 @@ func (m *Storage) fetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	return rns, nil
 }
 
+func (m *Storage) upsertRosterGroups(user string, ris []rostermodel.Item) error {
+	var groupsSet = make(map[string]struct{})
+	// remove duplicates
+	for _, ri := range ris {
+		for _, group := range ri.Groups {
+			groupsSet[group] = struct{}{}
+		}
+	}
+	var groups []string
+	for group := range groupsSet {
+		groups = append(groups, group)
+	}
+	// encode groups
+	buf := bytes.NewBuffer(nil)
+
+	enc := gob.NewEncoder(buf)
+	if err := enc.Encode(len(groups)); err != nil {
+		return err
+	}
+	for _, group := range groups {
+		if err := enc.Encode(group); err != nil {
+			return err
+		}
+	}
+	m.bytes[rosterGroupsKey(user)] = buf.Bytes()
+	return nil
+}
+
+func (m *Storage) fetchRosterGroups(user string) ([]string, error) {
+	var ln int
+	var groups []string
+
+	b := m.bytes[rosterGroupsKey(user)]
+	if b == nil {
+		return nil, nil
+	}
+	// decode groups
+	dec := gob.NewDecoder(bytes.NewReader(b))
+	if err := dec.Decode(&ln); err != nil {
+		return nil, err
+	}
+	for i := 0; i < ln; i++ {
+		var group string
+		if err := dec.Decode(&group); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
 func rosterItemsKey(user string) string {
 	return "rosterItems:" + user
 }
@@ -292,4 +365,8 @@ func rosterVersionKey(username string) string {
 
 func rosterNotificationsKey(contact string) string {
 	return "rosterNotifications:" + contact
+}
+
+func rosterGroupsKey(username string) string {
+	return "rosterGroups:" + username
 }

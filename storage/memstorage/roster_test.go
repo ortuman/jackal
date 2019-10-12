@@ -111,6 +111,14 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	require.Equal(t, 2, len(ris))
 	ris, _, _ = s.FetchRosterItemsInGroups("user", []string{"buddies"})
 	require.Equal(t, 1, len(ris))
+
+	gr, err := s.FetchRosterGroups("user")
+	require.Len(t, gr, 4)
+
+	require.Contains(t, gr, "general")
+	require.Contains(t, gr, "friends")
+	require.Contains(t, gr, "family")
+	require.Contains(t, gr, "buddies")
 }
 
 func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
@@ -127,8 +135,14 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 	s := New()
 	_, _ = s.UpsertRosterItem(&ri)
 
+	gr, err := s.FetchRosterGroups("user")
+	require.Len(t, gr, 2)
+
+	require.Contains(t, gr, "general")
+	require.Contains(t, gr, "friends")
+
 	s.EnableMockedError()
-	_, err := s.DeleteRosterItem("user", "contact")
+	_, err = s.DeleteRosterItem("user", "contact")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
 
@@ -139,6 +153,9 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 
 	ri2, _ := s.FetchRosterItem("user", "contact")
 	require.Nil(t, ri2)
+
+	gr, err = s.FetchRosterGroups("user")
+	require.Len(t, gr, 0)
 }
 
 func TestMemoryStorage_InsertRosterNotification(t *testing.T) {

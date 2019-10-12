@@ -261,3 +261,32 @@ func TestFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 }
+
+func TestStorageFetchRosterGroups(t *testing.T) {
+	s, mock := NewMock()
+	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
+		WithArgs("ortuman").
+		WillReturnRows(sqlmock.NewRows([]string{"group"}).
+			AddRow("Contacts").
+			AddRow("News"))
+
+	groups, err := s.FetchRosterGroups("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	require.Equal(t, 2, len(groups))
+	require.Equal(t, "Contacts", groups[0])
+	require.Equal(t, "News", groups[1])
+
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
+		WithArgs("ortuman").
+		WillReturnError(errGeneric)
+
+	groups, err = s.FetchRosterGroups("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, groups)
+	require.NotNil(t, err)
+	require.Equal(t, errGeneric, err)
+}

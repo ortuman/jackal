@@ -305,7 +305,13 @@ func (x *Pep) sendConfigurationForm(nCtx *nodeContext, iq *xmpp.IQ) {
 	configureNode := xmpp.NewElementName("configure")
 	configureNode.SetAttribute("node", nCtx.nodeID)
 
-	rosterGroups := []string{}
+	rosterGroups, err := storage.FetchRosterGroups(iq.ToJID().Node())
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+
 	configureNode.AppendElement(nCtx.node.Options.Form(rosterGroups).Element())
 
 	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)

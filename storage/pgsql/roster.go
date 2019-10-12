@@ -243,6 +243,30 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 	return err
 }
 
+// FetchRosterGroups retrieves all groups associated to a user roster
+func (s *Storage) FetchRosterGroups(username string) ([]string, error) {
+	q := sq.Select("`group`").
+		From("roster_groups").
+		Where(sq.Eq{"username": username}).
+		GroupBy("`group`")
+
+	rows, err := q.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var groups []string
+	for rows.Next() {
+		var group string
+		if err := rows.Scan(&group); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
 func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {
 	var presenceXML string
 	if err := scanner.Scan(&rn.Contact, &rn.JID, &presenceXML); err != nil {
