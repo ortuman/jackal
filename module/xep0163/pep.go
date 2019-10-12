@@ -464,6 +464,8 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
 	iqRes.AppendElement(pubSubElem)
+
+	_ = x.router.Route(iqRes)
 }
 
 func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {
