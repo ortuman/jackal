@@ -303,6 +303,21 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	require.Nil(t, n)
 }
 
+func TestXEP163_UpdateAffiliations(t *testing.T) {
+}
+
+func TestXEP163_RetrieveAffiliations(t *testing.T) {
+}
+
+func TestXEP163_UpdateSubscriptions(t *testing.T) {
+}
+
+func TestXEP163_RetrieveSubscriptions(t *testing.T) {
+}
+
+func TestXEP163_Subscribe(t *testing.T) {
+}
+
 func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},

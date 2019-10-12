@@ -21,17 +21,17 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// <feature var='http://jabber.org/protocol/pubsub#access-presence'/>          [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#access-presence'/>          [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#auto-create'/>              [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#auto-subscribe'/>           [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-and-configure'/>     [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
-// <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [PENDING]
-// <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [DONE]
 
 const (
 	pubSubNamespace      = "http://jabber.org/protocol/pubsub"
@@ -139,19 +139,35 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 
 func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 	// Create node
-	// https://xmpp.org/extensions/xep-0060.html#owner-create
 	if cmdEl := pubSubEl.Elements().Child("create"); cmdEl != nil && iq.IsSet() {
 		x.withNodeContext(func(ni *nodeContext) { x.createNode(ni, pubSubEl, iq) }, nodeContextFetchOptions{}, cmdEl, iq)
 		return
 	}
-
+	// Publish
+	if cmdEl := pubSubEl.Elements().Child("publish"); cmdEl != nil && iq.IsSet() {
+		opts := nodeContextFetchOptions{
+			allowedAffiliations:  []string{pubsubmodel.Owner, pubsubmodel.Member},
+			includeSubscriptions: true,
+			failOnNotFound:       true,
+		}
+		x.withNodeContext(func(ni *nodeContext) { x.publish(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		return
+	}
 	// Subscribe
-	// https://xmpp.org/extensions/xep-0060.html#subscriber-subscribe
 	if cmdEl := pubSubEl.Elements().Child("subscribe"); cmdEl != nil && iq.IsSet() {
+		opts := nodeContextFetchOptions{
+			includeAffiliations: true,
+			failOnNotFound:      true,
+		}
+		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		return
+	}
+	// Unsubscribe
+	if cmdEl := pubSubEl.Elements().Child("unsubscribe"); cmdEl != nil && iq.IsSet() {
 		opts := nodeContextFetchOptions{
 			failOnNotFound: true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withNodeContext(func(ni *nodeContext) { x.unsubscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 
@@ -160,7 +176,6 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 
 func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Configure node
-	// https://xmpp.org/extensions/xep-0060.html#owner-configure
 	if cmdEl := pubSub.Elements().Child("configure"); cmdEl != nil {
 		if iq.IsGet() {
 			// send configuration form
@@ -182,9 +197,7 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		}
 		return
 	}
-
 	// Manage affiliations
-	// https://xmpp.org/extensions/xep-0060.html#owner-affiliations
 	if cmdEl := pubSub.Elements().Child("affiliations"); cmdEl != nil {
 		if iq.IsGet() {
 			opts := nodeContextFetchOptions{
@@ -205,7 +218,6 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		return
 	}
 	// Manage subscriptions
-	// https://xmpp.org/extensions/xep-0060.html#owner-subscriptions
 	if cmdEl := pubSub.Elements().Child("subscriptions"); cmdEl != nil {
 		if iq.IsGet() {
 			opts := nodeContextFetchOptions{
@@ -225,9 +237,7 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 		}
 		return
 	}
-
 	// Delete node
-	// https://xmpp.org/extensions/xep-0060.html#owner-delete
 	if cmdEl := pubSub.Elements().Child("delete"); cmdEl != nil && iq.IsSet() {
 		opts := nodeContextFetchOptions{
 			allowedAffiliations:  []string{pubsubmodel.Owner},
@@ -454,16 +464,74 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	}
 	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
 
-	// reply
+	// notify subscription
 	subscriptionElem := xmpp.NewElementName("subscription")
 	subscriptionElem.SetAttribute("node", nCtx.nodeID)
 	subscriptionElem.SetAttribute("jid", subJID)
 	subscriptionElem.SetAttribute("subid", subID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
 
+	// TODO(ortuman): notify owners about subscription
+	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifySub {
+	}
+
+	// reply
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
+	iqRes.AppendElement(pubSubElem)
+
+	_ = x.router.Route(iqRes)
+}
+
+func (x *Pep) unsubscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+	// TODO(ortuman): implement me!
+}
+
+func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+	itemEl := cmdEl.Elements().Child("item")
+	if itemEl == nil || len(itemEl.Elements().All()) != 1 {
+		_ = x.router.Route(invalidPayloadError(iq))
+		return
+	}
+	itemID := itemEl.Attributes().Get("id")
+	if len(itemID) == 0 {
+		// generate unique item identifier
+		itemID = uuid.New().String()
+	}
+	// persist node item
+	if nCtx.node.Options.PersistItems {
+		err := storage.UpsertPubSubNodeItem(&pubsubmodel.Item{
+			ID:        itemID,
+			Publisher: iq.FromJID().ToBareJID().String(),
+			Payload:   itemEl.Elements().All()[0],
+		}, nCtx.host, nCtx.nodeID, int(nCtx.node.Options.MaxItems))
+
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+	}
+	// notify published item
+	bItemEl := xmpp.NewElementName("item")
+	bItemEl.SetAttribute("id", itemID)
+
+	if nCtx.node.Options.DeliverPayloads || !nCtx.node.Options.PersistItems {
+		bItemEl.AppendElement(itemEl.Elements().All()[0])
+	}
+	x.notify(bItemEl, nCtx.subscriptions, nCtx.host)
+
+	// reply
+	publishElem := xmpp.NewElementName("publish")
+	publishElem.SetAttribute("node", nCtx.nodeID)
+	resItemElem := xmpp.NewElementName("item")
+	resItemElem.SetAttribute("id", itemID)
+	publishElem.AppendElement(resItemElem)
+
+	iqRes := iq.ResultIQ()
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem.AppendElement(publishElem)
 	iqRes.AppendElement(pubSubElem)
 
 	_ = x.router.Route(iqRes)
@@ -479,14 +547,14 @@ func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {
 		affElem.SetAttribute("jid", aff.JID)
 		affElem.SetAttribute("affiliation", aff.Affiliation)
 	}
+	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+
+	// reply
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(affiliationsElem)
 	iqRes.AppendElement(pubSubElem)
 
-	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
-
-	// reply
 	_ = x.router.Route(iqRes)
 }
 
@@ -534,14 +602,14 @@ func (x *Pep) retrieveSubscriptions(nCtx *nodeContext, iq *xmpp.IQ) {
 		subElem.SetAttribute("jid", sub.JID)
 		subElem.SetAttribute("subscription", sub.Subscription)
 	}
+	log.Infof("pep: retrieved subscriptions (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+
+	// reply
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionsElem)
 	iqRes.AppendElement(pubSubElem)
 
-	log.Infof("pep: retrieved subscriptions (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
-
-	// reply
 	_ = x.router.Route(iqRes)
 }
 
@@ -713,6 +781,11 @@ func checkWhitelistAccess(host, jid string, affiliations []pubsubmodel.Affiliati
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
 	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pubSubErrorNamespace)}
 	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAcceptable, errorElements)
+}
+
+func invalidPayloadError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("invalid-payload", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrBadRequest, errorElements)
 }
 
 func invalidJIDError(stanza xmpp.Stanza) xmpp.Stanza {
