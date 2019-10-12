@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -150,7 +151,7 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 		opts := nodeContextFetchOptions{
 			failOnNotFound: true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, pubSubEl, iq) }, opts, cmdEl, iq)
+		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 
@@ -386,18 +387,83 @@ func (x *Pep) deleteNode(nCtx *nodeContext, iq *xmpp.IQ) {
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) subscribe(nCtx *nodeContext, pubSubEl xmpp.XElement, iq *xmpp.IQ) {
-	// check access model
+func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+	// validate JID portion
+	subJID := cmdEl.Attributes().Get("jid")
+	if subJID != iq.FromJID().ToBareJID().String() {
+		_ = x.router.Route(invalidJIDError(iq))
+		return
+	}
+
+	// check access
+	for _, aff := range nCtx.affiliations {
+		if aff.JID == subJID && aff.Affiliation == pubsubmodel.Outcast {
+			_ = x.router.Route(iq.ForbiddenError())
+			return
+		}
+	}
+
 	switch nCtx.node.Options.AccessModel {
 	case pubsubmodel.Open:
 		break
+
 	case pubsubmodel.Presence:
-		break
+		allowed, err := checkPresenceAccess(nCtx.host, subJID)
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+		if !allowed {
+			_ = x.router.Route(presenceSubscriptionRequiredError(iq))
+			return
+		}
+
 	case pubsubmodel.Roster:
-		break
+		allowed, err := checkRosterAccess(nCtx.host, subJID, nCtx.node.Options.RosterGroupsAllowed)
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+		if !allowed {
+			_ = x.router.Route(notInRosterGroupError(iq))
+			return
+		}
+
 	case pubsubmodel.WhiteList:
-		break
+		if !checkWhitelistAccess(nCtx.host, subJID, nCtx.affiliations) {
+			_ = x.router.Route(notOnWhitelistError(iq))
+			return
+		}
 	}
+
+	// create subscription
+	subID := subscriptionID(subJID, pubsubmodel.Subscribed, nCtx.host, nCtx.nodeID)
+
+	err := storage.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+		SubID:        subID,
+		JID:          subJID,
+		Subscription: pubsubmodel.Subscribed,
+	}, nCtx.host, nCtx.nodeID)
+
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+
+	// reply
+	subscriptionElem := xmpp.NewElementName("subscription")
+	subscriptionElem.SetAttribute("node", nCtx.nodeID)
+	subscriptionElem.SetAttribute("jid", subJID)
+	subscriptionElem.SetAttribute("subid", subID)
+	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
+
+	iqRes := iq.ResultIQ()
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem.AppendElement(subscriptionElem)
+	iqRes.AppendElement(pubSubElem)
 }
 
 func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {
@@ -605,9 +671,65 @@ func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchO
 	fn(&ctx)
 }
 
+func checkPresenceAccess(host, jid string) (bool, error) {
+	ri, err := storage.FetchRosterItem(host, jid)
+	if err != nil {
+		return false, err
+	}
+	allowed := ri != nil && (ri.Subscription == rostermodel.SubscriptionFrom || ri.Subscription == rostermodel.SubscriptionBoth)
+	return allowed, nil
+}
+
+func checkRosterAccess(host, jid string, allowedGroups []string) (bool, error) {
+	ri, err := storage.FetchRosterItem(host, jid)
+	if err != nil {
+		return false, err
+	}
+	if ri == nil {
+		return false, nil
+	}
+	for _, group := range ri.Groups {
+		for _, allowedGroup := range allowedGroups {
+			if group == allowedGroup {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func checkWhitelistAccess(host, jid string, affiliations []pubsubmodel.Affiliation) bool {
+	for _, aff := range affiliations {
+		if aff.Affiliation == pubsubmodel.Member {
+			return true
+		}
+	}
+	return false
+}
+
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
 	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("nodeid-required", pubSubErrorNamespace)}
 	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAcceptable, errorElements)
+}
+
+func invalidJIDError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("invalid-jid", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrBadRequest, errorElements)
+}
+
+func presenceSubscriptionRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("presence-subscription-required", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAuthorized, errorElements)
+}
+
+func notInRosterGroupError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("not-in-roster-group", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAuthorized, errorElements)
+}
+
+func notOnWhitelistError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("closed-node", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAllowed, errorElements)
 }
 
 func subscriptionID(jid, subscription, host, name string) string {

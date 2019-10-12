@@ -71,7 +71,7 @@ func New(config *Config, router *router.Router) *Modules {
 	m.iqHandlers = append(m.iqHandlers, m.DiscoInfo)
 	m.all = append(m.all, m.DiscoInfo)
 
-	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
+	// rosterAccessChecker (https://xmpp.org/rfcs/rfc3921.html#roster)
 	if _, ok := config.Enabled["roster"]; ok {
 		m.Roster = roster.New(&config.Roster, router)
 		m.iqHandlers = append(m.iqHandlers, m.Roster)
