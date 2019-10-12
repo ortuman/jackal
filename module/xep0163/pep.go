@@ -452,6 +452,7 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
+	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
 
 	// reply
 	subscriptionElem := xmpp.NewElementName("subscription")
