@@ -55,6 +55,10 @@ func (*disabledStorage) FetchRosterNotifications(contact string) ([]rostermodel.
 	return nil, nil
 }
 
+func (*disabledStorage) FetchRosterGroups(username string) ([]string, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) InsertOfflineMessage(message *xmpp.Message, username string) error {
 	return nil
 }
