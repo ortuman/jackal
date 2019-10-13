@@ -34,6 +34,7 @@ func TestError(t *testing.T) {
 	require.Equal(t, subscriptionRequiredErrorReason, ErrSubscriptionRequired.Error())
 	require.Equal(t, undefinedConditionErrorReason, ErrUndefinedCondition.Error())
 	require.Equal(t, unexpectedConditionErrorReason, ErrUnexpectedCondition.Error())
+	require.Equal(t, unexpectedRequestErrorReason, ErrUnexpectedRequest.Error())
 
 	j, _ := jid.New("", "jackal.im", "", true)
 	e := NewIQType(uuid.New(), GetType)
@@ -62,4 +63,5 @@ func TestError(t *testing.T) {
 	require.NotNil(t, e.SubscriptionRequiredError().Error().Elements().Child(subscriptionRequiredErrorReason))
 	require.NotNil(t, e.UndefinedConditionError().Error().Elements().Child(undefinedConditionErrorReason))
 	require.NotNil(t, e.UnexpectedConditionError().Error().Elements().Child(unexpectedConditionErrorReason))
+	require.NotNil(t, e.UnexpectedRequestError().Error().Elements().Child(unexpectedRequestErrorReason))
 }

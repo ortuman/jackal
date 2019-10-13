@@ -29,7 +29,7 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [DONE]
 
@@ -68,6 +68,7 @@ type nodeContextFetchOptions struct {
 	allowedAffiliations  []string
 	includeAffiliations  bool
 	includeSubscriptions bool
+	checkAccess          bool
 	failOnNotFound       bool
 }
 
@@ -157,6 +158,7 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 	if cmdEl := pubSubEl.Elements().Child("subscribe"); cmdEl != nil && iq.IsSet() {
 		opts := nodeContextFetchOptions{
 			includeAffiliations: true,
+			checkAccess:         true,
 			failOnNotFound:      true,
 		}
 		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
@@ -165,7 +167,8 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 	// Unsubscribe
 	if cmdEl := pubSubEl.Elements().Child("unsubscribe"); cmdEl != nil && iq.IsSet() {
 		opts := nodeContextFetchOptions{
-			failOnNotFound: true,
+			includeSubscriptions: true,
+			failOnNotFound:       true,
 		}
 		x.withNodeContext(func(ni *nodeContext) { x.unsubscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
 		return
@@ -369,7 +372,7 @@ func (x *Pep) configureNode(nCtx *nodeContext, cmdElem xmpp.XElement, iq *xmpp.I
 		if nCtx.node.Options.DeliverPayloads {
 			configElem.AppendElement(nCtx.node.Options.ResultForm().Element())
 		}
-		x.notify(configElem, nCtx.subscriptions, nCtx.host)
+		x.notifySubscribers(configElem, nCtx.subscriptions, nCtx.host)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
 
@@ -389,7 +392,7 @@ func (x *Pep) deleteNode(nCtx *nodeContext, iq *xmpp.IQ) {
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", nCtx.nodeID)
 
-		x.notify(deleteElem, nCtx.subscriptions, nCtx.host)
+		x.notifySubscribers(deleteElem, nCtx.subscriptions, nCtx.host)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
 
@@ -404,50 +407,6 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 		_ = x.router.Route(invalidJIDError(iq))
 		return
 	}
-
-	// check access
-	for _, aff := range nCtx.affiliations {
-		if aff.JID == subJID && aff.Affiliation == pubsubmodel.Outcast {
-			_ = x.router.Route(iq.ForbiddenError())
-			return
-		}
-	}
-
-	switch nCtx.node.Options.AccessModel {
-	case pubsubmodel.Open:
-		break
-
-	case pubsubmodel.Presence:
-		allowed, err := checkPresenceAccess(nCtx.host, subJID)
-		if err != nil {
-			log.Error(err)
-			_ = x.router.Route(iq.InternalServerError())
-			return
-		}
-		if !allowed {
-			_ = x.router.Route(presenceSubscriptionRequiredError(iq))
-			return
-		}
-
-	case pubsubmodel.Roster:
-		allowed, err := checkRosterAccess(nCtx.host, subJID, nCtx.node.Options.RosterGroupsAllowed)
-		if err != nil {
-			log.Error(err)
-			_ = x.router.Route(iq.InternalServerError())
-			return
-		}
-		if !allowed {
-			_ = x.router.Route(notInRosterGroupError(iq))
-			return
-		}
-
-	case pubsubmodel.WhiteList:
-		if !checkWhitelistAccess(nCtx.host, subJID, nCtx.affiliations) {
-			_ = x.router.Route(notOnWhitelistError(iq))
-			return
-		}
-	}
-
 	// create subscription
 	subID := subscriptionID(subJID, pubsubmodel.Subscribed, nCtx.host, nCtx.nodeID)
 
@@ -464,15 +423,15 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	}
 	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
 
-	// notify subscription
+	// notify subscription update
 	subscriptionElem := xmpp.NewElementName("subscription")
 	subscriptionElem.SetAttribute("node", nCtx.nodeID)
 	subscriptionElem.SetAttribute("jid", subJID)
 	subscriptionElem.SetAttribute("subid", subID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
 
-	// TODO(ortuman): notify owners about subscription
 	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifySub {
+		x.notifyOwners(subscriptionElem, nCtx.affiliations, nCtx.host)
 	}
 
 	// reply
@@ -485,7 +444,48 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 }
 
 func (x *Pep) unsubscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
-	// TODO(ortuman): implement me!
+	subJID := cmdEl.Attributes().Get("jid")
+	if subJID != iq.FromJID().ToBareJID().String() {
+		_ = x.router.Route(iq.ForbiddenError())
+		return
+	}
+	var subscription *pubsubmodel.Subscription
+	for _, sub := range nCtx.subscriptions {
+		if sub.JID == subJID {
+			subscription = &sub
+			break
+		}
+	}
+	if subscription == nil {
+		_ = x.router.Route(notSubscribedError(iq))
+		return
+	}
+	// delete subscription
+	if err := storage.DeletePubSubNodeSubscription(subJID, nCtx.host, nCtx.nodeID); err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
+
+	// notify subscription update
+	subscriptionElem := xmpp.NewElementName("subscription")
+	subscriptionElem.SetAttribute("node", nCtx.nodeID)
+	subscriptionElem.SetAttribute("jid", subJID)
+	subscriptionElem.SetAttribute("subid", subscription.SubID)
+	subscriptionElem.SetAttribute("subscription", pubsubmodel.None)
+
+	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifySub {
+		x.notifyOwners(subscriptionElem, nCtx.affiliations, nCtx.host)
+	}
+
+	// reply
+	iqRes := iq.ResultIQ()
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem.AppendElement(subscriptionElem)
+	iqRes.AppendElement(pubSubElem)
+
+	_ = x.router.Route(iqRes)
 }
 
 func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
@@ -520,7 +520,7 @@ func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	if nCtx.node.Options.DeliverPayloads || !nCtx.node.Options.PersistItems {
 		bItemEl.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notify(bItemEl, nCtx.subscriptions, nCtx.host)
+	x.notifySubscribers(bItemEl, nCtx.subscriptions, nCtx.host)
 
 	// reply
 	publishElem := xmpp.NewElementName("publish")
@@ -647,22 +647,29 @@ func (x *Pep) updateSubscriptions(nCtx *nodeContext, cmdElem xmpp.XElement, iq *
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) notify(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host string) {
+func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsubmodel.Affiliation, host string) {
+	hostJID, _ := jid.NewWithString(host, true)
+	for _, affiliation := range affiliations {
+		if affiliation.Affiliation != pubsubmodel.Owner {
+			continue
+		}
+		toJID, _ := jid.NewWithString(affiliation.JID, true)
+		eventMsg := eventMessage(notificationElem, hostJID, toJID)
+
+		_ = x.router.Route(eventMsg)
+	}
+}
+
+func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host string) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, subscription := range subscriptions {
 		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
 		toJID, _ := jid.NewWithString(subscription.JID, true)
+		eventMsg := eventMessage(notificationElem, hostJID, toJID)
 
-		msg := xmpp.NewMessageType(uuid.New().String(), xmpp.HeadlineType)
-		msg.SetFromJID(hostJID)
-		msg.SetToJID(toJID)
-		eventElem := xmpp.NewElementNamespace("event", pubSubEventNamespace)
-		eventElem.AppendElement(notificationElem)
-		msg.AppendElement(eventElem)
-
-		_ = x.router.Route(msg)
+		_ = x.router.Route(eventMsg)
 	}
 }
 
@@ -674,6 +681,7 @@ func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchO
 		_ = x.router.Route(nodeIDRequiredError(iq))
 		return
 	}
+	fromJID := iq.FromJID().ToBareJID().String()
 	host := iq.ToJID().ToBareJID().String()
 
 	ctx.host = host
@@ -703,6 +711,52 @@ func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchO
 			return
 		}
 	}
+
+	// check access
+	if opts.checkAccess {
+		for _, aff := range affiliations {
+			if aff.JID == fromJID && aff.Affiliation == pubsubmodel.Outcast {
+				_ = x.router.Route(iq.ForbiddenError())
+				return
+			}
+		}
+
+		switch node.Options.AccessModel {
+		case pubsubmodel.Open:
+			break
+
+		case pubsubmodel.Presence:
+			allowed, err := checkPresenceAccess(host, fromJID)
+			if err != nil {
+				log.Error(err)
+				_ = x.router.Route(iq.InternalServerError())
+				return
+			}
+			if !allowed {
+				_ = x.router.Route(presenceSubscriptionRequiredError(iq))
+				return
+			}
+
+		case pubsubmodel.Roster:
+			allowed, err := checkRosterAccess(host, fromJID, node.Options.RosterGroupsAllowed)
+			if err != nil {
+				log.Error(err)
+				_ = x.router.Route(iq.InternalServerError())
+				return
+			}
+			if !allowed {
+				_ = x.router.Route(notInRosterGroupError(iq))
+				return
+			}
+
+		case pubsubmodel.WhiteList:
+			if !checkWhitelistAccess(fromJID, affiliations) {
+				_ = x.router.Route(notOnWhitelistError(iq))
+				return
+			}
+		}
+	}
+
 	// validate affiliation
 	if len(opts.allowedAffiliations) > 0 {
 		fromJID := iq.FromJID().ToBareJID().String()
@@ -729,6 +783,7 @@ func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchO
 	if opts.includeAffiliations {
 		ctx.affiliations = affiliations
 	}
+
 	// fetch subscriptions
 	if opts.includeSubscriptions {
 		subscriptions, err := storage.FetchPubSubNodeSubscriptions(host, nodeID)
@@ -769,13 +824,24 @@ func checkRosterAccess(host, jid string, allowedGroups []string) (bool, error) {
 	return false, nil
 }
 
-func checkWhitelistAccess(host, jid string, affiliations []pubsubmodel.Affiliation) bool {
+func checkWhitelistAccess(jid string, affiliations []pubsubmodel.Affiliation) bool {
 	for _, aff := range affiliations {
-		if aff.Affiliation == pubsubmodel.Member {
+		if aff.JID == jid && aff.Affiliation == pubsubmodel.Member {
 			return true
 		}
 	}
 	return false
+}
+
+func eventMessage(payloadElem xmpp.XElement, hostJID, toJID *jid.JID) *xmpp.Message {
+	msg := xmpp.NewMessageType(uuid.New().String(), xmpp.HeadlineType)
+	msg.SetFromJID(hostJID)
+	msg.SetToJID(toJID)
+	eventElem := xmpp.NewElementNamespace("event", pubSubEventNamespace)
+	eventElem.AppendElement(payloadElem)
+	msg.AppendElement(eventElem)
+
+	return msg
 }
 
 func nodeIDRequiredError(stanza xmpp.Stanza) xmpp.Stanza {
@@ -806,6 +872,11 @@ func notInRosterGroupError(stanza xmpp.Stanza) xmpp.Stanza {
 func notOnWhitelistError(stanza xmpp.Stanza) xmpp.Stanza {
 	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("closed-node", pubSubErrorNamespace)}
 	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrNotAllowed, errorElements)
+}
+
+func notSubscribedError(stanza xmpp.Stanza) xmpp.Stanza {
+	errorElements := []xmpp.XElement{xmpp.NewElementNamespace("not-subscribed", pubSubErrorNamespace)}
+	return xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrUnexpectedRequest, errorElements)
 }
 
 func subscriptionID(jid, subscription, host, name string) string {
