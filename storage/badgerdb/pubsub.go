@@ -78,6 +78,11 @@ func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 	return items, nil
 }
 
+func (b *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	// TODO(ortuman): implement me!
+	return nil, nil
+}
+
 func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var affiliations []pubsubmodel.Affiliation

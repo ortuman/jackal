@@ -61,6 +61,7 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	rows, err := sq.Select("name", "value").
 		From("pubsub_node_options").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
+		OrderBy("created_at").
 		RunWith(s.db).Query()
 	if err != nil {
 		return nil, err
@@ -202,6 +203,11 @@ func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	// TODO(ortuman): implement me!
+	return nil, nil
 }
 
 func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {

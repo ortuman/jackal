@@ -100,6 +100,11 @@ func (m *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 	return items, nil
 }
 
+func (m *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	// TODO(ortuman): implement me!
+	return nil, nil
+}
+
 func (m *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte

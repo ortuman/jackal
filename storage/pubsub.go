@@ -16,6 +16,7 @@ type pubSubStorage interface {
 
 	UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
 	FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error)
+	FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error)
 
 	UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
 	FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
@@ -44,6 +45,10 @@ func UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItem
 
 func FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	return inst.FetchPubSubNodeItems(host, name)
+}
+
+func FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	return inst.FetchPubSubNodeItemsWithIDs(host, name, identifiers)
 }
 
 func UpsertPubSubNodeAffiliation(affiliatiaon *pubsubmodel.Affiliation, host, name string) error {

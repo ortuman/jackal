@@ -63,7 +63,7 @@ var defaultNodeOptions = pubsubmodel.Options{
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
 }
 
-type nodeContextFetchOptions struct {
+type commandOptions struct {
 	allowedAffiliations  []string
 	includeAffiliations  bool
 	includeSubscriptions bool
@@ -71,7 +71,7 @@ type nodeContextFetchOptions struct {
 	failOnNotFound       bool
 }
 
-type nodeContext struct {
+type commandContext struct {
 	host          string
 	nodeID        string
 	node          *pubsubmodel.Node
@@ -140,46 +140,46 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 	// Create node
 	if cmdEl := pubSubEl.Elements().Child("create"); cmdEl != nil && iq.IsSet() {
-		x.withNodeContext(func(ni *nodeContext) { x.create(ni, pubSubEl, iq) }, nodeContextFetchOptions{}, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.create(cmdCtx, pubSubEl, iq) }, commandOptions{}, cmdEl, iq)
 		return
 	}
 	// Publish
 	if cmdEl := pubSubEl.Elements().Child("publish"); cmdEl != nil && iq.IsSet() {
-		opts := nodeContextFetchOptions{
+		opts := commandOptions{
 			allowedAffiliations:  []string{pubsubmodel.Owner, pubsubmodel.Member},
 			includeSubscriptions: true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.publish(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.publish(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 	// Subscribe
 	if cmdEl := pubSubEl.Elements().Child("subscribe"); cmdEl != nil && iq.IsSet() {
-		opts := nodeContextFetchOptions{
+		opts := commandOptions{
 			includeAffiliations: true,
 			checkAccess:         true,
 			failOnNotFound:      true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.subscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.subscribe(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 	// Unsubscribe
 	if cmdEl := pubSubEl.Elements().Child("unsubscribe"); cmdEl != nil && iq.IsSet() {
-		opts := nodeContextFetchOptions{
+		opts := commandOptions{
 			includeAffiliations:  true,
 			includeSubscriptions: true,
 			failOnNotFound:       true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.unsubscribe(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.unsubscribe(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 	// Retrieve items
 	if cmdEl := pubSubEl.Elements().Child("items"); cmdEl != nil && iq.IsGet() {
-		opts := nodeContextFetchOptions{
+		opts := commandOptions{
 			includeSubscriptions: true,
 			checkAccess:          true,
 			failOnNotFound:       true,
 		}
-		x.withNodeContext(func(ni *nodeContext) { x.retrieveItems(ni, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveItems(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 
@@ -191,19 +191,19 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	if cmdEl := pubSub.Elements().Child("configure"); cmdEl != nil {
 		if iq.IsGet() {
 			// send configuration form
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withNodeContext(func(ni *nodeContext) { x.sendConfigurationForm(ni, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.sendConfigurationForm(cmdCtx, iq) }, opts, cmdEl, iq)
 		} else if iq.IsSet() {
 			// update node configuration
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations:  []string{pubsubmodel.Owner},
 				includeSubscriptions: true,
 				failOnNotFound:       true,
 			}
-			x.withNodeContext(func(nCtx *nodeContext) { x.configure(nCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.configure(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -212,18 +212,18 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Manage affiliations
 	if cmdEl := pubSub.Elements().Child("affiliations"); cmdEl != nil {
 		if iq.IsGet() {
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				includeAffiliations: true,
 				failOnNotFound:      true,
 			}
-			x.withNodeContext(func(nCtx *nodeContext) { x.retrieveAffiliations(nCtx, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveAffiliations(cmdCtx, iq) }, opts, cmdEl, iq)
 		} else if iq.IsSet() {
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withNodeContext(func(nCtx *nodeContext) { x.updateAffiliations(nCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.updateAffiliations(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -232,18 +232,18 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	// Manage subscriptions
 	if cmdEl := pubSub.Elements().Child("subscriptions"); cmdEl != nil {
 		if iq.IsGet() {
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations:  []string{pubsubmodel.Owner},
 				includeSubscriptions: true,
 				failOnNotFound:       true,
 			}
-			x.withNodeContext(func(nCtx *nodeContext) { x.retrieveSubscriptions(nCtx, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveSubscriptions(cmdCtx, iq) }, opts, cmdEl, iq)
 		} else if iq.IsSet() {
-			opts := nodeContextFetchOptions{
+			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withNodeContext(func(nCtx *nodeContext) { x.updateSubscriptions(nCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.updateSubscriptions(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -251,26 +251,26 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 	}
 	// Delete node
 	if cmdEl := pubSub.Elements().Child("delete"); cmdEl != nil && iq.IsSet() {
-		opts := nodeContextFetchOptions{
+		opts := commandOptions{
 			allowedAffiliations:  []string{pubsubmodel.Owner},
 			includeSubscriptions: true,
 			failOnNotFound:       true,
 		}
-		x.withNodeContext(func(nCtx *nodeContext) { x.delete(nCtx, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.delete(cmdCtx, iq) }, opts, cmdEl, iq)
 		return
 	}
 
 	_ = x.router.Route(iq.FeatureNotImplementedError())
 }
 
-func (x *Pep) create(nCtx *nodeContext, pubSubEl xmpp.XElement, iq *xmpp.IQ) {
-	if nCtx.node != nil {
+func (x *Pep) create(cmdCtx *commandContext, pubSubEl xmpp.XElement, iq *xmpp.IQ) {
+	if cmdCtx.node != nil {
 		_ = x.router.Route(iq.ConflictError())
 		return
 	}
 	node := &pubsubmodel.Node{
-		Host: nCtx.host,
-		Name: nCtx.nodeID,
+		Host: cmdCtx.host,
+		Name: cmdCtx.nodeID,
 	}
 	if configEl := pubSubEl.Elements().Child("configure"); configEl != nil {
 		form, err := xep0004.NewFormFromElement(configEl)
@@ -293,16 +293,15 @@ func (x *Pep) create(nCtx *nodeContext, pubSubEl xmpp.XElement, iq *xmpp.IQ) {
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("pep: created node (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: created node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) sendConfigurationForm(nCtx *nodeContext, iq *xmpp.IQ) {
+func (x *Pep) sendConfigurationForm(cmdCtx *commandContext, iq *xmpp.IQ) {
 	// compose config form response
 	configureNode := xmpp.NewElementName("configure")
-	configureNode.SetAttribute("node", nCtx.nodeID)
+	configureNode.SetAttribute("node", cmdCtx.nodeID)
 
 	rosterGroups, err := storage.FetchRosterGroups(iq.ToJID().Node())
 	if err != nil {
@@ -311,7 +310,7 @@ func (x *Pep) sendConfigurationForm(nCtx *nodeContext, iq *xmpp.IQ) {
 		return
 	}
 
-	configureNode.AppendElement(nCtx.node.Options.Form(rosterGroups).Element())
+	configureNode.AppendElement(cmdCtx.node.Options.Form(rosterGroups).Element())
 
 	pubSubNode := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubNode.AppendElement(configureNode)
@@ -319,13 +318,12 @@ func (x *Pep) sendConfigurationForm(nCtx *nodeContext, iq *xmpp.IQ) {
 	res := iq.ResultIQ()
 	res.AppendElement(pubSubNode)
 
-	log.Infof("pep: sent configuration form (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: sent configuration form (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(res)
 }
 
-func (x *Pep) configure(nCtx *nodeContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
 	formEl := cmdElem.Elements().ChildNamespace("x", xep0004.FormNamespace)
 	if formEl == nil {
 		_ = x.router.Route(iq.NotAcceptableError())
@@ -341,51 +339,49 @@ func (x *Pep) configure(nCtx *nodeContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
 		_ = x.router.Route(iq.NotAcceptableError())
 		return
 	}
-	nCtx.node.Options = *nodeOpts
+	cmdCtx.node.Options = *nodeOpts
 
 	// update node config
-	if err := storage.UpsertPubSubNode(nCtx.node); err != nil {
+	if err := storage.UpsertPubSubNode(cmdCtx.node); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
 	// notify config update
-	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifyConfig {
+	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifyConfig {
 		configElem := xmpp.NewElementName("configuration")
-		configElem.SetAttribute("node", nCtx.nodeID)
+		configElem.SetAttribute("node", cmdCtx.nodeID)
 
-		if nCtx.node.Options.DeliverPayloads {
-			configElem.AppendElement(nCtx.node.Options.ResultForm().Element())
+		if cmdCtx.node.Options.DeliverPayloads {
+			configElem.AppendElement(cmdCtx.node.Options.ResultForm().Element())
 		}
-		x.notifySubscribers(configElem, nCtx.subscriptions, nCtx.host)
+		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host)
 	}
-	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) delete(nCtx *nodeContext, iq *xmpp.IQ) {
+func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 	// delete node
-	if err := storage.DeletePubSubNode(nCtx.host, nCtx.nodeID); err != nil {
+	if err := storage.DeletePubSubNode(cmdCtx.host, cmdCtx.nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
 	// notify delete
-	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifyDelete {
+	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifyDelete {
 		deleteElem := xmpp.NewElementName("delete")
-		deleteElem.SetAttribute("node", nCtx.nodeID)
+		deleteElem.SetAttribute("node", cmdCtx.nodeID)
 
-		x.notifySubscribers(deleteElem, nCtx.subscriptions, nCtx.host)
+		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host)
 	}
-	log.Infof("pep: deleted node (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	// validate JID portion
 	subJID := cmdEl.Attributes().Get("jid")
 	if subJID != iq.FromJID().ToBareJID().String() {
@@ -393,33 +389,33 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 		return
 	}
 	// create subscription
-	subID := subscriptionID(subJID, nCtx.host, nCtx.nodeID)
+	subID := subscriptionID(subJID, cmdCtx.host, cmdCtx.nodeID)
 
 	err := storage.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
 		SubID:        subID,
 		JID:          subJID,
 		Subscription: pubsubmodel.Subscribed,
-	}, nCtx.host, nCtx.nodeID)
+	}, cmdCtx.host, cmdCtx.nodeID)
 
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
+	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", cmdCtx.host, cmdCtx.nodeID, subJID)
 
 	// notify subscription update
 	subscriptionElem := xmpp.NewElementName("subscription")
-	subscriptionElem.SetAttribute("node", nCtx.nodeID)
+	subscriptionElem.SetAttribute("node", cmdCtx.nodeID)
 	subscriptionElem.SetAttribute("jid", subJID)
 	subscriptionElem.SetAttribute("subid", subID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
 
-	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, nCtx.affiliations, nCtx.host)
+	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host)
 	}
 
-	// reply
+	// compose response
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
@@ -428,14 +424,14 @@ func (x *Pep) subscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	_ = x.router.Route(iqRes)
 }
 
-func (x *Pep) unsubscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) unsubscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	subJID := cmdEl.Attributes().Get("jid")
 	if subJID != iq.FromJID().ToBareJID().String() {
 		_ = x.router.Route(iq.ForbiddenError())
 		return
 	}
 	var subscription *pubsubmodel.Subscription
-	for _, sub := range nCtx.subscriptions {
+	for _, sub := range cmdCtx.subscriptions {
 		if sub.JID == subJID {
 			subscription = &sub
 			break
@@ -446,25 +442,25 @@ func (x *Pep) unsubscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 		return
 	}
 	// delete subscription
-	if err := storage.DeletePubSubNodeSubscription(subJID, nCtx.host, nCtx.nodeID); err != nil {
+	if err := storage.DeletePubSubNodeSubscription(subJID, cmdCtx.host, cmdCtx.nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", nCtx.host, nCtx.nodeID, subJID)
+	log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", cmdCtx.host, cmdCtx.nodeID, subJID)
 
 	// notify subscription update
 	subscriptionElem := xmpp.NewElementName("subscription")
-	subscriptionElem.SetAttribute("node", nCtx.nodeID)
+	subscriptionElem.SetAttribute("node", cmdCtx.nodeID)
 	subscriptionElem.SetAttribute("jid", subJID)
 	subscriptionElem.SetAttribute("subid", subscription.SubID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.None)
 
-	if nCtx.node.Options.DeliverNotifications && nCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, nCtx.affiliations, nCtx.host)
+	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host)
 	}
 
-	// reply
+	// compose response
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
@@ -473,7 +469,7 @@ func (x *Pep) unsubscribe(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	_ = x.router.Route(iqRes)
 }
 
-func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	itemEl := cmdEl.Elements().Child("item")
 	if itemEl == nil || len(itemEl.Elements().All()) != 1 {
 		_ = x.router.Route(invalidPayloadError(iq))
@@ -485,30 +481,30 @@ func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 		itemID = uuid.New().String()
 	}
 	// auto create node
-	if nCtx.node == nil {
-		nCtx.node = &pubsubmodel.Node{
-			Host:    nCtx.host,
-			Name:    nCtx.nodeID,
+	if cmdCtx.node == nil {
+		cmdCtx.node = &pubsubmodel.Node{
+			Host:    cmdCtx.host,
+			Name:    cmdCtx.nodeID,
 			Options: defaultNodeOptions,
 		}
-		nCtx.subscriptions = []pubsubmodel.Subscription{{
-			JID:          nCtx.host,
-			SubID:        subscriptionID(nCtx.host, nCtx.host, nCtx.nodeID),
+		cmdCtx.subscriptions = []pubsubmodel.Subscription{{
+			JID:          cmdCtx.host,
+			SubID:        subscriptionID(cmdCtx.host, cmdCtx.host, cmdCtx.nodeID),
 			Subscription: pubsubmodel.Subscribed,
 		}}
-		if err := x.createNode(nCtx.node); err != nil {
+		if err := x.createNode(cmdCtx.node); err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
 			return
 		}
 	}
 	// persist node item
-	if nCtx.node.Options.PersistItems {
+	if cmdCtx.node.Options.PersistItems {
 		err := storage.UpsertPubSubNodeItem(&pubsubmodel.Item{
 			ID:        itemID,
 			Publisher: iq.FromJID().ToBareJID().String(),
 			Payload:   itemEl.Elements().All()[0],
-		}, nCtx.host, nCtx.nodeID, int(nCtx.node.Options.MaxItems))
+		}, cmdCtx.host, cmdCtx.nodeID, int(cmdCtx.node.Options.MaxItems))
 
 		if err != nil {
 			log.Error(err)
@@ -520,14 +516,14 @@ func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	bItemEl := xmpp.NewElementName("item")
 	bItemEl.SetAttribute("id", itemID)
 
-	if nCtx.node.Options.DeliverPayloads || !nCtx.node.Options.PersistItems {
+	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
 		bItemEl.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notifySubscribers(bItemEl, nCtx.subscriptions, nCtx.host)
+	x.notifySubscribers(bItemEl, cmdCtx.subscriptions, cmdCtx.host)
 
-	// reply
+	// compose response
 	publishElem := xmpp.NewElementName("publish")
-	publishElem.SetAttribute("node", nCtx.nodeID)
+	publishElem.SetAttribute("node", cmdCtx.nodeID)
 	resItemElem := xmpp.NewElementName("item")
 	resItemElem.SetAttribute("id", itemID)
 	publishElem.AppendElement(resItemElem)
@@ -540,22 +536,21 @@ func (x *Pep) publish(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 	_ = x.router.Route(iqRes)
 }
 
-func (x *Pep) retrieveItems(nCtx *nodeContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) retrieveItems(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
 }
 
-func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {
-	// compose response
+func (x *Pep) retrieveAffiliations(cmdCtx *commandContext, iq *xmpp.IQ) {
 	affiliationsElem := xmpp.NewElementName("affiliations")
-	affiliationsElem.SetAttribute("node", nCtx.nodeID)
+	affiliationsElem.SetAttribute("node", cmdCtx.nodeID)
 
-	for _, aff := range nCtx.affiliations {
+	for _, aff := range cmdCtx.affiliations {
 		affElem := xmpp.NewElementName("affiliation")
 		affElem.SetAttribute("jid", aff.JID)
 		affElem.SetAttribute("affiliation", aff.Affiliation)
 	}
-	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
+	// compose response
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(affiliationsElem)
@@ -564,23 +559,23 @@ func (x *Pep) retrieveAffiliations(nCtx *nodeContext, iq *xmpp.IQ) {
 	_ = x.router.Route(iqRes)
 }
 
-func (x *Pep) updateAffiliations(nCtx *nodeContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) updateAffiliations(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
 	// update affiliations
 	for _, affElem := range cmdElem.Elements().Children("affiliation") {
 		var aff pubsubmodel.Affiliation
 		aff.JID = affElem.Attributes().Get("jid")
 		aff.Affiliation = affElem.Attributes().Get("affiliation")
 
-		if aff.JID == nCtx.host {
+		if aff.JID == cmdCtx.host {
 			// ignore node owner affiliation update
 			continue
 		}
 		var err error
 		switch aff.Affiliation {
 		case pubsubmodel.Owner, pubsubmodel.Member, pubsubmodel.Publisher, pubsubmodel.Outcast:
-			err = storage.UpsertPubSubNodeAffiliation(&aff, nCtx.host, nCtx.nodeID)
+			err = storage.UpsertPubSubNodeAffiliation(&aff, cmdCtx.host, cmdCtx.nodeID)
 		case pubsubmodel.None:
-			err = storage.DeletePubSubNodeAffiliation(aff.JID, nCtx.host, nCtx.nodeID)
+			err = storage.DeletePubSubNodeAffiliation(aff.JID, cmdCtx.host, cmdCtx.nodeID)
 		default:
 			_ = x.router.Route(iq.BadRequestError())
 			return
@@ -591,26 +586,24 @@ func (x *Pep) updateAffiliations(nCtx *nodeContext, cmdElem xmpp.XElement, iq *x
 			return
 		}
 	}
-	log.Infof("pep: modified affiliations (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: modified affiliations (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) retrieveSubscriptions(nCtx *nodeContext, iq *xmpp.IQ) {
-	// compose response
+func (x *Pep) retrieveSubscriptions(cmdCtx *commandContext, iq *xmpp.IQ) {
 	subscriptionsElem := xmpp.NewElementName("subscriptions")
-	subscriptionsElem.SetAttribute("node", nCtx.nodeID)
+	subscriptionsElem.SetAttribute("node", cmdCtx.nodeID)
 
-	for _, sub := range nCtx.subscriptions {
+	for _, sub := range cmdCtx.subscriptions {
 		subElem := xmpp.NewElementName("subscription")
 		subElem.SetAttribute("subid", sub.SubID)
 		subElem.SetAttribute("jid", sub.JID)
 		subElem.SetAttribute("subscription", sub.Subscription)
 	}
-	log.Infof("pep: retrieved subscriptions (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: retrieved subscriptions (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
+	// compose response
 	iqRes := iq.ResultIQ()
 	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
 	pubSubElem.AppendElement(subscriptionsElem)
@@ -619,7 +612,7 @@ func (x *Pep) retrieveSubscriptions(nCtx *nodeContext, iq *xmpp.IQ) {
 	_ = x.router.Route(iqRes)
 }
 
-func (x *Pep) updateSubscriptions(nCtx *nodeContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
+func (x *Pep) updateSubscriptions(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.IQ) {
 	// update subscriptions
 	for _, subElem := range cmdElem.Elements().Children("subscription") {
 		var sub pubsubmodel.Subscription
@@ -627,16 +620,16 @@ func (x *Pep) updateSubscriptions(nCtx *nodeContext, cmdElem xmpp.XElement, iq *
 		sub.JID = subElem.Attributes().Get("jid")
 		sub.Subscription = subElem.Attributes().Get("subscription")
 
-		if sub.JID == nCtx.host {
+		if sub.JID == cmdCtx.host {
 			// ignore node owner subscription update
 			continue
 		}
 		var err error
 		switch sub.Subscription {
 		case pubsubmodel.Subscribed:
-			err = storage.UpsertPubSubNodeSubscription(&sub, nCtx.host, nCtx.nodeID)
+			err = storage.UpsertPubSubNodeSubscription(&sub, cmdCtx.host, cmdCtx.nodeID)
 		case pubsubmodel.None:
-			err = storage.DeletePubSubNodeSubscription(sub.JID, nCtx.host, nCtx.nodeID)
+			err = storage.DeletePubSubNodeSubscription(sub.JID, cmdCtx.host, cmdCtx.nodeID)
 		default:
 			_ = x.router.Route(iq.BadRequestError())
 			return
@@ -647,9 +640,8 @@ func (x *Pep) updateSubscriptions(nCtx *nodeContext, cmdElem xmpp.XElement, iq *
 			return
 		}
 	}
-	log.Infof("pep: modified subscriptions (host: %s, node_id: %s)", nCtx.host, nCtx.nodeID)
+	log.Infof("pep: modified subscriptions (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	// reply
 	_ = x.router.Route(iq.ResultIQ())
 }
 
@@ -679,8 +671,8 @@ func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []
 	}
 }
 
-func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchOptions, cmdElem xmpp.XElement, iq *xmpp.IQ) {
-	var ctx nodeContext
+func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOptions, cmdElem xmpp.XElement, iq *xmpp.IQ) {
+	var ctx commandContext
 
 	nodeID := cmdElem.Attributes().Get("node")
 	if len(nodeID) == 0 {
@@ -717,7 +709,6 @@ func (x *Pep) withNodeContext(fn func(nCtx *nodeContext), opts nodeContextFetchO
 			return
 		}
 	}
-
 	// check access
 	if opts.checkAccess {
 		for _, aff := range affiliations {
