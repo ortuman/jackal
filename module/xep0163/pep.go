@@ -151,9 +151,7 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			allowedAffiliations:  []string{pubsubmodel.Owner, pubsubmodel.Member},
 			includeSubscriptions: true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) {
-			x.publish(cmdCtx, cmdEl, iq)
-		}, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.publish(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 	// Subscribe
@@ -163,9 +161,7 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			checkAccess:         true,
 			failOnNotFound:      true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) {
-			x.subscribe(cmdCtx, cmdEl, iq)
-		}, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) { x.subscribe(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		return
 	}
 	// Unsubscribe
@@ -215,9 +211,7 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				includeSubscriptions: true,
 				failOnNotFound:       true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) {
-				x.configure(cmdCtx, cmdEl, iq)
-			}, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.configure(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
