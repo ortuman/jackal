@@ -140,7 +140,9 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 	// Create node
 	if cmdEl := pubSubEl.Elements().Child("create"); cmdEl != nil && iq.IsSet() {
-		x.withCommandContext(func(cmdCtx *commandContext) { x.create(cmdCtx, pubSubEl, iq) }, commandOptions{}, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) {
+			x.create(cmdCtx, pubSubEl, iq)
+		}, commandOptions{}, cmdEl, iq)
 		return
 	}
 	// Publish
@@ -149,7 +151,9 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			allowedAffiliations:  []string{pubsubmodel.Owner, pubsubmodel.Member},
 			includeSubscriptions: true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) { x.publish(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) {
+			x.publish(cmdCtx, cmdEl, iq)
+		}, opts, cmdEl, iq)
 		return
 	}
 	// Subscribe
@@ -159,7 +163,9 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			checkAccess:         true,
 			failOnNotFound:      true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) { x.subscribe(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) {
+			x.subscribe(cmdCtx, cmdEl, iq)
+		}, opts, cmdEl, iq)
 		return
 	}
 	// Unsubscribe
@@ -169,7 +175,9 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			includeSubscriptions: true,
 			failOnNotFound:       true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) { x.unsubscribe(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) {
+			x.unsubscribe(cmdCtx, cmdEl, iq)
+		}, opts, cmdEl, iq)
 		return
 	}
 	// Retrieve items
@@ -179,7 +187,9 @@ func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {
 			checkAccess:          true,
 			failOnNotFound:       true,
 		}
-		x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveItems(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+		x.withCommandContext(func(cmdCtx *commandContext) {
+			x.retrieveItems(cmdCtx, cmdEl, iq)
+		}, opts, cmdEl, iq)
 		return
 	}
 
@@ -195,7 +205,9 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.sendConfigurationForm(cmdCtx, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.sendConfigurationForm(cmdCtx, iq)
+			}, opts, cmdEl, iq)
 		} else if iq.IsSet() {
 			// update node configuration
 			opts := commandOptions{
@@ -203,7 +215,9 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				includeSubscriptions: true,
 				failOnNotFound:       true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.configure(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.configure(cmdCtx, cmdEl, iq)
+			}, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -217,13 +231,17 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				includeAffiliations: true,
 				failOnNotFound:      true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveAffiliations(cmdCtx, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.retrieveAffiliations(cmdCtx, iq)
+			}, opts, cmdEl, iq)
 		} else if iq.IsSet() {
 			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.updateAffiliations(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.updateAffiliations(cmdCtx, cmdEl, iq)
+			}, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
@@ -237,13 +255,17 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				includeSubscriptions: true,
 				failOnNotFound:       true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.retrieveSubscriptions(cmdCtx, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.retrieveSubscriptions(cmdCtx, iq)
+			}, opts, cmdEl, iq)
 		} else if iq.IsSet() {
 			opts := commandOptions{
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) { x.updateSubscriptions(cmdCtx, cmdEl, iq) }, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) {
+				x.updateSubscriptions(cmdCtx, cmdEl, iq)
+			}, opts, cmdEl, iq)
 		} else {
 			_ = x.router.Route(iq.ServiceUnavailableError())
 		}
