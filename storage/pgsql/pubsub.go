@@ -188,26 +188,21 @@ func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 	}
 	defer func() { _ = rows.Close() }()
 
-	var items []pubsubmodel.Item
-	for rows.Next() {
-		var payload string
-		var item pubsubmodel.Item
-		if err := rows.Scan(&item.ID, &item.Publisher, &payload); err != nil {
-			return nil, err
-		}
-		parser := xmpp.NewParser(strings.NewReader(payload), xmpp.DefaultMode, 0)
-		item.Payload, err = parser.ParseElement()
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, nil
+	return s.scanPubSubNodeItems(rows)
 }
 
 func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
-	// TODO(ortuman): implement me!
-	return nil, nil
+	rows, err := sq.Select("item_id", "publisher", "payload").
+		From("pubsub_items").
+		Where(sq.And{sq.Eq{"id": identifiers}, sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name)}).
+		OrderBy("created_at").
+		RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanPubSubNodeItems(rows)
 }
 
 func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
@@ -248,15 +243,7 @@ func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	}
 	defer func() { _ = rows.Close() }()
 
-	var affiliations []pubsubmodel.Affiliation
-	for rows.Next() {
-		var affiliation pubsubmodel.Affiliation
-		if err := rows.Scan(&affiliation.JID, &affiliation.Affiliation); err != nil {
-			return nil, err
-		}
-		affiliations = append(affiliations, affiliation)
-	}
-	return affiliations, nil
+	return s.scanPubSubNodeAffiliations(rows)
 }
 
 func (s *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
@@ -304,15 +291,7 @@ func (s *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 	}
 	defer func() { _ = rows.Close() }()
 
-	var subscriptions []pubsubmodel.Subscription
-	for rows.Next() {
-		var subscription pubsubmodel.Subscription
-		if err := rows.Scan(&subscription.SubID, &subscription.JID, &subscription.Subscription); err != nil {
-			return nil, err
-		}
-		subscriptions = append(subscriptions, subscription)
-	}
-	return subscriptions, nil
+	return s.scanPubSubNodeSubscriptions(rows)
 }
 
 func (s *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
@@ -320,4 +299,50 @@ func (s *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
 		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
 		RunWith(s.db).Exec()
 	return err
+}
+
+func (s *Storage) scanPubSubNodeAffiliations(scanner rowsScanner) ([]pubsubmodel.Affiliation, error) {
+	var affiliations []pubsubmodel.Affiliation
+
+	for scanner.Next() {
+		var affiliation pubsubmodel.Affiliation
+		if err := scanner.Scan(&affiliation.JID, &affiliation.Affiliation); err != nil {
+			return nil, err
+		}
+		affiliations = append(affiliations, affiliation)
+	}
+	return affiliations, nil
+}
+
+func (s *Storage) scanPubSubNodeSubscriptions(scanner rowsScanner) ([]pubsubmodel.Subscription, error) {
+	var subscriptions []pubsubmodel.Subscription
+
+	for scanner.Next() {
+		var subscription pubsubmodel.Subscription
+		if err := scanner.Scan(&subscription.SubID, &subscription.JID, &subscription.Subscription); err != nil {
+			return nil, err
+		}
+		subscriptions = append(subscriptions, subscription)
+	}
+	return subscriptions, nil
+}
+
+func (s *Storage) scanPubSubNodeItems(scanner rowsScanner) ([]pubsubmodel.Item, error) {
+	var items []pubsubmodel.Item
+	var err error
+
+	for scanner.Next() {
+		var payload string
+		var item pubsubmodel.Item
+		if err := scanner.Scan(&item.ID, &item.Publisher, &payload); err != nil {
+			return nil, err
+		}
+		parser := xmpp.NewParser(strings.NewReader(payload), xmpp.DefaultMode, 0)
+		item.Payload, err = parser.ParseElement()
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }

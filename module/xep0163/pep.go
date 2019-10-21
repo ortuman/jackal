@@ -529,13 +529,13 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 		}
 	}
 	// notify published item
-	bItemEl := xmpp.NewElementName("item")
-	bItemEl.SetAttribute("id", itemID)
+	notifyElem := xmpp.NewElementName("item")
+	notifyElem.SetAttribute("id", itemID)
 
 	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
-		bItemEl.AppendElement(itemEl.Elements().All()[0])
+		notifyElem.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notifySubscribers(bItemEl, cmdCtx.subscriptions, cmdCtx.host)
+	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host)
 
 	// compose response
 	publishElem := xmpp.NewElementName("publish")
@@ -553,6 +553,51 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 }
 
 func (x *Pep) retrieveItems(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) {
+	var itemIDs []string
+
+	itemElems := cmdEl.Elements().Children("item")
+	if len(itemElems) > 0 {
+		for _, itemEl := range itemElems {
+			itemID := itemEl.Attributes().Get("id")
+			if len(itemID) == 0 {
+				continue
+			}
+			itemIDs = append(itemIDs, itemID)
+		}
+	}
+	// retrieve node items
+	var items []pubsubmodel.Item
+	var err error
+
+	if len(itemIDs) > 0 {
+		items, err = storage.FetchPubSubNodeItemsWithIDs(cmdCtx.host, cmdCtx.nodeID, itemIDs)
+	} else {
+		items, err = storage.FetchPubSubNodeItems(cmdCtx.host, cmdCtx.nodeID)
+	}
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
+	}
+	log.Infof("pep: retrieved items (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
+
+	// compose response
+	iqRes := iq.ResultIQ()
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	itemsElem := xmpp.NewElementName("items")
+	itemsElem.SetAttribute("node", cmdCtx.nodeID)
+
+	for _, itm := range items {
+		itemElem := xmpp.NewElementName("item")
+		itemElem.SetAttribute("id", itm.ID)
+		itemElem.AppendElement(itm.Payload)
+
+		itemsElem.AppendElement(itemsElem)
+	}
+	pubSubElem.AppendElement(itemsElem)
+	iqRes.AppendElement(pubSubElem)
+
+	_ = x.router.Route(iqRes)
 }
 
 func (x *Pep) retrieveAffiliations(cmdCtx *commandContext, iq *xmpp.IQ) {
