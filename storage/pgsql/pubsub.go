@@ -194,7 +194,7 @@ func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
-		Where(sq.And{sq.Eq{"id": identifiers}, sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name)}).
+		Where(sq.And{sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name), sq.Eq{"id": identifiers}}).
 		OrderBy("created_at").
 		RunWith(s.db).Query()
 	if err != nil {

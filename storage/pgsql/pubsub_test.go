@@ -174,6 +174,41 @@ func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
 	require.Equal(t, errGeneric, err)
 }
 
+func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
+	s, mock := NewMock()
+	rows := sqlmock.NewRows([]string{"item_id", "publisher", "payload"})
+	rows.AddRow("1234", "ortuman@jackal.im", "<message/>")
+	rows.AddRow("5678", "noelia@jackal.im", "<iq type='get'/>")
+
+	identifiers := []string{"1234", "5678"}
+
+	mock.ExpectQuery("SELECT item_id, publisher, payload FROM pubsub_items WHERE (.+ IN (.+)) ORDER BY created_at").
+		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
+		WillReturnRows(rows)
+
+	items, err := s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+	require.Equal(t, 2, len(items))
+	require.Equal(t, "1234", items[0].ID)
+	require.Equal(t, "5678", items[1].ID)
+
+	// error case
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT item_id, publisher, payload FROM pubsub_items WHERE (.+ IN (.+)) ORDER BY created_at").
+		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
+		WillReturnError(errGeneric)
+
+	_, err = s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Equal(t, errGeneric, err)
+}
+
 func TestPgSQLUpsertPubSubNodeAffiliation(t *testing.T) {
 	s, mock := NewMock()
 
