@@ -79,8 +79,24 @@ func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 }
 
 func (b *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
-	// TODO(ortuman): implement me!
-	return nil, nil
+	var items []pubsubmodel.Item
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
+	})
+	if err != nil {
+		return nil, err
+	}
+	identifiersSet := make(map[string]struct{})
+	for _, id := range identifiers {
+		identifiersSet[id] = struct{}{}
+	}
+	var filteredItems []pubsubmodel.Item
+	for _, itm := range items {
+		if _, ok := identifiersSet[itm.ID]; ok {
+			filteredItems = append(filteredItems, itm)
+		}
+	}
+	return filteredItems, nil
 }
 
 func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {

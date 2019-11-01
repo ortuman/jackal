@@ -54,6 +54,12 @@ func TestBadgerDB_PubSubItems(t *testing.T) {
 	require.Len(t, items, 2)
 	require.Equal(t, "5678", items[0].ID)
 	require.Equal(t, "91011", items[1].ID)
+
+	items, err = h.db.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", []string{"5678"})
+	require.Nil(t, err)
+
+	require.Len(t, items, 1)
+	require.Equal(t, "5678", items[0].ID)
 }
 
 func TestBadgerDB_PubSubAffiliations(t *testing.T) {

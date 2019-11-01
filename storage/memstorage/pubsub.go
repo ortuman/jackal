@@ -101,8 +101,30 @@ func (m *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 }
 
 func (m *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
-	// TODO(ortuman): implement me!
-	return nil, nil
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[pubSubItemsKey(host, name)]
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	identifiersSet := make(map[string]struct{})
+	for _, id := range identifiers {
+		identifiersSet[id] = struct{}{}
+	}
+	var filteredItems, items []pubsubmodel.Item
+	if err := serializer.DeserializeSlice(b, &items); err != nil {
+		return nil, err
+	}
+	for _, itm := range items {
+		if _, ok := identifiersSet[itm.ID]; ok {
+			filteredItems = append(filteredItems, itm)
+		}
+	}
+	return filteredItems, nil
 }
 
 func (m *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {

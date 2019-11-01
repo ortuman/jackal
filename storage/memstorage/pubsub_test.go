@@ -41,6 +41,11 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("b"),
 	}
+	item3 := &pubsubmodel.Item{
+		ID:        "id3",
+		Publisher: "noelia@jackal.im",
+		Payload:   xmpp.NewElementName("c"),
+	}
 	require.Nil(t, s.UpsertPubSubNodeItem(item1, "ortuman@jackal.im", "princely_musings", 1))
 	require.Nil(t, s.UpsertPubSubNodeItem(item2, "ortuman@jackal.im", "princely_musings", 1))
 
@@ -52,15 +57,22 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 	require.True(t, reflect.DeepEqual(&items[0], item2))
 
 	// update item
-	item2.Publisher = "ortuman@jackal.im"
-	require.Nil(t, s.UpsertPubSubNodeItem(item2, "ortuman@jackal.im", "princely_musings", 1))
+	require.Nil(t, s.UpsertPubSubNodeItem(item3, "ortuman@jackal.im", "princely_musings", 2))
 
 	items, err = s.FetchPubSubNodeItems("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, items)
 
-	require.Len(t, items, 1)
+	require.Len(t, items, 2)
 	require.True(t, reflect.DeepEqual(&items[0], item2))
+	require.True(t, reflect.DeepEqual(&items[1], item3))
+
+	items, err = s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", []string{"id3"})
+	require.Nil(t, err)
+	require.NotNil(t, items)
+
+	require.Len(t, items, 1)
+	require.Equal(t, "id3", items[0].ID)
 }
 
 func TestStorage_PubSubNodeAffiliation(t *testing.T) {
