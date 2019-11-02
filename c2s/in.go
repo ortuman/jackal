@@ -713,9 +713,9 @@ func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
 	node = ss[0]
 	ver = ss[1]
 
+	// retrieve and store features
 	log.Infof("storing capabilities... node: %s, ver: %s", node, ver)
 
-	// retrieve and store features
 	var features []string
 	featureElems := query.Elements().Children("feature")
 	for _, featureElem := range featureElems {
