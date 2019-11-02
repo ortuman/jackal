@@ -58,7 +58,6 @@ type Options struct {
 	NotificationType      string
 	NotifyConfig          bool
 	NotifyDelete          bool
-	NotifyRetract         bool
 	NotifySub             bool
 }
 
@@ -74,7 +73,6 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	opt.NotificationType = m[notificationTypeFieldVar]
 	opt.NotifyConfig, _ = strconv.ParseBool(m[notifyConfigFieldVar])
 	opt.NotifyDelete, _ = strconv.ParseBool(m[notifyDeleteFieldVar])
-	opt.NotifyRetract, _ = strconv.ParseBool(m[notifyRetractFieldVar])
 	opt.NotifySub, _ = strconv.ParseBool(m[notifySubFieldVar])
 
 	// extract roster allowed groups
@@ -157,7 +155,6 @@ func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	opt.NotificationType = fields.ValueForField(notificationTypeFieldVar)
 	opt.NotifyConfig, _ = strconv.ParseBool(fields.ValueForField(notifyConfigFieldVar))
 	opt.NotifyDelete, _ = strconv.ParseBool(fields.ValueForField(notifyDeleteFieldVar))
-	opt.NotifyRetract, _ = strconv.ParseBool(fields.ValueForField(notifyRetractFieldVar))
 	opt.NotifySub, _ = strconv.ParseBool(fields.ValueForField(notifySubFieldVar))
 
 	return opt, nil
@@ -182,7 +179,6 @@ func (opt *Options) Map() (map[string]string, error) {
 	m[notificationTypeFieldVar] = opt.NotificationType
 	m[notifyConfigFieldVar] = strconv.FormatBool(opt.NotifyConfig)
 	m[notifyDeleteFieldVar] = strconv.FormatBool(opt.NotifyDelete)
-	m[notifyRetractFieldVar] = strconv.FormatBool(opt.NotifyRetract)
 	m[notifySubFieldVar] = strconv.FormatBool(opt.NotifySub)
 	return m, nil
 }
@@ -273,6 +269,16 @@ func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 		},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    notificationTypeFieldVar,
+		Type:   xep0004.ListSingle,
+		Label:  "Specify the delivery style for event notifications",
+		Values: []string{opt.NotificationType},
+		Options: []xep0004.Option{
+			{Value: "normal"},
+			{Value: "headline"},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    notifyConfigFieldVar,
 		Type:   xep0004.Boolean,
 		Label:  "Notify subscribers when the node configuration changes",
@@ -283,12 +289,6 @@ func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 		Type:   xep0004.Boolean,
 		Label:  "Notify subscribers when the node is deleted",
 		Values: []string{strconv.FormatBool(opt.NotifyDelete)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifyRetractFieldVar,
-		Type:   xep0004.Boolean,
-		Label:  "Notify subscribers when items are removed from the node",
-		Values: []string{strconv.FormatBool(opt.NotifyRetract)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    notifySubFieldVar,
@@ -356,10 +356,6 @@ func (opt *Options) ResultForm() *xep0004.DataForm {
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    notifyDeleteFieldVar,
 		Values: []string{strconv.FormatBool(opt.NotifyDelete)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    notifyRetractFieldVar,
-		Values: []string{strconv.FormatBool(opt.NotifyRetract)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    notifySubFieldVar,

@@ -75,6 +75,9 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 		}
 		optMap[opt] = value
 	}
+	if len(optMap) == 0 {
+		return nil, nil // node does not exist
+	}
 	opts, err := pubsubmodel.NewOptionsFromMap(optMap)
 	if err != nil {
 		return nil, err
@@ -298,8 +301,8 @@ func (s *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscri
 
 		// upsert subscription
 		_, err = sq.Insert("pubsub_subscriptions").
-			Columns("node_id", "subid", "jid", "subscription").
-			Values(nodeIdentifier, subscription.SubID, subscription.JID, subscription.Subscription).
+			Columns("node_id", "subid", "jid", "subscription", "updated_at", "created_at").
+			Values(nodeIdentifier, subscription.SubID, subscription.JID, subscription.Subscription, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE subid = ?, subscription = ?, updated_at = NOW()", subscription.SubID, subscription.Subscription).
 			RunWith(tx).Exec()
 		return err

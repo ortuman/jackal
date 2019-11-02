@@ -95,7 +95,6 @@ func TestOptions_New(t *testing.T) {
 	require.Equal(t, "headline", opt.NotificationType)
 	require.True(t, opt.NotifyConfig)
 	require.True(t, opt.NotifyDelete)
-	require.True(t, opt.NotifyRetract)
 	require.True(t, opt.NotifySub)
 
 	form2 := opt.ResultForm()

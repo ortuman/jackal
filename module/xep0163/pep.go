@@ -7,6 +7,7 @@ package xep0163
 
 import (
 	"crypto/sha256"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
@@ -63,6 +64,7 @@ var defaultNodeOptions = pubsubmodel.Options{
 	AccessModel:           pubsubmodel.Presence,
 	PublishModel:          pubsubmodel.Publishers,
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
+	NotificationType:      xmpp.HeadlineType,
 }
 
 type commandOptions struct {
@@ -373,7 +375,7 @@ func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.
 		if cmdCtx.node.Options.DeliverPayloads {
 			configElem.AppendElement(cmdCtx.node.Options.ResultForm().Element())
 		}
-		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host)
+		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -392,7 +394,7 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", cmdCtx.nodeID)
 
-		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host)
+		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -430,7 +432,7 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
 
 	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host)
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 	}
 
 	// compose response
@@ -475,7 +477,7 @@ func (x *Pep) unsubscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.None)
 
 	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host)
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 	}
 
 	// compose response
@@ -537,7 +539,7 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
 		notifyElem.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host)
+	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 
 	// compose response
 	publishElem := xmpp.NewElementName("publish")
@@ -708,27 +710,27 @@ func (x *Pep) updateSubscriptions(cmdCtx *commandContext, cmdElem xmpp.XElement,
 	_ = x.router.Route(iq.ResultIQ())
 }
 
-func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsubmodel.Affiliation, host string) {
+func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsubmodel.Affiliation, host, notificationType string) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, affiliation := range affiliations {
 		if affiliation.Affiliation != pubsubmodel.Owner {
 			continue
 		}
 		toJID, _ := jid.NewWithString(affiliation.JID, true)
-		eventMsg := eventMessage(notificationElem, hostJID, toJID)
+		eventMsg := eventMessage(notificationElem, hostJID, toJID, notificationType)
 
 		_ = x.router.Route(eventMsg)
 	}
 }
 
-func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host string) {
+func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host, notificationType string) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, subscription := range subscriptions {
 		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
 		toJID, _ := jid.NewWithString(subscription.JID, true)
-		eventMsg := eventMessage(notificationElem, hostJID, toJID)
+		eventMsg := eventMessage(notificationElem, hostJID, toJID, notificationType)
 
 		_ = x.router.Route(eventMsg)
 	}
@@ -913,8 +915,8 @@ func checkWhitelistAccess(jid string, affiliations []pubsubmodel.Affiliation) bo
 	return false
 }
 
-func eventMessage(payloadElem xmpp.XElement, hostJID, toJID *jid.JID) *xmpp.Message {
-	msg := xmpp.NewMessageType(uuid.New().String(), xmpp.HeadlineType)
+func eventMessage(payloadElem xmpp.XElement, hostJID, toJID *jid.JID, notificationType string) *xmpp.Message {
+	msg := xmpp.NewMessageType(uuid.New().String(), notificationType)
 	msg.SetFromJID(hostJID)
 	msg.SetToJID(toJID)
 	eventElem := xmpp.NewElementNamespace("event", pubSubEventNamespace)
@@ -962,5 +964,5 @@ func notSubscribedError(stanza xmpp.Stanza) xmpp.Stanza {
 func subscriptionID(jid, host, name string) string {
 	h := sha256.New()
 	h.Write([]byte(jid + host + name))
-	return string(h.Sum(nil))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
