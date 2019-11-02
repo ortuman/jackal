@@ -22,6 +22,7 @@ type Storage interface {
 	IsClusterCompatible() bool
 
 	userStorage
+	capabilitiesStorage
 	offlineStorage
 	rosterStorage
 	vCardStorage

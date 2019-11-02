@@ -7,11 +7,10 @@ package c2s
 
 import (
 	"crypto/tls"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/ortuman/jackal/runqueue"
 
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/cluster"
@@ -20,7 +19,9 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/session"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
@@ -691,7 +692,39 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		}
 		return
 	}
+	// process capabilities result
+	caps := iq.Elements().ChildNamespace("query", discoInfoNamespace)
+	if caps != nil && iq.IsResult() {
+		s.processCapabilitiesResponse(caps)
+		return
+	}
 	s.mods.ProcessIQ(iq)
+}
+
+func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
+	var node, ver string
+
+	nodeStr := query.Attributes().Get("node")
+	ss := strings.Split(nodeStr, "#")
+	if len(ss) != 2 {
+		log.Warnf("wrong node format: %s", nodeStr)
+		return
+	}
+	node = ss[0]
+	ver = ss[1]
+
+	log.Infof("storing capabilities... node: %s, ver: %s", node, ver)
+
+	// retrieve and store features
+	var features []string
+	featureElems := query.Elements().Children("feature")
+	for _, featureElem := range featureElems {
+		features = append(features, featureElem.Attributes().Get("var"))
+	}
+	if err := storage.InsertCapabilities(node, ver, features); err != nil {
+		log.Warnf("%v", err)
+		return
+	}
 }
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
@@ -868,8 +901,8 @@ func (s *inStream) restartSession() {
 
 func (s *inStream) setContextValue(key string, value interface{}) {
 	s.contextMu.Lock()
-	defer s.contextMu.Unlock()
 	s.context[key] = value
+	s.contextMu.Unlock()
 
 	// notify the whole roster about the context update.
 	if c := s.router.Cluster(); c != nil {
@@ -886,9 +919,32 @@ func (s *inStream) setContextValue(key string, value interface{}) {
 
 func (s *inStream) setPresence(presence *xmpp.Presence) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.presence = presence
+	s.mu.Unlock()
 
+	// request entity capabilities if needed
+	if caps := presence.Capabilities(); caps != nil {
+		ok, err := storage.HasCapabilities(caps.Node, caps.Ver)
+		switch err {
+		case nil:
+			if !ok {
+				srvJID, _ := jid.NewWithString(s.Domain(), true)
+
+				iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
+				iq.SetFromJID(srvJID)
+				iq.SetToJID(s.JID())
+
+				query := xmpp.NewElementNamespace("query", discoInfoNamespace)
+				query.SetAttribute("node", caps.Node+"#"+caps.Ver)
+				iq.AppendElement(query)
+
+				log.Infof("requesting capabilities... node: %s, ver: %s", caps.Node, caps.Ver)
+				s.writeElement(iq)
+			}
+		default:
+			log.Warnf("%v", err)
+		}
+	}
 	// notify the whole roster about the presence update.
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{

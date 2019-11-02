@@ -14,6 +14,8 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+const capabilitiesNamespace = "http://jabber.org/protocol/caps"
+
 const (
 	// AvailableType represents an 'available' Presence type.
 	AvailableType = ""
@@ -36,6 +38,13 @@ const (
 	// ProbeType represents a 'probe' Presence type.
 	ProbeType = "probe"
 )
+
+// Capabilities represents presence entity capabilities
+type Capabilities struct {
+	Node string
+	Hash string
+	Ver  string
+}
 
 // ShowState represents Presence show state.
 type ShowState int
@@ -166,6 +175,20 @@ func (p *Presence) ShowState() ShowState {
 // Priority returns presence stanza priority value.
 func (p *Presence) Priority() int8 {
 	return p.priority
+}
+
+// Capabilities returns presence stanza capabilities element
+func (p *Presence) Capabilities() *Capabilities {
+	c := p.Elements().ChildNamespace("c", capabilitiesNamespace)
+	if c == nil {
+		return nil
+	}
+	attribs := c.Attributes()
+	return &Capabilities{
+		Node: attribs.Get("node"),
+		Hash: attribs.Get("hash"),
+		Ver:  attribs.Get("ver"),
+	}
 }
 
 func isPresenceType(presenceType string) bool {

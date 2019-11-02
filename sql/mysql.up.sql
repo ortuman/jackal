@@ -14,6 +14,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at       DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- capabilities
+
+CREATE TABLE IF NOT EXISTS capabilities (
+    node       VARCHAR(256) NOT NULL,
+    ver        VARCHAR(256) NOT NULL,
+    features   TEXT,
+    created_at DATETIME NOT NULL,
+
+    PRIMARY KEY (node, ver)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- roster_notifications
 
 CREATE TABLE IF NOT EXISTS roster_notifications (

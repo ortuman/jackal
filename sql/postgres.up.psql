@@ -45,6 +45,19 @@ CREATE TABLE IF NOT EXISTS users (
 
 SELECT enable_updated_at('users');
 
+-- capabilities
+
+CREATE TABLE IF NOT EXISTS capabilities (
+    node       VARCHAR(1023) NOT NULL,
+    ver        VARCHAR(1023) NOT NULL,
+    features   TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (node, ver)
+);
+
+SELECT enable_updated_at('capabilities');
+
 -- roster_notifications
 
 CREATE TABLE IF NOT EXISTS roster_notifications (

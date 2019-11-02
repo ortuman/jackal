@@ -30,8 +30,10 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
 // <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [DONE]
+
+// send last published item!!!
 
 const (
 	pubSubNamespace      = "http://jabber.org/protocol/pubsub"

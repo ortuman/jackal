@@ -16,4 +16,5 @@ DROP TABLE IF EXISTS roster_versions;
 DROP TABLE IF EXISTS roster_groups;
 DROP TABLE IF EXISTS roster_items;
 DROP TABLE IF EXISTS roster_notifications;
+DROP TABLE IF EXISTS capabilities;
 DROP TABLE IF EXISTS users;
