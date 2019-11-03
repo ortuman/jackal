@@ -924,7 +924,7 @@ func (s *inStream) setPresence(presence *xmpp.Presence) {
 	s.mu.Unlock()
 
 	// request entity capabilities if needed
-	if caps := presence.Capabilities(); caps != nil {
+	if caps := presence.Capabilities(); presence.IsAvailable() && caps != nil {
 		ok, err := storage.HasCapabilities(caps.Node, caps.Ver)
 		switch err {
 		case nil:
