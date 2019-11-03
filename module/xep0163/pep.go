@@ -414,11 +414,12 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	// create subscription
 	subID := subscriptionID(subJID, cmdCtx.host, cmdCtx.nodeID)
 
-	err := storage.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	sub := pubsubmodel.Subscription{
 		SubID:        subID,
 		JID:          subJID,
 		Subscription: pubsubmodel.Subscribed,
-	}, cmdCtx.host, cmdCtx.nodeID)
+	}
+	err := storage.UpsertPubSubNodeSubscription(&sub, cmdCtx.host, cmdCtx.nodeID)
 
 	if err != nil {
 		log.Error(err)
@@ -441,13 +442,12 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	// send last node item
 	switch cmdCtx.node.Options.SendLastPublishedItem {
 	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-		items, err := storage.FetchPubSubNodeItems(cmdCtx.host, cmdCtx.nodeID)
+		err := x.sendLastPublishedItem(sub, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
 			return
 		}
-		println(items)
 	default:
 		break
 	}
@@ -903,6 +903,23 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 		Subscription: pubsubmodel.Subscribed,
 	}
 	return storage.UpsertPubSubNodeSubscription(ownerSub, node.Host, node.Name)
+}
+
+func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, host, nodeID, notificationType string) error {
+	items, err := storage.FetchPubSubNodeItems(host, nodeID)
+	if err != nil {
+		return err
+	}
+	if len(items) > 0 {
+		lastItem := items[len(items)-1]
+
+		itemsEl := xmpp.NewElementName("items")
+		itemsEl.SetAttribute("node", nodeID)
+		itemsEl.AppendElement(lastItem.Payload)
+
+		x.notifySubscribers(itemsEl, []pubsubmodel.Subscription{sub}, host, notificationType)
+	}
+	return nil
 }
 
 func checkPresenceAccess(host, jid string) (bool, error) {
