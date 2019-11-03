@@ -168,38 +168,32 @@ func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 			Values(nodeIdentifier, item.ID, rawPayload, item.Publisher, nowExpr, nowExpr).
 			Suffix("ON DUPLICATE KEY UPDATE payload = ?, publisher = ?, updated_at = NOW()", rawPayload, item.Publisher).
 			RunWith(tx).Exec()
-
-		// get total items count
-		var itemsCount int
-
-		err = sq.Select("COUNT(*)").
-			From("pubsub_items").
-			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).QueryRow().Scan(&itemsCount)
 		if err != nil {
 			return err
 		}
 
-		// check if maximum item count was reached
-		if itemsCount == maxNodeItems {
-			// fetch oldest item timestamp
-			var oldestCreatedAt string
-
-			err := sq.Select("MIN(created_at)").
-				From("pubsub_items").
-				Where(sq.Eq{"node_id": nodeIdentifier}).
-				RunWith(tx).QueryRow().Scan(&oldestCreatedAt)
-			if err != nil {
-				return err
-			}
-			// delete oldest item
-			_, err = sq.Delete("pubsub_items").
-				Where(sq.And{sq.Eq{"node_id": nodeIdentifier}, sq.Eq{"created_at": oldestCreatedAt}}).
-				RunWith(tx).Exec()
-			if err != nil {
-				return err
-			}
+		// fetch valid identifiers
+		rows, err := sq.Select("item_id").
+			From("pubsub_items").
+			Where(sq.Eq{"node_id": nodeIdentifier}).
+			OrderBy("created_at DESC").
+			Limit(uint64(maxNodeItems)).RunWith(tx).Query()
+		if err != nil {
+			return err
 		}
+		defer func() { _ = rows.Close() }()
+
+		var validIdentifiers []string
+		for rows.Next() {
+			var identifier string
+			if err := rows.Scan(&identifier); err != nil {
+				return err
+			}
+			validIdentifiers = append(validIdentifiers, identifier)
+		}
+		// delete older items
+		_, err = sq.Delete("pubsub_items").
+			Where(sq.NotEq{"item_id": validIdentifiers}).RunWith(tx).Exec()
 		return err
 	})
 }

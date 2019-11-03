@@ -125,16 +125,12 @@ func TestMySQLUpsertPubSubNodeItem(t *testing.T) {
 		WithArgs("1", "abc1234", payload.String(), "ortuman@jackal.im", payload.String(), "ortuman@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	mock.ExpectQuery("SELECT COUNT(.+) FROM pubsub_items WHERE node_id = (.+)").
+	mock.ExpectQuery("SELECT item_id FROM pubsub_items WHERE node_id = \\? ORDER BY created_at DESC LIMIT 1").
 		WithArgs("1").
-		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow("1"))
+		WillReturnRows(sqlmock.NewRows([]string{"item_id"}).AddRow("1").AddRow("2"))
 
-	mock.ExpectQuery("SELECT MIN(.+) FROM pubsub_items WHERE node_id = (.+)").
-		WithArgs("1").
-		WillReturnRows(sqlmock.NewRows([]string{"MIN(created_at)"}).AddRow("2019-07-14 10:24:42"))
-
-	mock.ExpectExec("DELETE FROM pubsub_items WHERE (.+)").
-		WithArgs("1", "2019-07-14 10:24:42").
+	mock.ExpectExec("DELETE FROM pubsub_items WHERE item_id NOT IN \\(.+\\)").
+		WithArgs("1", "2").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
