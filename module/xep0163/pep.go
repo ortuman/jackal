@@ -63,6 +63,8 @@ var defaultNodeOptions = pubsubmodel.Options{
 	DeliverPayloads:       true,
 	AccessModel:           pubsubmodel.Presence,
 	PublishModel:          pubsubmodel.Publishers,
+	PersistItems:          true,
+	MaxItems:              1,
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
 	NotificationType:      xmpp.HeadlineType,
 }
@@ -76,11 +78,12 @@ type commandOptions struct {
 }
 
 type commandContext struct {
-	host          string
-	nodeID        string
-	node          *pubsubmodel.Node
-	affiliations  []pubsubmodel.Affiliation
-	subscriptions []pubsubmodel.Subscription
+	host           string
+	nodeID         string
+	isAccountOwner bool
+	node           *pubsubmodel.Node
+	affiliations   []pubsubmodel.Affiliation
+	subscriptions  []pubsubmodel.Subscription
 }
 
 type Pep struct {
@@ -435,9 +438,23 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, cmdCtx.node.Options.NotificationType)
 	}
 
+	// send last node item
+	switch cmdCtx.node.Options.SendLastPublishedItem {
+	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
+		items, err := storage.FetchPubSubNodeItems(cmdCtx.host, cmdCtx.nodeID)
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+		println(items)
+	default:
+		break
+	}
+
 	// compose response
 	iqRes := iq.ResultIQ()
-	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
 	iqRes.AppendElement(pubSubElem)
 
@@ -482,7 +499,7 @@ func (x *Pep) unsubscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.
 
 	// compose response
 	iqRes := iq.ResultIQ()
-	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
 	pubSubElem.AppendElement(subscriptionElem)
 	iqRes.AppendElement(pubSubElem)
 
@@ -502,6 +519,10 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	}
 	// auto create node
 	if cmdCtx.node == nil {
+		if !cmdCtx.isAccountOwner {
+			_ = x.router.Route(iq.ForbiddenError())
+			return
+		}
 		cmdCtx.node = &pubsubmodel.Node{
 			Host:    cmdCtx.host,
 			Name:    cmdCtx.nodeID,
@@ -549,7 +570,7 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	publishElem.AppendElement(resItemElem)
 
 	iqRes := iq.ResultIQ()
-	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
 	pubSubElem.AppendElement(publishElem)
 	iqRes.AppendElement(pubSubElem)
 
@@ -587,7 +608,7 @@ func (x *Pep) retrieveItems(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmp
 
 	// compose response
 	iqRes := iq.ResultIQ()
-	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubOwnerNamespace)
+	pubSubElem := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
 	itemsElem := xmpp.NewElementName("items")
 	itemsElem.SetAttribute("node", cmdCtx.nodeID)
 
@@ -749,6 +770,7 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 
 	ctx.host = host
 	ctx.nodeID = nodeID
+	ctx.isAccountOwner = fromJID == host
 
 	// fetch node
 	node, err := storage.FetchPubSubNode(host, nodeID)
@@ -757,8 +779,12 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	if node == nil && opts.failOnNotFound {
-		_ = x.router.Route(iq.ItemNotFoundError())
+	if node == nil {
+		if opts.failOnNotFound {
+			_ = x.router.Route(iq.ItemNotFoundError())
+		} else {
+			fn(&ctx)
+		}
 		return
 	}
 	ctx.node = node
@@ -775,7 +801,7 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 		}
 	}
 	// check access
-	if opts.checkAccess {
+	if opts.checkAccess && !ctx.isAccountOwner {
 		for _, aff := range affiliations {
 			if aff.JID == fromJID && aff.Affiliation == pubsubmodel.Outcast {
 				_ = x.router.Route(iq.ForbiddenError())
@@ -908,7 +934,11 @@ func checkRosterAccess(host, jid string, allowedGroups []string) (bool, error) {
 
 func checkWhitelistAccess(jid string, affiliations []pubsubmodel.Affiliation) bool {
 	for _, aff := range affiliations {
-		if aff.JID == jid && aff.Affiliation == pubsubmodel.Member {
+		if aff.JID != jid {
+			continue
+		}
+		switch aff.Affiliation {
+		case pubsubmodel.Owner, pubsubmodel.Member:
 			return true
 		}
 	}
