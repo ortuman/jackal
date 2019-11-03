@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/component"
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
@@ -721,7 +722,7 @@ func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
 	for _, featureElem := range featureElems {
 		features = append(features, featureElem.Attributes().Get("var"))
 	}
-	if err := storage.InsertCapabilities(node, ver, features); err != nil {
+	if err := storage.InsertCapabilities(node, ver, &model.Capabilities{Features: features}); err != nil {
 		log.Warnf("%v", err)
 		return
 	}

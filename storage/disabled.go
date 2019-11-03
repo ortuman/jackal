@@ -19,11 +19,11 @@ func (*disabledStorage) DeleteUser(username string) error               { return
 func (*disabledStorage) FetchUser(username string) (*model.User, error) { return nil, nil }
 func (*disabledStorage) UserExists(username string) (bool, error)       { return false, nil }
 
-func (*disabledStorage) InsertCapabilities(node, ver string, features []string) error {
+func (*disabledStorage) InsertCapabilities(node, ver string, caps *model.Capabilities) error {
 	return nil
 }
 func (*disabledStorage) HasCapabilities(node, ver string) (bool, error) { return false, nil }
-func (*disabledStorage) FetchCapabilities(node, ver string) ([]string, error) {
+func (*disabledStorage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
 	return nil, nil
 }
 

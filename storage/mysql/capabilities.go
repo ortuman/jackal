@@ -6,13 +6,19 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/ortuman/jackal/model"
 )
 
-func (s *Storage) InsertCapabilities(node, ver string, features []string) error {
-	b, err := json.Marshal(&features)
+func (s *Storage) InsertCapabilities(node, ver string, caps *model.Capabilities) error {
+	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
 	}
+	sql3, _, _ := sq.Insert("capabilities").
+		Columns("node", "ver", "features", "created_at").
+		Values(node, ver, b, nowExpr).ToSql()
+	println(sql3)
+
 	_, err = sq.Insert("capabilities").
 		Columns("node", "ver", "features", "created_at").
 		Values(node, ver, b, nowExpr).
@@ -33,18 +39,18 @@ func (s *Storage) HasCapabilities(node, ver string) (bool, error) {
 	}
 }
 
-func (s *Storage) FetchCapabilities(node, ver string) ([]string, error) {
+func (s *Storage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
 		RunWith(s.db).QueryRow().Scan(&b)
 	switch err {
 	case nil:
-		var features []string
-		if err := json.NewDecoder(strings.NewReader(b)).Decode(&features); err != nil {
+		var caps model.Capabilities
+		if err := json.NewDecoder(strings.NewReader(b)).Decode(&caps.Features); err != nil {
 			return nil, err
 		}
-		return features, nil
+		return &caps, nil
 	case sql.ErrNoRows:
 		return nil, nil
 	default:
