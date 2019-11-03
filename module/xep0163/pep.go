@@ -448,8 +448,6 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 			_ = x.router.Route(iq.InternalServerError())
 			return
 		}
-	default:
-		break
 	}
 
 	// compose response
