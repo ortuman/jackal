@@ -7,7 +7,6 @@ package c2s
 
 import (
 	"crypto/tls"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,12 +16,10 @@ import (
 	"github.com/ortuman/jackal/component"
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/session"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
@@ -693,15 +690,10 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 		}
 		return
 	}
-	// process capabilities result
-	caps := iq.Elements().ChildNamespace("query", discoInfoNamespace)
-	if caps != nil && iq.IsResult() {
-		s.processCapabilitiesResponse(caps)
-		return
-	}
 	s.mods.ProcessIQ(iq)
 }
 
+/*
 func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
 	var node, ver string
 
@@ -726,7 +718,7 @@ func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
 		log.Warnf("%v", err)
 		return
 	}
-}
+}*/
 
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if presence.ToJID().IsFullWithUser() {
@@ -923,30 +915,7 @@ func (s *inStream) setPresence(presence *xmpp.Presence) {
 	s.presence = presence
 	s.mu.Unlock()
 
-	// request entity capabilities if needed
-	if caps := presence.Capabilities(); presence.IsAvailable() && caps != nil {
-		ok, err := storage.HasCapabilities(caps.Node, caps.Ver)
-		switch err {
-		case nil:
-			if !ok {
-				srvJID, _ := jid.NewWithString(s.Domain(), true)
-
-				iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
-				iq.SetFromJID(srvJID)
-				iq.SetToJID(s.JID())
-
-				query := xmpp.NewElementNamespace("query", discoInfoNamespace)
-				query.SetAttribute("node", caps.Node+"#"+caps.Ver)
-				iq.AppendElement(query)
-
-				log.Infof("requesting capabilities... node: %s, ver: %s", caps.Node, caps.Ver)
-				s.writeElement(iq)
-			}
-		default:
-			log.Warnf("%v", err)
-		}
-	}
-	// notify the whole roster about the presence update.
+	// notify the whole cluster about the presence update
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdatePresence,

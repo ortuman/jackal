@@ -25,7 +25,6 @@ const (
 	sessionNamespace          = "urn:ietf:params:xml:ns:xmpp-session"
 	saslNamespace             = "urn:ietf:params:xml:ns:xmpp-sasl"
 	blockedErrorNamespace     = "urn:xmpp:blocking:errors"
-	discoInfoNamespace        = "http://jabber.org/protocol/disco#info"
 )
 
 type c2sServer interface {

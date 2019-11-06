@@ -14,7 +14,7 @@ import (
 
 func TestCapabilities(t *testing.T) {
 	var c1, c2 Capabilities
-	c1 = Capabilities{[]string{"ns"}}
+	c1 = Capabilities{Node: "n", Ver: "v", Features: []string{"ns"}}
 	buf := new(bytes.Buffer)
 	require.Nil(t, c1.ToBytes(buf))
 	require.Nil(t, c2.FromBytes(buf))

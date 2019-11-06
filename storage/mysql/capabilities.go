@@ -9,19 +9,14 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (s *Storage) InsertCapabilities(node, ver string, caps *model.Capabilities) error {
+func (s *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
 	}
-	sql3, _, _ := sq.Insert("capabilities").
-		Columns("node", "ver", "features", "created_at").
-		Values(node, ver, b, nowExpr).ToSql()
-	println(sql3)
-
 	_, err = sq.Insert("capabilities").
 		Columns("node", "ver", "features", "created_at").
-		Values(node, ver, b, nowExpr).
+		Values(caps.Node, caps.Ver, b, nowExpr).
 		RunWith(s.db).Exec()
 	return err
 }

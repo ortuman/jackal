@@ -13,9 +13,9 @@ func TestBadgerDB_Capabilities(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
-	caps := model.Capabilities{Features: []string{"ns"}}
+	caps := model.Capabilities{Node: "n1", Ver: "1234AB", Features: []string{"ns"}}
 
-	err := h.db.InsertCapabilities("n1", "1234AB", &caps)
+	err := h.db.InsertCapabilities(&caps)
 	require.Nil(t, err)
 
 	cs, err := h.db.FetchCapabilities("n1", "1234AB")

@@ -24,7 +24,7 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.InsertCapabilities("n1", "1234A", &model.Capabilities{Features: features})
+	err := s.InsertCapabilities(&model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -36,7 +36,7 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b).
 		WillReturnError(errGeneric)
 
-	err = s.InsertCapabilities("n1", "1234A", &model.Capabilities{Features: features})
+	err = s.InsertCapabilities(&model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 

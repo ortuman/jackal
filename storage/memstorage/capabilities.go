@@ -5,13 +5,13 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-func (m *Storage) InsertCapabilities(node, ver string, caps *model.Capabilities) error {
+func (m *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	b, err := serializer.Serialize(caps)
 	if err != nil {
 		return err
 	}
 	return m.inWriteLock(func() error {
-		m.bytes[capabilitiesKey(node, ver)] = b
+		m.bytes[capabilitiesKey(caps.Node, caps.Ver)] = b
 		return nil
 	})
 }

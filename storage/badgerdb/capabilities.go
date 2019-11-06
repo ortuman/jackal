@@ -5,9 +5,9 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (b *Storage) InsertCapabilities(node, ver string, caps *model.Capabilities) error {
+func (b *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(caps, b.capabilitiesKey(node, ver), tx)
+		return b.upsert(caps, b.capabilitiesKey(caps.Node, caps.Ver), tx)
 	})
 }
 

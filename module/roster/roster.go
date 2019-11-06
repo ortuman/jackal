@@ -24,6 +24,8 @@ import (
 
 const rosterNamespace = "jabber:iq:roster"
 
+const discoInfoNamespace = "http://jabber.org/protocol/disco#info"
+
 const rosterRequestedCtxKey = "roster:requested"
 
 // Config represents a roster configuration.
@@ -33,18 +35,20 @@ type Config struct {
 
 // Roster represents a roster server stream module.
 type Roster struct {
-	cfg        *Config
-	router     *router.Router
-	onlineJIDs sync.Map
-	runQueue   *runqueue.RunQueue
+	cfg             *Config
+	router          *router.Router
+	onlineJIDs      sync.Map
+	activeDiscoReqs map[string]string
+	runQueue        *runqueue.RunQueue
 }
 
 // New returns a roster server stream module.
 func New(cfg *Config, router *router.Router) *Roster {
 	r := &Roster{
-		cfg:      cfg,
-		router:   router,
-		runQueue: runqueue.New("roster"),
+		cfg:             cfg,
+		router:          router,
+		activeDiscoReqs: make(map[string]string),
+		runQueue:        runqueue.New("roster"),
 	}
 	return r
 }
@@ -52,7 +56,9 @@ func New(cfg *Config, router *router.Router) *Roster {
 // MatchesIQ returns whether or not an IQ should be
 // processed by the roster module.
 func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
-	return iq.Elements().ChildNamespace("query", rosterNamespace) != nil
+	isRosterIQ := iq.Elements().ChildNamespace("query", rosterNamespace) != nil
+	isDiscoInfoResult := false // TODO(ortuman): implement me!
+	return isRosterIQ || isDiscoInfoResult
 }
 
 // ProcessIQ processes a roster IQ taking according actions
@@ -580,6 +586,13 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 	// keep track of available presences
 	if presence.IsAvailable() {
 		log.Infof("processing 'available' - user: %s", fromJID)
+
+		// request entity capabilities if needed
+		if caps := presence.Capabilities(); caps != nil {
+			if err := x.requestCapabilities(caps.Node, caps.Ver, userJID); err != nil {
+				log.Warnf("%v", err)
+			}
+		}
 		if _, loaded := x.onlineJIDs.LoadOrStore(fromJID.String(), presence); !loaded {
 			if replyOnBehalf {
 				if err := x.deliverRosterPresences(userJID); err != nil {
@@ -595,6 +608,30 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 		return x.broadcastPresence(presence)
 	}
 	return x.router.Route(presence)
+}
+
+func (x *Roster) requestCapabilities(node, ver string, userJID *jid.JID) error {
+	ok, err := storage.HasCapabilities(node, ver)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil // nothing to do here
+	}
+	srvJID, _ := jid.NewWithString(userJID.Domain(), true)
+
+	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
+	iq.SetFromJID(srvJID)
+	iq.SetToJID(userJID)
+
+	query := xmpp.NewElementNamespace("query", discoInfoNamespace)
+	query.SetAttribute("node", node+"#"+ver)
+	iq.AppendElement(query)
+
+	log.Infof("requesting capabilities... node: %s, ver: %s", node, ver)
+
+	_ = x.router.Route(iq)
+	return nil
 }
 
 func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
