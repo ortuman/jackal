@@ -208,8 +208,9 @@ func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *jid.JID, ris []roste
 		// roster disabled
 		return
 	}
-	presences := x.roster.OnlinePresencesMatchingJID(jid)
-	for _, presence := range presences {
+	onlinePresences := x.roster.OnlinePresencesMatchingJID(jid)
+	for _, onlinePresence := range onlinePresences {
+		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {
 			continue
 		}

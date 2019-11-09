@@ -44,36 +44,6 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 	require.Equal(t, errGeneric, err)
 }
 
-func TestPgSQLHasCapabilities(t *testing.T) {
-	s, mock := NewMock()
-	rows := sqlmock.NewRows([]string{"COUNT(*)"})
-	rows.AddRow(1)
-
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM capabilities WHERE \\(node = . AND ver = .\\)").
-		WithArgs("n1", "1234A").
-		WillReturnRows(rows)
-
-	ok, err := s.HasCapabilities("n1", "1234A")
-
-	require.Nil(t, mock.ExpectationsWereMet())
-
-	require.Nil(t, err)
-	require.True(t, ok)
-
-	// error case
-	s, mock = NewMock()
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM capabilities WHERE \\(node = . AND ver = .\\)").
-		WithArgs("n1", "1234A").
-		WillReturnError(errGeneric)
-
-	ok, err = s.HasCapabilities("n1", "1234A")
-
-	require.Nil(t, mock.ExpectationsWereMet())
-
-	require.NotNil(t, err)
-	require.False(t, ok)
-}
-
 func TestPgSQLFetchCapabilities(t *testing.T) {
 	s, mock := NewMock()
 	rows := sqlmock.NewRows([]string{"features"})

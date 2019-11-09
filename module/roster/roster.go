@@ -39,8 +39,15 @@ type Roster struct {
 	cfg             *Config
 	router          *router.Router
 	onlineJIDs      sync.Map
+	capabilities    sync.Map
 	activeDiscoInfo sync.Map
 	runQueue        *runqueue.RunQueue
+}
+
+// OnlinePresence represents an available presence
+type OnlinePresence struct {
+	Presence *xmpp.Presence
+	Caps     *model.Capabilities
 }
 
 // New returns a roster server stream module.
@@ -87,13 +94,24 @@ func (x *Roster) ProcessPresence(presence *xmpp.Presence) {
 }
 
 // OnlinePresencesMatchingJID returns current online presences matching a given JID.
-func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []*xmpp.Presence {
-	var ret []*xmpp.Presence
+func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []OnlinePresence {
+	var ret []OnlinePresence
 	x.onlineJIDs.Range(func(_, value interface{}) bool {
 		switch presence := value.(type) {
 		case *xmpp.Presence:
 			if x.onlineJIDMatchesJID(presence.FromJID(), j) {
-				ret = append(ret, presence)
+				var onlinePresence OnlinePresence
+
+				onlinePresence.Presence = presence
+				if c := presence.Capabilities(); c != nil {
+					if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
+						switch caps := caps.(type) {
+						case *model.Capabilities:
+							onlinePresence.Caps = caps
+						}
+					}
+				}
+				ret = append(ret, onlinePresence)
 			}
 		}
 		return true
@@ -147,10 +165,16 @@ func (x *Roster) processCapabilitiesIQ(query xmpp.XElement) {
 	for _, featureElem := range featureElems {
 		features = append(features, featureElem.Attributes().Get("var"))
 	}
-	if err := storage.InsertCapabilities(&model.Capabilities{Node: node, Ver: ver, Features: features}); err != nil {
+	caps := &model.Capabilities{
+		Node:     node,
+		Ver:      ver,
+		Features: features,
+	}
+	if err := storage.InsertCapabilities(caps); err != nil { // save into disk
 		log.Warnf("%v", err)
 		return
 	}
+	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)
 }
 
 func (x *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) error {
@@ -167,7 +191,7 @@ func (x *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) er
 		stm.SendElement(iq.InternalServerError())
 		return err
 	}
-	v := x.parseVer(query.Attributes().Get("ver"))
+	v := parseVer(query.Attributes().Get("ver"))
 
 	res := iq.ResultIQ()
 	if v == 0 || v < ver.DeletionVer {
@@ -200,12 +224,12 @@ func (x *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) er
 }
 
 func (x *Roster) updateRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) error {
-	itms := query.Elements().Children("item")
-	if len(itms) != 1 {
+	items := query.Elements().Children("item")
+	if len(items) != 1 {
 		stm.SendElement(iq.BadRequestError())
 		return nil
 	}
-	ri, err := rostermodel.NewItem(itms[0])
+	ri, err := rostermodel.NewItem(items[0])
 	if err != nil {
 		stm.SendElement(iq.BadRequestError())
 		return err
@@ -620,12 +644,23 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 	if presence.IsAvailable() {
 		log.Infof("processing 'available' - user: %s", fromJID)
 
-		// request entity capabilities if needed
-		if caps := presence.Capabilities(); caps != nil {
-			if err := x.requestCapabilities(caps.Node, caps.Ver, userJID); err != nil {
-				log.Warnf("%v", err)
+		// check if caps were previously cached
+		if c := presence.Capabilities(); c != nil {
+			capsKey := capabilitiesKey(c.Node, c.Ver)
+			_, ok := x.capabilities.Load(capsKey)
+			if !ok {
+				caps, err := storage.FetchCapabilities(c.Node, c.Ver) // try fetching from disk
+				if err != nil {
+					return err
+				}
+				if caps != nil {
+					x.capabilities.Store(capsKey, caps) // cache capabilities
+				} else {
+					x.requestCapabilities(caps.Node, caps.Ver, userJID) // request capabilities
+				}
 			}
 		}
+		// store available presence
 		if _, loaded := x.onlineJIDs.LoadOrStore(fromJID.String(), presence); !loaded {
 			if replyOnBehalf {
 				if err := x.deliverRosterPresences(userJID); err != nil {
@@ -643,14 +678,7 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 	return x.router.Route(presence)
 }
 
-func (x *Roster) requestCapabilities(node, ver string, userJID *jid.JID) error {
-	ok, err := storage.HasCapabilities(node, ver)
-	if err != nil {
-		return err
-	}
-	if ok {
-		return nil // nothing to do here
-	}
+func (x *Roster) requestCapabilities(node, ver string, userJID *jid.JID) {
 	srvJID, _ := jid.NewWithString(userJID.Domain(), true)
 
 	iqID := uuid.New()
@@ -667,7 +695,6 @@ func (x *Roster) requestCapabilities(node, ver string, userJID *jid.JID) error {
 	log.Infof("requesting capabilities... node: %s, ver: %s", node, ver)
 
 	_ = x.router.Route(iq)
-	return nil
 }
 
 func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
@@ -813,10 +840,14 @@ func (x *Roster) routePresencesFrom(from *jid.JID, to *jid.JID, presenceType str
 	}
 }
 
-func (x *Roster) parseVer(ver string) int {
+func parseVer(ver string) int {
 	if len(ver) > 0 && ver[0] == 'v' {
 		v, _ := strconv.Atoi(ver[1:])
 		return v
 	}
 	return 0
+}
+
+func capabilitiesKey(node, ver string) string {
+	return node + "#" + ver
 }

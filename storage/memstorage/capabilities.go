@@ -16,17 +16,6 @@ func (m *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	})
 }
 
-func (m *Storage) HasCapabilities(node, ver string) (bool, error) {
-	var b []byte
-	if err := m.inReadLock(func() error {
-		b = m.bytes[capabilitiesKey(node, ver)]
-		return nil
-	}); err != nil {
-		return false, err
-	}
-	return b != nil, nil
-}
-
 func (m *Storage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {

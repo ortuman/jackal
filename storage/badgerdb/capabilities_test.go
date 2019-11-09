@@ -23,10 +23,6 @@ func TestBadgerDB_Capabilities(t *testing.T) {
 	require.NotNil(t, cs)
 	require.Equal(t, "ns", cs.Features[0])
 
-	exists, err := h.db.HasCapabilities("n1", "1234AB")
-	require.Nil(t, err)
-	require.True(t, exists)
-
 	cs2, err := h.db.FetchCapabilities("n2", "1234AB")
 	require.Nil(t, cs2)
 	require.Nil(t, err)

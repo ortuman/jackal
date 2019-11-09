@@ -21,19 +21,6 @@ func (s *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	return err
 }
 
-func (s *Storage) HasCapabilities(node, ver string) (bool, error) {
-	var count int
-	err := sq.Select("COUNT(*)").From("capabilities").
-		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
-		RunWith(s.db).QueryRow().Scan(&count)
-	switch err {
-	case nil:
-		return count > 0, nil
-	default:
-		return false, err
-	}
-}
-
 func (s *Storage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").

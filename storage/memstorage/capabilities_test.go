@@ -18,17 +18,6 @@ func TestMemoryStorage_InsertCapabilities(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestMemoryStorage_HasCapabilities(t *testing.T) {
-	s := New()
-	s.EnableMockedError()
-	_, err := s.HasCapabilities("n1", "1234A")
-	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
-	ok, err := s.HasCapabilities("n1", "1234A")
-	require.Nil(t, err)
-	require.False(t, ok)
-}
-
 func TestMemoryStorage_FetchCapabilities(t *testing.T) {
 	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
 	s := New()

@@ -22,7 +22,6 @@ func (*disabledStorage) UserExists(username string) (bool, error)       { return
 func (*disabledStorage) InsertCapabilities(caps *model.Capabilities) error {
 	return nil
 }
-func (*disabledStorage) HasCapabilities(node, ver string) (bool, error) { return false, nil }
 func (*disabledStorage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
 	return nil, nil
 }
