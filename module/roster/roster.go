@@ -8,6 +8,7 @@ package roster
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/ortuman/jackal/log"
@@ -38,38 +39,39 @@ type Roster struct {
 	cfg             *Config
 	router          *router.Router
 	onlineJIDs      sync.Map
-	activeDiscoReqs map[string]string
+	activeDiscoInfo sync.Map
 	runQueue        *runqueue.RunQueue
 }
 
 // New returns a roster server stream module.
 func New(cfg *Config, router *router.Router) *Roster {
 	r := &Roster{
-		cfg:             cfg,
-		router:          router,
-		activeDiscoReqs: make(map[string]string),
-		runQueue:        runqueue.New("roster"),
+		cfg:      cfg,
+		router:   router,
+		runQueue: runqueue.New("roster"),
 	}
 	return r
 }
 
-// MatchesIQ returns whether or not an IQ should be
-// processed by the roster module.
+// MatchesIQ returns whether or not an IQ should be processed by the roster module.
 func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 	isRosterIQ := iq.Elements().ChildNamespace("query", rosterNamespace) != nil
-	isDiscoInfoResult := false // TODO(ortuman): implement me!
-	return isRosterIQ || isDiscoInfoResult
+	return isRosterIQ || x.isDiscoInfoResult(iq)
 }
 
-// ProcessIQ processes a roster IQ taking according actions
-// over the associated stream.
+// ProcessIQ processes a roster IQ taking according actions over the associated stream.
 func (x *Roster) ProcessIQ(iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
+		// process capabilities result
+		if caps := iq.Elements().ChildNamespace("query", discoInfoNamespace); caps != nil {
+			x.processCapabilitiesIQ(caps)
+			return
+		}
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
 		}
-		if err := x.processIQ(iq, stm); err != nil {
+		if err := x.processRosterIQ(iq, stm); err != nil {
 			log.Error(err)
 		}
 	})
@@ -107,7 +109,12 @@ func (x *Roster) Shutdown() error {
 	return nil
 }
 
-func (x *Roster) processIQ(iq *xmpp.IQ, stm stream.C2S) error {
+func (x *Roster) isDiscoInfoResult(iq *xmpp.IQ) bool {
+	_, ok := x.activeDiscoInfo.Load(iq.ID())
+	return ok && iq.IsResult()
+}
+
+func (x *Roster) processRosterIQ(iq *xmpp.IQ, stm stream.C2S) error {
 	var err error
 	q := iq.Elements().ChildNamespace("query", rosterNamespace)
 	if iq.IsGet() {
@@ -118,6 +125,32 @@ func (x *Roster) processIQ(iq *xmpp.IQ, stm stream.C2S) error {
 		stm.SendElement(iq.BadRequestError())
 	}
 	return err
+}
+
+func (x *Roster) processCapabilitiesIQ(query xmpp.XElement) {
+	var node, ver string
+
+	nodeStr := query.Attributes().Get("node")
+	ss := strings.Split(nodeStr, "#")
+	if len(ss) != 2 {
+		log.Warnf("wrong node format: %s", nodeStr)
+		return
+	}
+	node = ss[0]
+	ver = ss[1]
+
+	// retrieve and store features
+	log.Infof("storing capabilities... node: %s, ver: %s", node, ver)
+
+	var features []string
+	featureElems := query.Elements().Children("feature")
+	for _, featureElem := range featureElems {
+		features = append(features, featureElem.Attributes().Get("var"))
+	}
+	if err := storage.InsertCapabilities(&model.Capabilities{Node: node, Ver: ver, Features: features}); err != nil {
+		log.Warnf("%v", err)
+		return
+	}
 }
 
 func (x *Roster) sendRoster(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) error {
@@ -620,7 +653,10 @@ func (x *Roster) requestCapabilities(node, ver string, userJID *jid.JID) error {
 	}
 	srvJID, _ := jid.NewWithString(userJID.Domain(), true)
 
-	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
+	iqID := uuid.New()
+	x.activeDiscoInfo.Store(iqID, true)
+
+	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.SetFromJID(srvJID)
 	iq.SetToJID(userJID)
 
