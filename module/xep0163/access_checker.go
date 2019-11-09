@@ -7,6 +7,7 @@ package xep0163
 
 import (
 	"errors"
+	"fmt"
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -52,6 +53,9 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		if !ac.checkWhitelistAccess(j) {
 			return errNotOnWhiteList
 		}
+
+	default:
+		return fmt.Errorf("pep: unrecognized access model: %s", ac.accessModel)
 	}
 	return nil
 }

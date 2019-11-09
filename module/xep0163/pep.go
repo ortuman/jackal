@@ -780,16 +780,18 @@ func (x *Pep) notifySubscribers(
 		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
-		// check JID access before notifying
-		err := accessChecker.checkAccess(host, subscription.JID)
-		switch err {
-		case nil:
-			break
-		case errPresenceSubscriptionRequired, errNotInRosterGroup, errNotOnWhiteList:
-			continue
-		default:
-			log.Error(err)
-			continue
+		if subscription.JID != host {
+			// check JID access before notifying
+			err := accessChecker.checkAccess(host, subscription.JID)
+			switch err {
+			case nil:
+				break
+			case errPresenceSubscriptionRequired, errNotInRosterGroup, errNotOnWhiteList:
+				continue
+			default:
+				log.Error(err)
+				continue
+			}
 		}
 		subscriberJID, _ := jid.NewWithString(subscription.JID, true)
 
@@ -858,6 +860,11 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 			return
 		}
 	}
+	ctx.accessChecker = &accessChecker{
+		accessModel:         node.Options.AccessModel,
+		rosterAllowedGroups: node.Options.RosterGroupsAllowed,
+		affiliations:        affiliations,
+	}
 	// check access
 	if opts.checkAccess && !ctx.isAccountOwner {
 		for _, aff := range affiliations {
@@ -865,11 +872,6 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 				_ = x.router.Route(iq.ForbiddenError())
 				return
 			}
-		}
-		ctx.accessChecker = &accessChecker{
-			accessModel:         node.Options.AccessModel,
-			rosterAllowedGroups: node.Options.RosterGroupsAllowed,
-			affiliations:        affiliations,
 		}
 		err := ctx.accessChecker.checkAccess(host, fromJID)
 		switch err {

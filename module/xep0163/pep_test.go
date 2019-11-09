@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -170,6 +171,13 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
+	_, err = s.UpsertRosterItem(&rostermodel.Item{
+		Username:     "ortuman@jackal.im",
+		JID:          "noelia@jackal.im",
+		Subscription: "both",
+	})
+	require.Nil(t, err)
+
 	// process pus bub command
 	p := New(nil, nil, r)
 
@@ -260,6 +268,13 @@ func TestXEP163_DeleteNode(t *testing.T) {
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
+	require.Nil(t, err)
+
+	_, err = s.UpsertRosterItem(&rostermodel.Item{
+		Username:     "ortuman@jackal.im",
+		JID:          "noelia@jackal.im",
+		Subscription: "both",
+	})
 	require.Nil(t, err)
 
 	// process pus bub command
