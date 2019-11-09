@@ -39,3 +39,13 @@ func (c *Capabilities) ToBytes(buf *bytes.Buffer) error {
 	}
 	return enc.Encode(&c.Features)
 }
+
+// HasFeature returns whether or not Capabilities instance contains a concrete feature
+func (c *Capabilities) HasFeature(feature string) bool {
+	for _, f := range c.Features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
+}
