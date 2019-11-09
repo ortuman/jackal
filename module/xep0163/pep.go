@@ -28,7 +28,7 @@ import (
 // <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-and-configure'/>     [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [PENDING]
+// <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [DONE]
 // <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [DONE]
@@ -103,7 +103,6 @@ func New(disco *xep0030.DiscoInfo, onlinePresenceProvider onlinePresenceProvider
 		router:                 router,
 		runQueue:               runqueue.New("xep0163"),
 	}
-
 	// register account identity and features
 	if disco != nil {
 		for _, feature := range discoInfoFeatures {
@@ -378,12 +377,14 @@ func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.
 		return
 	}
 	// notify config update
-	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifyConfig {
+	opts := cmdCtx.node.Options
+
+	if opts.DeliverNotifications && opts.NotifyConfig {
 		configElem := xmpp.NewElementName("configuration")
 		configElem.SetAttribute("node", cmdCtx.nodeID)
 
-		if cmdCtx.node.Options.DeliverPayloads {
-			configElem.AppendElement(cmdCtx.node.Options.ResultForm().Element())
+		if opts.DeliverPayloads {
+			configElem.AppendElement(opts.ResultForm().Element())
 		}
 		x.notifySubscribers(
 			configElem,
@@ -391,7 +392,7 @@ func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.
 			cmdCtx.accessChecker,
 			cmdCtx.host,
 			cmdCtx.nodeID,
-			cmdCtx.node.Options.NotificationType)
+			opts.NotificationType)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -406,7 +407,9 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 		return
 	}
 	// notify delete
-	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifyDelete {
+	opts := cmdCtx.node.Options
+
+	if opts.DeliverNotifications && opts.NotifyDelete {
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", cmdCtx.nodeID)
 
@@ -416,7 +419,7 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 			cmdCtx.accessChecker,
 			cmdCtx.host,
 			cmdCtx.nodeID,
-			cmdCtx.node.Options.NotificationType)
+			opts.NotificationType)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -454,14 +457,14 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	subscriptionElem.SetAttribute("subid", subID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
 
-	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, cmdCtx.node.Options.NotificationType)
+	opts := cmdCtx.node.Options
+	if opts.DeliverNotifications && opts.NotifySub {
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, opts.NotificationType)
 	}
-
 	// send last node item
-	switch cmdCtx.node.Options.SendLastPublishedItem {
+	switch opts.SendLastPublishedItem {
 	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-		err := x.sendLastPublishedItem(sub, cmdCtx.accessChecker, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
+		err := x.sendLastPublishedItem(sub, cmdCtx.accessChecker, cmdCtx.host, cmdCtx.nodeID, opts.NotificationType)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
@@ -510,8 +513,9 @@ func (x *Pep) unsubscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.
 	subscriptionElem.SetAttribute("subid", subscription.SubID)
 	subscriptionElem.SetAttribute("subscription", pubsubmodel.None)
 
-	if cmdCtx.node.Options.DeliverNotifications && cmdCtx.node.Options.NotifySub {
-		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, cmdCtx.node.Options.NotificationType)
+	opts := cmdCtx.node.Options
+	if opts.DeliverNotifications && opts.NotifySub {
+		x.notifyOwners(subscriptionElem, cmdCtx.affiliations, cmdCtx.host, opts.NotificationType)
 	}
 
 	// compose response
@@ -557,12 +561,13 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 		}
 	}
 	// persist node item
-	if cmdCtx.node.Options.PersistItems {
+	opts := cmdCtx.node.Options
+	if opts.PersistItems {
 		err := storage.UpsertPubSubNodeItem(&pubsubmodel.Item{
 			ID:        itemID,
 			Publisher: iq.FromJID().ToBareJID().String(),
 			Payload:   itemEl.Elements().All()[0],
-		}, cmdCtx.host, cmdCtx.nodeID, int(cmdCtx.node.Options.MaxItems))
+		}, cmdCtx.host, cmdCtx.nodeID, int(opts.MaxItems))
 
 		if err != nil {
 			log.Error(err)
@@ -574,7 +579,7 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	notifyElem := xmpp.NewElementName("item")
 	notifyElem.SetAttribute("id", itemID)
 
-	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
+	if opts.DeliverPayloads || !opts.PersistItems {
 		notifyElem.AppendElement(itemEl.Elements().All()[0])
 	}
 	x.notifySubscribers(
