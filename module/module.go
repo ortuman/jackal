@@ -121,7 +121,7 @@ func New(config *Config, router *router.Router) *Modules {
 
 	// XEP-0163: Personal Eventing Protocol (https://xmpp.org/extensions/xep-0163.html)
 	if _, ok := config.Enabled["pep"]; ok {
-		m.Pep = xep0163.New(m.DiscoInfo, router)
+		m.Pep = xep0163.New(m.DiscoInfo, m.Roster, router)
 		m.iqHandlers = append(m.iqHandlers, m.Pep)
 		m.all = append(m.all, m.Pep)
 	}

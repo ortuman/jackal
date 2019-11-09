@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -87,12 +88,14 @@ type commandContext struct {
 }
 
 type Pep struct {
+	roster   *roster.Roster
 	router   *router.Router
 	runQueue *runqueue.RunQueue
 }
 
-func New(disco *xep0030.DiscoInfo, router *router.Router) *Pep {
+func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) *Pep {
 	p := &Pep{
+		roster:   roster,
 		router:   router,
 		runQueue: runqueue.New("xep0163"),
 	}
@@ -378,7 +381,7 @@ func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.
 		if cmdCtx.node.Options.DeliverPayloads {
 			configElem.AppendElement(cmdCtx.node.Options.ResultForm().Element())
 		}
-		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
+		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -397,7 +400,7 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", cmdCtx.nodeID)
 
-		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
+		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -558,7 +561,7 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
 		notifyElem.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.node.Options.NotificationType)
+	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
 
 	// compose response
 	publishElem := xmpp.NewElementName("publish")
@@ -742,16 +745,34 @@ func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsub
 	}
 }
 
-func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host, notificationType string) {
+func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host, nodeID, notificationType string) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, subscription := range subscriptions {
 		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
-		toJID, _ := jid.NewWithString(subscription.JID, true)
-		eventMsg := eventMessage(notificationElem, hostJID, toJID, notificationType)
+		// check access model
+		subscriberJID, _ := jid.NewWithString(subscription.JID, true)
 
-		_ = x.router.Route(eventMsg)
+		if r := x.roster; r != nil {
+			onlinePresences := r.OnlinePresencesMatchingJID(subscriberJID)
+
+			for _, onlinePresence := range onlinePresences {
+				presence := onlinePresence.Presence
+				if caps := onlinePresence.Caps; caps != nil {
+					if !caps.HasFeature(nodeID + "+notify") {
+						continue
+					}
+				}
+				// notify to full jid
+				eventMsg := eventMessage(notificationElem, hostJID, presence.FromJID(), notificationType)
+				_ = x.router.Route(eventMsg)
+			}
+		} else {
+			// broadcast event message
+			eventMsg := eventMessage(notificationElem, hostJID, subscriberJID, notificationType)
+			_ = x.router.Route(eventMsg)
+		}
 	}
 }
 
@@ -915,7 +936,7 @@ func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, host, nodeID, 
 		itemsEl.SetAttribute("node", nodeID)
 		itemsEl.AppendElement(lastItem.Payload)
 
-		x.notifySubscribers(itemsEl, []pubsubmodel.Subscription{sub}, host, notificationType)
+		x.notifySubscribers(itemsEl, []pubsubmodel.Subscription{sub}, host, nodeID, notificationType)
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ func TestXEP0163_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	p := New(nil, r)
+	p := New(nil, nil, r)
 
 	// test MatchesIQ
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -50,7 +50,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	p := New(nil, r)
+	p := New(nil, nil, r)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -97,7 +97,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
-	p := New(nil, r)
+	p := New(nil, nil, r)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
@@ -171,7 +171,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	require.Nil(t, err)
 
 	// process pus bub command
-	p := New(nil, r)
+	p := New(nil, nil, r)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -263,7 +263,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	require.Nil(t, err)
 
 	// process pus bub command
-	p := New(nil, r)
+	p := New(nil, nil, r)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
