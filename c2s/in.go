@@ -693,33 +693,6 @@ func (s *inStream) processIQ(iq *xmpp.IQ) {
 	s.mods.ProcessIQ(iq)
 }
 
-/*
-func (s *inStream) processCapabilitiesResponse(query xmpp.XElement) {
-	var node, ver string
-
-	nodeStr := query.Attributes().Get("node")
-	ss := strings.Split(nodeStr, "#")
-	if len(ss) != 2 {
-		log.Warnf("wrong node format: %s", nodeStr)
-		return
-	}
-	node = ss[0]
-	ver = ss[1]
-
-	// retrieve and store features
-	log.Infof("storing capabilities... node: %s, ver: %s", node, ver)
-
-	var features []string
-	featureElems := query.Elements().Children("feature")
-	for _, featureElem := range featureElems {
-		features = append(features, featureElem.Attributes().Get("var"))
-	}
-	if err := storage.InsertCapabilities(node, ver, &model.Capabilities{Features: features}); err != nil {
-		log.Warnf("%v", err)
-		return
-	}
-}*/
-
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if presence.ToJID().IsFullWithUser() {
 		_ = s.router.Route(presence)
