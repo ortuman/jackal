@@ -44,12 +44,6 @@ type Roster struct {
 	runQueue        *runqueue.RunQueue
 }
 
-// OnlinePresence represents an available presence
-type OnlinePresence struct {
-	Presence *xmpp.Presence
-	Caps     *model.Capabilities
-}
-
 // New returns a roster server stream module.
 func New(cfg *Config, router *router.Router) *Roster {
 	r := &Roster{
@@ -94,13 +88,13 @@ func (x *Roster) ProcessPresence(presence *xmpp.Presence) {
 }
 
 // OnlinePresencesMatchingJID returns current online presences matching a given JID.
-func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []OnlinePresence {
-	var ret []OnlinePresence
+func (x *Roster) OnlinePresencesMatchingJID(j *jid.JID) []model.OnlinePresence {
+	var ret []model.OnlinePresence
 	x.onlineJIDs.Range(func(_, value interface{}) bool {
 		switch presence := value.(type) {
 		case *xmpp.Presence:
 			if x.onlineJIDMatchesJID(presence.FromJID(), j) {
-				var onlinePresence OnlinePresence
+				var onlinePresence model.OnlinePresence
 
 				onlinePresence.Presence = presence
 				if c := presence.Capabilities(); c != nil {

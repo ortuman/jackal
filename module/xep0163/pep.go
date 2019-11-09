@@ -11,9 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
-	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -85,19 +84,24 @@ type commandContext struct {
 	node           *pubsubmodel.Node
 	affiliations   []pubsubmodel.Affiliation
 	subscriptions  []pubsubmodel.Subscription
+	accessChecker  *accessChecker
+}
+
+type onlinePresenceProvider interface {
+	OnlinePresencesMatchingJID(j *jid.JID) []model.OnlinePresence
 }
 
 type Pep struct {
-	roster   *roster.Roster
-	router   *router.Router
-	runQueue *runqueue.RunQueue
+	onlinePresenceProvider onlinePresenceProvider
+	router                 *router.Router
+	runQueue               *runqueue.RunQueue
 }
 
-func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) *Pep {
+func New(disco *xep0030.DiscoInfo, onlinePresenceProvider onlinePresenceProvider, router *router.Router) *Pep {
 	p := &Pep{
-		roster:   roster,
-		router:   router,
-		runQueue: runqueue.New("xep0163"),
+		onlinePresenceProvider: onlinePresenceProvider,
+		router:                 router,
+		runQueue:               runqueue.New("xep0163"),
 	}
 
 	// register account identity and features
@@ -381,7 +385,13 @@ func (x *Pep) configure(cmdCtx *commandContext, cmdElem xmpp.XElement, iq *xmpp.
 		if cmdCtx.node.Options.DeliverPayloads {
 			configElem.AppendElement(cmdCtx.node.Options.ResultForm().Element())
 		}
-		x.notifySubscribers(configElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
+		x.notifySubscribers(
+			configElem,
+			cmdCtx.subscriptions,
+			cmdCtx.accessChecker,
+			cmdCtx.host,
+			cmdCtx.nodeID,
+			cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: node configuration updated (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -400,7 +410,13 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 		deleteElem := xmpp.NewElementName("delete")
 		deleteElem.SetAttribute("node", cmdCtx.nodeID)
 
-		x.notifySubscribers(deleteElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
+		x.notifySubscribers(
+			deleteElem,
+			cmdCtx.subscriptions,
+			cmdCtx.accessChecker,
+			cmdCtx.host,
+			cmdCtx.nodeID,
+			cmdCtx.node.Options.NotificationType)
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -445,7 +461,7 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	// send last node item
 	switch cmdCtx.node.Options.SendLastPublishedItem {
 	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-		err := x.sendLastPublishedItem(sub, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
+		err := x.sendLastPublishedItem(sub, cmdCtx.accessChecker, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
@@ -561,7 +577,13 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	if cmdCtx.node.Options.DeliverPayloads || !cmdCtx.node.Options.PersistItems {
 		notifyElem.AppendElement(itemEl.Elements().All()[0])
 	}
-	x.notifySubscribers(notifyElem, cmdCtx.subscriptions, cmdCtx.host, cmdCtx.nodeID, cmdCtx.node.Options.NotificationType)
+	x.notifySubscribers(
+		notifyElem,
+		cmdCtx.subscriptions,
+		cmdCtx.accessChecker,
+		cmdCtx.host,
+		cmdCtx.nodeID,
+		cmdCtx.node.Options.NotificationType)
 
 	// compose response
 	publishElem := xmpp.NewElementName("publish")
@@ -745,17 +767,34 @@ func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsub
 	}
 }
 
-func (x *Pep) notifySubscribers(notificationElem xmpp.XElement, subscriptions []pubsubmodel.Subscription, host, nodeID, notificationType string) {
+func (x *Pep) notifySubscribers(
+	notificationElem xmpp.XElement,
+	subscriptions []pubsubmodel.Subscription,
+	accessChecker *accessChecker,
+	host string,
+	nodeID string,
+	notificationType string,
+) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, subscription := range subscriptions {
 		if subscription.Subscription != pubsubmodel.Subscribed {
 			continue
 		}
-		// check access model
+		// check JID access before notifying
+		err := accessChecker.checkAccess(host, subscription.JID)
+		switch err {
+		case nil:
+			break
+		case errPresenceSubscriptionRequired, errNotInRosterGroup, errNotOnWhiteList:
+			continue
+		default:
+			log.Error(err)
+			continue
+		}
 		subscriberJID, _ := jid.NewWithString(subscription.JID, true)
 
-		if r := x.roster; r != nil {
-			onlinePresences := r.OnlinePresencesMatchingJID(subscriberJID)
+		if pp := x.onlinePresenceProvider; pp != nil {
+			onlinePresences := pp.OnlinePresencesMatchingJID(subscriberJID)
 
 			for _, onlinePresence := range onlinePresences {
 				presence := onlinePresence.Presence
@@ -827,39 +866,29 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 				return
 			}
 		}
-		switch node.Options.AccessModel {
-		case pubsubmodel.Open:
-			break
+		ctx.accessChecker = &accessChecker{
+			accessModel:         node.Options.AccessModel,
+			rosterAllowedGroups: node.Options.RosterGroupsAllowed,
+			affiliations:        affiliations,
+		}
+		err := ctx.accessChecker.checkAccess(host, fromJID)
+		switch err {
+		case errPresenceSubscriptionRequired:
+			_ = x.router.Route(presenceSubscriptionRequiredError(iq))
+			return
 
-		case pubsubmodel.Presence:
-			allowed, err := checkPresenceAccess(host, fromJID)
-			if err != nil {
-				log.Error(err)
-				_ = x.router.Route(iq.InternalServerError())
-				return
-			}
-			if !allowed {
-				_ = x.router.Route(presenceSubscriptionRequiredError(iq))
-				return
-			}
+		case errNotInRosterGroup:
+			_ = x.router.Route(notInRosterGroupError(iq))
+			return
 
-		case pubsubmodel.Roster:
-			allowed, err := checkRosterAccess(host, fromJID, node.Options.RosterGroupsAllowed)
-			if err != nil {
-				log.Error(err)
-				_ = x.router.Route(iq.InternalServerError())
-				return
-			}
-			if !allowed {
-				_ = x.router.Route(notInRosterGroupError(iq))
-				return
-			}
+		case errNotOnWhiteList:
+			_ = x.router.Route(notOnWhitelistError(iq))
+			return
 
-		case pubsubmodel.WhiteList:
-			if !checkWhitelistAccess(fromJID, affiliations) {
-				_ = x.router.Route(notOnWhitelistError(iq))
-				return
-			}
+		default:
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
 		}
 	}
 	// validate affiliation
@@ -924,7 +953,7 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 	return storage.UpsertPubSubNodeSubscription(ownerSub, node.Host, node.Name)
 }
 
-func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, host, nodeID, notificationType string) error {
+func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, accessChecker *accessChecker, host, nodeID, notificationType string) error {
 	items, err := storage.FetchPubSubNodeItems(host, nodeID)
 	if err != nil {
 		return err
@@ -936,49 +965,15 @@ func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, host, nodeID, 
 		itemsEl.SetAttribute("node", nodeID)
 		itemsEl.AppendElement(lastItem.Payload)
 
-		x.notifySubscribers(itemsEl, []pubsubmodel.Subscription{sub}, host, nodeID, notificationType)
+		x.notifySubscribers(
+			itemsEl,
+			[]pubsubmodel.Subscription{sub},
+			accessChecker,
+			host,
+			nodeID,
+			notificationType)
 	}
 	return nil
-}
-
-func checkPresenceAccess(host, jid string) (bool, error) {
-	ri, err := storage.FetchRosterItem(host, jid)
-	if err != nil {
-		return false, err
-	}
-	allowed := ri != nil && (ri.Subscription == rostermodel.SubscriptionFrom || ri.Subscription == rostermodel.SubscriptionBoth)
-	return allowed, nil
-}
-
-func checkRosterAccess(host, jid string, allowedGroups []string) (bool, error) {
-	ri, err := storage.FetchRosterItem(host, jid)
-	if err != nil {
-		return false, err
-	}
-	if ri == nil {
-		return false, nil
-	}
-	for _, group := range ri.Groups {
-		for _, allowedGroup := range allowedGroups {
-			if group == allowedGroup {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-func checkWhitelistAccess(jid string, affiliations []pubsubmodel.Affiliation) bool {
-	for _, aff := range affiliations {
-		if aff.JID != jid {
-			continue
-		}
-		switch aff.Affiliation {
-		case pubsubmodel.Owner, pubsubmodel.Member:
-			return true
-		}
-	}
-	return false
 }
 
 func eventMessage(payloadElem xmpp.XElement, hostJID, toJID *jid.JID, notificationType string) *xmpp.Message {
