@@ -705,7 +705,9 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 		s.setPresence(presence)
 	}
 	// process presence
-	s.mods.ProcessPresence(presence)
+	if r := s.mods.Roster; r != nil {
+		r.ProcessPresence(presence)
+	}
 
 	// deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
@@ -827,7 +829,9 @@ func (s *inStream) disconnectClosingSession(closeSession, unbind bool) {
 	}
 	// send 'unavailable' presence when disconnecting
 	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
-		s.mods.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
+		if r := s.mods.Roster; r != nil {
+			r.ProcessPresence(xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
+		}
 	}
 	if closeSession {
 		_ = s.sess.Close()

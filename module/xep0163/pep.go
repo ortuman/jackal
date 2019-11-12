@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -87,21 +87,17 @@ type commandContext struct {
 	accessChecker  *accessChecker
 }
 
-type onlinePresenceProvider interface {
-	OnlinePresencesMatchingJID(j *jid.JID) []model.OnlinePresence
-}
-
 type Pep struct {
-	onlinePresenceProvider onlinePresenceProvider
-	router                 *router.Router
-	runQueue               *runqueue.RunQueue
+	router      *router.Router
+	runQueue    *runqueue.RunQueue
+	presenceHub *presencehub.PresenceHub
 }
 
-func New(disco *xep0030.DiscoInfo, onlinePresenceProvider onlinePresenceProvider, router *router.Router) *Pep {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router) *Pep {
 	p := &Pep{
-		onlinePresenceProvider: onlinePresenceProvider,
-		router:                 router,
-		runQueue:               runqueue.New("xep0163"),
+		router:      router,
+		runQueue:    runqueue.New("xep0163"),
+		presenceHub: presenceHub,
 	}
 	// register account identity and features
 	if disco != nil {
@@ -800,8 +796,8 @@ func (x *Pep) notifySubscribers(
 		}
 		subscriberJID, _ := jid.NewWithString(subscription.JID, true)
 
-		if pp := x.onlinePresenceProvider; pp != nil {
-			onlinePresences := pp.OnlinePresencesMatchingJID(subscriberJID)
+		if ph := x.presenceHub; ph != nil {
+			onlinePresences := ph.AvailablePresencesMatchingJID(subscriberJID)
 
 			for _, onlinePresence := range onlinePresences {
 				presence := onlinePresence.Presence

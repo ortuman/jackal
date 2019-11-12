@@ -12,7 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
@@ -32,10 +32,10 @@ func TestXEP0191_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(stm)
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer func() { _ = r.Shutdown() }()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
+	x := New(nil, ph, rtr)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -67,10 +67,10 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(stm)
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer func() { _ = r.Shutdown() }()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
+	x := New(nil, ph, rtr)
 	defer func() { _ = x.Shutdown() }()
 
 	_ = storage.InsertBlockListItem(&model.BlockListItem{
@@ -106,10 +106,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rtr, s, shutdown := setupTest("jackal.im")
 	defer shutdown()
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer func() { _ = r.Shutdown() }()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
+	x := New(nil, ph, rtr)
 	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -135,10 +135,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rtr.Bind(stm4)
 
 	// register presences
-	r.ProcessPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 

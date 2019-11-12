@@ -9,7 +9,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
@@ -28,17 +28,17 @@ const (
 
 // BlockingCommand returns a blocking command IQ handler module.
 type BlockingCommand struct {
-	router   *router.Router
-	roster   *roster.Roster
-	runQueue *runqueue.RunQueue
+	router      *router.Router
+	runQueue    *runqueue.RunQueue
+	presenceHub *presencehub.PresenceHub
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, roster *roster.Roster, router *router.Router) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router) *BlockingCommand {
 	b := &BlockingCommand{
-		router:   router,
-		roster:   roster,
-		runQueue: runqueue.New("xep0191"),
+		router:      router,
+		presenceHub: presenceHub,
+		runQueue:    runqueue.New("xep0191"),
 	}
 	if disco != nil {
 		disco.RegisterServerFeature(blockingCommandNamespace)
@@ -204,11 +204,11 @@ func (x *BlockingCommand) pushIQ(elem xmpp.XElement, stm stream.C2S) {
 }
 
 func (x *BlockingCommand) broadcastPresenceMatchingJID(jid *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
-	if x.roster == nil {
+	if x.presenceHub == nil {
 		// roster disabled
 		return
 	}
-	onlinePresences := x.roster.OnlinePresencesMatchingJID(jid)
+	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(jid)
 	for _, onlinePresence := range onlinePresences {
 		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {

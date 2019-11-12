@@ -192,8 +192,10 @@ func (s *inStream) processStanza(stanza xmpp.Stanza) {
 func (s *inStream) processPresence(presence *xmpp.Presence) {
 	// process roster presence
 	if presence.ToJID().IsBare() {
-		s.mods.ProcessPresence(presence)
-		return
+		if r := s.mods.Roster; r != nil {
+			r.ProcessPresence(presence)
+			return
+		}
 	}
 	_ = s.router.Route(presence)
 }
