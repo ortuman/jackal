@@ -65,7 +65,7 @@ type Modules struct {
 
 // New returns a set of modules derived from a concrete configuration.
 func New(config *Config, router *router.Router) *Modules {
-	var presenceHub *presencehub.PresenceHub
+	var presenceHub = presencehub.New(router)
 
 	m := &Modules{router: router}
 
@@ -73,16 +73,6 @@ func New(config *Config, router *router.Router) *Modules {
 	m.DiscoInfo = xep0030.New(router)
 	m.iqHandlers = append(m.iqHandlers, m.DiscoInfo)
 	m.all = append(m.all, m.DiscoInfo)
-
-	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	if _, ok := config.Enabled["roster"]; ok {
-		presenceHub = presencehub.New(router)
-		m.iqHandlers = append(m.iqHandlers, presenceHub)
-
-		m.Roster = roster.New(&config.Roster, presenceHub, router)
-		m.iqHandlers = append(m.iqHandlers, m.Roster)
-		m.all = append(m.all, m.Roster)
-	}
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := config.Enabled["last_activity"]; ok {
@@ -144,6 +134,15 @@ func New(config *Config, router *router.Router) *Modules {
 		m.Ping = xep0199.New(&config.Ping, m.DiscoInfo, router)
 		m.iqHandlers = append(m.iqHandlers, m.Ping)
 		m.all = append(m.all, m.Ping)
+	}
+
+	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
+	if _, ok := config.Enabled["roster"]; ok {
+		m.iqHandlers = append(m.iqHandlers, presenceHub)
+
+		m.Roster = roster.New(&config.Roster, presenceHub, m.Pep, router)
+		m.iqHandlers = append(m.iqHandlers, m.Roster)
+		m.all = append(m.all, m.Roster)
 	}
 	return m
 }

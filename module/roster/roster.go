@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/roster/presencehub"
+	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
@@ -36,16 +37,18 @@ type Roster struct {
 	cfg         *Config
 	router      *router.Router
 	runQueue    *runqueue.RunQueue
+	pep         *xep0163.Pep
 	presenceHub *presencehub.PresenceHub
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, router *router.Router) *Roster {
+func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router *router.Router) *Roster {
 	r := &Roster{
 		cfg:         cfg,
 		router:      router,
 		runQueue:    runqueue.New("roster"),
 		presenceHub: presenceHub,
+		pep:         pep,
 	}
 	return r
 }
@@ -374,6 +377,11 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 		}
 		if err := x.insertItem(cntRi, contactJID); err != nil {
 			return err
+		}
+		if pep := x.pep; pep != nil && x.router.IsLocalHost(userJID.Domain()) {
+			if err := pep.AutoSubscribe(contactJID, userJID); err != nil {
+				return err
+			}
 		}
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address

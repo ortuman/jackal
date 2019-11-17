@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package presencehub
 
 import (
@@ -51,10 +56,10 @@ func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alre
 			if err != nil {
 				return err, false
 			}
-			if caps != nil {
-				x.capabilities.Store(capsKey, caps) // cache capabilities
+			if caps == nil {
+				x.requestCapabilities(c.Node, c.Ver, userJID) // request capabilities
 			} else {
-				x.requestCapabilities(caps.Node, caps.Ver, userJID) // request capabilities
+				x.capabilities.Store(capsKey, caps) // cache capabilities
 			}
 		}
 	}
@@ -101,9 +106,7 @@ func (x *PresenceHub) AvailablePresencesMatchingJID(j *jid.JID) []AvailablePrese
 			if !x.availableJIDMatchesJID(presence.FromJID(), j) {
 				return true
 			}
-			var availPresenceInfo AvailablePresenceInfo
-
-			availPresenceInfo.Presence = presence
+			availPresenceInfo := AvailablePresenceInfo{Presence: presence}
 			if c := presence.Capabilities(); c != nil {
 				if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
 					switch caps := caps.(type) {

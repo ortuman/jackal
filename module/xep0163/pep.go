@@ -128,6 +128,11 @@ func (x *Pep) ProcessIQ(iq *xmpp.IQ) {
 	})
 }
 
+func (x *Pep) AutoSubscribe(jid *jid.JID, toJID *jid.JID) error {
+	log.Infof("AUTOSUBSCRIBE: user: %s, to: %s", jid.ToBareJID().String(), toJID.ToBareJID().String())
+	return nil
+}
+
 // Shutdown shuts down version module.
 func (x *Pep) Shutdown() error {
 	c := make(chan struct{})
@@ -210,9 +215,7 @@ func (x *Pep) processOwnerRequest(iq *xmpp.IQ, pubSub xmpp.XElement) {
 				allowedAffiliations: []string{pubsubmodel.Owner},
 				failOnNotFound:      true,
 			}
-			x.withCommandContext(func(cmdCtx *commandContext) {
-				x.sendConfigurationForm(cmdCtx, iq)
-			}, opts, cmdEl, iq)
+			x.withCommandContext(func(cmdCtx *commandContext) { x.sendConfigurationForm(cmdCtx, iq) }, opts, cmdEl, iq)
 		} else if iq.IsSet() {
 			// update node configuration
 			opts := commandOptions{
