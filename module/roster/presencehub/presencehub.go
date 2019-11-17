@@ -98,20 +98,21 @@ func (x *PresenceHub) AvailablePresencesMatchingJID(j *jid.JID) []AvailablePrese
 	x.availablePresences.Range(func(_, value interface{}) bool {
 		switch presence := value.(type) {
 		case *xmpp.Presence:
-			if x.availableJIDMatchesJID(presence.FromJID(), j) {
-				var availPresenceInfo AvailablePresenceInfo
+			if !x.availableJIDMatchesJID(presence.FromJID(), j) {
+				return true
+			}
+			var availPresenceInfo AvailablePresenceInfo
 
-				availPresenceInfo.Presence = presence
-				if c := presence.Capabilities(); c != nil {
-					if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
-						switch caps := caps.(type) {
-						case *model.Capabilities:
-							availPresenceInfo.Caps = caps
-						}
+			availPresenceInfo.Presence = presence
+			if c := presence.Capabilities(); c != nil {
+				if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
+					switch caps := caps.(type) {
+					case *model.Capabilities:
+						availPresenceInfo.Caps = caps
 					}
 				}
-				ret = append(ret, availPresenceInfo)
 			}
+			ret = append(ret, availPresenceInfo)
 		}
 		return true
 	})
