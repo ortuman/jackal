@@ -964,19 +964,20 @@ func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, accessChecker 
 	if err != nil {
 		return err
 	}
-	if lastItem != nil {
-		itemsEl := xmpp.NewElementName("items")
-		itemsEl.SetAttribute("node", nodeID)
-		itemsEl.AppendElement(lastItem.Payload)
-
-		x.notifySubscribers(
-			itemsEl,
-			[]pubsubmodel.Subscription{sub},
-			accessChecker,
-			host,
-			nodeID,
-			notificationType)
+	if lastItem == nil {
+		return nil
 	}
+	itemsEl := xmpp.NewElementName("items")
+	itemsEl.SetAttribute("node", nodeID)
+	itemsEl.AppendElement(lastItem.Payload)
+
+	x.notifySubscribers(
+		itemsEl,
+		[]pubsubmodel.Subscription{sub},
+		accessChecker,
+		host,
+		nodeID,
+		notificationType)
 	return nil
 }
 
