@@ -379,7 +379,7 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 			return err
 		}
 		if pep := x.pep; pep != nil && x.router.IsLocalHost(userJID.Domain()) {
-			if err := pep.AutoSubscribe(contactJID, userJID); err != nil {
+			if err := pep.SubscribeTo(userJID, contactJID); err != nil {
 				return err
 			}
 		}

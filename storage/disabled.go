@@ -134,6 +134,10 @@ func (*disabledStorage) FetchPubSubNodeItemsWithIDs(host, name string, identifie
 	return nil, nil
 }
 
+func (*disabledStorage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return nil
 }

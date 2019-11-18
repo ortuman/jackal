@@ -128,7 +128,7 @@ func (x *Pep) ProcessIQ(iq *xmpp.IQ) {
 	})
 }
 
-func (x *Pep) AutoSubscribe(jid *jid.JID, toJID *jid.JID) error {
+func (x *Pep) SubscribeTo(toJID *jid.JID, jid *jid.JID) error {
 	log.Infof("AUTOSUBSCRIBE: user: %s, to: %s", jid.ToBareJID().String(), toJID.ToBareJID().String())
 	return nil
 }
@@ -960,13 +960,11 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 }
 
 func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, accessChecker *accessChecker, host, nodeID, notificationType string) error {
-	items, err := storage.FetchPubSubNodeItems(host, nodeID)
+	lastItem, err := storage.FetchPubSubNodeLastItem(host, nodeID)
 	if err != nil {
 		return err
 	}
-	if len(items) > 0 {
-		lastItem := items[len(items)-1]
-
+	if lastItem != nil {
 		itemsEl := xmpp.NewElementName("items")
 		itemsEl.SetAttribute("node", nodeID)
 		itemsEl.AppendElement(lastItem.Payload)

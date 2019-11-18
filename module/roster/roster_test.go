@@ -27,7 +27,7 @@ func TestRoster_MatchesIQ(t *testing.T) {
 	rtr, _, shutdown := setupTest("jackal.im")
 	defer shutdown()
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -45,7 +45,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	rtr.Bind(stm)
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
@@ -93,7 +93,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	storage.UpsertRosterItem(ri2)
 
-	r = New(&Config{Versioning: true}, presencehub.New(rtr), rtr)
+	r = New(&Config{Versioning: true}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	r.ProcessIQ(iq)
@@ -128,7 +128,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	s.EnableMockedError()
-	r = New(&Config{}, presencehub.New(rtr), rtr)
+	r = New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	r.ProcessIQ(iq)
@@ -150,7 +150,7 @@ func TestRoster_Update(t *testing.T) {
 	stm2.SetAuthenticated(true)
 	stm2.SetBool(rosterRequestedCtxKey, true)
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	rtr.Bind(stm1)
@@ -227,7 +227,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(stm)
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	// remove item
@@ -296,7 +296,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	})
 
 	ph := presencehub.New(rtr)
-	r := New(&Config{}, ph, rtr)
+	r := New(&Config{}, ph, nil, rtr)
 	defer func() { _ = r.Shutdown() }()
 
 	// online presence...
@@ -373,7 +373,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	rtr.Bind(stm)
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	// user doesn't exist...
@@ -421,7 +421,7 @@ func TestRoster_Subscription(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 
-	r := New(&Config{}, presencehub.New(rtr), rtr)
+	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer r.Shutdown()
 
 	r.ProcessPresence(xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))

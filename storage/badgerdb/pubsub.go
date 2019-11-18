@@ -99,6 +99,17 @@ func (b *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 	return filteredItems, nil
 }
 
+func (b *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+	var items []pubsubmodel.Item
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &items[len(items)-1], nil
+}
+
 func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var affiliations []pubsubmodel.Affiliation

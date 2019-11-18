@@ -208,6 +208,24 @@ func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 	return s.scanPubSubNodeItems(rows)
 }
 
+func (s *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+	row := sq.Select("item_id", "publisher", "payload").
+		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
+		OrderBy("created_at DESC").
+		Limit(1).
+		RunWith(s.db).QueryRow()
+
+	item, err := s.scanPubSubNodeItem(row)
+	switch err {
+	case nil:
+		return item, nil
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
 func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
@@ -348,4 +366,20 @@ func (s *Storage) scanPubSubNodeItems(scanner rowsScanner) ([]pubsubmodel.Item, 
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (s *Storage) scanPubSubNodeItem(scanner rowScanner) (*pubsubmodel.Item, error) {
+	var payload string
+	var item pubsubmodel.Item
+	var err error
+
+	if err = scanner.Scan(&item.ID, &item.Publisher, &payload); err != nil {
+		return nil, err
+	}
+	parser := xmpp.NewParser(strings.NewReader(payload), xmpp.DefaultMode, 0)
+	item.Payload, err = parser.ParseElement()
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
 }

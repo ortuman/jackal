@@ -127,6 +127,24 @@ func (m *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 	return filteredItems, nil
 }
 
+func (m *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[pubSubItemsKey(host, name)]
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	var items []pubsubmodel.Item
+	if err := serializer.DeserializeSlice(b, &items); err != nil {
+		return nil, err
+	}
+	return &items[len(items)-1], nil
+}
+
 func (m *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
