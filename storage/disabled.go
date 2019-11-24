@@ -114,6 +114,10 @@ func (*disabledStorage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	return nil
 }
 
+func (*disabledStorage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	return nil, nil
 }

@@ -58,27 +58,7 @@ func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 }
 
 func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
-	rows, err := sq.Select("name", "value").
-		From("pubsub_node_options").
-		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
-		RunWith(s.db).Query()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var optMap = make(map[string]string)
-	for rows.Next() {
-		var opt, value string
-		if err := rows.Scan(&opt, &value); err != nil {
-			return nil, err
-		}
-		optMap[opt] = value
-	}
-	if len(optMap) == 0 {
-		return nil, nil // node does not exist
-	}
-	opts, err := pubsubmodel.NewOptionsFromMap(optMap)
+	opts, err := s.fetchPubSubNodeOptions(host, name)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +67,40 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 		Name:    name,
 		Options: *opts,
 	}, nil
+}
+
+func (s *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+	rows, err := sq.Select("name").
+		From("pubsub_nodes").
+		Where(sq.Eq{"host": host}).
+		RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+	var nodes []pubsubmodel.Node
+	for _, nm := range names {
+		var node = pubsubmodel.Node{Host: host, Name: nm}
+
+		opts, err := s.fetchPubSubNodeOptions(host, nm)
+		if err != nil {
+			return nil, err
+		}
+		if opts != nil {
+			node.Options = *opts
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, nil
 }
 
 func (s *Storage) DeletePubSubNode(host, name string) error {
@@ -339,6 +353,34 @@ func (s *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
 		Where("jid = ? AND node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", jid, host, name).
 		RunWith(s.db).Exec()
 	return err
+}
+
+func (s *Storage) fetchPubSubNodeOptions(host, name string) (*pubsubmodel.Options, error) {
+	rows, err := sq.Select("name", "value").
+		From("pubsub_node_options").
+		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
+		RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var optMap = make(map[string]string)
+	for rows.Next() {
+		var opt, value string
+		if err := rows.Scan(&opt, &value); err != nil {
+			return nil, err
+		}
+		optMap[opt] = value
+	}
+	if len(optMap) == 0 {
+		return nil, nil // node does not exist
+	}
+	opts, err := pubsubmodel.NewOptionsFromMap(optMap)
+	if err != nil {
+		return nil, err
+	}
+	return opts, nil
 }
 
 func (s *Storage) scanPubSubNodeAffiliations(scanner rowsScanner) ([]pubsubmodel.Affiliation, error) {

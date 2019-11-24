@@ -27,6 +27,36 @@ func TestStorage_PubSubNode(t *testing.T) {
 	require.NotNil(t, n)
 
 	require.True(t, reflect.DeepEqual(n, node))
+
+	node2 := &pubsubmodel.Node{
+		Host: "ortuman@jackal.im",
+		Name: "princely_musings_2",
+	}
+	node3 := &pubsubmodel.Node{
+		Host: "ortuman@jackal.im",
+		Name: "princely_musings_3",
+	}
+	require.Nil(t, s.UpsertPubSubNode(node2))
+	require.Nil(t, s.UpsertPubSubNode(node3))
+
+	nodes, err := s.FetchPubSubNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.NotNil(t, nodes)
+
+	require.Len(t, nodes, 3)
+	require.Equal(t, "princely_musings", nodes[0].Name)
+	require.Equal(t, "princely_musings_2", nodes[1].Name)
+	require.Equal(t, "princely_musings_3", nodes[2].Name)
+
+	require.Nil(t, s.DeletePubSubNode("ortuman@jackal.im", "princely_musings_2"))
+
+	nodes, err = s.FetchPubSubNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.NotNil(t, nodes)
+
+	require.Len(t, nodes, 2)
+	require.Equal(t, "princely_musings", nodes[0].Name)
+	require.Equal(t, "princely_musings_3", nodes[1].Name)
 }
 
 func TestStorage_PubSubNodeItem(t *testing.T) {

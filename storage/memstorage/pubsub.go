@@ -10,6 +10,25 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+func (m *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.bytes[pubSubHostNodesKey(host)]
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	var nodes []pubsubmodel.Node
+
+	if err := serializer.DeserializeSlice(b, &nodes); err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	b, err := serializer.Serialize(node)
 	if err != nil {
@@ -17,7 +36,7 @@ func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	}
 	return m.inWriteLock(func() error {
 		m.bytes[pubSubNodesKey(node.Host, node.Name)] = b
-		return nil
+		return m.upsertHostNode(node)
 	})
 }
 
@@ -40,11 +59,11 @@ func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 }
 
 func (m *Storage) DeletePubSubNode(host, name string) error {
-	return m.inReadLock(func() error {
+	return m.inWriteLock(func() error {
 		delete(m.bytes, pubSubNodesKey(host, name))
 		delete(m.bytes, pubSubItemsKey(host, name))
 		delete(m.bytes, pubSubAffiliationsKey(host, name))
-		return nil
+		return m.deleteHostNode(host, name)
 	})
 }
 
@@ -303,6 +322,64 @@ func (m *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
 		m.bytes[pubSubSubscriptionsKey(host, name)] = b
 		return nil
 	})
+}
+
+func (m *Storage) upsertHostNode(node *pubsubmodel.Node) error {
+	var nodes []pubsubmodel.Node
+
+	b := m.bytes[pubSubHostNodesKey(node.Host)]
+	if b != nil {
+		if err := serializer.DeserializeSlice(b, &nodes); err != nil {
+			return err
+		}
+	}
+	var updated bool
+
+	for i, n := range nodes {
+		if n.Name == node.Name {
+			nodes[i] = *node
+			updated = true
+			break
+		}
+	}
+	if !updated {
+		nodes = append(nodes, *node)
+	}
+
+	b, err := serializer.SerializeSlice(&nodes)
+	if err != nil {
+		return err
+	}
+	m.bytes[pubSubHostNodesKey(node.Host)] = b
+	return nil
+}
+
+func (m *Storage) deleteHostNode(host, name string) error {
+	var nodes []pubsubmodel.Node
+
+	b := m.bytes[pubSubHostNodesKey(host)]
+	if b != nil {
+		if err := serializer.DeserializeSlice(b, &nodes); err != nil {
+			return err
+		}
+	}
+	for i, n := range nodes {
+		if n.Name == name {
+			nodes = append(nodes[:i], nodes[i+1:]...)
+			break
+		}
+	}
+
+	b, err := serializer.SerializeSlice(&nodes)
+	if err != nil {
+		return err
+	}
+	m.bytes[pubSubHostNodesKey(host)] = b
+	return nil
+}
+
+func pubSubHostNodesKey(host string) string {
+	return "pubSubHostNodes:" + host
 }
 
 func pubSubNodesKey(host, name string) string {

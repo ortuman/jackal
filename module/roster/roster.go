@@ -378,11 +378,6 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 		if err := x.insertItem(cntRi, contactJID); err != nil {
 			return err
 		}
-		if pep := x.pep; pep != nil && x.router.IsLocalHost(userJID.Domain()) {
-			if err := pep.SubscribeTo(userJID, contactJID); err != nil {
-				return err
-			}
-		}
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.SubscribedType)
@@ -406,6 +401,9 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 			if err := x.insertItem(usrRi, userJID); err != nil {
 				return err
 			}
+		}
+		if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
+			p.SubscribeToAll(userJID.String(), contactJID)
 		}
 	}
 	_ = x.router.Route(p)
@@ -525,6 +523,9 @@ routePresence:
 			if err := x.insertItem(usrRi, userJID); err != nil {
 				return err
 			}
+		}
+		if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
+			p.UnsubscribeFromAll(contactJID.String(), userJID)
 		}
 	}
 	_ = x.router.Route(p)

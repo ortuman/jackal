@@ -30,6 +30,38 @@ func TestBadgerDB_PubSubNodes(t *testing.T) {
 	sNode, err := h.db.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.True(t, reflect.DeepEqual(sNode, &node))
+
+	node2 := pubsubmodel.Node{
+		Host:    "ortuman@jackal.im",
+		Name:    "princely_musings_2",
+		Options: pubsubmodel.Options{NotifySub: true},
+	}
+	err = h.db.UpsertPubSubNode(&node2)
+	require.Nil(t, err)
+
+	node3 := pubsubmodel.Node{
+		Host:    "ortuman@jackal.im",
+		Name:    "princely_musings_3",
+		Options: pubsubmodel.Options{NotifySub: true},
+	}
+	err = h.db.UpsertPubSubNode(&node3)
+	require.Nil(t, err)
+
+	nodes, err := h.db.FetchPubSubNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Len(t, nodes, 3)
+	require.Equal(t, "princely_musings", nodes[0].Name)
+	require.Equal(t, "princely_musings_2", nodes[1].Name)
+	require.Equal(t, "princely_musings_3", nodes[2].Name)
+
+	err = h.db.DeletePubSubNode("ortuman@jackal.im", "princely_musings_2")
+	require.Nil(t, err)
+
+	nodes, err = h.db.FetchPubSubNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Len(t, nodes, 2)
+	require.Equal(t, "princely_musings", nodes[0].Name)
+	require.Equal(t, "princely_musings_3", nodes[1].Name)
 }
 
 func TestBadgerDB_PubSubItems(t *testing.T) {

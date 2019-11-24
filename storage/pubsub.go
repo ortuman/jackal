@@ -12,6 +12,7 @@ import (
 type pubSubStorage interface {
 	UpsertPubSubNode(node *pubsubmodel.Node) error
 	FetchPubSubNode(host, name string) (*pubsubmodel.Node, error)
+	FetchPubSubNodes(host string) ([]pubsubmodel.Node, error)
 	DeletePubSubNode(host, name string) error
 
 	UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
@@ -26,6 +27,10 @@ type pubSubStorage interface {
 	UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
 	FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error)
 	DeletePubSubNodeSubscription(jid, host, name string) error
+}
+
+func FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+	return inst.FetchPubSubNodes(host)
 }
 
 func UpsertPubSubNode(node *pubsubmodel.Node) error {

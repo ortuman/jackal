@@ -8,6 +8,7 @@ package badgerdb
 import (
 	"github.com/dgraph-io/badger"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	"github.com/ortuman/jackal/model/serializer"
 )
 
 func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
@@ -29,6 +30,29 @@ func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	default:
 		return nil, err
 	}
+}
+
+func (b *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+	var nodes []pubsubmodel.Node
+
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.forEachKey([]byte("pubSubNodes:"+host), func(k []byte) error {
+			bs, err := b.getVal(k, txn)
+			if err != nil {
+				return err
+			}
+			var node pubsubmodel.Node
+			if err := serializer.Deserialize(bs, &node); err != nil {
+				return err
+			}
+			nodes = append(nodes, node)
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
 
 func (b *Storage) DeletePubSubNode(host, name string) error {

@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS pubsub_nodes (
     updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
 
+    INDEX i_pubsub_nodes_host (host(256)),
     UNIQUE INDEX i_pubsub_nodes_host_name (host(256), name(512))
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

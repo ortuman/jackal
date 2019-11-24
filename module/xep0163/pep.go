@@ -128,9 +128,22 @@ func (x *Pep) ProcessIQ(iq *xmpp.IQ) {
 	})
 }
 
-func (x *Pep) SubscribeTo(toJID *jid.JID, jid *jid.JID) error {
-	log.Infof("AUTOSUBSCRIBE: user: %s, to: %s", jid.ToBareJID().String(), toJID.ToBareJID().String())
-	return nil
+// SubscribeToAll subscribes a jid to all host nodes
+func (x *Pep) SubscribeToAll(host string, jid *jid.JID) {
+	x.runQueue.Run(func() {
+		if err := x.subscribeToAll(host, jid); err != nil {
+			log.Error(err)
+		}
+	})
+}
+
+// UnsubscribeFromAll unsubscribes a jid from all host nodes
+func (x *Pep) UnsubscribeFromAll(host string, jid *jid.JID) {
+	x.runQueue.Run(func() {
+		if err := x.unsubscribeFromAll(host, jid); err != nil {
+			log.Error(err)
+		}
+	})
 }
 
 // Shutdown shuts down version module.
@@ -149,6 +162,37 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 	case pubSubOwnerNamespace:
 		x.processOwnerRequest(iq, pubSub)
 	}
+}
+
+func (x *Pep) subscribeToAll(host string, jid *jid.JID) error {
+	nodes, err := storage.FetchPubSubNodes(host)
+	if err != nil {
+		return err
+	}
+	for _, n := range nodes {
+		sub := pubsubmodel.Subscription{
+			SubID:        subscriptionID(jid.ToBareJID().String(), host, n.Name),
+			JID:          jid.ToBareJID().String(),
+			Subscription: pubsubmodel.Subscribed,
+		}
+		if err := storage.UpsertPubSubNodeSubscription(&sub, host, n.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (x *Pep) unsubscribeFromAll(host string, jid *jid.JID) error {
+	nodes, err := storage.FetchPubSubNodes(host)
+	if err != nil {
+		return err
+	}
+	for _, n := range nodes {
+		if err := storage.DeletePubSubNodeSubscription(jid.ToBareJID().String(), host, n.Name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (x *Pep) processRequest(iq *xmpp.IQ, pubSubEl xmpp.XElement) {

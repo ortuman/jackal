@@ -152,3 +152,20 @@ func (b *Storage) upsertSlice(slice interface{}, key []byte, tx *badger.Txn) err
 func (b *Storage) delete(key []byte, txn *badger.Txn) error {
 	return txn.Delete(key)
 }
+
+func (b *Storage) forEachKey(prefix []byte, f func(k []byte) error) error {
+	return b.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		iter := txn.NewIterator(opts)
+		defer iter.Close()
+
+		for iter.Seek(prefix); iter.ValidForPrefix(prefix); iter.Next() {
+			it := iter.Item()
+			if err := f(it.Key()); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
