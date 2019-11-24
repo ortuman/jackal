@@ -170,6 +170,7 @@ func (x *Pep) subscribeToAll(host string, jid *jid.JID) error {
 		return err
 	}
 	for _, n := range nodes {
+		// upsert subscription
 		sub := pubsubmodel.Subscription{
 			SubID:        subscriptionID(jid.ToBareJID().String(), host, n.Name),
 			JID:          jid.ToBareJID().String(),
@@ -177,6 +178,20 @@ func (x *Pep) subscribeToAll(host string, jid *jid.JID) error {
 		}
 		if err := storage.UpsertPubSubNodeSubscription(&sub, host, n.Name); err != nil {
 			return err
+		}
+		// send last node item
+		switch n.Options.SendLastPublishedItem {
+		case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
+			affiliations, err := storage.FetchPubSubNodeAffiliations(host, n.Name)
+			if err != nil {
+				return err
+			}
+			accessChecker := &accessChecker{
+				accessModel:         n.Options.AccessModel,
+				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
+				affiliations:        affiliations,
+			}
+			return x.sendLastPublishedItem(sub, accessChecker, host, n.Name, n.Options.NotificationType)
 		}
 	}
 	return nil

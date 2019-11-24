@@ -403,7 +403,7 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 			}
 		}
 		if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
-			p.SubscribeToAll(userJID.String(), contactJID)
+			p.SubscribeToAll(contactJID.String(), userJID)
 		}
 	}
 	_ = x.router.Route(p)

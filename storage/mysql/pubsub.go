@@ -242,6 +242,7 @@ func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 
 func (s *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
 	row := sq.Select("item_id", "publisher", "payload").
+		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
 		OrderBy("created_at DESC").
 		Limit(1).
