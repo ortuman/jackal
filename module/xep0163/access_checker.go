@@ -12,6 +12,7 @@ import (
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 var (
@@ -60,8 +61,11 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 	return nil
 }
 
-func (ac *accessChecker) checkPresenceAccess(host, jid string) (bool, error) {
-	ri, err := storage.FetchRosterItem(host, jid)
+func (ac *accessChecker) checkPresenceAccess(host, j string) (bool, error) {
+	userJID, _ := jid.NewWithString(host, true)
+	contactJID, _ := jid.NewWithString(j, true)
+
+	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}
@@ -69,8 +73,11 @@ func (ac *accessChecker) checkPresenceAccess(host, jid string) (bool, error) {
 	return allowed, nil
 }
 
-func (ac *accessChecker) checkRosterAccess(host, jid string) (bool, error) {
-	ri, err := storage.FetchRosterItem(host, jid)
+func (ac *accessChecker) checkRosterAccess(host, j string) (bool, error) {
+	userJID, _ := jid.NewWithString(host, true)
+	contactJID, _ := jid.NewWithString(j, true)
+
+	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

@@ -402,12 +402,14 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 				return err
 			}
 		}
-		if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
-			p.SubscribeToAll(contactJID.String(), userJID)
-		}
 	}
 	_ = x.router.Route(p)
 	x.routePresencesFrom(contactJID, userJID, xmpp.AvailableType)
+
+	// auto-subscribe to all contact virtual nodes
+	if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
+		p.SubscribeToAll(contactJID.String(), userJID)
+	}
 	return nil
 }
 
@@ -524,14 +526,15 @@ routePresence:
 				return err
 			}
 		}
-		if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
-			p.UnsubscribeFromAll(contactJID.String(), userJID)
-		}
 	}
 	_ = x.router.Route(p)
 
 	if cntSub == rostermodel.SubscriptionFrom || cntSub == rostermodel.SubscriptionBoth {
 		x.routePresencesFrom(contactJID, userJID, xmpp.UnavailableType)
+	}
+	// auto-unsubscribe from all contact virtual nodes
+	if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
+		p.UnsubscribeFromAll(contactJID.String(), userJID)
 	}
 	return nil
 }

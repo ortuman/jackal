@@ -22,20 +22,6 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// <feature var='http://jabber.org/protocol/pubsub#access-presence'/>          [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#auto-create'/>              [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#auto-subscribe'/>           [PENDING]
-// <feature var='http://jabber.org/protocol/pubsub#config-node'/>              [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#create-and-configure'/>     [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#create-nodes'/>             [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#filtered-notifications'/>   [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#persistent-items'/>         [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#publish'/>                  [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#retrieve-items'/>           [DONE]
-// <feature var='http://jabber.org/protocol/pubsub#subscribe'/>                [DONE]
-
-// send last published item!!!
-
 const (
 	pubSubNamespace      = "http://jabber.org/protocol/pubsub"
 	pubSubOwnerNamespace = "http://jabber.org/protocol/pubsub#owner"
@@ -164,28 +150,41 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 	}
 }
 
-func (x *Pep) subscribeToAll(host string, jid *jid.JID) error {
+func (x *Pep) subscribeToAll(host string, subJID *jid.JID) error {
 	nodes, err := storage.FetchPubSubNodes(host)
 	if err != nil {
 		return err
 	}
 	for _, n := range nodes {
 		// upsert subscription
+		subID := subscriptionID(subJID.ToBareJID().String(), host, n.Name)
 		sub := pubsubmodel.Subscription{
-			SubID:        subscriptionID(jid.ToBareJID().String(), host, n.Name),
-			JID:          jid.ToBareJID().String(),
+			SubID:        subID,
+			JID:          subJID.ToBareJID().String(),
 			Subscription: pubsubmodel.Subscribed,
 		}
 		if err := storage.UpsertPubSubNodeSubscription(&sub, host, n.Name); err != nil {
 			return err
 		}
+		log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID)
+
+		// notify subscription update
+		affiliations, err := storage.FetchPubSubNodeAffiliations(host, n.Name)
+		if err != nil {
+			return err
+		}
+		subscriptionElem := xmpp.NewElementName("subscription")
+		subscriptionElem.SetAttribute("node", n.Name)
+		subscriptionElem.SetAttribute("jid", subJID.ToBareJID().String())
+		subscriptionElem.SetAttribute("subid", subID)
+		subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
+
+		if n.Options.DeliverNotifications && n.Options.NotifySub {
+			x.notifyOwners(subscriptionElem, affiliations, host, n.Options.NotificationType)
+		}
 		// send last node item
 		switch n.Options.SendLastPublishedItem {
 		case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-			affiliations, err := storage.FetchPubSubNodeAffiliations(host, n.Name)
-			if err != nil {
-				return err
-			}
 			accessChecker := &accessChecker{
 				accessModel:         n.Options.AccessModel,
 				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
@@ -197,15 +196,16 @@ func (x *Pep) subscribeToAll(host string, jid *jid.JID) error {
 	return nil
 }
 
-func (x *Pep) unsubscribeFromAll(host string, jid *jid.JID) error {
+func (x *Pep) unsubscribeFromAll(host string, subJID *jid.JID) error {
 	nodes, err := storage.FetchPubSubNodes(host)
 	if err != nil {
 		return err
 	}
 	for _, n := range nodes {
-		if err := storage.DeletePubSubNodeSubscription(jid.ToBareJID().String(), host, n.Name); err != nil {
+		if err := storage.DeletePubSubNodeSubscription(subJID.ToBareJID().String(), host, n.Name); err != nil {
 			return err
 		}
+		log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID.ToBareJID().String())
 	}
 	return nil
 }
