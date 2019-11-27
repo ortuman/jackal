@@ -201,7 +201,7 @@ func (x *Roster) updateItem(ri *rostermodel.Item, stm stream.C2S) error {
 			Ask:          ri.Ask,
 		}
 	}
-	return x.insertItem(usrRi, userJID)
+	return x.upsertItem(usrRi, userJID)
 }
 
 func (x *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
@@ -238,7 +238,10 @@ func (x *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 		if err := x.deleteItem(usrRi, userJID); err != nil {
 			return err
 		}
+		// auto-unsubscribe from all contact virtual nodes
+		x.unsubscribeFromVirtualNodes(contactJID.String(), userJID)
 	}
+
 	if x.router.IsLocalHost(contactJID.Domain()) {
 		cntRi, err := storage.FetchRosterItem(contactJID.Node(), userJID.String())
 		if err != nil {
@@ -251,17 +254,19 @@ func (x *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 			switch cntRi.Subscription {
 			case rostermodel.SubscriptionBoth:
 				cntRi.Subscription = rostermodel.SubscriptionTo
-				if err := x.insertItem(cntRi, contactJID); err != nil {
+				if err := x.upsertItem(cntRi, contactJID); err != nil {
 					return err
 				}
 				fallthrough
 
 			default:
 				cntRi.Subscription = rostermodel.SubscriptionNone
-				if err := x.insertItem(cntRi, contactJID); err != nil {
+				if err := x.upsertItem(cntRi, contactJID); err != nil {
 					return err
 				}
 			}
+			// auto-unsubscribe from all user virtual nodes
+			x.unsubscribeFromVirtualNodes(userJID.String(), contactJID)
 		}
 	}
 	if unsubscribe != nil {
@@ -326,7 +331,7 @@ func (x *Roster) processSubscribe(presence *xmpp.Presence) error {
 				Ask:          true,
 			}
 		}
-		if err := x.insertItem(usrRi, userJID); err != nil {
+		if err := x.upsertItem(usrRi, userJID); err != nil {
 			return err
 		}
 	}
@@ -375,9 +380,11 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 				Ask:          false,
 			}
 		}
-		if err := x.insertItem(cntRi, contactJID); err != nil {
+		if err := x.upsertItem(cntRi, contactJID); err != nil {
 			return err
 		}
+		// auto-subscribe to all contact virtual nodes
+		x.subscribeToAllVirtualNodes(contactJID.String(), userJID)
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.SubscribedType)
@@ -398,18 +405,16 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 				return nil
 			}
 			usrRi.Ask = false
-			if err := x.insertItem(usrRi, userJID); err != nil {
+			if err := x.upsertItem(usrRi, userJID); err != nil {
 				return err
 			}
 		}
+		// auto-subscribe to all user virtual nodes
+		x.subscribeToAllVirtualNodes(userJID.String(), contactJID)
 	}
 	_ = x.router.Route(p)
 	x.routePresencesFrom(contactJID, userJID, xmpp.AvailableType)
 
-	// auto-subscribe to all contact virtual nodes
-	if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
-		p.SubscribeToAll(contactJID.String(), userJID)
-	}
 	return nil
 }
 
@@ -434,7 +439,7 @@ func (x *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 			default:
 				usrRi.Subscription = rostermodel.SubscriptionNone
 			}
-			if err := x.insertItem(usrRi, userJID); err != nil {
+			if err := x.upsertItem(usrRi, userJID); err != nil {
 				return err
 			}
 		}
@@ -455,7 +460,7 @@ func (x *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 			default:
 				cntRi.Subscription = rostermodel.SubscriptionNone
 			}
-			if err := x.insertItem(cntRi, contactJID); err != nil {
+			if err := x.upsertItem(cntRi, contactJID); err != nil {
 				return err
 			}
 		}
@@ -497,7 +502,7 @@ func (x *Roster) processUnsubscribed(presence *xmpp.Presence) error {
 			default:
 				cntRi.Subscription = rostermodel.SubscriptionNone
 			}
-			if err := x.insertItem(cntRi, contactJID); err != nil {
+			if err := x.upsertItem(cntRi, contactJID); err != nil {
 				return err
 			}
 		}
@@ -522,7 +527,7 @@ routePresence:
 				}
 			}
 			usrRi.Ask = false
-			if err := x.insertItem(usrRi, userJID); err != nil {
+			if err := x.upsertItem(usrRi, userJID); err != nil {
 				return err
 			}
 		}
@@ -531,10 +536,6 @@ routePresence:
 
 	if cntSub == rostermodel.SubscriptionFrom || cntSub == rostermodel.SubscriptionBoth {
 		x.routePresencesFrom(contactJID, userJID, xmpp.UnavailableType)
-	}
-	// auto-unsubscribe from all contact virtual nodes
-	if p := x.pep; p != nil && x.router.IsLocalHost(contactJID.Domain()) {
-		p.UnsubscribeFromAll(contactJID.String(), userJID)
 	}
 	return nil
 }
@@ -655,7 +656,7 @@ func (x *Roster) broadcastPresence(presence *xmpp.Presence) error {
 	return nil
 }
 
-func (x *Roster) insertItem(ri *rostermodel.Item, pushTo *jid.JID) error {
+func (x *Roster) upsertItem(ri *rostermodel.Item, pushTo *jid.JID) error {
 	v, err := storage.UpsertRosterItem(ri)
 	if err != nil {
 		return err
@@ -725,6 +726,20 @@ func (x *Roster) routePresencesFrom(from *jid.JID, to *jid.JID, presenceType str
 		}
 		_ = x.router.Route(p)
 	}
+}
+
+func (x *Roster) subscribeToAllVirtualNodes(hostJID string, jid *jid.JID) {
+	if x.pep == nil {
+		return
+	}
+	x.pep.SubscribeToAll(hostJID, jid)
+}
+
+func (x *Roster) unsubscribeFromVirtualNodes(hostJID string, jid *jid.JID) {
+	if x.pep == nil {
+		return
+	}
+	x.pep.UnsubscribeFromAll(hostJID, jid)
 }
 
 func parseVer(ver string) int {
