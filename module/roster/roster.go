@@ -238,8 +238,8 @@ func (x *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 		if err := x.deleteItem(usrRi, userJID); err != nil {
 			return err
 		}
-		// auto-unsubscribe from all contact virtual nodes
-		x.unsubscribeFromVirtualNodes(contactJID.String(), userJID)
+		// auto-unsubscribe from all user virtual nodes
+		x.unsubscribeFromVirtualNodes(userJID.String(), contactJID)
 	}
 
 	if x.router.IsLocalHost(contactJID.Domain()) {
@@ -265,8 +265,8 @@ func (x *Roster) removeItem(ri *rostermodel.Item, stm stream.C2S) error {
 					return err
 				}
 			}
-			// auto-unsubscribe from all user virtual nodes
-			x.unsubscribeFromVirtualNodes(userJID.String(), contactJID)
+			// auto-unsubscribe from all contact virtual nodes
+			x.unsubscribeFromVirtualNodes(contactJID.String(), userJID)
 		}
 	}
 	if unsubscribe != nil {
@@ -380,11 +380,11 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 				Ask:          false,
 			}
 		}
+		x.subscribeToAllVirtualNodes(contactJID.String(), userJID) // auto-subscribe to all contact virtual nodes
+
 		if err := x.upsertItem(cntRi, contactJID); err != nil {
 			return err
 		}
-		// auto-subscribe to all contact virtual nodes
-		x.subscribeToAllVirtualNodes(contactJID.String(), userJID)
 	}
 	// stamp the presence stanza of type "subscribed" with the contact's bare JID as the 'from' address
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.SubscribedType)
@@ -409,8 +409,6 @@ func (x *Roster) processSubscribed(presence *xmpp.Presence) error {
 				return err
 			}
 		}
-		// auto-subscribe to all user virtual nodes
-		x.subscribeToAllVirtualNodes(userJID.String(), contactJID)
 	}
 	_ = x.router.Route(p)
 	x.routePresencesFrom(contactJID, userJID, xmpp.AvailableType)
@@ -464,6 +462,8 @@ func (x *Roster) processUnsubscribe(presence *xmpp.Presence) error {
 				return err
 			}
 		}
+		// auto-unsubscribe from all contact virtual nodes
+		x.unsubscribeFromVirtualNodes(contactJID.String(), userJID)
 	}
 	_ = x.router.Route(p)
 
@@ -506,6 +506,8 @@ func (x *Roster) processUnsubscribed(presence *xmpp.Presence) error {
 				return err
 			}
 		}
+		// auto-unsubscribe from all contact virtual nodes
+		x.unsubscribeFromVirtualNodes(contactJID.String(), userJID)
 	}
 routePresence:
 	// stamp the presence stanza of type "unsubscribed" with the contact's bare JID as the 'from' address

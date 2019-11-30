@@ -62,6 +62,9 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	if err != nil {
 		return nil, err
 	}
+	if opts == nil {
+		return nil, nil // not found
+	}
 	return &pubsubmodel.Node{
 		Host:    host,
 		Name:    name,
