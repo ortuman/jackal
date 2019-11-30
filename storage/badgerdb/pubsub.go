@@ -160,6 +160,11 @@ func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 	})
 }
 
+func (b *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	// TODO(ortuman): Implement me!
+	return nil, nil
+}
+
 func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	var affiliations []pubsubmodel.Affiliation
 	err := b.db.View(func(txn *badger.Txn) error {

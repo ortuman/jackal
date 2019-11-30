@@ -23,6 +23,7 @@ type pubSubStorage interface {
 
 	UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
 	FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
+	FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error)
 	DeletePubSubNodeAffiliation(jid, host, name string) error
 
 	UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
@@ -72,6 +73,10 @@ func UpsertPubSubNodeAffiliation(affiliatiaon *pubsubmodel.Affiliation, host, na
 
 func DeletePubSubNodeAffiliation(jid, host, name string) error {
 	return inst.DeletePubSubNodeAffiliation(jid, host, name)
+}
+
+func FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	return inst.FetchPubSubNodeAffiliation(host, name, jid)
 }
 
 func FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {

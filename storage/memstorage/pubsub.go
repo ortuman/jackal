@@ -200,6 +200,11 @@ func (m *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 	})
 }
 
+func (m *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	// TODO(ortuman): Implement me!
+	return nil, nil
+}
+
 func (m *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {

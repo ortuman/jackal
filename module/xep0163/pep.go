@@ -194,14 +194,21 @@ func (x *Pep) subscribeToAll(host string, subJID *jid.JID) error {
 		// send last node item
 		switch n.Options.SendLastPublishedItem {
 		case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
+			var subAff *pubsubmodel.Affiliation
+			for _, aff := range affiliations {
+				if aff.JID == subJID.ToBareJID().String() {
+					subAff = &aff
+					break
+				}
+			}
 			accessChecker := &accessChecker{
 				host:                n.Host,
 				nodeID:              n.Name,
 				accessModel:         n.Options.AccessModel,
 				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
+				affiliation:         subAff,
 			}
-			subscriberJID, _ := jid.NewWithString(sub.JID, true)
-			return x.sendLastPublishedItem(subscriberJID, accessChecker, host, n.Name, n.Options.NotificationType)
+			return x.sendLastPublishedItem(subJID, accessChecker, host, n.Name, n.Options.NotificationType)
 		}
 	}
 	return nil
@@ -230,11 +237,16 @@ func (x *Pep) deliverLastItems(jid *jid.JID) error {
 		if node.Options.SendLastPublishedItem != pubsubmodel.OnSubAndPresence {
 			continue
 		}
+		aff, err := storage.FetchPubSubNodeAffiliation(node.Host, node.Name, jid.ToBareJID().String())
+		if err != nil {
+			return err
+		}
 		accessChecker := &accessChecker{
 			host:                node.Host,
 			nodeID:              node.Name,
 			accessModel:         node.Options.AccessModel,
 			rosterAllowedGroups: node.Options.RosterGroupsAllowed,
+			affiliation:         aff,
 		}
 		if err := x.sendLastPublishedItem(jid, accessChecker, node.Host, node.Name, node.Options.NotificationType); err != nil {
 			return err
@@ -961,33 +973,28 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	}
 	ctx.node = node
 
-	// fetch affiliations
-	var affiliations []pubsubmodel.Affiliation
-
-	if len(opts.allowedAffiliations) > 0 || opts.includeAffiliations {
-		affiliations, err = storage.FetchPubSubNodeAffiliations(host, nodeID)
-		if err != nil {
-			log.Error(err)
-			_ = x.router.Route(iq.InternalServerError())
-			return
-		}
+	// fetch affiliation
+	aff, err := storage.FetchPubSubNodeAffiliation(host, nodeID, fromJID)
+	if err != nil {
+		log.Error(err)
+		_ = x.router.Route(iq.InternalServerError())
+		return
 	}
 	ctx.accessChecker = &accessChecker{
 		host:                node.Host,
 		nodeID:              node.Name,
 		accessModel:         node.Options.AccessModel,
 		rosterAllowedGroups: node.Options.RosterGroupsAllowed,
+		affiliation:         aff,
 	}
 	// check access
 	if opts.checkAccess && !ctx.isAccountOwner {
-		for _, aff := range affiliations {
-			if aff.JID == fromJID && aff.Affiliation == pubsubmodel.Outcast {
-				_ = x.router.Route(iq.ForbiddenError())
-				return
-			}
-		}
 		err := ctx.accessChecker.checkAccess(host, fromJID)
 		switch err {
+		case errOutcastMember:
+			_ = x.router.Route(iq.ForbiddenError())
+			return
+
 		case errPresenceSubscriptionRequired:
 			_ = x.router.Route(presenceSubscriptionRequiredError(iq))
 			return
@@ -1008,31 +1015,18 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	}
 	// validate affiliation
 	if len(opts.allowedAffiliations) > 0 {
-		fromJID := iq.FromJID().ToBareJID().String()
-
 		var allowed bool
-		for _, aff := range affiliations {
-			if aff.JID != fromJID {
-				continue
-			}
-			for _, allowedAff := range opts.allowedAffiliations {
-				if allowedAff != aff.Affiliation {
-					continue
-				}
+		for _, allowedAff := range opts.allowedAffiliations {
+			if aff.Affiliation == allowedAff {
 				allowed = true
 				break
 			}
-			break
 		}
 		if !allowed {
 			_ = x.router.Route(iq.ForbiddenError())
 			return
 		}
 	}
-	if opts.includeAffiliations {
-		ctx.affiliations = affiliations
-	}
-
 	// fetch subscriptions
 	if opts.includeSubscriptions {
 		subscriptions, err := storage.FetchPubSubNodeSubscriptions(host, nodeID)
@@ -1042,6 +1036,16 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 			return
 		}
 		ctx.subscriptions = subscriptions
+	}
+	// fetch affiliations
+	if opts.includeAffiliations {
+		affiliations, err := storage.FetchPubSubNodeAffiliations(host, nodeID)
+		if err != nil {
+			log.Error(err)
+			_ = x.router.Route(iq.InternalServerError())
+			return
+		}
+		ctx.affiliations = affiliations
 	}
 	fn(&ctx)
 }

@@ -315,6 +315,24 @@ func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 	})
 }
 
+func (s *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	var aff pubsubmodel.Affiliation
+
+	row := sq.Select("jid", "affiliation").
+		From("pubsub_affiliations").
+		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?) AND jid = ?", host, name, jid).
+		RunWith(s.db).QueryRow()
+	err := row.Scan(&aff.JID, &aff.Affiliation)
+	switch err {
+	case nil:
+		return &aff, nil
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
 func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	rows, err := sq.Select("jid", "affiliation").
 		From("pubsub_affiliations").

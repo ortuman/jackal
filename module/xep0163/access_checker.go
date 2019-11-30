@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	errOutcastMember                = errors.New("pep: outcast member")
 	errPresenceSubscriptionRequired = errors.New("pep: presence subscription required")
 	errNotInRosterGroup             = errors.New("pep: not in roster group")
 	errNotOnWhiteList               = errors.New("pep: not on whitelist")
@@ -26,9 +27,14 @@ type accessChecker struct {
 	nodeID              string
 	accessModel         string
 	rosterAllowedGroups []string
+	affiliation         *pubsubmodel.Affiliation
 }
 
 func (ac *accessChecker) checkAccess(host, j string) error {
+	aff := ac.affiliation
+	if aff != nil && aff.Affiliation == pubsubmodel.Outcast {
+		return errOutcastMember
+	}
 	switch ac.accessModel {
 	case pubsubmodel.Open:
 		return nil
@@ -52,7 +58,7 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		}
 
 	case pubsubmodel.WhiteList:
-		allowed, err := ac.checkWhitelistAccess(j)
+		allowed, err := ac.checkWhitelistAccess()
 		if err != nil {
 			return err
 		}
@@ -99,19 +105,10 @@ func (ac *accessChecker) checkRosterAccess(host, j string) (bool, error) {
 	return false, nil
 }
 
-func (ac *accessChecker) checkWhitelistAccess(j string) (bool, error) {
-	affiliations, err := storage.FetchPubSubNodeAffiliations(ac.host, ac.nodeID)
-	if err != nil {
-		return false, err
+func (ac *accessChecker) checkWhitelistAccess() (bool, error) {
+	aff := ac.affiliation
+	if aff == nil {
+		return false, nil
 	}
-	for _, aff := range affiliations {
-		if aff.JID != j {
-			continue
-		}
-		switch aff.Affiliation {
-		case pubsubmodel.Owner, pubsubmodel.Member:
-			return true, nil
-		}
-	}
-	return false, nil
+	return aff.Affiliation == pubsubmodel.Owner || aff.Affiliation == pubsubmodel.Member, nil
 }

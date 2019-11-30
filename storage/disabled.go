@@ -154,6 +154,10 @@ func (*disabledStorage) DeletePubSubNodeAffiliation(jid, host, name string) erro
 	return nil
 }
 
+func (*disabledStorage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	return nil, nil
+}
+
 func (*disabledStorage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	return nil, nil
 }
