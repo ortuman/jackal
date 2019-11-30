@@ -132,6 +132,15 @@ func (x *Pep) UnsubscribeFromAll(host string, jid *jid.JID) {
 	})
 }
 
+// DeliverLastItems delivers last items from all those nodes to which the jid is subscribed
+func (x *Pep) DeliverLastItems(jid *jid.JID) {
+	x.runQueue.Run(func() {
+		if err := x.deliverLastItems(jid); err != nil {
+			log.Error(err)
+		}
+	})
+}
+
 // Shutdown shuts down version module.
 func (x *Pep) Shutdown() error {
 	c := make(chan struct{})
@@ -207,6 +216,11 @@ func (x *Pep) unsubscribeFromAll(host string, subJID *jid.JID) error {
 		}
 		log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID.ToBareJID().String())
 	}
+	return nil
+}
+
+func (x *Pep) deliverLastItems(jid *jid.JID) error {
+	// TODO(ortuman): implement storage method to fetch all jid subscriptions
 	return nil
 }
 

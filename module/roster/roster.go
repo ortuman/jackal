@@ -585,6 +585,7 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 			if err := x.deliverRosterPresences(userJID); err != nil {
 				return err
 			}
+			x.sendVirtualNodesLastItems(userJID)
 		}
 	} else {
 		log.Infof("processing 'unavailable' - user: %s", fromJID)
@@ -742,6 +743,13 @@ func (x *Roster) unsubscribeFromVirtualNodes(hostJID string, jid *jid.JID) {
 		return
 	}
 	x.pep.UnsubscribeFromAll(hostJID, jid)
+}
+
+func (x *Roster) sendVirtualNodesLastItems(jid *jid.JID) {
+	if x.pep == nil {
+		return
+	}
+	x.pep.DeliverLastItems(jid)
 }
 
 func parseVer(ver string) int {
