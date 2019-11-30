@@ -55,6 +55,11 @@ func (b *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
+func (b *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+	// TODO(ortuman): implement me!
+	return nil, nil
+}
+
 func (b *Storage) DeletePubSubNode(host, name string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		if err := b.delete(b.pubSubNodesKey(host, name), tx); err != nil {

@@ -10,41 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPgSQLFetchPubSubNodes(t *testing.T) {
-	s, mock := NewMock()
-	rows := sqlmock.NewRows([]string{"name"})
-	rows.AddRow("princely_musings_1")
-	rows.AddRow("princely_musings_2")
-
-	mock.ExpectQuery("SELECT name FROM pubsub_nodes WHERE host = (.+)").
-		WithArgs("ortuman@jackal.im").
-		WillReturnRows(rows)
-
-	var cols = []string{"name", "value"}
-
-	rows = sqlmock.NewRows(cols)
-	rows.AddRow("pubsub#access_model", "presence")
-	rows.AddRow("pubsub#publish_model", "publishers")
-	rows.AddRow("pubsub#send_last_published_item", "on_sub_and_presence")
-
-	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
-		WithArgs("ortuman@jackal.im", "princely_musings_1").
-		WillReturnRows(rows)
-	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
-		WithArgs("ortuman@jackal.im", "princely_musings_2").
-		WillReturnRows(rows)
-
-	nodes, err := s.FetchPubSubNodes("ortuman@jackal.im")
-
-	require.Nil(t, mock.ExpectationsWereMet())
-
-	require.Nil(t, err)
-	require.NotNil(t, nodes)
-	require.Len(t, nodes, 2)
-	require.Equal(t, "princely_musings_1", nodes[0].Name)
-	require.Equal(t, "princely_musings_2", nodes[1].Name)
-}
-
 func TestPgSQLUpsertPubSubNode(t *testing.T) {
 	s, mock := NewMock()
 	mock.ExpectBegin()
@@ -113,6 +78,76 @@ func TestPgSQLFetchPubSubNode(t *testing.T) {
 	require.Equal(t, node.Options.AccessModel, pubsubmodel.Presence)
 	require.Equal(t, node.Options.PublishModel, pubsubmodel.Publishers)
 	require.Equal(t, node.Options.SendLastPublishedItem, pubsubmodel.OnSubAndPresence)
+}
+
+func TestPgSQLFetchPubSubNodes(t *testing.T) {
+	s, mock := NewMock()
+	rows := sqlmock.NewRows([]string{"name"})
+	rows.AddRow("princely_musings_1")
+	rows.AddRow("princely_musings_2")
+
+	mock.ExpectQuery("SELECT name FROM pubsub_nodes WHERE host = (.+)").
+		WithArgs("ortuman@jackal.im").
+		WillReturnRows(rows)
+
+	var cols = []string{"name", "value"}
+
+	rows = sqlmock.NewRows(cols)
+	rows.AddRow("pubsub#access_model", "presence")
+	rows.AddRow("pubsub#publish_model", "publishers")
+	rows.AddRow("pubsub#send_last_published_item", "on_sub_and_presence")
+
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_1").
+		WillReturnRows(rows)
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_2").
+		WillReturnRows(rows)
+
+	nodes, err := s.FetchPubSubNodes("ortuman@jackal.im")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+	require.NotNil(t, nodes)
+	require.Len(t, nodes, 2)
+	require.Equal(t, "princely_musings_1", nodes[0].Name)
+	require.Equal(t, "princely_musings_2", nodes[1].Name)
+}
+
+func TestPgSQLFetchPubSubSubscribedNodes(t *testing.T) {
+	s, mock := NewMock()
+	rows := sqlmock.NewRows([]string{"host", "name"})
+	rows.AddRow("ortuman@jackal.im", "princely_musings_1")
+	rows.AddRow("ortuman@jackal.im", "princely_musings_2")
+
+	mock.ExpectQuery("SELECT host, name FROM pubsub_nodes WHERE id IN (.+)").
+		WithArgs("ortuman@jackal.im", pubsubmodel.Subscribed).
+		WillReturnRows(rows)
+
+	var cols = []string{"name", "value"}
+
+	rows = sqlmock.NewRows(cols)
+	rows.AddRow("pubsub#access_model", "presence")
+	rows.AddRow("pubsub#publish_model", "publishers")
+	rows.AddRow("pubsub#send_last_published_item", "on_sub_and_presence")
+
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_1").
+		WillReturnRows(rows)
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_2").
+		WillReturnRows(rows)
+
+	nodes, err := s.FetchPubSubSubscribedNodes("ortuman@jackal.im")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+	require.NotNil(t, nodes)
+	require.Len(t, nodes, 2)
+	require.Equal(t, "princely_musings_1", nodes[0].Name)
+	require.Equal(t, "princely_musings_2", nodes[1].Name)
 }
 
 func TestPgSQLDeletePubSubNode(t *testing.T) {

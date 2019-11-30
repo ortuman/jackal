@@ -10,6 +10,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMySQLUpsertPubSubNode(t *testing.T) {
+	s, mock := NewMock()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO pubsub_nodes (.+) ON DUPLICATE KEY UPDATE (.+)").
+		WithArgs("host", "name").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
+		WithArgs("host", "name").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("1"))
+
+	mock.ExpectExec("DELETE FROM pubsub_node_options WHERE (.+)").
+		WithArgs("1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	opts := pubsubmodel.Options{}
+
+	optMap, _ := opts.Map()
+	for i := 0; i < len(optMap); i++ {
+		mock.ExpectExec("INSERT INTO pubsub_node_options (.+)").
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	mock.ExpectCommit()
+
+	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
+	err := s.UpsertPubSubNode(&node)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+}
+
 func TestMySQLFetchPubSubNodes(t *testing.T) {
 	s, mock := NewMock()
 	rows := sqlmock.NewRows([]string{"name"})
@@ -45,37 +78,39 @@ func TestMySQLFetchPubSubNodes(t *testing.T) {
 	require.Equal(t, "princely_musings_2", nodes[1].Name)
 }
 
-func TestMySQLUpsertPubSubNode(t *testing.T) {
+func TestMySQLFetchPubSubSubscribedNodes(t *testing.T) {
 	s, mock := NewMock()
-	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO pubsub_nodes (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("host", "name").
-		WillReturnResult(sqlmock.NewResult(0, 1))
+	rows := sqlmock.NewRows([]string{"host", "name"})
+	rows.AddRow("ortuman@jackal.im", "princely_musings_1")
+	rows.AddRow("ortuman@jackal.im", "princely_musings_2")
 
-	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
-		WithArgs("host", "name").
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("1"))
+	mock.ExpectQuery("SELECT host, name FROM pubsub_nodes WHERE id IN (.+)").
+		WithArgs("ortuman@jackal.im", pubsubmodel.Subscribed).
+		WillReturnRows(rows)
 
-	mock.ExpectExec("DELETE FROM pubsub_node_options WHERE (.+)").
-		WithArgs("1").
-		WillReturnResult(sqlmock.NewResult(0, 1))
+	var cols = []string{"name", "value"}
 
-	opts := pubsubmodel.Options{}
+	rows = sqlmock.NewRows(cols)
+	rows.AddRow("pubsub#access_model", "presence")
+	rows.AddRow("pubsub#publish_model", "publishers")
+	rows.AddRow("pubsub#send_last_published_item", "on_sub_and_presence")
 
-	optMap, _ := opts.Map()
-	for i := 0; i < len(optMap); i++ {
-		mock.ExpectExec("INSERT INTO pubsub_node_options (.+)").
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-			WillReturnResult(sqlmock.NewResult(0, 1))
-	}
-	mock.ExpectCommit()
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_1").
+		WillReturnRows(rows)
+	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
+		WithArgs("ortuman@jackal.im", "princely_musings_2").
+		WillReturnRows(rows)
 
-	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
-	err := s.UpsertPubSubNode(&node)
+	nodes, err := s.FetchPubSubSubscribedNodes("ortuman@jackal.im")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
+	require.NotNil(t, nodes)
+	require.Len(t, nodes, 2)
+	require.Equal(t, "princely_musings_1", nodes[0].Name)
+	require.Equal(t, "princely_musings_2", nodes[1].Name)
 }
 
 func TestMySQLFetchPubSubNode(t *testing.T) {

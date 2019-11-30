@@ -22,9 +22,10 @@ var (
 )
 
 type accessChecker struct {
+	host                string
+	nodeID              string
 	accessModel         string
 	rosterAllowedGroups []string
-	affiliations        []pubsubmodel.Affiliation
 }
 
 func (ac *accessChecker) checkAccess(host, j string) error {
@@ -51,7 +52,11 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		}
 
 	case pubsubmodel.WhiteList:
-		if !ac.checkWhitelistAccess(j) {
+		allowed, err := ac.checkWhitelistAccess(j)
+		if err != nil {
+			return err
+		}
+		if !allowed {
 			return errNotOnWhiteList
 		}
 
@@ -94,15 +99,19 @@ func (ac *accessChecker) checkRosterAccess(host, j string) (bool, error) {
 	return false, nil
 }
 
-func (ac *accessChecker) checkWhitelistAccess(j string) bool {
-	for _, aff := range ac.affiliations {
+func (ac *accessChecker) checkWhitelistAccess(j string) (bool, error) {
+	affiliations, err := storage.FetchPubSubNodeAffiliations(ac.host, ac.nodeID)
+	if err != nil {
+		return false, err
+	}
+	for _, aff := range affiliations {
 		if aff.JID != j {
 			continue
 		}
 		switch aff.Affiliation {
 		case pubsubmodel.Owner, pubsubmodel.Member:
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }

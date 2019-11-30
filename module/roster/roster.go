@@ -585,7 +585,7 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 			if err := x.deliverRosterPresences(userJID); err != nil {
 				return err
 			}
-			x.sendVirtualNodesLastItems(userJID)
+			x.sendVirtualNodesLastItems(fromJID)
 		}
 	} else {
 		log.Infof("processing 'unavailable' - user: %s", fromJID)

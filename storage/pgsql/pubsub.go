@@ -79,19 +79,43 @@ func (s *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var names []string
+	var nodes []pubsubmodel.Node
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
 			return nil, err
 		}
-		names = append(names, name)
+		var node = pubsubmodel.Node{Host: host, Name: name}
+		opts, err := s.fetchPubSubNodeOptions(host, name)
+		if err != nil {
+			return nil, err
+		}
+		if opts != nil {
+			node.Options = *opts
+		}
+		nodes = append(nodes, node)
 	}
-	var nodes []pubsubmodel.Node
-	for _, nm := range names {
-		var node = pubsubmodel.Node{Host: host, Name: nm}
+	return nodes, nil
+}
 
-		opts, err := s.fetchPubSubNodeOptions(host, nm)
+func (s *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+	rows, err := sq.Select("host", "name").
+		From("pubsub_nodes").
+		Where(sq.Expr("id IN (SELECT DISTINCT(node_id) FROM pubsub_subscriptions WHERE jid = ? AND subscription = ?)", jid, pubsubmodel.Subscribed)).
+		RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var nodes []pubsubmodel.Node
+	for rows.Next() {
+		var host, name string
+		if err := rows.Scan(&host, &name); err != nil {
+			return nil, err
+		}
+		var node = pubsubmodel.Node{Host: host, Name: name}
+		opts, err := s.fetchPubSubNodeOptions(host, name)
 		if err != nil {
 			return nil, err
 		}

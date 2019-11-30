@@ -107,7 +107,7 @@ func (x *Pep) MatchesIQ(iq *xmpp.IQ) bool {
 	return false
 }
 
-// ProcessIQ processes a version IQ taking according actions over the associated stream.
+// ProcessIQ processes a version IQ taking according actions over the associated stream
 func (x *Pep) ProcessIQ(iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
 		x.processIQ(iq)
@@ -195,11 +195,13 @@ func (x *Pep) subscribeToAll(host string, subJID *jid.JID) error {
 		switch n.Options.SendLastPublishedItem {
 		case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
 			accessChecker := &accessChecker{
+				host:                n.Host,
+				nodeID:              n.Name,
 				accessModel:         n.Options.AccessModel,
 				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
-				affiliations:        affiliations,
 			}
-			return x.sendLastPublishedItem(sub, accessChecker, host, n.Name, n.Options.NotificationType)
+			subscriberJID, _ := jid.NewWithString(sub.JID, true)
+			return x.sendLastPublishedItem(subscriberJID, accessChecker, host, n.Name, n.Options.NotificationType)
 		}
 	}
 	return nil
@@ -220,7 +222,24 @@ func (x *Pep) unsubscribeFromAll(host string, subJID *jid.JID) error {
 }
 
 func (x *Pep) deliverLastItems(jid *jid.JID) error {
-	// TODO(ortuman): implement storage method to fetch all jid subscriptions
+	nodes, err := storage.FetchPubSubSubscribedNodes(jid.ToBareJID().String())
+	if err != nil {
+		return err
+	}
+	for _, node := range nodes {
+		if node.Options.SendLastPublishedItem != pubsubmodel.OnSubAndPresence {
+			continue
+		}
+		accessChecker := &accessChecker{
+			host:                node.Host,
+			nodeID:              node.Name,
+			accessModel:         node.Options.AccessModel,
+			rosterAllowedGroups: node.Options.RosterGroupsAllowed,
+		}
+		if err := x.sendLastPublishedItem(jid, accessChecker, node.Host, node.Name, node.Options.NotificationType); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -536,7 +555,8 @@ func (x *Pep) subscribe(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ
 	// send last node item
 	switch opts.SendLastPublishedItem {
 	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-		err := x.sendLastPublishedItem(sub, cmdCtx.accessChecker, cmdCtx.host, cmdCtx.nodeID, opts.NotificationType)
+		subscriberJID, _ := jid.NewWithString(sub.JID, true)
+		err := x.sendLastPublishedItem(subscriberJID, cmdCtx.accessChecker, cmdCtx.host, cmdCtx.nodeID, opts.NotificationType)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())
@@ -846,20 +866,36 @@ func (x *Pep) notifyOwners(notificationElem xmpp.XElement, affiliations []pubsub
 
 func (x *Pep) notifySubscribers(
 	notificationElem xmpp.XElement,
-	subscriptions []pubsubmodel.Subscription,
+	subscribers []pubsubmodel.Subscription,
+	accessChecker *accessChecker,
+	host string,
+	nodeID string,
+	notificationType string,
+) {
+	var toJIDs []jid.JID
+	for _, subscriber := range subscribers {
+		if subscriber.Subscription != pubsubmodel.Subscribed {
+			continue
+		}
+		subscriberJID, _ := jid.NewWithString(subscriber.JID, true)
+		toJIDs = append(toJIDs, *subscriberJID)
+	}
+	x.notify(notificationElem, toJIDs, accessChecker, host, nodeID, notificationType)
+}
+
+func (x *Pep) notify(
+	notificationElem xmpp.XElement,
+	toJIDs []jid.JID,
 	accessChecker *accessChecker,
 	host string,
 	nodeID string,
 	notificationType string,
 ) {
 	hostJID, _ := jid.NewWithString(host, true)
-	for _, subscription := range subscriptions {
-		if subscription.Subscription != pubsubmodel.Subscribed {
-			continue
-		}
-		if subscription.JID != host {
+	for _, toJID := range toJIDs {
+		if toJID.ToBareJID().String() != host {
 			// check JID access before notifying
-			err := accessChecker.checkAccess(host, subscription.JID)
+			err := accessChecker.checkAccess(host, toJID.ToBareJID().String())
 			switch err {
 			case nil:
 				break
@@ -870,10 +906,9 @@ func (x *Pep) notifySubscribers(
 				continue
 			}
 		}
-		subscriberJID, _ := jid.NewWithString(subscription.JID, true)
 
 		if ph := x.presenceHub; ph != nil {
-			onlinePresences := ph.AvailablePresencesMatchingJID(subscriberJID)
+			onlinePresences := ph.AvailablePresencesMatchingJID(&toJID)
 
 			for _, onlinePresence := range onlinePresences {
 				presence := onlinePresence.Presence
@@ -888,7 +923,7 @@ func (x *Pep) notifySubscribers(
 			}
 		} else {
 			// broadcast event message
-			eventMsg := eventMessage(notificationElem, hostJID, subscriberJID, notificationType)
+			eventMsg := eventMessage(notificationElem, hostJID, &toJID, notificationType)
 			_ = x.router.Route(eventMsg)
 		}
 	}
@@ -929,7 +964,7 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	// fetch affiliations
 	var affiliations []pubsubmodel.Affiliation
 
-	if len(opts.allowedAffiliations) > 0 || opts.includeAffiliations || opts.checkAccess {
+	if len(opts.allowedAffiliations) > 0 || opts.includeAffiliations {
 		affiliations, err = storage.FetchPubSubNodeAffiliations(host, nodeID)
 		if err != nil {
 			log.Error(err)
@@ -938,9 +973,10 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 		}
 	}
 	ctx.accessChecker = &accessChecker{
+		host:                node.Host,
+		nodeID:              node.Name,
 		accessModel:         node.Options.AccessModel,
 		rosterAllowedGroups: node.Options.RosterGroupsAllowed,
-		affiliations:        affiliations,
 	}
 	// check access
 	if opts.checkAccess && !ctx.isAccountOwner {
@@ -1032,7 +1068,7 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 	return storage.UpsertPubSubNodeSubscription(ownerSub, node.Host, node.Name)
 }
 
-func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, accessChecker *accessChecker, host, nodeID, notificationType string) error {
+func (x *Pep) sendLastPublishedItem(toJID *jid.JID, accessChecker *accessChecker, host, nodeID, notificationType string) error {
 	lastItem, err := storage.FetchPubSubNodeLastItem(host, nodeID)
 	if err != nil {
 		return err
@@ -1044,9 +1080,9 @@ func (x *Pep) sendLastPublishedItem(sub pubsubmodel.Subscription, accessChecker 
 	itemsEl.SetAttribute("node", nodeID)
 	itemsEl.AppendElement(lastItem.Payload)
 
-	x.notifySubscribers(
+	x.notify(
 		itemsEl,
-		[]pubsubmodel.Subscription{sub},
+		[]jid.JID{*toJID},
 		accessChecker,
 		host,
 		nodeID,

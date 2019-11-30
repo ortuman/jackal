@@ -10,6 +10,17 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
+	b, err := serializer.Serialize(node)
+	if err != nil {
+		return err
+	}
+	return m.inWriteLock(func() error {
+		m.bytes[pubSubNodesKey(node.Host, node.Name)] = b
+		return m.upsertHostNode(node)
+	})
+}
+
 func (m *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -29,17 +40,6 @@ func (m *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
-func (m *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
-	b, err := serializer.Serialize(node)
-	if err != nil {
-		return err
-	}
-	return m.inWriteLock(func() error {
-		m.bytes[pubSubNodesKey(node.Host, node.Name)] = b
-		return m.upsertHostNode(node)
-	})
-}
-
 func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -56,6 +56,11 @@ func (m *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 		return nil, err
 	}
 	return &node, nil
+}
+
+func (m *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+	// TODO(ortuman): implement me!
+	return nil, nil
 }
 
 func (m *Storage) DeletePubSubNode(host, name string) error {
