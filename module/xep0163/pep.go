@@ -679,6 +679,8 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 			return
 		}
 	}
+	log.Infof("pep: published item (host: %s, node_id: %s, item_id: %s)", cmdCtx.host, cmdCtx.nodeID, itemID)
+
 	// notify published item
 	notifyElem := xmpp.NewElementName("item")
 	notifyElem.SetAttribute("id", itemID)
