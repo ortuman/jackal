@@ -993,6 +993,9 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	if opts.checkAccess && !ctx.isAccountOwner {
 		err := ctx.accessChecker.checkAccess(host, fromJID)
 		switch err {
+		case nil:
+			break
+
 		case errOutcastMember:
 			_ = x.router.Route(iq.ForbiddenError())
 			return
