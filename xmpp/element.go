@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -185,7 +184,6 @@ func (e *Element) ToXML(w io.Writer, includeClosing bool) {
 			_ = escapeText(w, []byte(e.text), false)
 		}
 		for _, elem := range e.elements {
-			log.Infof("To XML in: %s, %s", e.name, elem.Name())
 			elem.ToXML(w, true)
 		}
 

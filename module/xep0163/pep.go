@@ -749,7 +749,7 @@ func (x *Pep) retrieveItems(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmp
 		itemElem.SetAttribute("id", itm.ID)
 		itemElem.AppendElement(itm.Payload)
 
-		itemsElem.AppendElement(itemsElem)
+		itemsElem.AppendElement(itemElem)
 	}
 	pubSubElem.AppendElement(itemsElem)
 	iqRes.AppendElement(pubSubElem)
