@@ -53,7 +53,7 @@ Each time a message is sent to an offline user a `POST` http request to the `pas
 
 ### Getting Started
 
-To start using jackal, install Go 1.12+ and run the following commands:
+To start using jackal, install Go 1.13+ and run the following commands:
 
 ```bash
 $ go get -d github.com/ortuman/jackal
