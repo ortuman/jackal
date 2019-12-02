@@ -234,7 +234,9 @@ func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 		}
 		// delete older items
 		_, err = sq.Delete("pubsub_items").
-			Where(sq.NotEq{"item_id": validIdentifiers}).RunWith(tx).Exec()
+			Where(sq.And{sq.Eq{"node_id": nodeIdentifier}, sq.NotEq{"item_id": validIdentifiers}}).
+			RunWith(tx).
+			Exec()
 		return err
 	})
 }

@@ -47,9 +47,9 @@ var discoInfoFeatures = []string{
 var defaultNodeOptions = pubsubmodel.Options{
 	DeliverNotifications:  true,
 	DeliverPayloads:       true,
+	PersistItems:          true,
 	AccessModel:           pubsubmodel.Presence,
 	PublishModel:          pubsubmodel.Publishers,
-	PersistItems:          true,
 	MaxItems:              1,
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
 	NotificationType:      xmpp.HeadlineType,
