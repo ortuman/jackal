@@ -165,6 +165,7 @@ $ docker run --name jackal -p 5222:5222 ortuman/jackal
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html) *1.1*
 - [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html) *2.0*
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html) *1.0.1*
+- [XEP-0163: Personal Eventing Protocol](https://xmpp.org/extensions/xep-0163.html) *1.2.1*
 - [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html) *1.3*
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
