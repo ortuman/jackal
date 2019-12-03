@@ -113,7 +113,7 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 		s.connectTm = nil
 	}
 	// assign domain pair
-	s.localDomain = elem.To()
+	s.localDomain = s.router.DefaultHostName()
 	s.remoteDomain = elem.From()
 
 	// open stream session

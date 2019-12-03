@@ -8,6 +8,7 @@ package router
 import (
 	"crypto/tls"
 	"runtime"
+	"sort"
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
@@ -79,6 +80,16 @@ func New(config *Config) (*Router, error) {
 	return r, nil
 }
 
+// DefaultHostName returns default local host name
+func (r *Router) DefaultHostName() (hostname string) {
+	hostNames := r.HostNames()
+	if len(hostNames) == 0 {
+		return
+	}
+	hostname = hostNames[0]
+	return
+}
+
 // HostNames returns the list of all configured host names.
 func (r *Router) HostNames() []string {
 	r.mu.RLock()
@@ -87,6 +98,7 @@ func (r *Router) HostNames() []string {
 	for n := range r.hosts {
 		ret = append(ret, n)
 	}
+	sort.Slice(ret, func(i, j int) bool { return ret[i] < ret[j] })
 	return ret
 }
 
