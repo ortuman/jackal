@@ -316,7 +316,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 	}
 	log.Infof("authorizing dialback key: %s...", elem.Text())
 
-	outCfg, err := s.cfg.dialer.dial(elem.To(), elem.From())
+	outCfg, err := s.cfg.dialer.dial(s.router.DefaultHostName(), elem.From())
 	if err != nil {
 		log.Error(err)
 		s.writeStanzaErrorResponse(elem, xmpp.ErrRemoteServerNotFound)
