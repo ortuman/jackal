@@ -543,26 +543,39 @@ routePresence:
 }
 
 func (x *Roster) processProbePresence(presence *xmpp.Presence) error {
-	userJID := presence.ToJID().ToBareJID()
-	contactJID := presence.FromJID().ToBareJID()
+	userJID := presence.FromJID().ToBareJID()
+	contactJID := presence.ToJID().ToBareJID()
 
 	log.Infof("processing 'probe' - user: %s (%s)", userJID, contactJID)
 
-	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.String())
-	if err != nil {
-		return err
-	}
-	usr, err := storage.FetchUser(userJID.Node())
-	if err != nil {
-		return err
-	}
-	if usr == nil || ri == nil || (ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom) {
-		_ = x.router.Route(xmpp.NewPresence(userJID, contactJID, xmpp.UnsubscribedType))
+	if !x.router.IsLocalHost(contactJID.Domain()) {
+		_ = x.router.Route(presence)
 		return nil
 	}
-	if usr.LastPresence != nil {
+	ri, err := storage.FetchRosterItem(contactJID.Node(), userJID.String())
+	if err != nil {
+		return err
+	}
+	if ri == nil || (ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom) {
+		return nil // silently ignore
+	}
+	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
+	if len(availPresences) == 0 { // send last known presence
+		usr, err := storage.FetchUser(userJID.Node())
+		if err != nil {
+			return err
+		}
+		if usr.LastPresence == nil {
+			return nil
+		}
 		p := xmpp.NewPresence(usr.LastPresence.FromJID(), contactJID, usr.LastPresence.Type())
 		p.AppendElements(usr.LastPresence.Elements().All())
+		_ = x.router.Route(p)
+		return nil
+	}
+	for _, availPresence := range availPresences {
+		p := xmpp.NewPresence(availPresence.Presence.FromJID(), contactJID, availPresence.Presence.Type())
+		p.AppendElements(availPresence.Presence.Elements().All())
 		_ = x.router.Route(p)
 	}
 	return nil
