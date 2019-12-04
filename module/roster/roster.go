@@ -609,7 +609,8 @@ func (x *Roster) processAvailablePresence(presence *xmpp.Presence) error {
 	if replyOnBehalf {
 		return x.broadcastPresence(presence)
 	}
-	return x.router.Route(presence)
+	_ = x.router.Route(presence)
+	return nil
 }
 
 func (x *Roster) deliverRosterPresences(userJID *jid.JID) error {
