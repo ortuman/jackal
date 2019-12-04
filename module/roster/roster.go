@@ -568,7 +568,7 @@ func (x *Roster) processProbePresence(presence *xmpp.Presence) error {
 		if usr.LastPresence == nil {
 			return nil
 		}
-		p := xmpp.NewPresence(usr.LastPresence.FromJID(), contactJID, usr.LastPresence.Type())
+		p := xmpp.NewPresence(usr.LastPresence.FromJID(), userJID, usr.LastPresence.Type())
 		p.AppendElements(usr.LastPresence.Elements().All())
 		_ = x.router.Route(p)
 		return nil
