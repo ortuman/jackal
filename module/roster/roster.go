@@ -574,7 +574,7 @@ func (x *Roster) processProbePresence(presence *xmpp.Presence) error {
 		return nil
 	}
 	for _, availPresence := range availPresences {
-		p := xmpp.NewPresence(availPresence.Presence.FromJID(), contactJID, availPresence.Presence.Type())
+		p := xmpp.NewPresence(availPresence.Presence.FromJID(), userJID, availPresence.Presence.Type())
 		p.AppendElements(availPresence.Presence.Elements().All())
 		_ = x.router.Route(p)
 	}
