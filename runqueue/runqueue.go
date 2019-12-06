@@ -6,6 +6,7 @@
 package runqueue
 
 import (
+	"runtime"
 	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
@@ -80,10 +81,12 @@ process:
 }
 
 func (m *RunQueue) run() {
-
 	defer func() {
 		if err := recover(); err != nil {
-			log.Debugf("run queue %s panicked with error: %v", m.name, err)
+			stackSlice := make([]byte, 1024)
+			s := runtime.Stack(stackSlice, false)
+			log.Errorf("run queue '%s' panicked with error: %v", m.name, err)
+			log.Errorf("\n%s", stackSlice[0:s])
 		}
 	}()
 
