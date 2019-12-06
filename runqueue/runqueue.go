@@ -83,10 +83,7 @@ process:
 func (m *RunQueue) run() {
 	defer func() {
 		if err := recover(); err != nil {
-			stackSlice := make([]byte, 4096)
-			s := runtime.Stack(stackSlice, false)
-			log.Errorf("runqueue '%s' panicked with error: %v", m.name, err)
-			log.Errorf("\n%s", stackSlice[0:s])
+			m.logStackTrace(err)
 		}
 	}()
 
@@ -104,4 +101,11 @@ func (m *RunQueue) run() {
 			return
 		}
 	}
+}
+
+func (m *RunQueue) logStackTrace(err interface{}) {
+	stackSlice := make([]byte, 4096)
+	s := runtime.Stack(stackSlice, false)
+
+	log.Errorf("runqueue '%s' panicked with error: %v\n%s", m.name, err, stackSlice[0:s])
 }
