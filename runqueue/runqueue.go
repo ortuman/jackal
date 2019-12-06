@@ -85,7 +85,7 @@ func (m *RunQueue) run() {
 		if err := recover(); err != nil {
 			stackSlice := make([]byte, 1024)
 			s := runtime.Stack(stackSlice, false)
-			log.Errorf("run queue '%s' panicked with error: %v", m.name, err)
+			log.Errorf("runqueue '%s' panicked with error: %v", m.name, err)
 			log.Errorf("\n%s", stackSlice[0:s])
 		}
 	}()
