@@ -561,11 +561,11 @@ func (x *Roster) processProbePresence(presence *xmpp.Presence) error {
 	}
 	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
 	if len(availPresences) == 0 { // send last known presence
-		usr, err := storage.FetchUser(userJID.Node())
+		usr, err := storage.FetchUser(contactJID.Node())
 		if err != nil {
 			return err
 		}
-		if usr.LastPresence == nil {
+		if usr == nil || usr.LastPresence == nil {
 			return nil
 		}
 		p := xmpp.NewPresence(usr.LastPresence.FromJID(), userJID, usr.LastPresence.Type())
