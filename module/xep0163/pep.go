@@ -767,6 +767,8 @@ func (x *Pep) retrieveAffiliations(cmdCtx *commandContext, iq *xmpp.IQ) {
 		affElem := xmpp.NewElementName("affiliation")
 		affElem.SetAttribute("jid", aff.JID)
 		affElem.SetAttribute("affiliation", aff.Affiliation)
+
+		affiliationsElem.AppendElement(affElem)
 	}
 	log.Infof("pep: retrieved affiliations (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
@@ -820,6 +822,8 @@ func (x *Pep) retrieveSubscriptions(cmdCtx *commandContext, iq *xmpp.IQ) {
 		subElem.SetAttribute("subid", sub.SubID)
 		subElem.SetAttribute("jid", sub.JID)
 		subElem.SetAttribute("subscription", sub.Subscription)
+
+		subscriptionsElem.AppendElement(subElem)
 	}
 	log.Infof("pep: retrieved subscriptions (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
