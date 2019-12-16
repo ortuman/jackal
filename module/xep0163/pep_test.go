@@ -172,13 +172,13 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	require.Nil(t, err)
 
 	_, err = s.UpsertRosterItem(&rostermodel.Item{
-		Username:     "ortuman@jackal.im",
+		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 	require.Nil(t, err)
 
-	// process pus bub command
+	// process pubsub command
 	p := New(nil, nil, r)
 
 	iqID := uuid.New()
@@ -271,7 +271,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	require.Nil(t, err)
 
 	_, err = s.UpsertRosterItem(&rostermodel.Item{
-		Username:     "ortuman@jackal.im",
+		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})

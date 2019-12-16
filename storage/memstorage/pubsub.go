@@ -201,7 +201,15 @@ func (m *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 }
 
 func (m *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
-	// TODO(ortuman): Implement me!
+	affiliations, err := m.FetchPubSubNodeAffiliations(host, name)
+	if err != nil {
+		return nil, err
+	}
+	for _, aff := range affiliations {
+		if aff.JID == jid {
+			return &aff, nil
+		}
+	}
 	return nil, nil
 }
 

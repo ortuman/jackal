@@ -1022,7 +1022,7 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	if len(opts.allowedAffiliations) > 0 {
 		var allowed bool
 		for _, allowedAff := range opts.allowedAffiliations {
-			if aff.Affiliation == allowedAff {
+			if aff != nil && aff.Affiliation == allowedAff {
 				allowed = true
 				break
 			}
