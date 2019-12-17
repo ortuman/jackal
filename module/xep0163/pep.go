@@ -251,6 +251,7 @@ func (x *Pep) deliverLastItems(jid *jid.JID) error {
 		if err := x.sendLastPublishedItem(jid, accessChecker, node.Host, node.Name, node.Options.NotificationType); err != nil {
 			return err
 		}
+		log.Infof("pep: delivered last items: %s (node: %s, host: %s)", jid.String(), node.Host, node.Name)
 	}
 	return nil
 }
