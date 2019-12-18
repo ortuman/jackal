@@ -374,24 +374,12 @@ func TestRoster_Probe(t *testing.T) {
 	rtr.Bind(stm)
 
 	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
-	defer r.Shutdown()
-
-	// user doesn't exist...
-	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem := stm.ReceiveElement()
-	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, "noelia@jackal.im", elem.From())
-	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
+	defer func() { _ = r.Shutdown() }()
 
 	_ = storage.UpsertUser(&model.User{
 		Username:     "noelia",
 		LastPresence: xmpp.NewPresence(j2.ToBareJID(), j2.ToBareJID(), xmpp.UnavailableType),
 	})
-
-	// user exists, with no presence subscription...
-	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.ReceiveElement()
-	require.Equal(t, xmpp.UnsubscribedType, elem.Type())
 
 	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "noelia",
@@ -399,7 +387,7 @@ func TestRoster_Probe(t *testing.T) {
 		Subscription: rostermodel.SubscriptionFrom,
 	})
 	r.ProcessPresence(xmpp.NewPresence(j1, j2, xmpp.ProbeType))
-	elem = stm.ReceiveElement()
+	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
 
 	// test available presence...

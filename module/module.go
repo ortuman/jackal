@@ -147,7 +147,7 @@ func New(config *Config, router *router.Router) *Modules {
 	return m
 }
 
-// ProcessIQ process a module IQ returning 'service unavailable' in case it can't be properly handled.
+// ProcessIQ process a module IQ returning 'service unavailable' in case it couldn't be properly handled.
 func (m *Modules) ProcessIQ(iq *xmpp.IQ) {
 	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {
