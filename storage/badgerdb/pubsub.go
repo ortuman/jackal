@@ -6,6 +6,8 @@
 package badgerdb
 
 import (
+	"strings"
+
 	"github.com/dgraph-io/badger"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	"github.com/ortuman/jackal/model/serializer"
@@ -56,8 +58,52 @@ func (b *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 }
 
 func (b *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
-	// TODO(ortuman): implement me!
-	return nil, nil
+	var nodes []pubsubmodel.Node
+
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.forEachKey([]byte("pubSubSubscriptions:"), func(k []byte) error {
+			bs, err := b.getVal(k, txn)
+			if err != nil {
+				return err
+			}
+			keySplits := strings.Split(string(k), ":")
+			if len(keySplits) != 3 {
+				return nil // wrong key format
+			}
+			host := keySplits[1]
+			name := keySplits[2]
+
+			var subs []pubsubmodel.Subscription
+			if err := serializer.DeserializeSlice(bs, &subs); err != nil {
+				return err
+			}
+			for _, sub := range subs {
+				if sub.JID != jid || sub.Subscription != pubsubmodel.Subscribed {
+					continue
+				}
+				// fetch pubsub node
+				var node pubsubmodel.Node
+
+				b, err := b.getVal(b.pubSubNodesKey(host, name), txn)
+				if err != nil {
+					return err
+				}
+				if b == nil {
+					continue
+				}
+				if err := serializer.Deserialize(b, &node); err != nil {
+					return err
+				}
+				nodes = append(nodes, node)
+				break
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nodes, nil
 }
 
 func (b *Storage) DeleteNode(host, name string) error {

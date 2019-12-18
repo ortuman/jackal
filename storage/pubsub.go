@@ -22,8 +22,8 @@ type pubSubStorage interface {
 	FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error)
 
 	UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
-	FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
 	FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error)
+	FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
 	DeleteNodeAffiliation(jid, host, name string) error
 
 	UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error

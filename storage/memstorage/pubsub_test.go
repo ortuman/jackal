@@ -163,7 +163,13 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings",
 	}
-	require.Nil(t, s.UpsertNode(node))
+	_ = s.UpsertNode(node)
+
+	node2 := &pubsubmodel.Node{
+		Host: "noelia@jackal.im",
+		Name: "princely_musings",
+	}
+	_ = s.UpsertNode(node2)
 
 	sub1 := &pubsubmodel.Subscription{
 		SubID:        "1234",
@@ -175,13 +181,19 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 		JID:          "noelia@jackal.im",
 		Subscription: "unsubscribed",
 	}
+	sub3 := &pubsubmodel.Subscription{
+		SubID:        "9012",
+		JID:          "ortuman@jackal.im",
+		Subscription: "subscribed",
+	}
 	require.Nil(t, s.UpsertNodeSubscription(sub1, "ortuman@jackal.im", "princely_musings"))
 	require.Nil(t, s.UpsertNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeSubscription(sub3, "noelia@jackal.im", "princely_musings"))
 
 	// fetch user subscribed nodes
 	nodes, err := s.FetchSubscribedNodes("ortuman@jackal.im")
 	require.Nil(t, err)
-	require.Len(t, nodes, 1)
+	require.Len(t, nodes, 2)
 
 	subscriptions, err := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)

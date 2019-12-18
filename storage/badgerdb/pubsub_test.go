@@ -133,6 +133,18 @@ func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
 	h := tUtilBadgerDBSetup()
 	defer tUtilBadgerDBTeardown(h)
 
+	node := &pubsubmodel.Node{
+		Host: "ortuman@jackal.im",
+		Name: "princely_musings",
+	}
+	_ = h.db.UpsertNode(node)
+
+	node2 := &pubsubmodel.Node{
+		Host: "noelia@jackal.im",
+		Name: "princely_musings",
+	}
+	_ = h.db.UpsertNode(node2)
+
 	require.Nil(t, h.db.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		SubID:        "1234",
 		JID:          "ortuman@jackal.im",
@@ -143,6 +155,11 @@ func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
 		JID:          "noelia@jackal.im",
 		Subscription: "unsubscribed",
 	}, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, h.db.UpsertNodeSubscription(&pubsubmodel.Subscription{
+		SubID:        "1234",
+		JID:          "ortuman@jackal.im",
+		Subscription: "subscribed",
+	}, "noelia@jackal.im", "princely_musings"))
 
 	subscriptions, err := h.db.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
@@ -150,6 +167,11 @@ func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
 	require.Len(t, subscriptions, 2)
 	require.Equal(t, "ortuman@jackal.im", subscriptions[0].JID)
 	require.Equal(t, "noelia@jackal.im", subscriptions[1].JID)
+
+	// fetch user subscribed nodes
+	nodes, err := h.db.FetchSubscribedNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Len(t, nodes, 2)
 
 	// delete subscription
 	err = h.db.DeleteNodeSubscription("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
