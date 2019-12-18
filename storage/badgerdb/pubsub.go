@@ -11,13 +11,13 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-func (b *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
+func (b *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.upsert(node, b.pubSubNodesKey(node.Host, node.Name), tx)
 	})
 }
 
-func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+func (b *Storage) FetchNode(host, name string) (*pubsubmodel.Node, error) {
 	var node pubsubmodel.Node
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetch(&node, b.pubSubNodesKey(host, name), txn)
@@ -32,7 +32,7 @@ func (b *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	}
 }
 
-func (b *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+func (b *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 	var nodes []pubsubmodel.Node
 
 	err := b.db.View(func(txn *badger.Txn) error {
@@ -55,12 +55,12 @@ func (b *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
-func (b *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+func (b *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 	// TODO(ortuman): implement me!
 	return nil, nil
 }
 
-func (b *Storage) DeletePubSubNode(host, name string) error {
+func (b *Storage) DeleteNode(host, name string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		if err := b.delete(b.pubSubNodesKey(host, name), tx); err != nil {
 			return err
@@ -72,7 +72,7 @@ func (b *Storage) DeletePubSubNode(host, name string) error {
 	})
 }
 
-func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+func (b *Storage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var items []pubsubmodel.Item
 		if err := b.fetchSlice(&items, b.pubSubItemsKey(host, name), tx); err != nil {
@@ -96,7 +96,7 @@ func (b *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 	})
 }
 
-func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+func (b *Storage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	var items []pubsubmodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
@@ -107,7 +107,7 @@ func (b *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 	return items, nil
 }
 
-func (b *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+func (b *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	var items []pubsubmodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
@@ -128,7 +128,7 @@ func (b *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 	return filteredItems, nil
 }
 
-func (b *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+func (b *Storage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
 	var items []pubsubmodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&items, b.pubSubItemsKey(host, name), txn)
@@ -139,7 +139,7 @@ func (b *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item,
 	return &items[len(items)-1], nil
 }
 
-func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
+func (b *Storage) UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var affiliations []pubsubmodel.Affiliation
 		if err := b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn); err != nil {
@@ -160,12 +160,20 @@ func (b *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 	})
 }
 
-func (b *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
-	// TODO(ortuman): Implement me!
+func (b *Storage) FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	affiliations, err := b.FetchNodeAffiliations(host, name)
+	if err != nil {
+		return nil, err
+	}
+	for _, aff := range affiliations {
+		if aff.JID == jid {
+			return &aff, nil
+		}
+	}
 	return nil, nil
 }
 
-func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+func (b *Storage) FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	var affiliations []pubsubmodel.Affiliation
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn)
@@ -176,7 +184,7 @@ func (b *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return affiliations, nil
 }
 
-func (b *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+func (b *Storage) DeleteNodeAffiliation(jid, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var affiliations []pubsubmodel.Affiliation
 		if err := b.fetchSlice(&affiliations, b.pubSubAffiliationsKey(host, name), txn); err != nil {
@@ -197,7 +205,7 @@ func (b *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
 	})
 }
 
-func (b *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+func (b *Storage) UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var subscriptions []pubsubmodel.Subscription
 		if err := b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn); err != nil {
@@ -218,7 +226,7 @@ func (b *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscri
 	})
 }
 
-func (b *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+func (b *Storage) FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
 	var subscriptions []pubsubmodel.Subscription
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn)
@@ -229,7 +237,7 @@ func (b *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 	return subscriptions, nil
 }
 
-func (b *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
+func (b *Storage) DeleteNodeSubscription(jid, host, name string) error {
 	return b.db.Update(func(txn *badger.Txn) error {
 		var subscriptions []pubsubmodel.Subscription
 		if err := b.fetchSlice(&subscriptions, b.pubSubSubscriptionsKey(host, name), txn); err != nil {

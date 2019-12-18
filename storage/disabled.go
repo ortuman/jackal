@@ -110,67 +110,67 @@ func (*disabledStorage) FetchBlockListItems(username string) ([]model.BlockListI
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertPubSubNode(node *pubsubmodel.Node) error {
+func (*disabledStorage) UpsertNode(node *pubsubmodel.Node) error {
 	return nil
 }
 
-func (*disabledStorage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+func (*disabledStorage) FetchNode(host, name string) (*pubsubmodel.Node, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+func (*disabledStorage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+func (*disabledStorage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) DeletePubSubNode(host, name string) error {
+func (*disabledStorage) DeleteNode(host, name string) error {
 	return nil
 }
 
-func (*disabledStorage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+func (*disabledStorage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return nil
 }
 
-func (*disabledStorage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+func (*disabledStorage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+func (*disabledStorage) FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+func (*disabledStorage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
+func (*disabledStorage) UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return nil
 }
 
-func (*disabledStorage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+func (*disabledStorage) DeleteNodeAffiliation(jid, host, name string) error {
 	return nil
 }
 
-func (*disabledStorage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+func (*disabledStorage) FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+func (*disabledStorage) FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+func (*disabledStorage) UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
 	return nil
 }
 
-func (*disabledStorage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+func (*disabledStorage) FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) DeletePubSubNodeSubscription(jid, host, name string) error {
+func (*disabledStorage) DeleteNodeSubscription(jid, host, name string) error {
 	return nil
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
+func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// if not existing, insert new node
 		_, err := sq.Insert("pubsub_nodes").
@@ -57,7 +57,7 @@ func (s *Storage) UpsertPubSubNode(node *pubsubmodel.Node) error {
 	})
 }
 
-func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
+func (s *Storage) FetchNode(host, name string) (*pubsubmodel.Node, error) {
 	opts, err := s.fetchPubSubNodeOptions(host, name)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (s *Storage) FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) 
 	}, nil
 }
 
-func (s *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
+func (s *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 	rows, err := sq.Select("name").
 		From("pubsub_nodes").
 		Where(sq.Eq{"host": host}).
@@ -98,7 +98,7 @@ func (s *Storage) FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
-func (s *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+func (s *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 	rows, err := sq.Select("host", "name").
 		From("pubsub_nodes").
 		Where(sq.Expr("id IN (SELECT DISTINCT(node_id) FROM pubsub_subscriptions WHERE jid = ? AND subscription = ?)", jid, pubsubmodel.Subscribed)).
@@ -127,7 +127,7 @@ func (s *Storage) FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, er
 	return nodes, nil
 }
 
-func (s *Storage) DeletePubSubNode(host, name string) error {
+func (s *Storage) DeleteNode(host, name string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
@@ -180,7 +180,7 @@ func (s *Storage) DeletePubSubNode(host, name string) error {
 	})
 }
 
-func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+func (s *Storage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
@@ -218,7 +218,7 @@ func (s *Storage) UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string
 	})
 }
 
-func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
@@ -231,7 +231,7 @@ func (s *Storage) FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, e
 	return s.scanPubSubNodeItems(rows)
 }
 
-func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where(sq.And{sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name), sq.Eq{"id": identifiers}}).
@@ -245,7 +245,7 @@ func (s *Storage) FetchPubSubNodeItemsWithIDs(host, name string, identifiers []s
 	return s.scanPubSubNodeItems(rows)
 }
 
-func (s *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
 	row := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
@@ -264,7 +264,7 @@ func (s *Storage) FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item,
 	}
 }
 
-func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
+func (s *Storage) UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
@@ -292,7 +292,7 @@ func (s *Storage) UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliati
 	})
 }
 
-func (s *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+func (s *Storage) FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
 	var aff pubsubmodel.Affiliation
 
 	row := sq.Select("jid", "affiliation").
@@ -310,7 +310,7 @@ func (s *Storage) FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmod
 	}
 }
 
-func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+func (s *Storage) FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
 	rows, err := sq.Select("jid", "affiliation").
 		From("pubsub_affiliations").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
@@ -323,14 +323,14 @@ func (s *Storage) FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.
 	return s.scanPubSubNodeAffiliations(rows)
 }
 
-func (s *Storage) DeletePubSubNodeAffiliation(jid, host, name string) error {
+func (s *Storage) DeleteNodeAffiliation(jid, host, name string) error {
 	_, err := sq.Delete("pubsub_affiliations").
 		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
 		RunWith(s.db).Exec()
 	return err
 }
 
-func (s *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+func (s *Storage) UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
@@ -358,7 +358,7 @@ func (s *Storage) UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscri
 	})
 }
 
-func (s *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+func (s *Storage) FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
 	rows, err := sq.Select("subid", "jid", "subscription").
 		From("pubsub_subscriptions").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
@@ -371,7 +371,7 @@ func (s *Storage) FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel
 	return s.scanPubSubNodeSubscriptions(rows)
 }
 
-func (s *Storage) DeletePubSubNodeSubscription(jid, host, name string) error {
+func (s *Storage) DeleteNodeSubscription(jid, host, name string) error {
 	_, err := sq.Delete("pubsub_subscriptions").
 		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
 		RunWith(s.db).Exec()

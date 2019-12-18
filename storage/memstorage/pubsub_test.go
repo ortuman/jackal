@@ -20,9 +20,9 @@ func TestStorage_PubSubNode(t *testing.T) {
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings",
 	}
-	require.Nil(t, s.UpsertPubSubNode(node))
+	require.Nil(t, s.UpsertNode(node))
 
-	n, err := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	n, err := s.FetchNode("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, n)
 
@@ -36,10 +36,10 @@ func TestStorage_PubSubNode(t *testing.T) {
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings_3",
 	}
-	require.Nil(t, s.UpsertPubSubNode(node2))
-	require.Nil(t, s.UpsertPubSubNode(node3))
+	require.Nil(t, s.UpsertNode(node2))
+	require.Nil(t, s.UpsertNode(node3))
 
-	nodes, err := s.FetchPubSubNodes("ortuman@jackal.im")
+	nodes, err := s.FetchNodes("ortuman@jackal.im")
 	require.Nil(t, err)
 	require.NotNil(t, nodes)
 
@@ -48,9 +48,9 @@ func TestStorage_PubSubNode(t *testing.T) {
 	require.Equal(t, "princely_musings_2", nodes[1].Name)
 	require.Equal(t, "princely_musings_3", nodes[2].Name)
 
-	require.Nil(t, s.DeletePubSubNode("ortuman@jackal.im", "princely_musings_2"))
+	require.Nil(t, s.DeleteNode("ortuman@jackal.im", "princely_musings_2"))
 
-	nodes, err = s.FetchPubSubNodes("ortuman@jackal.im")
+	nodes, err = s.FetchNodes("ortuman@jackal.im")
 	require.Nil(t, err)
 	require.NotNil(t, nodes)
 
@@ -76,10 +76,10 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("c"),
 	}
-	require.Nil(t, s.UpsertPubSubNodeItem(item1, "ortuman@jackal.im", "princely_musings", 1))
-	require.Nil(t, s.UpsertPubSubNodeItem(item2, "ortuman@jackal.im", "princely_musings", 1))
+	require.Nil(t, s.UpsertNodeItem(item1, "ortuman@jackal.im", "princely_musings", 1))
+	require.Nil(t, s.UpsertNodeItem(item2, "ortuman@jackal.im", "princely_musings", 1))
 
-	items, err := s.FetchPubSubNodeItems("ortuman@jackal.im", "princely_musings")
+	items, err := s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, items)
 
@@ -87,9 +87,9 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 	require.True(t, reflect.DeepEqual(&items[0], item2))
 
 	// update item
-	require.Nil(t, s.UpsertPubSubNodeItem(item3, "ortuman@jackal.im", "princely_musings", 2))
+	require.Nil(t, s.UpsertNodeItem(item3, "ortuman@jackal.im", "princely_musings", 2))
 
-	items, err = s.FetchPubSubNodeItems("ortuman@jackal.im", "princely_musings")
+	items, err = s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, items)
 
@@ -97,7 +97,7 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 	require.True(t, reflect.DeepEqual(&items[0], item2))
 	require.True(t, reflect.DeepEqual(&items[1], item3))
 
-	items, err = s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", []string{"id3"})
+	items, err = s.FetchNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", []string{"id3"})
 	require.Nil(t, err)
 	require.NotNil(t, items)
 
@@ -115,10 +115,10 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 		JID:         "noelia@jackal.im",
 		Affiliation: "publisher",
 	}
-	require.Nil(t, s.UpsertPubSubNodeAffiliation(aff1, "ortuman@jackal.im", "princely_musings"))
-	require.Nil(t, s.UpsertPubSubNodeAffiliation(aff2, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeAffiliation(aff1, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeAffiliation(aff2, "ortuman@jackal.im", "princely_musings"))
 
-	affiliations, err := s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err := s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, affiliations)
 
@@ -126,9 +126,9 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 
 	// update affiliation
 	aff2.Affiliation = "owner"
-	require.Nil(t, s.UpsertPubSubNodeAffiliation(aff2, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeAffiliation(aff2, "ortuman@jackal.im", "princely_musings"))
 
-	affiliations, err = s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err = s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, affiliations)
 
@@ -147,10 +147,10 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 	}
 
 	// delete affiliation
-	err = s.DeletePubSubNodeAffiliation("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeAffiliation("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
-	affiliations, err = s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err = s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, affiliations)
 
@@ -159,6 +159,12 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 
 func TestStorage_PubSubNodeSubscription(t *testing.T) {
 	s := New()
+	node := &pubsubmodel.Node{
+		Host: "ortuman@jackal.im",
+		Name: "princely_musings",
+	}
+	require.Nil(t, s.UpsertNode(node))
+
 	sub1 := &pubsubmodel.Subscription{
 		SubID:        "1234",
 		JID:          "ortuman@jackal.im",
@@ -169,10 +175,15 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 		JID:          "noelia@jackal.im",
 		Subscription: "unsubscribed",
 	}
-	require.Nil(t, s.UpsertPubSubNodeSubscription(sub1, "ortuman@jackal.im", "princely_musings"))
-	require.Nil(t, s.UpsertPubSubNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeSubscription(sub1, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
 
-	subscriptions, err := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	// fetch user subscribed nodes
+	nodes, err := s.FetchSubscribedNodes("ortuman@jackal.im")
+	require.Nil(t, err)
+	require.Len(t, nodes, 1)
+
+	subscriptions, err := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, subscriptions)
 
@@ -180,9 +191,9 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 
 	// update affiliation
 	sub2.Subscription = "subscribed"
-	require.Nil(t, s.UpsertPubSubNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
+	require.Nil(t, s.UpsertNodeSubscription(sub2, "ortuman@jackal.im", "princely_musings"))
 
-	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, subscriptions)
 
@@ -201,10 +212,10 @@ func TestStorage_PubSubNodeSubscription(t *testing.T) {
 	}
 
 	// delete subscription
-	err = s.DeletePubSubNodeSubscription("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeSubscription("noelia@jackal.im", "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 
-	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, err)
 	require.NotNil(t, subscriptions)
 

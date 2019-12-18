@@ -10,87 +10,87 @@ import (
 )
 
 type pubSubStorage interface {
-	UpsertPubSubNode(node *pubsubmodel.Node) error
-	FetchPubSubNode(host, name string) (*pubsubmodel.Node, error)
-	FetchPubSubNodes(host string) ([]pubsubmodel.Node, error)
-	FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error)
-	DeletePubSubNode(host, name string) error
+	UpsertNode(node *pubsubmodel.Node) error
+	FetchNode(host, name string) (*pubsubmodel.Node, error)
+	FetchNodes(host string) ([]pubsubmodel.Node, error)
+	FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error)
+	DeleteNode(host, name string) error
 
-	UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
-	FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error)
-	FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error)
-	FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error)
+	UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
+	FetchNodeItems(host, name string) ([]pubsubmodel.Item, error)
+	FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error)
+	FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error)
 
-	UpsertPubSubNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
-	FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
-	FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error)
-	DeletePubSubNodeAffiliation(jid, host, name string) error
+	UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
+	FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
+	FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error)
+	DeleteNodeAffiliation(jid, host, name string) error
 
-	UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
-	FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error)
-	DeletePubSubNodeSubscription(jid, host, name string) error
+	UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
+	FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error)
+	DeleteNodeSubscription(jid, host, name string) error
 }
 
-func UpsertPubSubNode(node *pubsubmodel.Node) error {
-	return inst.UpsertPubSubNode(node)
+func UpsertNode(node *pubsubmodel.Node) error {
+	return inst.UpsertNode(node)
 }
 
-func FetchPubSubNode(host, name string) (*pubsubmodel.Node, error) {
-	return inst.FetchPubSubNode(host, name)
+func FetchNode(host, name string) (*pubsubmodel.Node, error) {
+	return inst.FetchNode(host, name)
 }
 
-func FetchPubSubNodes(host string) ([]pubsubmodel.Node, error) {
-	return inst.FetchPubSubNodes(host)
+func FetchNodes(host string) ([]pubsubmodel.Node, error) {
+	return inst.FetchNodes(host)
 }
 
-func FetchPubSubSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
-	return inst.FetchPubSubSubscribedNodes(jid)
+func FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+	return inst.FetchSubscribedNodes(jid)
 }
 
-func DeletePubSubNode(host, name string) error {
-	return inst.DeletePubSubNode(host, name)
+func DeleteNode(host, name string) error {
+	return inst.DeleteNode(host, name)
 }
 
-func UpsertPubSubNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
-	return inst.UpsertPubSubNodeItem(item, host, name, maxNodeItems)
+func UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+	return inst.UpsertNodeItem(item, host, name, maxNodeItems)
 }
 
-func FetchPubSubNodeItems(host, name string) ([]pubsubmodel.Item, error) {
-	return inst.FetchPubSubNodeItems(host, name)
+func FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+	return inst.FetchNodeItems(host, name)
 }
 
-func FetchPubSubNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
-	return inst.FetchPubSubNodeItemsWithIDs(host, name, identifiers)
+func FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	return inst.FetchNodeItemsWithIDs(host, name, identifiers)
 }
 
-func FetchPubSubNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
-	return inst.FetchPubSubNodeLastItem(host, name)
+func FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+	return inst.FetchNodeLastItem(host, name)
 }
 
-func UpsertPubSubNodeAffiliation(affiliatiaon *pubsubmodel.Affiliation, host, name string) error {
-	return inst.UpsertPubSubNodeAffiliation(affiliatiaon, host, name)
+func UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
+	return inst.UpsertNodeAffiliation(affiliation, host, name)
 }
 
-func DeletePubSubNodeAffiliation(jid, host, name string) error {
-	return inst.DeletePubSubNodeAffiliation(jid, host, name)
+func DeleteNodeAffiliation(jid, host, name string) error {
+	return inst.DeleteNodeAffiliation(jid, host, name)
 }
 
-func FetchPubSubNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
-	return inst.FetchPubSubNodeAffiliation(host, name, jid)
+func FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	return inst.FetchNodeAffiliation(host, name, jid)
 }
 
-func FetchPubSubNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
-	return inst.FetchPubSubNodeAffiliations(host, name)
+func FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+	return inst.FetchNodeAffiliations(host, name)
 }
 
-func UpsertPubSubNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
-	return inst.UpsertPubSubNodeSubscription(subscription, host, name)
+func UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
+	return inst.UpsertNodeSubscription(subscription, host, name)
 }
 
-func FetchPubSubNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
-	return inst.FetchPubSubNodeSubscriptions(host, name)
+func FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+	return inst.FetchNodeSubscriptions(host, name)
 }
 
-func DeletePubSubNodeSubscription(jid, host, name string) error {
-	return inst.DeletePubSubNodeSubscription(jid, host, name)
+func DeleteNodeSubscription(jid, host, name string) error {
+	return inst.DeleteNodeSubscription(jid, host, name)
 }

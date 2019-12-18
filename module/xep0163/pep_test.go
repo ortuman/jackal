@@ -71,7 +71,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// read node
-	n, _ := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, n)
 	require.Equal(t, n.Options, defaultNodeOptions)
 }
@@ -85,13 +85,13 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(stm)
 
-	_ = s.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -144,23 +144,23 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	nodeOpts.NotifyConfig = true
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		JID:          "ortuman@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -217,7 +217,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// check if configuration was applied
-	n, _ := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, n)
 	require.Equal(t, nodeOpts.Title, n.Options.Title)
 }
@@ -238,23 +238,23 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	nodeOpts.NotifyDelete = true
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		JID:          "ortuman@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -302,7 +302,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// read node
-	n, _ := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, n)
 }
 
@@ -316,13 +316,13 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -353,7 +353,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	aff, _ := s.FetchPubSubNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
+	aff, _ := s.FetchNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
 	require.NotNil(t, aff)
 	require.Equal(t, "noelia@jackal.im", aff.JID)
 	require.Equal(t, pubsubmodel.Owner, aff.Affiliation)
@@ -367,7 +367,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	aff, _ = s.FetchPubSubNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
+	aff, _ = s.FetchNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
 	require.Nil(t, aff)
 }
 
@@ -381,18 +381,18 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "noelia@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -441,12 +441,12 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -477,7 +477,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	subs, _ := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, subs)
 	require.Len(t, subs, 1)
 	require.Equal(t, "noelia@jackal.im", subs[0].JID)
@@ -492,7 +492,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	subs, _ = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, subs)
 }
 
@@ -506,18 +506,18 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		SubID:        uuid.New(),
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
@@ -571,13 +571,13 @@ func TestXEP163_Subscribe(t *testing.T) {
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifySub = true
 
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -634,7 +634,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 	require.Equal(t, "princely_musings", subscriptionElem.Attributes().Get("node"))
 
 	// check storage subscription
-	subs, _ := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Len(t, subs, 1)
 	require.Equal(t, "noelia@jackal.im", subs[0].JID)
 	require.Equal(t, pubsubmodel.Subscribed, subs[0].Subscription)
@@ -651,13 +651,13 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	r.Bind(stm2)
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -668,7 +668,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 		Subscription: "both",
 	})
 
-	_ = s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		SubID:        uuid.New(),
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
@@ -698,7 +698,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// check storage subscription
-	subs, _ := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Len(t, subs, 0)
 }
 
@@ -715,12 +715,12 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	r.Bind(stm2)
 
 	// create node and affiliations
-	_ = storage.UpsertPubSubNode(&pubsubmodel.Node{
+	_ = storage.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -731,13 +731,13 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	})
 
 	// create items
-	_ = s.UpsertPubSubNodeItem(&pubsubmodel.Item{
+	_ = s.UpsertNodeItem(&pubsubmodel.Item{
 		ID:        "i1",
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("m1"),
 	}, "ortuman@jackal.im", "princely_musings", 2)
 
-	_ = s.UpsertPubSubNodeItem(&pubsubmodel.Item{
+	_ = s.UpsertNodeItem(&pubsubmodel.Item{
 		ID:        "i2",
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("m2"),

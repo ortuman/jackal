@@ -36,7 +36,7 @@ func TestMySQLUpsertPubSubNode(t *testing.T) {
 	mock.ExpectCommit()
 
 	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
-	err := s.UpsertPubSubNode(&node)
+	err := s.UpsertNode(&node)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -67,7 +67,7 @@ func TestMySQLFetchPubSubNodes(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings_2").
 		WillReturnRows(rows)
 
-	nodes, err := s.FetchPubSubNodes("ortuman@jackal.im")
+	nodes, err := s.FetchNodes("ortuman@jackal.im")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -102,7 +102,7 @@ func TestMySQLFetchPubSubSubscribedNodes(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings_2").
 		WillReturnRows(rows)
 
-	nodes, err := s.FetchPubSubSubscribedNodes("ortuman@jackal.im")
+	nodes, err := s.FetchSubscribedNodes("ortuman@jackal.im")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -126,7 +126,7 @@ func TestMySQLFetchPubSubNode(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	node, err := s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	node, err := s.FetchNode("ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -142,7 +142,7 @@ func TestMySQLFetchPubSubNode(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	_, err = s.FetchPubSubNode("ortuman@jackal.im", "princely_musings")
+	_, err = s.FetchNode("ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -175,7 +175,7 @@ func TestMySQLDeletePubSubNode(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.DeletePubSubNode("ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNode("ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
@@ -199,12 +199,12 @@ func TestMySQLUpsertPubSubNodeItem(t *testing.T) {
 		WithArgs("1").
 		WillReturnRows(sqlmock.NewRows([]string{"item_id"}).AddRow("1").AddRow("2"))
 
-	mock.ExpectExec("DELETE FROM pubsub_items WHERE item_id NOT IN \\(.+\\)").
-		WithArgs("1", "2").
+	mock.ExpectExec("DELETE FROM pubsub_items WHERE \\(node_id = \\? AND item_id NOT IN \\(.+\\)\\)").
+		WithArgs("1", "1", "2").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertPubSubNodeItem(&pubsubmodel.Item{
+	err := s.UpsertNodeItem(&pubsubmodel.Item{
 		ID:        "abc1234",
 		Publisher: "ortuman@jackal.im",
 		Payload:   payload,
@@ -225,7 +225,7 @@ func TestMySQLFetchPubSubNodeItems(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	items, err := s.FetchPubSubNodeItems("ortuman@jackal.im", "princely_musings")
+	items, err := s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -240,7 +240,7 @@ func TestMySQLFetchPubSubNodeItems(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	_, err = s.FetchPubSubNodeItems("ortuman@jackal.im", "princely_musings")
+	_, err = s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -260,7 +260,7 @@ func TestMySQLFetchPubSubNodeItemsWithID(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
 		WillReturnRows(rows)
 
-	items, err := s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+	items, err := s.FetchNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -275,7 +275,7 @@ func TestMySQLFetchPubSubNodeItemsWithID(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
 		WillReturnError(errMySQLStorage)
 
-	_, err = s.FetchPubSubNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+	_, err = s.FetchNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -296,7 +296,7 @@ func TestMySQLUpsertPubSubNodeAffiliation(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertPubSubNodeAffiliation(&pubsubmodel.Affiliation{
+	err := s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: "owner",
 	}, "ortuman@jackal.im", "princely_musings")
@@ -316,7 +316,7 @@ func TestMySQLFetchPubSubNodeAffiliations(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	affiliations, err := s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err := s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
@@ -327,7 +327,7 @@ func TestMySQLFetchPubSubNodeAffiliations(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	affiliations, err = s.FetchPubSubNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err = s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)
@@ -341,7 +341,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -353,7 +353,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	err = s.DeletePubSubNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -374,7 +374,7 @@ func TestMySQLUpsertPubSubNodeSubscription(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertPubSubNodeSubscription(&pubsubmodel.Subscription{
+	err := s.UpsertNodeSubscription(&pubsubmodel.Subscription{
 		SubID:        "1234",
 		JID:          "ortuman@jackal.im",
 		Subscription: "subscribed",
@@ -395,7 +395,7 @@ func TestMySQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	subscriptions, err := s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
@@ -406,7 +406,7 @@ func TestMySQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	subscriptions, err = s.FetchPubSubNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)
@@ -420,7 +420,7 @@ func TestMySQLDeletePubSubNodeSubscription(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -432,7 +432,7 @@ func TestMySQLDeletePubSubNodeSubscription(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errMySQLStorage)
 
-	err = s.DeletePubSubNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
