@@ -144,7 +144,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	nodeOpts.NotifyConfig = true
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
@@ -238,7 +238,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	nodeOpts.NotifyDelete = true
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
@@ -316,7 +316,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -381,7 +381,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -441,7 +441,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -506,7 +506,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	r.Bind(stm1)
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -571,7 +571,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifySub = true
 
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
@@ -651,7 +651,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	r.Bind(stm2)
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -715,7 +715,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	r.Bind(stm2)
 
 	// create node and affiliations
-	_ = storage.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
@@ -793,9 +793,37 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 }
 
 func TestXEP163_SubscribeToAll(t *testing.T) {
-}
+	r, s, shutdown := setupTest("jackal.im")
+	defer shutdown()
 
-func TestXEP163_UnsubscribeFromAll(t *testing.T) {
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+
+	// create node and affiliations
+	_ = s.UpsertNode(&pubsubmodel.Node{
+		Host:    "noelia@jackal.im",
+		Name:    "princely_musings_1",
+		Options: defaultNodeOptions,
+	})
+	_ = s.UpsertNode(&pubsubmodel.Node{
+		Host:    "noelia@jackal.im",
+		Name:    "princely_musings_2",
+		Options: defaultNodeOptions,
+	})
+
+	p := New(nil, nil, r)
+
+	err := p.subscribeToAll("noelia@jackal.im", j1)
+	require.Nil(t, err)
+
+	nodes, _ := s.FetchSubscribedNodes(j1.ToBareJID().String())
+	require.NotNil(t, nodes)
+	require.Len(t, nodes, 2)
+
+	err = p.unsubscribeFromAll("noelia@jackal.im", j1)
+	require.Nil(t, err)
+
+	nodes, _ = s.FetchSubscribedNodes(j1.ToBareJID().String())
+	require.Nil(t, nodes)
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {

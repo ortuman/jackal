@@ -208,7 +208,9 @@ func (x *Pep) subscribeToAll(host string, subJID *jid.JID) error {
 				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
 				affiliation:         subAff,
 			}
-			return x.sendLastPublishedItem(subJID, accessChecker, host, n.Name, n.Options.NotificationType)
+			if err := x.sendLastPublishedItem(subJID, accessChecker, host, n.Name, n.Options.NotificationType); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
