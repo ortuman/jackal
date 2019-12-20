@@ -76,11 +76,14 @@ type commandContext struct {
 type Pep struct {
 	router      *router.Router
 	runQueue    *runqueue.RunQueue
+	disco       *xep0030.DiscoInfo
 	presenceHub *presencehub.PresenceHub
+	hosts       []string
 }
 
 func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router) *Pep {
 	p := &Pep{
+		disco:       disco,
 		router:      router,
 		runQueue:    runqueue.New("xep0163"),
 		presenceHub: presenceHub,
@@ -91,6 +94,8 @@ func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router 
 			disco.RegisterAccountFeature(feature)
 		}
 	}
+	// register disco items
+	p.registerDiscoItems()
 	return p
 }
 
@@ -157,6 +162,29 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 	case pubSubOwnerNamespace:
 		x.processOwnerRequest(iq, pubSub)
 	}
+}
+
+func (x *Pep) registerDiscoItems() {
+	if err := x.registerDiscoItemHandlers(); err != nil {
+		log.Warnf("pep: failed to register disco item handlers: %v", err)
+	}
+}
+
+func (x *Pep) registerDiscoItemHandlers() error {
+	// unregister previous handlers
+	for _, h := range x.hosts {
+		x.disco.UnregisterProvider(h)
+	}
+	// register current ones
+	hosts, err := storage.FetchHosts()
+	if err != nil {
+		return err
+	}
+	for _, host := range hosts {
+		x.disco.RegisterProvider(host, &discoInfoProvider{host: host})
+	}
+	x.hosts = hosts
+	return nil
 }
 
 func (x *Pep) subscribeToAll(host string, subJID *jid.JID) error {
