@@ -918,8 +918,11 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 
 	eventEl := elem.Elements().ChildNamespace("event", pubSubEventNamespace)
 	require.NotNil(t, eventEl)
-	require.NotNil(t, eventEl.Elements().Child("item"))
-	require.Equal(t, "bnd81g37d61f49fgn581", eventEl.Elements().Child("item").Attributes().Get("id"))
+
+	itemsEl := eventEl.Elements().Child("items")
+	require.NotNil(t, itemsEl)
+
+	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
 func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {

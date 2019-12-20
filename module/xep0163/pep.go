@@ -703,18 +703,18 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	log.Infof("pep: published item (host: %s, node_id: %s, item_id: %s)", cmdCtx.host, cmdCtx.nodeID, itemID)
 
 	// notify published item
-	notifyElem := xmpp.NewElementName("items")
-	notifyElem.SetAttribute("node", cmdCtx.nodeID)
+	itemsElem := xmpp.NewElementName("items")
+	itemsElem.SetAttribute("node", cmdCtx.nodeID)
 
 	itemElem := xmpp.NewElementName("item")
 	itemElem.SetAttribute("id", itemID)
 	if opts.DeliverPayloads || !opts.PersistItems {
 		itemElem.AppendElement(itemEl.Elements().All()[0])
 	}
-	notifyElem.AppendElement(itemElem)
+	itemsElem.AppendElement(itemElem)
 
 	x.notifySubscribers(
-		notifyElem,
+		itemsElem,
 		cmdCtx.subscriptions,
 		cmdCtx.accessChecker,
 		cmdCtx.host,
@@ -1115,6 +1115,13 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 }
 
 func (x *Pep) sendLastPublishedItem(toJID *jid.JID, accessChecker *accessChecker, host, nodeID, notificationType string) error {
+	node, err := storage.FetchNode(host, nodeID)
+	if err != nil {
+		return err
+	}
+	if node == nil {
+		return nil
+	}
 	lastItem, err := storage.FetchNodeLastItem(host, nodeID)
 	if err != nil {
 		return err
@@ -1124,7 +1131,12 @@ func (x *Pep) sendLastPublishedItem(toJID *jid.JID, accessChecker *accessChecker
 	}
 	itemsEl := xmpp.NewElementName("items")
 	itemsEl.SetAttribute("node", nodeID)
-	itemsEl.AppendElement(lastItem.Payload)
+	itemEl := xmpp.NewElementName("item")
+	itemEl.SetAttribute("id", lastItem.ID)
+	if node.Options.DeliverPayloads || !node.Options.PersistItems {
+		itemEl.AppendElement(lastItem.Payload)
+	}
+	itemsEl.AppendElement(itemEl)
 
 	x.notify(
 		itemsEl,
