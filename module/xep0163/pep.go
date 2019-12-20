@@ -703,8 +703,11 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	log.Infof("pep: published item (host: %s, node_id: %s, item_id: %s)", cmdCtx.host, cmdCtx.nodeID, itemID)
 
 	// notify published item
-	notifyElem := xmpp.NewElementName("item")
-	notifyElem.SetAttribute("id", itemID)
+	notifyElem := xmpp.NewElementName("items")
+	notifyElem.SetAttribute("node", cmdCtx.nodeID)
+	itemElem := xmpp.NewElementName("item")
+	itemElem.SetAttribute("id", itemID)
+	notifyElem.AppendElement(itemElem)
 
 	if opts.DeliverPayloads || !opts.PersistItems {
 		notifyElem.AppendElement(itemEl.Elements().All()[0])
