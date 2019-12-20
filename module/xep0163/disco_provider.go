@@ -40,7 +40,7 @@ func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Ide
 	} else {
 		identities = append(identities, xep0030.Identity{Type: "collection", Category: "pubsub"})
 	}
-	identities = append(identities, xep0030.Identity{Type: "collection", Category: "pubsub"})
+	identities = append(identities, xep0030.Identity{Type: "pep", Category: "pubsub"})
 	return identities
 }
 
