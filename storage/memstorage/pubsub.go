@@ -12,6 +12,38 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+func (m *Storage) FetchHosts() ([]string, error) {
+	var hosts []string
+	if err := m.inReadLock(func() error {
+		for k := range m.bytes {
+			if !strings.HasPrefix(k, "pubSubHostNodes:") {
+				continue
+			}
+			keySplits := strings.Split(k, ":")
+			if len(keySplits) != 2 {
+				continue
+			}
+			host := keySplits[1]
+
+			var isPresent bool
+			for _, h := range hosts {
+				if h == host {
+					isPresent = true
+					break
+				}
+			}
+			if isPresent {
+				continue
+			}
+			hosts = append(hosts, host)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return hosts, nil
+}
+
 func (m *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	b, err := serializer.Serialize(node)
 	if err != nil {

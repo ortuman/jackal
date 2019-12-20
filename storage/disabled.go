@@ -110,6 +110,10 @@ func (*disabledStorage) FetchBlockListItems(username string) ([]model.BlockListI
 	return nil, nil
 }
 
+func (*disabledStorage) FetchHosts() (hosts []string, err error) {
+	return nil, nil
+}
+
 func (*disabledStorage) UpsertNode(node *pubsubmodel.Node) error {
 	return nil
 }

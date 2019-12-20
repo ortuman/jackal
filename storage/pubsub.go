@@ -10,6 +10,8 @@ import (
 )
 
 type pubSubStorage interface {
+	FetchHosts() (hosts []string, err error)
+
 	UpsertNode(node *pubsubmodel.Node) error
 	FetchNode(host, name string) (*pubsubmodel.Node, error)
 	FetchNodes(host string) ([]pubsubmodel.Node, error)
@@ -29,6 +31,10 @@ type pubSubStorage interface {
 	UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
 	FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error)
 	DeleteNodeSubscription(jid, host, name string) error
+}
+
+func FetchHosts() (hosts []string, err error) {
+	return inst.FetchHosts()
 }
 
 func UpsertNode(node *pubsubmodel.Node) error {

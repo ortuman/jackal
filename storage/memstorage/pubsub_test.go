@@ -36,8 +36,13 @@ func TestStorage_PubSubNode(t *testing.T) {
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings_3",
 	}
+	node4 := &pubsubmodel.Node{
+		Host: "noelia@jackal.im",
+		Name: "princely_musings_1",
+	}
 	require.Nil(t, s.UpsertNode(node2))
 	require.Nil(t, s.UpsertNode(node3))
+	require.Nil(t, s.UpsertNode(node4))
 
 	nodes, err := s.FetchNodes("ortuman@jackal.im")
 	require.Nil(t, err)
@@ -57,6 +62,11 @@ func TestStorage_PubSubNode(t *testing.T) {
 	require.Len(t, nodes, 2)
 	require.Equal(t, "princely_musings", nodes[0].Name)
 	require.Equal(t, "princely_musings_3", nodes[1].Name)
+
+	// fetch hosts
+	hosts, err := s.FetchHosts()
+	require.Nil(t, err)
+	require.Len(t, hosts, 2)
 }
 
 func TestStorage_PubSubNodeItem(t *testing.T) {

@@ -47,6 +47,14 @@ func TestBadgerDB_PubSubNodes(t *testing.T) {
 	err = h.db.UpsertNode(&node3)
 	require.Nil(t, err)
 
+	node4 := pubsubmodel.Node{
+		Host:    "noelia@jackal.im",
+		Name:    "princely_musings_1",
+		Options: pubsubmodel.Options{NotifySub: true},
+	}
+	err = h.db.UpsertNode(&node4)
+	require.Nil(t, err)
+
 	nodes, err := h.db.FetchNodes("ortuman@jackal.im")
 	require.Nil(t, err)
 	require.Len(t, nodes, 3)
@@ -62,6 +70,11 @@ func TestBadgerDB_PubSubNodes(t *testing.T) {
 	require.Len(t, nodes, 2)
 	require.Equal(t, "princely_musings", nodes[0].Name)
 	require.Equal(t, "princely_musings_3", nodes[1].Name)
+
+	// fetch hosts
+	hosts, err := h.db.FetchHosts()
+	require.Nil(t, err)
+	require.Len(t, hosts, 2)
 }
 
 func TestBadgerDB_PubSubItems(t *testing.T) {

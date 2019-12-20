@@ -13,6 +13,38 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+func (b *Storage) FetchHosts() ([]string, error) {
+	var hosts []string
+
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.forEachKey([]byte("pubSubNodes:"), func(k []byte) error {
+			key := string(k)
+			keySplits := strings.Split(key, ":")
+			if len(keySplits) != 3 {
+				return nil
+			}
+			host := keySplits[1]
+
+			var isPresent bool
+			for _, h := range hosts {
+				if h == host {
+					isPresent = true
+					break
+				}
+			}
+			if isPresent {
+				return nil // nothing to do here
+			}
+			hosts = append(hosts, host)
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return hosts, nil
+}
+
 func (b *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.upsert(node, b.pubSubNodesKey(node.Host, node.Name), tx)

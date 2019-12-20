@@ -9,6 +9,27 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+func (s *Storage) FetchHosts() ([]string, error) {
+	rows, err := sq.Select("DISTINCT(host)").
+		From("pubsub_nodes").
+		RunWith(s.db).
+		Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var hosts []string
+	for rows.Next() {
+		var host string
+		if err := rows.Scan(&host); err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, host)
+	}
+	return hosts, nil
+}
+
 func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	return s.inTransaction(func(tx *sql.Tx) error {
 

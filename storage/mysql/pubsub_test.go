@@ -10,6 +10,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMySQLFetchPubSubHosts(t *testing.T) {
+	s, mock := NewMock()
+	rows := sqlmock.NewRows([]string{"host"})
+	rows.AddRow("ortuman@jackal.im")
+	rows.AddRow("noelia@jackal.im")
+
+	mock.ExpectQuery("SELECT DISTINCT\\(host\\) FROM pubsub_nodes").
+		WillReturnRows(rows)
+
+	hosts, err := s.FetchHosts()
+	require.Nil(t, err)
+	require.NotNil(t, hosts)
+	require.Equal(t, "ortuman@jackal.im", hosts[0])
+	require.Equal(t, "noelia@jackal.im", hosts[1])
+
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT DISTINCT\\(host\\) FROM pubsub_nodes").
+		WillReturnError(errMySQLStorage)
+
+	hosts, err = s.FetchHosts()
+	require.Nil(t, hosts)
+	require.NotNil(t, err)
+	require.Equal(t, errMySQLStorage, err)
+}
+
 func TestMySQLUpsertPubSubNode(t *testing.T) {
 	s, mock := NewMock()
 	mock.ExpectBegin()
