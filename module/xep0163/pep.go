@@ -955,7 +955,7 @@ func (x *Pep) notify(
 			for _, onlinePresence := range onlinePresences {
 				caps := onlinePresence.Caps
 				if caps == nil {
-					goto broadcastEventMsg // broadcast event message
+					goto broadcastEventMsg // broadcast when caps are pending to be fetched
 				}
 				if !caps.HasFeature(nodeID + "+notify") {
 					continue
