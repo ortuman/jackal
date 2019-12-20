@@ -270,7 +270,7 @@ func (x *Pep) deliverLastItems(jid *jid.JID) error {
 		if err := x.sendLastPublishedItem(jid, accessChecker, node.Host, node.Name, node.Options.NotificationType); err != nil {
 			return err
 		}
-		log.Infof("pep: delivered last items: %s (node: %s, host: %s)", jid.String(), node.Host, node.Name)
+		log.Infof("pep: delivered last item: %s (node: %s, host: %s)", jid.String(), node.Host, node.Name)
 	}
 	return nil
 }
@@ -919,7 +919,7 @@ func (x *Pep) notifySubscribers(
 		subscriberJID, _ := jid.NewWithString(subscriber.JID, true)
 		toJIDs = append(toJIDs, *subscriberJID)
 	}
-	x.notify(notificationElem, toJIDs, accessChecker, host, nodeID, notificationType, false)
+	x.notify(notificationElem, toJIDs, accessChecker, host, nodeID, notificationType)
 }
 
 func (x *Pep) notify(
@@ -929,7 +929,6 @@ func (x *Pep) notify(
 	host string,
 	nodeID string,
 	notificationType string,
-	ignoreFiltering bool,
 ) {
 	hostJID, _ := jid.NewWithString(host, true)
 	for _, toJID := range toJIDs {
@@ -951,14 +950,12 @@ func (x *Pep) notify(
 			onlinePresences := ph.AvailablePresencesMatchingJID(&toJID)
 
 			for _, onlinePresence := range onlinePresences {
-				if !ignoreFiltering {
-					caps := onlinePresence.Caps
-					if caps == nil {
-						goto broadcastEventMsg // broadcast event message
-					}
-					if !caps.HasFeature(nodeID + "+notify") {
-						continue
-					}
+				caps := onlinePresence.Caps
+				if caps == nil {
+					goto broadcastEventMsg // broadcast event message
+				}
+				if !caps.HasFeature(nodeID + "+notify") {
+					continue
 				}
 				// notify to full jid
 				presence := onlinePresence.Presence
@@ -1131,8 +1128,7 @@ func (x *Pep) sendLastPublishedItem(toJID *jid.JID, accessChecker *accessChecker
 		accessChecker,
 		host,
 		nodeID,
-		notificationType,
-		true)
+		notificationType)
 	return nil
 }
 
