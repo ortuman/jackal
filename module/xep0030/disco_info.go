@@ -119,17 +119,17 @@ func (x *DiscoInfo) processIQ(iq *xmpp.IQ) {
 
 	var prov InfoProvider
 	if x.router.IsLocalHost(toJID.Domain()) {
-		prov = x.srvProvider
+		if p := x.providers[toJID.String()]; p != nil {
+			prov = p
+		} else {
+			prov = x.srvProvider
+		}
 	} else {
 		prov = x.providers[toJID.Domain()]
 		if prov == nil {
 			_ = x.router.Route(iq.ItemNotFoundError())
 			return
 		}
-	}
-	if prov == nil {
-		_ = x.router.Route(iq.ItemNotFoundError())
-		return
 	}
 	q := iq.Elements().Child("query")
 	node := q.Attributes().Get("node")
