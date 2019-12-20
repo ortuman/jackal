@@ -30,20 +30,6 @@ const (
 	pubSubErrorNamespace = "http://jabber.org/protocol/pubsub#errors"
 )
 
-var discoInfoFeatures = []string{
-	"http://jabber.org/protocol/pubsub#access-presence",
-	"http://jabber.org/protocol/pubsub#auto-create",
-	"http://jabber.org/protocol/pubsub#auto-subscribe",
-	"http://jabber.org/protocol/pubsub#config-node",
-	"http://jabber.org/protocol/pubsub#create-and-configure",
-	"http://jabber.org/protocol/pubsub#create-nodes",
-	"http://jabber.org/protocol/pubsub#filtered-notifications",
-	"http://jabber.org/protocol/pubsub#persistent-items",
-	"http://jabber.org/protocol/pubsub#publish",
-	"http://jabber.org/protocol/pubsub#retrieve-items",
-	"http://jabber.org/protocol/pubsub#subscribe",
-}
-
 var defaultNodeOptions = pubsubmodel.Options{
 	DeliverNotifications:  true,
 	DeliverPayloads:       true,
@@ -90,7 +76,7 @@ func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router 
 	}
 	// register account identity and features
 	if disco != nil {
-		for _, feature := range discoInfoFeatures {
+		for _, feature := range pepFeatures {
 			disco.RegisterAccountFeature(feature)
 		}
 	}

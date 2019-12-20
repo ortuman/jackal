@@ -10,8 +10,39 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+var pepIdentities = []xep0030.Identity{
+	{Type: "pep", Category: "pubsub"},
+	{Type: "collection", Category: "pubsub"},
+}
+
+var pepFeatures = []string{
+	"http://jabber.org/protocol/pubsub#access-presence",
+	"http://jabber.org/protocol/pubsub#auto-create",
+	"http://jabber.org/protocol/pubsub#auto-subscribe",
+	"http://jabber.org/protocol/pubsub#config-node",
+	"http://jabber.org/protocol/pubsub#create-and-configure",
+	"http://jabber.org/protocol/pubsub#create-nodes",
+	"http://jabber.org/protocol/pubsub#filtered-notifications",
+	"http://jabber.org/protocol/pubsub#persistent-items",
+	"http://jabber.org/protocol/pubsub#publish",
+	"http://jabber.org/protocol/pubsub#retrieve-items",
+	"http://jabber.org/protocol/pubsub#subscribe",
+}
+
 type discoInfoProvider struct {
 	host string
+}
+
+func (p *discoInfoProvider) Identities(_, _ *jid.JID, _ string) []xep0030.Identity {
+	return pepIdentities
+}
+
+func (p *discoInfoProvider) Features(_, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	return pepFeatures, nil
+}
+
+func (p *discoInfoProvider) Form(_, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
+	return nil, nil
 }
 
 func (p *discoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
@@ -68,16 +99,6 @@ func (p *discoInfoProvider) nodeItems(node string) ([]xep0030.Item, *xmpp.Stanza
 		})
 	}
 	return items, nil
-}
-
-func (p *discoInfoProvider) Identities(_, _ *jid.JID, _ string) []xep0030.Identity { return nil }
-
-func (p *discoInfoProvider) Features(_, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
-	return nil, nil
-}
-
-func (p *discoInfoProvider) Form(_, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
-	return nil, nil
 }
 
 func (p *discoInfoProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) bool {
