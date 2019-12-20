@@ -33,8 +33,15 @@ type discoInfoProvider struct {
 	host string
 }
 
-func (p *discoInfoProvider) Identities(_, _ *jid.JID, _ string) []xep0030.Identity {
-	return pepIdentities
+func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Identity {
+	var identities []xep0030.Identity
+	if len(node) > 0 {
+		identities = append(identities, xep0030.Identity{Type: "leaf", Category: "pubsub"})
+	} else {
+		identities = append(identities, xep0030.Identity{Type: "collection", Category: "pubsub"})
+	}
+	identities = append(identities, xep0030.Identity{Type: "collection", Category: "pubsub"})
+	return identities
 }
 
 func (p *discoInfoProvider) Features(_, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
