@@ -123,7 +123,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
 		defer cancel()
 
-		srv.shutdown(ctx)
+		_ = srv.shutdown(ctx)
 		errCh <- nil
 	}()
 	err = <-errCh
