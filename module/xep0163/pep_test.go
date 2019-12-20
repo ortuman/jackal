@@ -811,7 +811,17 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 		Name:    "princely_musings_2",
 		Options: defaultNodeOptions,
 	})
+	_ = s.UpsertNodeItem(&pubsubmodel.Item{
+		ID:        "i2",
+		Publisher: "noelia@jackal.im",
+		Payload:   xmpp.NewElementName("m2"),
+	}, "noelia@jackal.im", "princely_musings_2", 2)
 
+	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+		Username:     "noelia",
+		JID:          "ortuman@jackal.im",
+		Subscription: "both",
+	})
 	p := New(nil, nil, r)
 
 	err := p.subscribeToAll("noelia@jackal.im", j1)

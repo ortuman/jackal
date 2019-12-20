@@ -17,6 +17,8 @@ import (
 
 const offlineNamespace = "msgoffline"
 
+const hintsNamespace = "urn:xmpp:hints"
+
 const offlineDeliveredCtxKey = "offline:delivered"
 
 // Offline represents an offline server stream module.
@@ -114,5 +116,8 @@ func (x *Offline) deliverOfflineMessages(stm stream.C2S) {
 }
 
 func isMessageArchivable(message *xmpp.Message) bool {
+	if message.Elements().ChildNamespace("no-store", hintsNamespace) != nil {
+		return false
+	}
 	return message.IsNormal() || (message.IsChat() && message.IsMessageWithBody())
 }
