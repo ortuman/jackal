@@ -9,8 +9,10 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -827,6 +829,87 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {
+	r, s, shutdown := setupTest("jackal.im")
+	defer shutdown()
+
+	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
+	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	r.Bind(stm1)
+	r.Bind(stm2)
+
+	// create node, affiliations and subscriptions
+	_ = s.UpsertNode(&pubsubmodel.Node{
+		Host:    "ortuman@jackal.im",
+		Name:    "princely_musings",
+		Options: defaultNodeOptions,
+	})
+
+	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+		JID:         "ortuman@jackal.im",
+		Affiliation: pubsubmodel.Owner,
+	}, "ortuman@jackal.im", "princely_musings")
+
+	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+		Username:     "ortuman",
+		JID:          "noelia@jackal.im",
+		Subscription: "both",
+	})
+
+	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+		SubID:        uuid.New(),
+		JID:          "noelia@jackal.im",
+		Subscription: pubsubmodel.Subscribed,
+	}, "ortuman@jackal.im", "princely_musings")
+
+	// set capabilities
+	_ = s.InsertCapabilities(&model.Capabilities{
+		Node:     "http://code.google.com/p/exodus",
+		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
+		Features: []string{"princely_musings+notify"},
+	})
+	ph := presencehub.New(r)
+
+	// register presence
+	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
+	c := xmpp.NewElementNamespace("c", "http://jabber.org/protocol/caps")
+	c.SetAttribute("hash", "sha-1")
+	c.SetAttribute("node", "http://code.google.com/p/exodus")
+	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
+	pr2.AppendElement(c)
+
+	_, _ = ph.RegisterPresence(pr2)
+
+	// process pubsub command
+	p := New(nil, ph, r)
+
+	iqID := uuid.New()
+	iq := xmpp.NewIQType(iqID, xmpp.SetType)
+	iq.SetFromJID(j1)
+	iq.SetToJID(j1.ToBareJID())
+
+	pubSubEl := xmpp.NewElementNamespace("pubsub", pubSubNamespace)
+	publishEl := xmpp.NewElementName("publish")
+	publishEl.SetAttribute("node", "princely_musings")
+	itemEl := xmpp.NewElementName("item")
+	itemEl.SetAttribute("id", "bnd81g37d61f49fgn581")
+	entryEl := xmpp.NewElementNamespace("entry", "http://www.w3.org/2005/Atom")
+	itemEl.AppendElement(entryEl)
+	publishEl.AppendElement(itemEl)
+	pubSubEl.AppendElement(publishEl)
+
+	iq.AppendElement(pubSubEl)
+
+	p.ProcessIQ(iq)
+	elem := stm2.ReceiveElement()
+	require.Equal(t, "message", elem.Name())
+	require.Equal(t, xmpp.HeadlineType, elem.Type())
+
+	eventEl := elem.Elements().ChildNamespace("event", pubSubEventNamespace)
+	require.NotNil(t, eventEl)
+	require.NotNil(t, eventEl.Elements().Child("item"))
+	require.Equal(t, "bnd81g37d61f49fgn581", eventEl.Elements().Child("item").Attributes().Get("id"))
 }
 
 func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {

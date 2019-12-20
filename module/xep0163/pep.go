@@ -932,21 +932,25 @@ func (x *Pep) notify(
 			onlinePresences := ph.AvailablePresencesMatchingJID(&toJID)
 
 			for _, onlinePresence := range onlinePresences {
-				presence := onlinePresence.Presence
-				if caps := onlinePresence.Caps; caps != nil {
-					if !caps.HasFeature(nodeID + "+notify") {
-						continue
-					}
+				caps := onlinePresence.Caps
+				if caps == nil {
+					goto broadcastEventMsg // broadcast event message
+				}
+				if !caps.HasFeature(nodeID + "+notify") {
+					continue
 				}
 				// notify to full jid
+				presence := onlinePresence.Presence
+
 				eventMsg := eventMessage(notificationElem, hostJID, presence.FromJID(), notificationType)
 				_ = x.router.Route(eventMsg)
 			}
-		} else {
-			// broadcast event message
-			eventMsg := eventMessage(notificationElem, hostJID, &toJID, notificationType)
-			_ = x.router.Route(eventMsg)
+			return
 		}
+	broadcastEventMsg:
+		// broadcast event message
+		eventMsg := eventMessage(notificationElem, hostJID, &toJID, notificationType)
+		_ = x.router.Route(eventMsg)
 	}
 }
 
