@@ -705,13 +705,14 @@ func (x *Pep) publish(cmdCtx *commandContext, cmdEl xmpp.XElement, iq *xmpp.IQ) 
 	// notify published item
 	notifyElem := xmpp.NewElementName("items")
 	notifyElem.SetAttribute("node", cmdCtx.nodeID)
+
 	itemElem := xmpp.NewElementName("item")
 	itemElem.SetAttribute("id", itemID)
+	if opts.DeliverPayloads || !opts.PersistItems {
+		itemElem.AppendElement(itemEl.Elements().All()[0])
+	}
 	notifyElem.AppendElement(itemElem)
 
-	if opts.DeliverPayloads || !opts.PersistItems {
-		notifyElem.AppendElement(itemEl.Elements().All()[0])
-	}
 	x.notifySubscribers(
 		notifyElem,
 		cmdCtx.subscriptions,
