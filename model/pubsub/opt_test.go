@@ -51,10 +51,6 @@ func TestOptions_New(t *testing.T) {
 				Values: []string{"open"},
 			},
 			{
-				Var:    publishModelFieldVar,
-				Values: []string{"publishers"},
-			},
-			{
 				Var:    sendLastPublishedItemFieldVar,
 				Values: []string{"never"},
 			},
@@ -90,7 +86,6 @@ func TestOptions_New(t *testing.T) {
 	require.True(t, opt.PersistItems)
 	require.Equal(t, int64(10), opt.MaxItems)
 	require.Equal(t, Open, opt.AccessModel)
-	require.Equal(t, Publishers, opt.PublishModel)
 	require.Equal(t, Never, opt.SendLastPublishedItem)
 	require.Equal(t, "headline", opt.NotificationType)
 	require.True(t, opt.NotifyConfig)

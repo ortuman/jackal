@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package xep0163
 
 import (
@@ -9,11 +14,6 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
-
-var pepIdentities = []xep0030.Identity{
-	{Type: "pep", Category: "pubsub"},
-	{Type: "collection", Category: "pubsub"},
-}
 
 var pepFeatures = []string{
 	"http://jabber.org/protocol/pubsub#access-presence",

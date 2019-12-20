@@ -24,7 +24,6 @@ const (
 	persistItemsFieldVar          = "pubsub#persist_items"
 	maxItemsFieldVar              = "pubsub#max_items"
 	accessModelFieldVar           = "pubsub#access_model"
-	publishModelFieldVar          = "pubsub#publish_model"
 	sendLastPublishedItemFieldVar = "pubsub#send_last_published_item"
 	rosterGroupsAllowedFieldVar   = "pubsub#roster_groups_allowed"
 	notificationTypeFieldVar      = "pubsub#notification_type"
@@ -52,7 +51,6 @@ type Options struct {
 	PersistItems          bool
 	MaxItems              int64
 	AccessModel           string
-	PublishModel          string
 	SendLastPublishedItem string
 	RosterGroupsAllowed   []string
 	NotificationType      string
@@ -92,14 +90,6 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 		return nil, fmt.Errorf("invalid access_model value: %s", accessModel)
 	}
 
-	publishModel := m[publishModelFieldVar]
-	switch publishModel {
-	case Open, Publishers:
-		opt.PublishModel = publishModel
-	default:
-		return nil, fmt.Errorf("invalid publish_model value: %s", publishModel)
-	}
-
 	sendLastPublishedItem := m[sendLastPublishedItemFieldVar]
 	switch sendLastPublishedItem {
 	case Never, OnSub, OnSubAndPresence:
@@ -128,14 +118,6 @@ func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 		opt.AccessModel = accessModel
 	default:
 		return nil, fmt.Errorf("invalid access_model value: %s", accessModel)
-	}
-
-	publishModel := fields.ValueForField(publishModelFieldVar)
-	switch publishModel {
-	case Open, Publishers:
-		opt.PublishModel = publishModel
-	default:
-		return nil, fmt.Errorf("invalid publish_model value: %s", publishModel)
 	}
 
 	sendLastPublishedItem := fields.ValueForField(sendLastPublishedItemFieldVar)
@@ -173,7 +155,6 @@ func (opt *Options) Map() (map[string]string, error) {
 	m[persistItemsFieldVar] = strconv.FormatBool(opt.PersistItems)
 	m[maxItemsFieldVar] = strconv.Itoa(int(opt.MaxItems))
 	m[accessModelFieldVar] = opt.AccessModel
-	m[publishModelFieldVar] = opt.PublishModel
 	m[rosterGroupsAllowedFieldVar] = string(b)
 	m[sendLastPublishedItemFieldVar] = opt.SendLastPublishedItem
 	m[notificationTypeFieldVar] = opt.NotificationType
@@ -246,16 +227,6 @@ func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 		Values:  opt.RosterGroupsAllowed,
 		Label:   "Roster groups allowed to subscribe",
 		Options: rosterGroupOpts,
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    publishModelFieldVar,
-		Type:   xep0004.ListSingle,
-		Label:  "Specify the publisher model",
-		Values: []string{opt.PublishModel},
-		Options: []xep0004.Option{
-			{Label: "Only publishers may publish", Value: Publishers},
-			{Label: "Anyone may publish", Value: Open},
-		},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    sendLastPublishedItemFieldVar,
@@ -336,10 +307,6 @@ func (opt *Options) ResultForm() *xep0004.DataForm {
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    accessModelFieldVar,
 		Values: []string{opt.AccessModel},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    publishModelFieldVar,
-		Values: []string{opt.PublishModel},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    sendLastPublishedItemFieldVar,

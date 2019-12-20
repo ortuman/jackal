@@ -158,7 +158,6 @@ func TestMySQLFetchPubSubNode(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, node)
 	require.Equal(t, node.Options.AccessModel, pubsubmodel.Presence)
-	require.Equal(t, node.Options.PublishModel, pubsubmodel.Publishers)
 	require.Equal(t, node.Options.SendLastPublishedItem, pubsubmodel.OnSubAndPresence)
 
 	// error case

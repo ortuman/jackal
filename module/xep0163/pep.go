@@ -35,7 +35,6 @@ var defaultNodeOptions = pubsubmodel.Options{
 	DeliverPayloads:       true,
 	PersistItems:          true,
 	AccessModel:           pubsubmodel.Presence,
-	PublishModel:          pubsubmodel.Publishers,
 	MaxItems:              1,
 	SendLastPublishedItem: pubsubmodel.OnSubAndPresence,
 	NotificationType:      xmpp.HeadlineType,
