@@ -165,6 +165,9 @@ func (x *Pep) processIQ(iq *xmpp.IQ) {
 }
 
 func (x *Pep) registerDiscoItems() {
+	if x.disco == nil {
+		return // nothing to do here
+	}
 	if err := x.registerDiscoItemHandlers(); err != nil {
 		log.Warnf("pep: failed to register disco item handlers: %v", err)
 	}
@@ -557,6 +560,7 @@ func (x *Pep) delete(cmdCtx *commandContext, iq *xmpp.IQ) {
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
+	x.registerDiscoItems()
 	_ = x.router.Route(iq.ResultIQ())
 }
 
@@ -1113,7 +1117,11 @@ func (x *Pep) createNode(node *pubsubmodel.Node) error {
 		JID:          node.Host,
 		Subscription: pubsubmodel.Subscribed,
 	}
-	return storage.UpsertNodeSubscription(ownerSub, node.Host, node.Name)
+	if err := storage.UpsertNodeSubscription(ownerSub, node.Host, node.Name); err != nil {
+		return err
+	}
+	x.registerDiscoItems()
+	return nil
 }
 
 func (x *Pep) sendLastPublishedItem(toJID *jid.JID, accessChecker *accessChecker, host, nodeID, notificationType string) error {

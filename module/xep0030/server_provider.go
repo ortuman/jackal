@@ -39,22 +39,22 @@ func (sp *serverProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *
 	if node != "" {
 		return nil, nil
 	}
-	var itms []Item
+	var items []Item
 	if toJID.IsServer() {
-		itms = append(itms, Item{Jid: fromJID.ToBareJID().String()})
-		itms = append(itms, sp.serverItems...)
+		items = append(items, Item{Jid: fromJID.ToBareJID().String()})
+		items = append(items, sp.serverItems...)
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(toJID, fromJID) {
-			stms := sp.router.UserStreams(toJID.Node())
-			for _, stm := range stms {
-				itms = append(itms, Item{Jid: stm.JID().String()})
+			streams := sp.router.UserStreams(toJID.Node())
+			for _, stm := range streams {
+				items = append(items, Item{Jid: stm.JID().String()})
 			}
 		} else {
 			return nil, xmpp.ErrSubscriptionRequired
 		}
 	}
-	return itms, nil
+	return items, nil
 }
 
 func (sp *serverProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
