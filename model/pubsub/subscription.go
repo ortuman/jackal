@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package pubsubmodel
 
 import (
@@ -5,6 +10,7 @@ import (
 	"encoding/gob"
 )
 
+// Subscription represents a pubsub node subscription
 type Subscription struct {
 	SubID        string
 	JID          string

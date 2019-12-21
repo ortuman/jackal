@@ -38,12 +38,12 @@ const (
 	Presence         = "presence"
 	Roster           = "roster"
 	WhiteList        = "whitelist"
-	Publishers       = "publishers"
 	Never            = "never"
 	OnSub            = "on_sub"
 	OnSubAndPresence = "on_sub_and_presence"
 )
 
+// Options represents pubsub node configuration options
 type Options struct {
 	Title                 string
 	DeliverNotifications  bool
@@ -59,6 +59,7 @@ type Options struct {
 	NotifySub             bool
 }
 
+// NewOptionsFromMap returns a new node Options instance derived from an input map.
 func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	opt := &Options{}
 
@@ -100,6 +101,7 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	return opt, nil
 }
 
+// NewOptionsFromMap returns a new node Options instance derived from a submit form.
 func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	opt := &Options{}
 	fields := form.Fields
@@ -142,6 +144,7 @@ func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	return opt, nil
 }
 
+// Map returns Options map representation.
 func (opt *Options) Map() (map[string]string, error) {
 	// marshall roster allowed groups
 	b, err := json.Marshal(&opt.RosterGroupsAllowed)
@@ -164,6 +167,7 @@ func (opt *Options) Map() (map[string]string, error) {
 	return m, nil
 }
 
+// Form returns Options form representation.
 func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 	form := xep0004.DataForm{
 		Type: xep0004.Form,
@@ -270,6 +274,7 @@ func (opt *Options) Form(rosterGroups []string) *xep0004.DataForm {
 	return &form
 }
 
+// ResultForm returns Options result form representation.
 func (opt *Options) ResultForm() *xep0004.DataForm {
 	form := xep0004.DataForm{
 		Type: xep0004.Result,

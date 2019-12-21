@@ -10,6 +10,7 @@ import (
 	"encoding/gob"
 )
 
+// Node represents a pubsub node
 type Node struct {
 	Host    string
 	Name    string

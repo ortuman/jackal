@@ -6,6 +6,7 @@
 package presencehub
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -126,7 +127,9 @@ func (x *PresenceHub) AvailablePresencesMatchingJID(j *jid.JID) []AvailablePrese
 func (x *PresenceHub) processIQ(iq *xmpp.IQ) {
 	// process capabilities result
 	if caps := iq.Elements().ChildNamespace("query", discoInfoNamespace); caps != nil {
-		x.processCapabilitiesIQ(caps)
+		if err := x.processCapabilitiesIQ(caps); err != nil {
+			log.Warnf("%v", err)
+		}
 		return
 	}
 }
@@ -150,14 +153,13 @@ func (x *PresenceHub) requestCapabilities(node, ver string, userJID *jid.JID) {
 	_ = x.router.Route(iq)
 }
 
-func (x *PresenceHub) processCapabilitiesIQ(query xmpp.XElement) {
+func (x *PresenceHub) processCapabilitiesIQ(query xmpp.XElement) error {
 	var node, ver string
 
 	nodeStr := query.Attributes().Get("node")
 	ss := strings.Split(nodeStr, "#")
 	if len(ss) != 2 {
-		log.Warnf("wrong node format: %s", nodeStr)
-		return
+		return fmt.Errorf("presencehub: wrong node format: %s", nodeStr)
 	}
 	node = ss[0]
 	ver = ss[1]
@@ -176,10 +178,10 @@ func (x *PresenceHub) processCapabilitiesIQ(query xmpp.XElement) {
 		Features: features,
 	}
 	if err := storage.InsertCapabilities(caps); err != nil { // save into disk
-		log.Warnf("%v", err)
-		return
+		return err
 	}
 	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)
+	return nil
 }
 
 func (x *PresenceHub) availableJIDMatchesJID(availableJID, j *jid.JID) bool {

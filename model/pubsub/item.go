@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// Item represents a pubsub node item
 type Item struct {
 	ID        string
 	Publisher string

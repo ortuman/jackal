@@ -122,7 +122,7 @@ func (s *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 func (s *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 	rows, err := sq.Select("host", "name").
 		From("pubsub_nodes").
-		Where(sq.Expr("id IN (SELECT DISTINCT(node_id) FROM pubsub_subscriptions WHERE jid = ? AND subscription = ?)", jid, pubsubmodel.Subscribed)).
+		Where(sq.Expr("id IN (SELECT DISTINCT(node_id) FROM pubsub_subscriptions WHERE jid = $1 AND subscription = $2)", jid, pubsubmodel.Subscribed)).
 		RunWith(s.db).Query()
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (s *Storage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) 
 func (s *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
-		Where(sq.And{sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name), sq.Eq{"id": identifiers}}).
+		Where(sq.And{sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name), sq.Eq{"id": identifiers}}).
 		OrderBy("created_at").
 		RunWith(s.db).Query()
 	if err != nil {
@@ -269,7 +269,7 @@ func (s *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string)
 func (s *Storage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
 	row := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
-		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = ? AND name = ?)", host, name).
+		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
 		OrderBy("created_at DESC").
 		Limit(1).
 		RunWith(s.db).QueryRow()

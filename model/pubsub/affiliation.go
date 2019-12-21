@@ -24,6 +24,7 @@ const (
 	Subscribed = "subscribed"
 )
 
+// Affiliation represents a pubsub affiliation
 type Affiliation struct {
 	JID         string
 	Affiliation string
