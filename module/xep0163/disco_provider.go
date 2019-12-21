@@ -29,9 +29,7 @@ var pepFeatures = []string{
 	"http://jabber.org/protocol/pubsub#subscribe",
 }
 
-type discoInfoProvider struct {
-	host string
-}
+type discoInfoProvider struct{}
 
 func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
@@ -56,25 +54,27 @@ func (p *discoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]xep00
 	if !p.isSubscribedTo(toJID, fromJID) {
 		return nil, xmpp.ErrSubscriptionRequired
 	}
+	host := toJID.ToBareJID().String()
+
 	if len(node) > 0 {
 		// return node items
-		return p.nodeItems(node)
+		return p.nodeItems(host, node)
 	}
 	// return host nodes
-	return p.hostNodes()
+	return p.hostNodes(host)
 }
 
-func (p *discoInfoProvider) hostNodes() ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) hostNodes(host string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	nodes, err := storage.FetchNodes(p.host)
+	nodes, err := storage.FetchNodes(host)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
 	}
 	for _, node := range nodes {
 		items = append(items, xep0030.Item{
-			Jid:  p.host,
+			Jid:  host,
 			Node: node.Name,
 			Name: node.Options.Title,
 		})
@@ -82,10 +82,10 @@ func (p *discoInfoProvider) hostNodes() ([]xep0030.Item, *xmpp.StanzaError) {
 	return items, nil
 }
 
-func (p *discoInfoProvider) nodeItems(node string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	n, err := storage.FetchNode(p.host, node)
+	n, err := storage.FetchNode(host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -94,7 +94,7 @@ func (p *discoInfoProvider) nodeItems(node string) ([]xep0030.Item, *xmpp.Stanza
 		// does not exist
 		return nil, xmpp.ErrItemNotFound
 	}
-	nodeItems, err := storage.FetchNodeItems(p.host, node)
+	nodeItems, err := storage.FetchNodeItems(host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError

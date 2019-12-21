@@ -171,7 +171,7 @@ func (x *Pep) registerDiscoItemHandlers() error {
 		return err
 	}
 	for _, host := range hosts {
-		x.disco.RegisterProvider(host, &discoInfoProvider{host: host})
+		x.disco.RegisterProvider(host, &discoInfoProvider{})
 	}
 	x.hosts = hosts
 	return nil
