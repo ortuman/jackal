@@ -30,7 +30,7 @@ type accessChecker struct {
 	affiliation         *pubsubmodel.Affiliation
 }
 
-func (ac *accessChecker) checkAccess(host, j string) error {
+func (ac *accessChecker) checkAccess(j string) error {
 	aff := ac.affiliation
 	if aff != nil && aff.Affiliation == pubsubmodel.Outcast {
 		return errOutcastMember
@@ -40,7 +40,7 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		return nil
 
 	case pubsubmodel.Presence:
-		allowed, err := ac.checkPresenceAccess(host, j)
+		allowed, err := ac.checkPresenceAccess(j)
 		if err != nil {
 			return err
 		}
@@ -49,7 +49,7 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		}
 
 	case pubsubmodel.Roster:
-		allowed, err := ac.checkRosterAccess(host, j)
+		allowed, err := ac.checkRosterAccess(j)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 		}
 
 	case pubsubmodel.WhiteList:
-		allowed, err := ac.checkWhitelistAccess()
+		allowed, err := ac.checkWhitelistAccess(j)
 		if err != nil {
 			return err
 		}
@@ -72,8 +72,8 @@ func (ac *accessChecker) checkAccess(host, j string) error {
 	return nil
 }
 
-func (ac *accessChecker) checkPresenceAccess(host, j string) (bool, error) {
-	userJID, _ := jid.NewWithString(host, true)
+func (ac *accessChecker) checkPresenceAccess(j string) (bool, error) {
+	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
 	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
@@ -84,8 +84,8 @@ func (ac *accessChecker) checkPresenceAccess(host, j string) (bool, error) {
 	return allowed, nil
 }
 
-func (ac *accessChecker) checkRosterAccess(host, j string) (bool, error) {
-	userJID, _ := jid.NewWithString(host, true)
+func (ac *accessChecker) checkRosterAccess(j string) (bool, error) {
+	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
 	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
@@ -105,9 +105,9 @@ func (ac *accessChecker) checkRosterAccess(host, j string) (bool, error) {
 	return false, nil
 }
 
-func (ac *accessChecker) checkWhitelistAccess() (bool, error) {
+func (ac *accessChecker) checkWhitelistAccess(j string) (bool, error) {
 	aff := ac.affiliation
-	if aff == nil {
+	if aff == nil || j != aff.JID {
 		return false, nil
 	}
 	return aff.Affiliation == pubsubmodel.Owner || aff.Affiliation == pubsubmodel.Member, nil

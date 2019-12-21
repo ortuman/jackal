@@ -939,7 +939,7 @@ func (x *Pep) notify(
 	for _, toJID := range toJIDs {
 		if toJID.ToBareJID().String() != host {
 			// check JID access before notifying
-			err := accessChecker.checkAccess(host, toJID.ToBareJID().String())
+			err := accessChecker.checkAccess(toJID.ToBareJID().String())
 			switch err {
 			case nil:
 				break
@@ -1025,7 +1025,7 @@ func (x *Pep) withCommandContext(fn func(cmdCtx *commandContext), opts commandOp
 	}
 	// check access
 	if opts.checkAccess && !ctx.isAccountOwner {
-		err := ctx.accessChecker.checkAccess(host, fromJID)
+		err := ctx.accessChecker.checkAccess(fromJID)
 		switch err {
 		case nil:
 			break
