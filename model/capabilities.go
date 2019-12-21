@@ -10,6 +10,7 @@ import (
 	"encoding/gob"
 )
 
+// Capabilities represents presence capabilities info
 type Capabilities struct {
 	Node     string
 	Ver      string
