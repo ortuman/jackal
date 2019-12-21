@@ -23,11 +23,13 @@ const (
 	discoInfoNamespace = "http://jabber.org/protocol/disco#info"
 )
 
+// AvailablePresenceInfo contains an active presence reference along with its capabilities.
 type AvailablePresenceInfo struct {
 	Presence *xmpp.Presence
 	Caps     *model.Capabilities
 }
 
+// PresenceHub represents global presence hub
 type PresenceHub struct {
 	router             *router.Router
 	runQueue           *runqueue.RunQueue
@@ -36,6 +38,7 @@ type PresenceHub struct {
 	activeDiscoInfo    sync.Map
 }
 
+// New returns a new presence hub instance.
 func New(router *router.Router) *PresenceHub {
 	return &PresenceHub{
 		router:   router,
@@ -43,6 +46,7 @@ func New(router *router.Router) *PresenceHub {
 	}
 }
 
+// RegisterPresence keeps track of a new client presence, requesting capabilities when necessary.
 func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alreadyRegistered bool) {
 	fromJID := presence.FromJID()
 	userJID := fromJID.ToBareJID()
@@ -68,6 +72,7 @@ func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alre
 	return nil, loaded
 }
 
+// UnregisterPresence removes a presence from the hub.
 func (x *PresenceHub) UnregisterPresence(presence *xmpp.Presence) {
 	x.availablePresences.Delete(presence.FromJID())
 }

@@ -386,7 +386,7 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 		break
 
 	case xmpp.ErrStreamClosedByPeer:
-		s.Close()
+		_ = s.Close()
 
 	case xmpp.ErrTooLargeStanza:
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
