@@ -32,23 +32,6 @@ jackal supports the following features:
 - Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+, PostgreSQL 9.5+)
 - Cross-platform (OS X, Linux)
 
-## Push notifications
-
-Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`. 
-
-However there's a chance to forward offline messages to some external service by configuring offline module as follows:
-
-```yaml
-  mod_offline:
-    queue_size: 2500
-    gateway:
-      type: http
-      auth: a-secret-token-here
-      pass: http://127.0.0.1:6666
-```
-
-Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
-
 ## Installing
 
 ### Getting Started
@@ -126,6 +109,23 @@ storage:
 ```
 
 That's it!
+
+## Push notifications
+
+Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`.
+
+However there's a chance to forward offline messages to some external service by configuring offline module as follows:
+
+```yaml
+  mod_offline:
+    queue_size: 2500
+    gateway:
+      type: http
+      auth: a-secret-token-here
+      pass: http://127.0.0.1:6666
+```
+
+Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
 
 ### Cluster configuration
 
