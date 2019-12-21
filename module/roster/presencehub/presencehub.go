@@ -81,11 +81,7 @@ func (x *PresenceHub) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a roster IQ taking according actions over the associated stream.
 func (x *PresenceHub) ProcessIQ(iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		// process capabilities result
-		if caps := iq.Elements().ChildNamespace("query", discoInfoNamespace); caps != nil {
-			x.processCapabilitiesIQ(caps)
-			return
-		}
+		x.processIQ(iq)
 	})
 }
 
@@ -120,6 +116,14 @@ func (x *PresenceHub) AvailablePresencesMatchingJID(j *jid.JID) []AvailablePrese
 		return true
 	})
 	return ret
+}
+
+func (x *PresenceHub) processIQ(iq *xmpp.IQ) {
+	// process capabilities result
+	if caps := iq.Elements().ChildNamespace("query", discoInfoNamespace); caps != nil {
+		x.processCapabilitiesIQ(caps)
+		return
+	}
 }
 
 func (x *PresenceHub) requestCapabilities(node, ver string, userJID *jid.JID) {
