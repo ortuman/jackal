@@ -127,7 +127,7 @@ However there's a chance to forward offline messages to some external service by
 
 Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
 
-### Cluster configuration
+## Cluster configuration
 
 The purpose of clustering is to be able to use several servers for fault-tolerance and scalability.
 
