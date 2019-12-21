@@ -58,6 +58,7 @@ type commandContext struct {
 	accessChecker  *accessChecker
 }
 
+// Pep represents a Personal Eventing Protocol module.
 type Pep struct {
 	router      *router.Router
 	runQueue    *runqueue.RunQueue
@@ -66,6 +67,7 @@ type Pep struct {
 	hosts       []string
 }
 
+// New returns a PEP command IQ handler module.
 func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router) *Pep {
 	p := &Pep{
 		disco:       disco,

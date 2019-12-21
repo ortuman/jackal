@@ -26,7 +26,7 @@ const (
 	xep191RequestedContextKey = "xep_191:requested"
 )
 
-// BlockingCommand returns a blocking command IQ handler module.
+// BlockingCommand represents a blocking command IQ handler module.
 type BlockingCommand struct {
 	router      *router.Router
 	runQueue    *runqueue.RunQueue

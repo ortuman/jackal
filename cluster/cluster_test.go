@@ -8,6 +8,7 @@ package cluster
 import (
 	"bytes"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ func (d *fakeClusterDelegate) NodeLeft(node *Node)        { d.nodeLeftCalls++ }
 func (d *fakeClusterDelegate) NotifyMessage(msg *Message) { d.notifyMessageCalls++ }
 
 type fakeMemberList struct {
+	mu                sync.Mutex
 	members           []Node
 	joinHosts         []string
 	sendErr           error
@@ -42,17 +44,26 @@ type fakeMemberList struct {
 }
 
 func (ml *fakeMemberList) Members() []Node {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+
 	ml.membersCalls++
 	return ml.members
 }
 
 func (ml *fakeMemberList) Join(hosts []string) error {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+
 	ml.joinHosts = hosts
 	ml.joinCalls++
 	return nil
 }
 
 func (ml *fakeMemberList) Shutdown() error {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+
 	if ml.shutdownCh != nil {
 		close(ml.shutdownCh)
 	}
@@ -61,6 +72,9 @@ func (ml *fakeMemberList) Shutdown() error {
 }
 
 func (ml *fakeMemberList) SendReliable(node string, msg []byte) error {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+
 	if ml.sendErr != nil {
 		return ml.sendErr
 	}

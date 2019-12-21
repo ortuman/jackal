@@ -7,17 +7,16 @@ package cluster
 
 import (
 	"bytes"
+	"errors"
+	"strings"
 	"sync"
-
-	"github.com/ortuman/jackal/runqueue"
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
-
-const clusterMailboxSize = 32768
 
 var createMemberList = func(localName string, bindPort int, cluster *Cluster) (memberList, error) {
 	return newDefaultMemberList(localName, bindPort, cluster)
@@ -149,13 +148,36 @@ func (c *Cluster) broadcast(msg *Message) error {
 	c.membersMu.RLock()
 	defer c.membersMu.RUnlock()
 
+	var errs []error
+	var errsMu sync.Mutex
+
+	var wg sync.WaitGroup
 	for _, node := range c.members {
-		if node.Name == c.LocalNode() {
-			continue
+		wg.Add(1)
+		go func(node string, b []byte) {
+			defer wg.Done()
+
+			if node == c.LocalNode() {
+				return
+			}
+			if err := c.memberList.SendReliable(node, b); err != nil {
+				errsMu.Lock()
+				errs = append(errs, err)
+				errsMu.Unlock()
+			}
+		}(node.Name, msgBytes)
+	}
+	wg.Wait()
+
+	if len(errs) > 0 {
+		var sb strings.Builder
+		for i, err := range errs {
+			if i != 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(err.Error())
 		}
-		if err := c.memberList.SendReliable(node.Name, msgBytes); err != nil {
-			return err
-		}
+		return errors.New(sb.String())
 	}
 	return nil
 }
