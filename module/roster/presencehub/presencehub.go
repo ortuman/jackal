@@ -50,7 +50,6 @@ func New(router *router.Router) *PresenceHub {
 // RegisterPresence keeps track of a new client presence, requesting capabilities when necessary.
 func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alreadyRegistered bool) {
 	fromJID := presence.FromJID()
-	userJID := fromJID.ToBareJID()
 
 	// check if caps were previously cached
 	if c := presence.Capabilities(); c != nil {
@@ -62,7 +61,7 @@ func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alre
 				return err, false
 			}
 			if caps == nil {
-				x.requestCapabilities(c.Node, c.Ver, userJID) // request capabilities
+				x.requestCapabilities(c.Node, c.Ver, fromJID) // request capabilities
 			} else {
 				x.capabilities.Store(capsKey, caps) // cache capabilities
 			}
