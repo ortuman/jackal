@@ -119,5 +119,8 @@ func isMessageArchivable(message *xmpp.Message) bool {
 	if message.Elements().ChildNamespace("no-store", hintsNamespace) != nil {
 		return false
 	}
+	if message.Elements().ChildNamespace("store", hintsNamespace) != nil {
+		return true
+	}
 	return message.IsNormal() || (message.IsChat() && message.IsMessageWithBody())
 }
