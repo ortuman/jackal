@@ -135,7 +135,7 @@ func (x *PresenceHub) processIQ(iq *xmpp.IQ) {
 }
 
 func (x *PresenceHub) requestCapabilities(node, ver string, userJID *jid.JID) {
-	srvJID, _ := jid.NewWithString(userJID.Domain(), true)
+	srvJID, _ := jid.NewWithString(x.router.DefaultHostName(), true)
 
 	iqID := uuid.New()
 	x.activeDiscoInfo.Store(iqID, true)
