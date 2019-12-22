@@ -87,6 +87,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 
 	elem := stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, "jackal.im", elem.From())
 
 	queryElem := elem.Elements().Child("query")
 	require.NotNil(t, queryElem)
