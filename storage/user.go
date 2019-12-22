@@ -1,19 +1,24 @@
+/*
+ * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package storage
 
 import "github.com/ortuman/jackal/model"
 
 // userStorage defines storage operations for users
 type userStorage interface {
-	InsertOrUpdateUser(user *model.User) error
+	UpsertUser(user *model.User) error
 	DeleteUser(username string) error
 	FetchUser(username string) (*model.User, error)
 	UserExists(username string) (bool, error)
 }
 
-// InsertOrUpdateUser inserts a new user entity into storage,
+// UpsertUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
-func InsertOrUpdateUser(user *model.User) error {
-	return instance().InsertOrUpdateUser(user)
+func UpsertUser(user *model.User) error {
+	return instance().UpsertUser(user)
 }
 
 // DeleteUser deletes a user entity from storage.

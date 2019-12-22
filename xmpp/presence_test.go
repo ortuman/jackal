@@ -117,6 +117,21 @@ func TestPresenceBuild(t *testing.T) {
 	presence, err = xmpp.NewPresenceFromElement(elem, j, j)
 	require.Nil(t, err)
 	require.Equal(t, "Readable text", presence.Status())
+
+	elem.ClearElements()
+	c := xmpp.NewElementNamespace("c", "http://jabber.org/protocol/caps")
+	c.SetAttribute("hash", "sha-1")
+	c.SetAttribute("node", "http://code.google.com/p/exodus")
+	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
+	elem.AppendElement(c)
+	presence, err = xmpp.NewPresenceFromElement(elem, j, j)
+	require.Nil(t, err)
+
+	caps := presence.Capabilities()
+	require.NotNil(t, caps)
+	require.Equal(t, "sha-1", caps.Hash)
+	require.Equal(t, "http://code.google.com/p/exodus", caps.Node)
+	require.Equal(t, "QgayPKawpkPSDYmwT/WM94uAlu0=", caps.Ver)
 }
 
 func TestPresenceType(t *testing.T) {

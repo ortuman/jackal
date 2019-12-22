@@ -8,7 +8,7 @@ package memstorage
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
@@ -28,13 +28,13 @@ func TestMemoryStorage_InsertRosterItem(t *testing.T) {
 
 	s := New()
 	s.EnableMockedError()
-	_, err := s.InsertOrUpdateRosterItem(&ri)
+	_, err := s.UpsertRosterItem(&ri)
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	_, err = s.InsertOrUpdateRosterItem(&ri)
+	_, err = s.UpsertRosterItem(&ri)
 	require.Nil(t, err)
 	ri.Subscription = "to"
-	_, err = s.InsertOrUpdateRosterItem(&ri)
+	_, err = s.UpsertRosterItem(&ri)
 	require.Nil(t, err)
 }
 
@@ -50,7 +50,7 @@ func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 		Groups:       g,
 	}
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri)
 
 	s.EnableMockedError()
 	_, err := s.FetchRosterItem("user", "contact")
@@ -96,9 +96,9 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	}
 
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
-	_, _ = s.InsertOrUpdateRosterItem(&ri2)
-	_, _ = s.InsertOrUpdateRosterItem(&ri3)
+	_, _ = s.UpsertRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri2)
+	_, _ = s.UpsertRosterItem(&ri3)
 
 	s.EnableMockedError()
 	_, _, err := s.FetchRosterItems("user")
@@ -111,6 +111,14 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	require.Equal(t, 2, len(ris))
 	ris, _, _ = s.FetchRosterItemsInGroups("user", []string{"buddies"})
 	require.Equal(t, 1, len(ris))
+
+	gr, err := s.FetchRosterGroups("user")
+	require.Len(t, gr, 4)
+
+	require.Contains(t, gr, "general")
+	require.Contains(t, gr, "friends")
+	require.Contains(t, gr, "family")
+	require.Contains(t, gr, "buddies")
 }
 
 func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
@@ -125,10 +133,16 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 		Groups:       g,
 	}
 	s := New()
-	_, _ = s.InsertOrUpdateRosterItem(&ri)
+	_, _ = s.UpsertRosterItem(&ri)
+
+	gr, err := s.FetchRosterGroups("user")
+	require.Len(t, gr, 2)
+
+	require.Contains(t, gr, "general")
+	require.Contains(t, gr, "friends")
 
 	s.EnableMockedError()
-	_, err := s.DeleteRosterItem("user", "contact")
+	_, err = s.DeleteRosterItem("user", "contact")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
 
@@ -139,6 +153,9 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 
 	ri2, _ := s.FetchRosterItem("user", "contact")
 	require.Nil(t, ri2)
+
+	gr, err = s.FetchRosterGroups("user")
+	require.Len(t, gr, 0)
 }
 
 func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
@@ -149,9 +166,9 @@ func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
 	}
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOrUpdateRosterNotification(&rn))
+	require.Equal(t, ErrMockedError, s.UpsertRosterNotification(&rn))
 	s.DisableMockedError()
-	require.Nil(t, s.InsertOrUpdateRosterNotification(&rn))
+	require.Nil(t, s.UpsertRosterNotification(&rn))
 }
 
 func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
@@ -166,13 +183,13 @@ func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 		Presence: &xmpp.Presence{},
 	}
 	s := New()
-	_ = s.InsertOrUpdateRosterNotification(&rn1)
-	_ = s.InsertOrUpdateRosterNotification(&rn2)
+	_ = s.UpsertRosterNotification(&rn1)
+	_ = s.UpsertRosterNotification(&rn2)
 
 	from, _ := jid.NewWithString("ortuman2@jackal.im", true)
 	to, _ := jid.NewWithString("romeo@jackal.im", true)
 	rn2.Presence = xmpp.NewPresence(from, to, xmpp.SubscribeType)
-	_ = s.InsertOrUpdateRosterNotification(&rn2)
+	_ = s.UpsertRosterNotification(&rn2)
 
 	s.EnableMockedError()
 	_, err := s.FetchRosterNotifications("romeo")
@@ -192,7 +209,7 @@ func TestMemoryStorage_DeleteRosterNotification(t *testing.T) {
 		Presence: &xmpp.Presence{},
 	}
 	s := New()
-	_ = s.InsertOrUpdateRosterNotification(&rn1)
+	_ = s.UpsertRosterNotification(&rn1)
 
 	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteRosterNotification("ortuman", "romeo@jackal.im"))

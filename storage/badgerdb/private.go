@@ -10,20 +10,21 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// InsertOrUpdatePrivateXML inserts a new private element into storage,
-// or updates it in case it's been previously inserted.
-func (b *Storage) InsertOrUpdatePrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+// UpsertPrivateXML inserts a new private element into storage, or updates it in case it's been previously inserted.
+func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.insertOrUpdate(r, b.privateStorageKey(username, namespace), tx)
+		return b.upsert(r, b.privateElementsKey(username, namespace), tx)
 	})
 }
 
 // FetchPrivateXML retrieves from storage a private element.
 func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
 	var r xmpp.Element
-	err := b.fetch(&r, b.privateStorageKey(username, namespace))
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetch(&r, b.privateElementsKey(username, namespace), txn)
+	})
 	switch err {
 	case nil:
 		return r.Elements().All(), nil
@@ -34,6 +35,6 @@ func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XEl
 	}
 }
 
-func (b *Storage) privateStorageKey(username, namespace string) []byte {
+func (b *Storage) privateElementsKey(username, namespace string) []byte {
 	return []byte("privateElements:" + username + ":" + namespace)
 }

@@ -83,7 +83,7 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
 		_ = x.router.Route(iq.InternalServerError())
 		return
 	}
-	log.Infof("retrieving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
+	log.Infof("retrieving vcard... (jid: %s)", toJID.String())
 
 	resultIQ := iq.ResultIQ()
 	if resElem != nil {
@@ -99,9 +99,9 @@ func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 	if toJID.IsServer() || (toJID.Node() == fromJID.Node()) {
-		log.Infof("saving vcard... (%s/%s)", toJID.Node(), toJID.Resource())
+		log.Infof("saving vcard... (jid: %s)", toJID.String())
 
-		err := storage.InsertOrUpdateVCard(vCard, toJID.Node())
+		err := storage.UpsertVCard(vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(iq.InternalServerError())

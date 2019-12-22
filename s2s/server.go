@@ -97,7 +97,7 @@ func (s *server) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, err
 		}
 		outCfg.onOutDisconnect = s.unregisterOutStream
 
-		stm.(*outStream).start(outCfg)
+		_ = stm.(*outStream).start(outCfg)
 		log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
 	}
 	return stm.(*outStream), nil
@@ -133,7 +133,7 @@ func (s *server) unregisterInStream(stm stream.S2SIn) {
 
 func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
 	connections.Range(func(_, v interface{}) bool {
-		stm := v.(*inStream)
+		stm := v.(stream.InStream)
 		select {
 		case <-closeConn(stm):
 			count++

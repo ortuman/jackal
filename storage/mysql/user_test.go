@@ -28,7 +28,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateUser(&user)
+	err := s.UpsertUser(&user)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -36,7 +36,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnError(errMySQLStorage)
-	err = s.InsertOrUpdateUser(&user)
+	err = s.UpsertUser(&user)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

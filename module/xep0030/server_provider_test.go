@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -104,7 +104,7 @@ func TestServerProvider_Items(t *testing.T) {
 	require.Nil(t, items)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

@@ -176,7 +176,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// already existing user...
-	storage.InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
 	username.SetText("ortuman")
 	password.SetText("5678")
 	x.ProcessIQ(iq)
@@ -212,9 +212,9 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)
@@ -229,7 +229,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	x = New(&Config{AllowCancel: true}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	q.AppendElement(xmpp.NewElementName("remove2"))
 	x.ProcessIQ(iq)
@@ -266,9 +266,9 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)

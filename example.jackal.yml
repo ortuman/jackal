@@ -18,6 +18,7 @@ storage:
     database: jackal
     pool_size: 16
 
+#storage:
 #  type: pgsql
 #  pgsql:
 #    host: 127.0.0.1:5432
@@ -46,6 +47,7 @@ modules:
     - vcard            # XEP-0054: vcard-temp
     - registration     # XEP-0077: In-Band Registration
     - version          # XEP-0092: Software Version
+    - pep              # XEP-0163: Personal Eventing Protocol
     - blocking_command # XEP-0191: Blocking Command
     - ping             # XEP-0199: XMPP Ping
     - offline          # Offline storage

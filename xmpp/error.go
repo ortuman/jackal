@@ -69,6 +69,7 @@ const (
 	subscriptionRequiredErrorReason  = "subscription-required"
 	undefinedConditionErrorReason    = "undefined-condition"
 	unexpectedConditionErrorReason   = "unexpected-condition"
+	unexpectedRequestErrorReason     = "unexpected-request"
 )
 
 var (
@@ -165,6 +166,10 @@ var (
 	// ErrUnexpectedCondition is returned by the stream when the recipient or server
 	// understood the request but was not expecting it at this time.
 	ErrUnexpectedCondition = newStanzaError(400, waitErrorType, unexpectedConditionErrorReason)
+
+	// ErrUnexpectedRequest is returned by the stream when the recipient or server
+	// understood the request but was not expecting it at this time.
+	ErrUnexpectedRequest = newStanzaError(400, cancelErrorType, unexpectedRequestErrorReason)
 )
 
 // BadRequestError returns an error copy of the element
@@ -297,4 +302,10 @@ func (s *stanzaElement) UndefinedConditionError() Stanza {
 // attaching 'unexpected-condition' error sub element.
 func (s *stanzaElement) UnexpectedConditionError() Stanza {
 	return NewErrorStanzaFromStanza(s, ErrUnexpectedCondition, nil)
+}
+
+// UnexpectedRequestError returns an error copy of the element
+// attaching 'unexpected-request' error sub element.
+func (s *stanzaElement) UnexpectedRequestError() Stanza {
+	return NewErrorStanzaFromStanza(s, ErrUnexpectedRequest, nil)
 }

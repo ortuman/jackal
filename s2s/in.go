@@ -113,7 +113,7 @@ func (s *inStream) handleConnecting(elem xmpp.XElement) {
 		s.connectTm = nil
 	}
 	// assign domain pair
-	s.localDomain = elem.To()
+	s.localDomain = s.router.DefaultHostName()
 	s.remoteDomain = elem.From()
 
 	// open stream session
@@ -193,9 +193,9 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	// process roster presence
 	if presence.ToJID().IsBare() {
 		if r := s.mods.Roster; r != nil {
-			s.mods.Roster.ProcessPresence(presence)
+			r.ProcessPresence(presence)
+			return
 		}
-		return
 	}
 	_ = s.router.Route(presence)
 }
@@ -316,7 +316,7 @@ func (s *inStream) authorizeDialbackKey(elem xmpp.XElement) {
 	}
 	log.Infof("authorizing dialback key: %s...", elem.Text())
 
-	outCfg, err := s.cfg.dialer.dial(elem.To(), elem.From())
+	outCfg, err := s.cfg.dialer.dial(s.router.DefaultHostName(), elem.From())
 	if err != nil {
 		log.Error(err)
 		s.writeStanzaErrorResponse(elem, xmpp.ErrRemoteServerNotFound)

@@ -8,6 +8,7 @@ package router
 import (
 	"crypto/tls"
 	"runtime"
+	"sort"
 	"sync"
 
 	"github.com/ortuman/jackal/cluster"
@@ -44,13 +45,14 @@ type Cluster interface {
 
 // Router represents an XMPP stanza router.
 type Router struct {
-	mu             sync.RWMutex
-	outS2SProvider OutS2SProvider
-	hosts          map[string]tls.Certificate
-	streams        map[string][]stream.C2S
-	cluster        Cluster
-	localStreams   map[string]stream.C2S
-	clusterStreams map[string]map[string]*cluster.C2S
+	mu              sync.RWMutex
+	outS2SProvider  OutS2SProvider
+	defaultHostname string
+	hosts           map[string]tls.Certificate
+	streams         map[string][]stream.C2S
+	cluster         Cluster
+	localStreams    map[string]stream.C2S
+	clusterStreams  map[string]map[string]*cluster.C2S
 
 	blockListsMu sync.RWMutex
 	blockLists   map[string][]*jid.JID
@@ -66,7 +68,10 @@ func New(config *Config) (*Router, error) {
 		clusterStreams: make(map[string]map[string]*cluster.C2S),
 	}
 	if len(config.Hosts) > 0 {
-		for _, h := range config.Hosts {
+		for i, h := range config.Hosts {
+			if i == 0 {
+				r.defaultHostname = h.Name
+			}
 			r.hosts[h.Name] = h.Certificate
 		}
 	} else {
@@ -74,9 +79,15 @@ func New(config *Config) (*Router, error) {
 		if err != nil {
 			return nil, err
 		}
+		r.defaultHostname = defaultDomain
 		r.hosts[defaultDomain] = cer
 	}
 	return r, nil
+}
+
+// DefaultHostName returns default local host name
+func (r *Router) DefaultHostName() (hostname string) {
+	return r.defaultHostname
 }
 
 // HostNames returns the list of all configured host names.
@@ -87,6 +98,7 @@ func (r *Router) HostNames() []string {
 	for n := range r.hosts {
 		ret = append(ret, n)
 	}
+	sort.Slice(ret, func(i, j int) bool { return ret[i] < ret[j] })
 	return ret
 }
 
@@ -375,7 +387,7 @@ func (r *Router) remoteRoute(elem xmpp.Stanza) error {
 	if r.outS2SProvider == nil {
 		return ErrFailedRemoteConnect
 	}
-	localDomain := elem.FromJID().Domain()
+	localDomain := r.defaultHostname
 	remoteDomain := elem.ToJID().Domain()
 
 	out, err := r.outS2SProvider.GetOut(localDomain, remoteDomain)

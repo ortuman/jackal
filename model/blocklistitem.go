@@ -16,7 +16,7 @@ type BlockListItem struct {
 	JID      string
 }
 
-// FromBytes deserializes a BlockListItem entity from it's gob binary representation.
+// FromBytes deserializes a BlockListItem entity from its binary representation.
 func (bli *BlockListItem) FromBytes(buf *bytes.Buffer) error {
 	dec := gob.NewDecoder(buf)
 	if err := dec.Decode(&bli.Username); err != nil {
@@ -25,8 +25,7 @@ func (bli *BlockListItem) FromBytes(buf *bytes.Buffer) error {
 	return dec.Decode(&bli.JID)
 }
 
-// ToBytes converts a BlockListItem entity
-// to it's gob binary representation.
+// ToBytes converts a BlockListItem entity to its binary representation.
 func (bli *BlockListItem) ToBytes(buf *bytes.Buffer) error {
 	enc := gob.NewEncoder(buf)
 	if err := enc.Encode(&bli.Username); err != nil {

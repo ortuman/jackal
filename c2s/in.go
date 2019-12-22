@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/runqueue"
-
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
@@ -20,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/session"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
@@ -705,10 +704,11 @@ func (s *inStream) processPresence(presence *xmpp.Presence) {
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
 		s.setPresence(presence)
 	}
-	// deliver presence to roster module
+	// process presence
 	if r := s.mods.Roster; r != nil {
 		r.ProcessPresence(presence)
 	}
+
 	// deliver offline messages
 	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
 		if off := s.mods.Offline; off != nil {
@@ -868,8 +868,8 @@ func (s *inStream) restartSession() {
 
 func (s *inStream) setContextValue(key string, value interface{}) {
 	s.contextMu.Lock()
-	defer s.contextMu.Unlock()
 	s.context[key] = value
+	s.contextMu.Unlock()
 
 	// notify the whole roster about the context update.
 	if c := s.router.Cluster(); c != nil {
@@ -886,10 +886,10 @@ func (s *inStream) setContextValue(key string, value interface{}) {
 
 func (s *inStream) setPresence(presence *xmpp.Presence) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.presence = presence
+	s.mu.Unlock()
 
-	// notify the whole roster about the presence update.
+	// notify the whole cluster about the presence update
 	if c := s.router.Cluster(); c != nil {
 		c.BroadcastMessage(&cluster.Message{
 			Type: cluster.MsgUpdatePresence,

@@ -21,7 +21,7 @@ func TestDataForm_FromElement(t *testing.T) {
 	_, err = NewFormFromElement(elem)
 	require.NotNil(t, err)
 
-	elem.SetNamespace(formNamespace)
+	elem.SetNamespace(FormNamespace)
 	_, err = NewFormFromElement(elem)
 	require.NotNil(t, err)
 
@@ -66,7 +66,7 @@ func TestDataForm_Element(t *testing.T) {
 	form.Type = Form
 	elem := form.Element()
 	require.Equal(t, "x", elem.Name())
-	require.Equal(t, formNamespace, elem.Namespace())
+	require.Equal(t, FormNamespace, elem.Namespace())
 
 	form.Title = "A title"
 	form.Instructions = "A set of instructions"
@@ -80,7 +80,7 @@ func TestDataForm_Element(t *testing.T) {
 	require.Equal(t, "A set of instructions", instElem.Text())
 
 	form.Reported = []Field{{Var: "var1"}}
-	form.Items = [][]Field{{{Var: "var2"}}}
+	form.Items = []Fields{{{Var: "var2"}}}
 
 	elem = form.Element()
 	require.NotNil(t, elem.Elements().Child("reported"))

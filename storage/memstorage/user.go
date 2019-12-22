@@ -10,9 +10,9 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// InsertOrUpdateUser inserts a new user entity into storage,
+// UpsertUser inserts a new user entity into storage,
 // or updates it in case it's been previously inserted.
-func (m *Storage) InsertOrUpdateUser(user *model.User) error {
+func (m *Storage) UpsertUser(user *model.User) error {
 	b, err := serializer.Serialize(user)
 	if err != nil {
 		return err

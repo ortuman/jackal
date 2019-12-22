@@ -22,7 +22,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
+	err := s.UpsertPrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -31,7 +31,7 @@ func TestMySQLStorageInsertPrivateXML(t *testing.T) {
 		WithArgs("ortuman", "exodus:ns", rawXML, rawXML).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertOrUpdatePrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
+	err = s.UpsertPrivateXML([]xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

@@ -15,21 +15,17 @@ import (
 
 func TestMySQLStorageInsertBlockListItems(t *testing.T) {
 	s, mock := NewMock()
-	mock.ExpectBegin()
 	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
 
-	err := s.InsertBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}})
+	err := s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
 	s, mock = NewMock()
-	mock.ExpectBegin()
 	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").WillReturnError(errMySQLStorage)
-	mock.ExpectRollback()
 
-	err = s.InsertBlockListItems([]model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}})
+	err = s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
@@ -57,31 +53,24 @@ func TestMySQLFetchBlockListItems(t *testing.T) {
 
 func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 	s, mock := NewMock()
-	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
 
 	s, mock = NewMock()
-	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
 
-	delItems := []model.BlockListItem{{Username: "ortuman", JID: "noelia@jackal.im"}}
-	err := s.DeleteBlockListItems(delItems)
+	err := s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
 	s, mock = NewMock()
-	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WillReturnError(errMySQLStorage)
-	mock.ExpectRollback()
 
-	err = s.DeleteBlockListItems(delItems)
+	err = s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

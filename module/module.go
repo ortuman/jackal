@@ -11,12 +11,14 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0012"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/module/xep0049"
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
+	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
@@ -52,6 +54,7 @@ type Modules struct {
 	VCard        *xep0054.VCard
 	Register     *xep0077.Register
 	Version      *xep0092.Version
+	Pep          *xep0163.Pep
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
 
@@ -62,19 +65,14 @@ type Modules struct {
 
 // New returns a set of modules derived from a concrete configuration.
 func New(config *Config, router *router.Router) *Modules {
+	var presenceHub = presencehub.New(router)
+
 	m := &Modules{router: router}
 
 	// XEP-0030: Service Discovery (https://xmpp.org/extensions/xep-0030.html)
 	m.DiscoInfo = xep0030.New(router)
 	m.iqHandlers = append(m.iqHandlers, m.DiscoInfo)
 	m.all = append(m.all, m.DiscoInfo)
-
-	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
-	if _, ok := config.Enabled["roster"]; ok {
-		m.Roster = roster.New(&config.Roster, router)
-		m.iqHandlers = append(m.iqHandlers, m.Roster)
-		m.all = append(m.all, m.Roster)
-	}
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := config.Enabled["last_activity"]; ok {
@@ -117,9 +115,16 @@ func New(config *Config, router *router.Router) *Modules {
 		m.all = append(m.all, m.Offline)
 	}
 
+	// XEP-0163: Personal Eventing Protocol (https://xmpp.org/extensions/xep-0163.html)
+	if _, ok := config.Enabled["pep"]; ok {
+		m.Pep = xep0163.New(m.DiscoInfo, presenceHub, router)
+		m.iqHandlers = append(m.iqHandlers, m.Pep)
+		m.all = append(m.all, m.Pep)
+	}
+
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := config.Enabled["blocking_command"]; ok {
-		m.BlockingCmd = xep0191.New(m.DiscoInfo, m.Roster, router)
+		m.BlockingCmd = xep0191.New(m.DiscoInfo, presenceHub, router)
 		m.iqHandlers = append(m.iqHandlers, m.BlockingCmd)
 		m.all = append(m.all, m.BlockingCmd)
 	}
@@ -130,11 +135,19 @@ func New(config *Config, router *router.Router) *Modules {
 		m.iqHandlers = append(m.iqHandlers, m.Ping)
 		m.all = append(m.all, m.Ping)
 	}
+
+	// Roster (https://xmpp.org/rfcs/rfc3921.html#roster)
+	if _, ok := config.Enabled["roster"]; ok {
+		m.iqHandlers = append(m.iqHandlers, presenceHub)
+
+		m.Roster = roster.New(&config.Roster, presenceHub, m.Pep, router)
+		m.iqHandlers = append(m.iqHandlers, m.Roster)
+		m.all = append(m.all, m.Roster)
+	}
 	return m
 }
 
-// ProcessIQ process a module IQ returning 'service unavailable'
-// in case it can't be properly handled.
+// ProcessIQ process a module IQ returning 'service unavailable' in case it couldn't be properly handled.
 func (m *Modules) ProcessIQ(iq *xmpp.IQ) {
 	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {

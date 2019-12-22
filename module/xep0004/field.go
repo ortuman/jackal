@@ -11,6 +11,8 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+const FormType = "FORM_TYPE"
+
 const (
 	// Boolean represents a 'boolean' form field.
 	Boolean = "boolean"

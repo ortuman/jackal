@@ -13,15 +13,15 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// InsertOrUpdateVCard inserts a new vCard element into storage,
+// UpsertVCard inserts a new vCard element into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateVCard(vCard xmpp.XElement, username string) error {
+func (s *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
 	rawXML := vCard.String()
 
 	q := sq.Insert("vcards").
 		Columns("username", "vcard").
 		Values(username, rawXML).
-		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = ?", rawXML)
+		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = $3", rawXML)
 
 	_, err := q.RunWith(s.db).Exec()
 	return err

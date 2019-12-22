@@ -11,14 +11,14 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// InsertOrUpdateRosterItem inserts a new roster item entity into storage,
+// UpsertRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+func (s *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
 	var ver rostermodel.Version
 
 	err := s.inTransaction(func(tx *sql.Tx) error {
@@ -138,7 +138,7 @@ func (s *Storage) FetchRosterItems(username string) ([]rostermodel.Item, rosterm
 func (s *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	q := sq.Select("ris.username", "ris.jid", "ris.name", "ris.subscription", "ris.`groups`", "ris.ask", "ris.ver").
 		From("roster_items ris").
-		LeftJoin("roster_groups g on ris.username = g.username").
+		LeftJoin("roster_groups g ON ris.username = g.username").
 		Where(sq.And{sq.Eq{"ris.username": username}, sq.Eq{"g.group": groups}}).
 		OrderBy("ris.created_at DESC")
 
@@ -177,9 +177,9 @@ func (s *Storage) FetchRosterItem(username, jid string) (*rostermodel.Item, erro
 	}
 }
 
-// InsertOrUpdateRosterNotification inserts a new roster notification entity
+// UpsertRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (s *Storage) InsertOrUpdateRosterNotification(rn *rostermodel.Notification) error {
+func (s *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
 	presenceXML := rn.Presence.String()
 	q := sq.Insert("roster_notifications").
 		Columns("contact", "jid", "elements", "updated_at", "created_at").
@@ -201,7 +201,7 @@ func (s *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var ret []rostermodel.Notification
 	for rows.Next() {
@@ -237,6 +237,30 @@ func (s *Storage) DeleteRosterNotification(contact, jid string) error {
 	q := sq.Delete("roster_notifications").Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
 	_, err := q.RunWith(s.db).Exec()
 	return err
+}
+
+// FetchRosterGroups retrieves all groups associated to a user roster
+func (s *Storage) FetchRosterGroups(username string) ([]string, error) {
+	q := sq.Select("`group`").
+		From("roster_groups").
+		Where(sq.Eq{"username": username}).
+		GroupBy("`group`")
+
+	rows, err := q.RunWith(s.db).Query()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var groups []string
+	for rows.Next() {
+		var group string
+		if err := rows.Scan(&group); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
 }
 
 func (s *Storage) scanRosterNotificationEntity(rn *rostermodel.Notification, scanner rowScanner) error {

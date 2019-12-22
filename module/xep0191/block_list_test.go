@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/model/rostermodel"
-	"github.com/ortuman/jackal/module/roster"
+	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memstorage"
@@ -32,11 +32,11 @@ func TestXEP0191_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(stm)
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	x := New(nil, ph, rtr)
+	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -67,19 +67,20 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(stm)
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	x := New(nil, ph, rtr)
+	defer func() { _ = x.Shutdown() }()
 
-	storage.InsertBlockListItems([]model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}, {
+	})
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
-	}})
+	})
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq1.SetFromJID(j)
@@ -105,11 +106,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rtr, s, shutdown := setupTest("jackal.im")
 	defer shutdown()
 
-	r := roster.New(&roster.Config{}, rtr)
-	defer r.Shutdown()
+	ph := presencehub.New(rtr)
+	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, r, rtr)
-	defer x.Shutdown()
+	x := New(nil, ph, rtr)
+	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
@@ -134,17 +135,17 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rtr.Bind(stm4)
 
 	// register presences
-	r.ProcessPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
-	r.ProcessPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
 	stm1.SetBool(xep191RequestedContextKey, true)
 	stm2.SetBool(xep191RequestedContextKey, true)
 
-	storage.InsertOrUpdateRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",
@@ -254,13 +255,14 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	storage.InsertBlockListItems([]model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
-	}, {
+	})
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
-	}})
+	})
 
 	iqID = uuid.New()
 	iq = xmpp.NewIQType(iqID, xmpp.SetType)

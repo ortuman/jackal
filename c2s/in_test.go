@@ -78,7 +78,7 @@ func TestStream_TLS(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -86,7 +86,7 @@ func TestStream_TLS(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
-	conn.inboundWrite([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
+	_, _ = conn.inboundWrite([]byte(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`))
 
 	elem := conn.outboundRead()
 
@@ -100,7 +100,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	_, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -108,23 +108,23 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 
 	// wrong mechanism
-	conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="FOO"/>`))
+	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="FOO"/>`))
 
 	elem := conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 
-	conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
+	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
 
 	elem = conn.outboundRead()
 	require.Equal(t, "challenge", elem.Name())
 
-	conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9Im9ydHVtYW4iLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
+	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9Im9ydHVtYW4iLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
 
 	elem = conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 
 	// non-SASL
-	conn.inboundWrite([]byte(`<iq type='set' id='auth2'><query xmlns='jabber:iq:auth'>
+	_, _ = conn.inboundWrite([]byte(`<iq type='set' id='auth2'><query xmlns='jabber:iq:auth'>
 <username>bill</username>
 <password>Calli0pe</password>
 </query>
@@ -140,7 +140,7 @@ func TestStream_Compression(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -154,13 +154,13 @@ func TestStream_Compression(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 
 	// no method...
-	conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress"/>`))
+	_, _ = conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress"/>`))
 	elem := conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 	require.NotNil(t, elem.Elements().Child("setup-failed"))
 
 	// invalid method...
-	conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
+	_, _ = conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
 <method>7z</method>
 </compress>`))
 	elem = conn.outboundRead()
@@ -168,7 +168,7 @@ func TestStream_Compression(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("unsupported-method"))
 
 	// valid method...
-	conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
+	_, _ = conn.inboundWrite([]byte(`<compress xmlns="http://jabber.org/protocol/compress">
 <method>zlib</method>
 </compress>`))
 
@@ -183,7 +183,7 @@ func TestStream_StartSession(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -206,7 +206,7 @@ func TestStream_SendIQ(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -229,7 +229,7 @@ func TestStream_SendIQ(t *testing.T) {
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:iq:roster"))
 
-	conn.inboundWrite([]byte(iq.String()))
+	_, _ = conn.inboundWrite([]byte(iq.String()))
 
 	elem := conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
@@ -243,7 +243,7 @@ func TestStream_SendPresence(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -261,7 +261,7 @@ func TestStream_SendPresence(t *testing.T) {
 
 	require.Equal(t, bound, stm.getState())
 
-	conn.inboundWrite([]byte(`
+	_, _ = conn.inboundWrite([]byte(`
 <presence>
 <show>away</show>
 <status>away!</status>
@@ -288,7 +288,7 @@ func TestStream_SendMessage(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -320,7 +320,7 @@ func TestStream_SendMessage(t *testing.T) {
 	body.SetText("Hi buddy!")
 	msg.AppendElement(body)
 
-	conn.inboundWrite([]byte(msg.String()))
+	_, _ = conn.inboundWrite([]byte(msg.String()))
 
 	// to full jid...
 	elem := stm2.ReceiveElement()
@@ -329,7 +329,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 	// to bare jid...
 	msg.SetToJID(jTo.ToBareJID())
-	conn.inboundWrite([]byte(msg.String()))
+	_, _ = conn.inboundWrite([]byte(msg.String()))
 	elem = stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, msgID, elem.ID())
@@ -339,7 +339,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	storage.InsertOrUpdateUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -357,13 +357,13 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	require.Equal(t, bound, stm.getState())
 
-	storage.InsertBlockListItems([]model.BlockListItem{{
+	_ = storage.InsertBlockListItem(&model.BlockListItem{
 		Username: "user",
 		JID:      "hamlet@localhost",
-	}})
+	})
 
 	// send presence to a blocked JID...
-	conn.inboundWrite([]byte(`<presence to="hamlet@localhost"/>`))
+	_, _ = conn.inboundWrite([]byte(`<presence to="hamlet@localhost"/>`))
 
 	elem := conn.outboundRead()
 	require.Equal(t, "presence", elem.Name())
@@ -376,21 +376,21 @@ func tUtilStreamOpen(conn *fakeSocketConn) {
 	<stream:stream xmlns:stream="http://etherx.jabber.org/streams"
 	version="1.0" xmlns="jabber:client" to="localhost" xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 `
-	conn.inboundWrite([]byte(s))
+	_, _ = conn.inboundWrite([]byte(s))
 }
 
 func tUtilStreamAuthenticate(conn *fakeSocketConn, t *testing.T) {
-	conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
+	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
 
 	elem := conn.outboundRead()
 	require.Equal(t, "challenge", elem.Name())
 
-	conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
+	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
 
 	elem = conn.outboundRead()
 	require.Equal(t, "challenge", elem.Name())
 
-	conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
+	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
 
 	elem = conn.outboundRead()
 	require.Equal(t, "success", elem.Name())
@@ -398,7 +398,7 @@ func tUtilStreamAuthenticate(conn *fakeSocketConn, t *testing.T) {
 
 func tUtilStreamBind(conn *fakeSocketConn, t *testing.T) {
 	// bind a resource
-	conn.inboundWrite([]byte(`<iq type="set" id="bind_1">
+	_, _ = conn.inboundWrite([]byte(`<iq type="set" id="bind_1">
 <bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
 <resource>balcony</resource>
 </bind>
@@ -411,7 +411,7 @@ func tUtilStreamBind(conn *fakeSocketConn, t *testing.T) {
 
 func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	// open session
-	conn.inboundWrite([]byte(`<iq type="set" id="aab8a">
+	_, _ = conn.inboundWrite([]byte(`<iq type="set" id="aab8a">
 <session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
 </iq>`))
 

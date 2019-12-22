@@ -22,7 +22,7 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateVCard(vCard, "ortuman")
+	err := s.UpsertVCard(vCard, "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
@@ -32,7 +32,7 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertOrUpdateVCard(vCard, "ortuman")
+	err = s.UpsertVCard(vCard, "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

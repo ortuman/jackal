@@ -162,41 +162,41 @@ func (e *Element) String() string {
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
 func (e *Element) ToXML(w io.Writer, includeClosing bool) {
-	io.WriteString(w, "<")
-	io.WriteString(w, e.name)
+	_, _ = io.WriteString(w, "<")
+	_, _ = io.WriteString(w, e.name)
 
 	// serialize attributes
 	for _, attr := range e.attrs {
 		if len(attr.Value) == 0 {
 			continue
 		}
-		io.WriteString(w, " ")
-		io.WriteString(w, attr.Label)
-		io.WriteString(w, `="`)
-		io.WriteString(w, attr.Value)
-		io.WriteString(w, `"`)
+		_, _ = io.WriteString(w, ` `)
+		_, _ = io.WriteString(w, attr.Label)
+		_, _ = io.WriteString(w, `="`)
+		_, _ = io.WriteString(w, attr.Value)
+		_, _ = io.WriteString(w, `"`)
 	}
 
 	if e.elements.Count() > 0 || len(e.text) > 0 {
-		io.WriteString(w, ">")
+		_, _ = io.WriteString(w, ">")
 
 		if len(e.text) > 0 {
-			escapeText(w, []byte(e.text), false)
+			_ = escapeText(w, []byte(e.text), false)
 		}
 		for _, elem := range e.elements {
 			elem.ToXML(w, true)
 		}
 
 		if includeClosing {
-			io.WriteString(w, "</")
-			io.WriteString(w, e.name)
-			io.WriteString(w, ">")
+			_, _ = io.WriteString(w, "</")
+			_, _ = io.WriteString(w, e.name)
+			_, _ = io.WriteString(w, ">")
 		}
 	} else {
 		if includeClosing {
-			io.WriteString(w, "/>")
+			_, _ = io.WriteString(w, "/>")
 		} else {
-			io.WriteString(w, ">")
+			_, _ = io.WriteString(w, ">")
 		}
 	}
 }

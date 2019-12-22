@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/model/rostermodel"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -69,7 +69,7 @@ func TestInsertRosterItem(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	_, err := s.InsertOrUpdateRosterItem(&ri)
+	_, err := s.UpsertRosterItem(&ri)
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -157,7 +157,7 @@ func TestFetchRosterItems(t *testing.T) {
 
 	var riColumns2 = []string{"ris.user", "ris.contact", "ris.name", "ris.subscription", "ris.groups", "ris.ask", "ris.ver"}
 	s, mock = NewMock()
-	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g on ris.username = g.username (.+)").
+	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g ON ris.username = g.username (.+)").
 		WithArgs("ortuman", "Family").
 		WillReturnRows(sqlmock.NewRows(riColumns2).AddRow("ortuman", "romeo", "Romeo", "both", `["Family"]`, false, 0))
 	mock.ExpectQuery("SELECT (.+) FROM roster_versions (.+)").
@@ -188,7 +188,7 @@ func TestInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOrUpdateRosterNotification(&rn)
+	err := s.UpsertRosterNotification(&rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -197,7 +197,7 @@ func TestInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnError(errGeneric)
 
-	err = s.InsertOrUpdateRosterNotification(&rn)
+	err = s.UpsertRosterNotification(&rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -260,4 +260,33 @@ func TestFetchRosterNotifications(t *testing.T) {
 	_, err = s.FetchRosterNotifications("ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
+}
+
+func TestStorageFetchRosterGroups(t *testing.T) {
+	s, mock := NewMock()
+	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
+		WithArgs("ortuman").
+		WillReturnRows(sqlmock.NewRows([]string{"group"}).
+			AddRow("Contacts").
+			AddRow("News"))
+
+	groups, err := s.FetchRosterGroups("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+	require.Nil(t, err)
+
+	require.Equal(t, 2, len(groups))
+	require.Equal(t, "Contacts", groups[0])
+	require.Equal(t, "News", groups[1])
+
+	s, mock = NewMock()
+	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
+		WithArgs("ortuman").
+		WillReturnError(errGeneric)
+
+	groups, err = s.FetchRosterGroups("ortuman")
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, groups)
+	require.NotNil(t, err)
+	require.Equal(t, errGeneric, err)
 }

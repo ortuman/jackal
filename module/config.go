@@ -44,7 +44,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	enabled := make(map[string]struct{}, len(p.Enabled))
 	for _, mod := range p.Enabled {
 		switch mod {
-		case "roster", "last_activity", "private", "vcard", "registration", "version", "blocking_command",
+		case "roster", "last_activity", "private", "vcard", "registration", "pep", "version", "blocking_command",
 			"ping", "offline":
 			break
 		default:

@@ -194,9 +194,9 @@ func (s *Session) Close() error {
 	}
 	switch s.tr.Type() {
 	case transport.Socket:
-		io.WriteString(s.tr, "</stream:stream>")
+		_, _ = io.WriteString(s.tr, "</stream:stream>")
 	case transport.WebSocket:
-		io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
+		_, _ = io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
 	_ = s.tr.Flush()
 
@@ -386,7 +386,7 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 		break
 
 	case xmpp.ErrStreamClosedByPeer:
-		s.Close()
+		_ = s.Close()
 
 	case xmpp.ErrTooLargeStanza:
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}

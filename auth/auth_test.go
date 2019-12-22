@@ -21,7 +21,7 @@ func authTestSetup(user *model.User) (*stream.MockC2S, *memstorage.Storage) {
 	s := memstorage.New()
 	storage.Set(s)
 
-	storage.InsertOrUpdateUser(user)
+	_ = storage.UpsertUser(user)
 
 	j, _ := jid.New("mariana", "localhost", "res", true)
 

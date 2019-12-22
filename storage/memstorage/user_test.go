@@ -16,10 +16,10 @@ func TestMemoryStorage_InsertUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
 	s.EnableMockedError()
-	err := s.InsertOrUpdateUser(&u)
+	err := s.UpsertUser(&u)
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	err = s.InsertOrUpdateUser(&u)
+	err = s.UpsertUser(&u)
 	require.Nil(t, err)
 }
 
@@ -37,7 +37,7 @@ func TestMemoryStorage_UserExists(t *testing.T) {
 func TestMemoryStorage_FetchUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
-	_ = s.InsertOrUpdateUser(&u)
+	_ = s.UpsertUser(&u)
 
 	s.EnableMockedError()
 	_, err := s.FetchUser("ortuman")
@@ -54,7 +54,7 @@ func TestMemoryStorage_FetchUser(t *testing.T) {
 func TestMemoryStorage_DeleteUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
-	_ = s.InsertOrUpdateUser(&u)
+	_ = s.UpsertUser(&u)
 
 	s.EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteUser("ortuman"))

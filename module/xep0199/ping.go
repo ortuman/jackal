@@ -7,6 +7,7 @@ package xep0199
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	streamerror "github.com/ortuman/jackal/errors"
@@ -55,11 +56,12 @@ type ping struct {
 
 // Ping represents a ping server stream module.
 type Ping struct {
-	cfg         *Config
-	router      *router.Router
-	pings       map[string]*ping
-	activePings map[string]*ping
-	runQueue    *runqueue.RunQueue
+	cfg           *Config
+	router        *router.Router
+	pings         map[string]*ping
+	activePingsMu sync.RWMutex
+	activePings   map[string]*ping
+	runQueue      *runqueue.RunQueue
 }
 
 // New returns an ping IQ handler module.
@@ -209,7 +211,9 @@ func (x *Ping) sendPing(pi *ping) {
 	pi.timer = time.AfterFunc(x.cfg.SendInterval/3, func() {
 		x.runQueue.Run(func() { x.disconnectStream(pi) })
 	})
+	x.activePingsMu.Lock()
 	x.activePings[pi.identifier] = pi
+	x.activePingsMu.Unlock()
 }
 
 func (x *Ping) disconnectStream(pi *ping) {
@@ -217,6 +221,9 @@ func (x *Ping) disconnectStream(pi *ping) {
 }
 
 func (x *Ping) isPongIQ(iq *xmpp.IQ) bool {
+	x.activePingsMu.RLock()
 	_, ok := x.activePings[iq.ID()]
+	x.activePingsMu.RUnlock()
+
 	return ok && (iq.IsResult() || iq.Type() == xmpp.ErrorType)
 }

@@ -20,10 +20,12 @@ func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 	}
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertBlockListItems(items))
+	require.Equal(t, ErrMockedError, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
 	s.DisableMockedError()
 
-	_ = s.InsertBlockListItems(items)
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
 	s.EnableMockedError()
 	_, err := s.FetchBlockListItems("ortuman")
@@ -35,20 +37,17 @@ func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 }
 
 func TestMemoryStorage_DeleteBlockListItems(t *testing.T) {
-	items := []model.BlockListItem{
-		{Username: "ortuman", JID: "user@jackal.im"},
-		{Username: "ortuman", JID: "romeo@jackal.im"},
-		{Username: "ortuman", JID: "juliet@jackal.im"},
-	}
 	s := New()
-	_ = s.InsertBlockListItems(items)
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
-	delItems := []model.BlockListItem{{Username: "ortuman", JID: "romeo@jackal.im"}}
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteBlockListItems(delItems))
+	require.Equal(t, ErrMockedError, s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 	s.DisableMockedError()
 
-	_ = s.DeleteBlockListItems(delItems)
+	require.Nil(t, s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+
 	sItems, _ := s.FetchBlockListItems("ortuman")
 	require.Equal(t, []model.BlockListItem{
 		{Username: "ortuman", JID: "user@jackal.im"},

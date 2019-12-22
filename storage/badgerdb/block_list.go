@@ -10,25 +10,35 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-// InsertBlockListItems inserts a set of block list item entities
+// InsertBlockListItem inserts a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (b *Storage) InsertBlockListItems(items []model.BlockListItem) error {
+func (b *Storage) InsertBlockListItem(item *model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		for _, item := range items {
-			if err := b.insertOrUpdate(&item, b.blockListItemKey(item.Username, item.JID), tx); err != nil {
-				return err
+		var blItems []model.BlockListItem
+		if err := b.fetchSlice(&blItems, b.blockListItemsKey(item.Username), tx); err != nil {
+			return err
+		}
+		for _, blItem := range blItems {
+			if blItem.JID == item.JID {
+				return nil
 			}
 		}
-		return nil
+		blItems = append(blItems, *item)
+		return b.upsertSlice(&blItems, b.blockListItemsKey(item.Username), tx)
 	})
 }
 
-// DeleteBlockListItems deletes a set of block list item entities from storage.
-func (b *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
+// DeleteBlockListItem deletes a block list item entity from storage.
+func (b *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		for _, item := range items {
-			if err := b.delete(b.blockListItemKey(item.Username, item.JID), tx); err != nil {
-				return err
+		var blItems []model.BlockListItem
+		if err := b.fetchSlice(&blItems, b.blockListItemsKey(item.Username), tx); err != nil {
+			return err
+		}
+		for i, blItem := range blItems {
+			if blItem.JID == item.JID { // delete item
+				blItems = append(blItems[:i], blItems[i+1:]...)
+				return b.upsertSlice(&blItems, b.blockListItemsKey(item.Username), tx)
 			}
 		}
 		return nil
@@ -39,12 +49,15 @@ func (b *Storage) DeleteBlockListItems(items []model.BlockListItem) error {
 // associated to a given user.
 func (b *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
 	var blItems []model.BlockListItem
-	if err := b.fetchAll(&blItems, []byte("blockListItems:"+username)); err != nil {
+	err := b.db.View(func(txn *badger.Txn) error {
+		return b.fetchSlice(&blItems, b.blockListItemsKey(username), txn)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return blItems, nil
 }
 
-func (b *Storage) blockListItemKey(username, jid string) []byte {
-	return []byte("blockListItems:" + username + ":" + jid)
+func (b *Storage) blockListItemsKey(username string) []byte {
+	return []byte("blockListItems:" + username)
 }

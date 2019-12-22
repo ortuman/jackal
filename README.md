@@ -32,28 +32,11 @@ jackal supports the following features:
 - Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+, PostgreSQL 9.5+)
 - Cross-platform (OS X, Linux)
 
-## Push notifications
-
-Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`. 
-
-However there's a chance to forward offline messages to some external service by configuring offline module as follows:
-
-```yaml
-  mod_offline:
-    queue_size: 2500
-    gateway:
-      type: http
-      auth: a-secret-token-here
-      pass: http://127.0.0.1:6666
-```
-
-Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
-
 ## Installing
 
 ### Getting Started
 
-To start using jackal, install Go 1.12+ and run the following commands:
+To start using jackal, install Go 1.13+ and run the following commands:
 
 ```bash
 $ go get -d github.com/ortuman/jackal
@@ -127,7 +110,24 @@ storage:
 
 That's it!
 
-### Cluster configuration
+## Push notifications
+
+Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`.
+
+However there's a chance to forward offline messages to some external service by configuring offline module as follows:
+
+```yaml
+  mod_offline:
+    queue_size: 2500
+    gateway:
+      type: http
+      auth: a-secret-token-here
+      pass: http://127.0.0.1:6666
+```
+
+Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
+
+## Cluster configuration
 
 The purpose of clustering is to be able to use several servers for fault-tolerance and scalability.
 
@@ -165,6 +165,7 @@ $ docker run --name jackal -p 5222:5222 ortuman/jackal
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html) *1.1*
 - [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html) *2.0*
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html) *1.0.1*
+- [XEP-0163: Personal Eventing Protocol](https://xmpp.org/extensions/xep-0163.html) *1.2.1*
 - [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html) *1.3*
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
