@@ -6,6 +6,7 @@
 package s2s
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 
@@ -128,7 +129,7 @@ func (s *outStream) doRead() {
 	}
 }
 
-func (s *outStream) handleElement(elem xmpp.XElement) {
+func (s *outStream) handleElement(ctx context.Context, elem xmpp.XElement) {
 	switch s.getState() {
 	case outConnecting:
 		s.handleConnecting(elem)
@@ -292,7 +293,8 @@ func (s *outStream) writeElement(elem xmpp.XElement) {
 
 func (s *outStream) readElement(elem xmpp.XElement) {
 	if elem != nil {
-		s.handleElement(elem)
+		ctx, _ := context.WithTimeout(context.Background(), s.cfg.processTimeout)
+		s.handleElement(ctx, elem)
 	}
 	if s.getState() != outDisconnected {
 		go s.doRead()

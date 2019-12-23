@@ -6,6 +6,7 @@
 package c2s
 
 import (
+	"context"
 	"crypto/tls"
 	"sync"
 	"sync/atomic"
@@ -267,7 +268,7 @@ func (s *inStream) connectTimeout() {
 	s.runQueue.Run(func() { s.disconnect(streamerror.ErrConnectionTimeout) })
 }
 
-func (s *inStream) handleElement(elem xmpp.XElement) {
+func (s *inStream) handleElement(ctx context.Context, elem xmpp.XElement) {
 	switch s.getState() {
 	case connecting:
 		s.handleConnecting(elem)
@@ -788,7 +789,8 @@ func (s *inStream) writeElement(elem xmpp.XElement) {
 
 func (s *inStream) readElement(elem xmpp.XElement) {
 	if elem != nil {
-		s.handleElement(elem)
+		ctx, _ := context.WithTimeout(context.Background(), s.cfg.processTimeout)
+		s.handleElement(ctx, elem)
 	}
 	if s.getState() != disconnected {
 		go s.doRead() // Keep reading...
