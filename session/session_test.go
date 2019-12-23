@@ -12,6 +12,7 @@ import (
 	stdxml "encoding/xml"
 	"io"
 	"testing"
+	"time"
 
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/router"
@@ -41,8 +42,9 @@ func (t *fakeTransport) Write(p []byte) (n int, err error)                      
 func (t *fakeTransport) Close() error                                                 { return nil }
 func (t *fakeTransport) Type() transport.Type                                         { return t.typ }
 func (t *fakeTransport) Flush() error                                                 { return nil }
+func (t *fakeTransport) SetWriteDeadline(_ time.Time) error                           { return nil }
 func (t *fakeTransport) WriteString(s string) (n int, err error)                      { return t.wrBuf.WriteString(s) }
-func (t *fakeTransport) StartTLS(cfg *tls.Config, asClient bool)                      {}
+func (t *fakeTransport) StartTLS(_ *tls.Config, _ bool)                               {}
 func (t *fakeTransport) EnableCompression(compress.Level)                             {}
 func (t *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte { return nil }
 func (t *fakeTransport) PeerCertificates() []*x509.Certificate                        { return nil }

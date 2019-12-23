@@ -21,7 +21,7 @@ const (
 	defaultTransportKeepAlive = time.Duration(10) * time.Minute
 	defaultDialTimeout        = time.Duration(15) * time.Second
 	defaultConnectTimeout     = time.Duration(5) * time.Second
-	defaultProcessTimeout     = time.Duration(15) * time.Second
+	defaultProcessTimeout     = time.Duration(20) * time.Second
 	defaultMaxStanzaSize      = 131072
 )
 

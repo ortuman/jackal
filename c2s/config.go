@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultConnectTimeout     = time.Duration(5) * time.Second
-	defaultProcessTimeout     = time.Duration(15) * time.Second
+	defaultProcessTimeout     = time.Duration(20) * time.Second
 	defaultMaxStanzaSize      = 32768
 	defaultTransportPort      = 5222
 	defaultTransportKeepAlive = time.Duration(120) * time.Second

@@ -6,7 +6,6 @@
 package transport
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"io"
@@ -29,7 +28,6 @@ type WebSocketConn interface {
 
 type webSocketTransport struct {
 	conn      WebSocketConn
-	r         *bytes.Reader
 	keepAlive time.Duration
 }
 
@@ -42,57 +40,64 @@ func NewWebSocketTransport(conn WebSocketConn, keepAlive time.Duration) Transpor
 	return wst
 }
 
-func (wst *webSocketTransport) Read(p []byte) (n int, err error) {
-	_, r, err := wst.conn.NextReader()
+func (w *webSocketTransport) Read(p []byte) (n int, err error) {
+	_, r, err := w.conn.NextReader()
 	if err != nil {
 		return 0, err
 	}
-	if wst.keepAlive > 0 {
-		wst.conn.SetReadDeadline(time.Now().Add(wst.keepAlive))
+	if w.keepAlive > 0 {
+		_ = w.conn.SetReadDeadline(time.Now().Add(w.keepAlive))
 	}
 	return r.Read(p)
 }
 
-func (wst *webSocketTransport) Write(p []byte) (n int, err error) {
-	w, err := wst.conn.NextWriter(websocket.TextMessage)
+func (w *webSocketTransport) Write(p []byte) (n int, err error) {
+	nw, err := w.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return 0, err
 	}
-	defer w.Close()
-	return w.Write(p)
+	defer func() { _ = nw.Close() }()
+
+	return nw.Write(p)
 }
 
-func (wst *webSocketTransport) Close() error {
-	return wst.conn.Close()
+func (w *webSocketTransport) Close() error {
+	return w.conn.Close()
 }
 
-func (wst *webSocketTransport) Type() Type {
+func (w *webSocketTransport) Type() Type {
 	return WebSocket
 }
 
-func (wst *webSocketTransport) WriteString(str string) (int, error) {
-	w, err := wst.conn.NextWriter(websocket.TextMessage)
+func (w *webSocketTransport) WriteString(str string) (int, error) {
+	nw, err := w.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return 0, err
 	}
-	defer w.Close()
-	n, err := io.Copy(w, strings.NewReader(str))
+	defer func() { _ = nw.Close() }()
+
+	n, err := io.Copy(nw, strings.NewReader(str))
 	return int(n), err
 }
 
 // Flush writes any buffered data to the underlying io.Writer.
-func (wst *webSocketTransport) Flush() error {
+func (w *webSocketTransport) Flush() error {
 	return nil
 }
 
-func (wst *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {
+// SetWriteDeadline sets the deadline for future write calls.
+func (w *webSocketTransport) SetWriteDeadline(d time.Time) error {
+	return w.conn.UnderlyingConn().SetWriteDeadline(d)
 }
 
-func (wst *webSocketTransport) EnableCompression(level compress.Level) {
+func (w *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {
 }
 
-func (wst *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
-	if tlsConn, ok := wst.conn.UnderlyingConn().(tlsStateQueryable); ok {
+func (w *webSocketTransport) EnableCompression(_ compress.Level) {
+}
+
+func (w *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
+	if tlsConn, ok := w.conn.UnderlyingConn().(tlsStateQueryable); ok {
 		switch mechanism {
 		case TLSUnique:
 			st := tlsConn.ConnectionState()
@@ -104,8 +109,8 @@ func (wst *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMecha
 	return nil
 }
 
-func (wst *webSocketTransport) PeerCertificates() []*x509.Certificate {
-	if tlsConn, ok := wst.conn.UnderlyingConn().(tlsStateQueryable); ok {
+func (w *webSocketTransport) PeerCertificates() []*x509.Certificate {
+	if tlsConn, ok := w.conn.UnderlyingConn().(tlsStateQueryable); ok {
 		st := tlsConn.ConnectionState()
 		return st.PeerCertificates
 	}
