@@ -133,6 +133,7 @@ func (s *server) startStream(tr transport.Transport) {
 		transport:        tr,
 		resourceConflict: s.cfg.ResourceConflict,
 		connectTimeout:   s.cfg.ConnectTimeout,
+		processTimeout:   s.cfg.ProcessTimeout,
 		maxStanzaSize:    s.cfg.MaxStanzaSize,
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,

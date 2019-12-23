@@ -114,6 +114,7 @@ func (s *server) startInStream(tr transport.Transport) {
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,
+		processTimeout: s.cfg.ProcessTimeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
 		dialer:         s.dialer,
 		onInDisconnect: s.unregisterInStream,
