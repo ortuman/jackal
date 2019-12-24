@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
@@ -35,24 +36,26 @@ type hashicorpMemberList interface {
 }
 
 type memberListDelegate interface {
-	handleNotifyMsg(msg []byte)
+	handleNotifyMsg(ctx context.Context, msg []byte)
 
-	handleNotifyJoin(n *Node)
-	handleNotifyUpdate(n *Node)
-	handleNotifyLeave(n *Node)
+	handleNotifyJoin(ctx context.Context, n *Node)
+	handleNotifyUpdate(ctx context.Context, n *Node)
+	handleNotifyLeave(ctx context.Context, n *Node)
 }
 
 type defaultMemberList struct {
-	delegate memberListDelegate
-	ml       hashicorpMemberList
-	mu       sync.RWMutex
-	members  map[string]*memberlist.Node
+	delegate  memberListDelegate
+	inTimeout time.Duration
+	ml        hashicorpMemberList
+	mu        sync.RWMutex
+	members   map[string]*memberlist.Node
 }
 
-func newDefaultMemberList(localName string, bindPort int, delegate memberListDelegate) (*defaultMemberList, error) {
+func newDefaultMemberList(localName string, bindPort int, timeout time.Duration, delegate memberListDelegate) (*defaultMemberList, error) {
 	dl := &defaultMemberList{
-		delegate: delegate,
-		members:  make(map[string]*memberlist.Node),
+		delegate:  delegate,
+		inTimeout: timeout,
+		members:   make(map[string]*memberlist.Node),
 	}
 	conf := memberlist.DefaultLocalConfig()
 	conf.Name = localName
@@ -128,7 +131,7 @@ func (d *defaultMemberList) NodeMeta(limit int) []byte {
 }
 
 func (d *defaultMemberList) NotifyMsg(msg []byte) {
-	d.delegate.handleNotifyMsg(msg)
+	d.delegate.handleNotifyMsg(d.getContext(), msg)
 }
 
 func (d *defaultMemberList) GetBroadcasts(overhead, limit int) [][]byte { return nil }
@@ -147,7 +150,7 @@ func (d *defaultMemberList) NotifyJoin(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.delegate.handleNotifyJoin(cNode)
+	d.delegate.handleNotifyJoin(d.getContext(), cNode)
 }
 
 func (d *defaultMemberList) NotifyLeave(n *memberlist.Node) {
@@ -160,7 +163,7 @@ func (d *defaultMemberList) NotifyLeave(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.delegate.handleNotifyLeave(cNode)
+	d.delegate.handleNotifyLeave(d.getContext(), cNode)
 }
 
 func (d *defaultMemberList) NotifyUpdate(n *memberlist.Node) {
@@ -173,7 +176,7 @@ func (d *defaultMemberList) NotifyUpdate(n *memberlist.Node) {
 		log.Warnf("%s", err)
 		return
 	}
-	d.delegate.handleNotifyUpdate(cNode)
+	d.delegate.handleNotifyUpdate(d.getContext(), cNode)
 }
 
 func (d *defaultMemberList) clusterNodeFromMemberListNode(n *memberlist.Node) (*Node, error) {
@@ -185,4 +188,9 @@ func (d *defaultMemberList) clusterNodeFromMemberListNode(n *memberlist.Node) (*
 		Name:     n.Name,
 		Metadata: m,
 	}, nil
+}
+
+func (d *defaultMemberList) getContext() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), d.inTimeout)
+	return ctx
 }

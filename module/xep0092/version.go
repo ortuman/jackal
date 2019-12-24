@@ -6,6 +6,7 @@
 package xep0092
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 
@@ -57,11 +58,10 @@ func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }
 
-// ProcessIQ processes a version IQ taking according actions
-// over the associated stream.
-func (x *Version) ProcessIQ(iq *xmpp.IQ) {
+// ProcessIQ processes a version IQ taking according actions over the associated stream.
+func (x *Version) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		x.processIQ(iq)
+		x.processIQ(ctx, iq)
 	})
 }
 
@@ -73,16 +73,16 @@ func (x *Version) Shutdown() error {
 	return nil
 }
 
-func (x *Version) processIQ(iq *xmpp.IQ) {
+func (x *Version) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	q := iq.Elements().ChildNamespace("query", versionNamespace)
 	if q == nil || q.Elements().Count() != 0 {
-		_ = x.router.Route(iq.BadRequestError())
+		_ = x.router.Route(ctx, iq.BadRequestError())
 		return
 	}
-	x.sendSoftwareVersion(iq)
+	x.sendSoftwareVersion(ctx, iq)
 }
 
-func (x *Version) sendSoftwareVersion(iq *xmpp.IQ) {
+func (x *Version) sendSoftwareVersion(ctx context.Context, iq *xmpp.IQ) {
 	userJID := iq.FromJID()
 	username := userJID.Node()
 	resource := userJID.Resource()
@@ -105,5 +105,5 @@ func (x *Version) sendSoftwareVersion(iq *xmpp.IQ) {
 		query.AppendElement(os)
 	}
 	result.AppendElement(query)
-	_ = x.router.Route(result)
+	_ = x.router.Route(ctx, result)
 }

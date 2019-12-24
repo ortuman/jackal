@@ -7,6 +7,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"testing"
 
@@ -28,7 +29,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	elem := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	elem.SetAttribute("mechanism", "PLAIN")
-	authr.ProcessElement(elem)
+	authr.ProcessElement(context.Background(), elem)
 
 	buf := new(bytes.Buffer)
 	buf.WriteByte(0)
@@ -39,29 +40,29 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	// storage error...
 	s.EnableMockedError()
-	require.Equal(t, authr.ProcessElement(elem), memstorage.ErrMockedError)
+	require.Equal(t, authr.ProcessElement(context.Background(), elem), memstorage.ErrMockedError)
 	s.DisableMockedError()
 
 	// valid credentials...
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Nil(t, err)
 	require.Equal(t, "mariana", authr.Username())
 	require.True(t, authr.Authenticated())
 
 	// already authenticated...
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Nil(t, err)
 
 	// malformed request
 	authr.Reset()
 	elem.SetText("")
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Equal(t, ErrSASLMalformedRequest, err)
 
 	// invalid payload
 	authr.Reset()
 	elem.SetText("bad formed base64")
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Equal(t, ErrSASLIncorrectEncoding, err)
 
 	// invalid payload
@@ -74,7 +75,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	authr.Reset()
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Equal(t, ErrSASLIncorrectEncoding, err)
 
 	// invalid user
@@ -86,7 +87,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	authr.Reset()
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Equal(t, ErrSASLNotAuthorized, err)
 
 	// incorrect password
@@ -98,6 +99,6 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	authr.Reset()
-	err = authr.ProcessElement(elem)
+	err = authr.ProcessElement(context.Background(), elem)
 	require.Equal(t, ErrSASLNotAuthorized, err)
 }

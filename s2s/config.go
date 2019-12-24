@@ -21,7 +21,7 @@ const (
 	defaultTransportKeepAlive = time.Duration(10) * time.Minute
 	defaultDialTimeout        = time.Duration(15) * time.Second
 	defaultConnectTimeout     = time.Duration(5) * time.Second
-	defaultProcessTimeout     = time.Duration(20) * time.Second
+	defaultTimeout            = time.Duration(20) * time.Second
 	defaultMaxStanzaSize      = 131072
 )
 
@@ -68,7 +68,7 @@ type Config struct {
 	ID             string
 	DialTimeout    time.Duration
 	ConnectTimeout time.Duration
-	ProcessTimeout time.Duration
+	Timeout        time.Duration
 	DialbackSecret string
 	MaxStanzaSize  int
 	Transport      TransportConfig
@@ -78,7 +78,7 @@ type configProxy struct {
 	ID             string          `yaml:"id"`
 	DialTimeout    int             `yaml:"dial_timeout"`
 	ConnectTimeout int             `yaml:"connect_timeout"`
-	ProcessTimeout int             `yaml:"process_timeout"`
+	Timeout        int             `yaml:"timeout"`
 	DialbackSecret string          `yaml:"dialback_secret"`
 	MaxStanzaSize  int             `yaml:"max_stanza_size"`
 	Transport      TransportConfig `yaml:"transport"`
@@ -103,9 +103,9 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if c.ConnectTimeout == 0 {
 		c.ConnectTimeout = defaultConnectTimeout
 	}
-	c.ProcessTimeout = time.Duration(p.ProcessTimeout) * time.Second
-	if c.ProcessTimeout == 0 {
-		c.ProcessTimeout = defaultProcessTimeout
+	c.Timeout = time.Duration(p.Timeout) * time.Second
+	if c.Timeout == 0 {
+		c.Timeout = defaultTimeout
 	}
 	c.Transport = p.Transport
 	c.MaxStanzaSize = p.MaxStanzaSize
@@ -121,7 +121,7 @@ type streamConfig struct {
 	localDomain     string
 	remoteDomain    string
 	connectTimeout  time.Duration
-	processTimeout  time.Duration
+	timeout         time.Duration
 	tls             *tls.Config
 	transport       transport.Transport
 	maxStanzaSize   int

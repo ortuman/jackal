@@ -6,6 +6,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -44,7 +45,7 @@ func (h *digestMD5AuthTestHelper) clientParamsFromChallenge(challenge string) *d
 func (h *digestMD5AuthTestHelper) sendClientParamsResponse(params *digestMD5Parameters) error {
 	response := xmpp.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
 	response.SetText(h.serializeParams(params))
-	return h.authr.ProcessElement(response)
+	return h.authr.ProcessElement(context.Background(), response)
 }
 
 func (h *digestMD5AuthTestHelper) serializeParams(params *digestMD5Parameters) string {
@@ -70,13 +71,13 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.False(t, authr.UsesChannelBinding())
 
 	// test garbage input...
-	require.Equal(t, authr.ProcessElement(xmpp.NewElementName("garbage")), ErrSASLNotAuthorized)
+	require.Equal(t, authr.ProcessElement(context.Background(), xmpp.NewElementName("garbage")), ErrSASLNotAuthorized)
 
 	helper := digestMD5AuthTestHelper{t: t, testStrm: testStm, authr: authr}
 
 	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", "DIGEST-MD5")
-	authr.ProcessElement(auth)
+	_ = authr.ProcessElement(context.Background(), auth)
 
 	challenge := testStm.ReceiveElement()
 	require.Equal(t, challenge.Name(), "challenge")
@@ -88,11 +89,11 @@ func TestDigesMD5Authentication(t *testing.T) {
 	// empty payload
 	response := xmpp.NewElementNamespace("response", "urn:ietf:params:xml:ns:xmpp-sasl")
 	response.SetText("")
-	require.Equal(t, ErrSASLMalformedRequest, authr.ProcessElement(response))
+	require.Equal(t, ErrSASLMalformedRequest, authr.ProcessElement(context.Background(), response))
 
 	// incorrect payload encoding
 	response.SetText("bad_payload")
-	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(response))
+	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(context.Background(), response))
 
 	// invalid username...
 	cl0 := *clParams
@@ -149,7 +150,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.Equal(t, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("rspauth=%s", serverResp))), challenge.Text())
 
 	response.SetText("")
-	authr.ProcessElement(response)
+	_ = authr.ProcessElement(context.Background(), response)
 
 	success := testStm.ReceiveElement()
 	require.Equal(t, "success", success.Name())
@@ -159,7 +160,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.Equal(t, "mariana", authr.Username())
 
 	// already authenticated...
-	require.Nil(t, authr.ProcessElement(auth))
+	require.Nil(t, authr.ProcessElement(context.Background(), auth))
 
 	// test reset
 	authr.Reset()

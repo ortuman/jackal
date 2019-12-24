@@ -18,7 +18,7 @@ import (
 // Component represents a generic component interface.
 type Component interface {
 	Host() string
-	ProcessStanza(stanza xmpp.Stanza, stm stream.C2S)
+	ProcessStanza(ctx context.Context, stanza xmpp.Stanza, stm stream.C2S)
 }
 
 // Components represents a set of preconfigured components.

@@ -85,7 +85,7 @@ func (s *server) listenConn(address string) error {
 	return nil
 }
 
-func (s *server) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error) {
+func (s *server) getOrDial(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error) {
 	domainPair := localDomain + ":" + remoteDomain
 	stm, loaded := s.outConns.LoadOrStore(domainPair, newOutStream(s.router))
 	if !loaded {
@@ -97,7 +97,7 @@ func (s *server) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, err
 		}
 		outCfg.onOutDisconnect = s.unregisterOutStream
 
-		_ = stm.(*outStream).start(outCfg)
+		_ = stm.(*outStream).start(ctx, outCfg)
 		log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
 	}
 	return stm.(*outStream), nil
@@ -114,7 +114,7 @@ func (s *server) startInStream(tr transport.Transport) {
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,
-		processTimeout: s.cfg.ProcessTimeout,
+		timeout:        s.cfg.Timeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
 		dialer:         s.dialer,
 		onInDisconnect: s.unregisterInStream,
@@ -136,7 +136,7 @@ func closeConnections(ctx context.Context, connections *sync.Map) (count int, er
 	connections.Range(func(_, v interface{}) bool {
 		stm := v.(stream.InStream)
 		select {
-		case <-closeConn(stm):
+		case <-closeConn(ctx, stm):
 			count++
 			return true
 		case <-ctx.Done():
@@ -147,10 +147,10 @@ func closeConnections(ctx context.Context, connections *sync.Map) (count int, er
 	return
 }
 
-func closeConn(stm stream.InStream) <-chan bool {
+func closeConn(ctx context.Context, stm stream.InStream) <-chan bool {
 	c := make(chan bool, 1)
 	go func() {
-		stm.Disconnect(streamerror.ErrSystemShutdown)
+		stm.Disconnect(ctx, streamerror.ErrSystemShutdown)
 		c <- true
 	}()
 	return c

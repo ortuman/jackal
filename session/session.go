@@ -6,6 +6,7 @@
 package session
 
 import (
+	"context"
 	stdxml "encoding/xml"
 	"fmt"
 	"io"
@@ -135,7 +136,7 @@ func (s *Session) SetRemoteDomain(remoteDomain string) {
 }
 
 // Open initializes a sending the proper XMPP payload.
-func (s *Session) Open(featuresElem xmpp.XElement) error {
+func (s *Session) Open(ctx context.Context, featuresElem xmpp.XElement) error {
 	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
 		return errors.New("session already opened")
 	}
@@ -181,6 +182,8 @@ func (s *Session) Open(featuresElem xmpp.XElement) error {
 	openStr := buf.String()
 	log.Debugf("SEND(%s): %s", s.id, openStr)
 
+	s.setWriteDeadline(ctx)
+
 	_, err := io.Copy(s.tr, strings.NewReader(openStr))
 	_ = s.tr.Flush()
 	return err
@@ -188,10 +191,12 @@ func (s *Session) Open(featuresElem xmpp.XElement) error {
 
 // Close closes session sending the proper XMPP payload.
 // Is responsibility of the caller to close underlying transport.
-func (s *Session) Close() error {
+func (s *Session) Close(ctx context.Context) error {
 	if atomic.LoadUint32(&s.opened) == 0 {
 		return errors.New("session already closed")
 	}
+	s.setWriteDeadline(ctx)
+
 	switch s.tr.Type() {
 	case transport.Socket:
 		_, _ = io.WriteString(s.tr, "</stream:stream>")
@@ -199,17 +204,18 @@ func (s *Session) Close() error {
 		_, _ = io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
 	_ = s.tr.Flush()
-
 	return nil
 }
 
 // Send writes an XML element to the underlying session transport.
-func (s *Session) Send(elem xmpp.XElement) {
+func (s *Session) Send(ctx context.Context, elem xmpp.XElement) {
 	// clear namespace if sending a stanza
 	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
 		e.SetNamespace("")
 	}
 	log.Debugf("SEND(%s): %v", s.id, elem)
+
+	s.setWriteDeadline(ctx)
 
 	elem.ToXML(s.tr, true)
 	_ = s.tr.Flush()
@@ -243,6 +249,14 @@ func (s *Session) Receive() (xmpp.XElement, *Error) {
 		}
 	}
 	return elem, nil
+}
+
+func (s *Session) setWriteDeadline(ctx context.Context) {
+	d, ok := ctx.Deadline()
+	if !ok {
+		return
+	}
+	_ = s.tr.SetWriteDeadline(d)
 }
 
 func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
@@ -386,7 +400,7 @@ func (s *Session) mapErrorToSessionError(err error) *Error {
 		break
 
 	case xmpp.ErrStreamClosedByPeer:
-		_ = s.Close()
+		_ = s.Close(context.Background())
 
 	case xmpp.ErrTooLargeStanza:
 		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}

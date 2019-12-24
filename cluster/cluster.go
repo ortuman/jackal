@@ -7,9 +7,11 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
@@ -18,8 +20,8 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-var createMemberList = func(localName string, bindPort int, cluster *Cluster) (memberList, error) {
-	return newDefaultMemberList(localName, bindPort, cluster)
+var createMemberList = func(localName string, bindPort int, timeout time.Duration, cluster *Cluster) (memberList, error) {
+	return newDefaultMemberList(localName, bindPort, timeout, cluster)
 }
 
 // Metadata type represents all metadata information associated to a node.
@@ -36,11 +38,11 @@ type Node struct {
 
 // Delegate is the interface that will receive all c2s related events.
 type Delegate interface {
-	NodeJoined(node *Node)
-	NodeUpdated(node *Node)
-	NodeLeft(node *Node)
+	NodeJoined(ctx context.Context, node *Node)
+	NodeUpdated(ctx context.Context, node *Node)
+	NodeLeft(ctx context.Context, node *Node)
 
-	NotifyMessage(msg *Message)
+	NotifyMessage(ctx context.Context, msg *Message)
 }
 
 // memberList interface defines the common c2s member list methods.
@@ -76,7 +78,7 @@ func New(config *Config, delegate Delegate) (*Cluster, error) {
 		members:  make(map[string]*Node),
 		runQueue: runqueue.New("cluster"),
 	}
-	ml, err := createMemberList(config.Name, config.BindPort, c)
+	ml, err := createMemberList(config.Name, config.BindPort, config.InTimeout, c)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +113,9 @@ func (c *Cluster) C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[s
 }
 
 // SendMessageTo sends a cluster message to a concrete node.
-func (c *Cluster) SendMessageTo(node string, msg *Message) {
+func (c *Cluster) SendMessageTo(ctx context.Context, node string, msg *Message) {
 	c.runQueue.Run(func() {
-		if err := c.send(msg, node); err != nil {
+		if err := c.send(ctx, msg, node); err != nil {
 			log.Error(err)
 			return
 		}
@@ -121,9 +123,9 @@ func (c *Cluster) SendMessageTo(node string, msg *Message) {
 }
 
 // BroadcastMessage broadcasts a cluster message to all nodes.
-func (c *Cluster) BroadcastMessage(msg *Message) {
+func (c *Cluster) BroadcastMessage(ctx context.Context, msg *Message) {
 	c.runQueue.Run(func() {
-		if err := c.broadcast(msg); err != nil {
+		if err := c.broadcast(ctx, msg); err != nil {
 			log.Error(err)
 		}
 	})
@@ -138,11 +140,11 @@ func (c *Cluster) Shutdown() error {
 	return <-errCh
 }
 
-func (c *Cluster) send(msg *Message, toNode string) error {
+func (c *Cluster) send(_ context.Context, msg *Message, toNode string) error {
 	return c.memberList.SendReliable(toNode, c.encodeMessage(msg))
 }
 
-func (c *Cluster) broadcast(msg *Message) error {
+func (c *Cluster) broadcast(_ context.Context, msg *Message) error {
 	msgBytes := c.encodeMessage(msg)
 
 	c.membersMu.RLock()
@@ -182,7 +184,7 @@ func (c *Cluster) broadcast(msg *Message) error {
 	return nil
 }
 
-func (c *Cluster) handleNotifyJoin(n *Node) {
+func (c *Cluster) handleNotifyJoin(ctx context.Context, n *Node) {
 	if n.Name == c.LocalNode() {
 		return
 	}
@@ -192,11 +194,11 @@ func (c *Cluster) handleNotifyJoin(n *Node) {
 
 	log.Infof("registered cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeJoined(n)
+		c.delegate.NodeJoined(ctx, n)
 	}
 }
 
-func (c *Cluster) handleNotifyUpdate(n *Node) {
+func (c *Cluster) handleNotifyUpdate(ctx context.Context, n *Node) {
 	if n.Name == c.LocalNode() {
 		return
 	}
@@ -206,11 +208,11 @@ func (c *Cluster) handleNotifyUpdate(n *Node) {
 
 	log.Infof("updated cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeUpdated(n)
+		c.delegate.NodeUpdated(ctx, n)
 	}
 }
 
-func (c *Cluster) handleNotifyLeave(n *Node) {
+func (c *Cluster) handleNotifyLeave(ctx context.Context, n *Node) {
 	if n.Name == c.LocalNode() {
 		return
 	}
@@ -220,11 +222,11 @@ func (c *Cluster) handleNotifyLeave(n *Node) {
 
 	log.Infof("unregistered cluster node: %s", n.Name)
 	if c.delegate != nil && n.Name != c.LocalNode() {
-		c.delegate.NodeLeft(n)
+		c.delegate.NodeLeft(ctx, n)
 	}
 }
 
-func (c *Cluster) handleNotifyMsg(msg []byte) {
+func (c *Cluster) handleNotifyMsg(ctx context.Context, msg []byte) {
 	if len(msg) == 0 {
 		return
 	}
@@ -235,7 +237,7 @@ func (c *Cluster) handleNotifyMsg(msg []byte) {
 		return
 	}
 	if c.delegate != nil {
-		c.delegate.NotifyMessage(&m)
+		c.delegate.NotifyMessage(ctx, &m)
 	}
 }
 

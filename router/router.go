@@ -6,6 +6,7 @@
 package router
 
 import (
+	"context"
 	"crypto/tls"
 	"runtime"
 	"sort"
@@ -28,7 +29,7 @@ var bindMsgBatchSize = 1024
 // OutS2SProvider provides a specific s2s outgoing connection for every single
 // pair of (localdomain, remotedomain) values.
 type OutS2SProvider interface {
-	GetOut(localDomain, remoteDomain string) (stream.S2SOut, error)
+	GetOut(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error)
 }
 
 // Cluster represents the generic cluster interface used by router type.
@@ -38,9 +39,9 @@ type Cluster interface {
 
 	C2SStream(jid *jid.JID, presence *xmpp.Presence, context map[string]interface{}, node string) *cluster.C2S
 
-	SendMessageTo(node string, message *cluster.Message)
+	SendMessageTo(ctx context.Context, node string, message *cluster.Message)
 
-	BroadcastMessage(msg *cluster.Message)
+	BroadcastMessage(ctx context.Context, msg *cluster.Message)
 }
 
 // Router represents an XMPP stanza router.
@@ -149,7 +150,7 @@ func (r *Router) ClusterDelegate() cluster.Delegate {
 
 // Bind sets a c2s stream as bound.
 // An error will be returned in case no assigned resource is found.
-func (r *Router) Bind(stm stream.C2S) {
+func (r *Router) Bind(ctx context.Context, stm stream.C2S) {
 	if len(stm.Resource()) == 0 {
 		return
 	}
@@ -164,7 +165,7 @@ func (r *Router) Bind(stm stream.C2S) {
 
 	// broadcast cluster 'bind' message
 	if r.cluster != nil {
-		r.cluster.BroadcastMessage(&cluster.Message{
+		r.cluster.BroadcastMessage(ctx, &cluster.Message{
 			Type: cluster.MsgBind,
 			Node: r.cluster.LocalNode(),
 			Payloads: []cluster.MessagePayload{{
@@ -179,7 +180,7 @@ func (r *Router) Bind(stm stream.C2S) {
 
 // Unbind unbinds a previously bound c2s stream.
 // An error will be returned in case no assigned resource is found.
-func (r *Router) Unbind(stmJID *jid.JID) {
+func (r *Router) Unbind(ctx context.Context, stmJID *jid.JID) {
 	if len(stmJID.Resource()) == 0 {
 		return
 	}
@@ -196,7 +197,7 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 
 	// broadcast cluster 'unbind' message
 	if r.cluster != nil {
-		r.cluster.BroadcastMessage(&cluster.Message{
+		r.cluster.BroadcastMessage(ctx, &cluster.Message{
 			Type: cluster.MsgUnbind,
 			Node: r.cluster.LocalNode(),
 			Payloads: []cluster.MessagePayload{{
@@ -210,9 +211,9 @@ func (r *Router) Unbind(stmJID *jid.JID) {
 func (r *Router) UserStream(j *jid.JID) stream.C2S {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	stms := r.streams[j.Node()]
 
-	for _, stm := range stms {
+	streams := r.streams[j.Node()]
+	for _, stm := range streams {
 		if j.Matches(stm.JID(), jid.MatchesFull) {
 			return stm
 		}
@@ -249,14 +250,14 @@ func (r *Router) ReloadBlockList(username string) {
 
 // Route routes a stanza applying server rules for handling XML stanzas.
 // (https://xmpp.org/rfcs/rfc3921.html#rules)
-func (r *Router) Route(stanza xmpp.Stanza) error {
-	return r.route(stanza, false)
+func (r *Router) Route(ctx context.Context, stanza xmpp.Stanza) error {
+	return r.route(ctx, stanza, false)
 }
 
 // MustRoute routes a stanza applying server rules for handling XML stanzas
 // ignoring blocking lists.
-func (r *Router) MustRoute(stanza xmpp.Stanza) error {
-	return r.route(stanza, true)
+func (r *Router) MustRoute(ctx context.Context, stanza xmpp.Stanza) error {
+	return r.route(ctx, stanza, true)
 }
 
 func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
@@ -327,7 +328,7 @@ func (r *Router) unbind(jid *jid.JID) bool {
 	return found
 }
 
-func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
+func (r *Router) route(ctx context.Context, element xmpp.Stanza, ignoreBlocking bool) error {
 	toJID := element.ToJID()
 	if !ignoreBlocking && !toJID.IsServer() {
 		if r.IsBlockedJID(element.FromJID(), toJID.Node()) {
@@ -335,7 +336,7 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 		}
 	}
 	if !r.IsLocalHost(toJID.Domain()) {
-		return r.remoteRoute(element)
+		return r.remoteRoute(ctx, element)
 	}
 	recipients := r.streams[toJID.Node()]
 	if len(recipients) == 0 {
@@ -351,7 +352,7 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 	if toJID.IsFullWithUser() {
 		for _, stm := range recipients {
 			if stm.Resource() == toJID.Resource() {
-				stm.SendElement(element)
+				stm.SendElement(ctx, element)
 				return nil
 			}
 		}
@@ -372,49 +373,49 @@ func (r *Router) route(element xmpp.Stanza, ignoreBlocking bool) error {
 				highestPriority = p.Priority()
 			}
 		}
-		stm.SendElement(element)
+		stm.SendElement(ctx, element)
 
 	default:
 		// broadcast toJID all streams
 		for _, stm := range recipients {
-			stm.SendElement(element)
+			stm.SendElement(ctx, element)
 		}
 	}
 	return nil
 }
 
-func (r *Router) remoteRoute(elem xmpp.Stanza) error {
+func (r *Router) remoteRoute(ctx context.Context, elem xmpp.Stanza) error {
 	if r.outS2SProvider == nil {
 		return ErrFailedRemoteConnect
 	}
 	localDomain := r.defaultHostname
 	remoteDomain := elem.ToJID().Domain()
 
-	out, err := r.outS2SProvider.GetOut(localDomain, remoteDomain)
+	out, err := r.outS2SProvider.GetOut(ctx, localDomain, remoteDomain)
 	if err != nil {
 		log.Error(err)
 		return ErrFailedRemoteConnect
 	}
-	out.SendElement(elem)
+	out.SendElement(ctx, elem)
 	return nil
 }
 
-func (r *Router) handleNotifyMessage(msg *cluster.Message) {
+func (r *Router) handleNotifyMessage(ctx context.Context, msg *cluster.Message) {
 	switch msg.Type {
 	case cluster.MsgBatchBind, cluster.MsgBind:
-		r.processBindMessage(msg)
+		r.processBindMessage(ctx, msg)
 	case cluster.MsgUnbind:
-		r.processUnbindMessage(msg)
+		r.processUnbindMessage(ctx, msg)
 	case cluster.MsgUpdatePresence:
-		r.processUpdatePresenceMessage(msg)
+		r.processUpdatePresenceMessage(ctx, msg)
 	case cluster.MsgUpdateContext:
-		r.processUpdateContext(msg)
+		r.processUpdateContext(ctx, msg)
 	case cluster.MsgRouteStanza:
-		r.processRouteStanzaMessage(msg)
+		r.processRouteStanzaMessage(ctx, msg)
 	}
 }
 
-func (r *Router) handleNodeJoined(node *cluster.Node) {
+func (r *Router) handleNodeJoined(ctx context.Context, node *cluster.Node) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if r.cluster == nil {
@@ -440,7 +441,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 		})
 		i++
 		if i == bindMsgBatchSize {
-			r.cluster.SendMessageTo(node.Name, &cluster.Message{
+			r.cluster.SendMessageTo(ctx, node.Name, &cluster.Message{
 				Type:     cluster.MsgBatchBind,
 				Node:     r.cluster.LocalNode(),
 				Payloads: payloads,
@@ -451,7 +452,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 	}
 	// send remaining ones...
 	if len(payloads) > 0 {
-		r.cluster.SendMessageTo(node.Name, &cluster.Message{
+		r.cluster.SendMessageTo(ctx, node.Name, &cluster.Message{
 			Type:     cluster.MsgBatchBind,
 			Node:     r.cluster.LocalNode(),
 			Payloads: payloads,
@@ -459,7 +460,7 @@ func (r *Router) handleNodeJoined(node *cluster.Node) {
 	}
 }
 
-func (r *Router) handleNodeLeft(node *cluster.Node) {
+func (r *Router) handleNodeLeft(_ context.Context, node *cluster.Node) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -472,13 +473,12 @@ func (r *Router) handleNodeLeft(node *cluster.Node) {
 	delete(r.clusterStreams, node.Name)
 }
 
-func (r *Router) processBindMessage(msg *cluster.Message) {
+func (r *Router) processBindMessage(_ context.Context, msg *cluster.Message) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.cluster == nil {
 		return
 	}
-
 	for _, p := range msg.Payloads {
 		j := p.JID
 		presence, ok := p.Stanza.(*xmpp.Presence)
@@ -493,7 +493,7 @@ func (r *Router) processBindMessage(msg *cluster.Message) {
 	}
 }
 
-func (r *Router) processUnbindMessage(msg *cluster.Message) {
+func (r *Router) processUnbindMessage(_ context.Context, msg *cluster.Message) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.cluster == nil {
@@ -502,20 +502,21 @@ func (r *Router) processUnbindMessage(msg *cluster.Message) {
 	j := msg.Payloads[0].JID
 
 	log.Debugf("unbound cluster c2s: %s", j.String())
+
 	r.unbind(j)
 	r.unregisterClusterC2S(j, msg.Node)
 }
 
-func (r *Router) processUpdateContext(msg *cluster.Message) {
+func (r *Router) processUpdateContext(_ context.Context, msg *cluster.Message) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if r.cluster == nil {
 		return
 	}
 	j := msg.Payloads[0].JID
-	context := msg.Payloads[0].Context
+	stmContext := msg.Payloads[0].Context
 
-	log.Debugf("updated cluster c2s context: %s\n%v", j.String(), context)
+	log.Debugf("updated cluster c2s context: %s\n%v", j.String(), stmContext)
 
 	var stm *cluster.C2S
 	if streams := r.clusterStreams[msg.Node]; streams != nil {
@@ -524,10 +525,10 @@ func (r *Router) processUpdateContext(msg *cluster.Message) {
 	if stm == nil {
 		return
 	}
-	stm.UpdateContext(context)
+	stm.UpdateContext(stmContext)
 }
 
-func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
+func (r *Router) processUpdatePresenceMessage(_ context.Context, msg *cluster.Message) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if r.cluster == nil {
@@ -552,7 +553,7 @@ func (r *Router) processUpdatePresenceMessage(msg *cluster.Message) {
 	stm.SetPresence(presence)
 }
 
-func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
+func (r *Router) processRouteStanzaMessage(ctx context.Context, msg *cluster.Message) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	if r.cluster == nil {
@@ -562,7 +563,8 @@ func (r *Router) processRouteStanzaMessage(msg *cluster.Message) {
 	stanza := msg.Payloads[0].Stanza
 
 	log.Debugf("routing cluster stanza: %s\n%v", j.String(), stanza)
-	_ = r.route(stanza, false)
+
+	_ = r.route(ctx, stanza, false)
 }
 
 func (r *Router) registerClusterC2S(stm *cluster.C2S, node string) {

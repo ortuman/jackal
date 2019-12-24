@@ -7,6 +7,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -166,18 +167,18 @@ func (s *Scram) UsesChannelBinding() bool {
 }
 
 // ProcessElement process an incoming authenticator element.
-func (s *Scram) ProcessElement(elem xmpp.XElement) error {
+func (s *Scram) ProcessElement(ctx context.Context, elem xmpp.XElement) error {
 	if s.Authenticated() {
 		return nil
 	}
 	switch elem.Name() {
 	case "auth":
 		if s.state == startScramState {
-			return s.handleStart(elem)
+			return s.handleStart(ctx, elem)
 		}
 	case "response":
 		if s.state == challengedScramState {
-			return s.handleChallenged(elem)
+			return s.handleChallenged(ctx, elem)
 		}
 	}
 	return ErrSASLNotAuthorized
@@ -195,7 +196,7 @@ func (s *Scram) Reset() {
 	s.firstMessage = ""
 }
 
-func (s *Scram) handleStart(elem xmpp.XElement) error {
+func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -225,13 +226,13 @@ func (s *Scram) handleStart(elem xmpp.XElement) error {
 
 	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
-	s.stm.SendElement(respElem)
+	s.stm.SendElement(ctx, respElem)
 
 	s.state = challengedScramState
 	return nil
 }
 
-func (s *Scram) handleChallenged(elem xmpp.XElement) error {
+func (s *Scram) handleChallenged(ctx context.Context, elem xmpp.XElement) error {
 	p, err := s.getElementPayload(elem)
 	if err != nil {
 		return err
@@ -261,7 +262,7 @@ func (s *Scram) handleChallenged(elem xmpp.XElement) error {
 
 	respElem := xmpp.NewElementNamespace("success", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(v)))
-	s.stm.SendElement(respElem)
+	s.stm.SendElement(ctx, respElem)
 
 	s.authenticated = true
 	return nil

@@ -6,6 +6,7 @@
 package presencehub
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -48,7 +49,7 @@ func New(router *router.Router) *PresenceHub {
 }
 
 // RegisterPresence keeps track of a new client presence, requesting capabilities when necessary.
-func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alreadyRegistered bool) {
+func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Presence) (err error, alreadyRegistered bool) {
 	fromJID := presence.FromJID()
 
 	// check if caps were previously cached
@@ -61,7 +62,7 @@ func (x *PresenceHub) RegisterPresence(presence *xmpp.Presence) (err error, alre
 				return err, false
 			}
 			if caps == nil {
-				x.requestCapabilities(c.Node, c.Ver, fromJID) // request capabilities
+				x.requestCapabilities(ctx, c.Node, c.Ver, fromJID) // request capabilities
 			} else {
 				x.capabilities.Store(capsKey, caps) // cache capabilities
 			}
@@ -84,9 +85,9 @@ func (x *PresenceHub) MatchesIQ(iq *xmpp.IQ) bool {
 }
 
 // ProcessIQ processes a roster IQ taking according actions over the associated stream.
-func (x *PresenceHub) ProcessIQ(iq *xmpp.IQ) {
+func (x *PresenceHub) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		x.processIQ(iq)
+		x.processIQ(ctx, iq)
 	})
 }
 
@@ -123,17 +124,17 @@ func (x *PresenceHub) AvailablePresencesMatchingJID(j *jid.JID) []AvailablePrese
 	return ret
 }
 
-func (x *PresenceHub) processIQ(iq *xmpp.IQ) {
+func (x *PresenceHub) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	// process capabilities result
 	if caps := iq.Elements().ChildNamespace("query", discoInfoNamespace); caps != nil {
-		if err := x.processCapabilitiesIQ(caps); err != nil {
+		if err := x.processCapabilitiesIQ(ctx, caps); err != nil {
 			log.Warnf("%v", err)
 		}
 		return
 	}
 }
 
-func (x *PresenceHub) requestCapabilities(node, ver string, userJID *jid.JID) {
+func (x *PresenceHub) requestCapabilities(ctx context.Context, node, ver string, userJID *jid.JID) {
 	srvJID, _ := jid.NewWithString(x.router.DefaultHostName(), true)
 
 	iqID := uuid.New()
@@ -149,10 +150,10 @@ func (x *PresenceHub) requestCapabilities(node, ver string, userJID *jid.JID) {
 
 	log.Infof("requesting capabilities... node: %s, ver: %s", node, ver)
 
-	_ = x.router.Route(iq)
+	_ = x.router.Route(ctx, iq)
 }
 
-func (x *PresenceHub) processCapabilitiesIQ(query xmpp.XElement) error {
+func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XElement) error {
 	var node, ver string
 
 	nodeStr := query.Attributes().Get("node")

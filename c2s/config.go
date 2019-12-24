@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultConnectTimeout     = time.Duration(5) * time.Second
-	defaultProcessTimeout     = time.Duration(20) * time.Second
+	defaultTimeout            = time.Duration(20) * time.Second
 	defaultMaxStanzaSize      = 32768
 	defaultTransportPort      = 5222
 	defaultTransportKeepAlive = time.Duration(120) * time.Second
@@ -131,7 +131,7 @@ type TLSConfig struct {
 type Config struct {
 	ID               string
 	ConnectTimeout   time.Duration
-	ProcessTimeout   time.Duration
+	Timeout          time.Duration
 	MaxStanzaSize    int
 	ResourceConflict ResourceConflictPolicy
 	Transport        TransportConfig
@@ -144,7 +144,7 @@ type configProxy struct {
 	Domain           string          `yaml:"domain"`
 	TLS              TLSConfig       `yaml:"tls"`
 	ConnectTimeout   int             `yaml:"connect_timeout"`
-	ProcessTimeout   int             `yaml:"process_timeout"`
+	Timeout          int             `yaml:"timeout"`
 	MaxStanzaSize    int             `yaml:"max_stanza_size"`
 	ResourceConflict string          `yaml:"resource_conflict"`
 	Transport        TransportConfig `yaml:"transport"`
@@ -163,9 +163,9 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if cfg.ConnectTimeout == 0 {
 		cfg.ConnectTimeout = defaultConnectTimeout
 	}
-	cfg.ProcessTimeout = time.Duration(p.ProcessTimeout) * time.Second
-	if cfg.ProcessTimeout == 0 {
-		cfg.ProcessTimeout = defaultProcessTimeout
+	cfg.Timeout = time.Duration(p.Timeout) * time.Second
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultTimeout
 	}
 	cfg.MaxStanzaSize = p.MaxStanzaSize
 	if cfg.MaxStanzaSize == 0 {
@@ -202,7 +202,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type streamConfig struct {
 	transport        transport.Transport
 	connectTimeout   time.Duration
-	processTimeout   time.Duration
+	timeout          time.Duration
 	maxStanzaSize    int
 	resourceConflict ResourceConflictPolicy
 	sasl             []string

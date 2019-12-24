@@ -6,6 +6,8 @@
 package xep0077
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -48,27 +50,24 @@ func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Regis
 	return r
 }
 
-// MatchesIQ returns whether or not an IQ should be
-// processed by the in-band registration module.
+// MatchesIQ returns whether or not an IQ should be processed by the in-band registration module.
 func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.Elements().ChildNamespace("query", registerNamespace) != nil
 }
 
-// ProcessIQ processes an in-band registration IQ taking according actions over
-// the associated stream.
-func (x *Register) ProcessIQ(iq *xmpp.IQ) {
+// ProcessIQ processes an in-band registration IQ taking according actions over the associated stream.
+func (x *Register) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
 		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
-			x.processIQ(iq, stm)
+			x.processIQ(ctx, iq, stm)
 		}
 	})
 }
 
-// ProcessIQWithStream processes an in-band registration IQ taking according
-// actions over a referenced stream.
-func (x *Register) ProcessIQWithStream(iq *xmpp.IQ, stm stream.C2S) {
+// ProcessIQWithStream processes an in-band registration IQ taking according actions over a referenced stream.
+func (x *Register) ProcessIQWithStream(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 	x.runQueue.Run(func() {
-		x.processIQ(iq, stm)
+		x.processIQ(ctx, iq, stm)
 	})
 }
 
@@ -80,53 +79,53 @@ func (x *Register) Shutdown() error {
 	return nil
 }
 
-func (x *Register) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *Register) processIQ(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 	if !x.isValidToJid(iq.ToJID(), stm) {
-		stm.SendElement(iq.ForbiddenError())
+		stm.SendElement(ctx, iq.ForbiddenError())
 		return
 	}
 	q := iq.Elements().ChildNamespace("query", registerNamespace)
 	if !stm.IsAuthenticated() {
 		if iq.IsGet() {
 			if !x.cfg.AllowRegistration {
-				stm.SendElement(iq.NotAllowedError())
+				stm.SendElement(ctx, iq.NotAllowedError())
 				return
 			}
 			// ...send registration fields to requester entity...
-			x.sendRegistrationFields(iq, q, stm)
+			x.sendRegistrationFields(ctx, iq, q, stm)
 		} else if iq.IsSet() {
 			if !stm.GetBool(xep077RegisteredCtxKey) {
 				// ...register a new user...
-				x.registerNewUser(iq, q, stm)
+				x.registerNewUser(ctx, iq, q, stm)
 			} else {
 				// return a <not-acceptable/> stanza error if an entity attempts to register a second identity
-				stm.SendElement(iq.NotAcceptableError())
+				stm.SendElement(ctx, iq.NotAcceptableError())
 			}
 		} else {
-			stm.SendElement(iq.BadRequestError())
+			stm.SendElement(ctx, iq.BadRequestError())
 		}
 	} else if iq.IsSet() {
 		if q.Elements().Child("remove") != nil {
 			// remove user
-			x.cancelRegistration(iq, q, stm)
+			x.cancelRegistration(ctx, iq, q, stm)
 		} else {
 			user := q.Elements().Child("username")
 			password := q.Elements().Child("password")
 			if user != nil && password != nil {
 				// change password
-				x.changePassword(password.Text(), user.Text(), iq, stm)
+				x.changePassword(ctx, password.Text(), user.Text(), iq, stm)
 			} else {
-				stm.SendElement(iq.BadRequestError())
+				stm.SendElement(ctx, iq.BadRequestError())
 			}
 		}
 	} else {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 	}
 }
 
-func (x *Register) sendRegistrationFields(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
+func (x *Register) sendRegistrationFields(ctx context.Context, iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	if query.Elements().Count() > 0 {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 		return
 	}
 	result := iq.ResultIQ()
@@ -134,24 +133,24 @@ func (x *Register) sendRegistrationFields(iq *xmpp.IQ, query xmpp.XElement, stm 
 	q.AppendElement(xmpp.NewElementName("username"))
 	q.AppendElement(xmpp.NewElementName("password"))
 	result.AppendElement(q)
-	stm.SendElement(result)
+	stm.SendElement(ctx, result)
 }
 
-func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
+func (x *Register) registerNewUser(ctx context.Context, iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	userEl := query.Elements().Child("username")
 	passwordEl := query.Elements().Child("password")
 	if userEl == nil || passwordEl == nil || len(userEl.Text()) == 0 || len(passwordEl.Text()) == 0 {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 		return
 	}
 	exists, err := storage.UserExists(userEl.Text())
 	if err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		stm.SendElement(ctx, iq.InternalServerError())
 		return
 	}
 	if exists {
-		stm.SendElement(iq.ConflictError())
+		stm.SendElement(ctx, iq.ConflictError())
 		return
 	}
 	user := model.User{
@@ -161,63 +160,63 @@ func (x *Register) registerNewUser(iq *xmpp.IQ, query xmpp.XElement, stm stream.
 	}
 	if err := storage.UpsertUser(&user); err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		stm.SendElement(ctx, iq.InternalServerError())
 		return
 	}
-	stm.SendElement(iq.ResultIQ())
-	stm.SetBool(xep077RegisteredCtxKey, true) // mark as registered
+	stm.SendElement(ctx, iq.ResultIQ())
+	stm.SetBool(ctx, xep077RegisteredCtxKey, true) // mark as registered
 }
 
-func (x *Register) cancelRegistration(iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
+func (x *Register) cancelRegistration(ctx context.Context, iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {
 	if !x.cfg.AllowCancel {
-		stm.SendElement(iq.NotAllowedError())
+		stm.SendElement(ctx, iq.NotAllowedError())
 		return
 	}
 	if query.Elements().Count() > 1 {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 		return
 	}
 	if err := storage.DeleteUser(stm.Username()); err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		stm.SendElement(ctx, iq.InternalServerError())
 		return
 	}
-	stm.SendElement(iq.ResultIQ())
+	stm.SendElement(ctx, iq.ResultIQ())
 }
 
-func (x *Register) changePassword(password string, username string, iq *xmpp.IQ, stm stream.C2S) {
+func (x *Register) changePassword(ctx context.Context, password string, username string, iq *xmpp.IQ, stm stream.C2S) {
 	if !x.cfg.AllowChange {
-		stm.SendElement(iq.NotAllowedError())
+		stm.SendElement(ctx, iq.NotAllowedError())
 		return
 	}
 	if username != stm.Username() {
-		stm.SendElement(iq.NotAllowedError())
+		stm.SendElement(ctx, iq.NotAllowedError())
 		return
 	}
 	if !stm.IsSecured() {
 		// channel isn't safe enough to enable a password change
-		stm.SendElement(iq.NotAuthorizedError())
+		stm.SendElement(ctx, iq.NotAuthorizedError())
 		return
 	}
 	user, err := storage.FetchUser(username)
 	if err != nil {
 		log.Error(err)
-		stm.SendElement(iq.InternalServerError())
+		stm.SendElement(ctx, iq.InternalServerError())
 		return
 	}
 	if user == nil {
-		stm.SendElement(iq.ResultIQ())
+		stm.SendElement(ctx, iq.ResultIQ())
 		return
 	}
 	if user.Password != password {
 		user.Password = password
 		if err := storage.UpsertUser(user); err != nil {
 			log.Error(err)
-			stm.SendElement(iq.InternalServerError())
+			stm.SendElement(ctx, iq.InternalServerError())
 			return
 		}
 	}
-	stm.SendElement(iq.ResultIQ())
+	stm.SendElement(ctx, iq.ResultIQ())
 }
 
 func (x *Register) isValidToJid(j *jid.JID, stm stream.C2S) bool {
