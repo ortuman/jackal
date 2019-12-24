@@ -115,7 +115,7 @@ func (m *MockC2S) Context() map[string]interface{} {
 }
 
 // SetString associates a string context value to a key.
-func (m *MockC2S) SetString(key string, value string) {
+func (m *MockC2S) SetString(_ context.Context, key string, value string) {
 	m.setContextValue(key, value)
 }
 
@@ -131,7 +131,7 @@ func (m *MockC2S) GetString(key string) string {
 }
 
 // SetInt associates an integer context value to a key.
-func (m *MockC2S) SetInt(key string, value int) {
+func (m *MockC2S) SetInt(_ context.Context, key string, value int) {
 	m.setContextValue(key, value)
 }
 
@@ -147,7 +147,7 @@ func (m *MockC2S) GetInt(key string) int {
 }
 
 // SetFloat associates a float context value to a key.
-func (m *MockC2S) SetFloat(key string, value float64) {
+func (m *MockC2S) SetFloat(_ context.Context, key string, value float64) {
 	m.setContextValue(key, value)
 }
 
@@ -163,7 +163,7 @@ func (m *MockC2S) GetFloat(key string) float64 {
 }
 
 // SetBool associates a boolean context value to a key.
-func (m *MockC2S) SetBool(key string, value bool) {
+func (m *MockC2S) SetBool(ctx context.Context, key string, value bool) {
 	m.setContextValue(key, value)
 }
 

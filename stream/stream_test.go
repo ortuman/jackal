@@ -6,6 +6,7 @@
 package stream
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -35,12 +36,12 @@ func TestMockC2Stream(t *testing.T) {
 	require.Equal(t, 1, len(presenceElements))
 
 	elem := xmpp.NewElementName("elem1234")
-	stm.SendElement(elem)
+	stm.SendElement(context.Background(), elem)
 	fetch := stm.ReceiveElement()
 	require.NotNil(t, fetch)
 	require.Equal(t, "elem1234", fetch.Name())
 
-	stm.Disconnect(nil)
+	stm.Disconnect(context.Background(), nil)
 	require.True(t, stm.IsDisconnected())
 	stm.SetSecured(true)
 	require.True(t, stm.IsSecured())

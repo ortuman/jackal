@@ -605,7 +605,7 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'unavailable' - user: %s", fromJID)
 
 		// unregister presence
-		x.presenceHub.UnregisterPresence(presence)
+		x.presenceHub.UnregisterPresence(ctx, presence)
 	}
 	if replyOnBehalf {
 		return x.broadcastPresence(ctx, presence)

@@ -74,7 +74,7 @@ func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Prese
 }
 
 // UnregisterPresence removes a presence from the hub.
-func (x *PresenceHub) UnregisterPresence(presence *xmpp.Presence) {
+func (x *PresenceHub) UnregisterPresence(_ context.Context, presence *xmpp.Presence) {
 	x.availablePresences.Delete(presence.FromJID())
 }
 

@@ -71,8 +71,8 @@ func (frw *fakeSockReaderWriter) Read(b []byte) (n int, err error) {
 }
 
 func (frw *fakeSockReaderWriter) Close() error {
-	frw.w.Close()
-	frw.r.Close()
+	_ = frw.w.Close()
+	_ = frw.r.Close()
 	return nil
 }
 
@@ -122,8 +122,8 @@ func (c *fakeSocketConn) Write(b []byte) (n int, err error) {
 
 func (c *fakeSocketConn) Close() error {
 	if atomic.CompareAndSwapUint32(&c.closed, 0, 1) {
-		c.wr.Close()
-		c.rd.Close()
+		_ = c.wr.Close()
+		_ = c.rd.Close()
 		close(c.closeCh)
 		return nil
 	}
@@ -132,9 +132,9 @@ func (c *fakeSocketConn) Close() error {
 
 func (c *fakeSocketConn) LocalAddr() net.Addr                { return localAddr }
 func (c *fakeSocketConn) RemoteAddr() net.Addr               { return remoteAddr }
-func (c *fakeSocketConn) SetDeadline(t time.Time) error      { return nil }
-func (c *fakeSocketConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c *fakeSocketConn) SetWriteDeadline(t time.Time) error { return nil }
+func (c *fakeSocketConn) SetDeadline(_ time.Time) error      { return nil }
+func (c *fakeSocketConn) SetReadDeadline(_ time.Time) error  { return nil }
+func (c *fakeSocketConn) SetWriteDeadline(_ time.Time) error { return nil }
 
 func (c *fakeSocketConn) ConnectionState() tls.ConnectionState {
 	st := tls.ConnectionState{}
@@ -172,7 +172,7 @@ func (c *fakeSocketConn) loop() {
 	for {
 		select {
 		case b := <-c.wrCh:
-			c.wr.Write(b)
+			_, _ = c.wr.Write(b)
 		case <-c.closeCh:
 			return
 		}
@@ -218,12 +218,12 @@ func (s *fakeS2SServer) start() {
 	s.startCh <- struct{}{}
 }
 
-func (s *fakeS2SServer) shutdown(ctx context.Context) error {
+func (s *fakeS2SServer) shutdown(_ context.Context) error {
 	s.shutdownCh <- struct{}{}
 	return nil
 }
 
-func (s *fakeS2SServer) getOrDial(localDomain, remoteDomain string) (stream.S2SOut, error) {
+func (s *fakeS2SServer) getOrDial(_ context.Context, _, _ string) (stream.S2SOut, error) {
 	s.getOrDialCh <- struct{}{}
 	return nil, nil
 }
@@ -239,7 +239,7 @@ func TestS2S_StartAndShutdown(t *testing.T) {
 		require.Fail(t, "s2s start timeout")
 	}
 
-	s2s.GetOut("jackal.im", "jabber.org")
+	_, _ = s2s.GetOut(context.Background(), "jackal.im", "jabber.org")
 	select {
 	case <-fakeSrv.getOrDialCh:
 		break

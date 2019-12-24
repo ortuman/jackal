@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -25,10 +26,10 @@ type fakeClusterDelegate struct {
 	notifyMessageCalls int
 }
 
-func (d *fakeClusterDelegate) NodeJoined(node *Node)      { d.nodeJoinedCalls++ }
-func (d *fakeClusterDelegate) NodeUpdated(node *Node)     { d.nodeUpdatedCalls++ }
-func (d *fakeClusterDelegate) NodeLeft(node *Node)        { d.nodeLeftCalls++ }
-func (d *fakeClusterDelegate) NotifyMessage(msg *Message) { d.notifyMessageCalls++ }
+func (d *fakeClusterDelegate) NodeJoined(_ context.Context, _ *Node)       { d.nodeJoinedCalls++ }
+func (d *fakeClusterDelegate) NodeUpdated(_ context.Context, _ *Node)      { d.nodeUpdatedCalls++ }
+func (d *fakeClusterDelegate) NodeLeft(_ context.Context, _ *Node)         { d.nodeLeftCalls++ }
+func (d *fakeClusterDelegate) NotifyMessage(_ context.Context, _ *Message) { d.notifyMessageCalls++ }
 
 type fakeMemberList struct {
 	mu                sync.Mutex
@@ -87,7 +88,7 @@ func (ml *fakeMemberList) SendReliable(node string, msg []byte) error {
 
 func TestCluster_Create(t *testing.T) {
 	var ml fakeMemberList
-	createMemberList = func(_ string, _ int, _ *Cluster) (list memberList, e error) {
+	createMemberList = func(_ string, _ int, _ time.Duration, _ *Cluster) (list memberList, e error) {
 		return &ml, nil
 	}
 	c, _ := New(nil, nil)
@@ -100,7 +101,7 @@ func TestCluster_Create(t *testing.T) {
 
 func TestCluster_Shutdown(t *testing.T) {
 	var ml fakeMemberList
-	createMemberList = func(_ string, _ int, _ *Cluster) (list memberList, e error) {
+	createMemberList = func(_ string, _ int, _ time.Duration, _ *Cluster) (list memberList, e error) {
 		return &ml, nil
 	}
 	c, _ := New(testClusterConfig(), nil)
@@ -119,7 +120,7 @@ func TestCluster_Shutdown(t *testing.T) {
 
 func TestCluster_Join(t *testing.T) {
 	var ml fakeMemberList
-	createMemberList = func(_ string, _ int, _ *Cluster) (list memberList, e error) {
+	createMemberList = func(_ string, _ int, _ time.Duration, _ *Cluster) (list memberList, e error) {
 		return &ml, nil
 	}
 	c, _ := New(testClusterConfig(), nil)
@@ -137,7 +138,7 @@ func TestCluster_Join(t *testing.T) {
 
 func TestCluster_SendAndBroadcast(t *testing.T) {
 	var ml fakeMemberList
-	createMemberList = func(_ string, _ int, _ *Cluster) (list memberList, e error) {
+	createMemberList = func(_ string, _ int, _ time.Duration, _ *Cluster) (list memberList, e error) {
 		return &ml, nil
 	}
 	c, _ := New(testClusterConfig(), nil)
@@ -148,7 +149,7 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 	require.Nil(t, err)
 
 	ml.sendCh = make(chan []byte)
-	c.SendMessageTo("node3", &Message{})
+	c.SendMessageTo(context.Background(), "node3", &Message{})
 	select {
 	case <-ml.sendCh:
 		break
@@ -156,7 +157,7 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 		require.Fail(t, "cluster send message timeout")
 	}
 
-	c.BroadcastMessage(&Message{})
+	c.BroadcastMessage(context.Background(), &Message{})
 
 	for i := 0; i < 2; i++ {
 		select {
@@ -170,7 +171,7 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 	// test send error
 	ml.sendErr = errors.New("cluster: send error")
 
-	c.SendMessageTo("node3", &Message{})
+	c.SendMessageTo(context.Background(), "node3", &Message{})
 	select {
 	case <-ml.sendCh:
 		require.Fail(t, "unexpected send message")
@@ -178,7 +179,7 @@ func TestCluster_SendAndBroadcast(t *testing.T) {
 		break
 	}
 
-	c.BroadcastMessage(&Message{})
+	c.BroadcastMessage(context.Background(), &Message{})
 
 	for i := 0; i < 2; i++ {
 		select {
@@ -194,19 +195,19 @@ func TestCluster_Delegate(t *testing.T) {
 	var ml fakeMemberList
 	var delegate fakeClusterDelegate
 
-	createMemberList = func(_ string, _ int, _ *Cluster) (list memberList, e error) {
+	createMemberList = func(_ string, _ int, _ time.Duration, _ *Cluster) (list memberList, e error) {
 		return &ml, nil
 	}
 	c, _ := New(testClusterConfig(), &delegate)
 	require.NotNil(t, c)
 
-	c.handleNotifyJoin(&Node{Name: "node4"})
+	c.handleNotifyJoin(context.Background(), &Node{Name: "node4"})
 	require.Equal(t, 1, delegate.nodeJoinedCalls)
 
-	c.handleNotifyUpdate(&Node{Name: "node4"})
+	c.handleNotifyUpdate(context.Background(), &Node{Name: "node4"})
 	require.Equal(t, 1, delegate.nodeUpdatedCalls)
 
-	c.handleNotifyLeave(&Node{Name: "node4"})
+	c.handleNotifyLeave(context.Background(), &Node{Name: "node4"})
 	require.Equal(t, 1, delegate.nodeLeftCalls)
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/garden", true)
@@ -218,7 +219,7 @@ func TestCluster_Delegate(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	require.Nil(t, m.ToBytes(buf))
 
-	c.handleNotifyMsg(buf.Bytes())
+	c.handleNotifyMsg(context.Background(), buf.Bytes())
 	require.Equal(t, 1, delegate.notifyMessageCalls)
 }
 

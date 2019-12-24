@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestXEP0163_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r)
 
@@ -51,7 +52,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r)
 
@@ -66,7 +67,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	pubSub.AppendElement(create)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, iqID, elem.ID())
@@ -85,7 +86,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	_ = s.UpsertNode(&pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
@@ -111,7 +112,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	pubSub.AppendElement(configureElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, iqID, elem.ID())
@@ -139,8 +140,8 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifyConfig = true
@@ -195,7 +196,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	pubSub.AppendElement(configureElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
@@ -233,8 +234,8 @@ func TestXEP163_DeleteNode(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifyDelete = true
@@ -281,7 +282,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	pubSub.AppendElement(deleteElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "message", elem.Name()) // notification
@@ -315,7 +316,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -349,7 +350,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -363,7 +364,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	// remove affiliation
 	affiliation.SetAttribute("affiliation", pubsubmodel.None)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -380,7 +381,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -413,7 +414,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -440,7 +441,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -473,7 +474,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -488,7 +489,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	// remove subscription
 	sub.SetAttribute("subscription", pubsubmodel.None)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -505,7 +506,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -539,7 +540,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -566,8 +567,8 @@ func TestXEP163_Subscribe(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
 	nodeOpts := defaultNodeOptions
@@ -605,7 +606,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 
 	// command reply
@@ -650,7 +651,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -691,7 +692,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 
 	// command reply
@@ -713,8 +714,8 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -759,7 +760,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	pubSub.AppendElement(itemsCmdElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -779,7 +780,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	i2Elem.SetAttribute("id", "i2")
 	itemsCmdElem.AppendElement(i2Elem)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -824,14 +825,14 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 	})
 	p := New(nil, nil, r)
 
-	err := p.subscribeToAll("noelia@jackal.im", j1)
+	err := p.subscribeToAll(context.Background(), "noelia@jackal.im", j1)
 	require.Nil(t, err)
 
 	nodes, _ := s.FetchSubscribedNodes(j1.ToBareJID().String())
 	require.NotNil(t, nodes)
 	require.Len(t, nodes, 2)
 
-	err = p.unsubscribeFromAll("noelia@jackal.im", j1)
+	err = p.unsubscribeFromAll(context.Background(), "noelia@jackal.im", j1)
 	require.Nil(t, err)
 
 	nodes, _ = s.FetchSubscribedNodes(j1.ToBareJID().String())
@@ -846,8 +847,8 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node, affiliations and subscriptions
 	_ = s.UpsertNode(&pubsubmodel.Node{
@@ -889,7 +890,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	pr2.AppendElement(c)
 
-	_, _ = ph.RegisterPresence(pr2)
+	_, _ = ph.RegisterPresence(context.Background(), pr2)
 
 	// process pubsub command
 	p := New(nil, ph, r)
@@ -911,7 +912,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 
 	iq.AppendElement(pubSubEl)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, xmpp.HeadlineType, elem.Type())

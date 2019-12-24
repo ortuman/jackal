@@ -6,6 +6,7 @@
 package xep0077
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestXEP0077_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	x := New(&Config{}, nil, nil)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -43,17 +44,17 @@ func TestXEP0077_InvalidToJID(t *testing.T) {
 	j2, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	x := New(&Config{}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j1)
 	iq.SetToJID(j2.ToBareJID())
 	stm1.SetAuthenticated(true)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -69,41 +70,41 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	x := New(&Config{}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFromJID(j)
 	iq.SetToJID(j.ToBareJID())
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.GetType)
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	// allow registration...
 	x = New(&Config{AllowRegistration: true}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	q := xmpp.NewElementNamespace("query", registerNamespace)
 	q.AppendElement(xmpp.NewElementName("q2"))
 	iq.AppendElement(q)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	q.ClearElements()
 	iq.SetType(xmpp.SetType)
-	stm.SetBool(xep077RegisteredCtxKey, true)
+	stm.SetBool(context.Background(), xep077RegisteredCtxKey, true)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAcceptable.Error(), elem.Error().Elements().All()[0].Name())
 }
@@ -116,25 +117,25 @@ func TestXEP0077_AuthenticatedErrors(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	stm.SetAuthenticated(true)
 
 	x := New(&Config{}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
 	iq.SetFromJID(j)
 	iq.SetToJID(j.ToBareJID())
 	iq.SetToJID(srvJid)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	iq.SetType(xmpp.SetType)
 	iq.AppendElement(xmpp.NewElementNamespace("query", registerNamespace))
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 }
@@ -147,10 +148,10 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	x := New(&Config{AllowRegistration: true}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j)
@@ -159,7 +160,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	q := xmpp.NewElementNamespace("query", registerNamespace)
 	iq.AppendElement(q)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	q2 := stm.ReceiveElement().Elements().ChildNamespace("query", registerNamespace)
 	require.NotNil(t, q2.Elements().Child("username"))
 	require.NotNil(t, q2.Elements().Child("password"))
@@ -171,7 +172,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 
 	// empty fields
 	iq.SetType(xmpp.SetType)
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -179,19 +180,19 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
 	username.SetText("ortuman")
 	password.SetText("5678")
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrConflict.Error(), elem.Error().Elements().All()[0].Name())
 
 	// storage error
 	s.EnableMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
 	username.SetText("juliet")
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
@@ -207,7 +208,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd1234", j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	stm.SetAuthenticated(true)
 
@@ -224,7 +225,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	q.AppendElement(xmpp.NewElementName("remove"))
 
 	iq.AppendElement(q)
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -232,7 +233,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	defer func() { _ = x.Shutdown() }()
 
 	q.AppendElement(xmpp.NewElementName("remove2"))
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 	q.ClearElements()
@@ -240,12 +241,12 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 
 	// storage error
 	s.EnableMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
@@ -261,7 +262,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	stm.SetAuthenticated(true)
 
@@ -283,19 +284,19 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	q.AppendElement(password)
 	iq.AppendElement(q)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	x = New(&Config{AllowChange: true}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAllowed.Error(), elem.Error().Elements().All()[0].Name())
 
 	username.SetText("ortuman")
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrNotAuthorized.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -304,12 +305,12 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 
 	// storage error
 	s.EnableMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 

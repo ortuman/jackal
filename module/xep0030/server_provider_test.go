@@ -6,6 +6,7 @@
 package xep0030
 
 import (
+	"context"
 	"sort"
 	"testing"
 
@@ -86,9 +87,9 @@ func TestServerProvider_Items(t *testing.T) {
 	stm2 := stream.NewMockC2S(uuid.New(), accJID2)
 	stm3 := stream.NewMockC2S(uuid.New(), accJID3)
 
-	r.Bind(stm1)
-	r.Bind(stm2)
-	r.Bind(stm3)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
+	r.Bind(context.Background(), stm3)
 
 	items, sErr := sp.Items(srvJID, accJID1, "node")
 	require.Nil(t, items)
@@ -104,7 +105,7 @@ func TestServerProvider_Items(t *testing.T) {
 	require.Nil(t, items)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 
-	storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

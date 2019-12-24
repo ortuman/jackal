@@ -6,6 +6,7 @@
 package offline
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 	"time"
@@ -28,16 +29,16 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	x := New(&Config{QueueSize: 1}, nil, r)
-	defer x.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, "normal")
 	msg.SetFromJID(j1)
 	msg.SetToJID(j2)
-	x.ArchiveMessage(msg)
+	x.ArchiveMessage(context.Background(), msg)
 
 	// wait for insertion...
 	time.Sleep(time.Millisecond * 250)
@@ -50,7 +51,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	msg2.SetFromJID(j1)
 	msg2.SetToJID(j2)
 
-	x.ArchiveMessage(msg)
+	x.ArchiveMessage(context.Background(), msg)
 
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
@@ -58,12 +59,12 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 
 	// deliver offline messages...
 	stm2 := stream.NewMockC2S("abcd", j2)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	x2 := New(&Config{QueueSize: 1}, nil, r)
-	defer x2.Shutdown()
+	defer func() { _ = x.Shutdown() }()
 
-	x2.DeliverOfflineMessages(stm2)
+	x2.DeliverOfflineMessages(context.Background(), stm2)
 
 	elem = stm2.ReceiveElement()
 	require.NotNil(t, elem)

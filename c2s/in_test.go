@@ -6,6 +6,7 @@
 package c2s
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestStream_Disconnect(t *testing.T) {
 	defer shutdown()
 
 	stm, conn := tUtilStreamInit(r)
-	stm.Disconnect(nil)
+	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
 	require.Equal(t, disconnected, stm.getState())
@@ -310,7 +311,7 @@ func TestStream_SendMessage(t *testing.T) {
 	jTo, _ := jid.New("ortuman", "localhost", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", jTo)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
