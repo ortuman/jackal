@@ -394,7 +394,9 @@ func (s *inStream) writeStanzaErrorResponse(ctx context.Context, elem xmpp.XElem
 }
 
 func (s *inStream) writeElement(ctx context.Context, elem xmpp.XElement) {
-	s.sess.Send(ctx, elem)
+	if err := s.sess.Send(ctx, elem); err != nil {
+		log.Error(err)
+	}
 }
 
 func (s *inStream) readElement(ctx context.Context, elem xmpp.XElement) {

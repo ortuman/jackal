@@ -185,8 +185,10 @@ func (s *Session) Open(ctx context.Context, featuresElem xmpp.XElement) error {
 	s.setWriteDeadline(ctx)
 
 	_, err := io.Copy(s.tr, strings.NewReader(openStr))
-	_ = s.tr.Flush()
-	return err
+	if err != nil {
+		return err
+	}
+	return s.tr.Flush()
 }
 
 // Close closes session sending the proper XMPP payload.
@@ -197,18 +199,21 @@ func (s *Session) Close(ctx context.Context) error {
 	}
 	s.setWriteDeadline(ctx)
 
+	var err error
 	switch s.tr.Type() {
 	case transport.Socket:
-		_, _ = io.WriteString(s.tr, "</stream:stream>")
+		_, err = io.WriteString(s.tr, "</stream:stream>")
 	case transport.WebSocket:
-		_, _ = io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
+		_, err = io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
-	_ = s.tr.Flush()
-	return nil
+	if err != nil {
+		return err
+	}
+	return s.tr.Flush()
 }
 
 // Send writes an XML element to the underlying session transport.
-func (s *Session) Send(ctx context.Context, elem xmpp.XElement) {
+func (s *Session) Send(ctx context.Context, elem xmpp.XElement) error {
 	// clear namespace if sending a stanza
 	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
 		e.SetNamespace("")
@@ -218,7 +223,7 @@ func (s *Session) Send(ctx context.Context, elem xmpp.XElement) {
 	s.setWriteDeadline(ctx)
 
 	elem.ToXML(s.tr, true)
-	_ = s.tr.Flush()
+	return s.tr.Flush()
 }
 
 // Receive returns next incoming session element.

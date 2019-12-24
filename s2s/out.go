@@ -290,7 +290,9 @@ func (s *outStream) writeStanzaErrorResponse(ctx context.Context, elem xmpp.XEle
 }
 
 func (s *outStream) writeElement(ctx context.Context, elem xmpp.XElement) {
-	s.sess.Send(ctx, elem)
+	if err := s.sess.Send(ctx, elem); err != nil {
+		log.Error(err)
+	}
 }
 
 func (s *outStream) readElement(ctx context.Context, elem xmpp.XElement) {
