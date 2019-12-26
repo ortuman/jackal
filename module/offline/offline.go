@@ -67,7 +67,7 @@ func (x *Offline) archiveMessage(ctx context.Context, message *xmpp.Message) {
 		return
 	}
 	toJID := message.ToJID()
-	queueSize, err := storage.CountOfflineMessages(toJID.Node())
+	queueSize, err := storage.CountOfflineMessages(ctx, toJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
@@ -78,7 +78,7 @@ func (x *Offline) archiveMessage(ctx context.Context, message *xmpp.Message) {
 	}
 	delayed, _ := xmpp.NewMessageFromElement(message, message.FromJID(), message.ToJID())
 	delayed.Delay(message.FromJID().Domain(), "Offline Storage")
-	if err := storage.InsertOfflineMessage(delayed, toJID.Node()); err != nil {
+	if err := storage.InsertOfflineMessage(ctx, delayed, toJID.Node()); err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, message.InternalServerError())
 		return
@@ -98,7 +98,7 @@ func (x *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) {
 	}
 	// deliver offline messages
 	userJID := stm.JID()
-	messages, err := storage.FetchOfflineMessages(userJID.Node())
+	messages, err := storage.FetchOfflineMessages(ctx, userJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
@@ -111,7 +111,7 @@ func (x *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) {
 	for _, m := range messages {
 		_ = x.router.Route(ctx, &m)
 	}
-	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
+	if err := storage.DeleteOfflineMessages(ctx, userJID.Node()); err != nil {
 		log.Error(err)
 	}
 	stm.SetBool(ctx, offlineDeliveredCtxKey, true)

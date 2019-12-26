@@ -72,19 +72,19 @@ func (*disabledStorage) FetchRosterGroups(_ string) ([]string, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) InsertOfflineMessage(_ *xmpp.Message, _ string) error {
+func (*disabledStorage) InsertOfflineMessage(_ context.Context, _ *xmpp.Message, _ string) error {
 	return nil
 }
 
-func (*disabledStorage) CountOfflineMessages(_ string) (int, error) {
+func (*disabledStorage) CountOfflineMessages(_ context.Context, _ string) (int, error) {
 	return 0, nil
 }
 
-func (*disabledStorage) FetchOfflineMessages(_ string) ([]xmpp.Message, error) {
+func (*disabledStorage) FetchOfflineMessages(_ context.Context, _ string) ([]xmpp.Message, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) DeleteOfflineMessages(_ string) error {
+func (*disabledStorage) DeleteOfflineMessages(_ context.Context, _ string) error {
 	return nil
 }
 
@@ -96,11 +96,11 @@ func (*disabledStorage) FetchVCard(_ context.Context, _ string) (xmpp.XElement, 
 	return nil, nil
 }
 
-func (*disabledStorage) FetchPrivateXML(_ string, _ string) ([]xmpp.XElement, error) {
+func (*disabledStorage) FetchPrivateXML(_ context.Context, _ string, _ string) ([]xmpp.XElement, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertPrivateXML(_ []xmpp.XElement, _ string, _ string) error {
+func (*disabledStorage) UpsertPrivateXML(_ context.Context, _ []xmpp.XElement, _ string, _ string) error {
 	return nil
 }
 

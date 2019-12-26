@@ -88,7 +88,7 @@ func (x *Private) getPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) 
 	fromJID := iq.FromJID()
 	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, fromJID.Node(), fromJID.Resource())
 
-	privElements, err := storage.FetchPrivateXML(privNS, fromJID.Node())
+	privElements, err := storage.FetchPrivateXML(ctx, privNS, fromJID.Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -131,7 +131,7 @@ func (x *Private) setPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) 
 	for ns, elements := range nsElements {
 		log.Infof("saving private element. ns: %s... (%s/%s)", ns, fromJID.Node(), fromJID.Resource())
 
-		if err := storage.InsertOrUpdatePrivateXML(elements, ns, fromJID.Node()); err != nil {
+		if err := storage.InsertOrUpdatePrivateXML(ctx, elements, ns, fromJID.Node()); err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())
 			return

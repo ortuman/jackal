@@ -43,7 +43,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	// wait for insertion...
 	time.Sleep(time.Millisecond * 250)
 
-	msgs, err := storage.FetchOfflineMessages("juliet")
+	msgs, err := storage.FetchOfflineMessages(context.Background(), "juliet")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(msgs))
 
