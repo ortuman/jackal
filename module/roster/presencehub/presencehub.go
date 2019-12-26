@@ -57,7 +57,7 @@ func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Prese
 		capsKey := capabilitiesKey(c.Node, c.Ver)
 		_, ok := x.capabilities.Load(capsKey)
 		if !ok {
-			caps, err := storage.FetchCapabilities(c.Node, c.Ver) // try fetching from disk
+			caps, err := storage.FetchCapabilities(ctx, c.Node, c.Ver) // try fetching from disk
 			if err != nil {
 				return err, false
 			}
@@ -177,7 +177,7 @@ func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XEle
 		Ver:      ver,
 		Features: features,
 	}
-	if err := storage.InsertCapabilities(caps); err != nil { // save into disk
+	if err := storage.InsertCapabilities(ctx, caps); err != nil { // save into disk
 		return err
 	}
 	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)

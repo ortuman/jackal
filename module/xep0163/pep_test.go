@@ -875,7 +875,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = s.InsertCapabilities(&model.Capabilities{
+	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},

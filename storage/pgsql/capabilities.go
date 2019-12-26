@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"strings"
@@ -14,7 +15,7 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (s *Storage) InsertCapabilities(caps *model.Capabilities) error {
+func (s *Storage) InsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
@@ -22,15 +23,15 @@ func (s *Storage) InsertCapabilities(caps *model.Capabilities) error {
 	_, err = sq.Insert("capabilities").
 		Columns("node", "ver", "features", "created_at").
 		Values(caps.Node, caps.Ver, b, nowExpr).
-		RunWith(s.db).Exec()
+		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *Storage) FetchCapabilities(node, ver string) (*model.Capabilities, error) {
+func (s *Storage) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
-		RunWith(s.db).QueryRow().Scan(&b)
+		RunWith(s.db).QueryRowContext(ctx).Scan(&b)
 	switch err {
 	case nil:
 		var caps model.Capabilities

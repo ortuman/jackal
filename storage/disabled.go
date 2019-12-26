@@ -25,10 +25,10 @@ func (*disabledStorage) UserExists(_ context.Context, _ string) (bool, error) {
 	return false, nil
 }
 
-func (*disabledStorage) InsertCapabilities(_ *model.Capabilities) error {
+func (*disabledStorage) InsertCapabilities(_ context.Context, _ *model.Capabilities) error {
 	return nil
 }
-func (*disabledStorage) FetchCapabilities(_, _ string) (*model.Capabilities, error) {
+func (*disabledStorage) FetchCapabilities(_ context.Context, _, _ string) (*model.Capabilities, error) {
 	return nil, nil
 }
 
