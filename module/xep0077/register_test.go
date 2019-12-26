@@ -177,7 +177,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// already existing user...
-	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
 	username.SetText("ortuman")
 	password.SetText("5678")
 	x.ProcessIQ(context.Background(), iq)
@@ -196,7 +196,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	usr, _ := storage.FetchUser("ortuman")
+	usr, _ := storage.FetchUser(context.Background(), "ortuman")
 	require.NotNil(t, usr)
 }
 
@@ -215,7 +215,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	x := New(&Config{}, nil, r)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)
@@ -250,7 +250,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	usr, _ := storage.FetchUser("ortuman")
+	usr, _ := storage.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, usr)
 }
 
@@ -269,7 +269,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	x := New(&Config{}, nil, r)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = storage.UpsertUser(&model.User{Username: "ortuman", Password: "1234"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)
@@ -314,7 +314,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	usr, _ := storage.FetchUser("ortuman")
+	usr, _ := storage.FetchUser(context.Background(), "ortuman")
 	require.NotNil(t, usr)
 	require.Equal(t, "5678", usr.Password)
 }

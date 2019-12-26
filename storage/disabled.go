@@ -88,11 +88,11 @@ func (*disabledStorage) DeleteOfflineMessages(_ string) error {
 	return nil
 }
 
-func (*disabledStorage) UpsertVCard(_ xmpp.XElement, _ string) error {
+func (*disabledStorage) UpsertVCard(_ context.Context, _ xmpp.XElement, _ string) error {
 	return nil
 }
 
-func (*disabledStorage) FetchVCard(_ string) (xmpp.XElement, error) {
+func (*disabledStorage) FetchVCard(_ context.Context, _ string) (xmpp.XElement, error) {
 	return nil, nil
 }
 

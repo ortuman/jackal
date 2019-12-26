@@ -79,7 +79,7 @@ func TestStream_TLS(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -101,7 +101,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	_, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -141,7 +141,7 @@ func TestStream_Compression(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -184,7 +184,7 @@ func TestStream_StartSession(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -207,7 +207,7 @@ func TestStream_SendIQ(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -244,7 +244,7 @@ func TestStream_SendPresence(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -289,7 +289,7 @@ func TestStream_SendMessage(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -340,7 +340,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)

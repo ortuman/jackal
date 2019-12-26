@@ -272,7 +272,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	rtr.Bind(context.Background(), stm2)
 
 	// user entity
-	_ = storage.UpsertUser(&model.User{
+	_ = storage.UpsertUser(context.Background(), &model.User{
 		Username:     "ortuman",
 		LastPresence: xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType),
 	})
@@ -318,7 +318,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	require.Equal(t, xmpp.AvailableType, elem.Type())
 
 	// check if last presence was updated
-	usr, err := storage.FetchUser("ortuman")
+	usr, err := storage.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.NotNil(t, usr)
 	require.NotNil(t, usr.LastPresence)
@@ -377,7 +377,7 @@ func TestRoster_Probe(t *testing.T) {
 	r := New(&Config{}, presencehub.New(rtr), nil, rtr)
 	defer func() { _ = r.Shutdown() }()
 
-	_ = storage.UpsertUser(&model.User{
+	_ = storage.UpsertUser(context.Background(), &model.User{
 		Username:     "noelia",
 		LastPresence: xmpp.NewPresence(j2.ToBareJID(), j2.ToBareJID(), xmpp.UnavailableType),
 	})
@@ -393,7 +393,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	// test available presence...
 	p2 := xmpp.NewPresence(j2, j2.ToBareJID(), xmpp.AvailableType)
-	_ = storage.UpsertUser(&model.User{
+	_ = storage.UpsertUser(context.Background(), &model.User{
 		Username:     "noelia",
 		LastPresence: p2,
 	})

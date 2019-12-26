@@ -109,7 +109,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	st.SetText("Gone!")
 	p.AppendElement(st)
 
-	_ = storage.UpsertUser(&model.User{
+	_ = storage.UpsertUser(context.Background(), &model.User{
 		Username:     "noelia",
 		LastPresence: p,
 	})

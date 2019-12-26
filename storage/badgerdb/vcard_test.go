@@ -6,6 +6,7 @@
 package badgerdb
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -23,16 +24,16 @@ func TestBadgerDB_VCard(t *testing.T) {
 	fn.SetText("Miguel Ángel Ortuño")
 	vcard.AppendElement(fn)
 
-	err := h.db.UpsertVCard(vcard, "ortuman")
+	err := h.db.UpsertVCard(context.Background(), vcard, "ortuman")
 	require.Nil(t, err)
 
-	vcard2, err := h.db.FetchVCard("ortuman")
+	vcard2, err := h.db.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, "vCard", vcard2.Name())
 	require.Equal(t, "vcard-temp", vcard2.Namespace())
 	require.NotNil(t, vcard2.Elements().Child("FN"))
 
-	vcard3, err := h.db.FetchVCard("ortuman2")
+	vcard3, err := h.db.FetchVCard(context.Background(), "ortuman2")
 	require.Nil(t, vcard3)
 	require.Nil(t, err)
 }

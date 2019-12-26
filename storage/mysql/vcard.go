@@ -6,6 +6,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -13,26 +14,25 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// UpsertVCard inserts a new vCard element into storage,
-// or updates it in case it's been previously inserted.
-func (s *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
+// UpsertVCard inserts a new vCard element into storage, or updates it in case it's been previously inserted.
+func (s *Storage) UpsertVCard(ctx context.Context, vCard xmpp.XElement, username string) error {
 	rawXML := vCard.String()
 	q := sq.Insert("vcards").
 		Columns("username", "vcard", "updated_at", "created_at").
 		Values(username, rawXML, nowExpr, nowExpr).
 		Suffix("ON DUPLICATE KEY UPDATE vcard = ?, updated_at = NOW()", rawXML)
 
-	_, err := q.RunWith(s.db).Exec()
+	_, err := q.RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-// FetchVCard retrieves from storage a vCard element associated
-// to a given user.
-func (s *Storage) FetchVCard(username string) (xmpp.XElement, error) {
+// FetchVCard retrieves from storage a vCard element associated to a given user.
+func (s *Storage) FetchVCard(ctx context.Context, username string) (xmpp.XElement, error) {
+	var vCard string
+
 	q := sq.Select("vcard").From("vcards").Where(sq.Eq{"username": username})
 
-	var vCard string
-	err := q.RunWith(s.db).QueryRow().Scan(&vCard)
+	err := q.RunWith(s.db).QueryRowContext(ctx).Scan(&vCard)
 	switch err {
 	case nil:
 		parser := xmpp.NewParser(strings.NewReader(vCard), xmpp.DefaultMode, 0)
