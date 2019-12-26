@@ -39,9 +39,7 @@ func New(cfg *Config) *Storage {
 	if err := os.MkdirAll(filepath.Dir(cfg.DataDir), os.ModePerm); err != nil {
 		log.Fatalf("%v", err)
 	}
-	opts := badger.DefaultOptions
-	opts.Dir = cfg.DataDir
-	opts.ValueDir = cfg.DataDir
+	opts := badger.DefaultOptions(cfg.DataDir)
 	db, err := badger.Open(opts)
 	if err != nil {
 		log.Fatalf("%v", err)
