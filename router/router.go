@@ -340,7 +340,7 @@ func (r *Router) route(ctx context.Context, element xmpp.Stanza, ignoreBlocking 
 	}
 	recipients := r.streams[toJID.Node()]
 	if len(recipients) == 0 {
-		exists, err := storage.UserExists(toJID.Node())
+		exists, err := storage.UserExists(ctx, toJID.Node())
 		if err != nil {
 			return err
 		}

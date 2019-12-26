@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestInsertUser(t *testing.T) {
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.UpsertUser(&user)
+	err := s.UpsertUser(context.Background(), &user)
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -37,7 +38,7 @@ func TestInsertUser(t *testing.T) {
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnError(errGeneric)
 
-	err = s.UpsertUser(&user)
+	err = s.UpsertUser(context.Background(), &user)
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -59,7 +60,7 @@ func TestDeleteUser(t *testing.T) {
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.DeleteUser("ortuman")
+	err := s.DeleteUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -69,7 +70,7 @@ func TestDeleteUser(t *testing.T) {
 		WithArgs("ortuman").WillReturnError(errGeneric)
 	mock.ExpectRollback()
 
-	err = s.DeleteUser("ortuman")
+	err = s.DeleteUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -86,7 +87,7 @@ func TestFetchUser(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns))
 
-	usr, _ := s.FetchUser("ortuman")
+	usr, _ := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, usr)
 
@@ -94,14 +95,14 @@ func TestFetchUser(t *testing.T) {
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
-	_, err := s.FetchUser("ortuman")
+	_, err := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").WillReturnError(errGeneric)
-	_, err = s.FetchUser("ortuman")
+	_, err = s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -114,7 +115,7 @@ func TestUserExists(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
 
-	ok, err := s.UserExists("ortuman")
+	ok, err := s.UserExists(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.True(t, ok)
@@ -123,7 +124,7 @@ func TestUserExists(t *testing.T) {
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("romeo").
 		WillReturnError(errGeneric)
-	_, err = s.UserExists("romeo")
+	_, err = s.UserExists(context.Background(), "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }

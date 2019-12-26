@@ -95,7 +95,7 @@ func (x *LastActivity) sendUserLastActivity(ctx context.Context, iq *xmpp.IQ, to
 		x.sendReply(ctx, iq, 0, "")
 		return
 	}
-	usr, err := storage.FetchUser(to.Node())
+	usr, err := storage.FetchUser(ctx, to.Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())

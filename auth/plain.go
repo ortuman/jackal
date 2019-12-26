@@ -69,7 +69,7 @@ func (p *Plain) ProcessElement(ctx context.Context, elem xmpp.XElement) error {
 	password := string(s[2])
 
 	// validate user and password
-	user, err := storage.FetchUser(username)
+	user, err := storage.FetchUser(ctx, username)
 	if err != nil {
 		return err
 	}

@@ -187,7 +187,7 @@ func (d *DigestMD5) handleChallenged(ctx context.Context, elem xmpp.XElement) er
 		return ErrSASLNotAuthorized
 	}
 	// validate user
-	user, err := storage.FetchUser(params.username)
+	user, err := storage.FetchUser(ctx, params.username)
 	if err != nil {
 		return err
 	}

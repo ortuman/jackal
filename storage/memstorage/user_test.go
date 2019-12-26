@@ -6,6 +6,7 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/model"
@@ -16,20 +17,20 @@ func TestMemoryStorage_InsertUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
 	s.EnableMockedError()
-	err := s.UpsertUser(&u)
+	err := s.UpsertUser(context.Background(), &u)
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	err = s.UpsertUser(&u)
+	err = s.UpsertUser(context.Background(), &u)
 	require.Nil(t, err)
 }
 
 func TestMemoryStorage_UserExists(t *testing.T) {
 	s := New()
 	s.EnableMockedError()
-	_, err := s.UserExists("ortuman")
+	_, err := s.UserExists(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	ok, err := s.UserExists("ortuman")
+	ok, err := s.UserExists(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.False(t, ok)
 }
@@ -37,30 +38,30 @@ func TestMemoryStorage_UserExists(t *testing.T) {
 func TestMemoryStorage_FetchUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
-	_ = s.UpsertUser(&u)
+	_ = s.UpsertUser(context.Background(), &u)
 
 	s.EnableMockedError()
-	_, err := s.FetchUser("ortuman")
+	_, err := s.FetchUser(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
 
-	usr, _ := s.FetchUser("romeo")
+	usr, _ := s.FetchUser(context.Background(), "romeo")
 	require.Nil(t, usr)
 
-	usr, _ = s.FetchUser("ortuman")
+	usr, _ = s.FetchUser(context.Background(), "ortuman")
 	require.NotNil(t, usr)
 }
 
 func TestMemoryStorage_DeleteUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
 	s := New()
-	_ = s.UpsertUser(&u)
+	_ = s.UpsertUser(context.Background(), &u)
 
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteUser("ortuman"))
+	require.Equal(t, ErrMockedError, s.DeleteUser(context.Background(), "ortuman"))
 	s.DisableMockedError()
-	require.Nil(t, s.DeleteUser("ortuman"))
+	require.Nil(t, s.DeleteUser(context.Background(), "ortuman"))
 
-	usr, _ := s.FetchUser("ortuman")
+	usr, _ := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, usr)
 }

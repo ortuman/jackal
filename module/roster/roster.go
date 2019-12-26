@@ -562,7 +562,7 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 	}
 	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
 	if len(availPresences) == 0 { // send last known presence
-		usr, err := storage.FetchUser(contactJID.Node())
+		usr, err := storage.FetchUser(ctx, contactJID.Node())
 		if err != nil {
 			return err
 		}
@@ -662,10 +662,10 @@ func (x *Roster) broadcastPresence(ctx context.Context, presence *xmpp.Presence)
 	}
 
 	// update last received presence
-	if usr, err := storage.FetchUser(fromJID.Node()); err != nil {
+	if usr, err := storage.FetchUser(ctx, fromJID.Node()); err != nil {
 		return err
 	} else if usr != nil {
-		return storage.UpsertUser(&model.User{
+		return storage.UpsertUser(ctx, &model.User{
 			Username:     usr.Username,
 			Password:     usr.Password,
 			LastPresence: presence,

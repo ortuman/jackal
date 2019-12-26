@@ -6,13 +6,14 @@
 package memstorage
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// UpsertUser inserts a new user entity into storage,
-// or updates it in case it's been previously inserted.
-func (m *Storage) UpsertUser(user *model.User) error {
+// UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
+func (m *Storage) UpsertUser(_ context.Context, user *model.User) error {
 	b, err := serializer.Serialize(user)
 	if err != nil {
 		return err
@@ -24,7 +25,7 @@ func (m *Storage) UpsertUser(user *model.User) error {
 }
 
 // DeleteUser deletes a user entity from storage.
-func (m *Storage) DeleteUser(username string) error {
+func (m *Storage) DeleteUser(_ context.Context, username string) error {
 	return m.inWriteLock(func() error {
 		delete(m.bytes, userKey(username))
 		return nil
@@ -32,7 +33,7 @@ func (m *Storage) DeleteUser(username string) error {
 }
 
 // FetchUser retrieves from storage a user entity.
-func (m *Storage) FetchUser(username string) (*model.User, error) {
+func (m *Storage) FetchUser(_ context.Context, username string) (*model.User, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.bytes[userKey(username)]
@@ -51,7 +52,7 @@ func (m *Storage) FetchUser(username string) (*model.User, error) {
 }
 
 // UserExists returns whether or not a user exists within storage.
-func (m *Storage) UserExists(username string) (bool, error) {
+func (m *Storage) UserExists(_ context.Context, username string) (bool, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.bytes[userKey(username)]
