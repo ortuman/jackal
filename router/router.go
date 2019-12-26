@@ -229,8 +229,8 @@ func (r *Router) UserStreams(username string) []stream.C2S {
 }
 
 // IsBlockedJID returns whether or not the passed jid matches any of a user's blocking list jid.
-func (r *Router) IsBlockedJID(jid *jid.JID, username string) bool {
-	bl := r.getBlockList(username)
+func (r *Router) IsBlockedJID(ctx context.Context, jid *jid.JID, username string) bool {
+	bl := r.getBlockList(ctx, username)
 	for _, blkJID := range bl {
 		if r.jidMatchesBlockedJID(jid, blkJID) {
 			return true
@@ -271,14 +271,14 @@ func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
 	return j.Matches(blockedJID, jid.MatchesDomain)
 }
 
-func (r *Router) getBlockList(username string) []*jid.JID {
+func (r *Router) getBlockList(ctx context.Context, username string) []*jid.JID {
 	r.blockListsMu.RLock()
 	bl := r.blockLists[username]
 	r.blockListsMu.RUnlock()
 	if bl != nil {
 		return bl
 	}
-	blItems, err := storage.FetchBlockListItems(username)
+	blItems, err := storage.FetchBlockListItems(ctx, username)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -331,7 +331,7 @@ func (r *Router) unbind(jid *jid.JID) bool {
 func (r *Router) route(ctx context.Context, element xmpp.Stanza, ignoreBlocking bool) error {
 	toJID := element.ToJID()
 	if !ignoreBlocking && !toJID.IsServer() {
-		if r.IsBlockedJID(element.FromJID(), toJID.Node()) {
+		if r.IsBlockedJID(ctx, element.FromJID(), toJID.Node()) {
 			return ErrBlockedJID
 		}
 	}

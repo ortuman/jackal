@@ -660,7 +660,7 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 
 func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 	toJID := elem.ToJID()
-	if s.isBlockedJID(toJID) { // blocked JID?
+	if s.isBlockedJID(ctx, toJID) { // blocked JID?
 		blocked := xmpp.NewElementNamespace("blocked", blockedErrorNamespace)
 		resp := xmpp.NewErrorStanzaFromStanza(elem, xmpp.ErrNotAcceptable, []xmpp.XElement{blocked})
 		s.writeElement(ctx, resp)
@@ -858,11 +858,11 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession, u
 	s.runQueue.Stop(nil) // stop processing messages
 }
 
-func (s *inStream) isBlockedJID(j *jid.JID) bool {
+func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
 	if j.IsServer() && s.router.IsLocalHost(j.Domain()) {
 		return false
 	}
-	return s.router.IsBlockedJID(j, s.Username())
+	return s.router.IsBlockedJID(ctx, j, s.Username())
 }
 
 func (s *inStream) restartSession() {

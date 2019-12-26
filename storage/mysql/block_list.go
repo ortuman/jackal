@@ -6,38 +6,40 @@
 package mysql
 
 import (
+	"context"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
 )
 
 // InsertBlockListItem inserts a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (s *Storage) InsertBlockListItem(item *model.BlockListItem) error {
+func (s *Storage) InsertBlockListItem(ctx context.Context, item *model.BlockListItem) error {
 	_, err := sq.Insert("blocklist_items").
 		Options("IGNORE").
 		Columns("username", "jid", "created_at").
 		Values(item.Username, item.JID, nowExpr).
-		RunWith(s.db).Exec()
+		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
 // DeleteBlockListItems deletes a set of block list item entities from storage.
-func (s *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
+func (s *Storage) DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error {
 	_, err := sq.Delete("blocklist_items").
 		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
-		RunWith(s.db).Exec()
+		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
 // FetchBlockListItems retrieves from storage all block list item entities
 // associated to a given user.
-func (s *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+func (s *Storage) FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error) {
 	q := sq.Select("username", "jid").
 		From("blocklist_items").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at")
 
-	rows, err := q.RunWith(s.db).Query()
+	rows, err := q.RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -6,13 +6,15 @@
 package memstorage
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/model/serializer"
 )
 
 // InsertBlockListItem a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (m *Storage) InsertBlockListItem(item *model.BlockListItem) error {
+func (m *Storage) InsertBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return m.inWriteLock(func() error {
 		blItems, err := m.fetchUserBlockListItems(item.Username)
 		if err != nil {
@@ -36,7 +38,7 @@ func (m *Storage) InsertBlockListItem(item *model.BlockListItem) error {
 }
 
 // DeleteBlockListItem deletes a of block list item entity from storage.
-func (m *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
+func (m *Storage) DeleteBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return m.inWriteLock(func() error {
 		blItems, err := m.fetchUserBlockListItems(item.Username)
 		if err != nil {
@@ -58,7 +60,7 @@ func (m *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
 
 // FetchBlockListItems retrieves from storage all block list item entities
 // associated to a given user.
-func (m *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+func (m *Storage) FetchBlockListItems(_ context.Context, username string) ([]model.BlockListItem, error) {
 	var blItems []model.BlockListItem
 	if err := m.inReadLock(func() error {
 		var fnErr error

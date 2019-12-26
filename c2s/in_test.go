@@ -358,7 +358,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	require.Equal(t, bound, stm.getState())
 
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "user",
 		JID:      "hamlet@localhost",
 	})

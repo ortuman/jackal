@@ -92,7 +92,7 @@ func (x *BlockingCommand) processIQ(ctx context.Context, iq *xmpp.IQ, stm stream
 
 func (x *BlockingCommand) sendBlockList(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 	fromJID := iq.FromJID()
-	blItems, err := storage.FetchBlockListItems(fromJID.Node())
+	blItems, err := storage.FetchBlockListItems(ctx, fromJID.Node())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(ctx, iq.InternalServerError())
@@ -123,7 +123,7 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 		stm.SendElement(ctx, iq.JidMalformedError())
 		return
 	}
-	blItems, ris, err := x.fetchBlockListAndRosterItems(stm.Username())
+	blItems, ris, err := x.fetchBlockListAndRosterItems(ctx, stm.Username())
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(ctx, iq.InternalServerError())
@@ -132,7 +132,10 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 	username := stm.Username()
 	for _, j := range jds {
 		if !x.isJIDInBlockList(j, blItems) {
-			err := storage.InsertBlockListItem(&model.BlockListItem{Username: username, JID: j.String()})
+			err := storage.InsertBlockListItem(ctx, &model.BlockListItem{
+				Username: username,
+				JID:      j.String(),
+			})
 			if err != nil {
 				log.Error(err)
 				stm.SendElement(ctx, iq.InternalServerError())
@@ -157,7 +160,7 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 	}
 	username := stm.Username()
 
-	blItems, ris, err := x.fetchBlockListAndRosterItems(username)
+	blItems, ris, err := x.fetchBlockListAndRosterItems(ctx, username)
 	if err != nil {
 		log.Error(err)
 		stm.SendElement(ctx, iq.InternalServerError())
@@ -166,7 +169,10 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 	if len(jds) > 0 {
 		for _, j := range jds {
 			if x.isJIDInBlockList(j, blItems) {
-				if err := storage.DeleteBlockListItem(&model.BlockListItem{Username: username, JID: j.String()}); err != nil {
+				if err := storage.DeleteBlockListItem(ctx, &model.BlockListItem{
+					Username: username,
+					JID:      j.String(),
+				}); err != nil {
 					log.Error(err)
 					stm.SendElement(ctx, iq.InternalServerError())
 					return
@@ -176,7 +182,7 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 		}
 	} else { // remove all block list items
 		for _, blItem := range blItems {
-			if err := storage.DeleteBlockListItem(&blItem); err != nil {
+			if err := storage.DeleteBlockListItem(ctx, &blItem); err != nil {
 				log.Error(err)
 				stm.SendElement(ctx, iq.InternalServerError())
 				return
@@ -241,8 +247,8 @@ func (x *BlockingCommand) isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) b
 	return false
 }
 
-func (x *BlockingCommand) fetchBlockListAndRosterItems(username string) ([]model.BlockListItem, []rostermodel.Item, error) {
-	blItems, err := storage.FetchBlockListItems(username)
+func (x *BlockingCommand) fetchBlockListAndRosterItems(ctx context.Context, username string) ([]model.BlockListItem, []rostermodel.Item, error) {
+	blItems, err := storage.FetchBlockListItems(ctx, username)
 	if err != nil {
 		return nil, nil, err
 	}

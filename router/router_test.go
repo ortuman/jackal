@@ -249,62 +249,62 @@ func TestRouter_BlockedJID(t *testing.T) {
 	r.Bind(context.Background(), stm2)
 
 	// node + domain + resource
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	require.False(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
 
 	// node + domain
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
-	require.False(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
 
 	// domain + resource
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.False(t, r.IsBlockedJID(j3, "ortuman"))
-	require.False(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
 
 	// domain
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
-	require.True(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})

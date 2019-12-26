@@ -74,11 +74,11 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	x := New(nil, ph, rtr)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -210,7 +210,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// check storage
-	bl, _ := storage.FetchBlockListItems("ortuman")
+	bl, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
 	require.NotNil(t, bl)
 	require.Equal(t, 1, len(bl))
 	require.Equal(t, "jackal.im/jail", bl[0].JID)
@@ -256,11 +256,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -276,7 +276,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	blItems, _ := storage.FetchBlockListItems("ortuman")
+	blItems, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, 0, len(blItems))
 }
 

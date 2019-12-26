@@ -6,6 +6,7 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/model"
@@ -20,35 +21,35 @@ func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 	}
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
+	require.Equal(t, ErrMockedError, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
 	s.DisableMockedError()
 
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
 	s.EnableMockedError()
-	_, err := s.FetchBlockListItems("ortuman")
+	_, err := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
 
-	sItems, _ := s.FetchBlockListItems("ortuman")
+	sItems, _ := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, items, sItems)
 }
 
 func TestMemoryStorage_DeleteBlockListItems(t *testing.T) {
 	s := New()
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
-	require.Nil(t, s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Equal(t, ErrMockedError, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 	s.DisableMockedError()
 
-	require.Nil(t, s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 
-	sItems, _ := s.FetchBlockListItems("ortuman")
+	sItems, _ := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, []model.BlockListItem{
 		{Username: "ortuman", JID: "user@jackal.im"},
 		{Username: "ortuman", JID: "juliet@jackal.im"},

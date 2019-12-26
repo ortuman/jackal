@@ -104,15 +104,15 @@ func (*disabledStorage) UpsertPrivateXML(_ []xmpp.XElement, _ string, _ string) 
 	return nil
 }
 
-func (*disabledStorage) InsertBlockListItem(_ *model.BlockListItem) error {
+func (*disabledStorage) InsertBlockListItem(_ context.Context, _ *model.BlockListItem) error {
 	return nil
 }
 
-func (*disabledStorage) DeleteBlockListItem(_ *model.BlockListItem) error {
+func (*disabledStorage) DeleteBlockListItem(_ context.Context, _ *model.BlockListItem) error {
 	return nil
 }
 
-func (*disabledStorage) FetchBlockListItems(_ string) ([]model.BlockListItem, error) {
+func (*disabledStorage) FetchBlockListItems(_ context.Context, _ string) ([]model.BlockListItem, error) {
 	return nil, nil
 }
 
