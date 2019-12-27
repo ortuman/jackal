@@ -22,7 +22,7 @@ import (
 func (s *Storage) UpsertRosterItem(ctx context.Context, ri *rostermodel.Item) (rostermodel.Version, error) {
 	var ver rostermodel.Version
 
-	err := s.inTransactionTx(ctx, func(tx *sql.Tx) error {
+	err := s.inTransaction(ctx, func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
 			Values(ri.Username, nowExpr, nowExpr).
@@ -75,7 +75,7 @@ func (s *Storage) UpsertRosterItem(ctx context.Context, ri *rostermodel.Item) (r
 func (s *Storage) DeleteRosterItem(ctx context.Context, username, jid string) (rostermodel.Version, error) {
 	var ver rostermodel.Version
 
-	err := s.inTransactionTx(ctx, func(tx *sql.Tx) error {
+	err := s.inTransaction(ctx, func(tx *sql.Tx) error {
 		q := sq.Insert("roster_versions").
 			Columns("username", "created_at", "updated_at").
 			Values(username, nowExpr, nowExpr).

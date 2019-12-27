@@ -6,97 +6,99 @@
 package storage
 
 import (
+	"context"
+
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 )
 
 type pubSubStorage interface {
-	FetchHosts() (hosts []string, err error)
+	FetchHosts(ctx context.Context) (hosts []string, err error)
 
-	UpsertNode(node *pubsubmodel.Node) error
-	FetchNode(host, name string) (*pubsubmodel.Node, error)
-	FetchNodes(host string) ([]pubsubmodel.Node, error)
-	FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error)
-	DeleteNode(host, name string) error
+	UpsertNode(ctx context.Context, node *pubsubmodel.Node) error
+	FetchNode(ctx context.Context, host, name string) (*pubsubmodel.Node, error)
+	FetchNodes(ctx context.Context, host string) ([]pubsubmodel.Node, error)
+	FetchSubscribedNodes(ctx context.Context, jid string) ([]pubsubmodel.Node, error)
+	DeleteNode(ctx context.Context, host, name string) error
 
-	UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error
-	FetchNodeItems(host, name string) ([]pubsubmodel.Item, error)
-	FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error)
-	FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error)
+	UpsertNodeItem(ctx context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error
+	FetchNodeItems(ctx context.Context, host, name string) ([]pubsubmodel.Item, error)
+	FetchNodeItemsWithIDs(ctx context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error)
+	FetchNodeLastItem(ctx context.Context, host, name string) (*pubsubmodel.Item, error)
 
-	UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error
-	FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error)
-	FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error)
-	DeleteNodeAffiliation(jid, host, name string) error
+	UpsertNodeAffiliation(ctx context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error
+	FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error)
+	FetchNodeAffiliations(ctx context.Context, host, name string) ([]pubsubmodel.Affiliation, error)
+	DeleteNodeAffiliation(ctx context.Context, jid, host, name string) error
 
-	UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error
-	FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error)
-	DeleteNodeSubscription(jid, host, name string) error
+	UpsertNodeSubscription(ctx context.Context, subscription *pubsubmodel.Subscription, host, name string) error
+	FetchNodeSubscriptions(ctx context.Context, host, name string) ([]pubsubmodel.Subscription, error)
+	DeleteNodeSubscription(ctx context.Context, jid, host, name string) error
 }
 
-func FetchHosts() (hosts []string, err error) {
-	return inst.FetchHosts()
+func FetchHosts(ctx context.Context) (hosts []string, err error) {
+	return inst.FetchHosts(ctx)
 }
 
-func UpsertNode(node *pubsubmodel.Node) error {
-	return inst.UpsertNode(node)
+func UpsertNode(ctx context.Context, node *pubsubmodel.Node) error {
+	return inst.UpsertNode(ctx, node)
 }
 
-func FetchNode(host, name string) (*pubsubmodel.Node, error) {
-	return inst.FetchNode(host, name)
+func FetchNode(ctx context.Context, host, name string) (*pubsubmodel.Node, error) {
+	return inst.FetchNode(ctx, host, name)
 }
 
-func FetchNodes(host string) ([]pubsubmodel.Node, error) {
-	return inst.FetchNodes(host)
+func FetchNodes(ctx context.Context, host string) ([]pubsubmodel.Node, error) {
+	return inst.FetchNodes(ctx, host)
 }
 
-func FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
-	return inst.FetchSubscribedNodes(jid)
+func FetchSubscribedNodes(ctx context.Context, jid string) ([]pubsubmodel.Node, error) {
+	return inst.FetchSubscribedNodes(ctx, jid)
 }
 
-func DeleteNode(host, name string) error {
-	return inst.DeleteNode(host, name)
+func DeleteNode(ctx context.Context, host, name string) error {
+	return inst.DeleteNode(ctx, host, name)
 }
 
-func UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
-	return inst.UpsertNodeItem(item, host, name, maxNodeItems)
+func UpsertNodeItem(ctx context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+	return inst.UpsertNodeItem(ctx, item, host, name, maxNodeItems)
 }
 
-func FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
-	return inst.FetchNodeItems(host, name)
+func FetchNodeItems(ctx context.Context, host, name string) ([]pubsubmodel.Item, error) {
+	return inst.FetchNodeItems(ctx, host, name)
 }
 
-func FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
-	return inst.FetchNodeItemsWithIDs(host, name, identifiers)
+func FetchNodeItemsWithIDs(ctx context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+	return inst.FetchNodeItemsWithIDs(ctx, host, name, identifiers)
 }
 
-func FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
-	return inst.FetchNodeLastItem(host, name)
+func FetchNodeLastItem(ctx context.Context, host, name string) (*pubsubmodel.Item, error) {
+	return inst.FetchNodeLastItem(ctx, host, name)
 }
 
-func UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
-	return inst.UpsertNodeAffiliation(affiliation, host, name)
+func UpsertNodeAffiliation(ctx context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error {
+	return inst.UpsertNodeAffiliation(ctx, affiliation, host, name)
 }
 
-func DeleteNodeAffiliation(jid, host, name string) error {
-	return inst.DeleteNodeAffiliation(jid, host, name)
+func DeleteNodeAffiliation(ctx context.Context, jid, host, name string) error {
+	return inst.DeleteNodeAffiliation(ctx, jid, host, name)
 }
 
-func FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
-	return inst.FetchNodeAffiliation(host, name, jid)
+func FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error) {
+	return inst.FetchNodeAffiliation(ctx, host, name, jid)
 }
 
-func FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
-	return inst.FetchNodeAffiliations(host, name)
+func FetchNodeAffiliations(ctx context.Context, host, name string) ([]pubsubmodel.Affiliation, error) {
+	return inst.FetchNodeAffiliations(ctx, host, name)
 }
 
-func UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
-	return inst.UpsertNodeSubscription(subscription, host, name)
+func UpsertNodeSubscription(ctx context.Context, subscription *pubsubmodel.Subscription, host, name string) error {
+	return inst.UpsertNodeSubscription(ctx, subscription, host, name)
 }
 
-func FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
-	return inst.FetchNodeSubscriptions(host, name)
+func FetchNodeSubscriptions(ctx context.Context, host, name string) ([]pubsubmodel.Subscription, error) {
+	return inst.FetchNodeSubscriptions(ctx, host, name)
 }
 
-func DeleteNodeSubscription(jid, host, name string) error {
-	return inst.DeleteNodeSubscription(jid, host, name)
+func DeleteNodeSubscription(ctx context.Context, jid, host, name string) error {
+	return inst.DeleteNodeSubscription(ctx, jid, host, name)
 }

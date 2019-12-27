@@ -60,16 +60,16 @@ func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, 
 
 	if len(node) > 0 {
 		// return node items
-		return p.nodeItems(host, node)
+		return p.nodeItems(ctx, host, node)
 	}
 	// return host nodes
-	return p.hostNodes(host)
+	return p.hostNodes(ctx, host)
 }
 
-func (p *discoInfoProvider) hostNodes(host string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) hostNodes(ctx context.Context, host string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	nodes, err := storage.FetchNodes(host)
+	nodes, err := storage.FetchNodes(ctx, host)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -84,10 +84,10 @@ func (p *discoInfoProvider) hostNodes(host string) ([]xep0030.Item, *xmpp.Stanza
 	return items, nil
 }
 
-func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) nodeItems(ctx context.Context, host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	n, err := storage.FetchNode(host, node)
+	n, err := storage.FetchNode(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -96,7 +96,7 @@ func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.
 		// does not exist
 		return nil, xmpp.ErrItemNotFound
 	}
-	nodeItems, err := storage.FetchNodeItems(host, node)
+	nodeItems, err := storage.FetchNodeItems(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError

@@ -94,19 +94,7 @@ func (s *Storage) loop() {
 	}
 }
 
-func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
-	tx, txErr := s.db.Begin()
-	if txErr != nil {
-		return txErr
-	}
-	if err := f(tx); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
-}
-
-func (s *Storage) inTransactionTx(ctx context.Context, f func(tx *sql.Tx) error) error {
+func (s *Storage) inTransaction(ctx context.Context, f func(tx *sql.Tx) error) error {
 	tx, txErr := s.db.BeginTx(ctx, nil)
 	if txErr != nil {
 		return txErr

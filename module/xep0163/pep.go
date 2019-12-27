@@ -83,7 +83,7 @@ func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router 
 		}
 	}
 	// register disco items
-	p.registerDiscoItems()
+	p.registerDiscoItems(context.Background())
 	return p
 }
 
@@ -152,22 +152,22 @@ func (x *Pep) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	}
 }
 
-func (x *Pep) registerDiscoItems() {
+func (x *Pep) registerDiscoItems(ctx context.Context) {
 	if x.disco == nil {
 		return // nothing to do here
 	}
-	if err := x.registerDiscoItemHandlers(); err != nil {
+	if err := x.registerDiscoItemHandlers(ctx); err != nil {
 		log.Warnf("pep: failed to register disco item handlers: %v", err)
 	}
 }
 
-func (x *Pep) registerDiscoItemHandlers() error {
+func (x *Pep) registerDiscoItemHandlers(ctx context.Context) error {
 	// unregister previous handlers
 	for _, h := range x.hosts {
 		x.disco.UnregisterProvider(h)
 	}
 	// register current ones
-	hosts, err := storage.FetchHosts()
+	hosts, err := storage.FetchHosts(ctx)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (x *Pep) registerDiscoItemHandlers() error {
 }
 
 func (x *Pep) subscribeToAll(ctx context.Context, host string, subJID *jid.JID) error {
-	nodes, err := storage.FetchNodes(host)
+	nodes, err := storage.FetchNodes(ctx, host)
 	if err != nil {
 		return err
 	}
@@ -191,13 +191,13 @@ func (x *Pep) subscribeToAll(ctx context.Context, host string, subJID *jid.JID) 
 			JID:          subJID.ToBareJID().String(),
 			Subscription: pubsubmodel.Subscribed,
 		}
-		if err := storage.UpsertNodeSubscription(&sub, host, n.Name); err != nil {
+		if err := storage.UpsertNodeSubscription(ctx, &sub, host, n.Name); err != nil {
 			return err
 		}
 		log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID)
 
 		// notify subscription update
-		affiliations, err := storage.FetchNodeAffiliations(host, n.Name)
+		affiliations, err := storage.FetchNodeAffiliations(ctx, host, n.Name)
 		if err != nil {
 			return err
 		}
@@ -236,12 +236,12 @@ func (x *Pep) subscribeToAll(ctx context.Context, host string, subJID *jid.JID) 
 }
 
 func (x *Pep) unsubscribeFromAll(ctx context.Context, host string, subJID *jid.JID) error {
-	nodes, err := storage.FetchNodes(host)
+	nodes, err := storage.FetchNodes(ctx, host)
 	if err != nil {
 		return err
 	}
 	for _, n := range nodes {
-		if err := storage.DeleteNodeSubscription(subJID.ToBareJID().String(), host, n.Name); err != nil {
+		if err := storage.DeleteNodeSubscription(ctx, subJID.ToBareJID().String(), host, n.Name); err != nil {
 			return err
 		}
 		log.Infof("pep: subscription removed (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID.ToBareJID().String())
@@ -250,7 +250,7 @@ func (x *Pep) unsubscribeFromAll(ctx context.Context, host string, subJID *jid.J
 }
 
 func (x *Pep) deliverLastItems(ctx context.Context, jid *jid.JID) error {
-	nodes, err := storage.FetchSubscribedNodes(jid.ToBareJID().String())
+	nodes, err := storage.FetchSubscribedNodes(ctx, jid.ToBareJID().String())
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (x *Pep) deliverLastItems(ctx context.Context, jid *jid.JID) error {
 		if node.Options.SendLastPublishedItem != pubsubmodel.OnSubAndPresence {
 			continue
 		}
-		aff, err := storage.FetchNodeAffiliation(node.Host, node.Name, jid.ToBareJID().String())
+		aff, err := storage.FetchNodeAffiliation(ctx, node.Host, node.Name, jid.ToBareJID().String())
 		if err != nil {
 			return err
 		}
@@ -506,7 +506,7 @@ func (x *Pep) configure(ctx context.Context, cmdCtx *commandContext, cmdElem xmp
 	cmdCtx.node.Options = *nodeOpts
 
 	// update node config
-	if err := storage.UpsertNode(cmdCtx.node); err != nil {
+	if err := storage.UpsertNode(ctx, cmdCtx.node); err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
 		return
@@ -537,7 +537,7 @@ func (x *Pep) configure(ctx context.Context, cmdCtx *commandContext, cmdElem xmp
 
 func (x *Pep) delete(ctx context.Context, cmdCtx *commandContext, iq *xmpp.IQ) {
 	// delete node
-	if err := storage.DeleteNode(cmdCtx.host, cmdCtx.nodeID); err != nil {
+	if err := storage.DeleteNode(ctx, cmdCtx.host, cmdCtx.nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
 		return
@@ -560,7 +560,7 @@ func (x *Pep) delete(ctx context.Context, cmdCtx *commandContext, iq *xmpp.IQ) {
 	}
 	log.Infof("pep: deleted node (host: %s, node_id: %s)", cmdCtx.host, cmdCtx.nodeID)
 
-	x.registerDiscoItems()
+	x.registerDiscoItems(ctx)
 	_ = x.router.Route(ctx, iq.ResultIQ())
 }
 
@@ -579,7 +579,7 @@ func (x *Pep) subscribe(ctx context.Context, cmdCtx *commandContext, cmdEl xmpp.
 		JID:          subJID,
 		Subscription: pubsubmodel.Subscribed,
 	}
-	err := storage.UpsertNodeSubscription(&sub, cmdCtx.host, cmdCtx.nodeID)
+	err := storage.UpsertNodeSubscription(ctx, &sub, cmdCtx.host, cmdCtx.nodeID)
 
 	if err != nil {
 		log.Error(err)
@@ -638,7 +638,7 @@ func (x *Pep) unsubscribe(ctx context.Context, cmdCtx *commandContext, cmdEl xmp
 		return
 	}
 	// delete subscription
-	if err := storage.DeleteNodeSubscription(subJID, cmdCtx.host, cmdCtx.nodeID); err != nil {
+	if err := storage.DeleteNodeSubscription(ctx, subJID, cmdCtx.host, cmdCtx.nodeID); err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
 		return
@@ -702,7 +702,7 @@ func (x *Pep) publish(ctx context.Context, cmdCtx *commandContext, cmdEl xmpp.XE
 	// persist node item
 	opts := cmdCtx.node.Options
 	if opts.PersistItems {
-		err := storage.UpsertNodeItem(&pubsubmodel.Item{
+		err := storage.UpsertNodeItem(ctx, &pubsubmodel.Item{
 			ID:        itemID,
 			Publisher: iq.FromJID().ToBareJID().String(),
 			Payload:   itemEl.Elements().All()[0],
@@ -769,9 +769,9 @@ func (x *Pep) retrieveItems(ctx context.Context, cmdCtx *commandContext, cmdEl x
 	var err error
 
 	if len(itemIDs) > 0 {
-		items, err = storage.FetchNodeItemsWithIDs(cmdCtx.host, cmdCtx.nodeID, itemIDs)
+		items, err = storage.FetchNodeItemsWithIDs(ctx, cmdCtx.host, cmdCtx.nodeID, itemIDs)
 	} else {
-		items, err = storage.FetchNodeItems(cmdCtx.host, cmdCtx.nodeID)
+		items, err = storage.FetchNodeItems(ctx, cmdCtx.host, cmdCtx.nodeID)
 	}
 	if err != nil {
 		log.Error(err)
@@ -835,9 +835,9 @@ func (x *Pep) updateAffiliations(ctx context.Context, cmdCtx *commandContext, cm
 		var err error
 		switch aff.Affiliation {
 		case pubsubmodel.Owner, pubsubmodel.Member, pubsubmodel.Publisher, pubsubmodel.Outcast:
-			err = storage.UpsertNodeAffiliation(&aff, cmdCtx.host, cmdCtx.nodeID)
+			err = storage.UpsertNodeAffiliation(ctx, &aff, cmdCtx.host, cmdCtx.nodeID)
 		case pubsubmodel.None:
-			err = storage.DeleteNodeAffiliation(aff.JID, cmdCtx.host, cmdCtx.nodeID)
+			err = storage.DeleteNodeAffiliation(ctx, aff.JID, cmdCtx.host, cmdCtx.nodeID)
 		default:
 			_ = x.router.Route(ctx, iq.BadRequestError())
 			return
@@ -891,9 +891,9 @@ func (x *Pep) updateSubscriptions(ctx context.Context, cmdCtx *commandContext, c
 		var err error
 		switch sub.Subscription {
 		case pubsubmodel.Subscribed:
-			err = storage.UpsertNodeSubscription(&sub, cmdCtx.host, cmdCtx.nodeID)
+			err = storage.UpsertNodeSubscription(ctx, &sub, cmdCtx.host, cmdCtx.nodeID)
 		case pubsubmodel.None:
-			err = storage.DeleteNodeSubscription(sub.JID, cmdCtx.host, cmdCtx.nodeID)
+			err = storage.DeleteNodeSubscription(ctx, sub.JID, cmdCtx.host, cmdCtx.nodeID)
 		default:
 			_ = x.router.Route(ctx, iq.BadRequestError())
 			return
@@ -1009,7 +1009,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 	cmdCtx.isAccountOwner = fromJID == host
 
 	// fetch node
-	node, err := storage.FetchNode(host, nodeID)
+	node, err := storage.FetchNode(ctx, host, nodeID)
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -1026,7 +1026,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 	cmdCtx.node = node
 
 	// fetch affiliation
-	aff, err := storage.FetchNodeAffiliation(host, nodeID, fromJID)
+	aff, err := storage.FetchNodeAffiliation(ctx, host, nodeID, fromJID)
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -1084,7 +1084,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 	}
 	// fetch subscriptions
 	if opts.includeSubscriptions {
-		subscriptions, err := storage.FetchNodeSubscriptions(host, nodeID)
+		subscriptions, err := storage.FetchNodeSubscriptions(ctx, host, nodeID)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())
@@ -1094,7 +1094,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 	}
 	// fetch affiliations
 	if opts.includeAffiliations {
-		affiliations, err := storage.FetchNodeAffiliations(host, nodeID)
+		affiliations, err := storage.FetchNodeAffiliations(ctx, host, nodeID)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())
@@ -1107,7 +1107,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 
 func (x *Pep) createNode(ctx context.Context, node *pubsubmodel.Node) error {
 	// create node
-	if err := storage.UpsertNode(node); err != nil {
+	if err := storage.UpsertNode(ctx, node); err != nil {
 		return err
 	}
 	// create owner affiliation
@@ -1115,7 +1115,7 @@ func (x *Pep) createNode(ctx context.Context, node *pubsubmodel.Node) error {
 		JID:         node.Host,
 		Affiliation: pubsubmodel.Owner,
 	}
-	if err := storage.UpsertNodeAffiliation(ownerAffiliation, node.Host, node.Name); err != nil {
+	if err := storage.UpsertNodeAffiliation(ctx, ownerAffiliation, node.Host, node.Name); err != nil {
 		return err
 	}
 	// create owner subscription
@@ -1124,22 +1124,22 @@ func (x *Pep) createNode(ctx context.Context, node *pubsubmodel.Node) error {
 		JID:          node.Host,
 		Subscription: pubsubmodel.Subscribed,
 	}
-	if err := storage.UpsertNodeSubscription(ownerSub, node.Host, node.Name); err != nil {
+	if err := storage.UpsertNodeSubscription(ctx, ownerSub, node.Host, node.Name); err != nil {
 		return err
 	}
-	x.registerDiscoItems()
+	x.registerDiscoItems(ctx)
 	return nil
 }
 
 func (x *Pep) sendLastPublishedItem(ctx context.Context, toJID *jid.JID, accessChecker *accessChecker, host, nodeID, notificationType string) error {
-	node, err := storage.FetchNode(host, nodeID)
+	node, err := storage.FetchNode(ctx, host, nodeID)
 	if err != nil {
 		return err
 	}
 	if node == nil {
 		return nil
 	}
-	lastItem, err := storage.FetchNodeLastItem(host, nodeID)
+	lastItem, err := storage.FetchNodeLastItem(ctx, host, nodeID)
 	if err != nil {
 		return err
 	}

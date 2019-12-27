@@ -51,7 +51,7 @@ func TestDiscoInfoProvider_Items(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,

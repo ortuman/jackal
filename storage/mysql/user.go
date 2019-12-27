@@ -89,7 +89,7 @@ func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, 
 
 // DeleteUser deletes a user entity from storage.
 func (s *Storage) DeleteUser(ctx context.Context, username string) error {
-	return s.inTransactionTx(ctx, func(tx *sql.Tx) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
 		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
 		if err != nil {

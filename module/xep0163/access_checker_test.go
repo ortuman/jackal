@@ -108,7 +108,7 @@ func TestAccessChecker_Member(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "noelia@jackal.im",
 		Affiliation: pubsubmodel.Member,
 	}, "ortuman@jackal.im", "princely_musings")
