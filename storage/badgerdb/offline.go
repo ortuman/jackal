@@ -6,12 +6,14 @@
 package badgerdb
 
 import (
+	"context"
+
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 // InsertOfflineMessage inserts a new message element into user's offline queue.
-func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
+func (b *Storage) InsertOfflineMessage(_ context.Context, message *xmpp.Message, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var messages []xmpp.Message
 		if err := b.fetchSlice(&messages, b.offlineMessagesKey(username), tx); err != nil {
@@ -23,7 +25,7 @@ func (b *Storage) InsertOfflineMessage(message *xmpp.Message, username string) e
 }
 
 // CountOfflineMessages returns current length of user's offline queue.
-func (b *Storage) CountOfflineMessages(username string) (int, error) {
+func (b *Storage) CountOfflineMessages(_ context.Context, username string) (int, error) {
 	var cnt int
 	err := b.db.View(func(tx *badger.Txn) error {
 		var messages []xmpp.Message
@@ -40,7 +42,7 @@ func (b *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
+func (b *Storage) FetchOfflineMessages(_ context.Context, username string) ([]xmpp.Message, error) {
 	var messages []xmpp.Message
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&messages, b.offlineMessagesKey(username), txn)
@@ -52,7 +54,7 @@ func (b *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 }
 
 // DeleteOfflineMessages clears a user offline queue.
-func (b *Storage) DeleteOfflineMessages(username string) error {
+func (b *Storage) DeleteOfflineMessages(_ context.Context, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.delete(b.offlineMessagesKey(username), tx)
 	})

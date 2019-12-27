@@ -10,9 +10,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp/jid"
-
 	"github.com/pborman/uuid"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,15 +67,15 @@ func TestElement_ToXML(t *testing.T) {
 	e1.AppendElement(NewElementName("a"))
 	e1.AppendElement(NewElementName("b"))
 	buf := new(bytes.Buffer)
-	e1.ToXML(buf, true)
+	_ = e1.ToXML(buf, true)
 	require.Equal(t, `<n xmlns="ns" id="id" type="normal">Hi!<a/><b/></n>`, buf.String())
 	buf.Reset()
 	e1.ClearElements()
 	e1.SetText("")
-	e1.ToXML(buf, true)
+	_ = e1.ToXML(buf, true)
 	require.Equal(t, `<n xmlns="ns" id="id" type="normal"/>`, buf.String())
 	buf.Reset()
-	e1.ToXML(buf, false)
+	_ = e1.ToXML(buf, false)
 	require.Equal(t, `<n xmlns="ns" id="id" type="normal">`, buf.String())
 }
 

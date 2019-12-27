@@ -6,12 +6,14 @@
 package badgerdb
 
 import (
+	"context"
+
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 // UpsertPrivateXML inserts a new private element into storage, or updates it in case it's been previously inserted.
-func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+func (b *Storage) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
 	return b.db.Update(func(tx *badger.Txn) error {
@@ -20,7 +22,7 @@ func (b *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string,
 }
 
 // FetchPrivateXML retrieves from storage a private element.
-func (b *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
+func (b *Storage) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	var r xmpp.Element
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetch(&r, b.privateElementsKey(username, namespace), txn)

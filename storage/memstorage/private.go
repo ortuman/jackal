@@ -6,13 +6,15 @@
 package memstorage
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/model/serializer"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 // UpsertPrivateXML inserts a new private element into storage,
 // or updates it in case it's been previously inserted.
-func (m *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string, username string) error {
+func (m *Storage) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
 	var priv []xmpp.Element
 
 	// convert to concrete type
@@ -30,7 +32,7 @@ func (m *Storage) UpsertPrivateXML(privateXML []xmpp.XElement, namespace string,
 }
 
 // FetchPrivateXML retrieves from storage a private element.
-func (m *Storage) FetchPrivateXML(namespace string, username string) ([]xmpp.XElement, error) {
+func (m *Storage) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.bytes[privateStorageKey(username, namespace)]

@@ -1,16 +1,20 @@
 package storage
 
-import "github.com/ortuman/jackal/model"
+import (
+	"context"
+
+	"github.com/ortuman/jackal/model"
+)
 
 type capabilitiesStorage interface {
-	InsertCapabilities(caps *model.Capabilities) error
-	FetchCapabilities(node, ver string) (*model.Capabilities, error)
+	InsertCapabilities(ctx context.Context, caps *model.Capabilities) error
+	FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error)
 }
 
-func InsertCapabilities(caps *model.Capabilities) error {
-	return inst.InsertCapabilities(caps)
+func InsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+	return inst.InsertCapabilities(ctx, caps)
 }
 
-func FetchCapabilities(node, ver string) (*model.Capabilities, error) {
-	return inst.FetchCapabilities(node, ver)
+func FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
+	return inst.FetchCapabilities(ctx, node, ver)
 }

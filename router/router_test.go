@@ -6,6 +6,7 @@
 package router
 
 import (
+	"context"
 	"crypto/tls"
 	"os"
 	"runtime"
@@ -41,14 +42,14 @@ func (d *fakeClusterDelegate) C2SStream(jid *jid.JID, presence *xmpp.Presence, c
 	return d.cluster.C2SStream(jid, presence, context, node)
 }
 
-func (d *fakeClusterDelegate) SendMessageTo(node string, message *cluster.Message) {
+func (d *fakeClusterDelegate) SendMessageTo(_ context.Context, _ string, message *cluster.Message) {
 	if d.sendCh != nil {
 		d.sendCh <- message
 	}
 	d.sendMessageToCalls++
 }
 
-func (d *fakeClusterDelegate) BroadcastMessage(msg *cluster.Message) {
+func (d *fakeClusterDelegate) BroadcastMessage(_ context.Context, _ *cluster.Message) {
 	d.broadcastMessageCalls++
 }
 
@@ -56,18 +57,20 @@ type fakeS2SOut struct {
 	elems []xmpp.XElement
 }
 
-func (f *fakeS2SOut) ID() string                     { return uuid.New() }
-func (f *fakeS2SOut) SendElement(elem xmpp.XElement) { f.elems = append(f.elems, elem) }
-func (f *fakeS2SOut) Disconnect(err error)           {}
+func (f *fakeS2SOut) ID() string { return uuid.New() }
+func (f *fakeS2SOut) SendElement(_ context.Context, elem xmpp.XElement) {
+	f.elems = append(f.elems, elem)
+}
+func (f *fakeS2SOut) Disconnect(_ context.Context, _ error) {}
 
 type fakeOutS2SProvider struct{ s2sOut *fakeS2SOut }
 
-func (f *fakeOutS2SProvider) GetOut(localDomain, remoteDomain string) (stream.S2SOut, error) {
+func (f *fakeOutS2SProvider) GetOut(_ context.Context, _, _ string) (stream.S2SOut, error) {
 	return f.s2sOut, nil
 }
 
 func TestRouter_EmptyConfig(t *testing.T) {
-	defer os.RemoveAll("./.cert")
+	defer func() { _ = os.RemoveAll("./.cert") }()
 
 	r, _ := New(&Config{})
 	require.True(t, r.IsLocalHost("localhost"))
@@ -114,12 +117,12 @@ func TestRouter_Binding(t *testing.T) {
 	stm5 := stream.NewMockC2S(uuid.New(), j5)
 	stm6 := stream.NewMockC2S(uuid.New(), j6)
 
-	r.Bind(stm1)
-	r.Bind(stm2)
-	r.Bind(stm3)
-	r.Bind(stm4)
-	r.Bind(stm5)
-	r.Bind(stm6)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
+	r.Bind(context.Background(), stm3)
+	r.Bind(context.Background(), stm4)
+	r.Bind(context.Background(), stm5)
+	r.Bind(context.Background(), stm6)
 
 	require.Equal(t, 5, del.broadcastMessageCalls)
 
@@ -128,13 +131,13 @@ func TestRouter_Binding(t *testing.T) {
 	require.Equal(t, 1, len(r.UserStreams("romeo")))
 	require.Equal(t, 1, len(r.UserStreams("juliet")))
 
-	r.Unbind(j7)
-	r.Unbind(j6)
-	r.Unbind(j5)
-	r.Unbind(j4)
-	r.Unbind(j3)
-	r.Unbind(j2)
-	r.Unbind(j1)
+	r.Unbind(context.Background(), j7)
+	r.Unbind(context.Background(), j6)
+	r.Unbind(context.Background(), j5)
+	r.Unbind(context.Background(), j4)
+	r.Unbind(context.Background(), j3)
+	r.Unbind(context.Background(), j2)
+	r.Unbind(context.Background(), j1)
 
 	require.Equal(t, 10, del.broadcastMessageCalls)
 
@@ -163,8 +166,8 @@ func TestRouter_Routing(t *testing.T) {
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -172,31 +175,31 @@ func TestRouter_Routing(t *testing.T) {
 	iq.SetToJID(j6)
 
 	// remote routing
-	require.Nil(t, r.Route(iq))
+	require.Nil(t, r.Route(context.Background(), iq))
 	require.Equal(t, 1, len(outS2S.elems))
 
 	iq.SetToJID(j3)
-	require.Equal(t, ErrNotExistingAccount, r.Route(iq))
+	require.Equal(t, ErrNotExistingAccount, r.Route(context.Background(), iq))
 
 	s.EnableMockedError()
-	require.Equal(t, memstorage.ErrMockedError, r.Route(iq))
+	require.Equal(t, memstorage.ErrMockedError, r.Route(context.Background(), iq))
 	s.DisableMockedError()
 
-	_ = storage.UpsertUser(&model.User{Username: "hamlet", Password: ""})
-	require.Equal(t, ErrNotAuthenticated, r.Route(iq))
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
+	require.Equal(t, ErrNotAuthenticated, r.Route(context.Background(), iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
-	r.Bind(stm4)
-	require.Equal(t, ErrResourceNotFound, r.Route(iq))
+	r.Bind(context.Background(), stm4)
+	require.Equal(t, ErrResourceNotFound, r.Route(context.Background(), iq))
 
-	r.Bind(stm3)
-	require.Nil(t, r.Route(iq))
+	r.Bind(context.Background(), stm3)
+	require.Nil(t, r.Route(context.Background(), iq))
 	elem := stm3.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 
 	// broadcast stanza
 	iq.SetToJID(j5)
-	require.Nil(t, r.Route(iq))
+	require.Nil(t, r.Route(context.Background(), iq))
 	elem = stm3.ReceiveElement()
 	require.Equal(t, iqID, elem.ID())
 	elem = stm4.ReceiveElement()
@@ -226,7 +229,7 @@ func TestRouter_Routing(t *testing.T) {
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
 	msg.SetToJID(j5)
-	require.Nil(t, r.Route(msg))
+	require.Nil(t, r.Route(context.Background(), msg))
 	elem = stm3.ReceiveElement()
 	require.Equal(t, msgID, elem.ID())
 }
@@ -242,66 +245,66 @@ func TestRouter_BlockedJID(t *testing.T) {
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// node + domain + resource
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	require.False(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
 
 	// node + domain
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
-	require.False(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
 
 	// domain + resource
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.False(t, r.IsBlockedJID(j3, "ortuman"))
-	require.False(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
 
 	// domain
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})
 	r.ReloadBlockList("ortuman")
 
-	require.True(t, r.IsBlockedJID(j2, "ortuman"))
-	require.True(t, r.IsBlockedJID(j3, "ortuman"))
-	require.True(t, r.IsBlockedJID(j4, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
+	require.True(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(&model.BlockListItem{
+	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})
@@ -310,7 +313,7 @@ func TestRouter_BlockedJID(t *testing.T) {
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
 	iq.SetFromJID(j2)
 	iq.SetToJID(j1)
-	require.Equal(t, ErrBlockedJID, r.Route(iq))
+	require.Equal(t, ErrBlockedJID, r.Route(context.Background(), iq))
 }
 
 func TestRouter_Cluster(t *testing.T) {
@@ -328,9 +331,9 @@ func TestRouter_Cluster(t *testing.T) {
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm3 := stream.NewMockC2S(uuid.New(), j3)
 
-	r.Bind(stm1)
-	r.Bind(stm2)
-	r.Bind(stm3)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
+	r.Bind(context.Background(), stm3)
 
 	node := &cluster.Node{
 		Name: "node2",
@@ -341,7 +344,7 @@ func TestRouter_Cluster(t *testing.T) {
 	}
 	bindMsgBatchSize = 2
 
-	r.handleNodeJoined(node)
+	r.handleNodeJoined(context.Background(), node)
 
 	// expecting 2 batches
 	for i := 0; i < 2; i++ {
@@ -355,14 +358,14 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, 2, del.sendMessageToCalls)
 
 	// try to join with incompatible version
-	r.handleNodeJoined(&cluster.Node{
+	r.handleNodeJoined(context.Background(), &cluster.Node{
 		Name: "node3",
 		Metadata: cluster.Metadata{
 			Version:   version.ApplicationVersion.String(),
 			GoVersion: "v0.1",
 		},
 	})
-	r.handleNodeJoined(&cluster.Node{
+	r.handleNodeJoined(context.Background(), &cluster.Node{
 		Name: "node4",
 		Metadata: cluster.Metadata{
 			Version:   "v0.0.0.1.rc2",
@@ -372,7 +375,7 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, 2, del.sendMessageToCalls) // nothing happened
 
 	r.SetCluster(nil)
-	r.handleNodeJoined(node)
+	r.handleNodeJoined(context.Background(), node)
 	require.Equal(t, 2, del.sendMessageToCalls) // nothing happened
 
 	// process bind message
@@ -381,7 +384,7 @@ func TestRouter_Cluster(t *testing.T) {
 	j4, _ := jid.NewWithString("noelia@jackal.im/balcony", true)
 	j5, _ := jid.NewWithString("noelia@jackal.im/yard", true)
 
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgBind,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{
@@ -390,7 +393,7 @@ func TestRouter_Cluster(t *testing.T) {
 			Context: map[string]interface{}{},
 		}},
 	})
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgBind,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{
@@ -403,7 +406,7 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, 2, len(r.clusterStreams["node2"]))
 	r.mu.RUnlock()
 
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgUnbind,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{
@@ -417,7 +420,7 @@ func TestRouter_Cluster(t *testing.T) {
 
 	// update cluster stream presence
 	p := xmpp.NewPresence(j4, j4, xmpp.UnavailableType)
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgUpdatePresence,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{
@@ -432,7 +435,7 @@ func TestRouter_Cluster(t *testing.T) {
 	r.mu.RUnlock()
 
 	// update cluster stream context
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgUpdateContext,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{
@@ -448,7 +451,7 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, "foo", stm.GetString("var"))
 	r.mu.RUnlock()
 
-	r.handleNodeLeft(&cluster.Node{
+	r.handleNodeLeft(context.Background(), &cluster.Node{
 		Name: "node2",
 		Metadata: cluster.Metadata{
 			Version:   version.ApplicationVersion.String(),
@@ -464,7 +467,7 @@ func TestRouter_Cluster(t *testing.T) {
 	iq.SetFromJID(j4)
 	iq.SetToJID(j3)
 
-	r.handleNotifyMessage(&cluster.Message{
+	r.handleNotifyMessage(context.Background(), &cluster.Message{
 		Type: cluster.MsgRouteStanza,
 		Node: "node2",
 		Payloads: []cluster.MessagePayload{{

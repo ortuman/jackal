@@ -6,6 +6,7 @@
 package stream
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -17,13 +18,13 @@ import (
 // InStream represents a generic incoming stream.
 type InStream interface {
 	ID() string
-	Disconnect(err error)
+	Disconnect(ctx context.Context, err error)
 }
 
 // InOutStream represents a generic incoming/outgoing stream.
 type InOutStream interface {
 	InStream
-	SendElement(elem xmpp.XElement)
+	SendElement(ctx context.Context, elem xmpp.XElement)
 }
 
 // C2S represents a client-to-server XMPP stream.
@@ -32,16 +33,16 @@ type C2S interface {
 
 	Context() map[string]interface{}
 
-	SetString(key string, value string)
+	SetString(ctx context.Context, key string, value string)
 	GetString(key string) string
 
-	SetInt(key string, value int)
+	SetInt(ctx context.Context, key string, value int)
 	GetInt(key string) int
 
-	SetFloat(key string, value float64)
+	SetFloat(ctx context.Context, key string, value float64)
 	GetFloat(key string) float64
 
-	SetBool(key string, value bool)
+	SetBool(ctx context.Context, key string, value bool)
 	GetBool(key string) bool
 
 	Username() string
@@ -114,7 +115,7 @@ func (m *MockC2S) Context() map[string]interface{} {
 }
 
 // SetString associates a string context value to a key.
-func (m *MockC2S) SetString(key string, value string) {
+func (m *MockC2S) SetString(_ context.Context, key string, value string) {
 	m.setContextValue(key, value)
 }
 
@@ -130,7 +131,7 @@ func (m *MockC2S) GetString(key string) string {
 }
 
 // SetInt associates an integer context value to a key.
-func (m *MockC2S) SetInt(key string, value int) {
+func (m *MockC2S) SetInt(_ context.Context, key string, value int) {
 	m.setContextValue(key, value)
 }
 
@@ -146,7 +147,7 @@ func (m *MockC2S) GetInt(key string) int {
 }
 
 // SetFloat associates a float context value to a key.
-func (m *MockC2S) SetFloat(key string, value float64) {
+func (m *MockC2S) SetFloat(_ context.Context, key string, value float64) {
 	m.setContextValue(key, value)
 }
 
@@ -162,7 +163,7 @@ func (m *MockC2S) GetFloat(key string) float64 {
 }
 
 // SetBool associates a boolean context value to a key.
-func (m *MockC2S) SetBool(key string, value bool) {
+func (m *MockC2S) SetBool(ctx context.Context, key string, value bool) {
 	m.setContextValue(key, value)
 }
 
@@ -261,14 +262,14 @@ func (m *MockC2S) Presence() *xmpp.Presence {
 }
 
 // SendElement sends the given XML element.
-func (m *MockC2S) SendElement(elem xmpp.XElement) {
+func (m *MockC2S) SendElement(_ context.Context, elem xmpp.XElement) {
 	m.actorCh <- func() {
 		m.sendElement(elem)
 	}
 }
 
 // Disconnect disconnects mocked stream.
-func (m *MockC2S) Disconnect(err error) {
+func (m *MockC2S) Disconnect(_ context.Context, err error) {
 	waitCh := make(chan struct{})
 	m.actorCh <- func() {
 		m.disconnect(err)

@@ -6,6 +6,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -86,15 +87,15 @@ func (s *Storage) loop() {
 				log.Error(err)
 			}
 		case ch := <-s.doneCh:
-			s.db.Close()
+			_ = s.db.Close()
 			close(ch)
 			return
 		}
 	}
 }
 
-func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
-	tx, txErr := s.db.Begin()
+func (s *Storage) inTransaction(ctx context.Context, f func(tx *sql.Tx) error) error {
+	tx, txErr := s.db.BeginTx(ctx, nil)
 	if txErr != nil {
 		return txErr
 	}

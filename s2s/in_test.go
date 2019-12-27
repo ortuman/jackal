@@ -6,6 +6,7 @@
 package s2s
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"net"
@@ -42,7 +43,7 @@ func TestStream_Disconnect(t *testing.T) {
 	defer shutdown()
 
 	stm, conn := tUtilInStreamInit(t, r, false)
-	stm.Disconnect(nil)
+	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
 	require.Equal(t, inDisconnected, stm.getState())
@@ -102,7 +103,7 @@ func TestStream_TLS(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 
 	// wrong namespace...
-	conn.inboundWriteString(`<starttls xmlns="foo:ns"/>`)
+	_, _ = conn.inboundWriteString(`<starttls xmlns="foo:ns"/>`)
 	require.True(t, conn.waitClose())
 
 	stm, conn = tUtilInStreamInit(t, r, false)
@@ -111,7 +112,7 @@ func TestStream_TLS(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 
 	// wrong name...
-	conn.inboundWriteString(`<foo xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
+	_, _ = conn.inboundWriteString(`<foo xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
 	require.True(t, conn.waitClose())
 
 	stm, conn = tUtilInStreamInit(t, r, false)
@@ -119,7 +120,7 @@ func TestStream_TLS(t *testing.T) {
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 
-	conn.inboundWriteString(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
+	_, _ = conn.inboundWriteString(`<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
 
 	elem := conn.outboundRead()
 
@@ -140,7 +141,7 @@ func TestStream_Authenticate(t *testing.T) {
 	atomic.StoreUint32(&stm.secured, 1)
 
 	// invalid namespace...
-	conn.inboundWriteString(`<auth xmlns="foo:ns" mechanism="EXTERNAL">=</auth>`)
+	_, _ = conn.inboundWriteString(`<auth xmlns="foo:ns" mechanism="EXTERNAL">=</auth>`)
 	require.True(t, conn.waitClose())
 
 	stm, conn = tUtilInStreamInit(t, r, true)
@@ -156,7 +157,7 @@ func TestStream_Authenticate(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 	atomic.StoreUint32(&stm.secured, 1)
 
-	conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">=</auth>`)
+	_, _ = conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">=</auth>`)
 	elem := conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 	require.Equal(t, saslNamespace, elem.Namespace())
@@ -168,13 +169,13 @@ func TestStream_Authenticate(t *testing.T) {
 	_ = conn.outboundRead() // read stream features...
 	atomic.StoreUint32(&stm.secured, 1)
 
-	conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="FOO">=</auth>`)
+	_, _ = conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="FOO">=</auth>`)
 	elem = conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 	require.Equal(t, saslNamespace, elem.Namespace())
 
 	// valid auth...
-	conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">=</auth>`)
+	_, _ = conn.inboundWriteString(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">=</auth>`)
 	elem = conn.outboundRead()
 	require.Equal(t, "success", elem.Name())
 	require.Equal(t, saslNamespace, elem.Namespace())
@@ -192,14 +193,14 @@ func TestStream_DialbackVerify(t *testing.T) {
 	atomic.StoreUint32(&stm.authenticated, 1)
 
 	// invalid host
-	conn.inboundWriteString(`<db:verify id="abcde" from="localhost" to="foo.org">abcd</db:verify>`)
+	_, _ = conn.inboundWriteString(`<db:verify id="abcde" from="localhost" to="foo.org">abcd</db:verify>`)
 	elem := conn.outboundRead()
 	require.Equal(t, "db:verify", elem.Name())
 	require.NotNil(t, elem.Elements().Child("error"))
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
 	// invalid key
-	conn.inboundWriteString(`<db:verify id="abcde" from="localhost" to="jackal.im">abcd</db:verify>`)
+	_, _ = conn.inboundWriteString(`<db:verify id="abcde" from="localhost" to="jackal.im">abcd</db:verify>`)
 	elem = conn.outboundRead()
 	require.Equal(t, "db:verify", elem.Name())
 	require.Equal(t, "invalid", elem.Type())
@@ -207,7 +208,8 @@ func TestStream_DialbackVerify(t *testing.T) {
 	// valid key
 	kg := &keyGen{secret: "s3cr3t"}
 	key := kg.generate("localhost", "jackal.im", "abcde")
-	conn.inboundWriteString(fmt.Sprintf(`<db:verify id="abcde" from="localhost" to="jackal.im">%s</db:verify>`, key))
+
+	_, _ = conn.inboundWriteString(fmt.Sprintf(`<db:verify id="abcde" from="localhost" to="jackal.im">%s</db:verify>`, key))
 	elem = conn.outboundRead()
 	require.Equal(t, "db:verify", elem.Name())
 	require.Equal(t, "valid", elem.Type())
@@ -224,7 +226,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 
-	conn.inboundWriteString(`<db:result to="foo.org">abcd</db:result>`)
+	_, _ = conn.inboundWriteString(`<db:result to="foo.org">abcd</db:result>`)
 	elem := conn.outboundRead()
 	require.Equal(t, "db:result", elem.Name())
 	require.Equal(t, xmpp.ErrorType, elem.Type())
@@ -248,8 +250,8 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 
-	conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
-	outConn.Close()
+	_, _ = conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
+	_ = outConn.Close()
 	elem = conn.outboundRead()
 	require.Equal(t, "db:result", elem.Name())
 	require.Equal(t, xmpp.ErrorType, elem.Type())
@@ -274,9 +276,9 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 
-	conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
+	_, _ = conn.inboundWriteString(`<db:result to="jackal.im">abcd</db:result>`)
 
-	outConn.inboundWriteString(`
+	_, _ = outConn.inboundWriteString(`
 <?xml version="1.0"?>
 <stream:stream xmlns="jabber:server" 
  xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" 
@@ -290,12 +292,12 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	_ = outConn.outboundRead() // stream:stream
 	_ = outConn.outboundRead() // starttls
 
-	outConn.inboundWriteString(`
+	_, _ = outConn.inboundWriteString(`
 <proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>
 `)
 	_ = outConn.outboundRead() // stream:stream
 
-	outConn.inboundWriteString(`
+	_, _ = outConn.inboundWriteString(`
 <?xml version="1.0"?>
 <stream:stream xmlns="jabber:server" 
  xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" 
@@ -308,7 +310,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 `)
 	_ = outConn.outboundRead() // db:verify
 
-	outConn.inboundWriteString(`
+	_, _ = outConn.inboundWriteString(`
 <db:verify from="jackal.im" type="valid"/>
 `)
 	elem = conn.outboundRead()
@@ -324,7 +326,7 @@ func TestStream_SendElement(t *testing.T) {
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", toJID)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
@@ -337,7 +339,7 @@ func TestStream_SendElement(t *testing.T) {
 	iq := xmpp.NewIQType(iqID, xmpp.ResultType)
 	iq.SetFromJID(fromJID)
 	iq.SetToJID(toJID)
-	conn.inboundWriteString(iq.String())
+	_, _ = conn.inboundWriteString(iq.String())
 
 	elem := stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
@@ -346,7 +348,7 @@ func TestStream_SendElement(t *testing.T) {
 
 	// invalid from...
 	iq.SetFrom("foo.org")
-	conn.inboundWriteString(iq.String())
+	_, _ = conn.inboundWriteString(iq.String())
 	require.True(t, conn.waitClose())
 }
 
@@ -361,7 +363,7 @@ func tUtilInStreamOpen(conn *fakeSocketConn) {
 	<stream:stream xmlns:stream="http://etherx.jabber.org/streams"
 	version="1.0" xmlns="jabber:server" to="jackal.im" from="localhost" xmlns:xml="http://www.w3.org/XML/1998/namespace">
 `
-	conn.inboundWriteString(s)
+	_, _ = conn.inboundWriteString(s)
 }
 
 func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*streamConfig, *fakeSocketConn) {

@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.InsertCapabilities(&model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err := s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -36,7 +37,7 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b).
 		WillReturnError(errGeneric)
 
-	err = s.InsertCapabilities(&model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err = s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -53,7 +54,7 @@ func TestPgSQLFetchCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A").
 		WillReturnRows(rows)
 
-	caps, err := s.FetchCapabilities("n1", "1234A")
+	caps, err := s.FetchCapabilities(context.Background(), "n1", "1234A")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -67,7 +68,7 @@ func TestPgSQLFetchCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A").
 		WillReturnError(errGeneric)
 
-	caps, err = s.FetchCapabilities("n1", "1234A")
+	caps, err = s.FetchCapabilities(context.Background(), "n1", "1234A")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 

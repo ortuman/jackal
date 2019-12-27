@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"testing"
@@ -69,7 +70,7 @@ func TestInsertRosterItem(t *testing.T) {
 
 	mock.ExpectCommit()
 
-	_, err := s.UpsertRosterItem(&ri)
+	_, err := s.UpsertRosterItem(context.Background(), &ri)
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -88,7 +89,7 @@ func TestDeleteRosterItem(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(1, 0))
 	mock.ExpectCommit()
 
-	_, err := s.DeleteRosterItem("user", "contact")
+	_, err := s.DeleteRosterItem(context.Background(), "user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -98,7 +99,7 @@ func TestDeleteRosterItem(t *testing.T) {
 		WithArgs("user").WillReturnError(errGeneric)
 	mock.ExpectRollback()
 
-	_, err = s.DeleteRosterItem("user", "contact")
+	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -114,7 +115,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(0, 0))
 
-	rosterItems, _, err := s.FetchRosterItems("ortuman")
+	rosterItems, _, err := s.FetchRosterItems(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterItems))
@@ -124,7 +125,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	_, _, err = s.FetchRosterItems("ortuman")
+	_, _, err = s.FetchRosterItems(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 
@@ -133,7 +134,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
 
-	_, err = s.FetchRosterItem("ortuman", "romeo")
+	_, err = s.FetchRosterItem(context.Background(), "ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -142,7 +143,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns))
 
-	ri, _ := s.FetchRosterItem("ortuman", "romeo")
+	ri, _ := s.FetchRosterItem(context.Background(), "ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, ri)
 
@@ -151,7 +152,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman", "romeo").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchRosterItem("ortuman", "romeo")
+	_, err = s.FetchRosterItem(context.Background(), "ortuman", "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 
@@ -164,7 +165,7 @@ func TestFetchRosterItems(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows([]string{"ver", "deletionVer"}).AddRow(0, 0))
 
-	_, _, err = s.FetchRosterItemsInGroups("ortuman", []string{"Family"})
+	_, _, err = s.FetchRosterItemsInGroups(context.Background(), "ortuman", []string{"Family"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
@@ -188,7 +189,7 @@ func TestInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.UpsertRosterNotification(&rn)
+	err := s.UpsertRosterNotification(context.Background(), &rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -197,7 +198,7 @@ func TestInsertRosterNotification(t *testing.T) {
 		WithArgs(args...).
 		WillReturnError(errGeneric)
 
-	err = s.UpsertRosterNotification(&rn)
+	err = s.UpsertRosterNotification(context.Background(), &rn)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -207,7 +208,7 @@ func TestDeleteRosterNotification(t *testing.T) {
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteRosterNotification("user", "contact")
+	err := s.DeleteRosterNotification(context.Background(), "user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -215,7 +216,7 @@ func TestDeleteRosterNotification(t *testing.T) {
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnError(errGeneric)
 
-	err = s.DeleteRosterNotification("user", "contact")
+	err = s.DeleteRosterNotification(context.Background(), "user", "contact")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -228,7 +229,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8</priority>"))
 
-	rosterNotifications, err := s.FetchRosterNotifications("ortuman")
+	rosterNotifications, err := s.FetchRosterNotifications(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterNotifications))
@@ -238,7 +239,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns))
 
-	rosterNotifications, err = s.FetchRosterNotifications("ortuman")
+	rosterNotifications, err = s.FetchRosterNotifications(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rosterNotifications))
@@ -248,7 +249,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchRosterNotifications("ortuman")
+	_, err = s.FetchRosterNotifications(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 
@@ -257,7 +258,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8"))
 
-	_, err = s.FetchRosterNotifications("ortuman")
+	_, err = s.FetchRosterNotifications(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 }
@@ -270,7 +271,7 @@ func TestStorageFetchRosterGroups(t *testing.T) {
 			AddRow("Contacts").
 			AddRow("News"))
 
-	groups, err := s.FetchRosterGroups("ortuman")
+	groups, err := s.FetchRosterGroups(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -283,7 +284,7 @@ func TestStorageFetchRosterGroups(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	groups, err = s.FetchRosterGroups("ortuman")
+	groups, err = s.FetchRosterGroups(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, groups)

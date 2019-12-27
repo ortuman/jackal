@@ -6,6 +6,7 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -23,9 +24,9 @@ func TestMemoryStorage_InsertOfflineMessage(t *testing.T) {
 
 	s := New()
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOfflineMessage(m, "ortuman"))
+	require.Equal(t, ErrMockedError, s.InsertOfflineMessage(context.Background(), m, "ortuman"))
 	s.DisableMockedError()
-	require.Nil(t, s.InsertOfflineMessage(m, "ortuman"))
+	require.Nil(t, s.InsertOfflineMessage(context.Background(), m, "ortuman"))
 }
 
 func TestMemoryStorage_CountOfflineMessages(t *testing.T) {
@@ -36,13 +37,13 @@ func TestMemoryStorage_CountOfflineMessages(t *testing.T) {
 	m, _ := xmpp.NewMessageFromElement(message, j, j)
 
 	s := New()
-	_ = s.InsertOfflineMessage(m, "ortuman")
+	_ = s.InsertOfflineMessage(context.Background(), m, "ortuman")
 
 	s.EnableMockedError()
-	_, err := s.CountOfflineMessages("ortuman")
+	_, err := s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	cnt, _ := s.CountOfflineMessages("ortuman")
+	cnt, _ := s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, 1, cnt)
 }
 
@@ -54,13 +55,13 @@ func TestMemoryStorage_FetchOfflineMessages(t *testing.T) {
 	m, _ := xmpp.NewMessageFromElement(message, j, j)
 
 	s := New()
-	_ = s.InsertOfflineMessage(m, "ortuman")
+	_ = s.InsertOfflineMessage(context.Background(), m, "ortuman")
 
 	s.EnableMockedError()
-	_, err := s.FetchOfflineMessages("ortuman")
+	_, err := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
 	s.DisableMockedError()
-	elems, _ := s.FetchOfflineMessages("ortuman")
+	elems, _ := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, 1, len(elems))
 }
 
@@ -72,13 +73,13 @@ func TestMemoryStorage_DeleteOfflineMessages(t *testing.T) {
 	m, _ := xmpp.NewMessageFromElement(message, j, j)
 
 	s := New()
-	_ = s.InsertOfflineMessage(m, "ortuman")
+	_ = s.InsertOfflineMessage(context.Background(), m, "ortuman")
 
 	s.EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteOfflineMessages("ortuman"))
+	require.Equal(t, ErrMockedError, s.DeleteOfflineMessages(context.Background(), "ortuman"))
 	s.DisableMockedError()
-	require.Nil(t, s.DeleteOfflineMessages("ortuman"))
+	require.Nil(t, s.DeleteOfflineMessages(context.Background(), "ortuman"))
 
-	elems, _ := s.FetchOfflineMessages("ortuman")
+	elems, _ := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, 0, len(elems))
 }

@@ -6,6 +6,7 @@
 package xep0191
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ func TestXEP0191_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rtr.Bind(stm)
+	rtr.Bind(context.Background(), stm)
 
 	ph := presencehub.New(rtr)
 	defer func() { _ = ph.Shutdown() }()
@@ -65,7 +66,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rtr.Bind(stm)
+	rtr.Bind(context.Background(), stm)
 
 	ph := presencehub.New(rtr)
 	defer func() { _ = ph.Shutdown() }()
@@ -73,11 +74,11 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	x := New(nil, ph, rtr)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -87,7 +88,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	iq1.SetToJID(j)
 	iq1.AppendElement(xmpp.NewElementNamespace("blocklist", blockingCommandNamespace))
 
-	x.ProcessIQ(iq1)
+	x.ProcessIQ(context.Background(), iq1)
 	elem := stm.ReceiveElement()
 	bl := elem.Elements().ChildNamespace("blocklist", blockingCommandNamespace)
 	require.NotNil(t, bl)
@@ -96,7 +97,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	require.True(t, stm.GetBool(xep191RequestedContextKey))
 
 	s.EnableMockedError()
-	x.ProcessIQ(iq1)
+	x.ProcessIQ(context.Background(), iq1)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
@@ -129,23 +130,23 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm3.SetAuthenticated(true)
 	stm4.SetAuthenticated(true)
 
-	rtr.Bind(stm1)
-	rtr.Bind(stm2)
-	rtr.Bind(stm3)
-	rtr.Bind(stm4)
+	rtr.Bind(context.Background(), stm1)
+	rtr.Bind(context.Background(), stm2)
+	rtr.Bind(context.Background(), stm3)
+	rtr.Bind(context.Background(), stm4)
 
 	// register presences
-	_, _ = ph.RegisterPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j4, j4, xmpp.AvailableType))
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	stm1.SetBool(xep191RequestedContextKey, true)
-	stm2.SetBool(xep191RequestedContextKey, true)
+	stm1.SetBool(context.Background(), xep191RequestedContextKey, true)
+	stm2.SetBool(context.Background(), xep191RequestedContextKey, true)
 
-	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",
@@ -158,7 +159,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	block := xmpp.NewElementNamespace("block", blockingCommandNamespace)
 	iq.AppendElement(block)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
@@ -170,12 +171,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	// TEST BLOCK
 	s.EnableMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 
 	// unavailable presence from *@jackal.im/jail
 	elem = stm1.ReceiveElement()
@@ -209,7 +210,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// check storage
-	bl, _ := storage.FetchBlockListItems("ortuman")
+	bl, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
 	require.NotNil(t, bl)
 	require.Equal(t, 1, len(bl))
 	require.Equal(t, "jackal.im/jail", bl[0].JID)
@@ -226,12 +227,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	iq.AppendElement(unblock)
 
 	s.EnableMockedError()
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
 	s.DisableMockedError()
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 
 	// receive available presence from *@jackal.im/jail
 	elem = stm1.ReceiveElement()
@@ -255,11 +256,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -271,11 +272,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	unblock = xmpp.NewElementNamespace("unblock", blockingCommandNamespace)
 	iq.AppendElement(unblock)
 
-	x.ProcessIQ(iq)
+	x.ProcessIQ(context.Background(), iq)
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	blItems, _ := storage.FetchBlockListItems("ortuman")
+	blItems, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, 0, len(blItems))
 }
 

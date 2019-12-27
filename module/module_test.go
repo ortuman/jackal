@@ -47,13 +47,13 @@ func TestModules_ProcessIQ(t *testing.T) {
 	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	stm := stream.NewMockC2S(uuid.New().String(), j0)
-	mods.router.Bind(stm)
+	mods.router.Bind(context.Background(), stm)
 
 	iqID := uuid.New().String()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.SetFromJID(j0)
 	iq.SetToJID(j1)
-	mods.ProcessIQ(iq)
+	mods.ProcessIQ(context.Background(), iq)
 
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)

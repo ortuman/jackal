@@ -6,6 +6,7 @@
 package presencehub
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	p2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
 	p3 := xmpp.NewPresence(j3, j3, xmpp.AvailableType)
 
-	_ = s.InsertCapabilities(&model.Capabilities{
+	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
@@ -46,14 +47,14 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	p2.AppendElement(c)
 
 	ph := New(r)
-	_, _ = ph.RegisterPresence(p1)
-	_, _ = ph.RegisterPresence(p2)
-	_, _ = ph.RegisterPresence(p3)
+	_, _ = ph.RegisterPresence(context.Background(), p1)
+	_, _ = ph.RegisterPresence(context.Background(), p2)
+	_, _ = ph.RegisterPresence(context.Background(), p3)
 
 	availablePresences := ph.AvailablePresencesMatchingJID(j3.ToBareJID())
 	require.Len(t, availablePresences, 2)
 
-	ph.UnregisterPresence(p3)
+	ph.UnregisterPresence(context.Background(), p3)
 
 	availablePresences = ph.AvailablePresencesMatchingJID(j2.ToBareJID())
 	require.Len(t, availablePresences, 1)
@@ -72,7 +73,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// register presence
 	p := xmpp.NewPresence(j1, j1, xmpp.AvailableType)
@@ -83,7 +84,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 	p.AppendElement(c)
 
 	ph := New(r)
-	_, _ = ph.RegisterPresence(p)
+	_, _ = ph.RegisterPresence(context.Background(), p)
 
 	elem := stm1.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
@@ -118,10 +119,10 @@ func TestPresenceHub_ProcessCapabilities(t *testing.T) {
 	ph := New(r)
 	ph.activeDiscoInfo.Store(iqID, true)
 
-	ph.processIQ(iqRes)
+	ph.processIQ(context.Background(), iqRes)
 
 	// check storage capabilities
-	caps, _ := storage.FetchCapabilities("http://code.google.com/p/exodus", "QgayPKawpkPSDYmwT/WM94uAlu0=")
+	caps, _ := storage.FetchCapabilities(context.Background(), "http://code.google.com/p/exodus", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	require.NotNil(t, caps)
 
 	require.Len(t, caps.Features, 1)

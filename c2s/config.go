@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	defaultTransportConnectTimeout = time.Duration(5) * time.Second
-	defaultTransportMaxStanzaSize  = 32768
-	defaultTransportPort           = 5222
-	defaultTransportKeepAlive      = time.Duration(120) * time.Second
-	defaultTransportURLPath        = "/xmpp/ws"
+	defaultConnectTimeout     = time.Duration(5) * time.Second
+	defaultTimeout            = time.Duration(20) * time.Second
+	defaultMaxStanzaSize      = 32768
+	defaultTransportPort      = 5222
+	defaultTransportKeepAlive = time.Duration(120) * time.Second
+	defaultTransportURLPath   = "/xmpp/ws"
 )
 
 // ResourceConflictPolicy represents a resource conflict policy.
@@ -130,6 +131,7 @@ type TLSConfig struct {
 type Config struct {
 	ID               string
 	ConnectTimeout   time.Duration
+	Timeout          time.Duration
 	MaxStanzaSize    int
 	ResourceConflict ResourceConflictPolicy
 	Transport        TransportConfig
@@ -142,6 +144,7 @@ type configProxy struct {
 	Domain           string          `yaml:"domain"`
 	TLS              TLSConfig       `yaml:"tls"`
 	ConnectTimeout   int             `yaml:"connect_timeout"`
+	Timeout          int             `yaml:"timeout"`
 	MaxStanzaSize    int             `yaml:"max_stanza_size"`
 	ResourceConflict string          `yaml:"resource_conflict"`
 	Transport        TransportConfig `yaml:"transport"`
@@ -158,11 +161,15 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	cfg.ID = p.ID
 	cfg.ConnectTimeout = time.Duration(p.ConnectTimeout) * time.Second
 	if cfg.ConnectTimeout == 0 {
-		cfg.ConnectTimeout = defaultTransportConnectTimeout
+		cfg.ConnectTimeout = defaultConnectTimeout
+	}
+	cfg.Timeout = time.Duration(p.Timeout) * time.Second
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultTimeout
 	}
 	cfg.MaxStanzaSize = p.MaxStanzaSize
 	if cfg.MaxStanzaSize == 0 {
-		cfg.MaxStanzaSize = defaultTransportMaxStanzaSize
+		cfg.MaxStanzaSize = defaultMaxStanzaSize
 	}
 
 	// validate resource conflict policy type
@@ -195,6 +202,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type streamConfig struct {
 	transport        transport.Transport
 	connectTimeout   time.Duration
+	timeout          time.Duration
 	maxStanzaSize    int
 	resourceConflict ResourceConflictPolicy
 	sasl             []string

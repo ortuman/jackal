@@ -6,13 +6,15 @@
 package badgerdb
 
 import (
+	"context"
+
 	"github.com/dgraph-io/badger"
 	"github.com/ortuman/jackal/model"
 )
 
 // InsertBlockListItem inserts a block list item entity
 // into storage, only in case they haven't been previously inserted.
-func (b *Storage) InsertBlockListItem(item *model.BlockListItem) error {
+func (b *Storage) InsertBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var blItems []model.BlockListItem
 		if err := b.fetchSlice(&blItems, b.blockListItemsKey(item.Username), tx); err != nil {
@@ -29,7 +31,7 @@ func (b *Storage) InsertBlockListItem(item *model.BlockListItem) error {
 }
 
 // DeleteBlockListItem deletes a block list item entity from storage.
-func (b *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
+func (b *Storage) DeleteBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var blItems []model.BlockListItem
 		if err := b.fetchSlice(&blItems, b.blockListItemsKey(item.Username), tx); err != nil {
@@ -47,7 +49,7 @@ func (b *Storage) DeleteBlockListItem(item *model.BlockListItem) error {
 
 // FetchBlockListItems retrieves from storage all block list item entities
 // associated to a given user.
-func (b *Storage) FetchBlockListItems(username string) ([]model.BlockListItem, error) {
+func (b *Storage) FetchBlockListItems(_ context.Context, username string) ([]model.BlockListItem, error) {
 	var blItems []model.BlockListItem
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&blItems, b.blockListItemsKey(username), txn)

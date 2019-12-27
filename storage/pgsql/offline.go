@@ -6,47 +6,47 @@
 package pgsql
 
 import (
+	"context"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// InsertOfflineMessage inserts a new message element into
-// user's offline queue.
-func (s *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
+// InsertOfflineMessage inserts a new message element into user's offline queue.
+func (s *Storage) InsertOfflineMessage(ctx context.Context, message *xmpp.Message, username string) error {
 	q := sq.Insert("offline_messages").
 		Columns("username", "data").
 		Values(username, message.String())
 
-	_, err := q.RunWith(s.db).Exec()
+	_, err := q.RunWith(s.db).ExecContext(ctx)
 
 	return err
 }
 
 // CountOfflineMessages returns current length of user's offline queue.
-func (s *Storage) CountOfflineMessages(username string) (int, error) {
+func (s *Storage) CountOfflineMessages(ctx context.Context, username string) (int, error) {
+	var count int
+
 	q := sq.Select("COUNT(*)").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at")
 
-	var count int
-
-	if err := q.RunWith(s.db).Scan(&count); err != nil {
+	if err := q.RunWith(s.db).QueryRowContext(ctx).Scan(&count); err != nil {
 		return 0, err
 	}
-
 	return count, nil
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (s *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
+func (s *Storage) FetchOfflineMessages(ctx context.Context, username string) ([]xmpp.Message, error) {
 	q := sq.Select("data").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
 		OrderBy("created_at")
 
-	rows, err := q.RunWith(s.db).Query()
+	rows, err := q.RunWith(s.db).QueryContext(ctx)
 
 	if err != nil {
 		return nil, err
@@ -88,8 +88,8 @@ func (s *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 }
 
 // DeleteOfflineMessages clears a user offline queue.
-func (s *Storage) DeleteOfflineMessages(username string) error {
+func (s *Storage) DeleteOfflineMessages(ctx context.Context, username string) error {
 	q := sq.Delete("offline_messages").Where(sq.Eq{"username": username})
-	_, err := q.RunWith(s.db).Exec()
+	_, err := q.RunWith(s.db).ExecContext(ctx)
 	return err
 }

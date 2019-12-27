@@ -6,6 +6,7 @@
 package cluster
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -18,8 +19,10 @@ type fakeC2SCluster struct {
 	sendMessageToCalls int
 }
 
-func (c *fakeC2SCluster) LocalNode() string                       { return "node1" }
-func (c *fakeC2SCluster) SendMessageTo(node string, msg *Message) { c.sendMessageToCalls++ }
+func (c *fakeC2SCluster) LocalNode() string { return "node1" }
+func (c *fakeC2SCluster) SendMessageTo(_ context.Context, _ string, _ *Message) {
+	c.sendMessageToCalls++
+}
 
 func TestC2S_New(t *testing.T) {
 	var c fakeC2SCluster
@@ -61,24 +64,24 @@ func TestC2S_Presence(t *testing.T) {
 func TestC2S_Context(t *testing.T) {
 	var c fakeC2SCluster
 
-	context := map[string]interface{}{
+	ctx := map[string]interface{}{
 		"a1": true,
 		"b1": 3.14,
 		"c1": 35,
 		"d1": "foo",
 	}
-	contextLength := len(context)
+	ctxLength := len(ctx)
 
 	id := uuid.New().String()
-	stm := newTestClusterC2S(id, "ortuman@jackal.im/balcony", xmpp.AvailableType, context, "node1", &c)
+	stm := newTestClusterC2S(id, "ortuman@jackal.im/balcony", xmpp.AvailableType, ctx, "node1", &c)
 
 	// setters don't do anything
-	stm.SetBool("a2", true)
-	stm.SetFloat("b2", 3.14)
-	stm.SetInt("c2", 35)
-	stm.SetString("d2", "foo")
+	stm.SetBool(context.Background(), "a2", true)
+	stm.SetFloat(context.Background(), "b2", 3.14)
+	stm.SetInt(context.Background(), "c2", 35)
+	stm.SetString(context.Background(), "d2", "foo")
 
-	require.Equal(t, contextLength, len(stm.Context()))
+	require.Equal(t, ctxLength, len(stm.Context()))
 
 	require.True(t, stm.GetBool("a1"))
 	require.Equal(t, 3.14, stm.GetFloat("b1"))
@@ -90,7 +93,7 @@ func TestC2S_Context(t *testing.T) {
 		"e1": "foo2",
 	})
 
-	require.Equal(t, contextLength+1, len(stm.Context()))
+	require.Equal(t, ctxLength+1, len(stm.Context()))
 	require.Equal(t, "foo2", stm.GetString("e1"))
 }
 
@@ -100,8 +103,8 @@ func TestC2S_SendElement(t *testing.T) {
 	id := uuid.New().String()
 	stm := newTestClusterC2S(id, "ortuman@jackal.im/balcony", xmpp.AvailableType, map[string]interface{}{}, "node1", &c)
 
-	stm.SendElement(xmpp.NewElementName("vCard")) // not a stanza
-	stm.SendElement(xmpp.NewIQType(uuid.New().String(), xmpp.GetType))
+	stm.SendElement(context.Background(), xmpp.NewElementName("vCard")) // not a stanza
+	stm.SendElement(context.Background(), xmpp.NewIQType(uuid.New().String(), xmpp.GetType))
 
 	require.Equal(t, 1, c.sendMessageToCalls)
 }

@@ -6,6 +6,7 @@
 package badgerdb
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -29,23 +30,23 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	b2.SetText("what's up?!")
 	msg1.AppendElement(b1)
 
-	require.NoError(t, h.db.InsertOfflineMessage(msg1, "ortuman"))
-	require.NoError(t, h.db.InsertOfflineMessage(msg2, "ortuman"))
+	require.NoError(t, h.db.InsertOfflineMessage(context.Background(), msg1, "ortuman"))
+	require.NoError(t, h.db.InsertOfflineMessage(context.Background(), msg2, "ortuman"))
 
-	cnt, err := h.db.CountOfflineMessages("ortuman")
+	cnt, err := h.db.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, cnt)
 
-	msgs, err := h.db.FetchOfflineMessages("ortuman")
+	msgs, err := h.db.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(msgs))
 
-	msgs2, err := h.db.FetchOfflineMessages("ortuman2")
+	msgs2, err := h.db.FetchOfflineMessages(context.Background(), "ortuman2")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(msgs2))
 
-	require.NoError(t, h.db.DeleteOfflineMessages("ortuman"))
-	cnt, err = h.db.CountOfflineMessages("ortuman")
+	require.NoError(t, h.db.DeleteOfflineMessages(context.Background(), "ortuman"))
+	cnt, err = h.db.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 0, cnt)
 }

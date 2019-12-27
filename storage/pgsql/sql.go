@@ -107,15 +107,13 @@ func (s *Storage) ping(ctx context.Context) {
 	}
 }
 
-func (s *Storage) inTransaction(f func(tx *sql.Tx) error) error {
-	tx, txErr := s.db.Begin()
-
+func (s *Storage) inTransaction(ctx context.Context, f func(tx *sql.Tx) error) error {
+	tx, txErr := s.db.BeginTx(ctx, nil)
 	if txErr != nil {
 		return txErr
 	}
-
 	if err := f(tx); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 	return tx.Commit()

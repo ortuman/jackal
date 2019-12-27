@@ -6,6 +6,7 @@
 package xep0199
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -22,6 +23,8 @@ import (
 )
 
 const pingNamespace = "urn:xmpp:ping"
+
+const pingWriteTimeout = time.Second
 
 // Config represents XMPP Ping module (XEP-0199) configuration.
 type Config struct {
@@ -85,15 +88,14 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 	return x.isPongIQ(iq) || iq.Elements().ChildNamespace("ping", pingNamespace) != nil
 }
 
-// ProcessIQ processes a ping IQ taking according actions
-// over the associated stream.
-func (x *Ping) ProcessIQ(iq *xmpp.IQ) {
+// ProcessIQ processes a ping IQ taking according actions over the associated stream.
+func (x *Ping) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
 		stm := x.router.UserStream(iq.FromJID())
 		if stm == nil {
 			return
 		}
-		x.processIQ(iq, stm)
+		x.processIQ(ctx, iq, stm)
 	})
 }
 
@@ -120,27 +122,27 @@ func (x *Ping) Shutdown() error {
 	return nil
 }
 
-func (x *Ping) processIQ(iq *xmpp.IQ, stm stream.C2S) {
+func (x *Ping) processIQ(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 	if x.isPongIQ(iq) {
 		x.handlePongIQ(iq, stm)
 		return
 	}
 	toJid := iq.ToJID()
 	if !toJid.IsServer() && toJid.Node() != stm.Username() {
-		stm.SendElement(iq.ForbiddenError())
+		stm.SendElement(ctx, iq.ForbiddenError())
 		return
 	}
 	p := iq.Elements().ChildNamespace("ping", pingNamespace)
 	if p == nil || p.Elements().Count() > 0 {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 		return
 	}
 	log.Infof("received ping... id: %s", iq.ID())
 	if iq.IsGet() {
 		log.Infof("sent pong... id: %s", iq.ID())
-		stm.SendElement(iq.ResultIQ())
+		stm.SendElement(ctx, iq.ResultIQ())
 	} else {
-		stm.SendElement(iq.BadRequestError())
+		stm.SendElement(ctx, iq.BadRequestError())
 	}
 }
 
@@ -181,7 +183,9 @@ func (x *Ping) schedulePingTimer(stm stream.C2S) {
 		stm:        stm,
 	}
 	pi.timer = time.AfterFunc(x.cfg.SendInterval, func() {
-		x.runQueue.Run(func() { x.sendPing(pi) })
+		x.runQueue.Run(func() {
+			x.sendPing(pi)
+		})
 	})
 	x.pings[stm.JID().String()] = pi
 }
@@ -197,6 +201,8 @@ func (x *Ping) handlePongIQ(iq *xmpp.IQ, stm stream.C2S) {
 }
 
 func (x *Ping) sendPing(pi *ping) {
+	ctx, _ := context.WithTimeout(context.Background(), pingWriteTimeout)
+
 	srvJID, _ := jid.New("", pi.stm.JID().Domain(), "", true)
 
 	iq := xmpp.NewIQType(pi.identifier, xmpp.GetType)
@@ -204,12 +210,14 @@ func (x *Ping) sendPing(pi *ping) {
 	iq.SetToJID(pi.stm.JID())
 	iq.AppendElement(xmpp.NewElementNamespace("ping", pingNamespace))
 
-	pi.stm.SendElement(iq)
+	pi.stm.SendElement(ctx, iq)
 
 	log.Infof("sent ping... id: %s", pi.identifier)
 
 	pi.timer = time.AfterFunc(x.cfg.SendInterval/3, func() {
-		x.runQueue.Run(func() { x.disconnectStream(pi) })
+		x.runQueue.Run(func() {
+			x.disconnectStream(pi)
+		})
 	})
 	x.activePingsMu.Lock()
 	x.activePings[pi.identifier] = pi
@@ -217,7 +225,8 @@ func (x *Ping) sendPing(pi *ping) {
 }
 
 func (x *Ping) disconnectStream(pi *ping) {
-	pi.stm.Disconnect(streamerror.ErrConnectionTimeout)
+	ctx, _ := context.WithTimeout(context.Background(), pingWriteTimeout)
+	pi.stm.Disconnect(ctx, streamerror.ErrConnectionTimeout)
 }
 
 func (x *Ping) isPongIQ(iq *xmpp.IQ) bool {

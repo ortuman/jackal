@@ -6,6 +6,8 @@
 package router
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/cluster"
 )
 
@@ -13,7 +15,14 @@ type clusterDelegate struct {
 	r *Router
 }
 
-func (d *clusterDelegate) NotifyMessage(msg *cluster.Message) { d.r.handleNotifyMessage(msg) }
-func (d *clusterDelegate) NodeJoined(node *cluster.Node)      { d.r.handleNodeJoined(node) }
-func (d *clusterDelegate) NodeUpdated(node *cluster.Node)     {}
-func (d *clusterDelegate) NodeLeft(node *cluster.Node)        { d.r.handleNodeLeft(node) }
+func (d *clusterDelegate) NotifyMessage(ctx context.Context, msg *cluster.Message) {
+	d.r.handleNotifyMessage(ctx, msg)
+}
+func (d *clusterDelegate) NodeJoined(ctx context.Context, node *cluster.Node) {
+	d.r.handleNodeJoined(ctx, node)
+}
+func (d *clusterDelegate) NodeUpdated(_ context.Context, _ *cluster.Node) {}
+
+func (d *clusterDelegate) NodeLeft(ctx context.Context, node *cluster.Node) {
+	d.r.handleNodeLeft(ctx, node)
+}

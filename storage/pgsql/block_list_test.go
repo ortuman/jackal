@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -20,7 +21,7 @@ func TestInsertValidBlockListItem(t *testing.T) {
 	mock.ExpectExec("INSERT INTO blocklist_items (.+)").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -37,10 +38,10 @@ func TestInsertDoubleBlockListItem(t *testing.T) {
 	mock.ExpectExec("INSERT INTO blocklist_items (.+)").
 		WillReturnError(errGeneric)
 
-	err := s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, err)
 
-	err = s.InsertBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err = s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -54,7 +55,7 @@ func TestFetchBlockListItems(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(blockListColumns).AddRow("ortuman", "noelia@jackal.im"))
 
-	_, err := s.FetchBlockListItems("ortuman")
+	_, err := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -67,7 +68,7 @@ func TestFetchBlockListItemsError(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	_, err := s.FetchBlockListItems("ortuman")
+	_, err := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -80,7 +81,7 @@ func TestDeleteBlockListItems(t *testing.T) {
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -93,7 +94,7 @@ func TestDeleteBlockListItemsError(t *testing.T) {
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnError(errGeneric)
 
-	err := s.DeleteBlockListItem(&model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }

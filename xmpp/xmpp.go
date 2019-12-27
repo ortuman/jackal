@@ -42,7 +42,7 @@ type XElement interface {
 	IsError() bool
 	Error() XElement
 
-	ToXML(w io.Writer, includeClosing bool)
+	ToXML(w io.Writer, includeClosing bool) error
 	ToBytes(buf *bytes.Buffer) error
 }
 

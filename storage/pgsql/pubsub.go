@@ -1,6 +1,12 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package pgsql
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -9,11 +15,11 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
-func (s *Storage) FetchHosts() ([]string, error) {
+func (s *Storage) FetchHosts(ctx context.Context) ([]string, error) {
 	rows, err := sq.Select("DISTINCT(host)").
 		From("pubsub_nodes").
 		RunWith(s.db).
-		Query()
+		QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -30,14 +36,14 @@ func (s *Storage) FetchHosts() ([]string, error) {
 	return hosts, nil
 }
 
-func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
+func (s *Storage) UpsertNode(ctx context.Context, node *pubsubmodel.Node) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		// if not existing, insert new node
 		_, err := sq.Insert("pubsub_nodes").
 			Columns("host", "name", "updated_at", "created_at").
 			Suffix("ON CONFLICT (host, name) DO NOTHING").
 			Values(node.Host, node.Name, nowExpr, nowExpr).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -48,7 +54,7 @@ func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 		err = sq.Select("id").
 			From("pubsub_nodes").
 			Where(sq.And{sq.Eq{"host": node.Host}, sq.Eq{"name": node.Name}}).
-			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+			RunWith(tx).QueryRowContext(ctx).Scan(&nodeIdentifier)
 		if err != nil {
 			return err
 		}
@@ -56,7 +62,7 @@ func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 		// delete previous node options
 		_, err = sq.Delete("pubsub_node_options").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -69,7 +75,7 @@ func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 			_, err = sq.Insert("pubsub_node_options").
 				Columns("node_id", "name", "value").
 				Values(nodeIdentifier, name, value).
-				RunWith(tx).Exec()
+				RunWith(tx).ExecContext(ctx)
 			if err != nil {
 				return err
 			}
@@ -78,8 +84,8 @@ func (s *Storage) UpsertNode(node *pubsubmodel.Node) error {
 	})
 }
 
-func (s *Storage) FetchNode(host, name string) (*pubsubmodel.Node, error) {
-	opts, err := s.fetchPubSubNodeOptions(host, name)
+func (s *Storage) FetchNode(ctx context.Context, host, name string) (*pubsubmodel.Node, error) {
+	opts, err := s.fetchPubSubNodeOptions(ctx, host, name)
 	if err != nil {
 		return nil, err
 	}
@@ -90,11 +96,11 @@ func (s *Storage) FetchNode(host, name string) (*pubsubmodel.Node, error) {
 	}, nil
 }
 
-func (s *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
+func (s *Storage) FetchNodes(ctx context.Context, host string) ([]pubsubmodel.Node, error) {
 	rows, err := sq.Select("name").
 		From("pubsub_nodes").
 		Where(sq.Eq{"host": host}).
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +113,7 @@ func (s *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 			return nil, err
 		}
 		var node = pubsubmodel.Node{Host: host, Name: name}
-		opts, err := s.fetchPubSubNodeOptions(host, name)
+		opts, err := s.fetchPubSubNodeOptions(ctx, host, name)
 		if err != nil {
 			return nil, err
 		}
@@ -119,11 +125,11 @@ func (s *Storage) FetchNodes(host string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
-func (s *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
+func (s *Storage) FetchSubscribedNodes(ctx context.Context, jid string) ([]pubsubmodel.Node, error) {
 	rows, err := sq.Select("host", "name").
 		From("pubsub_nodes").
 		Where(sq.Expr("id IN (SELECT DISTINCT(node_id) FROM pubsub_subscriptions WHERE jid = $1 AND subscription = $2)", jid, pubsubmodel.Subscribed)).
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +142,7 @@ func (s *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 			return nil, err
 		}
 		var node = pubsubmodel.Node{Host: host, Name: name}
-		opts, err := s.fetchPubSubNodeOptions(host, name)
+		opts, err := s.fetchPubSubNodeOptions(ctx, host, name)
 		if err != nil {
 			return nil, err
 		}
@@ -148,15 +154,15 @@ func (s *Storage) FetchSubscribedNodes(jid string) ([]pubsubmodel.Node, error) {
 	return nodes, nil
 }
 
-func (s *Storage) DeleteNode(host, name string) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
+func (s *Storage) DeleteNode(ctx context.Context, host, name string) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
 
 		err := sq.Select("id").
 			From("pubsub_nodes").
 			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+			RunWith(tx).QueryRowContext(ctx).Scan(&nodeIdentifier)
 		switch err {
 		case nil:
 			break
@@ -168,48 +174,48 @@ func (s *Storage) DeleteNode(host, name string) error {
 		// delete node
 		_, err = sq.Delete("pubsub_nodes").
 			Where(sq.Eq{"id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
 		// delete options
 		_, err = sq.Delete("pubsub_node_options").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
 		// delete items
 		_, err = sq.Delete("pubsub_items").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
 		// delete affiliations
 		_, err = sq.Delete("pubsub_affiliations").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
 		// delete subscriptions
 		_, err = sq.Delete("pubsub_subscriptions").
 			Where(sq.Eq{"node_id": nodeIdentifier}).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		return err
 	})
 }
 
-func (s *Storage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
+func (s *Storage) UpsertNodeItem(ctx context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
 
 		err := sq.Select("id").
 			From("pubsub_nodes").
 			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+			RunWith(tx).QueryRowContext(ctx).Scan(&nodeIdentifier)
 		switch err {
 		case nil:
 			break
@@ -226,7 +232,7 @@ func (s *Storage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxN
 			Columns("node_id", "item_id", "payload", "publisher").
 			Values(nodeIdentifier, item.ID, rawPayload, item.Publisher).
 			Suffix("ON CONFLICT (node_id, item_id) DO UPDATE SET payload = $5, publisher = $6", rawPayload, item.Publisher).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -234,16 +240,16 @@ func (s *Storage) UpsertNodeItem(item *pubsubmodel.Item, host, name string, maxN
 		// check if maximum item count was reached and delete oldest one
 		_, err = sq.Delete("pubsub_items").
 			Where("item_id IN (SELECT item_id FROM pubsub_items WHERE node_id = $1 ORDER BY created_at DESC OFFSET $2)", nodeIdentifier, maxNodeItems).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		return err
 	})
 }
 
-func (s *Storage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeItems(ctx context.Context, host, name string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -252,12 +258,12 @@ func (s *Storage) FetchNodeItems(host, name string) ([]pubsubmodel.Item, error) 
 	return s.scanPubSubNodeItems(rows)
 }
 
-func (s *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeItemsWithIDs(ctx context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	rows, err := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where(sq.And{sq.Expr("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name), sq.Eq{"id": identifiers}}).
 		OrderBy("created_at").
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -266,13 +272,13 @@ func (s *Storage) FetchNodeItemsWithIDs(host, name string, identifiers []string)
 	return s.scanPubSubNodeItems(rows)
 }
 
-func (s *Storage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error) {
+func (s *Storage) FetchNodeLastItem(ctx context.Context, host, name string) (*pubsubmodel.Item, error) {
 	row := sq.Select("item_id", "publisher", "payload").
 		From("pubsub_items").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
 		OrderBy("created_at DESC").
 		Limit(1).
-		RunWith(s.db).QueryRow()
+		RunWith(s.db).QueryRowContext(ctx)
 
 	item, err := s.scanPubSubNodeItem(row)
 	switch err {
@@ -285,15 +291,15 @@ func (s *Storage) FetchNodeLastItem(host, name string) (*pubsubmodel.Item, error
 	}
 }
 
-func (s *Storage) UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, host, name string) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
+func (s *Storage) UpsertNodeAffiliation(ctx context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
 
 		err := sq.Select("id").
 			From("pubsub_nodes").
 			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+			RunWith(tx).QueryRowContext(ctx).Scan(&nodeIdentifier)
 		switch err {
 		case nil:
 			break
@@ -308,18 +314,18 @@ func (s *Storage) UpsertNodeAffiliation(affiliation *pubsubmodel.Affiliation, ho
 			Columns("node_id", "jid", "affiliation").
 			Values(nodeIdentifier, affiliation.JID, affiliation.Affiliation).
 			Suffix("ON CONFLICT (node_id, jid) DO UPDATE SET affiliation = $4", affiliation.Affiliation).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		return err
 	})
 }
 
-func (s *Storage) FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Affiliation, error) {
+func (s *Storage) FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error) {
 	var aff pubsubmodel.Affiliation
 
 	row := sq.Select("jid", "affiliation").
 		From("pubsub_affiliations").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2) AND jid = $3", host, name, jid).
-		RunWith(s.db).QueryRow()
+		RunWith(s.db).QueryRowContext(ctx)
 	err := row.Scan(&aff.JID, &aff.Affiliation)
 	switch err {
 	case nil:
@@ -331,11 +337,11 @@ func (s *Storage) FetchNodeAffiliation(host, name, jid string) (*pubsubmodel.Aff
 	}
 }
 
-func (s *Storage) FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affiliation, error) {
+func (s *Storage) FetchNodeAffiliations(ctx context.Context, host, name string) ([]pubsubmodel.Affiliation, error) {
 	rows, err := sq.Select("jid", "affiliation").
 		From("pubsub_affiliations").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -344,22 +350,22 @@ func (s *Storage) FetchNodeAffiliations(host, name string) ([]pubsubmodel.Affili
 	return s.scanPubSubNodeAffiliations(rows)
 }
 
-func (s *Storage) DeleteNodeAffiliation(jid, host, name string) error {
+func (s *Storage) DeleteNodeAffiliation(ctx context.Context, jid, host, name string) error {
 	_, err := sq.Delete("pubsub_affiliations").
 		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
-		RunWith(s.db).Exec()
+		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *Storage) UpsertNodeSubscription(subscription *pubsubmodel.Subscription, host, name string) error {
-	return s.inTransaction(func(tx *sql.Tx) error {
+func (s *Storage) UpsertNodeSubscription(ctx context.Context, subscription *pubsubmodel.Subscription, host, name string) error {
+	return s.inTransaction(ctx, func(tx *sql.Tx) error {
 		// fetch node identifier
 		var nodeIdentifier string
 
 		err := sq.Select("id").
 			From("pubsub_nodes").
 			Where(sq.And{sq.Eq{"host": host}, sq.Eq{"name": name}}).
-			RunWith(tx).QueryRow().Scan(&nodeIdentifier)
+			RunWith(tx).QueryRowContext(ctx).Scan(&nodeIdentifier)
 		switch err {
 		case nil:
 			break
@@ -374,16 +380,16 @@ func (s *Storage) UpsertNodeSubscription(subscription *pubsubmodel.Subscription,
 			Columns("node_id", "subid", "jid", "subscription", "updated_at", "created_at").
 			Values(nodeIdentifier, subscription.SubID, subscription.JID, subscription.Subscription, nowExpr, nowExpr).
 			Suffix("ON CONFLICT (node_id, jid) DO UPDATE SET subid = $5, subscription = $6", subscription.SubID, subscription.Subscription).
-			RunWith(tx).Exec()
+			RunWith(tx).ExecContext(ctx)
 		return err
 	})
 }
 
-func (s *Storage) FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subscription, error) {
+func (s *Storage) FetchNodeSubscriptions(ctx context.Context, host, name string) ([]pubsubmodel.Subscription, error) {
 	rows, err := sq.Select("subid", "jid", "subscription").
 		From("pubsub_subscriptions").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -392,19 +398,19 @@ func (s *Storage) FetchNodeSubscriptions(host, name string) ([]pubsubmodel.Subsc
 	return s.scanPubSubNodeSubscriptions(rows)
 }
 
-func (s *Storage) DeleteNodeSubscription(jid, host, name string) error {
+func (s *Storage) DeleteNodeSubscription(ctx context.Context, jid, host, name string) error {
 	_, err := sq.Delete("pubsub_subscriptions").
 		Where("jid = $1 AND node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", jid, host, name).
-		RunWith(s.db).Exec()
+		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *Storage) fetchPubSubNodeOptions(host, name string) (*pubsubmodel.Options, error) {
+func (s *Storage) fetchPubSubNodeOptions(ctx context.Context, host, name string) (*pubsubmodel.Options, error) {
 	rows, err := sq.Select("name", "value").
 		From("pubsub_node_options").
 		Where("node_id = (SELECT id FROM pubsub_nodes WHERE host = $1 AND name = $2)", host, name).
 		OrderBy("created_at").
-		RunWith(s.db).Query()
+		RunWith(s.db).QueryContext(ctx)
 	if err != nil {
 		return nil, err
 	}

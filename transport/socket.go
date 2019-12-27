@@ -42,7 +42,7 @@ func NewSocketTransport(conn net.Conn, keepAlive time.Duration) Transport {
 
 func (s *socketTransport) Read(p []byte) (n int, err error) {
 	if s.keepAlive > 0 {
-		s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
+		_ = s.conn.SetReadDeadline(time.Now().Add(s.keepAlive))
 	}
 	return s.br.Read(p)
 }
@@ -67,6 +67,16 @@ func (s *socketTransport) WriteString(str string) (int, error) {
 // Flush writes any buffered data to the underlying io.Writer.
 func (s *socketTransport) Flush() error {
 	return s.bw.Flush()
+}
+
+// SetReadDeadline sets the deadline for future read calls.
+func (s *socketTransport) SetReadDeadline(d time.Time) error {
+	return s.conn.SetReadDeadline(d)
+}
+
+// SetWriteDeadline sets the deadline for future write calls.
+func (s *socketTransport) SetWriteDeadline(d time.Time) error {
+	return s.conn.SetWriteDeadline(d)
 }
 
 func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {

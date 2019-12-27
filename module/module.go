@@ -35,13 +35,11 @@ type Module interface {
 type IQHandler interface {
 	Module
 
-	// MatchesIQ returns whether or not an IQ should be
-	// processed by the module.
+	// MatchesIQ returns whether or not an IQ should be processed by the module.
 	MatchesIQ(iq *xmpp.IQ) bool
 
-	// ProcessIQ processes a module IQ taking according actions
-	// over the associated stream.
-	ProcessIQ(iq *xmpp.IQ)
+	// ProcessIQ processes a module IQ taking according actions over the associated stream.
+	ProcessIQ(ctx context.Context, iq *xmpp.IQ)
 }
 
 // Modules structure keeps reference to a set of preconfigured modules.
@@ -148,18 +146,18 @@ func New(config *Config, router *router.Router) *Modules {
 }
 
 // ProcessIQ process a module IQ returning 'service unavailable' in case it couldn't be properly handled.
-func (m *Modules) ProcessIQ(iq *xmpp.IQ) {
+func (m *Modules) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	for _, handler := range m.iqHandlers {
 		if !handler.MatchesIQ(iq) {
 			continue
 		}
-		handler.ProcessIQ(iq)
+		handler.ProcessIQ(ctx, iq)
 		return
 	}
 
 	// ...IQ not handled...
 	if iq.IsGet() || iq.IsSet() {
-		_ = m.router.Route(iq.ServiceUnavailableError())
+		_ = m.router.Route(ctx, iq.ServiceUnavailableError())
 	}
 }
 

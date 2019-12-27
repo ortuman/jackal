@@ -6,13 +6,14 @@
 package memstorage
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/model/serializer"
 	"github.com/ortuman/jackal/xmpp"
 )
 
-// UpsertVCard inserts a new vCard element into storage,
-// or updates it in case it's been previously inserted.
-func (m *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
+// UpsertVCard inserts a new vCard element into storage, or updates it in case it's been previously inserted.
+func (m *Storage) UpsertVCard(_ context.Context, vCard xmpp.XElement, username string) error {
 	b, err := serializer.Serialize(vCard)
 	if err != nil {
 		return err
@@ -23,9 +24,8 @@ func (m *Storage) UpsertVCard(vCard xmpp.XElement, username string) error {
 	})
 }
 
-// FetchVCard retrieves from storage a vCard element associated
-// to a given user.
-func (m *Storage) FetchVCard(username string) (xmpp.XElement, error) {
+// FetchVCard retrieves from storage a vCard element associated to a given user.
+func (m *Storage) FetchVCard(_ context.Context, username string) (xmpp.XElement, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.bytes[vCardKey(username)]

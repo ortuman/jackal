@@ -6,6 +6,7 @@
 package auth
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ortuman/jackal/model"
@@ -21,7 +22,7 @@ func authTestSetup(user *model.User) (*stream.MockC2S, *memstorage.Storage) {
 	s := memstorage.New()
 	storage.Set(s)
 
-	_ = storage.UpsertUser(user)
+	_ = storage.UpsertUser(context.Background(), user)
 
 	j, _ := jid.New("mariana", "localhost", "res", true)
 

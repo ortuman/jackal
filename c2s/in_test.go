@@ -6,6 +6,7 @@
 package c2s
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestStream_Disconnect(t *testing.T) {
 	defer shutdown()
 
 	stm, conn := tUtilStreamInit(r)
-	stm.Disconnect(nil)
+	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
 	require.Equal(t, disconnected, stm.getState())
@@ -78,7 +79,7 @@ func TestStream_TLS(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -100,7 +101,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	_, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -140,7 +141,7 @@ func TestStream_Compression(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -183,7 +184,7 @@ func TestStream_StartSession(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -206,7 +207,7 @@ func TestStream_SendIQ(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -243,7 +244,7 @@ func TestStream_SendPresence(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -288,7 +289,7 @@ func TestStream_SendMessage(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -310,7 +311,7 @@ func TestStream_SendMessage(t *testing.T) {
 	jTo, _ := jid.New("ortuman", "localhost", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", jTo)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	msgID := uuid.New()
 	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
@@ -339,7 +340,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 	r, _, shutdown := setupTest("localhost")
 	defer shutdown()
 
-	_ = storage.UpsertUser(&model.User{Username: "user", Password: "pencil"})
+	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
 	stm, conn := tUtilStreamInit(r)
 	tUtilStreamOpen(conn)
@@ -357,7 +358,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	require.Equal(t, bound, stm.getState())
 
-	_ = storage.InsertBlockListItem(&model.BlockListItem{
+	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "user",
 		JID:      "hamlet@localhost",
 	})

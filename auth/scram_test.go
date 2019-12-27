@@ -7,6 +7,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -19,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/transport"
@@ -38,6 +40,7 @@ func (ft *fakeTransport) Write(p []byte) (n int, err error)       { return 0, ni
 func (ft *fakeTransport) Close() error                            { return nil }
 func (ft *fakeTransport) Type() transport.Type                    { return transport.Socket }
 func (ft *fakeTransport) Flush() error                            { return nil }
+func (ft *fakeTransport) SetWriteDeadline(_ time.Time) error      { return nil }
 func (ft *fakeTransport) WriteString(s string) (n int, err error) { return 0, nil }
 func (ft *fakeTransport) StartTLS(*tls.Config, bool)              { return }
 func (ft *fakeTransport) EnableCompression(compress.Level)        { return }
@@ -262,12 +265,12 @@ func TestScramBadPayload(t *testing.T) {
 	auth.SetAttribute("mechanism", authr.Mechanism())
 
 	// empty auth payload
-	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(auth))
+	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(context.Background(), auth))
 
 	// incorrect auth payload encoding
 	authr.Reset()
 	auth.SetText(".")
-	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(auth))
+	require.Equal(t, ErrSASLIncorrectEncoding, authr.ProcessElement(context.Background(), auth))
 }
 
 func TestScramTestCases(t *testing.T) {
@@ -298,7 +301,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	authPayload := gs2Header + clientInitialMessage
 	auth.SetText(base64.StdEncoding.EncodeToString([]byte(authPayload)))
 
-	err := authr.ProcessElement(auth)
+	err := authr.ProcessElement(context.Background(), auth)
 	if err != nil {
 		return err
 	}
@@ -329,7 +332,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	response := xmpp.NewElementNamespace("response", saslNamespace)
 	response.SetText(base64.StdEncoding.EncodeToString([]byte(res.clientFinalMessage)))
 
-	err = authr.ProcessElement(response)
+	err = authr.ProcessElement(context.Background(), response)
 	if err != nil {
 		return err
 	}
@@ -344,7 +347,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	require.True(t, authr.Authenticated())
 	require.Equal(t, tc.n, authr.Username())
 
-	require.Nil(t, authr.ProcessElement(auth)) // test already authenticated...
+	require.Nil(t, authr.ProcessElement(context.Background(), auth)) // test already authenticated...
 	return nil
 }
 

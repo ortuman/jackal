@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -28,7 +29,7 @@ func TestInsertOfflineMessages(t *testing.T) {
 		WithArgs("ortuman", messageXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.InsertOfflineMessage(m, "ortuman")
+	err := s.InsertOfflineMessage(context.Background(), m, "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -37,7 +38,7 @@ func TestInsertOfflineMessages(t *testing.T) {
 		WithArgs("ortuman", messageXML).
 		WillReturnError(errGeneric)
 
-	err = s.InsertOfflineMessage(m, "ortuman")
+	err = s.InsertOfflineMessage(context.Background(), m, "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 }
@@ -50,7 +51,7 @@ func TestCountOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
 
-	cnt, _ := s.CountOfflineMessages("ortuman")
+	cnt, _ := s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 1, cnt)
 
@@ -59,7 +60,7 @@ func TestCountOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums))
 
-	cnt, _ = s.CountOfflineMessages("ortuman")
+	cnt, _ = s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 0, cnt)
 
@@ -68,7 +69,7 @@ func TestCountOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	_, err := s.CountOfflineMessages("ortuman")
+	_, err := s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -81,7 +82,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns).AddRow("<message id='abc'><body>Hi!</body></message>"))
 
-	msgs, _ := s.FetchOfflineMessages("ortuman")
+	msgs, _ := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 1, len(msgs))
 
@@ -90,7 +91,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns))
 
-	msgs, _ = s.FetchOfflineMessages("ortuman")
+	msgs, _ = s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 0, len(msgs))
 
@@ -99,7 +100,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns).AddRow("<message id='abc'><body>Hi!"))
 
-	_, err := s.FetchOfflineMessages("ortuman")
+	_, err := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 
@@ -108,7 +109,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchOfflineMessages("ortuman")
+	_, err = s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }
@@ -118,7 +119,7 @@ func TestDeleteOfflineMessages(t *testing.T) {
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteOfflineMessages("ortuman")
+	err := s.DeleteOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -126,7 +127,7 @@ func TestDeleteOfflineMessages(t *testing.T) {
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnError(errGeneric)
 
-	err = s.DeleteOfflineMessages("ortuman")
+	err = s.DeleteOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 }

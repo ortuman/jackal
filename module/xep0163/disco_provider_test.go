@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestDiscoInfoProvider_Identities(t *testing.T) {
 
 	dp := &discoInfoProvider{}
 
-	ids := dp.Identities(j1, j2, "")
+	ids := dp.Identities(context.Background(), j1, j2, "")
 	require.Len(t, ids, 2)
 
 	require.Equal(t, "collection", ids[0].Type)
@@ -32,7 +33,7 @@ func TestDiscoInfoProvider_Identities(t *testing.T) {
 	require.Equal(t, "pep", ids[1].Type)
 	require.Equal(t, "pubsub", ids[1].Category)
 
-	ids = dp.Identities(j1, j2, "node")
+	ids = dp.Identities(context.Background(), j1, j2, "node")
 	require.Len(t, ids, 2)
 
 	require.Equal(t, "leaf", ids[0].Type)
@@ -50,25 +51,25 @@ func TestDiscoInfoProvider_Items(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 	dp := &discoInfoProvider{}
 
-	items, err := dp.Items(j1, j2, "")
+	items, err := dp.Items(context.Background(), j1, j2, "")
 	require.Nil(t, items)
 	require.NotNil(t, err)
 	require.Equal(t, xmpp.ErrSubscriptionRequired, err)
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: rostermodel.SubscriptionTo,
 	})
 
-	items, err = dp.Items(j1, j2, "")
+	items, err = dp.Items(context.Background(), j1, j2, "")
 	require.Nil(t, err)
 	require.Len(t, items, 1)
 
@@ -82,10 +83,10 @@ func TestDiscoInfoProvider_Features(t *testing.T) {
 
 	dp := &discoInfoProvider{}
 
-	features, _ := dp.Features(j1, j2, "")
+	features, _ := dp.Features(context.Background(), j1, j2, "")
 	require.True(t, reflect.DeepEqual(features, pepFeatures))
 
-	features, _ = dp.Features(j1, j2, "node")
+	features, _ = dp.Features(context.Background(), j1, j2, "node")
 	require.True(t, reflect.DeepEqual(features, pepFeatures))
 }
 
@@ -95,12 +96,12 @@ func TestDiscoInfoProvider_Form(t *testing.T) {
 
 	dp := &discoInfoProvider{}
 
-	features, _ := dp.Features(j1, j2, "")
+	features, _ := dp.Features(context.Background(), j1, j2, "")
 	require.True(t, reflect.DeepEqual(features, pepFeatures))
 
-	form, _ := dp.Form(j1, j2, "")
+	form, _ := dp.Form(context.Background(), j1, j2, "")
 	require.Nil(t, form)
 
-	form, _ = dp.Form(j1, j2, "node")
+	form, _ = dp.Form(context.Background(), j1, j2, "node")
 	require.Nil(t, form)
 }

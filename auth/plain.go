@@ -7,6 +7,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 
 	"github.com/ortuman/jackal/storage"
@@ -49,7 +50,7 @@ func (p *Plain) UsesChannelBinding() bool {
 }
 
 // ProcessElement process an incoming authenticator element.
-func (p *Plain) ProcessElement(elem xmpp.XElement) error {
+func (p *Plain) ProcessElement(ctx context.Context, elem xmpp.XElement) error {
 	if p.authenticated {
 		return nil
 	}
@@ -68,7 +69,7 @@ func (p *Plain) ProcessElement(elem xmpp.XElement) error {
 	password := string(s[2])
 
 	// validate user and password
-	user, err := storage.FetchUser(username)
+	user, err := storage.FetchUser(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (p *Plain) ProcessElement(elem xmpp.XElement) error {
 	p.username = username
 	p.authenticated = true
 
-	p.stm.SendElement(xmpp.NewElementNamespace("success", saslNamespace))
+	p.stm.SendElement(ctx, xmpp.NewElementNamespace("success", saslNamespace))
 	return nil
 }
 

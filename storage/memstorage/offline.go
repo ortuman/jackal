@@ -6,12 +6,14 @@
 package memstorage
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/model/serializer"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 // InsertOfflineMessage inserts a new message element into user's offline queue.
-func (m *Storage) InsertOfflineMessage(message *xmpp.Message, username string) error {
+func (m *Storage) InsertOfflineMessage(_ context.Context, message *xmpp.Message, username string) error {
 	return m.inWriteLock(func() error {
 		messages, err := m.fetchUserOfflineMessages(username)
 		if err != nil {
@@ -29,7 +31,7 @@ func (m *Storage) InsertOfflineMessage(message *xmpp.Message, username string) e
 }
 
 // CountOfflineMessages returns current length of user's offline queue.
-func (m *Storage) CountOfflineMessages(username string) (int, error) {
+func (m *Storage) CountOfflineMessages(_ context.Context, username string) (int, error) {
 	var messages []xmpp.Message
 	if err := m.inReadLock(func() error {
 		var fnErr error
@@ -42,7 +44,7 @@ func (m *Storage) CountOfflineMessages(username string) (int, error) {
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (m *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) {
+func (m *Storage) FetchOfflineMessages(_ context.Context, username string) ([]xmpp.Message, error) {
 	var messages []xmpp.Message
 	if err := m.inReadLock(func() error {
 		var fnErr error
@@ -55,7 +57,7 @@ func (m *Storage) FetchOfflineMessages(username string) ([]xmpp.Message, error) 
 }
 
 // DeleteOfflineMessages clears a user offline queue.
-func (m *Storage) DeleteOfflineMessages(username string) error {
+func (m *Storage) DeleteOfflineMessages(_ context.Context, username string) error {
 	return m.inWriteLock(func() error {
 		delete(m.bytes, offlineMessageKey(username))
 		return nil

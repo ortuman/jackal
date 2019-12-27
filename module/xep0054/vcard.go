@@ -6,6 +6,8 @@
 package xep0054
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -41,11 +43,10 @@ func (x *VCard) MatchesIQ(iq *xmpp.IQ) bool {
 	return (iq.IsGet() || iq.IsSet()) && iq.Elements().ChildNamespace("vCard", vCardNamespace) != nil
 }
 
-// ProcessIQ processes a vCard IQ taking according actions
-// over the associated stream.
-func (x *VCard) ProcessIQ(iq *xmpp.IQ) {
+// ProcessIQ processes a vCard IQ taking according actions over the associated stream.
+func (x *VCard) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		x.processIQ(iq)
+		x.processIQ(ctx, iq)
 	})
 }
 
@@ -57,30 +58,30 @@ func (x *VCard) Shutdown() error {
 	return nil
 }
 
-func (x *VCard) processIQ(iq *xmpp.IQ) {
+func (x *VCard) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	vCard := iq.Elements().ChildNamespace("vCard", vCardNamespace)
 	if vCard != nil {
 		if iq.IsGet() {
-			x.getVCard(vCard, iq)
+			x.getVCard(ctx, vCard, iq)
 			return
 		} else if iq.IsSet() {
-			x.setVCard(vCard, iq)
+			x.setVCard(ctx, vCard, iq)
 			return
 		}
 	}
-	_ = x.router.Route(iq.BadRequestError())
+	_ = x.router.Route(ctx, iq.BadRequestError())
 }
 
-func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
+func (x *VCard) getVCard(ctx context.Context, vCard xmpp.XElement, iq *xmpp.IQ) {
 	if vCard.Elements().Count() > 0 {
-		_ = x.router.Route(iq.BadRequestError())
+		_ = x.router.Route(ctx, iq.BadRequestError())
 		return
 	}
 	toJID := iq.ToJID()
-	resElem, err := storage.FetchVCard(toJID.Node())
+	resElem, err := storage.FetchVCard(ctx, toJID.Node())
 	if err != nil {
 		log.Errorf("%v", err)
-		_ = x.router.Route(iq.InternalServerError())
+		_ = x.router.Route(ctx, iq.InternalServerError())
 		return
 	}
 	log.Infof("retrieving vcard... (jid: %s)", toJID.String())
@@ -92,24 +93,24 @@ func (x *VCard) getVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
 		// empty vCard
 		resultIQ.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 	}
-	_ = x.router.Route(resultIQ)
+	_ = x.router.Route(ctx, resultIQ)
 }
 
-func (x *VCard) setVCard(vCard xmpp.XElement, iq *xmpp.IQ) {
+func (x *VCard) setVCard(ctx context.Context, vCard xmpp.XElement, iq *xmpp.IQ) {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
 	if toJID.IsServer() || (toJID.Node() == fromJID.Node()) {
 		log.Infof("saving vcard... (jid: %s)", toJID.String())
 
-		err := storage.UpsertVCard(vCard, toJID.Node())
+		err := storage.UpsertVCard(ctx, vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
-			_ = x.router.Route(iq.InternalServerError())
+			_ = x.router.Route(ctx, iq.InternalServerError())
 			return
 
 		}
-		_ = x.router.Route(iq.ResultIQ())
+		_ = x.router.Route(ctx, iq.ResultIQ())
 	} else {
-		_ = x.router.Route(iq.ForbiddenError())
+		_ = x.router.Route(ctx, iq.ForbiddenError())
 	}
 }

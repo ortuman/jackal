@@ -1,6 +1,12 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package pgsql
 
 import (
+	"context"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -19,7 +25,7 @@ func TestPgSQLFetchPubSubHosts(t *testing.T) {
 	mock.ExpectQuery("SELECT DISTINCT\\(host\\) FROM pubsub_nodes").
 		WillReturnRows(rows)
 
-	hosts, err := s.FetchHosts()
+	hosts, err := s.FetchHosts(context.Background())
 	require.Nil(t, err)
 	require.NotNil(t, hosts)
 	require.Equal(t, "ortuman@jackal.im", hosts[0])
@@ -29,7 +35,7 @@ func TestPgSQLFetchPubSubHosts(t *testing.T) {
 	mock.ExpectQuery("SELECT DISTINCT\\(host\\) FROM pubsub_nodes").
 		WillReturnError(errGeneric)
 
-	hosts, err = s.FetchHosts()
+	hosts, err = s.FetchHosts(context.Background())
 	require.Nil(t, hosts)
 	require.NotNil(t, err)
 	require.Equal(t, errGeneric, err)
@@ -61,7 +67,7 @@ func TestPgSQLUpsertPubSubNode(t *testing.T) {
 	mock.ExpectCommit()
 
 	node := pubsubmodel.Node{Host: "host", Name: "name", Options: opts}
-	err := s.UpsertNode(&node)
+	err := s.UpsertNode(context.Background(), &node)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -73,7 +79,7 @@ func TestPgSQLUpsertPubSubNode(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchNode("ortuman@jackal.im", "princely_musings")
+	_, err = s.FetchNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -94,7 +100,7 @@ func TestPgSQLFetchPubSubNode(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	node, err := s.FetchNode("ortuman@jackal.im", "princely_musings")
+	node, err := s.FetchNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -128,7 +134,7 @@ func TestPgSQLFetchPubSubNodes(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings_2").
 		WillReturnRows(rows)
 
-	nodes, err := s.FetchNodes("ortuman@jackal.im")
+	nodes, err := s.FetchNodes(context.Background(), "ortuman@jackal.im")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -163,7 +169,7 @@ func TestPgSQLFetchPubSubSubscribedNodes(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings_2").
 		WillReturnRows(rows)
 
-	nodes, err := s.FetchSubscribedNodes("ortuman@jackal.im")
+	nodes, err := s.FetchSubscribedNodes(context.Background(), "ortuman@jackal.im")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -199,7 +205,7 @@ func TestPgSQLDeletePubSubNode(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.DeleteNode("ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
@@ -224,7 +230,7 @@ func TestPgSQLUpsertPubSubNodeItem(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertNodeItem(&pubsubmodel.Item{
+	err := s.UpsertNodeItem(context.Background(), &pubsubmodel.Item{
 		ID:        "abc1234",
 		Publisher: "ortuman@jackal.im",
 		Payload:   payload,
@@ -245,7 +251,7 @@ func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	items, err := s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
+	items, err := s.FetchNodeItems(context.Background(), "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -260,7 +266,7 @@ func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchNodeItems("ortuman@jackal.im", "princely_musings")
+	_, err = s.FetchNodeItems(context.Background(), "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -280,7 +286,7 @@ func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
 		WillReturnRows(rows)
 
-	items, err := s.FetchNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+	items, err := s.FetchNodeItemsWithIDs(context.Background(), "ortuman@jackal.im", "princely_musings", identifiers)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -295,7 +301,7 @@ func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
 		WillReturnError(errGeneric)
 
-	_, err = s.FetchNodeItemsWithIDs("ortuman@jackal.im", "princely_musings", identifiers)
+	_, err = s.FetchNodeItemsWithIDs(context.Background(), "ortuman@jackal.im", "princely_musings", identifiers)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -316,7 +322,7 @@ func TestPgSQLUpsertPubSubNodeAffiliation(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	err := s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: "owner",
 	}, "ortuman@jackal.im", "princely_musings")
@@ -336,7 +342,7 @@ func TestPgSQLFetchPubSubNodeAffiliations(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	affiliations, err := s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err := s.FetchNodeAffiliations(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
@@ -347,7 +353,7 @@ func TestPgSQLFetchPubSubNodeAffiliations(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	affiliations, err = s.FetchNodeAffiliations("ortuman@jackal.im", "princely_musings")
+	affiliations, err = s.FetchNodeAffiliations(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)
@@ -361,7 +367,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNodeAffiliation(context.Background(), "noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -373,7 +379,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	err = s.DeleteNodeAffiliation("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeAffiliation(context.Background(), "noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -394,7 +400,7 @@ func TestPgSQLUpsertPubSubNodeSubscription(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	err := s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		SubID:        "1234",
 		JID:          "ortuman@jackal.im",
 		Subscription: "subscribed",
@@ -415,7 +421,7 @@ func TestPgSQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnRows(rows)
 
-	subscriptions, err := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err := s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
@@ -426,7 +432,7 @@ func TestPgSQLFetchPubSubNodeSubscriptions(t *testing.T) {
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	subscriptions, err = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subscriptions, err = s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.NotNil(t, err)
@@ -440,7 +446,7 @@ func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err := s.DeleteNodeSubscription(context.Background(), "noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -452,7 +458,7 @@ func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
 
-	err = s.DeleteNodeSubscription("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
+	err = s.DeleteNodeSubscription(context.Background(), "noeliac@jackal.im", "ortuman@jackal.im", "princely_musings")
 
 	require.Nil(t, mock.ExpectationsWereMet())
 

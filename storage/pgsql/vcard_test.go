@@ -6,6 +6,7 @@
 package pgsql
 
 import (
+	"context"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -22,7 +23,7 @@ func TestInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.UpsertVCard(vCard, "ortuman")
+	err := s.UpsertVCard(context.Background(), vCard, "ortuman")
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -32,7 +33,7 @@ func TestInsertVCard(t *testing.T) {
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnError(errGeneric)
 
-	err = s.UpsertVCard(vCard, "ortuman")
+	err = s.UpsertVCard(context.Background(), vCard, "ortuman")
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -45,7 +46,7 @@ func TestFetchVCard(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(vCardColumns).AddRow("<vCard><FN>Miguel Ángel</FN></vCard>"))
 
-	vCard, err := s.FetchVCard("ortuman")
+	vCard, err := s.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
@@ -55,7 +56,7 @@ func TestFetchVCard(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(vCardColumns))
 
-	vCard, err = s.FetchVCard("ortuman")
+	vCard, err = s.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.Nil(t, vCard)
@@ -65,7 +66,7 @@ func TestFetchVCard(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
 
-	vCard, _ = s.FetchVCard("ortuman")
+	vCard, _ = s.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, vCard)
 }

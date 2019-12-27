@@ -155,50 +155,81 @@ func (e *Element) String() string {
 	buf := bufPool.Get()
 	defer bufPool.Put(buf)
 
-	e.ToXML(buf, true)
+	_ = e.ToXML(buf, true)
 	return buf.String()
 }
 
 // ToXML serializes element to a raw XML representation.
 // includeClosing determines if closing tag should be attached.
-func (e *Element) ToXML(w io.Writer, includeClosing bool) {
-	_, _ = io.WriteString(w, "<")
-	_, _ = io.WriteString(w, e.name)
+func (e *Element) ToXML(w io.Writer, includeClosing bool) error {
+	if _, err := io.WriteString(w, "<"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, e.name); err != nil {
+		return err
+	}
 
 	// serialize attributes
 	for _, attr := range e.attrs {
 		if len(attr.Value) == 0 {
 			continue
 		}
-		_, _ = io.WriteString(w, ` `)
-		_, _ = io.WriteString(w, attr.Label)
-		_, _ = io.WriteString(w, `="`)
-		_, _ = io.WriteString(w, attr.Value)
-		_, _ = io.WriteString(w, `"`)
+		if _, err := io.WriteString(w, ` `); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, attr.Label); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, `="`); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, attr.Value); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, `"`); err != nil {
+			return err
+		}
 	}
 
+	// serialize elements
 	if e.elements.Count() > 0 || len(e.text) > 0 {
-		_, _ = io.WriteString(w, ">")
-
+		if _, err := io.WriteString(w, ">"); err != nil {
+			return err
+		}
 		if len(e.text) > 0 {
-			_ = escapeText(w, []byte(e.text), false)
+			if err := escapeText(w, []byte(e.text), false); err != nil {
+				return err
+			}
 		}
 		for _, elem := range e.elements {
-			elem.ToXML(w, true)
+			if err := elem.ToXML(w, true); err != nil {
+				return err
+			}
 		}
 
 		if includeClosing {
-			_, _ = io.WriteString(w, "</")
-			_, _ = io.WriteString(w, e.name)
-			_, _ = io.WriteString(w, ">")
+			if _, err := io.WriteString(w, "</"); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, e.name); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(w, ">"); err != nil {
+				return err
+			}
 		}
 	} else {
 		if includeClosing {
-			_, _ = io.WriteString(w, "/>")
+			if _, err := io.WriteString(w, "/>"); err != nil {
+				return err
+			}
 		} else {
-			_, _ = io.WriteString(w, ">")
+			if _, err := io.WriteString(w, ">"); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // FromBytes deserializes an element node from it's gob binary representation.

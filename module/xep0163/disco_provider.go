@@ -6,6 +6,8 @@
 package xep0163
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/log"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -31,7 +33,7 @@ var pepFeatures = []string{
 
 type discoInfoProvider struct{}
 
-func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Identity {
+func (p *discoInfoProvider) Identities(_ context.Context, _, _ *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
 	if len(node) > 0 {
 		identities = append(identities, xep0030.Identity{Type: "leaf", Category: "pubsub"})
@@ -42,32 +44,32 @@ func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Ide
 	return identities
 }
 
-func (p *discoInfoProvider) Features(_, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Features(_ context.Context, _, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
 	return pepFeatures, nil
 }
 
-func (p *discoInfoProvider) Form(_, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
 	return nil, nil
 }
 
-func (p *discoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
-	if !p.isSubscribedTo(toJID, fromJID) {
+func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
+	if !p.isSubscribedTo(ctx, toJID, fromJID) {
 		return nil, xmpp.ErrSubscriptionRequired
 	}
 	host := toJID.ToBareJID().String()
 
 	if len(node) > 0 {
 		// return node items
-		return p.nodeItems(host, node)
+		return p.nodeItems(ctx, host, node)
 	}
 	// return host nodes
-	return p.hostNodes(host)
+	return p.hostNodes(ctx, host)
 }
 
-func (p *discoInfoProvider) hostNodes(host string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) hostNodes(ctx context.Context, host string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	nodes, err := storage.FetchNodes(host)
+	nodes, err := storage.FetchNodes(ctx, host)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -82,10 +84,10 @@ func (p *discoInfoProvider) hostNodes(host string) ([]xep0030.Item, *xmpp.Stanza
 	return items, nil
 }
 
-func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) nodeItems(ctx context.Context, host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	n, err := storage.FetchNode(host, node)
+	n, err := storage.FetchNode(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -94,7 +96,7 @@ func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.
 		// does not exist
 		return nil, xmpp.ErrItemNotFound
 	}
-	nodeItems, err := storage.FetchNodeItems(host, node)
+	nodeItems, err := storage.FetchNodeItems(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -108,11 +110,11 @@ func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.
 	return items, nil
 }
 
-func (p *discoInfoProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) bool {
+func (p *discoInfoProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) bool {
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false

@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"errors"
 	"runtime"
@@ -65,10 +66,10 @@ type fakeMemberListDelegate struct {
 	notifyLeaveCalls  int
 }
 
-func (d *fakeMemberListDelegate) handleNotifyMsg(msg []byte) { d.notifyMsgCalls++ }
-func (d *fakeMemberListDelegate) handleNotifyJoin(n *Node)   { d.notifyJoinCalls++ }
-func (d *fakeMemberListDelegate) handleNotifyUpdate(n *Node) { d.notifyUpdateCalls++ }
-func (d *fakeMemberListDelegate) handleNotifyLeave(n *Node)  { d.notifyLeaveCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyMsg(_ context.Context, _ []byte)   { d.notifyMsgCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyJoin(_ context.Context, _ *Node)   { d.notifyJoinCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyUpdate(_ context.Context, _ *Node) { d.notifyUpdateCalls++ }
+func (d *fakeMemberListDelegate) handleNotifyLeave(_ context.Context, _ *Node)  { d.notifyLeaveCalls++ }
 
 func TestClusterMemberList_Members(t *testing.T) {
 	var ml fakeHashicorpMemberList
@@ -77,7 +78,7 @@ func TestClusterMemberList_Members(t *testing.T) {
 	createHashicorpMemberList = func(_ *memberlist.Config) (list hashicorpMemberList, e error) {
 		return &ml, nil
 	}
-	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
+	cMemberList, _ := newDefaultMemberList("node1", 6666, time.Minute, &delegate)
 	cMemberList.NotifyJoin(memberListNode("node1"))
 	cMemberList.NotifyJoin(memberListNode("node2"))
 	cMemberList.NotifyJoin(memberListNode("node3"))
@@ -107,7 +108,7 @@ func TestClusterMemberList_Join(t *testing.T) {
 	createHashicorpMemberList = func(_ *memberlist.Config) (list hashicorpMemberList, e error) {
 		return &ml, nil
 	}
-	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
+	cMemberList, _ := newDefaultMemberList("node1", 6666, time.Minute, &delegate)
 
 	err := cMemberList.Join([]string{"127.0.0.1:7777", "127.0.0.1:8888"})
 	require.Nil(t, err)
@@ -126,7 +127,7 @@ func TestClusterMemberList_Shutdown(t *testing.T) {
 	createHashicorpMemberList = func(_ *memberlist.Config) (list hashicorpMemberList, e error) {
 		return &ml, nil
 	}
-	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
+	cMemberList, _ := newDefaultMemberList("node1", 6666, time.Minute, &delegate)
 	err := cMemberList.Shutdown()
 	require.Nil(t, err)
 	require.Equal(t, 1, ml.leaveCalls)
@@ -146,7 +147,7 @@ func TestClusterMemberList_SendReliable(t *testing.T) {
 	createHashicorpMemberList = func(_ *memberlist.Config) (list hashicorpMemberList, e error) {
 		return &ml, nil
 	}
-	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
+	cMemberList, _ := newDefaultMemberList("node1", 6666, time.Minute, &delegate)
 	err := cMemberList.SendReliable("node2", []byte{})
 	require.NotNil(t, err) // node2 has not joined
 	require.Equal(t, 0, ml.sendReliableCalls)
@@ -170,7 +171,7 @@ func TestClusterMemberList_NodeMetadata(t *testing.T) {
 	createHashicorpMemberList = func(_ *memberlist.Config) (list hashicorpMemberList, e error) {
 		return &ml, nil
 	}
-	cMemberList, _ := newDefaultMemberList("node1", 6666, &delegate)
+	cMemberList, _ := newDefaultMemberList("node1", 6666, time.Minute, &delegate)
 	require.Nil(t, cMemberList.NodeMeta(1))
 
 	b := cMemberList.NodeMeta(10000)

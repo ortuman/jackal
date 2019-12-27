@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestXEP0163_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r)
 
@@ -51,7 +52,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r)
 
@@ -66,14 +67,14 @@ func TestXEP163_CreateNode(t *testing.T) {
 	pubSub.AppendElement(create)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, iqID, elem.ID())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// read node
-	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, n)
 	require.Equal(t, n.Options, defaultNodeOptions)
 }
@@ -85,15 +86,15 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	r.Bind(stm)
+	r.Bind(context.Background(), stm)
 
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -111,7 +112,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	pubSub.AppendElement(configureElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, iqID, elem.ID())
@@ -139,35 +140,35 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifyConfig = true
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		JID:          "ortuman@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -195,7 +196,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	pubSub.AppendElement(configureElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
@@ -219,7 +220,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// check if configuration was applied
-	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, n)
 	require.Equal(t, nodeOpts.Title, n.Options.Title)
 }
@@ -233,35 +234,35 @@ func TestXEP163_DeleteNode(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifyDelete = true
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		JID:          "ortuman@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -281,7 +282,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	pubSub.AppendElement(deleteElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "message", elem.Name()) // notification
@@ -304,7 +305,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// read node
-	n, _ := s.FetchNode("ortuman@jackal.im", "princely_musings")
+	n, _ := s.FetchNode(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, n)
 }
 
@@ -315,16 +316,16 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -349,13 +350,13 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	aff, _ := s.FetchNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
+	aff, _ := s.FetchNodeAffiliation(context.Background(), "ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
 	require.NotNil(t, aff)
 	require.Equal(t, "noelia@jackal.im", aff.JID)
 	require.Equal(t, pubsubmodel.Owner, aff.Affiliation)
@@ -363,13 +364,13 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	// remove affiliation
 	affiliation.SetAttribute("affiliation", pubsubmodel.None)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	aff, _ = s.FetchNodeAffiliation("ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
+	aff, _ = s.FetchNodeAffiliation(context.Background(), "ortuman@jackal.im", "princely_musings", "noelia@jackal.im")
 	require.Nil(t, aff)
 }
 
@@ -380,21 +381,21 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "noelia@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -413,7 +414,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -440,15 +441,15 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
@@ -473,13 +474,13 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.NotNil(t, subs)
 	require.Len(t, subs, 1)
 	require.Equal(t, "noelia@jackal.im", subs[0].JID)
@@ -488,13 +489,13 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	// remove subscription
 	sub.SetAttribute("subscription", pubsubmodel.None)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
-	subs, _ = s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ = s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Nil(t, subs)
 }
 
@@ -505,21 +506,21 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
-	r.Bind(stm1)
+	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		SubID:        uuid.New(),
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
@@ -539,7 +540,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	pubSub.AppendElement(affElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
 	require.NotNil(t, elem)
 	require.Equal(t, "iq", elem.Name())
@@ -566,25 +567,25 @@ func TestXEP163_Subscribe(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
 	nodeOpts := defaultNodeOptions
 	nodeOpts.NotifySub = true
 
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: nodeOpts,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -605,7 +606,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 
 	// command reply
@@ -636,7 +637,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 	require.Equal(t, "princely_musings", subscriptionElem.Attributes().Get("node"))
 
 	// check storage subscription
-	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Len(t, subs, 1)
 	require.Equal(t, "noelia@jackal.im", subs[0].JID)
 	require.Equal(t, pubsubmodel.Subscribed, subs[0].Subscription)
@@ -650,27 +651,27 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		SubID:        uuid.New(),
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
@@ -691,7 +692,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	pubSub.AppendElement(subElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 
 	// command reply
@@ -700,7 +701,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	require.Equal(t, xmpp.ResultType, elem.Type())
 
 	// check storage subscription
-	subs, _ := s.FetchNodeSubscriptions("ortuman@jackal.im", "princely_musings")
+	subs, _ := s.FetchNodeSubscriptions(context.Background(), "ortuman@jackal.im", "princely_musings")
 	require.Len(t, subs, 0)
 }
 
@@ -713,33 +714,33 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
 	// create items
-	_ = s.UpsertNodeItem(&pubsubmodel.Item{
+	_ = s.UpsertNodeItem(context.Background(), &pubsubmodel.Item{
 		ID:        "i1",
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("m1"),
 	}, "ortuman@jackal.im", "princely_musings", 2)
 
-	_ = s.UpsertNodeItem(&pubsubmodel.Item{
+	_ = s.UpsertNodeItem(context.Background(), &pubsubmodel.Item{
 		ID:        "i2",
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("m2"),
@@ -759,7 +760,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	pubSub.AppendElement(itemsCmdElem)
 	iq.AppendElement(pubSub)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -779,7 +780,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 	i2Elem.SetAttribute("id", "i2")
 	itemsCmdElem.AppendElement(i2Elem)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem = stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
 	require.Equal(t, xmpp.ResultType, elem.Type())
@@ -801,40 +802,40 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	// create node and affiliations
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "noelia@jackal.im",
 		Name:    "princely_musings_1",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "noelia@jackal.im",
 		Name:    "princely_musings_2",
 		Options: defaultNodeOptions,
 	})
-	_ = s.UpsertNodeItem(&pubsubmodel.Item{
+	_ = s.UpsertNodeItem(context.Background(), &pubsubmodel.Item{
 		ID:        "i2",
 		Publisher: "noelia@jackal.im",
 		Payload:   xmpp.NewElementName("m2"),
 	}, "noelia@jackal.im", "princely_musings_2", 2)
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: "both",
 	})
 	p := New(nil, nil, r)
 
-	err := p.subscribeToAll("noelia@jackal.im", j1)
+	err := p.subscribeToAll(context.Background(), "noelia@jackal.im", j1)
 	require.Nil(t, err)
 
-	nodes, _ := s.FetchSubscribedNodes(j1.ToBareJID().String())
+	nodes, _ := s.FetchSubscribedNodes(context.Background(), j1.ToBareJID().String())
 	require.NotNil(t, nodes)
 	require.Len(t, nodes, 2)
 
-	err = p.unsubscribeFromAll("noelia@jackal.im", j1)
+	err = p.unsubscribeFromAll(context.Background(), "noelia@jackal.im", j1)
 	require.Nil(t, err)
 
-	nodes, _ = s.FetchSubscribedNodes(j1.ToBareJID().String())
+	nodes, _ = s.FetchSubscribedNodes(context.Background(), j1.ToBareJID().String())
 	require.Nil(t, nodes)
 }
 
@@ -846,35 +847,35 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
-	r.Bind(stm1)
-	r.Bind(stm2)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
 
 	// create node, affiliations and subscriptions
-	_ = s.UpsertNode(&pubsubmodel.Node{
+	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
-	_ = s.UpsertNodeSubscription(&pubsubmodel.Subscription{
+	_ = s.UpsertNodeSubscription(context.Background(), &pubsubmodel.Subscription{
 		SubID:        uuid.New(),
 		JID:          "noelia@jackal.im",
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = s.InsertCapabilities(&model.Capabilities{
+	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
@@ -889,7 +890,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	pr2.AppendElement(c)
 
-	_, _ = ph.RegisterPresence(pr2)
+	_, _ = ph.RegisterPresence(context.Background(), pr2)
 
 	// process pubsub command
 	p := New(nil, ph, r)
@@ -911,7 +912,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 
 	iq.AppendElement(pubSubEl)
 
-	p.ProcessIQ(iq)
+	p.ProcessIQ(context.Background(), iq)
 	elem := stm2.ReceiveElement()
 	require.Equal(t, "message", elem.Name())
 	require.Equal(t, xmpp.HeadlineType, elem.Type())

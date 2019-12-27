@@ -6,6 +6,7 @@
 package mysql
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err := s.UpsertUser(&user)
+	err := s.UpsertUser(context.Background(), &user)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -36,7 +37,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
 		WillReturnError(errMySQLStorage)
-	err = s.UpsertUser(&user)
+	err = s.UpsertUser(context.Background(), &user)
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
@@ -58,7 +59,7 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	err := s.DeleteUser("ortuman")
+	err := s.DeleteUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
@@ -68,7 +69,7 @@ func TestMySQLStorageDeleteUser(t *testing.T) {
 		WithArgs("ortuman").WillReturnError(errMySQLStorage)
 	mock.ExpectRollback()
 
-	err = s.DeleteUser("ortuman")
+	err = s.DeleteUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
@@ -85,7 +86,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns))
 
-	usr, _ := s.FetchUser("ortuman")
+	usr, _ := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, usr)
 
@@ -93,14 +94,14 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
-	_, err := s.FetchUser("ortuman")
+	_, err := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
 	s, mock = NewMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").WillReturnError(errMySQLStorage)
-	_, err = s.FetchUser("ortuman")
+	_, err = s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }
@@ -113,7 +114,7 @@ func TestMySQLStorageUserExists(t *testing.T) {
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
 
-	ok, err := s.UserExists("ortuman")
+	ok, err := s.UserExists(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 	require.True(t, ok)
@@ -122,7 +123,7 @@ func TestMySQLStorageUserExists(t *testing.T) {
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("romeo").
 		WillReturnError(errMySQLStorage)
-	_, err = s.UserExists("romeo")
+	_, err = s.UserExists(context.Background(), "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 }

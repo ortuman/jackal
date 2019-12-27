@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"context"
 	"testing"
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
@@ -22,7 +23,7 @@ func TestAccessChecker_Open(t *testing.T) {
 		accessModel: pubsubmodel.Open,
 	}
 
-	err := ac.checkAccess("noelia@jackal.im")
+	err := ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.Nil(t, err)
 }
 
@@ -34,7 +35,7 @@ func TestAccessChecker_Outcast(t *testing.T) {
 		affiliation: &pubsubmodel.Affiliation{JID: "noelia@jackal.im", Affiliation: pubsubmodel.Outcast},
 	}
 
-	err := ac.checkAccess("noelia@jackal.im")
+	err := ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.NotNil(t, err)
 	require.Equal(t, errOutcastMember, err)
 }
@@ -46,7 +47,7 @@ func TestAccessChecker_PresenceSubscription(t *testing.T) {
 		accessModel: pubsubmodel.Presence,
 	}
 
-	err := ac.checkAccess("noelia@jackal.im")
+	err := ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.NotNil(t, err)
 	require.Equal(t, errPresenceSubscriptionRequired, err)
 
@@ -54,13 +55,13 @@ func TestAccessChecker_PresenceSubscription(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: rostermodel.SubscriptionFrom,
 	})
 
-	err = ac.checkAccess("noelia@jackal.im")
+	err = ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.Nil(t, err)
 }
 
@@ -72,7 +73,7 @@ func TestAccessChecker_RosterGroup(t *testing.T) {
 		accessModel:         pubsubmodel.Roster,
 	}
 
-	err := ac.checkAccess("noelia@jackal.im")
+	err := ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.NotNil(t, err)
 	require.Equal(t, errNotInRosterGroup, err)
 
@@ -80,14 +81,14 @@ func TestAccessChecker_RosterGroup(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Groups:       []string{"Family"},
 		Subscription: rostermodel.SubscriptionFrom,
 	})
 
-	err = ac.checkAccess("noelia@jackal.im")
+	err = ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.Nil(t, err)
 }
 
@@ -99,7 +100,7 @@ func TestAccessChecker_Member(t *testing.T) {
 		affiliation: &pubsubmodel.Affiliation{JID: "noelia@jackal.im", Affiliation: pubsubmodel.Member},
 	}
 
-	err := ac.checkAccess("noelia2@jackal.im")
+	err := ac.checkAccess(context.Background(), "noelia2@jackal.im")
 	require.NotNil(t, err)
 	require.Equal(t, errNotOnWhiteList, err)
 
@@ -107,11 +108,11 @@ func TestAccessChecker_Member(t *testing.T) {
 	storage.Set(s)
 	defer storage.Unset()
 
-	_ = s.UpsertNodeAffiliation(&pubsubmodel.Affiliation{
+	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
 		JID:         "noelia@jackal.im",
 		Affiliation: pubsubmodel.Member,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	err = ac.checkAccess("noelia@jackal.im")
+	err = ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.Nil(t, err)
 }

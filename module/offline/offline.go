@@ -6,6 +6,8 @@
 package offline
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
@@ -42,14 +44,14 @@ func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Offli
 }
 
 // ArchiveMessage archives a new offline messages into the storage.
-func (x *Offline) ArchiveMessage(message *xmpp.Message) {
-	x.runQueue.Run(func() { x.archiveMessage(message) })
+func (x *Offline) ArchiveMessage(ctx context.Context, message *xmpp.Message) {
+	x.runQueue.Run(func() { x.archiveMessage(ctx, message) })
 }
 
 // DeliverOfflineMessages delivers every archived offline messages to the peer
 // deleting them from storage.
-func (x *Offline) DeliverOfflineMessages(stm stream.C2S) {
-	x.runQueue.Run(func() { x.deliverOfflineMessages(stm) })
+func (x *Offline) DeliverOfflineMessages(ctx context.Context, stm stream.C2S) {
+	x.runQueue.Run(func() { x.deliverOfflineMessages(ctx, stm) })
 }
 
 // Shutdown shuts down offline module.
@@ -60,25 +62,25 @@ func (x *Offline) Shutdown() error {
 	return nil
 }
 
-func (x *Offline) archiveMessage(message *xmpp.Message) {
+func (x *Offline) archiveMessage(ctx context.Context, message *xmpp.Message) {
 	if !isMessageArchivable(message) {
 		return
 	}
 	toJID := message.ToJID()
-	queueSize, err := storage.CountOfflineMessages(toJID.Node())
+	queueSize, err := storage.CountOfflineMessages(ctx, toJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	if queueSize >= x.cfg.QueueSize {
-		x.router.Route(message.ServiceUnavailableError())
+		_ = x.router.Route(ctx, message.ServiceUnavailableError())
 		return
 	}
 	delayed, _ := xmpp.NewMessageFromElement(message, message.FromJID(), message.ToJID())
 	delayed.Delay(message.FromJID().Domain(), "Offline Storage")
-	if err := storage.InsertOfflineMessage(delayed, toJID.Node()); err != nil {
+	if err := storage.InsertOfflineMessage(ctx, delayed, toJID.Node()); err != nil {
 		log.Error(err)
-		x.router.Route(message.InternalServerError())
+		_ = x.router.Route(ctx, message.InternalServerError())
 		return
 	}
 	log.Infof("archived offline message... id: %s", message.ID())
@@ -90,13 +92,13 @@ func (x *Offline) archiveMessage(message *xmpp.Message) {
 	}
 }
 
-func (x *Offline) deliverOfflineMessages(stm stream.C2S) {
+func (x *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) {
 	if stm.GetBool(offlineDeliveredCtxKey) {
 		return // already delivered
 	}
 	// deliver offline messages
 	userJID := stm.JID()
-	messages, err := storage.FetchOfflineMessages(userJID.Node())
+	messages, err := storage.FetchOfflineMessages(ctx, userJID.Node())
 	if err != nil {
 		log.Error(err)
 		return
@@ -107,12 +109,12 @@ func (x *Offline) deliverOfflineMessages(stm stream.C2S) {
 	log.Infof("delivering offline messages: %s... count: %d", userJID, len(messages))
 
 	for _, m := range messages {
-		_ = x.router.Route(&m)
+		_ = x.router.Route(ctx, &m)
 	}
-	if err := storage.DeleteOfflineMessages(userJID.Node()); err != nil {
+	if err := storage.DeleteOfflineMessages(ctx, userJID.Node()); err != nil {
 		log.Error(err)
 	}
-	stm.SetBool(offlineDeliveredCtxKey, true)
+	stm.SetBool(ctx, offlineDeliveredCtxKey, true)
 }
 
 func isMessageArchivable(message *xmpp.Message) bool {

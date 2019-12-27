@@ -6,6 +6,7 @@
 package cluster
 
 import (
+	"context"
 	"sync"
 
 	"github.com/ortuman/jackal/xmpp"
@@ -14,7 +15,7 @@ import (
 
 type c2sCluster interface {
 	LocalNode() string
-	SendMessageTo(node string, msg *Message)
+	SendMessageTo(ctx context.Context, node string, msg *Message)
 }
 
 // C2S represents a cluster c2s stream.
@@ -64,7 +65,7 @@ func (s *C2S) Context() map[string]interface{} {
 }
 
 // SetString associates a string context value to a key.
-func (s *C2S) SetString(key string, value string) {}
+func (s *C2S) SetString(_ context.Context, _ string, _ string) {}
 
 // GetString returns the context value associated with the key as a string.
 func (s *C2S) GetString(key string) string {
@@ -78,7 +79,7 @@ func (s *C2S) GetString(key string) string {
 }
 
 // SetInt associates an integer context value to a key.
-func (s *C2S) SetInt(key string, value int) {}
+func (s *C2S) SetInt(_ context.Context, _ string, _ int) {}
 
 // GetInt returns the context value associated with the key as an integer.
 func (s *C2S) GetInt(key string) int {
@@ -92,7 +93,7 @@ func (s *C2S) GetInt(key string) int {
 }
 
 // SetFloat associates a float context value to a key.
-func (s *C2S) SetFloat(key string, value float64) {}
+func (s *C2S) SetFloat(_ context.Context, _ string, _ float64) {}
 
 // GetFloat returns the context value associated with the key as a float64.
 func (s *C2S) GetFloat(key string) float64 {
@@ -106,7 +107,7 @@ func (s *C2S) GetFloat(key string) float64 {
 }
 
 // SetBool associates a boolean context value to a key.
-func (s *C2S) SetBool(key string, value bool) {}
+func (s *C2S) SetBool(_ context.Context, _ string, _ bool) {}
 
 // GetBool returns the context value associated with the key as a boolean.
 func (s *C2S) GetBool(key string) bool {
@@ -169,15 +170,15 @@ func (s *C2S) SetPresence(presence *xmpp.Presence) {
 }
 
 // Disconnect disconnects remote peer by closing the underlying TCP socket connection.
-func (s *C2S) Disconnect(err error) {}
+func (s *C2S) Disconnect(_ context.Context, _ error) {}
 
 // SendElement writes an XMPP element to the stream.
-func (s *C2S) SendElement(elem xmpp.XElement) {
+func (s *C2S) SendElement(ctx context.Context, elem xmpp.XElement) {
 	stanza, ok := elem.(xmpp.Stanza)
 	if !ok {
 		return
 	}
-	s.cluster.SendMessageTo(s.node, &Message{
+	s.cluster.SendMessageTo(ctx, s.node, &Message{
 		Type: MsgRouteStanza,
 		Node: s.cluster.LocalNode(),
 		Payloads: []MessagePayload{{
