@@ -32,43 +32,43 @@ func (*disabledStorage) FetchCapabilities(_ context.Context, _, _ string) (*mode
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertRosterItem(_ *rostermodel.Item) (rostermodel.Version, error) {
+func (*disabledStorage) UpsertRosterItem(_ context.Context, _ *rostermodel.Item) (rostermodel.Version, error) {
 	return rostermodel.Version{}, nil
 }
 
-func (*disabledStorage) DeleteRosterItem(_, _ string) (rostermodel.Version, error) {
+func (*disabledStorage) DeleteRosterItem(_ context.Context, _, _ string) (rostermodel.Version, error) {
 	return rostermodel.Version{}, nil
 }
 
-func (*disabledStorage) FetchRosterItems(_ string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (*disabledStorage) FetchRosterItems(_ context.Context, _ string) ([]rostermodel.Item, rostermodel.Version, error) {
 	return nil, rostermodel.Version{}, nil
 }
 
-func (*disabledStorage) FetchRosterItemsInGroups(_ string, _ []string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (*disabledStorage) FetchRosterItemsInGroups(_ context.Context, _ string, _ []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	return nil, rostermodel.Version{}, nil
 }
 
-func (*disabledStorage) FetchRosterItem(_, _ string) (*rostermodel.Item, error) {
+func (*disabledStorage) FetchRosterItem(_ context.Context, _, _ string) (*rostermodel.Item, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) UpsertRosterNotification(_ *rostermodel.Notification) error {
+func (*disabledStorage) UpsertRosterNotification(_ context.Context, _ *rostermodel.Notification) error {
 	return nil
 }
 
-func (*disabledStorage) DeleteRosterNotification(_, _ string) error {
+func (*disabledStorage) DeleteRosterNotification(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func (*disabledStorage) FetchRosterNotification(_ string, _ string) (*rostermodel.Notification, error) {
+func (*disabledStorage) FetchRosterNotification(_ context.Context, _ string, _ string) (*rostermodel.Notification, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchRosterNotifications(_ string) ([]rostermodel.Notification, error) {
+func (*disabledStorage) FetchRosterNotifications(_ context.Context, _ string) ([]rostermodel.Notification, error) {
 	return nil, nil
 }
 
-func (*disabledStorage) FetchRosterGroups(_ string) ([]string, error) {
+func (*disabledStorage) FetchRosterGroups(_ context.Context, _ string) ([]string, error) {
 	return nil, nil
 }
 

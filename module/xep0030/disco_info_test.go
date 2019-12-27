@@ -135,19 +135,19 @@ func TestXEP0030_SendItems(t *testing.T) {
 type testDiscoInfoProvider struct {
 }
 
-func (tp *testDiscoInfoProvider) Identities(toJID, fromJID *jid.JID, node string) []Identity {
+func (tp *testDiscoInfoProvider) Identities(_ context.Context, toJID, fromJID *jid.JID, node string) []Identity {
 	return []Identity{{Name: "test_identity"}}
 }
 
-func (tp *testDiscoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError) {
+func (tp *testDiscoInfoProvider) Items(_ context.Context, toJID, fromJID *jid.JID, node string) ([]Item, *xmpp.StanzaError) {
 	return []Item{{Jid: "test.jackal.im"}}, nil
 }
 
-func (tp *testDiscoInfoProvider) Features(toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
+func (tp *testDiscoInfoProvider) Features(_ context.Context, toJID, fromJID *jid.JID, node string) ([]Feature, *xmpp.StanzaError) {
 	return []Feature{"com.jackal.im.feature"}, nil
 }
 
-func (tp *testDiscoInfoProvider) Form(toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError) {
+func (tp *testDiscoInfoProvider) Form(_ context.Context, toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, *xmpp.StanzaError) {
 	return nil, nil
 }
 

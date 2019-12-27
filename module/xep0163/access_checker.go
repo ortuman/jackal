@@ -6,6 +6,7 @@
 package xep0163
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -30,7 +31,7 @@ type accessChecker struct {
 	affiliation         *pubsubmodel.Affiliation
 }
 
-func (ac *accessChecker) checkAccess(j string) error {
+func (ac *accessChecker) checkAccess(ctx context.Context, j string) error {
 	aff := ac.affiliation
 	if aff != nil && aff.Affiliation == pubsubmodel.Outcast {
 		return errOutcastMember
@@ -40,7 +41,7 @@ func (ac *accessChecker) checkAccess(j string) error {
 		return nil
 
 	case pubsubmodel.Presence:
-		allowed, err := ac.checkPresenceAccess(j)
+		allowed, err := ac.checkPresenceAccess(ctx, j)
 		if err != nil {
 			return err
 		}
@@ -49,7 +50,7 @@ func (ac *accessChecker) checkAccess(j string) error {
 		}
 
 	case pubsubmodel.Roster:
-		allowed, err := ac.checkRosterAccess(j)
+		allowed, err := ac.checkRosterAccess(ctx, j)
 		if err != nil {
 			return err
 		}
@@ -72,11 +73,11 @@ func (ac *accessChecker) checkAccess(j string) error {
 	return nil
 }
 
-func (ac *accessChecker) checkPresenceAccess(j string) (bool, error) {
+func (ac *accessChecker) checkPresenceAccess(ctx context.Context, j string) (bool, error) {
 	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
-	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}
@@ -84,11 +85,11 @@ func (ac *accessChecker) checkPresenceAccess(j string) (bool, error) {
 	return allowed, nil
 }
 
-func (ac *accessChecker) checkRosterAccess(j string) (bool, error) {
+func (ac *accessChecker) checkRosterAccess(ctx context.Context, j string) (bool, error) {
 	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
-	ri, err := storage.FetchRosterItem(userJID.Node(), contactJID.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

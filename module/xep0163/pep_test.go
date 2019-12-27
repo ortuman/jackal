@@ -168,7 +168,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -262,7 +262,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -585,7 +585,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -665,7 +665,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -727,7 +727,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -818,7 +818,7 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 		Payload:   xmpp.NewElementName("m2"),
 	}, "noelia@jackal.im", "princely_musings_2", 2)
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: "both",
@@ -862,7 +862,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = s.UpsertRosterItem(&rostermodel.Item{
+	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

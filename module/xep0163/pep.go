@@ -467,7 +467,7 @@ func (x *Pep) sendConfigurationForm(ctx context.Context, cmdCtx *commandContext,
 	configureNode := xmpp.NewElementName("configure")
 	configureNode.SetAttribute("node", cmdCtx.nodeID)
 
-	rosterGroups, err := storage.FetchRosterGroups(iq.ToJID().Node())
+	rosterGroups, err := storage.FetchRosterGroups(ctx, iq.ToJID().Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -955,7 +955,7 @@ func (x *Pep) notify(
 	for _, toJID := range toJIDs {
 		if toJID.ToBareJID().String() != host {
 			// check JID access before notifying
-			err := accessChecker.checkAccess(toJID.ToBareJID().String())
+			err := accessChecker.checkAccess(ctx, toJID.ToBareJID().String())
 			switch err {
 			case nil:
 				break
@@ -1041,7 +1041,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 	}
 	// check access
 	if opts.checkAccess && !cmdCtx.isAccountOwner {
-		err := cmdCtx.accessChecker.checkAccess(fromJID)
+		err := cmdCtx.accessChecker.checkAccess(ctx, fromJID)
 		switch err {
 		case nil:
 			break

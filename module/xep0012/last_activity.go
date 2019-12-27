@@ -69,7 +69,7 @@ func (x *LastActivity) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	if toJID.IsServer() {
 		x.sendServerUptime(ctx, iq)
 	} else if toJID.IsBare() {
-		ok, err := x.isSubscribedTo(toJID, fromJID)
+		ok, err := x.isSubscribedTo(ctx, toJID, fromJID)
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())
@@ -125,11 +125,11 @@ func (x *LastActivity) sendReply(ctx context.Context, iq *xmpp.IQ, secs int, sta
 	_ = x.router.Route(ctx, res)
 }
 
-func (x *LastActivity) isSubscribedTo(contact *jid.JID, userJID *jid.JID) (bool, error) {
+func (x *LastActivity) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) (bool, error) {
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true, nil
 	}
-	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

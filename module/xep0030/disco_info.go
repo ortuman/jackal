@@ -147,7 +147,7 @@ func (x *DiscoInfo) processIQ(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (x *DiscoInfo) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ) {
-	features, sErr := prov.Features(toJID, fromJID, node)
+	features, sErr := prov.Features(ctx, toJID, fromJID, node)
 	if sErr != nil {
 		_ = x.router.Route(ctx, xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
@@ -158,7 +158,7 @@ func (x *DiscoInfo) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID,
 	result := iq.ResultIQ()
 	query := xmpp.NewElementNamespace("query", discoInfoNamespace)
 
-	identities := prov.Identities(toJID, fromJID, node)
+	identities := prov.Identities(ctx, toJID, fromJID, node)
 	for _, identity := range identities {
 		identityEl := xmpp.NewElementName("identity")
 		identityEl.SetAttribute("category", identity.Category)
@@ -175,7 +175,7 @@ func (x *DiscoInfo) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID,
 		featureEl.SetAttribute("var", feature)
 		query.AppendElement(featureEl)
 	}
-	form, sErr := prov.Form(toJID, fromJID, node)
+	form, sErr := prov.Form(ctx, toJID, fromJID, node)
 	if sErr != nil {
 		_ = x.router.Route(ctx, xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return
@@ -188,7 +188,7 @@ func (x *DiscoInfo) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID,
 }
 
 func (x *DiscoInfo) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *xmpp.IQ) {
-	items, sErr := prov.Items(toJID, fromJID, node)
+	items, sErr := prov.Items(ctx, toJID, fromJID, node)
 	if sErr != nil {
 		_ = x.router.Route(ctx, xmpp.NewErrorStanzaFromStanza(iq, sErr, nil))
 		return

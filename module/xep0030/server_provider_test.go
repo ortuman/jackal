@@ -39,19 +39,19 @@ func TestServerProvider_Features(t *testing.T) {
 	accJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
 	accJID2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 
-	features, sErr := sp.Features(srvJID, accJID, "node")
+	features, sErr := sp.Features(context.Background(), srvJID, accJID, "node")
 	require.Nil(t, features)
 	require.Nil(t, sErr)
 
-	features, sErr = sp.Features(srvJID, accJID, "")
+	features, sErr = sp.Features(context.Background(), srvJID, accJID, "")
 	require.Equal(t, features, []Feature{"sf0"})
 	require.Nil(t, sErr)
 
-	features, sErr = sp.Features(accJID.ToBareJID(), accJID, "")
+	features, sErr = sp.Features(context.Background(), accJID.ToBareJID(), accJID, "")
 	require.Equal(t, features, []Feature{"af1"})
 	require.Nil(t, sErr)
 
-	features, sErr = sp.Features(accJID2.ToBareJID(), accJID, "")
+	features, sErr = sp.Features(context.Background(), accJID2.ToBareJID(), accJID, "")
 	require.Nil(t, features)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 }
@@ -61,12 +61,12 @@ func TestServerProvider_Identities(t *testing.T) {
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	accJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
-	require.Nil(t, sp.Identities(srvJID, accJID, "node"))
+	require.Nil(t, sp.Identities(context.Background(), srvJID, accJID, "node"))
 
-	require.Equal(t, sp.Identities(srvJID, accJID, ""), []Identity{
+	require.Equal(t, sp.Identities(context.Background(), srvJID, accJID, ""), []Identity{
 		{Type: "im", Category: "server", Name: "jackal"},
 	})
-	require.Equal(t, sp.Identities(accJID.ToBareJID(), accJID, ""), []Identity{
+	require.Equal(t, sp.Identities(context.Background(), accJID.ToBareJID(), accJID, ""), []Identity{
 		{Type: "registered", Category: "account"},
 	})
 }
@@ -91,26 +91,26 @@ func TestServerProvider_Items(t *testing.T) {
 	r.Bind(context.Background(), stm2)
 	r.Bind(context.Background(), stm3)
 
-	items, sErr := sp.Items(srvJID, accJID1, "node")
+	items, sErr := sp.Items(context.Background(), srvJID, accJID1, "node")
 	require.Nil(t, items)
 	require.Nil(t, sErr)
 
-	items, sErr = sp.Items(srvJID, accJID1, "")
+	items, sErr = sp.Items(context.Background(), srvJID, accJID1, "")
 	require.Equal(t, items, []Item{
 		{Jid: accJID1.ToBareJID().String()},
 	})
 	require.Nil(t, sErr)
 
-	items, sErr = sp.Items(accJID2.ToBareJID(), accJID1, "")
+	items, sErr = sp.Items(context.Background(), accJID2.ToBareJID(), accJID1, "")
 	require.Nil(t, items)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 
-	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
-	items, sErr = sp.Items(accJID2.ToBareJID(), accJID1, "")
+	items, sErr = sp.Items(context.Background(), accJID2.ToBareJID(), accJID1, "")
 	sort.Slice(items, func(i, j int) bool { return items[i].Jid < items[j].Jid })
 
 	require.Equal(t, items, []Item{

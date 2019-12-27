@@ -7,6 +7,7 @@ package memstorage
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -15,7 +16,7 @@ import (
 
 // UpsertRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (m *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, error) {
+func (m *Storage) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	err := m.inWriteLock(func() error {
 		ris, fnErr := m.fetchRosterItems(ri.Username)
@@ -53,7 +54,7 @@ func (m *Storage) UpsertRosterItem(ri *rostermodel.Item) (rostermodel.Version, e
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
-func (m *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, error) {
+func (m *Storage) DeleteRosterItem(_ context.Context, user, contact string) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	if err := m.inWriteLock(func() error {
 		ris, fnErr := m.fetchRosterItems(user)
@@ -87,7 +88,7 @@ func (m *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, e
 }
 
 // FetchRosterItems retrieves from storage all roster item entities associated to a given user.
-func (m *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (m *Storage) FetchRosterItems(_ context.Context, user string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
 
@@ -107,7 +108,7 @@ func (m *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel
 
 // FetchRosterItemsInGroups retrieves from storage all roster item entities
 // associated to a given user and a set of groups.
-func (m *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (m *Storage) FetchRosterItemsInGroups(_ context.Context, username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
 
@@ -137,7 +138,7 @@ func (m *Storage) FetchRosterItemsInGroups(username string, groups []string) ([]
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
-func (m *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
+func (m *Storage) FetchRosterItem(_ context.Context, user, contact string) (*rostermodel.Item, error) {
 	var ret *rostermodel.Item
 	err := m.inReadLock(func() error {
 		ris, fnErr := m.fetchRosterItems(user)
@@ -157,7 +158,7 @@ func (m *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, erro
 
 // UpsertRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (m *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
+func (m *Storage) UpsertRosterNotification(_ context.Context, rn *rostermodel.Notification) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(rn.Contact)
 		if fnErr != nil {
@@ -180,7 +181,7 @@ func (m *Storage) UpsertRosterNotification(rn *rostermodel.Notification) error {
 }
 
 // DeleteRosterNotification deletes a roster notification entity from storage.
-func (m *Storage) DeleteRosterNotification(contact, jid string) error {
+func (m *Storage) DeleteRosterNotification(_ context.Context, contact, jid string) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(contact)
 		if fnErr != nil {
@@ -197,7 +198,7 @@ func (m *Storage) DeleteRosterNotification(contact, jid string) error {
 }
 
 // FetchRosterNotification retrieves from storage a roster notification entity.
-func (m *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+func (m *Storage) FetchRosterNotification(_ context.Context, contact string, jid string) (*rostermodel.Notification, error) {
 	var ret *rostermodel.Notification
 	err := m.inReadLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(contact)
@@ -216,7 +217,7 @@ func (m *Storage) FetchRosterNotification(contact string, jid string) (*rostermo
 }
 
 // FetchRosterNotifications retrieves from storage all roster notifications associated to a given user.
-func (m *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+func (m *Storage) FetchRosterNotifications(_ context.Context, contact string) ([]rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
 	if err := m.inReadLock(func() error {
 		var fnErr error
@@ -229,7 +230,7 @@ func (m *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 }
 
 // FetchRosterGroups retrieves all groups associated to a user roster
-func (m *Storage) FetchRosterGroups(username string) ([]string, error) {
+func (m *Storage) FetchRosterGroups(_ context.Context, username string) ([]string, error) {
 	var groups []string
 	if err := m.inReadLock(func() error {
 		var fnErr error

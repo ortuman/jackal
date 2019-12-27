@@ -146,7 +146,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm1.SetBool(context.Background(), xep191RequestedContextKey, true)
 	stm2.SetBool(context.Background(), xep191RequestedContextKey, true)
 
-	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",

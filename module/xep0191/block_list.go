@@ -252,7 +252,7 @@ func (x *BlockingCommand) fetchBlockListAndRosterItems(ctx context.Context, user
 	if err != nil {
 		return nil, nil, err
 	}
-	ris, _, err := storage.FetchRosterItems(username)
+	ris, _, err := storage.FetchRosterItems(ctx, username)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -113,7 +113,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 		Username:     "noelia",
 		LastPresence: p,
 	})
-	_, _ = storage.UpsertRosterItem(&rostermodel.Item{
+	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

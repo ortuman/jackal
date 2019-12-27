@@ -7,6 +7,7 @@ package badgerdb
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 
 	"github.com/dgraph-io/badger"
@@ -15,7 +16,7 @@ import (
 
 // UpsertRosterItem inserts a new roster item entity into storage,
 // or updates it in case it's been previously inserted.
-func (b *Storage) UpsertRosterItem(rItem *rostermodel.Item) (rostermodel.Version, error) {
+func (b *Storage) UpsertRosterItem(_ context.Context, rItem *rostermodel.Item) (rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var ver rostermodel.Version
 
@@ -56,7 +57,7 @@ func (b *Storage) UpsertRosterItem(rItem *rostermodel.Item) (rostermodel.Version
 }
 
 // DeleteRosterItem deletes a roster item entity from storage.
-func (b *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, error) {
+func (b *Storage) DeleteRosterItem(_ context.Context, user, contact string) (rostermodel.Version, error) {
 	var ver rostermodel.Version
 
 	err := b.db.Update(func(tx *badger.Txn) error {
@@ -93,7 +94,7 @@ func (b *Storage) DeleteRosterItem(user, contact string) (rostermodel.Version, e
 
 // FetchRosterItems retrieves from storage all roster item entities
 // associated to a given user.
-func (b *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (b *Storage) FetchRosterItems(_ context.Context, user string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var ver rostermodel.Version
 
@@ -116,7 +117,7 @@ func (b *Storage) FetchRosterItems(user string) ([]rostermodel.Item, rostermodel
 
 // FetchRosterItemsInGroups retrieves from storage all roster item entities
 // associated to a given user and a set of groups.
-func (b *Storage) FetchRosterItemsInGroups(user string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (b *Storage) FetchRosterItemsInGroups(_ context.Context, user string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	groupSet := make(map[string]struct{}, len(groups))
 	for _, group := range groups {
 		groupSet[group] = struct{}{}
@@ -152,7 +153,7 @@ func (b *Storage) FetchRosterItemsInGroups(user string, groups []string) ([]rost
 }
 
 // FetchRosterItem retrieves from storage a roster item entity.
-func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, error) {
+func (b *Storage) FetchRosterItem(_ context.Context, user, contact string) (*rostermodel.Item, error) {
 	var ris []rostermodel.Item
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&ris, b.rosterItemsKey(user), txn)
@@ -170,7 +171,7 @@ func (b *Storage) FetchRosterItem(user, contact string) (*rostermodel.Item, erro
 
 // UpsertRosterNotification inserts a new roster notification entity
 // into storage, or updates it in case it's been previously inserted.
-func (b *Storage) UpsertRosterNotification(rNotification *rostermodel.Notification) error {
+func (b *Storage) UpsertRosterNotification(_ context.Context, rNotification *rostermodel.Notification) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var rns []rostermodel.Notification
 		if err := b.fetchSlice(&rns, b.rosterNotificationsKey(rNotification.Contact), tx); err != nil {
@@ -192,7 +193,7 @@ func (b *Storage) UpsertRosterNotification(rNotification *rostermodel.Notificati
 }
 
 // DeleteRosterNotification deletes a roster notification entity from storage.
-func (b *Storage) DeleteRosterNotification(contact, jid string) error {
+func (b *Storage) DeleteRosterNotification(_ context.Context, contact, jid string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var rns []rostermodel.Notification
 		if err := b.fetchSlice(&rns, b.rosterNotificationsKey(contact), tx); err != nil {
@@ -209,7 +210,7 @@ func (b *Storage) DeleteRosterNotification(contact, jid string) error {
 }
 
 // FetchRosterNotification retrieves from storage a roster notification entity.
-func (b *Storage) FetchRosterNotification(contact string, jid string) (*rostermodel.Notification, error) {
+func (b *Storage) FetchRosterNotification(_ context.Context, contact string, jid string) (*rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&rns, b.rosterNotificationsKey(contact), txn)
@@ -227,7 +228,7 @@ func (b *Storage) FetchRosterNotification(contact string, jid string) (*rostermo
 
 // FetchRosterNotifications retrieves from storage all roster notifications
 // associated to a given user.
-func (b *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+func (b *Storage) FetchRosterNotifications(_ context.Context, contact string) ([]rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
 	err := b.db.View(func(txn *badger.Txn) error {
 		return b.fetchSlice(&rns, b.rosterNotificationsKey(contact), txn)
@@ -239,7 +240,7 @@ func (b *Storage) FetchRosterNotifications(contact string) ([]rostermodel.Notifi
 }
 
 // FetchRosterGroups retrieves all groups associated to a user roster
-func (b *Storage) FetchRosterGroups(username string) ([]string, error) {
+func (b *Storage) FetchRosterGroups(_ context.Context, username string) ([]string, error) {
 	var groups []string
 	err := b.db.View(func(txn *badger.Txn) error {
 		var fnErr error

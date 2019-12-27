@@ -6,6 +6,8 @@
 package xep0163
 
 import (
+	"context"
+
 	"github.com/ortuman/jackal/log"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -31,7 +33,7 @@ var pepFeatures = []string{
 
 type discoInfoProvider struct{}
 
-func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Identity {
+func (p *discoInfoProvider) Identities(_ context.Context, _, _ *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
 	if len(node) > 0 {
 		identities = append(identities, xep0030.Identity{Type: "leaf", Category: "pubsub"})
@@ -42,16 +44,16 @@ func (p *discoInfoProvider) Identities(_, _ *jid.JID, node string) []xep0030.Ide
 	return identities
 }
 
-func (p *discoInfoProvider) Features(_, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Features(_ context.Context, _, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
 	return pepFeatures, nil
 }
 
-func (p *discoInfoProvider) Form(_, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
 	return nil, nil
 }
 
-func (p *discoInfoProvider) Items(toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
-	if !p.isSubscribedTo(toJID, fromJID) {
+func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
+	if !p.isSubscribedTo(ctx, toJID, fromJID) {
 		return nil, xmpp.ErrSubscriptionRequired
 	}
 	host := toJID.ToBareJID().String()
@@ -108,11 +110,11 @@ func (p *discoInfoProvider) nodeItems(host, node string) ([]xep0030.Item, *xmpp.
 	return items, nil
 }
 
-func (p *discoInfoProvider) isSubscribedTo(contact *jid.JID, userJID *jid.JID) bool {
+func (p *discoInfoProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) bool {
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.FetchRosterItem(userJID.Node(), contact.ToBareJID().String())
+	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false
