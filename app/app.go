@@ -137,7 +137,13 @@ func (a *Application) Run() error {
 	a.printLogo()
 
 	// initialize storage
-	err = a.initStorage(&cfg.Storage)
+	_, err = storage.New(&cfg.Storage)
+	if err != nil {
+		return err
+	}
+
+	// initialize storage (deprecated)
+	err = a.initStorage2(&cfg.Storage)
 	if err != nil {
 		return err
 	}
@@ -243,8 +249,8 @@ func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
 	return nil
 }
 
-func (a *Application) initStorage(config *storage.Config) error {
-	s, err := storage.New(config)
+func (a *Application) initStorage2(config *storage.Config) error {
+	s, err := storage.New2(config)
 	if err != nil {
 		return err
 	}

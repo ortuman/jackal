@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +40,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	// storage error...
 	s.EnableMockedError()
-	require.Equal(t, authr.ProcessElement(context.Background(), elem), memstorage.ErrMockedError)
+	require.Equal(t, authr.ProcessElement(context.Background(), elem), memory.ErrMockedError)
 	s.DisableMockedError()
 
 	// valid credentials...

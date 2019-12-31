@@ -14,7 +14,7 @@ import (
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -140,11 +140,11 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	s.DisableMockedError()
 }
 
-func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
+func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 	})
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	return r, s, func() {
 		storage.Unset()

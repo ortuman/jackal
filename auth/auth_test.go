@@ -11,15 +11,15 @@ import (
 
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func authTestSetup(user *model.User) (*stream.MockC2S, *memstorage.Storage) {
-	s := memstorage.New()
+func authTestSetup(user *model.User) (*stream.MockC2S, *memory.Storage) {
+	s := memory.New()
 	storage.Set(s)
 
 	_ = storage.UpsertUser(context.Background(), user)

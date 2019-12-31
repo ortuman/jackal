@@ -12,7 +12,7 @@ import (
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,7 +51,7 @@ func TestAccessChecker_PresenceSubscription(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errPresenceSubscriptionRequired, err)
 
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	defer storage.Unset()
 
@@ -77,7 +77,7 @@ func TestAccessChecker_RosterGroup(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errNotInRosterGroup, err)
 
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	defer storage.Unset()
 
@@ -104,7 +104,7 @@ func TestAccessChecker_Member(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errNotOnWhiteList, err)
 
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	defer storage.Unset()
 

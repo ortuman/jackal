@@ -16,7 +16,7 @@ import (
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
@@ -182,7 +182,7 @@ func TestRouter_Routing(t *testing.T) {
 	require.Equal(t, ErrNotExistingAccount, r.Route(context.Background(), iq))
 
 	s.EnableMockedError()
-	require.Equal(t, memstorage.ErrMockedError, r.Route(context.Background(), iq))
+	require.Equal(t, memory.ErrMockedError, r.Route(context.Background(), iq))
 	s.DisableMockedError()
 
 	_ = storage.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
@@ -480,11 +480,11 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, elem, iq)
 }
 
-func setupTest() (*Router, *memstorage.Storage, func()) {
+func setupTest() (*Router, *memory.Storage, func()) {
 	r, _ := New(&Config{
 		Hosts: []HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 	})
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	return r, s, func() {
 		storage.Unset()

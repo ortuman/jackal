@@ -18,7 +18,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util"
 	"github.com/stretchr/testify/require"
@@ -80,7 +80,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
 	})
-	s := memstorage.New()
+	s := memory.New()
 	storage.Set(s)
 	defer storage.Unset()
 
