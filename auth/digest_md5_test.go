@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/internal/memory"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func (h *digestMD5AuthTestHelper) clientParamsFromChallenge(challenge string) *d
 	require.Nil(h.t, err)
 	srvParams := h.authr.parseParameters(string(b))
 	clParams := *srvParams
-	clParams.setParameter("cnonce=" + hex.EncodeToString(util.RandomBytes(16)))
+	clParams.setParameter("cnonce=" + hex.EncodeToString(utilrand.RandomBytes(16)))
 	clParams.setParameter("username=" + h.testStrm.Username())
 	clParams.setParameter("realm=" + h.testStrm.Domain())
 	clParams.setParameter("nc=00000001")

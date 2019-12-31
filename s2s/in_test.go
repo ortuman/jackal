@@ -22,7 +22,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
@@ -380,7 +380,7 @@ func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*stream
 
 	certFile := "../testdata/cert/test.server.crt"
 	certKey := "../testdata/cert/test.server.key"
-	cer, err := util.LoadCertificate(certKey, certFile, "localhost")
+	cer, err := utiltls.LoadCertificate(certKey, certFile, "localhost")
 	require.Nil(t, err)
 
 	var peerCerts []*x509.Certificate

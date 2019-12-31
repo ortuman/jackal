@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func TestBufferPool_GetAndPut(t *testing.T) {
 	require.Equal(t, "*bytes.Buffer", reflect.ValueOf(buf).Type().String())
 
 	buf = p.Get()
-	buf.Write(util.RandomBytes(randomBytesLength))
+	buf.Write(utilrand.RandomBytes(randomBytesLength))
 	require.Equal(t, randomBytesLength, buf.Len())
 	p.Put(buf)
 	buf = p.Get()

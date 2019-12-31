@@ -25,7 +25,8 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
+	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pbkdf2"
@@ -105,7 +106,7 @@ var tt = []scramAuthTestCase{
 		id:          4,
 		scramType:   ScramSHA1,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(23),
+		cbBytes:     utilrand.RandomBytes(23),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -117,7 +118,7 @@ var tt = []scramAuthTestCase{
 		id:          5,
 		scramType:   ScramSHA256,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(32),
+		cbBytes:     utilrand.RandomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -129,7 +130,7 @@ var tt = []scramAuthTestCase{
 		id:          6,
 		scramType:   ScramSHA512,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(32),
+		cbBytes:     utilrand.RandomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -381,7 +382,7 @@ func parseScramResponse(b64 string) (map[string]string, error) {
 	ret := map[string]string{}
 	s1 := strings.Split(string(s), ",")
 	for _, s0 := range s1 {
-		k, v := util.SplitKeyAndValue(s0, '=')
+		k, v := utilstring.SplitKeyAndValue(s0, '=')
 		ret[k] = v
 	}
 	return ret, nil

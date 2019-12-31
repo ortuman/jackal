@@ -20,7 +20,7 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,7 +74,7 @@ func TestC2SSocketServer(t *testing.T) {
 func TestC2SWebSocketServer(t *testing.T) {
 	privKeyFile := "../testdata/cert/test.server.key"
 	certFile := "../testdata/cert/test.server.crt"
-	cer, err := util.LoadCertificate(privKeyFile, certFile, "localhost")
+	cer, err := utiltls.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
 	r, _ := router.New(&router.Config{

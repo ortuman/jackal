@@ -16,7 +16,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -76,7 +76,7 @@ func New(config *Config) (*Router, error) {
 			r.hosts[h.Name] = h.Certificate
 		}
 	} else {
-		cer, err := util.LoadCertificate("", "", defaultDomain)
+		cer, err := utiltls.LoadCertificate("", "", defaultDomain)
 		if err != nil {
 			return nil, err
 		}

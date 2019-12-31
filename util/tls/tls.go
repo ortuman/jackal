@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package util
+package utiltls
 
 import (
 	"crypto/rand"
@@ -93,17 +93,20 @@ func generateSelfSignedCertificate(keyFile, certFile, domain string) error {
 	if err != nil {
 		return err
 	}
-	defer certOut.Close()
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	defer func() { _ = certOut.Close() }()
+
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		return err
+	}
 
 	// encode private key
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
-	defer keyOut.Close()
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	return nil
+	defer func() { _ = keyOut.Close() }()
+
+	return pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
 }
 
 func selfSignedCertificateExists() bool {

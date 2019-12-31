@@ -8,7 +8,7 @@ package router
 import (
 	"crypto/tls"
 
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +57,7 @@ func (c *HostConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	c.Name = p.Name
-	cer, err := util.LoadCertificate(p.TLS.PrivKeyFile, p.TLS.CertFile, c.Name)
+	cer, err := utiltls.LoadCertificate(p.TLS.PrivKeyFile, p.TLS.CertFile, c.Name)
 	if err != nil {
 		return err
 	}

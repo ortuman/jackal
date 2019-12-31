@@ -21,7 +21,8 @@ import (
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
+	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
@@ -220,7 +221,7 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	s.user = user
 
 	s.srvNonce = cNonce + "-" + uuid.New()
-	s.salt = util.RandomBytes(32)
+	s.salt = utilrand.RandomBytes(32)
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
 
@@ -308,14 +309,14 @@ func (s *Scram) parseParameters(str string) error {
 	p.gs2Header = gs2BindFlag + "," + authzID + ","
 
 	if len(authzID) > 0 {
-		key, val := util.SplitKeyAndValue(authzID, '=')
+		key, val := utilstring.SplitKeyAndValue(authzID, '=')
 		if len(key) == 0 || key != "a" {
 			return ErrSASLMalformedRequest
 		}
 		p.authzID = val
 	}
 	for i := 2; i < len(sp); i++ {
-		key, val := util.SplitKeyAndValue(sp[i], '=')
+		key, val := utilstring.SplitKeyAndValue(sp[i], '=')
 		p.params = append(p.params, scramParameter{key, val})
 	}
 	s.params = p

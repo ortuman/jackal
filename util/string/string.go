@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package util
+package utilstring
 
 // SplitKeyAndValue splits a string between 'key' and 'value' sub elements.
 func SplitKeyAndValue(str string, sep byte) (key string, value string) {

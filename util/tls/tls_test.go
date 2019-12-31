@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package util
+package utiltls
 
 import (
 	"crypto/tls"
