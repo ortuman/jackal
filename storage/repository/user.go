@@ -11,7 +11,7 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-// User defines user storage repository operations
+// User defines user repository operations
 type User interface {
 	UpsertUser(ctx context.Context, user *model.User) error
 	DeleteUser(ctx context.Context, username string) error
