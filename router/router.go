@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/version"
@@ -51,6 +52,7 @@ type Router struct {
 	defaultHostname string
 	hosts           map[string]tls.Certificate
 	streams         map[string][]stream.C2S
+	userRep         repository.User
 	cluster         Cluster
 	localStreams    map[string]stream.C2S
 	clusterStreams  map[string]map[string]*cluster.C2S
@@ -60,13 +62,14 @@ type Router struct {
 }
 
 // New returns an new empty router instance.
-func New(config *Config) (*Router, error) {
+func New(config *Config, userRep repository.User) (*Router, error) {
 	r := &Router{
 		hosts:          make(map[string]tls.Certificate),
 		blockLists:     make(map[string][]*jid.JID),
 		streams:        make(map[string][]stream.C2S),
 		localStreams:   make(map[string]stream.C2S),
 		clusterStreams: make(map[string]map[string]*cluster.C2S),
+		userRep:        userRep,
 	}
 	if len(config.Hosts) > 0 {
 		for i, h := range config.Hosts {
@@ -340,7 +343,7 @@ func (r *Router) route(ctx context.Context, element xmpp.Stanza, ignoreBlocking 
 	}
 	recipients := r.streams[toJID.Node()]
 	if len(recipients) == 0 {
-		exists, err := storage.UserExists(ctx, toJID.Node())
+		exists, err := r.userRep.UserExists(ctx, toJID.Node())
 		if err != nil {
 			return err
 		}

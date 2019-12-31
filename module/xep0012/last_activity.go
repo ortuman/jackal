@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -27,14 +28,16 @@ type LastActivity struct {
 	router    *router.Router
 	startTime time.Time
 	runQueue  *runqueue.RunQueue
+	rep       repository.User
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router *router.Router, userRep repository.User) *LastActivity {
 	x := &LastActivity{
 		router:    router,
 		startTime: time.Now(),
 		runQueue:  runqueue.New("xep0012"),
+		rep:       userRep,
 	}
 	if disco != nil {
 		disco.RegisterServerFeature(lastActivityNamespace)
@@ -95,7 +98,7 @@ func (x *LastActivity) sendUserLastActivity(ctx context.Context, iq *xmpp.IQ, to
 		x.sendReply(ctx, iq, 0, "")
 		return
 	}
-	usr, err := storage.FetchUser(ctx, to.Node())
+	usr, err := x.rep.FetchUser(ctx, to.Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())

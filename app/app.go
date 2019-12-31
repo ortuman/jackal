@@ -137,7 +137,7 @@ func (a *Application) Run() error {
 	a.printLogo()
 
 	// initialize storage
-	_, err = storage.New(&cfg.Storage)
+	repContainer, err := storage.New(&cfg.Storage)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (a *Application) Run() error {
 	}
 
 	// initialize router
-	a.router, err = router.New(&cfg.Router)
+	a.router, err = router.New(&cfg.Router, repContainer.User())
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (a *Application) Run() error {
 	}
 
 	// initialize modules & components...
-	a.mods = module.New(&cfg.Modules, a.router)
+	a.mods = module.New(&cfg.Modules, a.router, repContainer)
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
 	// start serving s2s...
@@ -183,7 +183,7 @@ func (a *Application) Run() error {
 		a.s2s.Start()
 	}
 	// start serving c2s...
-	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router)
+	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router, repContainer.User())
 	if err != nil {
 		return err
 	}

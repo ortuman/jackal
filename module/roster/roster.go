@@ -18,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -40,16 +41,18 @@ type Roster struct {
 	runQueue    *runqueue.RunQueue
 	pep         *xep0163.Pep
 	presenceHub *presencehub.PresenceHub
+	rep         repository.User
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router *router.Router) *Roster {
+func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router *router.Router, userRep repository.User) *Roster {
 	r := &Roster{
 		cfg:         cfg,
 		router:      router,
 		runQueue:    runqueue.New("roster"),
 		presenceHub: presenceHub,
 		pep:         pep,
+		rep:         userRep,
 	}
 	return r
 }
@@ -562,7 +565,7 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 	}
 	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
 	if len(availPresences) == 0 { // send last known presence
-		usr, err := storage.FetchUser(ctx, contactJID.Node())
+		usr, err := x.rep.FetchUser(ctx, contactJID.Node())
 		if err != nil {
 			return err
 		}
@@ -662,10 +665,10 @@ func (x *Roster) broadcastPresence(ctx context.Context, presence *xmpp.Presence)
 	}
 
 	// update last received presence
-	if usr, err := storage.FetchUser(ctx, fromJID.Node()); err != nil {
+	if usr, err := x.rep.FetchUser(ctx, fromJID.Node()); err != nil {
 		return err
 	} else if usr != nil {
-		return storage.UpsertUser(ctx, &model.User{
+		return x.rep.UpsertUser(ctx, &model.User{
 			Username:     usr.Username,
 			Password:     usr.Password,
 			LastPresence: presence,

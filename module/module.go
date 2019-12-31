@@ -22,6 +22,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -62,7 +63,7 @@ type Modules struct {
 }
 
 // New returns a set of modules derived from a concrete configuration.
-func New(config *Config, router *router.Router) *Modules {
+func New(config *Config, router *router.Router, repContainer repository.Container) *Modules {
 	var presenceHub = presencehub.New(router)
 
 	m := &Modules{router: router}
@@ -74,7 +75,7 @@ func New(config *Config, router *router.Router) *Modules {
 
 	// XEP-0012: Last Activity (https://xmpp.org/extensions/xep-0012.html)
 	if _, ok := config.Enabled["last_activity"]; ok {
-		m.LastActivity = xep0012.New(m.DiscoInfo, router)
+		m.LastActivity = xep0012.New(m.DiscoInfo, router, repContainer.User())
 		m.iqHandlers = append(m.iqHandlers, m.LastActivity)
 		m.all = append(m.all, m.LastActivity)
 	}
@@ -95,7 +96,7 @@ func New(config *Config, router *router.Router) *Modules {
 
 	// XEP-0077: In-band registration (https://xmpp.org/extensions/xep-0077.html)
 	if _, ok := config.Enabled["registration"]; ok {
-		m.Register = xep0077.New(&config.Registration, m.DiscoInfo, router)
+		m.Register = xep0077.New(&config.Registration, m.DiscoInfo, router, repContainer.User())
 		m.iqHandlers = append(m.iqHandlers, m.Register)
 		m.all = append(m.all, m.Register)
 	}
@@ -138,7 +139,7 @@ func New(config *Config, router *router.Router) *Modules {
 	if _, ok := config.Enabled["roster"]; ok {
 		m.iqHandlers = append(m.iqHandlers, presenceHub)
 
-		m.Roster = roster.New(&config.Roster, presenceHub, m.Pep, router)
+		m.Roster = roster.New(&config.Roster, presenceHub, m.Pep, router, repContainer.User())
 		m.iqHandlers = append(m.iqHandlers, m.Roster)
 		m.all = append(m.all, m.Roster)
 	}

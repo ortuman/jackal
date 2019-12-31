@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	utilrand "github.com/ortuman/jackal/util/rand"
 	utilstring "github.com/ortuman/jackal/util/string"
@@ -80,16 +80,18 @@ func (r *digestMD5Parameters) setParameter(p string) {
 // DigestMD5 represents a DIGEST-MD5 authenticator.
 type DigestMD5 struct {
 	stm           stream.C2S
+	userRep       repository.User
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
 // NewDigestMD5 returns a new digest-md5 authenticator instance.
-func NewDigestMD5(stm stream.C2S) *DigestMD5 {
+func NewDigestMD5(stm stream.C2S, userRep repository.User) *DigestMD5 {
 	return &DigestMD5{
-		stm:   stm,
-		state: startDigestMD5State,
+		stm:     stm,
+		userRep: userRep,
+		state:   startDigestMD5State,
 	}
 }
 
@@ -188,7 +190,7 @@ func (d *DigestMD5) handleChallenged(ctx context.Context, elem xmpp.XElement) er
 		return ErrSASLNotAuthorized
 	}
 	// validate user
-	user, err := storage.FetchUser(ctx, params.username)
+	user, err := d.userRep.FetchUser(ctx, params.username)
 	if err != nil {
 		return err
 	}

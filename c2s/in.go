@@ -21,6 +21,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
 	"github.com/ortuman/jackal/session"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
@@ -41,6 +42,7 @@ const (
 type inStream struct {
 	cfg            *streamConfig
 	router         *router.Router
+	userRep        repository.User
 	mods           *module.Modules
 	comps          *component.Components
 	sess           *session.Session
@@ -63,10 +65,11 @@ type inStream struct {
 	context   map[string]interface{}
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router, userRep repository.User) stream.C2S {
 	s := &inStream{
 		cfg:      config,
 		router:   router,
+		userRep:  userRep,
 		mods:     mods,
 		comps:    comps,
 		id:       id,
@@ -243,22 +246,22 @@ func (s *inStream) initializeAuthenticators() {
 	for _, a := range s.cfg.sasl {
 		switch a {
 		case "plain":
-			authenticators = append(authenticators, auth.NewPlain(s))
+			authenticators = append(authenticators, auth.NewPlain(s, s.userRep))
 
 		case "digest_md5":
-			authenticators = append(authenticators, auth.NewDigestMD5(s))
+			authenticators = append(authenticators, auth.NewDigestMD5(s, s.userRep))
 
 		case "scram_sha_1":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, false))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, true))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, false, s.userRep))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, true, s.userRep))
 
 		case "scram_sha_256":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, false))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, false, s.userRep))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true, s.userRep))
 
 		case "scram_sha_512":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, false))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, false, s.userRep))
+			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true, s.userRep))
 		}
 	}
 	s.authenticators = authenticators

@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	utilrand "github.com/ortuman/jackal/util/rand"
@@ -86,6 +86,7 @@ func (s *scramParameters) String() string {
 // Scram represents a SCRAM authenticator.
 type Scram struct {
 	stm           stream.C2S
+	userRep       repository.User
 	tr            transport.Transport
 	tp            ScramType
 	usesCb        bool
@@ -101,13 +102,14 @@ type Scram struct {
 }
 
 // NewScram returns a new scram authenticator instance.
-func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
+func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool, userRep repository.User) *Scram {
 	s := &Scram{
-		stm:    stm,
-		tr:     tr,
-		tp:     scramType,
-		usesCb: usesChannelBinding,
-		state:  startScramState,
+		stm:     stm,
+		userRep: userRep,
+		tr:      tr,
+		tp:      scramType,
+		usesCb:  usesChannelBinding,
+		state:   startScramState,
 	}
 	switch s.tp {
 	case ScramSHA1:
@@ -211,7 +213,7 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	if len(username) == 0 || len(cNonce) == 0 {
 		return ErrSASLMalformedRequest
 	}
-	user, err := storage.FetchUser(ctx, username)
+	user, err := s.userRep.FetchUser(ctx, username)
 	if err != nil {
 		return err
 	}
