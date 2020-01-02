@@ -18,20 +18,20 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-type User struct {
+type pgSQLUser struct {
 	*pgSQLStorage
 	pool *pool.BufferPool
 }
 
-func NewUser(db *sql.DB) *User {
-	return &User{
+func newUser(db *sql.DB) *pgSQLUser {
+	return &pgSQLUser{
 		pgSQLStorage: newStorage(db),
 		pool:         pool.NewBufferPool(),
 	}
 }
 
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
-func (u *User) UpsertUser(ctx context.Context, usr *model.User) error {
+func (u *pgSQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	var presenceXML string
 
 	if usr.LastPresence != nil {
@@ -59,7 +59,7 @@ func (u *User) UpsertUser(ctx context.Context, usr *model.User) error {
 }
 
 // FetchUser retrieves from storage a user entity.
-func (u *User) FetchUser(ctx context.Context, username string) (*model.User, error) {
+func (u *pgSQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
 	q := sq.Select("username", "password", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
@@ -91,7 +91,7 @@ func (u *User) FetchUser(ctx context.Context, username string) (*model.User, err
 }
 
 // DeleteUser deletes a user entity from storage.
-func (u *User) DeleteUser(ctx context.Context, username string) error {
+func (u *pgSQLUser) DeleteUser(ctx context.Context, username string) error {
 	return u.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
 		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).ExecContext(ctx)
@@ -123,7 +123,7 @@ func (u *User) DeleteUser(ctx context.Context, username string) error {
 }
 
 // UserExists returns whether or not a user exists within storage.
-func (u *User) UserExists(ctx context.Context, username string) (bool, error) {
+func (u *pgSQLUser) UserExists(ctx context.Context, username string) (bool, error) {
 	var count int
 
 	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})

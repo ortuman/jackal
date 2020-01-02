@@ -130,9 +130,9 @@ func TestMySQLStorageUserExists(t *testing.T) {
 	require.Equal(t, errMocked, err)
 }
 
-func newMock() (*User, sqlmock.Sqlmock) {
+func newMock() (*mySQLUser, sqlmock.Sqlmock) {
 	s, sqlMock := newStorageMock()
-	return &User{
+	return &mySQLUser{
 		mySQLStorage: s,
 		pool:         pool.NewBufferPool(),
 	}, sqlMock

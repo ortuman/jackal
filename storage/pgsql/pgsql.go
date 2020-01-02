@@ -23,7 +23,7 @@ var pingInterval = 15 * time.Second
 var pingTimeout = 10 * time.Second
 
 type pgSQLContainer struct {
-	user *User
+	user *pgSQLUser
 
 	h          *sql.DB
 	cancelPing context.CancelFunc
@@ -52,7 +52,7 @@ func New(cfg *Config) (repository.Container, error) {
 	c.cancelPing = cancel
 	go c.loop(ctx)
 
-	c.user = NewUser(c.h)
+	c.user = newUser(c.h)
 	return c, nil
 }
 

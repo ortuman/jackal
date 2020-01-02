@@ -15,7 +15,7 @@ import (
 )
 
 type badgerDBContainer struct {
-	user *User
+	user *badgerDBUser
 
 	db *badger.DB
 }
@@ -33,7 +33,7 @@ func New(cfg *Config) (repository.Container, error) {
 	}
 	c.db = db
 
-	c.user = NewUser(c.db)
+	c.user = newUser(c.db)
 	return &c, nil
 }
 

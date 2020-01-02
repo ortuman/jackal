@@ -45,9 +45,9 @@ func TestBadgerDB_User(t *testing.T) {
 	require.False(t, exists)
 }
 
-func newMock() (*User, func()) {
+func newMock() (*badgerDBUser, func()) {
 	t := newT()
-	return &User{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBUser{badgerDBStorage: newStorage(t.DB)}, func() {
 		t.teardown()
 	}
 }
