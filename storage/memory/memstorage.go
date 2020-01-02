@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"errors"
@@ -15,12 +15,8 @@ var ErrMockedError = errors.New("memstorage: mocked error")
 
 // Storage represents an in memory storage sub system.
 type Storage struct {
-	mockErrMu   sync.Mutex
-	mockingErr  bool
-	invokeLimit int32
-	invokeCount int32
-	mu          sync.RWMutex
-	bytes       map[string][]byte
+	mu    sync.RWMutex
+	bytes map[string][]byte
 }
 
 // New returns a new in memory storage instance.
@@ -40,31 +36,22 @@ func (m *Storage) Close() error {
 
 // EnableMockedError enables in memory mocked error.
 func (m *Storage) EnableMockedError() {
-	m.EnableMockedErrorWithInvokeLimit(1)
+	EnableMockedErrorWithInvokeLimit(1)
 }
 
 // EnableMockedErrorWithInvokeLimit enables in memory mocked error after a given invocation limit is reached.
-func (m *Storage) EnableMockedErrorWithInvokeLimit(invokeLimit int32) {
-	m.mockErrMu.Lock()
-	defer m.mockErrMu.Unlock()
-	m.mockingErr = true
-	m.invokeLimit = invokeLimit
-	m.invokeCount = 0
+func (m *Storage) EnableMockedErrorWithInvokeLimit(limit int32) {
+	EnableMockedErrorWithInvokeLimit(limit)
 }
 
 // DisableMockedError disables in memory mocked error.
 func (m *Storage) DisableMockedError() {
-	m.mockErrMu.Lock()
-	defer m.mockErrMu.Unlock()
-	m.mockingErr = false
+	DisableMockedError()
 }
 
 func (m *Storage) inWriteLock(f func() error) error {
-	m.mockErrMu.Lock()
-	defer m.mockErrMu.Unlock()
-	m.invokeCount++
-	if m.invokeCount == m.invokeLimit {
-		return ErrMockedError
+	if err := checkMockedError(); err != nil {
+		return err
 	}
 	m.mu.Lock()
 	err := f()
@@ -73,11 +60,8 @@ func (m *Storage) inWriteLock(f func() error) error {
 }
 
 func (m *Storage) inReadLock(f func() error) error {
-	m.mockErrMu.Lock()
-	defer m.mockErrMu.Unlock()
-	m.invokeCount++
-	if m.invokeCount == m.invokeLimit {
-		return ErrMockedError
+	if err := checkMockedError(); err != nil {
+		return err
 	}
 	m.mu.RLock()
 	err := f()

@@ -13,7 +13,7 @@ import (
 
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -22,8 +22,7 @@ import (
 )
 
 func TestOffline_ArchiveMessage(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
@@ -71,13 +70,14 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) *router.Router {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r
 }

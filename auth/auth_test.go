@@ -10,19 +10,17 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func authTestSetup(user *model.User) (*stream.MockC2S, *memory.Storage) {
-	s := memory.New()
-	storage.Set(s)
+func authTestSetup(user *model.User) (*stream.MockC2S, *memorystorage.User) {
+	s := memorystorage.NewUser()
 
-	_ = storage.UpsertUser(context.Background(), user)
+	_ = s.UpsertUser(context.Background(), user)
 
 	j, _ := jid.New("mariana", "localhost", "res", true)
 
@@ -30,10 +28,6 @@ func authTestSetup(user *model.User) (*stream.MockC2S, *memory.Storage) {
 
 	testStm.SetJID(j)
 	return testStm, s
-}
-
-func authTestTeardown() {
-	storage.Unset()
 }
 
 func TestAuthError(t *testing.T) {

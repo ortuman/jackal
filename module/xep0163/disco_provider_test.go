@@ -13,7 +13,7 @@ import (
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func TestDiscoInfoProvider_Items(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "yard", true)
 
-	s := memory.New()
+	s := memorystorage.New2()
 
 	storage.Set(s)
 	defer storage.Unset()

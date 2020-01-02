@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/storage/internal/badgerdb"
-	"github.com/ortuman/jackal/storage/internal/memory"
-	"github.com/ortuman/jackal/storage/internal/mysql"
-	"github.com/ortuman/jackal/storage/internal/pgsql"
+	"github.com/ortuman/jackal/storage/badgerdb"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/mysql"
+	"github.com/ortuman/jackal/storage/pgsql"
 )
 
 // Storage represents an entity storage interface.
@@ -52,7 +52,7 @@ func New2(config *Config) (Storage, error) {
 	case PostgreSQL:
 		return pgsql.New2(config.PostgreSQL), nil
 	case Memory:
-		return memory.New2(), nil
+		return memorystorage.New2(), nil
 	default:
 		return nil, fmt.Errorf("storage: unrecognized storage type: %d", config.Type)
 	}

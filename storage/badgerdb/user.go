@@ -16,7 +16,7 @@ type User struct {
 	*badgerDBStorage
 }
 
-func newUser(db *badger.DB) *User {
+func NewUser(db *badger.DB) *User {
 	return &User{badgerDBStorage: newStorage(db)}
 }
 

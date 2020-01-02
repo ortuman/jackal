@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"context"
@@ -15,21 +15,21 @@ import (
 
 func TestMemoryStorage_InsertUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
-	s := newUser()
-	s.EnableMockedError()
+	s := NewUser()
+	EnableMockedError()
 	err := s.UpsertUser(context.Background(), &u)
 	require.Equal(t, errMocked, err)
-	s.DisableMockedError()
+	DisableMockedError()
 	err = s.UpsertUser(context.Background(), &u)
 	require.Nil(t, err)
 }
 
 func TestMemoryStorage_UserExists(t *testing.T) {
-	s := newUser()
-	s.EnableMockedError()
+	s := NewUser()
+	EnableMockedError()
 	_, err := s.UserExists(context.Background(), "ortuman")
 	require.Equal(t, errMocked, err)
-	s.DisableMockedError()
+	DisableMockedError()
 	ok, err := s.UserExists(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.False(t, ok)
@@ -37,13 +37,13 @@ func TestMemoryStorage_UserExists(t *testing.T) {
 
 func TestMemoryStorage_FetchUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
-	s := newUser()
+	s := NewUser()
 	_ = s.UpsertUser(context.Background(), &u)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchUser(context.Background(), "ortuman")
 	require.Equal(t, errMocked, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	usr, _ := s.FetchUser(context.Background(), "romeo")
 	require.Nil(t, usr)
@@ -54,12 +54,12 @@ func TestMemoryStorage_FetchUser(t *testing.T) {
 
 func TestMemoryStorage_DeleteUser(t *testing.T) {
 	u := model.User{Username: "ortuman", Password: "1234"}
-	s := newUser()
+	s := NewUser()
 	_ = s.UpsertUser(context.Background(), &u)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	require.Equal(t, errMocked, s.DeleteUser(context.Background(), "ortuman"))
-	s.DisableMockedError()
+	DisableMockedError()
 	require.Nil(t, s.DeleteUser(context.Background(), "ortuman"))
 
 	usr, _ := s.FetchUser(context.Background(), "ortuman")

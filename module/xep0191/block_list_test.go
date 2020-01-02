@@ -16,7 +16,7 @@ import (
 	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -25,18 +25,17 @@ import (
 )
 
 func TestXEP0191_Matching(t *testing.T) {
-	rtr, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	rt := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rtr.Bind(context.Background(), stm)
+	rt.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rtr)
+	ph := presencehub.New(rt)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rtr)
+	x := New(nil, ph, rt)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -60,18 +59,17 @@ func TestXEP0191_Matching(t *testing.T) {
 }
 
 func TestXEP0191_GetBlockList(t *testing.T) {
-	rtr, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	rt := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rtr.Bind(context.Background(), stm)
+	rt.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rtr)
+	ph := presencehub.New(rt)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rtr)
+	x := New(nil, ph, rt)
 	defer func() { _ = x.Shutdown() }()
 
 	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
@@ -96,21 +94,21 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 
 	require.True(t, stm.GetBool(xep191RequestedContextKey))
 
-	s.EnableMockedError()
+	memorystorage.EnableMockedError()
 	x.ProcessIQ(context.Background(), iq1)
 	elem = stm.ReceiveElement()
+	require.Len(t, elem.Error().Elements().All(), 1)
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	s.DisableMockedError()
+	memorystorage.DisableMockedError()
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	rtr, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	rt := setupTest("jackal.im")
 
-	ph := presencehub.New(rtr)
+	ph := presencehub.New(rt)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rtr)
+	x := New(nil, ph, rt)
 	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -130,10 +128,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm3.SetAuthenticated(true)
 	stm4.SetAuthenticated(true)
 
-	rtr.Bind(context.Background(), stm1)
-	rtr.Bind(context.Background(), stm2)
-	rtr.Bind(context.Background(), stm3)
-	rtr.Bind(context.Background(), stm4)
+	rt.Bind(context.Background(), stm1)
+	rt.Bind(context.Background(), stm2)
+	rt.Bind(context.Background(), stm3)
+	rt.Bind(context.Background(), stm4)
 
 	// register presences
 	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType))
@@ -161,6 +159,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	x.ProcessIQ(context.Background(), iq)
 	elem := stm1.ReceiveElement()
+	require.Len(t, elem.Error().Elements().All(), 1)
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	item := xmpp.NewElementName("item")
@@ -170,11 +169,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	iq.AppendElement(block)
 
 	// TEST BLOCK
-	s.EnableMockedError()
+	memorystorage.EnableMockedError()
 	x.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
+	require.Len(t, elem.Error().Elements().All(), 1)
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	s.DisableMockedError()
+	memorystorage.DisableMockedError()
 
 	x.ProcessIQ(context.Background(), iq)
 
@@ -226,11 +226,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	unblock.AppendElement(item)
 	iq.AppendElement(unblock)
 
-	s.EnableMockedError()
+	memorystorage.EnableMockedError()
 	x.ProcessIQ(context.Background(), iq)
 	elem = stm1.ReceiveElement()
+	require.Len(t, elem.Error().Elements().All(), 1)
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	s.DisableMockedError()
+	memorystorage.DisableMockedError()
 
 	x.ProcessIQ(context.Background(), iq)
 
@@ -280,13 +281,14 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) *router.Router {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r
 }

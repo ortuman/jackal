@@ -19,7 +19,8 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -47,8 +48,8 @@ func (frw *fakeSockReaderWriter) Read(b []byte) (n int, err error) {
 }
 
 func (frw *fakeSockReaderWriter) Close() error {
-	frw.w.Close()
-	frw.r.Close()
+	_ = frw.w.Close()
+	_ = frw.r.Close()
 	return nil
 }
 
@@ -152,15 +153,18 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+func setupTest(domain string) (*router.Router, repository.User) {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		}, s,
+	)
+	return r, s
 }
 
 type fakeC2SServer struct {
@@ -206,9 +210,9 @@ func TestC2S_StartAndShutdown(t *testing.T) {
 
 func setupTestC2S() (*C2S, *fakeC2SServer) {
 	srv := newFakeC2SServer()
-	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ *router.Router) c2sServer {
+	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ *router.Router, _ repository.User) c2sServer {
 		return srv
 	}
-	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, &router.Router{})
+	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, &router.Router{}, memorystorage.NewUser())
 	return c2s, srv
 }

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"bytes"

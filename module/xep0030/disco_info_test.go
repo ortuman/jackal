@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -22,8 +22,7 @@ import (
 )
 
 func TestXEP0030_Matching(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -55,8 +54,7 @@ func TestXEP0030_Matching(t *testing.T) {
 }
 
 func TestXEP0030_SendFeatures(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	srvJid, _ := jid.New("", "jackal.im", "", true)
@@ -108,8 +106,7 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 }
 
 func TestXEP0030_SendItems(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -152,8 +149,7 @@ func (tp *testDiscoInfoProvider) Form(_ context.Context, toJID, fromJID *jid.JID
 }
 
 func TestXEP0030_Provider(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	compJID, _ := jid.New("", "test.jackal.im", "", true)
@@ -191,13 +187,14 @@ func TestXEP0030_Provider(t *testing.T) {
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) *router.Router {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r
 }

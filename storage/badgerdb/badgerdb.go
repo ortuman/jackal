@@ -33,7 +33,7 @@ func New(cfg *Config) (repository.Container, error) {
 	}
 	c.db = db
 
-	c.user = newUser(c.db)
+	c.user = NewUser(c.db)
 	return &c, nil
 }
 

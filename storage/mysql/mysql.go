@@ -16,7 +16,7 @@ import (
 )
 
 type mySQLContainer struct {
-	user *user
+	user *User
 
 	h      *sql.DB
 	doneCh chan chan bool
@@ -43,7 +43,7 @@ func New(cfg *Config) (repository.Container, error) {
 	}
 	go c.loop()
 
-	c.user = newUser(c.h)
+	c.user = NewUser(c.h)
 	return c, nil
 }
 

@@ -3,11 +3,18 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"errors"
 	"sync"
+)
+
+var (
+	mockErrMu   sync.RWMutex
+	mockErr     bool
+	invokeLimit int32
+	invokeCount int32
 )
 
 // ErrMocked will be returned by when mocked error is activated.
@@ -15,12 +22,8 @@ var errMocked = errors.New("memstorage: mocked error")
 
 // memoryStorage represents an in memory base storage instance.
 type memoryStorage struct {
-	b map[string][]byte
-
-	mu          sync.RWMutex
-	mockingErr  bool
-	invokeLimit int32
-	invokeCount int32
+	mu sync.RWMutex
+	b  map[string][]byte
 }
 
 // newStorage returns a new in memory storage instance.
@@ -29,49 +32,55 @@ func newStorage() *memoryStorage {
 }
 
 // EnableMockedError enables in memory mocked error.
-func (m *memoryStorage) EnableMockedError() {
-	m.EnableMockedErrorWithInvokeLimit(1)
+func EnableMockedError() {
+	EnableMockedErrorWithInvokeLimit(1)
 }
 
 // EnableMockedErrorWithInvokeLimit enables in memory mocked error after a given invocation limit is reached.
-func (m *memoryStorage) EnableMockedErrorWithInvokeLimit(invokeLimit int32) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.mockingErr = true
-	m.invokeLimit = invokeLimit
-	m.invokeCount = 0
+func EnableMockedErrorWithInvokeLimit(limit int32) {
+	mockErrMu.Lock()
+	defer mockErrMu.Unlock()
+	mockErr = true
+	invokeLimit = limit
+	invokeCount = 0
 }
 
 // DisableMockedError disables in memory mocked error.
-func (m *memoryStorage) DisableMockedError() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.mockingErr = false
+func DisableMockedError() {
+	mockErrMu.Lock()
+	defer mockErrMu.Unlock()
+	mockErr = false
 }
 
 func (m *memoryStorage) inWriteLock(f func() error) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.invokeCount++
-	if m.invokeCount == m.invokeLimit {
-		return errMocked
+	if err := checkMockedError(); err != nil {
+		return err
 	}
+	m.mu.Lock()
 	err := f()
+	m.mu.Unlock()
 	return err
 }
 
 func (m *memoryStorage) inReadLock(f func() error) error {
-	m.mu.Lock()
-	m.invokeCount++
-	if m.invokeCount == m.invokeLimit {
-		m.mu.Unlock()
-		return errMocked
+	if err := checkMockedError(); err != nil {
+		return err
 	}
-	m.mu.Unlock()
-
 	m.mu.RLock()
 	err := f()
 	m.mu.RUnlock()
 	return err
+}
+
+func checkMockedError() error {
+	mockErrMu.Lock()
+	defer mockErrMu.Unlock()
+
+	if mockErr {
+		invokeCount++
+		if invokeCount >= invokeLimit {
+			return errMocked
+		}
+	}
+	return nil
 }

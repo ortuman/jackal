@@ -72,8 +72,7 @@ func TestServerProvider_Identities(t *testing.T) {
 }
 
 func TestServerProvider_Items(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	var sp serverProvider
 	sp.router = r

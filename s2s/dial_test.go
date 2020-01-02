@@ -15,8 +15,7 @@ import (
 )
 
 func TestS2SDial(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	cfg := &Config{
 		ConnectTimeout: time.Second * time.Duration(5),

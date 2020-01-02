@@ -8,10 +8,10 @@ package storage
 import (
 	"fmt"
 
-	"github.com/ortuman/jackal/storage/internal/badgerdb"
-	"github.com/ortuman/jackal/storage/internal/memory"
-	"github.com/ortuman/jackal/storage/internal/mysql"
-	"github.com/ortuman/jackal/storage/internal/pgsql"
+	"github.com/ortuman/jackal/storage/badgerdb"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/mysql"
+	"github.com/ortuman/jackal/storage/pgsql"
 	"github.com/ortuman/jackal/storage/repository"
 )
 
@@ -24,7 +24,7 @@ func New(config *Config) (repository.Container, error) {
 	case PostgreSQL:
 		return pgsql.New(config.PostgreSQL)
 	case Memory:
-		return memory.New()
+		return memorystorage.New()
 	default:
 		return nil, fmt.Errorf("storage: unrecognized storage type: %d", config.Type)
 	}

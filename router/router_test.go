@@ -16,7 +16,8 @@ import (
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
@@ -72,15 +73,14 @@ func (f *fakeOutS2SProvider) GetOut(_ context.Context, _, _ string) (stream.S2SO
 func TestRouter_EmptyConfig(t *testing.T) {
 	defer func() { _ = os.RemoveAll("./.cert") }()
 
-	r, _ := New(&Config{})
+	r, _ := New(&Config{}, nil)
 	require.True(t, r.IsLocalHost("localhost"))
 	require.Equal(t, 1, len(r.HostNames()))
 	require.Equal(t, 1, len(r.Certificates()))
 }
 
 func TestRouter_SetCluster(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _ := setupTest()
 
 	var del fakeClusterDelegate
 	r.SetCluster(&del)
@@ -88,8 +88,7 @@ func TestRouter_SetCluster(t *testing.T) {
 }
 
 func TestRouter_ClusterDelegate(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _ := setupTest()
 
 	del, ok := r.ClusterDelegate().(cluster.Delegate)
 	require.True(t, ok)
@@ -97,8 +96,7 @@ func TestRouter_ClusterDelegate(t *testing.T) {
 }
 
 func TestRouter_Binding(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _ := setupTest()
 
 	var del fakeClusterDelegate
 	r.SetCluster(&del)
@@ -151,8 +149,7 @@ func TestRouter_Routing(t *testing.T) {
 	outS2S := fakeS2SOut{}
 	s2sOutProvider := fakeOutS2SProvider{s2sOut: &outS2S}
 
-	r, s, shutdown := setupTest()
-	defer shutdown()
+	r, s := setupTest()
 
 	r.SetOutS2SProvider(&s2sOutProvider)
 
@@ -181,11 +178,11 @@ func TestRouter_Routing(t *testing.T) {
 	iq.SetToJID(j3)
 	require.Equal(t, ErrNotExistingAccount, r.Route(context.Background(), iq))
 
-	s.EnableMockedError()
-	require.Equal(t, memory.ErrMockedError, r.Route(context.Background(), iq))
-	s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	require.Equal(t, memorystorage.ErrMockedError, r.Route(context.Background(), iq))
+	memorystorage.DisableMockedError()
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
+	_ = s.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
 	require.Equal(t, ErrNotAuthenticated, r.Route(context.Background(), iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
@@ -235,8 +232,7 @@ func TestRouter_Routing(t *testing.T) {
 }
 
 func TestRouter_BlockedJID(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _ := setupTest()
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	j2, _ := jid.NewWithString("hamlet@jackal.im/balcony", false)
@@ -317,8 +313,7 @@ func TestRouter_BlockedJID(t *testing.T) {
 }
 
 func TestRouter_Cluster(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _ := setupTest()
 
 	var del fakeClusterDelegate
 	del.sendCh = make(chan *cluster.Message, 2)
@@ -480,13 +475,17 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, elem, iq)
 }
 
-func setupTest() (*Router, *memory.Storage, func()) {
-	r, _ := New(&Config{
-		Hosts: []HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+func setupTest() (*Router, repository.User) {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
+	r, _ := New(
+		&Config{
+			Hosts: []HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+		},
+		s,
+	)
+	return r, s
 }

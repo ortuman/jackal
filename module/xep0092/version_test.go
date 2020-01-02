@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/router"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
@@ -20,9 +21,7 @@ import (
 )
 
 func TestXEP0092(t *testing.T) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
+	r := setupTest()
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -73,4 +72,15 @@ func TestXEP0092(t *testing.T) {
 	elem = stm.ReceiveElement()
 	ver = elem.Elements().ChildNamespace("query", versionNamespace)
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
+}
+
+func setupTest() *router.Router {
+	s := memorystorage.NewUser()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+		},
+		s,
+	)
+	return r
 }

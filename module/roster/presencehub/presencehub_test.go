@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -22,8 +22,7 @@ import (
 )
 
 func TestPresenceHub_RegisterPresence(t *testing.T) {
-	r, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -33,7 +32,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	p2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
 	p3 := xmpp.NewPresence(j3, j3, xmpp.AvailableType)
 
-	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
+	_ = storage.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
@@ -67,8 +66,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 }
 
 func TestPresenceHub_RequestCapabilities(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -98,8 +96,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 }
 
 func TestPresenceHub_ProcessCapabilities(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -129,13 +126,14 @@ func TestPresenceHub_ProcessCapabilities(t *testing.T) {
 	require.Equal(t, "cool+feature", caps.Features[0])
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) *router.Router {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r
 }

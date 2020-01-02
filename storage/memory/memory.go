@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"context"
@@ -12,13 +12,13 @@ import (
 )
 
 type memoryContainer struct {
-	user *user
+	user *User
 }
 
 func New() (repository.Container, error) {
 	var c memoryContainer
 
-	c.user = newUser()
+	c.user = NewUser()
 	return &c, nil
 }
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -40,8 +40,7 @@ func TestXEP0049_Matching(t *testing.T) {
 }
 
 func TestXEP0049_InvalidIQ(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "balcony", true)
@@ -94,8 +93,7 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 }
 
 func TestXEP0049_SetAndGetPrivate(t *testing.T) {
-	r, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -118,11 +116,11 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	q.AppendElement(exodus2)
 
 	// set error
-	s.EnableMockedError()
+	memorystorage.EnableMockedError()
 	x.ProcessIQ(context.Background(), iq)
 	elem := stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	s.DisableMockedError()
+	memorystorage.DisableMockedError()
 
 	// set success
 	x.ProcessIQ(context.Background(), iq)
@@ -134,11 +132,11 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	q.RemoveElements("exodus2")
 	iq.SetType(xmpp.GetType)
 
-	s.EnableMockedError()
+	memorystorage.EnableMockedError()
 	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
 	require.Equal(t, xmpp.ErrInternalServerError.Error(), elem.Error().Elements().All()[0].Name())
-	s.DisableMockedError()
+	memorystorage.DisableMockedError()
 
 	// get success
 	x.ProcessIQ(context.Background(), iq)
@@ -161,13 +159,14 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	require.Equal(t, "exodus:ns:2", q3.Elements().All()[0].Namespace())
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) *router.Router {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r
 }

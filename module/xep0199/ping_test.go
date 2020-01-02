@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/router"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -37,9 +38,7 @@ func TestXEP0199_Matching(t *testing.T) {
 }
 
 func TestXEP0199_ReceivePing(t *testing.T) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
+	r := setupTest()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
@@ -78,9 +77,7 @@ func TestXEP0199_ReceivePing(t *testing.T) {
 }
 
 func TestXEP0199_SendPing(t *testing.T) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
+	r := setupTest()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("", "jackal.im", "", true)
@@ -118,9 +115,7 @@ func TestXEP0199_SendPing(t *testing.T) {
 }
 
 func TestXEP0199_Disconnect(t *testing.T) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
+	r := setupTest()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -142,4 +137,15 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	err := stm.WaitDisconnection()
 	require.NotNil(t, err)
 	require.Equal(t, "connection-timeout", err.Error())
+}
+
+func setupTest() *router.Router {
+	s := memorystorage.NewUser()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+		},
+		s,
+	)
+	return r
 }

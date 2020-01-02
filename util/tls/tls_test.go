@@ -15,7 +15,7 @@ import (
 
 func TestLoadCertificate(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		tlsCfg, err := LoadCertificate("../testdata/cert/test.server.key", "../testdata/cert/test.server.crt", "localhost")
+		tlsCfg, err := LoadCertificate("../../testdata/cert/test.server.key", "../../testdata/cert/test.server.crt", "localhost")
 		require.Nil(t, err)
 		require.NotNil(t, tlsCfg)
 	})

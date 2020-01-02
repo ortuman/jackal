@@ -12,7 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memory"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -45,8 +45,7 @@ func TestXEP0054_Matching(t *testing.T) {
 }
 
 func TestXEP0054_Set(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -83,8 +82,7 @@ func TestXEP0054_Set(t *testing.T) {
 }
 
 func TestXEP0054_SetError(t *testing.T) {
-	r, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -106,8 +104,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	require.Equal(t, xmpp.ErrForbidden.Error(), elem.Error().Elements().All()[0].Name())
 
 	// storage error
-	s.EnableMockedError()
-	defer s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	defer memorystorage.DisableMockedError()
 
 	iq2 := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq2.SetFromJID(j)
@@ -120,8 +118,7 @@ func TestXEP0054_SetError(t *testing.T) {
 }
 
 func TestXEP0054_Get(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -168,8 +165,7 @@ func TestXEP0054_Get(t *testing.T) {
 }
 
 func TestXEP0054_GetError(t *testing.T) {
-	r, s, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -205,8 +201,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqGet2.SetToJID(j.ToBareJID())
 	iqGet2.AppendElement(xmpp.NewElementNamespace("vCard", vCardNamespace))
 
-	s.EnableMockedError()
-	defer s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	defer memorystorage.DisableMockedError()
 
 	x.ProcessIQ(context.Background(), iqGet2)
 	elem = stm.ReceiveElement()
@@ -224,13 +220,14 @@ func testVCard() xmpp.XElement {
 	return vCard
 }
 
-func setupTest(domain string) (*router.Router, *memory.Storage, func()) {
+func setupTest(domain string) (*router.Router, *memorystorage.User) {
+	storage.Unset()
+	s2 := memorystorage.New2()
+	storage.Set(s2)
+
+	s := memorystorage.NewUser()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memory.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+	}, s)
+	return r, s
 }

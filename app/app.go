@@ -126,7 +126,6 @@ func (a *Application) Run() error {
 	if err := a.createPIDFile(cfg.PIDFile); err != nil {
 		return err
 	}
-
 	// initialize logger
 	err = a.initLogger(&cfg.Logger, a.output)
 	if err != nil {
@@ -141,7 +140,6 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
-
 	// initialize storage (deprecated)
 	err = a.initStorage2(&cfg.Storage)
 	if err != nil {

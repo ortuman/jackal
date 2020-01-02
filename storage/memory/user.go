@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package memory
+package memorystorage
 
 import (
 	"context"
@@ -12,16 +12,16 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-type user struct {
+type User struct {
 	*memoryStorage
 }
 
-func newUser() *user {
-	return &user{memoryStorage: newStorage()}
+func NewUser() *User {
+	return &User{memoryStorage: newStorage()}
 }
 
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
-func (m *user) UpsertUser(_ context.Context, user *model.User) error {
+func (m *User) UpsertUser(_ context.Context, user *model.User) error {
 	b, err := serializer.Serialize(user)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (m *user) UpsertUser(_ context.Context, user *model.User) error {
 }
 
 // DeleteUser deletes a user entity from storage.
-func (m *user) DeleteUser(_ context.Context, username string) error {
+func (m *User) DeleteUser(_ context.Context, username string) error {
 	return m.inWriteLock(func() error {
 		delete(m.b, userKey(username))
 		return nil
@@ -41,7 +41,7 @@ func (m *user) DeleteUser(_ context.Context, username string) error {
 }
 
 // FetchUser retrieves from storage a user entity.
-func (m *user) FetchUser(_ context.Context, username string) (*model.User, error) {
+func (m *User) FetchUser(_ context.Context, username string) (*model.User, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.b[userKey(username)]
@@ -60,7 +60,7 @@ func (m *user) FetchUser(_ context.Context, username string) (*model.User, error
 }
 
 // UserExists returns whether or not a user exists within storage.
-func (m *user) UserExists(_ context.Context, username string) (bool, error) {
+func (m *User) UserExists(_ context.Context, username string) (bool, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.b[userKey(username)]
