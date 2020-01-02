@@ -18,7 +18,7 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 	vCard := xmpp.NewElementName("vCard")
 	rawXML := vCard.String()
 
-	s, mock := NewMock()
+	s, mock := newVCardMock()
 	mock.ExpectExec("INSERT INTO vcards (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -28,7 +28,7 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
 
-	s, mock = NewMock()
+	s, mock = newVCardMock()
 	mock.ExpectExec("INSERT INTO vcards (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("ortuman", rawXML, rawXML).
 		WillReturnError(errMySQLStorage)
@@ -41,7 +41,7 @@ func TestMySQLStorageInsertVCard(t *testing.T) {
 func TestMySQLStorageFetchVCard(t *testing.T) {
 	var vCardColumns = []string{"vcard"}
 
-	s, mock := NewMock()
+	s, mock := newVCardMock()
 	mock.ExpectQuery("SELECT (.+) FROM vcards (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(vCardColumns).AddRow("<vCard><FN>Miguel Ángel</FN></vCard>"))
@@ -51,7 +51,7 @@ func TestMySQLStorageFetchVCard(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, vCard)
 
-	s, mock = NewMock()
+	s, mock = newVCardMock()
 	mock.ExpectQuery("SELECT (.+) FROM vcards (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(vCardColumns))
@@ -61,7 +61,7 @@ func TestMySQLStorageFetchVCard(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, vCard)
 
-	s, mock = NewMock()
+	s, mock = newVCardMock()
 	mock.ExpectQuery("SELECT (.+) FROM vcards (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -69,4 +69,11 @@ func TestMySQLStorageFetchVCard(t *testing.T) {
 	vCard, _ = s.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, vCard)
+}
+
+func newVCardMock() (*mySQLVCard, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &mySQLVCard{
+		mySQLStorage: s,
+	}, sqlMock
 }

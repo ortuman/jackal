@@ -35,7 +35,7 @@ var (
 	errMocked = errors.New("pgsql: storage error")
 )
 
-// New instantiates a PostgreSQL base storage instance.
+// newStorage instantiates a PostgreSQL base storage instance.
 func newStorage(db *sql.DB) *pgSQLStorage {
 	return &pgSQLStorage{db: db}
 }

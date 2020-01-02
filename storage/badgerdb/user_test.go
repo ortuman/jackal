@@ -16,7 +16,7 @@ import (
 func TestBadgerDB_User(t *testing.T) {
 	t.Parallel()
 
-	s, teardown := newMock()
+	s, teardown := newUserMock()
 	defer teardown()
 
 	usr := model.User{Username: "ortuman", Password: "1234"}
@@ -45,7 +45,7 @@ func TestBadgerDB_User(t *testing.T) {
 	require.False(t, exists)
 }
 
-func newMock() (*badgerDBUser, func()) {
+func newUserMock() (*badgerDBUser, func()) {
 	t := newT()
 	return &badgerDBUser{badgerDBStorage: newStorage(t.DB)}, func() {
 		t.teardown()

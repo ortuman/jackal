@@ -15,7 +15,8 @@ import (
 )
 
 type badgerDBContainer struct {
-	user *badgerDBUser
+	user  *badgerDBUser
+	vCard *badgerDBVCard
 
 	db *badger.DB
 }
@@ -34,10 +35,13 @@ func New(cfg *Config) (repository.Container, error) {
 	c.db = db
 
 	c.user = newUser(c.db)
+	c.vCard = newVCard(c.db)
+
 	return &c, nil
 }
 
-func (c *badgerDBContainer) User() repository.User { return c.user }
+func (c *badgerDBContainer) User() repository.User   { return c.user }
+func (c *badgerDBContainer) VCard() repository.VCard { return c.vCard }
 
 func (c *badgerDBContainer) Close(_ context.Context) error { return c.db.Close() }
 

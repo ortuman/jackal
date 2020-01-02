@@ -12,7 +12,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/runqueue"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -22,10 +22,11 @@ const vCardNamespace = "vcard-temp"
 type VCard struct {
 	router   *router.Router
 	runQueue *runqueue.RunQueue
+	rep      repository.VCard
 }
 
 // New returns a vCard IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router) *VCard {
+func New(disco *xep0030.DiscoInfo, router *router.Router, rep repository.VCard) *VCard {
 	v := &VCard{
 		router:   router,
 		runQueue: runqueue.New("xep0054"),
@@ -78,7 +79,7 @@ func (x *VCard) getVCard(ctx context.Context, vCard xmpp.XElement, iq *xmpp.IQ) 
 		return
 	}
 	toJID := iq.ToJID()
-	resElem, err := storage.FetchVCard(ctx, toJID.Node())
+	resElem, err := x.rep.FetchVCard(ctx, toJID.Node())
 	if err != nil {
 		log.Errorf("%v", err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -102,7 +103,7 @@ func (x *VCard) setVCard(ctx context.Context, vCard xmpp.XElement, iq *xmpp.IQ) 
 	if toJID.IsServer() || (toJID.Node() == fromJID.Node()) {
 		log.Infof("saving vcard... (jid: %s)", toJID.String())
 
-		err := storage.UpsertVCard(ctx, vCard, toJID.Node())
+		err := x.rep.UpsertVCard(ctx, vCard, toJID.Node())
 		if err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())

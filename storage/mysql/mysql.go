@@ -16,7 +16,8 @@ import (
 )
 
 type mySQLContainer struct {
-	user *mySQLUser
+	user  *mySQLUser
+	vCard *mySQLVCard
 
 	h      *sql.DB
 	doneCh chan chan bool
@@ -47,7 +48,8 @@ func New(cfg *Config) (repository.Container, error) {
 	return c, nil
 }
 
-func (c *mySQLContainer) User() repository.User { return c.user }
+func (c *mySQLContainer) User() repository.User   { return c.user }
+func (c *mySQLContainer) VCard() repository.VCard { return c.vCard }
 
 func (c *mySQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

@@ -10,6 +10,8 @@ import "context"
 type Container interface {
 	User() User
 
+	VCard() VCard
+
 	Close(ctx context.Context) error
 
 	IsClusterCompatible() bool

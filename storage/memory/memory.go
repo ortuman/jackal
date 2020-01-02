@@ -12,17 +12,20 @@ import (
 )
 
 type memoryContainer struct {
-	user *User
+	user  *User
+	vCard *VCard
 }
 
 func New() (repository.Container, error) {
 	var c memoryContainer
 
 	c.user = NewUser()
+	c.vCard = NewVCard()
 	return &c, nil
 }
 
-func (c *memoryContainer) User() repository.User { return c.user }
+func (c *memoryContainer) User() repository.User   { return c.user }
+func (c *memoryContainer) VCard() repository.VCard { return c.vCard }
 
 func (c *memoryContainer) Close(_ context.Context) error { return nil }
 

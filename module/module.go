@@ -89,7 +89,7 @@ func New(config *Config, router *router.Router, repContainer repository.Containe
 
 	// XEP-0054: vcard-temp (https://xmpp.org/extensions/xep-0054.html)
 	if _, ok := config.Enabled["vcard"]; ok {
-		m.VCard = xep0054.New(m.DiscoInfo, router)
+		m.VCard = xep0054.New(m.DiscoInfo, router, repContainer.VCard())
 		m.iqHandlers = append(m.iqHandlers, m.VCard)
 		m.all = append(m.all, m.VCard)
 	}

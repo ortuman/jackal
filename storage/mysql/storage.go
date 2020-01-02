@@ -36,7 +36,6 @@ var (
 	errMocked = errors.New("mysql: storage error")
 )
 
-// New instantiates a MySQL base storage instance.
 func newStorage(db *sql.DB) *mySQLStorage {
 	return &mySQLStorage{db: db}
 }

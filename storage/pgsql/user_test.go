@@ -25,7 +25,7 @@ func TestInsertUser(t *testing.T) {
 
 	user := model.User{Username: "ortuman", Password: "1234", LastPresence: p}
 
-	s, mock := newMock()
+	s, mock := newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -34,7 +34,7 @@ func TestInsertUser(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 
-	s, mock = newMock()
+	s, mock = newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnError(errMocked)
@@ -45,7 +45,7 @@ func TestInsertUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	s, mock := newMock()
+	s, mock := newUserMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -65,7 +65,7 @@ func TestDeleteUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = newMock()
+	s, mock = newUserMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnError(errMocked)
@@ -83,7 +83,7 @@ func TestFetchUser(t *testing.T) {
 
 	var userColumns = []string{"username", "password", "last_presence", "last_presence_at"}
 
-	s, mock := newMock()
+	s, mock := newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns))
@@ -92,7 +92,7 @@ func TestFetchUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, usr)
 
-	s, mock = newMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
@@ -100,7 +100,7 @@ func TestFetchUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = newMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").WillReturnError(errMocked)
 	_, err = s.FetchUser(context.Background(), "ortuman")
@@ -111,7 +111,7 @@ func TestFetchUser(t *testing.T) {
 func TestUserExists(t *testing.T) {
 	countColums := []string{"count"}
 
-	s, mock := newMock()
+	s, mock := newUserMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
@@ -121,7 +121,7 @@ func TestUserExists(t *testing.T) {
 	require.Nil(t, err)
 	require.True(t, ok)
 
-	s, mock = newMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("romeo").
 		WillReturnError(errMocked)
@@ -130,7 +130,7 @@ func TestUserExists(t *testing.T) {
 	require.Equal(t, errMocked, err)
 }
 
-func newMock() (*pgSQLUser, sqlmock.Sqlmock) {
+func newUserMock() (*pgSQLUser, sqlmock.Sqlmock) {
 	s, sqlMock := newStorageMock()
 	return &pgSQLUser{
 		pgSQLStorage: s,
