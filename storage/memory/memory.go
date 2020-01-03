@@ -12,8 +12,9 @@ import (
 )
 
 type memoryContainer struct {
-	user  *User
-	vCard *VCard
+	user    *User
+	vCard   *VCard
+	private *Private
 }
 
 func New() (repository.Container, error) {
@@ -21,11 +22,13 @@ func New() (repository.Container, error) {
 
 	c.user = NewUser()
 	c.vCard = NewVCard()
+	c.private = NewPrivate()
 	return &c, nil
 }
 
-func (c *memoryContainer) User() repository.User   { return c.user }
-func (c *memoryContainer) VCard() repository.VCard { return c.vCard }
+func (c *memoryContainer) User() repository.User       { return c.user }
+func (c *memoryContainer) VCard() repository.VCard     { return c.vCard }
+func (c *memoryContainer) Private() repository.Private { return c.private }
 
 func (c *memoryContainer) Close(_ context.Context) error { return nil }
 

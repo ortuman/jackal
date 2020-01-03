@@ -82,7 +82,7 @@ func New(config *Config, router *router.Router, repContainer repository.Containe
 
 	// XEP-0049: Private XML Storage (https://xmpp.org/extensions/xep-0049.html)
 	if _, ok := config.Enabled["private"]; ok {
-		m.Private = xep0049.New(router)
+		m.Private = xep0049.New(router, repContainer.Private())
 		m.iqHandlers = append(m.iqHandlers, m.Private)
 		m.all = append(m.all, m.Private)
 	}

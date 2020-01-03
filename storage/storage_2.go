@@ -24,7 +24,6 @@ type Storage interface {
 	capabilitiesStorage
 	offlineStorage
 	rosterStorage
-	privateStorage
 	blockListStorage
 	pubSubStorage
 }

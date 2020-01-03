@@ -16,11 +16,12 @@ import (
 func TestMemoryStorage_InsertPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
-	s := New2()
-	s.EnableMockedError()
+	s := NewPrivate()
+	EnableMockedError()
 	err := s.UpsertPrivateXML(context.Background(), []xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
+
 	err = s.UpsertPrivateXML(context.Background(), []xmpp.XElement{private}, "exodus:ns", "ortuman")
 	require.Nil(t, err)
 }
@@ -28,13 +29,14 @@ func TestMemoryStorage_InsertPrivateXML(t *testing.T) {
 func TestMemoryStorage_FetchPrivateXML(t *testing.T) {
 	private := xmpp.NewElementNamespace("exodus", "exodus:ns")
 
-	s := New2()
+	s := NewPrivate()
 	_ = s.UpsertPrivateXML(context.Background(), []xmpp.XElement{private}, "exodus:ns", "ortuman")
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchPrivateXML(context.Background(), "exodus:ns", "ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
+
 	elems, _ := s.FetchPrivateXML(context.Background(), "exodus:ns", "ortuman")
 	require.Equal(t, 1, len(elems))
 }

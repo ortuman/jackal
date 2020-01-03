@@ -30,6 +30,7 @@ func New(disco *xep0030.DiscoInfo, router *router.Router, rep repository.VCard) 
 	v := &VCard{
 		router:   router,
 		runQueue: runqueue.New("xep0054"),
+		rep:      rep,
 	}
 	if disco != nil {
 		disco.RegisterServerFeature(vCardNamespace)

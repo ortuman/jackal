@@ -8,6 +8,8 @@ package memorystorage
 import (
 	"errors"
 	"sync"
+
+	"github.com/ortuman/jackal/model/serializer"
 )
 
 var (
@@ -70,6 +72,80 @@ func (m *memoryStorage) inReadLock(f func() error) error {
 	err := f()
 	m.mu.RUnlock()
 	return err
+}
+
+func (m *memoryStorage) serializeEntity(k string, entity serializer.Serializer) error {
+	b, err := serializer.Serialize(entity)
+	if err != nil {
+		return err
+	}
+	return m.inWriteLock(func() error {
+		m.b[k] = b
+		return nil
+	})
+}
+
+func (m *memoryStorage) serializeEntities(k string, entities interface{}) error {
+	b, err := serializer.SerializeSlice(entities)
+	if err != nil {
+		return err
+	}
+	return m.inWriteLock(func() error {
+		m.b[k] = b
+		return nil
+	})
+}
+
+func (m *memoryStorage) deserializeEntity(k string, entity serializer.Deserializer) (bool, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.b[k]
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	if b == nil {
+		return false, nil
+	}
+	if err := serializer.Deserialize(b, entity); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (m *memoryStorage) deserializeEntities(k string, entities interface{}) (bool, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.b[k]
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	if b == nil {
+		return false, nil
+	}
+	if err := serializer.DeserializeSlice(b, entities); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (m *memoryStorage) deleteKey(k string) error {
+	return m.inWriteLock(func() error {
+		delete(m.b, k)
+		return nil
+	})
+}
+
+func (m *memoryStorage) keyExists(k string) (bool, error) {
+	var b []byte
+	if err := m.inReadLock(func() error {
+		b = m.b[k]
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return b != nil, nil
 }
 
 func checkMockedError() error {

@@ -23,7 +23,7 @@ import (
 func TestXEP0054_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, nil)
+	x := New(nil, nil, nil)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -45,7 +45,7 @@ func TestXEP0054_Matching(t *testing.T) {
 }
 
 func TestXEP0054_Set(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -58,7 +58,7 @@ func TestXEP0054_Set(t *testing.T) {
 	iq.SetToJID(j.ToBareJID())
 	iq.AppendElement(testVCard())
 
-	x := New(nil, r)
+	x := New(nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	x.ProcessIQ(context.Background(), iq)
@@ -82,7 +82,7 @@ func TestXEP0054_Set(t *testing.T) {
 }
 
 func TestXEP0054_SetError(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -90,7 +90,7 @@ func TestXEP0054_SetError(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j)
 	r.Bind(context.Background(), stm)
 
-	x := New(nil, r)
+	x := New(nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	// set other user vCard...
@@ -118,7 +118,7 @@ func TestXEP0054_SetError(t *testing.T) {
 }
 
 func TestXEP0054_Get(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
@@ -131,7 +131,7 @@ func TestXEP0054_Get(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil, r)
+	x := New(nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	x.ProcessIQ(context.Background(), iqSet)
@@ -165,7 +165,7 @@ func TestXEP0054_Get(t *testing.T) {
 }
 
 func TestXEP0054_GetError(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -177,7 +177,7 @@ func TestXEP0054_GetError(t *testing.T) {
 	iqSet.SetToJID(j.ToBareJID())
 	iqSet.AppendElement(testVCard())
 
-	x := New(nil, r)
+	x := New(nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	x.ProcessIQ(context.Background(), iqSet)
@@ -220,14 +220,16 @@ func testVCard() xmpp.XElement {
 	return vCard
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.User) {
+func setupTest(domain string) (*router.Router, *memorystorage.VCard) {
+	//=================================
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
+	//=================================
 
-	s := memorystorage.NewUser()
+	s := memorystorage.NewVCard()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
+	}, memorystorage.NewUser())
 	return r, s
 }

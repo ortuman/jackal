@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/model/serializer"
 )
 
 type User struct {
@@ -22,53 +21,32 @@ func NewUser() *User {
 
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
 func (m *User) UpsertUser(_ context.Context, user *model.User) error {
-	b, err := serializer.Serialize(user)
-	if err != nil {
-		return err
-	}
-	return m.inWriteLock(func() error {
-		m.b[userKey(user.Username)] = b
-		return nil
-	})
+	return m.serializeEntity(userKey(user.Username), user)
 }
 
 // DeleteUser deletes a user entity from storage.
 func (m *User) DeleteUser(_ context.Context, username string) error {
-	return m.inWriteLock(func() error {
-		delete(m.b, userKey(username))
-		return nil
-	})
+	return m.deleteKey(userKey(username))
 }
 
 // FetchUser retrieves from storage a user entity.
 func (m *User) FetchUser(_ context.Context, username string) (*model.User, error) {
-	var b []byte
-	if err := m.inReadLock(func() error {
-		b = m.b[userKey(username)]
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	if b == nil {
+	var user model.User
+	ok, err := m.deserializeEntity(userKey(username), &user)
+	switch err {
+	case nil:
+		if ok {
+			return &user, nil
+		}
 		return nil, nil
-	}
-	var usr model.User
-	if err := serializer.Deserialize(b, &usr); err != nil {
+	default:
 		return nil, err
 	}
-	return &usr, nil
 }
 
 // UserExists returns whether or not a user exists within storage.
 func (m *User) UserExists(_ context.Context, username string) (bool, error) {
-	var b []byte
-	if err := m.inReadLock(func() error {
-		b = m.b[userKey(username)]
-		return nil
-	}); err != nil {
-		return false, err
-	}
-	return b != nil, nil
+	return m.keyExists(userKey(username))
 }
 
 func userKey(username string) string {

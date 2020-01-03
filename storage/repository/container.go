@@ -12,6 +12,8 @@ type Container interface {
 
 	VCard() VCard
 
+	Private() Private
+
 	Close(ctx context.Context) error
 
 	IsClusterCompatible() bool
