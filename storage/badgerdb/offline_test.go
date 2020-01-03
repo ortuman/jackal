@@ -17,8 +17,8 @@ import (
 func TestBadgerDB_OfflineMessages(t *testing.T) {
 	t.Parallel()
 
-	h := tUtilBadgerDBSetup()
-	defer tUtilBadgerDBTeardown(h)
+	s, teardown := newOfflineMock()
+	defer teardown()
 
 	msg1 := xmpp.NewMessageType(uuid.New(), xmpp.NormalType)
 	b1 := xmpp.NewElementName("body")
@@ -30,23 +30,30 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 	b2.SetText("what's up?!")
 	msg1.AppendElement(b1)
 
-	require.NoError(t, h.db.InsertOfflineMessage(context.Background(), msg1, "ortuman"))
-	require.NoError(t, h.db.InsertOfflineMessage(context.Background(), msg2, "ortuman"))
+	require.NoError(t, s.InsertOfflineMessage(context.Background(), msg1, "ortuman"))
+	require.NoError(t, s.InsertOfflineMessage(context.Background(), msg2, "ortuman"))
 
-	cnt, err := h.db.CountOfflineMessages(context.Background(), "ortuman")
+	cnt, err := s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, cnt)
 
-	msgs, err := h.db.FetchOfflineMessages(context.Background(), "ortuman")
+	msgs, err := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(msgs))
 
-	msgs2, err := h.db.FetchOfflineMessages(context.Background(), "ortuman2")
+	msgs2, err := s.FetchOfflineMessages(context.Background(), "ortuman2")
 	require.Nil(t, err)
 	require.Equal(t, 0, len(msgs2))
 
-	require.NoError(t, h.db.DeleteOfflineMessages(context.Background(), "ortuman"))
-	cnt, err = h.db.CountOfflineMessages(context.Background(), "ortuman")
+	require.NoError(t, s.DeleteOfflineMessages(context.Background(), "ortuman"))
+	cnt, err = s.CountOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, 0, cnt)
+}
+
+func newOfflineMock() (*badgerDBOffline, func()) {
+	t := newT()
+	return &badgerDBOffline{badgerDBStorage: newStorage(t.DB)}, func() {
+		t.teardown()
+	}
 }

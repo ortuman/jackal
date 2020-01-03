@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
@@ -24,7 +25,7 @@ func TestInsertOfflineMessages(t *testing.T) {
 	m, _ := xmpp.NewMessageFromElement(message, j, j)
 	messageXML := m.String()
 
-	s, mock := NewMock()
+	s, mock := newOfflineMock()
 	mock.ExpectExec("INSERT INTO offline_messages (.+)").
 		WithArgs("ortuman", messageXML).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -33,7 +34,7 @@ func TestInsertOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectExec("INSERT INTO offline_messages (.+)").
 		WithArgs("ortuman", messageXML).
 		WillReturnError(errGeneric)
@@ -46,7 +47,7 @@ func TestInsertOfflineMessages(t *testing.T) {
 func TestCountOfflineMessages(t *testing.T) {
 	countColums := []string{"count"}
 
-	s, mock := NewMock()
+	s, mock := newOfflineMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
@@ -55,7 +56,7 @@ func TestCountOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 1, cnt)
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums))
@@ -64,7 +65,7 @@ func TestCountOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 0, cnt)
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
@@ -77,7 +78,7 @@ func TestCountOfflineMessages(t *testing.T) {
 func TestFetchOfflineMessages(t *testing.T) {
 	var offlineMessagesColumns = []string{"data"}
 
-	s, mock := NewMock()
+	s, mock := newOfflineMock()
 	mock.ExpectQuery("SELECT (.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns).AddRow("<message id='abc'><body>Hi!</body></message>"))
@@ -86,7 +87,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 1, len(msgs))
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectQuery("SELECT (.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns))
@@ -95,7 +96,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, 0, len(msgs))
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectQuery("SELECT (.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(offlineMessagesColumns).AddRow("<message id='abc'><body>Hi!"))
@@ -104,7 +105,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.NotNil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectQuery("SELECT (.+) FROM offline_messages (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
@@ -115,7 +116,7 @@ func TestFetchOfflineMessages(t *testing.T) {
 }
 
 func TestDeleteOfflineMessages(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newOfflineMock()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -123,11 +124,19 @@ func TestDeleteOfflineMessages(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newOfflineMock()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnError(errGeneric)
 
 	err = s.DeleteOfflineMessages(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
+}
+
+func newOfflineMock() (*pgSQLOffline, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &pgSQLOffline{
+		pgSQLStorage: s,
+		pool:         pool.NewBufferPool(),
+	}, sqlMock
 }

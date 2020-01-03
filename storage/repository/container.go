@@ -16,6 +16,8 @@ type Container interface {
 
 	Private() Private
 
+	Offline() Offline
+
 	Close(ctx context.Context) error
 
 	IsClusterCompatible() bool

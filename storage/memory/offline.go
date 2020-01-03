@@ -12,56 +12,58 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+type Offline struct {
+	*memoryStorage
+}
+
+func NewOffline() *Offline {
+	return &Offline{memoryStorage: newStorage()}
+}
+
 // InsertOfflineMessage inserts a new message element into user's offline queue.
-func (m *Storage) InsertOfflineMessage(_ context.Context, message *xmpp.Message, username string) error {
-	return m.inWriteLock(func() error {
-		messages, err := m.fetchUserOfflineMessages(username)
-		if err != nil {
-			return err
+func (m *Offline) InsertOfflineMessage(_ context.Context, message *xmpp.Message, username string) error {
+	return m.updateInWriteLock(offlineMessageKey(username), func(b []byte) ([]byte, error) {
+		var messages []xmpp.Message
+		if len(b) > 0 {
+			if err := serializer.DeserializeSlice(b, &messages); err != nil {
+				return nil, err
+			}
 		}
 		messages = append(messages, *message)
 
 		b, err := serializer.SerializeSlice(&messages)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		m.bytes[offlineMessageKey(username)] = b
-		return nil
+		return b, nil
 	})
 }
 
 // CountOfflineMessages returns current length of user's offline queue.
-func (m *Storage) CountOfflineMessages(_ context.Context, username string) (int, error) {
+func (m *Offline) CountOfflineMessages(_ context.Context, username string) (int, error) {
 	var messages []xmpp.Message
-	if err := m.inReadLock(func() error {
-		var fnErr error
-		messages, fnErr = m.fetchUserOfflineMessages(username)
-		return fnErr
-	}); err != nil {
+	_, err := m.getEntities(offlineMessageKey(username), &messages)
+	if err != nil {
 		return 0, err
 	}
 	return len(messages), nil
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (m *Storage) FetchOfflineMessages(_ context.Context, username string) ([]xmpp.Message, error) {
+func (m *Offline) FetchOfflineMessages(_ context.Context, username string) ([]xmpp.Message, error) {
 	var messages []xmpp.Message
-	if err := m.inReadLock(func() error {
-		var fnErr error
-		messages, fnErr = m.fetchUserOfflineMessages(username)
-		return fnErr
-	}); err != nil {
+	_, err := m.getEntities(offlineMessageKey(username), &messages)
+	switch err {
+	case nil:
+		return messages, nil
+	default:
 		return nil, err
 	}
-	return messages, nil
 }
 
 // DeleteOfflineMessages clears a user offline queue.
-func (m *Storage) DeleteOfflineMessages(_ context.Context, username string) error {
-	return m.inWriteLock(func() error {
-		delete(m.bytes, offlineMessageKey(username))
-		return nil
-	})
+func (m *Offline) DeleteOfflineMessages(_ context.Context, username string) error {
+	return m.deleteKey(offlineMessageKey(username))
 }
 
 func (m *Storage) fetchUserOfflineMessages(username string) ([]xmpp.Message, error) {

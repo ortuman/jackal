@@ -20,7 +20,7 @@ func newCapabilities(db *badger.DB) *badgerDBCapabilities {
 	return &badgerDBCapabilities{badgerDBStorage: newStorage(db)}
 }
 
-func (b *badgerDBCapabilities) InsertCapabilities(_ context.Context, caps *model.Capabilities) error {
+func (b *badgerDBCapabilities) UpsertCapabilities(_ context.Context, caps *model.Capabilities) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		return b.upsert(caps, capabilitiesKey(caps.Node, caps.Ver), tx)
 	})

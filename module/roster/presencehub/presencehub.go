@@ -179,7 +179,7 @@ func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XEle
 		Ver:      ver,
 		Features: features,
 	}
-	if err := x.capsRep.InsertCapabilities(ctx, caps); err != nil { // save into disk
+	if err := x.capsRep.UpsertCapabilities(ctx, caps); err != nil { // save into disk
 		return err
 	}
 	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)

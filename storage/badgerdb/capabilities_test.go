@@ -21,7 +21,7 @@ func TestBadgerDB_Capabilities(t *testing.T) {
 
 	caps := model.Capabilities{Node: "n1", Ver: "1234AB", Features: []string{"ns"}}
 
-	err := s.InsertCapabilities(context.Background(), &caps)
+	err := s.UpsertCapabilities(context.Background(), &caps)
 	require.Nil(t, err)
 
 	cs, err := s.FetchCapabilities(context.Background(), "n1", "1234AB")

@@ -22,7 +22,7 @@ import (
 )
 
 func TestOffline_ArchiveMessage(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
@@ -30,7 +30,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	r.Bind(context.Background(), stm)
 
-	x := New(&Config{QueueSize: 1}, nil, r)
+	x := New(&Config{QueueSize: 1}, nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	msgID := uuid.New()
@@ -42,7 +42,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	// wait for insertion...
 	time.Sleep(time.Millisecond * 250)
 
-	msgs, err := storage.FetchOfflineMessages(context.Background(), "juliet")
+	msgs, err := s.FetchOfflineMessages(context.Background(), "juliet")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(msgs))
 
@@ -60,7 +60,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	stm2 := stream.NewMockC2S("abcd", j2)
 	r.Bind(context.Background(), stm2)
 
-	x2 := New(&Config{QueueSize: 1}, nil, r)
+	x2 := New(&Config{QueueSize: 1}, nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
 	x2.DeliverOfflineMessages(context.Background(), stm2)
@@ -70,14 +70,16 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) (*router.Router, *memorystorage.Offline) {
+	// ===========================
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
+	// ===========================
 
-	s := memorystorage.NewUser()
+	s := memorystorage.NewOffline()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r
+	}, memorystorage.NewUser())
+	return r, s
 }

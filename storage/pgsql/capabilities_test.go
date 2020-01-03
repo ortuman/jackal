@@ -15,17 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPgSQLInsertCapabilities(t *testing.T) {
+func TestPgSQLUpsertCapabilities(t *testing.T) {
 	features := []string{"jabber:iq:last"}
 
 	b, _ := json.Marshal(&features)
 
 	s, mock := newCapabilitiesMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
-		WithArgs("n1", "1234A", b).
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON CONFLICT \\(node, ver\\) DO UPDATE SET features = (.+)").
+		WithArgs("n1", "1234A", b, b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err := s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -33,11 +33,11 @@ func TestPgSQLInsertCapabilities(t *testing.T) {
 
 	// error case
 	s, mock = newCapabilitiesMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
-		WithArgs("n1", "1234A", b).
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON CONFLICT \\(node, ver\\) DO UPDATE SET features = (.+)").
+		WithArgs("n1", "1234A", b, b).
 		WillReturnError(errGeneric)
 
-	err = s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err = s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 

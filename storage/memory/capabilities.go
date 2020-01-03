@@ -19,7 +19,7 @@ func NewCapabilities() *Capabilities {
 	return &Capabilities{memoryStorage: newStorage()}
 }
 
-func (m *Capabilities) InsertCapabilities(_ context.Context, caps *model.Capabilities) error {
+func (m *Capabilities) UpsertCapabilities(_ context.Context, caps *model.Capabilities) error {
 	return m.saveEntity(capabilitiesKey(caps.Node, caps.Ver), caps)
 }
 

@@ -25,14 +25,15 @@ func newCapabilities(db *sql.DB) *pgSQLCapabilities {
 	}
 }
 
-func (s *pgSQLCapabilities) InsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+func (s *pgSQLCapabilities) UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
 	}
 	_, err = sq.Insert("capabilities").
-		Columns("node", "ver", "features", "created_at").
-		Values(caps.Node, caps.Ver, b, nowExpr).
+		Columns("node", "ver", "features").
+		Values(caps.Node, caps.Ver, b).
+		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $4", b).
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }

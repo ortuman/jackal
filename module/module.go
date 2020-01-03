@@ -110,7 +110,7 @@ func New(config *Config, router *router.Router, repContainer repository.Containe
 
 	// XEP-0160: Offline message storage (https://xmpp.org/extensions/xep-0160.html)
 	if _, ok := config.Enabled["offline"]; ok {
-		m.Offline = offline.New(&config.Offline, m.DiscoInfo, router)
+		m.Offline = offline.New(&config.Offline, m.DiscoInfo, router, repContainer.Offline())
 		m.all = append(m.all, m.Offline)
 	}
 

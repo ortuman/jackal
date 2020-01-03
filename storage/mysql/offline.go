@@ -7,14 +7,28 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+type mySQLOffline struct {
+	*mySQLStorage
+	pool *pool.BufferPool
+}
+
+func newOffline(db *sql.DB) *mySQLOffline {
+	return &mySQLOffline{
+		mySQLStorage: newStorage(db),
+		pool:         pool.NewBufferPool(),
+	}
+}
+
 // InsertOfflineMessage inserts a new message element into user's offline queue.
-func (s *Storage) InsertOfflineMessage(ctx context.Context, message *xmpp.Message, username string) error {
+func (s *mySQLOffline) InsertOfflineMessage(ctx context.Context, message *xmpp.Message, username string) error {
 	q := sq.Insert("offline_messages").
 		Columns("username", "data", "created_at").
 		Values(username, message.String(), nowExpr)
@@ -23,7 +37,7 @@ func (s *Storage) InsertOfflineMessage(ctx context.Context, message *xmpp.Messag
 }
 
 // CountOfflineMessages returns current length of user's offline queue.
-func (s *Storage) CountOfflineMessages(ctx context.Context, username string) (int, error) {
+func (s *mySQLOffline) CountOfflineMessages(ctx context.Context, username string) (int, error) {
 	q := sq.Select("COUNT(*)").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -40,7 +54,7 @@ func (s *Storage) CountOfflineMessages(ctx context.Context, username string) (in
 }
 
 // FetchOfflineMessages retrieves from storage current user offline queue.
-func (s *Storage) FetchOfflineMessages(ctx context.Context, username string) ([]xmpp.Message, error) {
+func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string) ([]xmpp.Message, error) {
 	q := sq.Select("data").
 		From("offline_messages").
 		Where(sq.Eq{"username": username}).
@@ -86,7 +100,7 @@ func (s *Storage) FetchOfflineMessages(ctx context.Context, username string) ([]
 }
 
 // DeleteOfflineMessages clears a user offline queue.
-func (s *Storage) DeleteOfflineMessages(ctx context.Context, username string) error {
+func (s *mySQLOffline) DeleteOfflineMessages(ctx context.Context, username string) error {
 	q := sq.Delete("offline_messages").Where(sq.Eq{"username": username})
 	_, err := q.RunWith(s.db).ExecContext(ctx)
 	return err

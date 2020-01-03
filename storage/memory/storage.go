@@ -110,6 +110,17 @@ func (m *memoryStorage) getEntity(k string, entity serializer.Deserializer) (boo
 	return true, nil
 }
 
+func (m *memoryStorage) updateInWriteLock(k string, f func(b []byte) ([]byte, error)) error {
+	return m.inWriteLock(func() error {
+		b, err := f(m.b[k])
+		if err != nil {
+			return err
+		}
+		m.b[k] = b
+		return nil
+	})
+}
+
 func (m *memoryStorage) getEntities(k string, entities interface{}) (bool, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {

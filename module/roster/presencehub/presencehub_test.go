@@ -32,7 +32,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	p2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
 	p3 := xmpp.NewPresence(j3, j3, xmpp.AvailableType)
 
-	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
+	_ = s.UpsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},

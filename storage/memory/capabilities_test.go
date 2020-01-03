@@ -17,17 +17,17 @@ func TestMemoryStorage_InsertCapabilities(t *testing.T) {
 	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
 	s := NewCapabilities()
 	EnableMockedError()
-	err := s.InsertCapabilities(context.Background(), &caps)
+	err := s.UpsertCapabilities(context.Background(), &caps)
 	require.Equal(t, ErrMockedError, err)
 	DisableMockedError()
-	err = s.InsertCapabilities(context.Background(), &caps)
+	err = s.UpsertCapabilities(context.Background(), &caps)
 	require.Nil(t, err)
 }
 
 func TestMemoryStorage_FetchCapabilities(t *testing.T) {
 	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
 	s := NewCapabilities()
-	_ = s.InsertCapabilities(context.Background(), &caps)
+	_ = s.UpsertCapabilities(context.Background(), &caps)
 
 	EnableMockedError()
 	_, err := s.FetchCapabilities(context.Background(), "n1", "1234A")
