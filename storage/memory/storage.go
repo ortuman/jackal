@@ -19,16 +19,13 @@ var (
 	invokeCount int32
 )
 
-// ErrMocked will be returned by when mocked error is activated.
 var errMocked = errors.New("memstorage: mocked error")
 
-// memoryStorage represents an in memory base storage instance.
 type memoryStorage struct {
 	mu sync.RWMutex
 	b  map[string][]byte
 }
 
-// newStorage returns a new in memory storage instance.
 func newStorage() *memoryStorage {
 	return &memoryStorage{b: make(map[string][]byte)}
 }
