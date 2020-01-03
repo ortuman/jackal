@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 )
 
 var bufPool = pool.NewBufferPool()

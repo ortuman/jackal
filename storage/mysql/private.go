@@ -10,7 +10,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 )
 

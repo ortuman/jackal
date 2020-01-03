@@ -13,7 +13,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql" // SQL driver
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 )
 
 // Storage represents a SQL storage sub system.

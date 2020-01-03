@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/runqueue"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )

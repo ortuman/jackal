@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/runqueue"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )

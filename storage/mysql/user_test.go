@@ -12,7 +12,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"

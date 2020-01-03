@@ -14,7 +14,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 )
 
 // Storage represents a SQL storage sub system.

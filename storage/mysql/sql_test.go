@@ -10,7 +10,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 )
 
 var (
