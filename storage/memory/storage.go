@@ -74,7 +74,7 @@ func (m *memoryStorage) inReadLock(f func() error) error {
 	return err
 }
 
-func (m *memoryStorage) serializeEntity(k string, entity serializer.Serializer) error {
+func (m *memoryStorage) saveEntity(k string, entity serializer.Serializer) error {
 	b, err := serializer.Serialize(entity)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (m *memoryStorage) serializeEntity(k string, entity serializer.Serializer) 
 	})
 }
 
-func (m *memoryStorage) serializeEntities(k string, entities interface{}) error {
+func (m *memoryStorage) saveEntities(k string, entities interface{}) error {
 	b, err := serializer.SerializeSlice(entities)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (m *memoryStorage) serializeEntities(k string, entities interface{}) error 
 	})
 }
 
-func (m *memoryStorage) deserializeEntity(k string, entity serializer.Deserializer) (bool, error) {
+func (m *memoryStorage) getEntity(k string, entity serializer.Deserializer) (bool, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.b[k]
@@ -113,7 +113,7 @@ func (m *memoryStorage) deserializeEntity(k string, entity serializer.Deserializ
 	return true, nil
 }
 
-func (m *memoryStorage) deserializeEntities(k string, entities interface{}) (bool, error) {
+func (m *memoryStorage) getEntities(k string, entities interface{}) (bool, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
 		b = m.b[k]

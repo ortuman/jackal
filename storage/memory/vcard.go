@@ -21,13 +21,13 @@ func NewVCard() *VCard {
 
 // UpsertVCard inserts a new vCard element into storage, or updates it in case it's been previously inserted.
 func (m *VCard) UpsertVCard(_ context.Context, vCard xmpp.XElement, username string) error {
-	return m.serializeEntity(vCardKey(username), vCard)
+	return m.saveEntity(vCardKey(username), vCard)
 }
 
 // FetchVCard retrieves from storage a vCard element associated to a given user.
 func (m *VCard) FetchVCard(_ context.Context, username string) (xmpp.XElement, error) {
 	var vCard xmpp.Element
-	ok, err := m.deserializeEntity(vCardKey(username), &vCard)
+	ok, err := m.getEntity(vCardKey(username), &vCard)
 	switch err {
 	case nil:
 		if ok {

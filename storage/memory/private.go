@@ -27,13 +27,13 @@ func (m *Private) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement
 	for _, el := range privateXML {
 		priv = append(priv, *xmpp.NewElementFromElement(el))
 	}
-	return m.serializeEntities(privateStorageKey(username, namespace), &priv)
+	return m.saveEntities(privateStorageKey(username, namespace), &priv)
 }
 
 // FetchPrivateXML retrieves from storage a private element.
 func (m *Private) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	var priv []xmpp.Element
-	_, err := m.deserializeEntities(privateStorageKey(username, namespace), &priv)
+	_, err := m.getEntities(privateStorageKey(username, namespace), &priv)
 	if err != nil {
 		return nil, err
 	}

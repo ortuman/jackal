@@ -21,7 +21,7 @@ func NewUser() *User {
 
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
 func (m *User) UpsertUser(_ context.Context, user *model.User) error {
-	return m.serializeEntity(userKey(user.Username), user)
+	return m.saveEntity(userKey(user.Username), user)
 }
 
 // DeleteUser deletes a user entity from storage.
@@ -32,7 +32,7 @@ func (m *User) DeleteUser(_ context.Context, username string) error {
 // FetchUser retrieves from storage a user entity.
 func (m *User) FetchUser(_ context.Context, username string) (*model.User, error) {
 	var user model.User
-	ok, err := m.deserializeEntity(userKey(username), &user)
+	ok, err := m.getEntity(userKey(username), &user)
 	switch err {
 	case nil:
 		if ok {
