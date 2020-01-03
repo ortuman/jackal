@@ -10,6 +10,8 @@ import "context"
 type Container interface {
 	User() User
 
+	Capabilities() Capabilities
+
 	VCard() VCard
 
 	Private() Private

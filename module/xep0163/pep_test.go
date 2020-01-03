@@ -26,7 +26,7 @@ import (
 )
 
 func TestXEP0163_Matching(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -45,7 +45,7 @@ func TestXEP0163_Matching(t *testing.T) {
 }
 
 func TestXEP163_CreateNode(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -78,7 +78,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 }
 
 func TestXEP163_GetNodeConfiguration(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -129,7 +129,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 }
 
 func TestXEP163_SetNodeConfiguration(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -222,7 +222,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 }
 
 func TestXEP163_DeleteNode(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -305,7 +305,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 }
 
 func TestXEP163_UpdateAffiliations(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -369,7 +369,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 }
 
 func TestXEP163_RetrieveAffiliations(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -428,7 +428,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 }
 
 func TestXEP163_UpdateSubscriptions(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -492,7 +492,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 }
 
 func TestXEP163_RetrieveSubscriptions(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -550,7 +550,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 }
 
 func TestXEP163_Subscribe(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -634,7 +634,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 }
 
 func TestXEP163_Unsubscribe(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -695,7 +695,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 }
 
 func TestXEP163_RetrieveItems(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -784,7 +784,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 }
 
 func TestXEP163_SubscribeToAll(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, _ := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -827,7 +827,7 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, capsRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -861,12 +861,12 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = storage.InsertCapabilities(context.Background(), &model.Capabilities{
+	_ = capsRep.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
 	})
-	ph := presencehub.New(r)
+	ph := presencehub.New(r, capsRep)
 
 	// register presence
 	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
@@ -912,14 +912,16 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) (*router.Router, *memorystorage.Capabilities) {
+	// ===========================
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
+	// ===========================
 
-	s := memorystorage.NewUser()
+	capsRep := memorystorage.NewCapabilities()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r
+	}, memorystorage.NewUser())
+	return r, capsRep
 }

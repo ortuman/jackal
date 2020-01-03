@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package mysql
 
 import (
@@ -15,7 +20,7 @@ func TestMySQLInsertCapabilities(t *testing.T) {
 
 	b, _ := json.Marshal(&features)
 
-	s, mock := NewMock()
+	s, mock := newCapabilitiesMock()
 	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
 		WithArgs("n1", "1234A", b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -27,7 +32,7 @@ func TestMySQLInsertCapabilities(t *testing.T) {
 	require.Nil(t, err)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newCapabilitiesMock()
 	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
 		WithArgs("n1", "1234A", b).
 		WillReturnError(errMySQLStorage)
@@ -41,7 +46,7 @@ func TestMySQLInsertCapabilities(t *testing.T) {
 }
 
 func TestMySQLFetchCapabilities(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newCapabilitiesMock()
 	rows := sqlmock.NewRows([]string{"features"})
 	rows.AddRow(`["jabber:iq:last"]`)
 
@@ -58,7 +63,7 @@ func TestMySQLFetchCapabilities(t *testing.T) {
 	require.Equal(t, "jabber:iq:last", caps.Features[0])
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newCapabilitiesMock()
 	mock.ExpectQuery("SELECT features FROM capabilities WHERE \\(node = . AND ver = .\\)").
 		WithArgs("n1", "1234A").
 		WillReturnError(errMySQLStorage)
@@ -69,4 +74,11 @@ func TestMySQLFetchCapabilities(t *testing.T) {
 
 	require.NotNil(t, err)
 	require.Nil(t, caps)
+}
+
+func newCapabilitiesMock() (*mySQLCapabilities, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &mySQLCapabilities{
+		mySQLStorage: s,
+	}, sqlMock
 }

@@ -15,24 +15,24 @@ import (
 
 func TestMemoryStorage_InsertCapabilities(t *testing.T) {
 	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
-	s := New2()
-	s.EnableMockedError()
+	s := NewCapabilities()
+	EnableMockedError()
 	err := s.InsertCapabilities(context.Background(), &caps)
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 	err = s.InsertCapabilities(context.Background(), &caps)
 	require.Nil(t, err)
 }
 
 func TestMemoryStorage_FetchCapabilities(t *testing.T) {
 	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
-	s := New2()
+	s := NewCapabilities()
 	_ = s.InsertCapabilities(context.Background(), &caps)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchCapabilities(context.Background(), "n1", "1234A")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	cs, _ := s.FetchCapabilities(context.Background(), "n1", "1234B")
 	require.Nil(t, cs)

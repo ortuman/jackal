@@ -32,7 +32,7 @@ func TestXEP0191_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rt.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rt)
+	ph := presencehub.New(rt, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, rt)
@@ -66,7 +66,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rt.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rt)
+	ph := presencehub.New(rt, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, rt)
@@ -105,7 +105,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 func TestXEP191_BlockAndUnblock(t *testing.T) {
 	rt := setupTest("jackal.im")
 
-	ph := presencehub.New(rt)
+	ph := presencehub.New(rt, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, rt)

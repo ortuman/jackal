@@ -22,7 +22,7 @@ import (
 )
 
 func TestPresenceHub_RegisterPresence(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -32,7 +32,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	p2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
 	p3 := xmpp.NewPresence(j3, j3, xmpp.AvailableType)
 
-	_ = storage.InsertCapabilities(context.Background(), &model.Capabilities{
+	_ = s.InsertCapabilities(context.Background(), &model.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
@@ -45,7 +45,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	p2.AppendElement(c)
 
-	ph := New(r)
+	ph := New(r, s)
 	_, _ = ph.RegisterPresence(context.Background(), p1)
 	_, _ = ph.RegisterPresence(context.Background(), p2)
 	_, _ = ph.RegisterPresence(context.Background(), p3)
@@ -66,7 +66,7 @@ func TestPresenceHub_RegisterPresence(t *testing.T) {
 }
 
 func TestPresenceHub_RequestCapabilities(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -81,7 +81,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	p.AppendElement(c)
 
-	ph := New(r)
+	ph := New(r, s)
 	_, _ = ph.RegisterPresence(context.Background(), p)
 
 	elem := stm1.ReceiveElement()
@@ -96,7 +96,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 }
 
 func TestPresenceHub_ProcessCapabilities(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -113,27 +113,29 @@ func TestPresenceHub_ProcessCapabilities(t *testing.T) {
 	qElem.AppendElement(featureEl)
 	iqRes.AppendElement(qElem)
 
-	ph := New(r)
+	ph := New(r, s)
 	ph.activeDiscoInfo.Store(iqID, true)
 
 	ph.processIQ(context.Background(), iqRes)
 
 	// check storage capabilities
-	caps, _ := storage.FetchCapabilities(context.Background(), "http://code.google.com/p/exodus", "QgayPKawpkPSDYmwT/WM94uAlu0=")
+	caps, _ := s.FetchCapabilities(context.Background(), "http://code.google.com/p/exodus", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	require.NotNil(t, caps)
 
 	require.Len(t, caps.Features, 1)
 	require.Equal(t, "cool+feature", caps.Features[0])
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) (*router.Router, *memorystorage.Capabilities) {
+	// =============================
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
+	// =============================
 
-	s := memorystorage.NewUser()
+	s := memorystorage.NewCapabilities()
 	r, _ := router.New(&router.Config{
 		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r
+	}, memorystorage.NewUser())
+	return r, s
 }

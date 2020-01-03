@@ -21,7 +21,6 @@ type Storage interface {
 
 	IsClusterCompatible() bool
 
-	capabilitiesStorage
 	offlineStorage
 	rosterStorage
 	blockListStorage

@@ -64,7 +64,7 @@ type Modules struct {
 
 // New returns a set of modules derived from a concrete configuration.
 func New(config *Config, router *router.Router, repContainer repository.Container) *Modules {
-	var presenceHub = presencehub.New(router)
+	var presenceHub = presencehub.New(router, repContainer.Capabilities())
 
 	m := &Modules{router: router}
 

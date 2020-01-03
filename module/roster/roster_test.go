@@ -27,7 +27,7 @@ import (
 func TestRoster_MatchesIQ(t *testing.T) {
 	rtr, s := setupTest("jackal.im")
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -44,7 +44,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
@@ -92,7 +92,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	_, _ = storage.UpsertRosterItem(context.Background(), ri2)
 
-	r = New(&Config{Versioning: true}, presencehub.New(rtr), nil, rtr, s)
+	r = New(&Config{Versioning: true}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -127,7 +127,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	memorystorage.EnableMockedError()
-	r = New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r = New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -148,7 +148,7 @@ func TestRoster_Update(t *testing.T) {
 	stm2.SetAuthenticated(true)
 	stm2.SetBool(context.Background(), rosterRequestedCtxKey, true)
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	rtr.Bind(context.Background(), stm1)
@@ -224,7 +224,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	// remove item
@@ -291,7 +291,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
 	})
 
-	ph := presencehub.New(rtr)
+	ph := presencehub.New(rtr, nil)
 	r := New(&Config{}, ph, nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
@@ -368,7 +368,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	_ = s.UpsertUser(context.Background(), &model.User{
@@ -403,7 +403,7 @@ func TestRoster_Subscription(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 
-	r := New(&Config{}, presencehub.New(rtr), nil, rtr, s)
+	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, s)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))

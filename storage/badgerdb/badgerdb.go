@@ -15,9 +15,10 @@ import (
 )
 
 type badgerDBContainer struct {
-	user    *badgerDBUser
-	vCard   *badgerDBVCard
-	private *badgerDBPrivate
+	user  *badgerDBUser
+	caps  *badgerDBCapabilities
+	vCard *badgerDBVCard
+	priv  *badgerDBPrivate
 
 	db *badger.DB
 }
@@ -36,15 +37,17 @@ func New(cfg *Config) (repository.Container, error) {
 	c.db = db
 
 	c.user = newUser(c.db)
+	c.caps = newCapabilities(c.db)
 	c.vCard = newVCard(c.db)
-	c.private = newPrivate(c.db)
+	c.priv = newPrivate(c.db)
 
 	return &c, nil
 }
 
-func (c *badgerDBContainer) User() repository.User       { return c.user }
-func (c *badgerDBContainer) VCard() repository.VCard     { return c.vCard }
-func (c *badgerDBContainer) Private() repository.Private { return c.private }
+func (c *badgerDBContainer) User() repository.User                 { return c.user }
+func (c *badgerDBContainer) Capabilities() repository.Capabilities { return c.caps }
+func (c *badgerDBContainer) VCard() repository.VCard               { return c.vCard }
+func (c *badgerDBContainer) Private() repository.Private           { return c.priv }
 
 func (c *badgerDBContainer) Close(_ context.Context) error { return c.db.Close() }
 

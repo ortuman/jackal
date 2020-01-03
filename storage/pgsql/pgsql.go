@@ -23,9 +23,10 @@ var pingInterval = 15 * time.Second
 var pingTimeout = 10 * time.Second
 
 type pgSQLContainer struct {
-	user    *pgSQLUser
-	vCard   *pgSQLVCard
-	private *pgSQLPrivate
+	user  *pgSQLUser
+	caps  *pgSQLCapabilities
+	vCard *pgSQLVCard
+	priv  *pgSQLPrivate
 
 	h          *sql.DB
 	cancelPing context.CancelFunc
@@ -55,14 +56,16 @@ func New(cfg *Config) (repository.Container, error) {
 	go c.loop(ctx)
 
 	c.user = newUser(c.h)
+	c.caps = newCapabilities(c.h)
 	c.vCard = newVCard(c.h)
-	c.private = newPrivate(c.h)
+	c.priv = newPrivate(c.h)
 	return c, nil
 }
 
-func (c *pgSQLContainer) User() repository.User       { return c.user }
-func (c *pgSQLContainer) VCard() repository.VCard     { return c.vCard }
-func (c *pgSQLContainer) Private() repository.Private { return c.private }
+func (c *pgSQLContainer) User() repository.User                 { return c.user }
+func (c *pgSQLContainer) Capabilities() repository.Capabilities { return c.caps }
+func (c *pgSQLContainer) VCard() repository.VCard               { return c.vCard }
+func (c *pgSQLContainer) Private() repository.Private           { return c.priv }
 
 func (c *pgSQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

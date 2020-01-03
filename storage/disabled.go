@@ -16,22 +16,6 @@ import (
 
 type disabledStorage struct{}
 
-func (*disabledStorage) UpsertUser(_ context.Context, _ *model.User) error { return nil }
-func (*disabledStorage) DeleteUser(_ context.Context, _ string) error      { return nil }
-func (*disabledStorage) FetchUser(_ context.Context, _ string) (*model.User, error) {
-	return nil, nil
-}
-func (*disabledStorage) UserExists(_ context.Context, _ string) (bool, error) {
-	return false, nil
-}
-
-func (*disabledStorage) InsertCapabilities(_ context.Context, _ *model.Capabilities) error {
-	return nil
-}
-func (*disabledStorage) FetchCapabilities(_ context.Context, _, _ string) (*model.Capabilities, error) {
-	return nil, nil
-}
-
 func (*disabledStorage) UpsertRosterItem(_ context.Context, _ *rostermodel.Item) (rostermodel.Version, error) {
 	return rostermodel.Version{}, nil
 }
@@ -85,14 +69,6 @@ func (*disabledStorage) FetchOfflineMessages(_ context.Context, _ string) ([]xmp
 }
 
 func (*disabledStorage) DeleteOfflineMessages(_ context.Context, _ string) error {
-	return nil
-}
-
-func (*disabledStorage) FetchPrivateXML(_ context.Context, _ string, _ string) ([]xmpp.XElement, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) UpsertPrivateXML(_ context.Context, _ []xmpp.XElement, _ string, _ string) error {
 	return nil
 }
 
