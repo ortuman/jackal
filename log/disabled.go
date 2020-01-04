@@ -11,7 +11,5 @@ func (*disabledLogger) Level() Level {
 	return OffLevel
 }
 
-func (*disabledLogger) Log(level Level, pkg string, file string, line int, format string, args ...interface{}) {
-}
-
-func (*disabledLogger) Close() error { return nil }
+func (*disabledLogger) Log(_ Level, _ string, _ string, _ int, _ string, _ ...interface{}) {}
+func (*disabledLogger) Close() error                                                       { return nil }
