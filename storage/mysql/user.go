@@ -104,7 +104,7 @@ func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User
 func (u *mySQLUser) DeleteUser(ctx context.Context, username string) error {
 	return u.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
-		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
