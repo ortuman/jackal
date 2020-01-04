@@ -172,6 +172,8 @@ func TestStream_Compression(t *testing.T) {
 	require.Equal(t, "compressed", elem.Name())
 	require.Equal(t, "http://jabber.org/protocol/compress", elem.Namespace())
 
+	time.Sleep(time.Millisecond * 100) // wait until processed...
+
 	require.True(t, stm.isCompressed())
 }
 
