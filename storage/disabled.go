@@ -8,7 +8,6 @@ package storage
 import (
 	"context"
 
-	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/xmpp"
@@ -70,18 +69,6 @@ func (*disabledStorage) FetchOfflineMessages(_ context.Context, _ string) ([]xmp
 
 func (*disabledStorage) DeleteOfflineMessages(_ context.Context, _ string) error {
 	return nil
-}
-
-func (*disabledStorage) InsertBlockListItem(_ context.Context, _ *model.BlockListItem) error {
-	return nil
-}
-
-func (*disabledStorage) DeleteBlockListItem(_ context.Context, _ *model.BlockListItem) error {
-	return nil
-}
-
-func (*disabledStorage) FetchBlockListItems(_ context.Context, _ string) ([]model.BlockListItem, error) {
-	return nil, nil
 }
 
 func (*disabledStorage) FetchHosts(_ context.Context) (hosts []string, err error) {
