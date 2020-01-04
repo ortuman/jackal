@@ -75,12 +75,12 @@ func TestXEP0092(t *testing.T) {
 }
 
 func setupTest() *router.Router {
-	s := memorystorage.NewUser()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 		},
-		s,
+		memorystorage.NewUser(),
+		memorystorage.NewBlockList(),
 	)
 	return r
 }

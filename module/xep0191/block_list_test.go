@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -25,17 +26,17 @@ import (
 )
 
 func TestXEP0191_Matching(t *testing.T) {
-	rt := setupTest("jackal.im")
+	r, blockListRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rt.Bind(context.Background(), stm)
+	r.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rt, nil)
+	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rt)
+	x := New(nil, ph, r, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -59,24 +60,24 @@ func TestXEP0191_Matching(t *testing.T) {
 }
 
 func TestXEP0191_GetBlockList(t *testing.T) {
-	rt := setupTest("jackal.im")
+	r, blockListRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
-	rt.Bind(context.Background(), stm)
+	r.Bind(context.Background(), stm)
 
-	ph := presencehub.New(rt, nil)
+	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rt)
+	x := New(nil, ph, r, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -103,12 +104,12 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	rt := setupTest("jackal.im")
+	r, blockListRep := setupTest("jackal.im")
 
-	ph := presencehub.New(rt, nil)
+	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, rt)
+	x := New(nil, ph, r, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -128,10 +129,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm3.SetAuthenticated(true)
 	stm4.SetAuthenticated(true)
 
-	rt.Bind(context.Background(), stm1)
-	rt.Bind(context.Background(), stm2)
-	rt.Bind(context.Background(), stm3)
-	rt.Bind(context.Background(), stm4)
+	r.Bind(context.Background(), stm1)
+	r.Bind(context.Background(), stm2)
+	r.Bind(context.Background(), stm3)
+	r.Bind(context.Background(), stm4)
 
 	// register presences
 	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType))
@@ -210,7 +211,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, xmpp.SetType, elem.Type())
 
 	// check storage
-	bl, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
+	bl, _ := blockListRep.FetchBlockListItems(context.Background(), "ortuman")
 	require.NotNil(t, bl)
 	require.Equal(t, 1, len(bl))
 	require.Equal(t, "jackal.im/jail", bl[0].JID)
@@ -257,11 +258,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, item2)
 
 	// test full unblock
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jabber.org",
 	})
@@ -277,18 +278,21 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	blItems, _ := storage.FetchBlockListItems(context.Background(), "ortuman")
+	blItems, _ := blockListRep.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) (*router.Router, repository.BlockList) {
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
-	s := memorystorage.NewUser()
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r
+	blockListRep := memorystorage.NewBlockList()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		memorystorage.NewUser(),
+		blockListRep)
+	return r, blockListRep
 }

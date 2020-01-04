@@ -22,7 +22,6 @@ type Storage interface {
 	IsClusterCompatible() bool
 
 	rosterStorage
-	blockListStorage
 	pubSubStorage
 }
 

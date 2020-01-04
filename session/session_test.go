@@ -17,7 +17,7 @@ import (
 
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xmpp"
@@ -50,8 +50,7 @@ func (t *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) [
 func (t *fakeTransport) PeerCertificates() []*x509.Certificate                        { return nil }
 
 func TestSession_Open(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("jackal.im", true)
 
@@ -104,8 +103,7 @@ func TestSession_Open(t *testing.T) {
 }
 
 func TestSession_Close(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("jackal.im", true)
 
@@ -127,8 +125,7 @@ func TestSession_Close(t *testing.T) {
 }
 
 func TestSession_Send(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
@@ -143,8 +140,7 @@ func TestSession_Send(t *testing.T) {
 }
 
 func TestSession_Receive(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.WebSocket)
@@ -195,8 +191,7 @@ func TestSession_Receive(t *testing.T) {
 }
 
 func TestSession_IsValidNamespace(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	iqClient := xmpp.NewElementNamespace("iq", "jabber:client")
 	iqServer := xmpp.NewElementNamespace("iq", "jabber:server")
@@ -219,8 +214,7 @@ func TestSession_IsValidNamespace(t *testing.T) {
 }
 
 func TestSession_IsValidFrom(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.NewWithString("jackal.im", true)                  // server domain
 	j2, _ := jid.NewWithString("ortuman@jackal.im/resource", true) // full jid with user
@@ -237,8 +231,7 @@ func TestSession_IsValidFrom(t *testing.T) {
 }
 
 func TestSession_ValidateStream(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("jackal.im", true) // server domain
 
@@ -307,8 +300,7 @@ func TestSession_ValidateStream(t *testing.T) {
 }
 
 func TestSession_ExtractAddresses(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j1, _ := jid.NewWithString("jackal.im", true)
 	j2, _ := jid.NewWithString("ortuman@jackal.im/res", true)
@@ -348,8 +340,7 @@ func TestSession_ExtractAddresses(t *testing.T) {
 }
 
 func TestSession_BuildStanza(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
@@ -403,8 +394,7 @@ func TestSession_BuildStanza(t *testing.T) {
 }
 
 func TestSession_MapError(t *testing.T) {
-	r, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r := setupTest("jackal.im")
 
 	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
 	tr := newFakeTransport(transport.Socket)
@@ -424,14 +414,13 @@ func TestSession_MapError(t *testing.T) {
 	require.Equal(t, &Error{UnderlyingErr: er}, sess.mapErrorToSessionError(er))
 }
 
-func setupTest(domain string) (*router.Router, func()) {
-	rep, _ := storage.New(&storage.Config{Type: storage.Memory})
-
+func setupTest(domain string) *router.Router {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		rep.User(),
+		memorystorage.NewUser(),
+		memorystorage.NewBlockList(),
 	)
-	return r, func() { _ = rep.Close(context.Background()) }
+	return r
 }

@@ -16,11 +16,12 @@ import (
 )
 
 type mySQLContainer struct {
-	user    *mySQLUser
-	caps    *mySQLCapabilities
-	vCard   *mySQLVCard
-	priv    *mySQLPrivate
-	offline *mySQLOffline
+	user      *mySQLUser
+	caps      *mySQLCapabilities
+	vCard     *mySQLVCard
+	priv      *mySQLPrivate
+	blockList *mySQLBlockList
+	offline   *mySQLOffline
 
 	h      *sql.DB
 	doneCh chan chan bool
@@ -51,7 +52,9 @@ func New(cfg *Config) (repository.Container, error) {
 	c.caps = newCapabilities(c.h)
 	c.vCard = newVCard(c.h)
 	c.priv = newPrivate(c.h)
+	c.blockList = newBlockList(c.h)
 	c.offline = newOffline(c.h)
+
 	return c, nil
 }
 
@@ -59,6 +62,7 @@ func (c *mySQLContainer) User() repository.User                 { return c.user 
 func (c *mySQLContainer) Capabilities() repository.Capabilities { return c.caps }
 func (c *mySQLContainer) VCard() repository.VCard               { return c.vCard }
 func (c *mySQLContainer) Private() repository.Private           { return c.priv }
+func (c *mySQLContainer) BlockList() repository.BlockList       { return c.blockList }
 func (c *mySQLContainer) Offline() repository.Offline           { return c.offline }
 
 func (c *mySQLContainer) Close(ctx context.Context) error {

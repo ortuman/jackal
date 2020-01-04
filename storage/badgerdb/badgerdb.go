@@ -15,11 +15,12 @@ import (
 )
 
 type badgerDBContainer struct {
-	user    *badgerDBUser
-	caps    *badgerDBCapabilities
-	vCard   *badgerDBVCard
-	priv    *badgerDBPrivate
-	offline *badgerDBOffline
+	user      *badgerDBUser
+	caps      *badgerDBCapabilities
+	vCard     *badgerDBVCard
+	priv      *badgerDBPrivate
+	blockList *badgerDBBlockList
+	offline   *badgerDBOffline
 
 	db *badger.DB
 }
@@ -41,6 +42,7 @@ func New(cfg *Config) (repository.Container, error) {
 	c.caps = newCapabilities(c.db)
 	c.vCard = newVCard(c.db)
 	c.priv = newPrivate(c.db)
+	c.blockList = newBlockList(c.db)
 	c.offline = newOffline(c.db)
 
 	return &c, nil
@@ -50,6 +52,7 @@ func (c *badgerDBContainer) User() repository.User                 { return c.us
 func (c *badgerDBContainer) Capabilities() repository.Capabilities { return c.caps }
 func (c *badgerDBContainer) VCard() repository.VCard               { return c.vCard }
 func (c *badgerDBContainer) Private() repository.Private           { return c.priv }
+func (c *badgerDBContainer) BlockList() repository.BlockList       { return c.blockList }
 func (c *badgerDBContainer) Offline() repository.Offline           { return c.offline }
 
 func (c *badgerDBContainer) Close(_ context.Context) error { return c.db.Close() }

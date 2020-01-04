@@ -17,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -467,14 +468,18 @@ func TestRoster_Subscription(t *testing.T) {
 	require.Equal(t, rostermodel.SubscriptionNone, ri.Subscription)
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.User) {
+func setupTest(domain string) (*router.Router, repository.User) {
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
-	s := memorystorage.NewUser()
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r, s
+	userRep := memorystorage.NewUser()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		userRep,
+		memorystorage.NewBlockList(),
+	)
+	return r, userRep
 }

@@ -142,9 +142,13 @@ func setupTest(domain string) (*router.Router, *memorystorage.User) {
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
-	s := memorystorage.NewUser()
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, s)
-	return r, s
+	userRep := memorystorage.NewUser()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		userRep,
+		memorystorage.NewBlockList(),
+	)
+	return r, userRep
 }

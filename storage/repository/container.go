@@ -16,6 +16,8 @@ type Container interface {
 
 	Private() Private
 
+	BlockList() BlockList
+
 	Offline() Offline
 
 	Close(ctx context.Context) error

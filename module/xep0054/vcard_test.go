@@ -228,8 +228,12 @@ func setupTest(domain string) (*router.Router, *memorystorage.VCard) {
 	//=================================
 
 	s := memorystorage.NewVCard()
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	}, memorystorage.NewUser())
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		memorystorage.NewUser(),
+		memorystorage.NewBlockList(),
+	)
 	return r, s
 }

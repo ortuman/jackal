@@ -147,7 +147,7 @@ func (a *Application) Run() error {
 	}
 
 	// initialize router
-	a.router, err = router.New(&cfg.Router, repContainer.User())
+	a.router, err = router.New(&cfg.Router, repContainer.User(), repContainer.BlockList())
 	if err != nil {
 		return err
 	}

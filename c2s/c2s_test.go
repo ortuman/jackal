@@ -153,18 +153,21 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) (*router.Router, repository.User) {
+func setupTest(domain string) (*router.Router, repository.User, repository.BlockList) {
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
-	s := memorystorage.NewUser()
+	userRep := memorystorage.NewUser()
+	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		}, s,
+		},
+		userRep,
+		blockListRep,
 	)
-	return r, s
+	return r, userRep, blockListRep
 }
 
 type fakeC2SServer struct {

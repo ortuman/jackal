@@ -190,11 +190,13 @@ func (a fakeAddr) String() string  { return "str" }
 
 func setupTest(domain string) *router.Router {
 	userRep := memorystorage.NewUser()
+	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		userRep,
+		blockListRep,
 	)
 	return r
 }

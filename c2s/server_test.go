@@ -24,7 +24,7 @@ import (
 )
 
 func TestC2SSocketServer(t *testing.T) {
-	r, _ := setupTest("localhost")
+	r, _, _ := setupTest("localhost")
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -62,7 +62,7 @@ func TestC2SSocketServer(t *testing.T) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
 		defer cancel()
 
-		srv.shutdown(ctx)
+		_ = srv.shutdown(ctx)
 		errCh <- nil
 	}()
 	err := <-errCh
@@ -80,6 +80,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
 		},
 		memorystorage.NewUser(),
+		memorystorage.NewBlockList(),
 	)
 	errCh := make(chan error)
 	cfg := Config{

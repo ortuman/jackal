@@ -19,33 +19,33 @@ func TestMemoryStorage_InsertOrUpdateBlockListItems(t *testing.T) {
 		{Username: "ortuman", JID: "romeo@jackal.im"},
 		{Username: "ortuman", JID: "juliet@jackal.im"},
 	}
-	s := New2()
-	s.EnableMockedError()
+	s := NewBlockList()
+	EnableMockedError()
 	require.Equal(t, ErrMockedError, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
-	s.DisableMockedError()
+	DisableMockedError()
 
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	sItems, _ := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, items, sItems)
 }
 
 func TestMemoryStorage_DeleteBlockListItems(t *testing.T) {
-	s := New2()
+	s := NewBlockList()
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"}))
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 	require.Nil(t, s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
 
-	s.EnableMockedError()
+	EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
-	s.DisableMockedError()
+	DisableMockedError()
 
 	require.Nil(t, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 

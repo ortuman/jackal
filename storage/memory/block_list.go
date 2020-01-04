@@ -12,85 +12,67 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// InsertBlockListItem a block list item entity
-// into storage, only in case they haven't been previously inserted.
-func (m *Storage) InsertBlockListItem(_ context.Context, item *model.BlockListItem) error {
-	return m.inWriteLock(func() error {
-		blItems, err := m.fetchUserBlockListItems(item.Username)
-		if err != nil {
-			return err
-		}
-		if blItems != nil {
-			for _, blItem := range blItems {
-				if blItem.JID == item.JID {
-					return nil
-				}
+type BlockList struct {
+	*memoryStorage
+}
+
+func NewBlockList() *BlockList {
+	return &BlockList{memoryStorage: newStorage()}
+}
+
+func (m *BlockList) InsertBlockListItem(_ context.Context, item *model.BlockListItem) error {
+	return m.updateInWriteLock(blockListItemKey(item.Username), func(b []byte) ([]byte, error) {
+		var items []model.BlockListItem
+		if len(b) > 0 {
+			if err := serializer.DeserializeSlice(b, &items); err != nil {
+				return nil, err
 			}
-			blItems = append(blItems, *item)
-		} else {
-			blItems = []model.BlockListItem{*item}
 		}
-		if err := m.upsertBlockListItems(blItems, item.Username); err != nil {
-			return err
+		for _, itm := range items {
+			if itm.JID == item.JID {
+				return b, nil // already inserted
+			}
 		}
-		return nil
+		items = append(items, *item)
+
+		output, err := serializer.SerializeSlice(&items)
+		if err != nil {
+			return nil, err
+		}
+		return output, nil
 	})
 }
 
-// DeleteBlockListItem deletes a of block list item entity from storage.
-func (m *Storage) DeleteBlockListItem(_ context.Context, item *model.BlockListItem) error {
-	return m.inWriteLock(func() error {
-		blItems, err := m.fetchUserBlockListItems(item.Username)
-		if err != nil {
-			return err
-		}
-		for i, blItem := range blItems {
-			if blItem.JID == item.JID {
-				// delete item
-				blItems = append(blItems[:i], blItems[i+1:]...)
-				if err := m.upsertBlockListItems(blItems, item.Username); err != nil {
-					return err
-				}
-				break
+func (m *BlockList) DeleteBlockListItem(_ context.Context, item *model.BlockListItem) error {
+	return m.updateInWriteLock(blockListItemKey(item.Username), func(b []byte) ([]byte, error) {
+		var items []model.BlockListItem
+		if len(b) > 0 {
+			if err := serializer.DeserializeSlice(b, &items); err != nil {
+				return nil, err
 			}
 		}
-		return nil
+		for i, itm := range items {
+			if itm.JID == item.JID {
+				items = append(items[:i], items[i+1:]...)
+
+				output, err := serializer.SerializeSlice(&items)
+				if err != nil {
+					return nil, err
+				}
+				return output, nil
+			}
+		}
+		return b, nil // not present
 	})
 }
 
-// FetchBlockListItems retrieves from storage all block list item entities
-// associated to a given user.
-func (m *Storage) FetchBlockListItems(_ context.Context, username string) ([]model.BlockListItem, error) {
-	var blItems []model.BlockListItem
-	if err := m.inReadLock(func() error {
-		var fnErr error
-		blItems, fnErr = m.fetchUserBlockListItems(username)
-		return fnErr
-	}); err != nil {
-		return nil, err
-	}
-	return blItems, nil
-}
-
-func (m *Storage) upsertBlockListItems(blItems []model.BlockListItem, username string) error {
-	b, err := serializer.SerializeSlice(&blItems)
+func (m *BlockList) FetchBlockListItems(_ context.Context, username string) ([]model.BlockListItem, error) {
+	var items []model.BlockListItem
+	_, err := m.getEntities(blockListItemKey(username), &items)
 	if err != nil {
-		return err
-	}
-	m.bytes[blockListItemKey(username)] = b
-	return nil
-}
-
-func (m *Storage) fetchUserBlockListItems(username string) ([]model.BlockListItem, error) {
-	b := m.bytes[blockListItemKey(username)]
-	if b == nil {
-		return nil, nil
-	}
-	var blItems []model.BlockListItem
-	if err := serializer.DeserializeSlice(b, &blItems); err != nil {
 		return nil, err
 	}
-	return blItems, nil
+	return items, nil
 }
 
 func blockListItemKey(username string) string {

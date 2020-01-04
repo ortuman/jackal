@@ -523,10 +523,10 @@ func (s *inStream) compress(ctx context.Context, elem xmpp.XElement) {
 		s.writeElement(ctx, failure)
 		return
 	}
+	s.writeElement(ctx, xmpp.NewElementNamespace("compressed", compressProtocolNamespace))
+
 	s.cfg.transport.EnableCompression(s.cfg.compression.Level)
 	s.setCompressed(true)
-
-	s.writeElement(ctx, xmpp.NewElementNamespace("compressed", compressProtocolNamespace))
 
 	log.Infof("compressed stream... id: %s", s.id)
 

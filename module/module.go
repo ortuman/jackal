@@ -123,7 +123,7 @@ func New(config *Config, router *router.Router, repContainer repository.Containe
 
 	// XEP-0191: Blocking Command (https://xmpp.org/extensions/xep-0191.html)
 	if _, ok := config.Enabled["blocking_command"]; ok {
-		m.BlockingCmd = xep0191.New(m.DiscoInfo, presenceHub, router)
+		m.BlockingCmd = xep0191.New(m.DiscoInfo, presenceHub, router, repContainer.BlockList())
 		m.iqHandlers = append(m.iqHandlers, m.BlockingCmd)
 		m.all = append(m.all, m.BlockingCmd)
 	}
