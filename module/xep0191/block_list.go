@@ -14,7 +14,6 @@ import (
 	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util/runqueue"
@@ -34,15 +33,17 @@ type BlockingCommand struct {
 	runQueue     *runqueue.RunQueue
 	router       *router.Router
 	blockListRep repository.BlockList
+	rosterRep    repository.Roster
 	presenceHub  *presencehub.PresenceHub
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router, blockListRep repository.BlockList) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
 	b := &BlockingCommand{
 		runQueue:     runqueue.New("xep0191"),
 		router:       router,
 		blockListRep: blockListRep,
+		rosterRep:    rosterRep,
 		presenceHub:  presenceHub,
 	}
 	if disco != nil {
@@ -255,7 +256,7 @@ func (x *BlockingCommand) fetchBlockListAndRosterItems(ctx context.Context, user
 	if err != nil {
 		return nil, nil, err
 	}
-	ris, _, err := storage.FetchRosterItems(ctx, username)
+	ris, _, err := x.rosterRep.FetchRosterItems(ctx, username)
 	if err != nil {
 		return nil, nil, err
 	}

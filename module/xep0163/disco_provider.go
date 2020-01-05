@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -31,7 +32,9 @@ var pepFeatures = []string{
 	"http://jabber.org/protocol/pubsub#subscribe",
 }
 
-type discoInfoProvider struct{}
+type discoInfoProvider struct {
+	rosterRep repository.Roster
+}
 
 func (p *discoInfoProvider) Identities(_ context.Context, _, _ *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
@@ -114,7 +117,7 @@ func (p *discoInfoProvider) isSubscribedTo(ctx context.Context, contact *jid.JID
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
+	ri, err := p.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false

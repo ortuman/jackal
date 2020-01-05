@@ -13,6 +13,7 @@ import (
 
 type memoryContainer struct {
 	user      *User
+	roster    *Roster
 	vCard     *VCard
 	caps      *Capabilities
 	priv      *Private
@@ -24,6 +25,7 @@ func New() (repository.Container, error) {
 	var c memoryContainer
 
 	c.user = NewUser()
+	c.roster = NewRoster()
 	c.caps = NewCapabilities()
 	c.vCard = NewVCard()
 	c.priv = NewPrivate()
@@ -34,6 +36,7 @@ func New() (repository.Container, error) {
 }
 
 func (c *memoryContainer) User() repository.User                 { return c.user }
+func (c *memoryContainer) Roster() repository.Roster             { return c.roster }
 func (c *memoryContainer) Capabilities() repository.Capabilities { return c.caps }
 func (c *memoryContainer) VCard() repository.VCard               { return c.vCard }
 func (c *memoryContainer) Private() repository.Private           { return c.priv }

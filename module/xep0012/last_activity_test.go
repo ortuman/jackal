@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -23,11 +24,11 @@ import (
 )
 
 func TestXEP0012_Matching(t *testing.T) {
-	r, s := setupTest("jackal.im")
+	r, userRep, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(nil, r, s)
+	x := New(nil, r, userRep, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -53,7 +54,7 @@ func TestXEP0012_Matching(t *testing.T) {
 }
 
 func TestXEP0012_GetServerLastActivity(t *testing.T) {
-	r, s := setupTest("jackal.im")
+	r, userRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("", "jackal.im", "", true)
 	j2, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -61,7 +62,7 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	stm := stream.NewMockC2S("abcd", j2)
 	defer stm.Disconnect(context.Background(), nil)
 
-	x := New(nil, r, s)
+	x := New(nil, r, userRep, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	r.Bind(context.Background(), stm)
@@ -80,14 +81,14 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 }
 
 func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
-	r, s := setupTest("jackal.im")
+	r, userRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 
-	x := New(nil, r, s)
+	x := New(nil, r, userRep, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	r.Bind(context.Background(), stm1)
@@ -106,11 +107,11 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	st.SetText("Gone!")
 	p.AppendElement(st)
 
-	_ = s.UpsertUser(context.Background(), &model.User{
+	_ = userRep.UpsertUser(context.Background(), &model.User{
 		Username:     "noelia",
 		LastPresence: p,
 	})
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -137,12 +138,15 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	memorystorage.DisableMockedError()
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.User) {
+func setupTest(domain string) (*router.Router, repository.User, repository.Roster) {
+	// ============================
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
+	// ============================
 
 	userRep := memorystorage.NewUser()
+	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
@@ -150,5 +154,5 @@ func setupTest(domain string) (*router.Router, *memorystorage.User) {
 		userRep,
 		memorystorage.NewBlockList(),
 	)
-	return r, userRep
+	return r, userRep, rosterRep
 }

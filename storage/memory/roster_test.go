@@ -27,11 +27,11 @@ func TestMemoryStorage_InsertRosterItem(t *testing.T) {
 		Groups:       g,
 	}
 
-	s := New2()
-	s.EnableMockedError()
+	s := NewRoster()
+	EnableMockedError()
 	_, err := s.UpsertRosterItem(context.Background(), &ri)
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 	_, err = s.UpsertRosterItem(context.Background(), &ri)
 	require.Nil(t, err)
 	ri.Subscription = "to"
@@ -50,13 +50,13 @@ func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 		Ver:          1,
 		Groups:       g,
 	}
-	s := New2()
+	s := NewRoster()
 	_, _ = s.UpsertRosterItem(context.Background(), &ri)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchRosterItem(context.Background(), "user", "contact")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	ri3, _ := s.FetchRosterItem(context.Background(), "user", "contact2")
 	require.Nil(t, ri3)
@@ -96,15 +96,15 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 		Groups:       []string{"family", "friends"},
 	}
 
-	s := New2()
+	s := NewRoster()
 	_, _ = s.UpsertRosterItem(context.Background(), &ri)
 	_, _ = s.UpsertRosterItem(context.Background(), &ri2)
 	_, _ = s.UpsertRosterItem(context.Background(), &ri3)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, _, err := s.FetchRosterItems(context.Background(), "user")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	ris, _, _ := s.FetchRosterItems(context.Background(), "user")
 	require.Equal(t, 3, len(ris))
@@ -133,7 +133,7 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 		Ver:          1,
 		Groups:       g,
 	}
-	s := New2()
+	s := NewRoster()
 	_, _ = s.UpsertRosterItem(context.Background(), &ri)
 
 	gr, err := s.FetchRosterGroups(context.Background(), "user")
@@ -142,10 +142,10 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 	require.Contains(t, gr, "general")
 	require.Contains(t, gr, "friends")
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
 
 	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
 	require.Nil(t, err)
@@ -165,10 +165,10 @@ func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
 		JID:      "romeo@jackal.im",
 		Presence: &xmpp.Presence{},
 	}
-	s := New2()
-	s.EnableMockedError()
+	s := NewRoster()
+	EnableMockedError()
 	require.Equal(t, ErrMockedError, s.UpsertRosterNotification(context.Background(), &rn))
-	s.DisableMockedError()
+	DisableMockedError()
 	require.Nil(t, s.UpsertRosterNotification(context.Background(), &rn))
 }
 
@@ -183,7 +183,7 @@ func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 		JID:      "ortuman2@jackal.im",
 		Presence: &xmpp.Presence{},
 	}
-	s := New2()
+	s := NewRoster()
 	_ = s.UpsertRosterNotification(context.Background(), &rn1)
 	_ = s.UpsertRosterNotification(context.Background(), &rn2)
 
@@ -192,10 +192,11 @@ func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 	rn2.Presence = xmpp.NewPresence(from, to, xmpp.SubscribeType)
 	_ = s.UpsertRosterNotification(context.Background(), &rn2)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	_, err := s.FetchRosterNotifications(context.Background(), "romeo")
 	require.Equal(t, ErrMockedError, err)
-	s.DisableMockedError()
+	DisableMockedError()
+
 	rns, err := s.FetchRosterNotifications(context.Background(), "romeo")
 	require.Nil(t, err)
 	require.Equal(t, 2, len(rns))
@@ -209,12 +210,13 @@ func TestMemoryStorage_DeleteRosterNotification(t *testing.T) {
 		JID:      "romeo@jackal.im",
 		Presence: &xmpp.Presence{},
 	}
-	s := New2()
+	s := NewRoster()
 	_ = s.UpsertRosterNotification(context.Background(), &rn1)
 
-	s.EnableMockedError()
+	EnableMockedError()
 	require.Equal(t, ErrMockedError, s.DeleteRosterNotification(context.Background(), "ortuman", "romeo@jackal.im"))
-	s.DisableMockedError()
+	DisableMockedError()
+
 	require.Nil(t, s.DeleteRosterNotification(context.Background(), "ortuman", "romeo@jackal.im"))
 
 	rns, err := s.FetchRosterNotifications(context.Background(), "romeo")

@@ -9,67 +9,9 @@ import (
 	"context"
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
-	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/xmpp"
 )
 
 type disabledStorage struct{}
-
-func (*disabledStorage) UpsertRosterItem(_ context.Context, _ *rostermodel.Item) (rostermodel.Version, error) {
-	return rostermodel.Version{}, nil
-}
-
-func (*disabledStorage) DeleteRosterItem(_ context.Context, _, _ string) (rostermodel.Version, error) {
-	return rostermodel.Version{}, nil
-}
-
-func (*disabledStorage) FetchRosterItems(_ context.Context, _ string) ([]rostermodel.Item, rostermodel.Version, error) {
-	return nil, rostermodel.Version{}, nil
-}
-
-func (*disabledStorage) FetchRosterItemsInGroups(_ context.Context, _ string, _ []string) ([]rostermodel.Item, rostermodel.Version, error) {
-	return nil, rostermodel.Version{}, nil
-}
-
-func (*disabledStorage) FetchRosterItem(_ context.Context, _, _ string) (*rostermodel.Item, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) UpsertRosterNotification(_ context.Context, _ *rostermodel.Notification) error {
-	return nil
-}
-
-func (*disabledStorage) DeleteRosterNotification(_ context.Context, _, _ string) error {
-	return nil
-}
-
-func (*disabledStorage) FetchRosterNotification(_ context.Context, _ string, _ string) (*rostermodel.Notification, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) FetchRosterNotifications(_ context.Context, _ string) ([]rostermodel.Notification, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) FetchRosterGroups(_ context.Context, _ string) ([]string, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) InsertOfflineMessage(_ context.Context, _ *xmpp.Message, _ string) error {
-	return nil
-}
-
-func (*disabledStorage) CountOfflineMessages(_ context.Context, _ string) (int, error) {
-	return 0, nil
-}
-
-func (*disabledStorage) FetchOfflineMessages(_ context.Context, _ string) ([]xmpp.Message, error) {
-	return nil, nil
-}
-
-func (*disabledStorage) DeleteOfflineMessages(_ context.Context, _ string) error {
-	return nil
-}
 
 func (*disabledStorage) FetchHosts(_ context.Context) (hosts []string, err error) {
 	return nil, nil

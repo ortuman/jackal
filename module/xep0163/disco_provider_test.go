@@ -56,14 +56,15 @@ func TestDiscoInfoProvider_Items(t *testing.T) {
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
-	dp := &discoInfoProvider{}
+	rosterRep := memorystorage.NewRoster()
+	dp := &discoInfoProvider{rosterRep: rosterRep}
 
 	items, err := dp.Items(context.Background(), j1, j2, "")
 	require.Nil(t, items)
 	require.NotNil(t, err)
 	require.Equal(t, xmpp.ErrSubscriptionRequired, err)
 
-	_, _ = s.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: rostermodel.SubscriptionTo,

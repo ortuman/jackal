@@ -14,6 +14,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -22,11 +23,11 @@ import (
 )
 
 func TestXEP0030_Matching(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	x := New(r)
+	x := New(r, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -54,7 +55,7 @@ func TestXEP0030_Matching(t *testing.T) {
 }
 
 func TestXEP0030_SendFeatures(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	srvJid, _ := jid.New("", "jackal.im", "", true)
@@ -62,7 +63,7 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	x := New(r)
+	x := New(r, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	x.RegisterServerFeature("s0")
@@ -106,14 +107,14 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 }
 
 func TestXEP0030_SendItems(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	x := New(r)
+	x := New(r, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -149,7 +150,7 @@ func (tp *testDiscoInfoProvider) Form(_ context.Context, toJID, fromJID *jid.JID
 }
 
 func TestXEP0030_Provider(t *testing.T) {
-	r := setupTest("jackal.im")
+	r, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	compJID, _ := jid.New("", "test.jackal.im", "", true)
@@ -157,7 +158,7 @@ func TestXEP0030_Provider(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	x := New(r)
+	x := New(r, rosterRep)
 	defer func() { _ = x.Shutdown() }()
 
 	iq1 := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -187,16 +188,17 @@ func TestXEP0030_Provider(t *testing.T) {
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) (*router.Router, repository.Roster) {
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
+	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		memorystorage.NewUser(),
 		memorystorage.NewBlockList())
-	return r
+	return r, rosterRep
 }

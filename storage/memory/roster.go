@@ -14,9 +14,15 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-// UpsertRosterItem inserts a new roster item entity into storage,
-// or updates it in case it's been previously inserted.
-func (m *Storage) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (rostermodel.Version, error) {
+type Roster struct {
+	*memoryStorage
+}
+
+func NewRoster() *Roster {
+	return &Roster{memoryStorage: newStorage()}
+}
+
+func (m *Roster) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	err := m.inWriteLock(func() error {
 		ris, fnErr := m.fetchRosterItems(ri.Username)
@@ -53,8 +59,7 @@ func (m *Storage) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (ros
 	return rv, err
 }
 
-// DeleteRosterItem deletes a roster item entity from storage.
-func (m *Storage) DeleteRosterItem(_ context.Context, user, contact string) (rostermodel.Version, error) {
+func (m *Roster) DeleteRosterItem(_ context.Context, user, contact string) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	if err := m.inWriteLock(func() error {
 		ris, fnErr := m.fetchRosterItems(user)
@@ -87,8 +92,7 @@ func (m *Storage) DeleteRosterItem(_ context.Context, user, contact string) (ros
 	return rv, nil
 }
 
-// FetchRosterItems retrieves from storage all roster item entities associated to a given user.
-func (m *Storage) FetchRosterItems(_ context.Context, user string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (m *Roster) FetchRosterItems(_ context.Context, user string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
 
@@ -106,9 +110,7 @@ func (m *Storage) FetchRosterItems(_ context.Context, user string) ([]rostermode
 	return ris, rv, nil
 }
 
-// FetchRosterItemsInGroups retrieves from storage all roster item entities
-// associated to a given user and a set of groups.
-func (m *Storage) FetchRosterItemsInGroups(_ context.Context, username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
+func (m *Roster) FetchRosterItemsInGroups(_ context.Context, username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
 
@@ -137,8 +139,7 @@ func (m *Storage) FetchRosterItemsInGroups(_ context.Context, username string, g
 	return ris, rv, nil
 }
 
-// FetchRosterItem retrieves from storage a roster item entity.
-func (m *Storage) FetchRosterItem(_ context.Context, user, contact string) (*rostermodel.Item, error) {
+func (m *Roster) FetchRosterItem(_ context.Context, user, contact string) (*rostermodel.Item, error) {
 	var ret *rostermodel.Item
 	err := m.inReadLock(func() error {
 		ris, fnErr := m.fetchRosterItems(user)
@@ -156,9 +157,7 @@ func (m *Storage) FetchRosterItem(_ context.Context, user, contact string) (*ros
 	return ret, err
 }
 
-// UpsertRosterNotification inserts a new roster notification entity
-// into storage, or updates it in case it's been previously inserted.
-func (m *Storage) UpsertRosterNotification(_ context.Context, rn *rostermodel.Notification) error {
+func (m *Roster) UpsertRosterNotification(_ context.Context, rn *rostermodel.Notification) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(rn.Contact)
 		if fnErr != nil {
@@ -180,8 +179,7 @@ func (m *Storage) UpsertRosterNotification(_ context.Context, rn *rostermodel.No
 	})
 }
 
-// DeleteRosterNotification deletes a roster notification entity from storage.
-func (m *Storage) DeleteRosterNotification(_ context.Context, contact, jid string) error {
+func (m *Roster) DeleteRosterNotification(_ context.Context, contact, jid string) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(contact)
 		if fnErr != nil {
@@ -197,8 +195,7 @@ func (m *Storage) DeleteRosterNotification(_ context.Context, contact, jid strin
 	})
 }
 
-// FetchRosterNotification retrieves from storage a roster notification entity.
-func (m *Storage) FetchRosterNotification(_ context.Context, contact string, jid string) (*rostermodel.Notification, error) {
+func (m *Roster) FetchRosterNotification(_ context.Context, contact string, jid string) (*rostermodel.Notification, error) {
 	var ret *rostermodel.Notification
 	err := m.inReadLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(contact)
@@ -216,8 +213,7 @@ func (m *Storage) FetchRosterNotification(_ context.Context, contact string, jid
 	return ret, err
 }
 
-// FetchRosterNotifications retrieves from storage all roster notifications associated to a given user.
-func (m *Storage) FetchRosterNotifications(_ context.Context, contact string) ([]rostermodel.Notification, error) {
+func (m *Roster) FetchRosterNotifications(_ context.Context, contact string) ([]rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
 	if err := m.inReadLock(func() error {
 		var fnErr error
@@ -229,8 +225,7 @@ func (m *Storage) FetchRosterNotifications(_ context.Context, contact string) ([
 	return rns, nil
 }
 
-// FetchRosterGroups retrieves all groups associated to a user roster
-func (m *Storage) FetchRosterGroups(_ context.Context, username string) ([]string, error) {
+func (m *Roster) FetchRosterGroups(_ context.Context, username string) ([]string, error) {
 	var groups []string
 	if err := m.inReadLock(func() error {
 		var fnErr error
@@ -242,17 +237,17 @@ func (m *Storage) FetchRosterGroups(_ context.Context, username string) ([]strin
 	return groups, nil
 }
 
-func (m *Storage) upsertRosterItems(ris []rostermodel.Item, user string) error {
+func (m *Roster) upsertRosterItems(ris []rostermodel.Item, user string) error {
 	b, err := serializer.SerializeSlice(&ris)
 	if err != nil {
 		return err
 	}
-	m.bytes[rosterItemsKey(user)] = b
+	m.b[rosterItemsKey(user)] = b
 	return nil
 }
 
-func (m *Storage) fetchRosterItems(user string) ([]rostermodel.Item, error) {
-	b := m.bytes[rosterItemsKey(user)]
+func (m *Roster) fetchRosterItems(user string) ([]rostermodel.Item, error) {
+	b := m.b[rosterItemsKey(user)]
 	if b == nil {
 		return nil, nil
 	}
@@ -263,17 +258,17 @@ func (m *Storage) fetchRosterItems(user string) ([]rostermodel.Item, error) {
 	return ris, nil
 }
 
-func (m *Storage) upsertRosterVersion(rv rostermodel.Version, user string) error {
+func (m *Roster) upsertRosterVersion(rv rostermodel.Version, user string) error {
 	b, err := serializer.Serialize(&rv)
 	if err != nil {
 		return err
 	}
-	m.bytes[rosterVersionKey(user)] = b
+	m.b[rosterVersionKey(user)] = b
 	return nil
 }
 
-func (m *Storage) fetchRosterVersion(user string) (rostermodel.Version, error) {
-	b := m.bytes[rosterVersionKey(user)]
+func (m *Roster) fetchRosterVersion(user string) (rostermodel.Version, error) {
+	b := m.b[rosterVersionKey(user)]
 	if b == nil {
 		return rostermodel.Version{}, nil
 	}
@@ -284,17 +279,17 @@ func (m *Storage) fetchRosterVersion(user string) (rostermodel.Version, error) {
 	return rv, nil
 }
 
-func (m *Storage) upsertRosterNotifications(rns []rostermodel.Notification, contact string) error {
+func (m *Roster) upsertRosterNotifications(rns []rostermodel.Notification, contact string) error {
 	b, err := serializer.SerializeSlice(&rns)
 	if err != nil {
 		return err
 	}
-	m.bytes[rosterNotificationsKey(contact)] = b
+	m.b[rosterNotificationsKey(contact)] = b
 	return nil
 }
 
-func (m *Storage) fetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
-	b := m.bytes[rosterNotificationsKey(contact)]
+func (m *Roster) fetchRosterNotifications(contact string) ([]rostermodel.Notification, error) {
+	b := m.b[rosterNotificationsKey(contact)]
 	if b == nil {
 		return nil, nil
 	}
@@ -305,7 +300,7 @@ func (m *Storage) fetchRosterNotifications(contact string) ([]rostermodel.Notifi
 	return rns, nil
 }
 
-func (m *Storage) upsertRosterGroups(user string, ris []rostermodel.Item) error {
+func (m *Roster) upsertRosterGroups(user string, ris []rostermodel.Item) error {
 	var groupsSet = make(map[string]struct{})
 	// remove duplicates
 	for _, ri := range ris {
@@ -329,15 +324,15 @@ func (m *Storage) upsertRosterGroups(user string, ris []rostermodel.Item) error 
 			return err
 		}
 	}
-	m.bytes[rosterGroupsKey(user)] = buf.Bytes()
+	m.b[rosterGroupsKey(user)] = buf.Bytes()
 	return nil
 }
 
-func (m *Storage) fetchRosterGroups(user string) ([]string, error) {
+func (m *Roster) fetchRosterGroups(user string) ([]string, error) {
 	var ln int
 	var groups []string
 
-	b := m.bytes[rosterGroupsKey(user)]
+	b := m.b[rosterGroupsKey(user)]
 	if b == nil {
 		return nil, nil
 	}

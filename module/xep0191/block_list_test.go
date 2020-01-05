@@ -26,7 +26,7 @@ import (
 )
 
 func TestXEP0191_Matching(t *testing.T) {
-	r, blockListRep := setupTest("jackal.im")
+	r, blockListRep, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -36,7 +36,7 @@ func TestXEP0191_Matching(t *testing.T) {
 	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, r, blockListRep)
+	x := New(nil, ph, r, rosterRep, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	// test MatchesIQ
@@ -60,7 +60,7 @@ func TestXEP0191_Matching(t *testing.T) {
 }
 
 func TestXEP0191_GetBlockList(t *testing.T) {
-	r, blockListRep := setupTest("jackal.im")
+	r, blockListRep, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -70,7 +70,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, r, blockListRep)
+	x := New(nil, ph, r, rosterRep, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
@@ -104,12 +104,12 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	r, blockListRep := setupTest("jackal.im")
+	r, blockListRep, rosterRep := setupTest("jackal.im")
 
 	ph := presencehub.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
-	x := New(nil, ph, r, blockListRep)
+	x := New(nil, ph, r, rosterRep, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -145,7 +145,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm1.SetBool(context.Background(), xep191RequestedContextKey, true)
 	stm2.SetBool(context.Background(), xep191RequestedContextKey, true)
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "romeo@jackal.im",
 		Subscription: "both",
@@ -282,17 +282,18 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) (*router.Router, repository.BlockList) {
+func setupTest(domain string) (*router.Router, repository.BlockList, repository.Roster) {
 	storage.Unset()
 	s2 := memorystorage.New2()
 	storage.Set(s2)
 
 	blockListRep := memorystorage.NewBlockList()
+	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		memorystorage.NewUser(),
 		blockListRep)
-	return r, blockListRep
+	return r, blockListRep, rosterRep
 }

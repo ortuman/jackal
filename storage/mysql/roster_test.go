@@ -44,7 +44,7 @@ func TestMySQLStorageInsertRosterItem(t *testing.T) {
 		ri.Ask,
 	}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectBegin()
 
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
@@ -79,7 +79,7 @@ func TestMySQLStorageInsertRosterItem(t *testing.T) {
 }
 
 func TestMySQLStorageDeleteRosterItem(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -96,7 +96,7 @@ func TestMySQLStorageDeleteRosterItem(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+)").
 		WithArgs("user").WillReturnError(errMySQLStorage)
@@ -110,7 +110,7 @@ func TestMySQLStorageDeleteRosterItem(t *testing.T) {
 func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	var riColumns = []string{"user", "contact", "name", "subscription", "`groups`", "ask", "ver"}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
@@ -123,7 +123,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterItems))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -132,7 +132,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
@@ -141,7 +141,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns))
@@ -150,7 +150,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, ri)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnError(errMySQLStorage)
@@ -159,7 +159,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -169,7 +169,7 @@ func TestMySQLStorageFetchRosterItems(t *testing.T) {
 	require.Equal(t, errMySQLStorage, err)
 
 	var riColumns2 = []string{"ris.user", "ris.contact", "ris.name", "ris.subscription", "ris.`groups`", "ris.ask", "ris.ver"}
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g ON ris.username = g.username (.+)").
 		WithArgs("ortuman", "Family").
 		WillReturnRows(sqlmock.NewRows(riColumns2).AddRow("ortuman", "romeo", "Romeo", "both", `["Family"]`, false, 0))
@@ -196,7 +196,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 		presenceXML,
 		presenceXML,
 	}
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectExec("INSERT INTO roster_notifications (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -205,7 +205,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectExec("INSERT INTO roster_notifications (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(args...).
 		WillReturnError(errMySQLStorage)
@@ -216,7 +216,7 @@ func TestMySQLStorageInsertRosterNotification(t *testing.T) {
 }
 
 func TestMySQLStorageDeleteRosterNotification(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -224,7 +224,7 @@ func TestMySQLStorageDeleteRosterNotification(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnError(errMySQLStorage)
 
@@ -236,7 +236,7 @@ func TestMySQLStorageDeleteRosterNotification(t *testing.T) {
 func TestMySQLStorageFetchRosterNotifications(t *testing.T) {
 	var rnColumns = []string{"user", "contact", "elements"}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8</priority>"))
@@ -246,7 +246,7 @@ func TestMySQLStorageFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterNotifications))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns))
@@ -256,7 +256,7 @@ func TestMySQLStorageFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rosterNotifications))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -265,7 +265,7 @@ func TestMySQLStorageFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8"))
@@ -276,8 +276,7 @@ func TestMySQLStorageFetchRosterNotifications(t *testing.T) {
 }
 
 func TestMySQLStorageFetchRosterGroups(t *testing.T) {
-
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows([]string{"group"}).
@@ -292,7 +291,7 @@ func TestMySQLStorageFetchRosterGroups(t *testing.T) {
 	require.Equal(t, "Contacts", groups[0])
 	require.Equal(t, "News", groups[1])
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -303,4 +302,11 @@ func TestMySQLStorageFetchRosterGroups(t *testing.T) {
 	require.Nil(t, groups)
 	require.NotNil(t, err)
 	require.Equal(t, errMySQLStorage, err)
+}
+
+func newRosterMock() (*mySQLRoster, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &mySQLRoster{
+		mySQLStorage: s,
+	}, sqlMock
 }

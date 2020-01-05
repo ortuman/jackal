@@ -18,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -26,14 +27,14 @@ import (
 )
 
 func TestXEP0163_Matching(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	// test MatchesIQ
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -45,14 +46,14 @@ func TestXEP0163_Matching(t *testing.T) {
 }
 
 func TestXEP163_CreateNode(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -78,7 +79,7 @@ func TestXEP163_CreateNode(t *testing.T) {
 }
 
 func TestXEP163_GetNodeConfiguration(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -96,7 +97,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
@@ -129,7 +130,7 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 }
 
 func TestXEP163_SetNodeConfiguration(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -164,14 +165,14 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -222,7 +223,7 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 }
 
 func TestXEP163_DeleteNode(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -257,14 +258,14 @@ func TestXEP163_DeleteNode(t *testing.T) {
 		Subscription: pubsubmodel.Subscribed,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -305,7 +306,7 @@ func TestXEP163_DeleteNode(t *testing.T) {
 }
 
 func TestXEP163_UpdateAffiliations(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -325,7 +326,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	// create new affiliation
 	iqID := uuid.New()
@@ -369,7 +370,7 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 }
 
 func TestXEP163_RetrieveAffiliations(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -394,7 +395,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
@@ -428,7 +429,7 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 }
 
 func TestXEP163_UpdateSubscriptions(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -447,7 +448,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	// create new subscription
 	iqID := uuid.New()
@@ -492,7 +493,7 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 }
 
 func TestXEP163_RetrieveSubscriptions(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -518,7 +519,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
@@ -550,7 +551,7 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 }
 
 func TestXEP163_Subscribe(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -575,14 +576,14 @@ func TestXEP163_Subscribe(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
 	})
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -634,7 +635,7 @@ func TestXEP163_Subscribe(t *testing.T) {
 }
 
 func TestXEP163_Unsubscribe(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -654,7 +655,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -667,7 +668,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// process pubsub command
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -695,7 +696,7 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 }
 
 func TestXEP163_RetrieveItems(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -715,7 +716,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 		JID:         "ortuman@jackal.im",
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -734,7 +735,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 		Payload:   xmpp.NewElementName("m2"),
 	}, "ortuman@jackal.im", "princely_musings", 2)
 
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	// retrieve all items
 	iqID := uuid.New()
@@ -784,7 +785,7 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 }
 
 func TestXEP163_SubscribeToAll(t *testing.T) {
-	r, _ := setupTest("jackal.im")
+	r, _, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
@@ -805,12 +806,12 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 		Payload:   xmpp.NewElementName("m2"),
 	}, "noelia@jackal.im", "princely_musings_2", 2)
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "noelia",
 		JID:          "ortuman@jackal.im",
 		Subscription: "both",
 	})
-	p := New(nil, nil, r)
+	p := New(nil, nil, r, rosterRep)
 
 	err := p.subscribeToAll(context.Background(), "noelia@jackal.im", j1)
 	require.Nil(t, err)
@@ -827,7 +828,7 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {
-	r, capsRep := setupTest("jackal.im")
+	r, capsRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -848,7 +849,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 		Affiliation: pubsubmodel.Owner,
 	}, "ortuman@jackal.im", "princely_musings")
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",
@@ -879,7 +880,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	_, _ = ph.RegisterPresence(context.Background(), pr2)
 
 	// process pubsub command
-	p := New(nil, ph, r)
+	p := New(nil, ph, r, rosterRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -912,7 +913,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.Capabilities) {
+func setupTest(domain string) (*router.Router, repository.Capabilities, repository.Roster) {
 	// ===========================
 	storage.Unset()
 	s2 := memorystorage.New2()
@@ -920,6 +921,7 @@ func setupTest(domain string) (*router.Router, *memorystorage.Capabilities) {
 	// ===========================
 
 	capsRep := memorystorage.NewCapabilities()
+	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
@@ -927,5 +929,5 @@ func setupTest(domain string) (*router.Router, *memorystorage.Capabilities) {
 		memorystorage.NewUser(),
 		memorystorage.NewBlockList(),
 	)
-	return r, capsRep
+	return r, capsRep, rosterRep
 }

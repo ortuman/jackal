@@ -18,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -61,19 +62,21 @@ type commandContext struct {
 
 // Pep represents a Personal Eventing Protocol module.
 type Pep struct {
-	router      *router.Router
 	runQueue    *runqueue.RunQueue
+	router      *router.Router
+	rosterRep   repository.Roster
 	disco       *xep0030.DiscoInfo
 	presenceHub *presencehub.PresenceHub
 	hosts       []string
 }
 
 // New returns a PEP command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router) *Pep {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router, rosterRep repository.Roster) *Pep {
 	p := &Pep{
-		disco:       disco,
-		router:      router,
 		runQueue:    runqueue.New("xep0163"),
+		rosterRep:   rosterRep,
+		router:      router,
+		disco:       disco,
 		presenceHub: presenceHub,
 	}
 	// register account identity and features
@@ -172,7 +175,7 @@ func (x *Pep) registerDiscoItemHandlers(ctx context.Context) error {
 		return err
 	}
 	for _, host := range hosts {
-		x.disco.RegisterProvider(host, &discoInfoProvider{})
+		x.disco.RegisterProvider(host, &discoInfoProvider{rosterRep: x.rosterRep})
 	}
 	x.hosts = hosts
 	return nil
@@ -226,6 +229,7 @@ func (x *Pep) subscribeToAll(ctx context.Context, host string, subJID *jid.JID) 
 				accessModel:         n.Options.AccessModel,
 				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
 				affiliation:         subAff,
+				rosterRep:           x.rosterRep,
 			}
 			if err := x.sendLastPublishedItem(ctx, subJID, accessChecker, host, n.Name, n.Options.NotificationType); err != nil {
 				return err
@@ -268,6 +272,7 @@ func (x *Pep) deliverLastItems(ctx context.Context, jid *jid.JID) error {
 			accessModel:         node.Options.AccessModel,
 			rosterAllowedGroups: node.Options.RosterGroupsAllowed,
 			affiliation:         aff,
+			rosterRep:           x.rosterRep,
 		}
 		if err := x.sendLastPublishedItem(ctx, jid, accessChecker, node.Host, node.Name, node.Options.NotificationType); err != nil {
 			return err
@@ -467,7 +472,7 @@ func (x *Pep) sendConfigurationForm(ctx context.Context, cmdCtx *commandContext,
 	configureNode := xmpp.NewElementName("configure")
 	configureNode.SetAttribute("node", cmdCtx.nodeID)
 
-	rosterGroups, err := storage.FetchRosterGroups(ctx, iq.ToJID().Node())
+	rosterGroups, err := x.rosterRep.FetchRosterGroups(ctx, iq.ToJID().Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -1038,6 +1043,7 @@ func (x *Pep) withCommandContext(ctx context.Context, opts commandOptions, cmdEl
 		accessModel:         node.Options.AccessModel,
 		rosterAllowedGroups: node.Options.RosterGroupsAllowed,
 		affiliation:         aff,
+		rosterRep:           x.rosterRep,
 	}
 	// check access
 	if opts.checkAccess && !cmdCtx.isAccountOwner {

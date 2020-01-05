@@ -24,6 +24,7 @@ var pingTimeout = 10 * time.Second
 
 type pgSQLContainer struct {
 	user      *pgSQLUser
+	roster    *pgSQLRoster
 	caps      *pgSQLCapabilities
 	vCard     *pgSQLVCard
 	priv      *pgSQLPrivate
@@ -58,6 +59,7 @@ func New(cfg *Config) (repository.Container, error) {
 	go c.loop(ctx)
 
 	c.user = newUser(c.h)
+	c.roster = newRoster(c.h)
 	c.caps = newCapabilities(c.h)
 	c.vCard = newVCard(c.h)
 	c.priv = newPrivate(c.h)
@@ -68,6 +70,7 @@ func New(cfg *Config) (repository.Container, error) {
 }
 
 func (c *pgSQLContainer) User() repository.User                 { return c.user }
+func (c *pgSQLContainer) Roster() repository.Roster             { return c.roster }
 func (c *pgSQLContainer) Capabilities() repository.Capabilities { return c.caps }
 func (c *pgSQLContainer) VCard() repository.VCard               { return c.vCard }
 func (c *pgSQLContainer) Private() repository.Private           { return c.priv }

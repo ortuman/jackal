@@ -13,13 +13,14 @@ import (
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 type serverProvider struct {
 	router          *router.Router
+	rosterRep       repository.Roster
 	mu              sync.RWMutex
 	serverItems     []Item
 	serverFeatures  []Feature
@@ -147,7 +148,7 @@ func (sp *serverProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, 
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true
 	}
-	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
+	ri, err := sp.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		log.Error(err)
 		return false
