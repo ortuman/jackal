@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage/memstorage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -21,15 +21,14 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	var err error
 
 	testStm, s := authTestSetup(&model.User{Username: "mariana", Password: "1234"})
-	defer authTestTeardown()
 
-	authr := NewPlain(testStm)
+	authr := NewPlain(testStm, s)
 	require.Equal(t, authr.Mechanism(), "PLAIN")
 	require.False(t, authr.UsesChannelBinding())
 
 	elem := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	elem.SetAttribute("mechanism", "PLAIN")
-	authr.ProcessElement(context.Background(), elem)
+	_ = authr.ProcessElement(context.Background(), elem)
 
 	buf := new(bytes.Buffer)
 	buf.WriteByte(0)
@@ -39,9 +38,9 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	// storage error...
-	s.EnableMockedError()
-	require.Equal(t, authr.ProcessElement(context.Background(), elem), memstorage.ErrMockedError)
-	s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	require.Equal(t, authr.ProcessElement(context.Background(), elem), memorystorage.ErrMocked)
+	memorystorage.DisableMockedError()
 
 	// valid credentials...
 	err = authr.ProcessElement(context.Background(), elem)

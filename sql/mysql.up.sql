@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS capabilities (
     node       VARCHAR(256) NOT NULL,
     ver        VARCHAR(256) NOT NULL,
     features   TEXT,
+    updated_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
 
     PRIMARY KEY (node, ver)

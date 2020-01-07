@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package mysql
 
 import (
@@ -10,19 +15,30 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (s *Storage) InsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+type mySQLCapabilities struct {
+	*mySQLStorage
+}
+
+func newCapabilities(db *sql.DB) *mySQLCapabilities {
+	return &mySQLCapabilities{
+		mySQLStorage: newStorage(db),
+	}
+}
+
+func (s *mySQLCapabilities) UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
 	}
 	_, err = sq.Insert("capabilities").
-		Columns("node", "ver", "features", "created_at").
-		Values(caps.Node, caps.Ver, b, nowExpr).
+		Columns("node", "ver", "features", "updated_at", "created_at").
+		Values(caps.Node, caps.Ver, b, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE features = ?, updated_at = NOW()", b).
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *Storage) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
+func (s *mySQLCapabilities) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package mysql
 
 import (
@@ -10,29 +15,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMySQLInsertCapabilities(t *testing.T) {
+func TestMySQLUpsertCapabilities(t *testing.T) {
 	features := []string{"jabber:iq:last"}
 
 	b, _ := json.Marshal(&features)
 
-	s, mock := NewMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
-		WithArgs("n1", "1234A", b).
+	s, mock := newCapabilitiesMock()
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON DUPLICATE KEY UPDATE features = \\?, updated_at = NOW\\(\\)").
+		WithArgs("n1", "1234A", b, b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err := s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
 	require.Nil(t, err)
 
 	// error case
-	s, mock = NewMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+)").
-		WithArgs("n1", "1234A", b).
+	s, mock = newCapabilitiesMock()
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON DUPLICATE KEY UPDATE features = \\?, updated_at = NOW\\(\\)").
+		WithArgs("n1", "1234A", b, b).
 		WillReturnError(errMySQLStorage)
 
-	err = s.InsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err = s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -41,7 +46,7 @@ func TestMySQLInsertCapabilities(t *testing.T) {
 }
 
 func TestMySQLFetchCapabilities(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newCapabilitiesMock()
 	rows := sqlmock.NewRows([]string{"features"})
 	rows.AddRow(`["jabber:iq:last"]`)
 
@@ -58,7 +63,7 @@ func TestMySQLFetchCapabilities(t *testing.T) {
 	require.Equal(t, "jabber:iq:last", caps.Features[0])
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newCapabilitiesMock()
 	mock.ExpectQuery("SELECT features FROM capabilities WHERE \\(node = . AND ver = .\\)").
 		WithArgs("n1", "1234A").
 		WillReturnError(errMySQLStorage)
@@ -69,4 +74,11 @@ func TestMySQLFetchCapabilities(t *testing.T) {
 
 	require.NotNil(t, err)
 	require.Nil(t, caps)
+}
+
+func newCapabilitiesMock() (*mySQLCapabilities, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &mySQLCapabilities{
+		mySQLStorage: s,
+	}, sqlMock
 }

@@ -16,7 +16,7 @@ import (
 
 // Insert a valid block list item
 func TestInsertValidBlockListItem(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	mock.ExpectExec("INSERT INTO blocklist_items (.+)").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -28,7 +28,7 @@ func TestInsertValidBlockListItem(t *testing.T) {
 
 // Insert the same row twice to test for key uniqueness validation
 func TestInsertDoubleBlockListItem(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	// First insertion will be successful
 	mock.ExpectExec("INSERT INTO blocklist_items (.+)").
@@ -49,7 +49,7 @@ func TestInsertDoubleBlockListItem(t *testing.T) {
 // Test fetching block list items
 func TestFetchBlockListItems(t *testing.T) {
 	var blockListColumns = []string{"username", "jid"}
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
 		WithArgs("ortuman").
@@ -62,7 +62,7 @@ func TestFetchBlockListItems(t *testing.T) {
 
 // Test error handling on fetching block list items
 func TestFetchBlockListItemsError(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
 		WithArgs("ortuman").
@@ -75,7 +75,7 @@ func TestFetchBlockListItemsError(t *testing.T) {
 
 // Test deleting an item from the block list
 func TestDeleteBlockListItems(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman", "noelia@jackal.im").
@@ -88,7 +88,7 @@ func TestDeleteBlockListItems(t *testing.T) {
 
 // Test error handling on deleting a row from the block list
 func TestDeleteBlockListItemsError(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman", "noelia@jackal.im").
@@ -97,4 +97,11 @@ func TestDeleteBlockListItemsError(t *testing.T) {
 	err := s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Equal(t, errGeneric, err)
 	require.Nil(t, mock.ExpectationsWereMet())
+}
+
+func newBlockListMock() (*pgSQLBlockList, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &pgSQLBlockList{
+		pgSQLStorage: s,
+	}, sqlMock
 }

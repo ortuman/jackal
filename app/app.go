@@ -60,7 +60,6 @@ type Application struct {
 	output           io.Writer
 	args             []string
 	logger           log.Logger
-	storage          storage.Storage
 	cluster          *cluster.Cluster
 	router           *router.Router
 	mods             *module.Modules
@@ -126,7 +125,6 @@ func (a *Application) Run() error {
 	if err := a.createPIDFile(cfg.PIDFile); err != nil {
 		return err
 	}
-
 	// initialize logger
 	err = a.initLogger(&cfg.Logger, a.output)
 	if err != nil {
@@ -137,20 +135,19 @@ func (a *Application) Run() error {
 	a.printLogo()
 
 	// initialize storage
-	err = a.initStorage(&cfg.Storage)
+	repContainer, err := storage.New(&cfg.Storage)
 	if err != nil {
 		return err
 	}
-
 	// initialize router
-	a.router, err = router.New(&cfg.Router)
+	a.router, err = router.New(&cfg.Router, repContainer.User(), repContainer.BlockList())
 	if err != nil {
 		return err
 	}
 
 	// initialize cluster
 	if cfg.Cluster != nil {
-		if storage.IsClusterCompatible() {
+		if repContainer.IsClusterCompatible() {
 			a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
 			if err != nil {
 				return err
@@ -167,7 +164,7 @@ func (a *Application) Run() error {
 	}
 
 	// initialize modules & components...
-	a.mods = module.New(&cfg.Modules, a.router)
+	a.mods = module.New(&cfg.Modules, a.router, repContainer)
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
 	// start serving s2s...
@@ -177,7 +174,7 @@ func (a *Application) Run() error {
 		a.s2s.Start()
 	}
 	// start serving c2s...
-	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router)
+	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router, repContainer.User())
 	if err != nil {
 		return err
 	}
@@ -243,16 +240,6 @@ func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
 	return nil
 }
 
-func (a *Application) initStorage(config *storage.Config) error {
-	s, err := storage.New(config)
-	if err != nil {
-		return err
-	}
-	a.storage = s
-	storage.Set(a.storage)
-	return nil
-}
-
 func (a *Application) printLogo() {
 	for i := range logoStr {
 		log.Infof("%s", logoStr[i])
@@ -301,12 +288,11 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 			a.s2s.Shutdown(ctx)
 		}
 		if a.cluster != nil {
-			_ = a.cluster.Shutdown()
+			_ = a.cluster.Shutdown(ctx)
 		}
 		_ = a.comps.Shutdown(ctx)
 		_ = a.mods.Shutdown(ctx)
 
-		storage.Unset()
 		log.Unset()
 		c <- true
 	}()

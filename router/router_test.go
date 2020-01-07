@@ -15,8 +15,8 @@ import (
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
@@ -72,15 +72,14 @@ func (f *fakeOutS2SProvider) GetOut(_ context.Context, _, _ string) (stream.S2SO
 func TestRouter_EmptyConfig(t *testing.T) {
 	defer func() { _ = os.RemoveAll("./.cert") }()
 
-	r, _ := New(&Config{})
+	r, _ := New(&Config{}, nil, nil)
 	require.True(t, r.IsLocalHost("localhost"))
 	require.Equal(t, 1, len(r.HostNames()))
 	require.Equal(t, 1, len(r.Certificates()))
 }
 
 func TestRouter_SetCluster(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _, _ := setupTest()
 
 	var del fakeClusterDelegate
 	r.SetCluster(&del)
@@ -88,8 +87,7 @@ func TestRouter_SetCluster(t *testing.T) {
 }
 
 func TestRouter_ClusterDelegate(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _, _ := setupTest()
 
 	del, ok := r.ClusterDelegate().(cluster.Delegate)
 	require.True(t, ok)
@@ -97,8 +95,7 @@ func TestRouter_ClusterDelegate(t *testing.T) {
 }
 
 func TestRouter_Binding(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _, _ := setupTest()
 
 	var del fakeClusterDelegate
 	r.SetCluster(&del)
@@ -151,8 +148,7 @@ func TestRouter_Routing(t *testing.T) {
 	outS2S := fakeS2SOut{}
 	s2sOutProvider := fakeOutS2SProvider{s2sOut: &outS2S}
 
-	r, s, shutdown := setupTest()
-	defer shutdown()
+	r, userRep, _ := setupTest()
 
 	r.SetOutS2SProvider(&s2sOutProvider)
 
@@ -181,11 +177,11 @@ func TestRouter_Routing(t *testing.T) {
 	iq.SetToJID(j3)
 	require.Equal(t, ErrNotExistingAccount, r.Route(context.Background(), iq))
 
-	s.EnableMockedError()
-	require.Equal(t, memstorage.ErrMockedError, r.Route(context.Background(), iq))
-	s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	require.Equal(t, memorystorage.ErrMocked, r.Route(context.Background(), iq))
+	memorystorage.DisableMockedError()
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
 	require.Equal(t, ErrNotAuthenticated, r.Route(context.Background(), iq))
 
 	stm4 := stream.NewMockC2S(uuid.New(), j4)
@@ -235,8 +231,7 @@ func TestRouter_Routing(t *testing.T) {
 }
 
 func TestRouter_BlockedJID(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _, blockListRep := setupTest()
 
 	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", false)
 	j2, _ := jid.NewWithString("hamlet@jackal.im/balcony", false)
@@ -249,20 +244,20 @@ func TestRouter_BlockedJID(t *testing.T) {
 	r.Bind(context.Background(), stm2)
 
 	// node + domain + resource
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
 	require.False(t, r.IsBlockedJID(context.Background(), j2, "ortuman"))
 	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im/garden",
 	})
 
 	// node + domain
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
@@ -272,13 +267,13 @@ func TestRouter_BlockedJID(t *testing.T) {
 	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "hamlet@jackal.im",
 	})
 
 	// domain + resource
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
@@ -288,13 +283,13 @@ func TestRouter_BlockedJID(t *testing.T) {
 	require.False(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 	require.False(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im/balcony",
 	})
 
 	// domain
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})
@@ -304,7 +299,7 @@ func TestRouter_BlockedJID(t *testing.T) {
 	require.True(t, r.IsBlockedJID(context.Background(), j3, "ortuman"))
 	require.True(t, r.IsBlockedJID(context.Background(), j4, "ortuman"))
 
-	_ = storage.DeleteBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.DeleteBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "ortuman",
 		JID:      "jackal.im",
 	})
@@ -317,8 +312,7 @@ func TestRouter_BlockedJID(t *testing.T) {
 }
 
 func TestRouter_Cluster(t *testing.T) {
-	r, _, shutdown := setupTest()
-	defer shutdown()
+	r, _, _ := setupTest()
 
 	var del fakeClusterDelegate
 	del.sendCh = make(chan *cluster.Message, 2)
@@ -480,13 +474,15 @@ func TestRouter_Cluster(t *testing.T) {
 	require.Equal(t, elem, iq)
 }
 
-func setupTest() (*Router, *memstorage.Storage, func()) {
-	r, _ := New(&Config{
-		Hosts: []HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
-	s := memstorage.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+func setupTest() (*Router, repository.User, repository.BlockList) {
+	userRep := memorystorage.NewUser()
+	blockListRep := memorystorage.NewBlockList()
+	r, _ := New(
+		&Config{
+			Hosts: []HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+		},
+		userRep,
+		blockListRep,
+	)
+	return r, userRep, blockListRep
 }

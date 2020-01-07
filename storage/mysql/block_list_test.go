@@ -15,7 +15,7 @@ import (
 )
 
 func TestMySQLStorageInsertBlockListItems(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -23,7 +23,7 @@ func TestMySQLStorageInsertBlockListItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newBlockListMock()
 	mock.ExpectExec("INSERT IGNORE INTO blocklist_items (.+)").WillReturnError(errMySQLStorage)
 
 	err = s.InsertBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
@@ -33,7 +33,7 @@ func TestMySQLStorageInsertBlockListItems(t *testing.T) {
 
 func TestMySQLFetchBlockListItems(t *testing.T) {
 	var blockListColumns = []string{"username", "jid"}
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(blockListColumns).AddRow("ortuman", "noelia@jackal.im"))
@@ -42,7 +42,7 @@ func TestMySQLFetchBlockListItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newBlockListMock()
 	mock.ExpectQuery("SELECT (.+) FROM blocklist_items (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errMySQLStorage)
@@ -53,12 +53,12 @@ func TestMySQLFetchBlockListItems(t *testing.T) {
 }
 
 func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newBlockListMock()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	s, mock = NewMock()
+	s, mock = newBlockListMock()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -67,11 +67,18 @@ func TestMySQLStorageDeleteBlockListItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newBlockListMock()
 	mock.ExpectExec("DELETE FROM blocklist_items (.+)").
 		WillReturnError(errMySQLStorage)
 
 	err = s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errMySQLStorage, err)
+}
+
+func newBlockListMock() (*mySQLBlockList, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &mySQLBlockList{
+		mySQLStorage: s,
+	}, sqlMock
 }

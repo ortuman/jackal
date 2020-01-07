@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/runqueue"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -132,7 +132,7 @@ func (c *Cluster) BroadcastMessage(ctx context.Context, msg *Message) {
 }
 
 // Shutdown shuts down cluster sub system.
-func (c *Cluster) Shutdown() error {
+func (c *Cluster) Shutdown(_ context.Context) error {
 	errCh := make(chan error, 1)
 	c.runQueue.Stop(func() {
 		errCh <- c.memberList.Shutdown()

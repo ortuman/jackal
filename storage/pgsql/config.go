@@ -22,11 +22,9 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		PoolSize: defaultPoolSize,
 		SSLMode:  defaultSSLMode,
 	}
-
 	if err := unmarshal(&parsed); err != nil {
 		return err
 	}
-
 	*c = Config(parsed)
 
 	return nil

@@ -14,8 +14,8 @@ import (
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/runqueue"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -25,16 +25,20 @@ const lastActivityNamespace = "jabber:iq:last"
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
 	router    *router.Router
+	userRep   repository.User
+	rosterRep repository.Roster
 	startTime time.Time
 	runQueue  *runqueue.RunQueue
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router *router.Router, userRep repository.User, rosterRep repository.Roster) *LastActivity {
 	x := &LastActivity{
-		router:    router,
-		startTime: time.Now(),
 		runQueue:  runqueue.New("xep0012"),
+		router:    router,
+		userRep:   userRep,
+		rosterRep: rosterRep,
+		startTime: time.Now(),
 	}
 	if disco != nil {
 		disco.RegisterServerFeature(lastActivityNamespace)
@@ -95,7 +99,7 @@ func (x *LastActivity) sendUserLastActivity(ctx context.Context, iq *xmpp.IQ, to
 		x.sendReply(ctx, iq, 0, "")
 		return
 	}
-	usr, err := storage.FetchUser(ctx, to.Node())
+	usr, err := x.userRep.FetchUser(ctx, to.Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -129,7 +133,7 @@ func (x *LastActivity) isSubscribedTo(ctx context.Context, contact *jid.JID, use
 	if contact.Matches(userJID, jid.MatchesBare) {
 		return true, nil
 	}
-	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
+	ri, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

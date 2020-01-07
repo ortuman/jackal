@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package badgerdb
 
 import (
@@ -7,27 +12,35 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (b *Storage) InsertCapabilities(_ context.Context, caps *model.Capabilities) error {
+type badgerDBCapabilities struct {
+	*badgerDBStorage
+}
+
+func newCapabilities(db *badger.DB) *badgerDBCapabilities {
+	return &badgerDBCapabilities{badgerDBStorage: newStorage(db)}
+}
+
+func (b *badgerDBCapabilities) UpsertCapabilities(_ context.Context, caps *model.Capabilities) error {
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(caps, b.capabilitiesKey(caps.Node, caps.Ver), tx)
+		return b.upsert(caps, capabilitiesKey(caps.Node, caps.Ver), tx)
 	})
 }
 
-func (b *Storage) FetchCapabilities(_ context.Context, node, ver string) (*model.Capabilities, error) {
+func (b *badgerDBCapabilities) FetchCapabilities(_ context.Context, node, ver string) (*model.Capabilities, error) {
 	var caps model.Capabilities
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetch(&caps, b.capabilitiesKey(node, ver), txn)
+		return b.fetch(&caps, capabilitiesKey(node, ver), txn)
 	})
 	switch err {
 	case nil:
 		return &caps, nil
-	case errBadgerDBEntityNotFound:
+	case errEntityNotFound:
 		return nil, nil
 	default:
 		return nil, err
 	}
 }
 
-func (b *Storage) capabilitiesKey(node, ver string) []byte {
+func capabilitiesKey(node, ver string) []byte {
 	return []byte("capabilities:" + node + ":" + ver)
 }

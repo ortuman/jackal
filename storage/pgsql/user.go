@@ -13,40 +13,53 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+type pgSQLUser struct {
+	*pgSQLStorage
+	pool *pool.BufferPool
+}
+
+func newUser(db *sql.DB) *pgSQLUser {
+	return &pgSQLUser{
+		pgSQLStorage: newStorage(db),
+		pool:         pool.NewBufferPool(),
+	}
+}
+
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
-func (s *Storage) UpsertUser(ctx context.Context, u *model.User) error {
+func (u *pgSQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	var presenceXML string
 
-	if u.LastPresence != nil {
-		buf := s.pool.Get()
-		if err := u.LastPresence.ToXML(buf, true); err != nil {
+	if usr.LastPresence != nil {
+		buf := u.pool.Get()
+		if err := usr.LastPresence.ToXML(buf, true); err != nil {
 			return err
 		}
 		presenceXML = buf.String()
-		s.pool.Put(buf)
+		u.pool.Put(buf)
 	}
 
 	q := sq.Insert("users")
 
 	if len(presenceXML) > 0 {
 		q = q.Columns("username", "password", "last_presence", "last_presence_at").
-			Values(u.Username, u.Password, presenceXML, nowExpr).
+			Values(usr.Username, usr.Password, presenceXML, nowExpr).
 			Suffix("ON CONFLICT (username) DO UPDATE SET password = $2, last_presence = $3, last_presence_at = NOW()")
 	} else {
 		q = q.Columns("username", "password").
-			Values(u.Username, u.Password).
+			Values(usr.Username, usr.Password).
 			Suffix("ON CONFLICT (username) DO UPDATE SET password = $2")
 	}
-	_, err := q.RunWith(s.db).ExecContext(ctx)
+	_, err := q.RunWith(u.db).ExecContext(ctx)
 	return err
 }
 
 // FetchUser retrieves from storage a user entity.
-func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, error) {
+func (u *pgSQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
 	q := sq.Select("username", "password", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
@@ -55,7 +68,7 @@ func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, 
 	var presenceAt time.Time
 	var usr model.User
 
-	err := q.RunWith(s.db).QueryRowContext(ctx).Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
+	err := q.RunWith(u.db).QueryRowContext(ctx).Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
 	switch err {
 	case nil:
 		if len(presenceXML) > 0 {
@@ -78,8 +91,8 @@ func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, 
 }
 
 // DeleteUser deletes a user entity from storage.
-func (s *Storage) DeleteUser(ctx context.Context, username string) error {
-	return s.inTransaction(ctx, func(tx *sql.Tx) error {
+func (u *pgSQLUser) DeleteUser(ctx context.Context, username string) error {
+	return u.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
 		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).ExecContext(ctx)
 		if err != nil {
@@ -110,11 +123,11 @@ func (s *Storage) DeleteUser(ctx context.Context, username string) error {
 }
 
 // UserExists returns whether or not a user exists within storage.
-func (s *Storage) UserExists(ctx context.Context, username string) (bool, error) {
+func (u *pgSQLUser) UserExists(ctx context.Context, username string) (bool, error) {
 	var count int
 
 	q := sq.Select("COUNT(*)").From("users").Where(sq.Eq{"username": username})
-	err := q.RunWith(s.db).QueryRowContext(ctx).Scan(&count)
+	err := q.RunWith(u.db).QueryRowContext(ctx).Scan(&count)
 	switch err {
 	case nil:
 		return count > 0, nil

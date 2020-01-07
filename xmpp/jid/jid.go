@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/ortuman/jackal/pool"
+	"github.com/ortuman/jackal/util/pool"
 	"golang.org/x/net/idna"
 	"golang.org/x/text/secure/precis"
 )

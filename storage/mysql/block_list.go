@@ -7,14 +7,23 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
 )
 
-// InsertBlockListItem inserts a block list item entity
-// into storage, only in case they haven't been previously inserted.
-func (s *Storage) InsertBlockListItem(ctx context.Context, item *model.BlockListItem) error {
+type mySQLBlockList struct {
+	*mySQLStorage
+}
+
+func newBlockList(db *sql.DB) *mySQLBlockList {
+	return &mySQLBlockList{
+		mySQLStorage: newStorage(db),
+	}
+}
+
+func (s *mySQLBlockList) InsertBlockListItem(ctx context.Context, item *model.BlockListItem) error {
 	_, err := sq.Insert("blocklist_items").
 		Options("IGNORE").
 		Columns("username", "jid", "created_at").
@@ -23,17 +32,14 @@ func (s *Storage) InsertBlockListItem(ctx context.Context, item *model.BlockList
 	return err
 }
 
-// DeleteBlockListItems deletes a set of block list item entities from storage.
-func (s *Storage) DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error {
+func (s *mySQLBlockList) DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error {
 	_, err := sq.Delete("blocklist_items").
 		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-// FetchBlockListItems retrieves from storage all block list item entities
-// associated to a given user.
-func (s *Storage) FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error) {
+func (s *mySQLBlockList) FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error) {
 	q := sq.Select("username", "jid").
 		From("blocklist_items").
 		Where(sq.Eq{"username": username}).
@@ -44,10 +50,10 @@ func (s *Storage) FetchBlockListItems(ctx context.Context, username string) ([]m
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	return s.scanBlockListItemEntities(rows)
+	return scanBlockListItemEntities(rows)
 }
 
-func (s *Storage) scanBlockListItemEntities(scanner rowsScanner) ([]model.BlockListItem, error) {
+func scanBlockListItemEntities(scanner rowsScanner) ([]model.BlockListItem, error) {
 	var ret []model.BlockListItem
 	for scanner.Next() {
 		var it model.BlockListItem

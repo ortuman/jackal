@@ -16,24 +16,31 @@ import (
 func TestBadgerDB_VCard(t *testing.T) {
 	t.Parallel()
 
-	h := tUtilBadgerDBSetup()
-	defer tUtilBadgerDBTeardown(h)
+	s, teardown := newVCardMock()
+	defer teardown()
 
-	vcard := xmpp.NewElementNamespace("vCard", "vcard-temp")
+	vCard := xmpp.NewElementNamespace("vCard", "vcard-temp")
 	fn := xmpp.NewElementName("FN")
 	fn.SetText("Miguel Ángel Ortuño")
-	vcard.AppendElement(fn)
+	vCard.AppendElement(fn)
 
-	err := h.db.UpsertVCard(context.Background(), vcard, "ortuman")
+	err := s.UpsertVCard(context.Background(), vCard, "ortuman")
 	require.Nil(t, err)
 
-	vcard2, err := h.db.FetchVCard(context.Background(), "ortuman")
+	vCard2, err := s.FetchVCard(context.Background(), "ortuman")
 	require.Nil(t, err)
-	require.Equal(t, "vCard", vcard2.Name())
-	require.Equal(t, "vcard-temp", vcard2.Namespace())
-	require.NotNil(t, vcard2.Elements().Child("FN"))
+	require.Equal(t, "vCard", vCard2.Name())
+	require.Equal(t, "vcard-temp", vCard2.Namespace())
+	require.NotNil(t, vCard2.Elements().Child("FN"))
 
-	vcard3, err := h.db.FetchVCard(context.Background(), "ortuman2")
-	require.Nil(t, vcard3)
+	vCard3, err := s.FetchVCard(context.Background(), "ortuman2")
+	require.Nil(t, vCard3)
 	require.Nil(t, err)
+}
+
+func newVCardMock() (*badgerDBVCard, func()) {
+	t := newT()
+	return &badgerDBVCard{badgerDBStorage: newStorage(t.DB)}, func() {
+		t.teardown()
+	}
 }

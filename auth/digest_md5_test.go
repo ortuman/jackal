@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage/memstorage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func (h *digestMD5AuthTestHelper) clientParamsFromChallenge(challenge string) *d
 	require.Nil(h.t, err)
 	srvParams := h.authr.parseParameters(string(b))
 	clParams := *srvParams
-	clParams.setParameter("cnonce=" + hex.EncodeToString(util.RandomBytes(16)))
+	clParams.setParameter("cnonce=" + hex.EncodeToString(utilrand.RandomBytes(16)))
 	clParams.setParameter("username=" + h.testStrm.Username())
 	clParams.setParameter("realm=" + h.testStrm.Domain())
 	clParams.setParameter("nc=00000001")
@@ -64,9 +64,8 @@ func (h *digestMD5AuthTestHelper) serializeParams(params *digestMD5Parameters) s
 func TestDigesMD5Authentication(t *testing.T) {
 	user := &model.User{Username: "mariana", Password: "1234"}
 	testStm, s := authTestSetup(user)
-	defer authTestTeardown()
 
-	authr := NewDigestMD5(testStm)
+	authr := NewDigestMD5(testStm, s)
 	require.Equal(t, authr.Mechanism(), "DIGEST-MD5")
 	require.False(t, authr.UsesChannelBinding())
 
@@ -137,9 +136,9 @@ func TestDigesMD5Authentication(t *testing.T) {
 	require.Equal(t, ErrSASLNotAuthorized, helper.sendClientParamsResponse(&cl7))
 
 	// storage error...
-	s.EnableMockedError()
-	require.Equal(t, memstorage.ErrMockedError, helper.sendClientParamsResponse(clParams))
-	s.DisableMockedError()
+	memorystorage.EnableMockedError()
+	require.Equal(t, memorystorage.ErrMocked, helper.sendClientParamsResponse(clParams))
+	memorystorage.DisableMockedError()
 
 	// successful authentication...
 	require.Nil(t, helper.sendClientParamsResponse(clParams))

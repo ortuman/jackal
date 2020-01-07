@@ -10,7 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -18,13 +18,14 @@ import (
 // Plain represents a PLAIN authenticator.
 type Plain struct {
 	stm           stream.C2S
+	userRep       repository.User
 	username      string
 	authenticated bool
 }
 
 // NewPlain returns a new plain authenticator instance.
-func NewPlain(stm stream.C2S) *Plain {
-	return &Plain{stm: stm}
+func NewPlain(stm stream.C2S, userRep repository.User) *Plain {
+	return &Plain{stm: stm, userRep: userRep}
 }
 
 // Mechanism returns authenticator mechanism name.
@@ -69,7 +70,7 @@ func (p *Plain) ProcessElement(ctx context.Context, elem xmpp.XElement) error {
 	password := string(s[2])
 
 	// validate user and password
-	user, err := storage.FetchUser(ctx, username)
+	user, err := p.userRep.FetchUser(ctx, username)
 	if err != nil {
 		return err
 	}

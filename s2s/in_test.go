@@ -22,7 +22,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
@@ -30,8 +30,7 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, _ := tUtilInStreamInit(t, r, false)
 	time.Sleep(time.Millisecond * 1500)
@@ -39,8 +38,7 @@ func TestStream_ConnectTimeout(t *testing.T) {
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	stm.Disconnect(context.Background(), nil)
@@ -50,8 +48,7 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	// unsecured features
 	stm, conn := tUtilInStreamInit(t, r, false)
@@ -94,8 +91,7 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
@@ -131,8 +127,7 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_Authenticate(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
@@ -182,8 +177,7 @@ func TestStream_Authenticate(t *testing.T) {
 }
 
 func TestStream_DialbackVerify(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
@@ -216,8 +210,7 @@ func TestStream_DialbackVerify(t *testing.T) {
 }
 
 func TestStream_DialbackAuthorize(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	stm, conn := tUtilInStreamInit(t, r, false)
 	tUtilInStreamOpen(conn)
@@ -319,8 +312,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 }
 
 func TestStream_SendElement(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	fromJID, _ := jid.New("ortuman", "localhost", "garden", true)
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -380,7 +372,7 @@ func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*stream
 
 	certFile := "../testdata/cert/test.server.crt"
 	certKey := "../testdata/cert/test.server.key"
-	cer, err := util.LoadCertificate(certKey, certFile, "localhost")
+	cer, err := utiltls.LoadCertificate(certKey, certFile, "localhost")
 	require.Nil(t, err)
 
 	var peerCerts []*x509.Certificate

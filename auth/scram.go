@@ -18,10 +18,11 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
+	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
@@ -85,6 +86,7 @@ func (s *scramParameters) String() string {
 // Scram represents a SCRAM authenticator.
 type Scram struct {
 	stm           stream.C2S
+	userRep       repository.User
 	tr            transport.Transport
 	tp            ScramType
 	usesCb        bool
@@ -100,13 +102,14 @@ type Scram struct {
 }
 
 // NewScram returns a new scram authenticator instance.
-func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool) *Scram {
+func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesChannelBinding bool, userRep repository.User) *Scram {
 	s := &Scram{
-		stm:    stm,
-		tr:     tr,
-		tp:     scramType,
-		usesCb: usesChannelBinding,
-		state:  startScramState,
+		stm:     stm,
+		userRep: userRep,
+		tr:      tr,
+		tp:      scramType,
+		usesCb:  usesChannelBinding,
+		state:   startScramState,
 	}
 	switch s.tp {
 	case ScramSHA1:
@@ -210,7 +213,7 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	if len(username) == 0 || len(cNonce) == 0 {
 		return ErrSASLMalformedRequest
 	}
-	user, err := storage.FetchUser(ctx, username)
+	user, err := s.userRep.FetchUser(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -220,7 +223,7 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	s.user = user
 
 	s.srvNonce = cNonce + "-" + uuid.New()
-	s.salt = util.RandomBytes(32)
+	s.salt = utilrand.RandomBytes(32)
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
 
@@ -308,14 +311,14 @@ func (s *Scram) parseParameters(str string) error {
 	p.gs2Header = gs2BindFlag + "," + authzID + ","
 
 	if len(authzID) > 0 {
-		key, val := util.SplitKeyAndValue(authzID, '=')
+		key, val := utilstring.SplitKeyAndValue(authzID, '=')
 		if len(key) == 0 || key != "a" {
 			return ErrSASLMalformedRequest
 		}
 		p.authzID = val
 	}
 	for i := 2; i < len(sp); i++ {
-		key, val := util.SplitKeyAndValue(sp[i], '=')
+		key, val := utilstring.SplitKeyAndValue(sp[i], '=')
 		p.params = append(p.params, scramParameter{key, val})
 	}
 	s.params = p

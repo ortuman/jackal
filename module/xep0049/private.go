@@ -11,8 +11,8 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/runqueue"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -22,13 +22,15 @@ const privateNamespace = "jabber:iq:private"
 type Private struct {
 	router   *router.Router
 	runQueue *runqueue.RunQueue
+	rep      repository.Private
 }
 
 // New returns a private storage IQ handler module.
-func New(router *router.Router) *Private {
+func New(router *router.Router, privRep repository.Private) *Private {
 	x := &Private{
 		router:   router,
 		runQueue: runqueue.New("xep0049"),
+		rep:      privRep,
 	}
 	return x
 }
@@ -88,7 +90,7 @@ func (x *Private) getPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) 
 	fromJID := iq.FromJID()
 	log.Infof("retrieving private element. ns: %s... (%s/%s)", privNS, fromJID.Node(), fromJID.Resource())
 
-	privElements, err := storage.FetchPrivateXML(ctx, privNS, fromJID.Node())
+	privElements, err := x.rep.FetchPrivateXML(ctx, privNS, fromJID.Node())
 	if err != nil {
 		log.Error(err)
 		_ = x.router.Route(ctx, iq.InternalServerError())
@@ -131,7 +133,7 @@ func (x *Private) setPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) 
 	for ns, elements := range nsElements {
 		log.Infof("saving private element. ns: %s... (%s/%s)", ns, fromJID.Node(), fromJID.Resource())
 
-		if err := storage.InsertOrUpdatePrivateXML(ctx, elements, ns, fromJID.Node()); err != nil {
+		if err := x.rep.UpsertPrivateXML(ctx, elements, ns, fromJID.Node()); err != nil {
 			log.Error(err)
 			_ = x.router.Route(ctx, iq.InternalServerError())
 			return

@@ -15,19 +15,30 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
-func (s *Storage) InsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+type pgSQLCapabilities struct {
+	*pgSQLStorage
+}
+
+func newCapabilities(db *sql.DB) *pgSQLCapabilities {
+	return &pgSQLCapabilities{
+		pgSQLStorage: newStorage(db),
+	}
+}
+
+func (s *pgSQLCapabilities) UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
 	}
 	_, err = sq.Insert("capabilities").
-		Columns("node", "ver", "features", "created_at").
-		Values(caps.Node, caps.Ver, b, nowExpr).
+		Columns("node", "ver", "features").
+		Values(caps.Node, caps.Ver, b).
+		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $4", b).
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *Storage) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
+func (s *pgSQLCapabilities) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).

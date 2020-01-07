@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -20,7 +19,10 @@ import (
 )
 
 func TestServerProvider_Features(t *testing.T) {
-	var sp serverProvider
+	r, rosterRep := setupTest("jackal.im")
+
+	var sp = serverProvider{router: r, rosterRep: rosterRep}
+
 	sp.registerServerFeature("sf0")
 	sp.registerServerFeature("sf1")
 	sp.registerServerFeature("sf1")
@@ -57,7 +59,9 @@ func TestServerProvider_Features(t *testing.T) {
 }
 
 func TestServerProvider_Identities(t *testing.T) {
-	var sp serverProvider
+	r, rosterRep := setupTest("jackal.im")
+
+	var sp = serverProvider{router: r, rosterRep: rosterRep}
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	accJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -72,11 +76,9 @@ func TestServerProvider_Identities(t *testing.T) {
 }
 
 func TestServerProvider_Items(t *testing.T) {
-	r, _, shutdown := setupTest("jackal.im")
-	defer shutdown()
+	r, rosterRep := setupTest("jackal.im")
 
-	var sp serverProvider
-	sp.router = r
+	var sp = serverProvider{router: r, rosterRep: rosterRep}
 
 	srvJID, _ := jid.New("", "jackal.im", "", true)
 	accJID1, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -105,7 +107,7 @@ func TestServerProvider_Items(t *testing.T) {
 	require.Nil(t, items)
 	require.Equal(t, sErr, xmpp.ErrSubscriptionRequired)
 
-	_, _ = storage.UpsertRosterItem(context.Background(), &rostermodel.Item{
+	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
 		Subscription: "both",

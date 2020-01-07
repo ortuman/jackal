@@ -109,7 +109,7 @@ func TestCluster_Shutdown(t *testing.T) {
 
 	ml.shutdownCh = make(chan struct{})
 
-	_ = c.Shutdown()
+	_ = c.Shutdown(context.Background())
 	select {
 	case <-ml.shutdownCh:
 		break

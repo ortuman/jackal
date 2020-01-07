@@ -18,8 +18,7 @@ import (
 
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
@@ -189,15 +188,17 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) (*router.Router, *memstorage.Storage, func()) {
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-	})
-	s := memstorage.New()
-	storage.Set(s)
-	return r, s, func() {
-		storage.Unset()
-	}
+func setupTest(domain string) *router.Router {
+	userRep := memorystorage.NewUser()
+	blockListRep := memorystorage.NewBlockList()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		userRep,
+		blockListRep,
+	)
+	return r
 }
 
 type fakeS2SServer struct {

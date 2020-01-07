@@ -15,8 +15,7 @@ import (
 )
 
 func TestS2SSocketServer(t *testing.T) {
-	r, _, shutdown := setupTest(jackaDomain)
-	defer shutdown()
+	r := setupTest(jackaDomain)
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -50,7 +49,7 @@ func TestS2SSocketServer(t *testing.T) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
 		defer cancel()
 
-		srv.shutdown(ctx)
+		_ = srv.shutdown(ctx)
 
 		errCh <- nil
 	}()

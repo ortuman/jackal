@@ -12,6 +12,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ func TestInsertUser(t *testing.T) {
 
 	user := model.User{Username: "ortuman", Password: "1234", LastPresence: p}
 
-	s, mock := NewMock()
+	s, mock := newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -33,18 +34,18 @@ func TestInsertUser(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 
-	s, mock = NewMock()
+	s, mock = newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(user.Username, user.Password, user.LastPresence.String()).
-		WillReturnError(errGeneric)
+		WillReturnError(errMocked)
 
 	err = s.UpsertUser(context.Background(), &user)
-	require.Equal(t, errGeneric, err)
+	require.Equal(t, errMocked, err)
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
 func TestDeleteUser(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newUserMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
 		WithArgs("ortuman").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -64,15 +65,15 @@ func TestDeleteUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newUserMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM offline_messages (.+)").
-		WithArgs("ortuman").WillReturnError(errGeneric)
+		WithArgs("ortuman").WillReturnError(errMocked)
 	mock.ExpectRollback()
 
 	err = s.DeleteUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errGeneric, err)
+	require.Equal(t, errMocked, err)
 }
 
 func TestFetchUser(t *testing.T) {
@@ -82,7 +83,7 @@ func TestFetchUser(t *testing.T) {
 
 	var userColumns = []string{"username", "password", "last_presence", "last_presence_at"}
 
-	s, mock := NewMock()
+	s, mock := newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns))
@@ -91,7 +92,7 @@ func TestFetchUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, usr)
 
-	s, mock = NewMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
@@ -99,18 +100,18 @@ func TestFetchUser(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
-		WithArgs("ortuman").WillReturnError(errGeneric)
+		WithArgs("ortuman").WillReturnError(errMocked)
 	_, err = s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errGeneric, err)
+	require.Equal(t, errMocked, err)
 }
 
 func TestUserExists(t *testing.T) {
 	countColums := []string{"count"}
 
-	s, mock := NewMock()
+	s, mock := newUserMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(countColums).AddRow(1))
@@ -120,11 +121,19 @@ func TestUserExists(t *testing.T) {
 	require.Nil(t, err)
 	require.True(t, ok)
 
-	s, mock = NewMock()
+	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT COUNT(.+) FROM users (.+)").
 		WithArgs("romeo").
-		WillReturnError(errGeneric)
+		WillReturnError(errMocked)
 	_, err = s.UserExists(context.Background(), "romeo")
 	require.Nil(t, mock.ExpectationsWereMet())
-	require.Equal(t, errGeneric, err)
+	require.Equal(t, errMocked, err)
+}
+
+func newUserMock() (*pgSQLUser, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &pgSQLUser{
+		pgSQLStorage: s,
+		pool:         pool.NewBufferPool(),
+	}, sqlMock
 }

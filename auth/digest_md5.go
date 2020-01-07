@@ -15,9 +15,10 @@ import (
 	"strings"
 
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
+	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 )
 
@@ -44,7 +45,7 @@ type digestMD5Parameters struct {
 }
 
 func (r *digestMD5Parameters) setParameter(p string) {
-	key, val := util.SplitKeyAndValue(p, '=')
+	key, val := utilstring.SplitKeyAndValue(p, '=')
 
 	// strip value double quotes
 	val = strings.TrimPrefix(val, `"`)
@@ -79,16 +80,18 @@ func (r *digestMD5Parameters) setParameter(p string) {
 // DigestMD5 represents a DIGEST-MD5 authenticator.
 type DigestMD5 struct {
 	stm           stream.C2S
+	userRep       repository.User
 	state         digestMD5State
 	username      string
 	authenticated bool
 }
 
 // NewDigestMD5 returns a new digest-md5 authenticator instance.
-func NewDigestMD5(stm stream.C2S) *DigestMD5 {
+func NewDigestMD5(stm stream.C2S, userRep repository.User) *DigestMD5 {
 	return &DigestMD5{
-		stm:   stm,
-		state: startDigestMD5State,
+		stm:     stm,
+		userRep: userRep,
+		state:   startDigestMD5State,
 	}
 }
 
@@ -145,7 +148,7 @@ func (d *DigestMD5) Reset() {
 
 func (d *DigestMD5) handleStart(ctx context.Context) error {
 	domain := d.stm.Domain()
-	nonce := base64.StdEncoding.EncodeToString(util.RandomBytes(32))
+	nonce := base64.StdEncoding.EncodeToString(utilrand.RandomBytes(32))
 	chnge := fmt.Sprintf(`realm="%s",nonce="%s",qop="auth",charset=utf-8,algorithm=md5-sess`, domain, nonce)
 
 	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
@@ -187,7 +190,7 @@ func (d *DigestMD5) handleChallenged(ctx context.Context, elem xmpp.XElement) er
 		return ErrSASLNotAuthorized
 	}
 	// validate user
-	user, err := storage.FetchUser(ctx, params.username)
+	user, err := d.userRep.FetchUser(ctx, params.username)
 	if err != nil {
 		return err
 	}

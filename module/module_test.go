@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -34,14 +35,14 @@ func (m *fakeModule) Shutdown() error {
 
 func TestModules_New(t *testing.T) {
 	mods := setupModules(t)
-	defer mods.Shutdown(context.Background())
+	defer func() { _ = mods.Shutdown(context.Background()) }()
 
 	require.Equal(t, 10, len(mods.all))
 }
 
 func TestModules_ProcessIQ(t *testing.T) {
 	mods := setupModules(t)
-	defer mods.Shutdown(context.Background())
+	defer func() { _ = mods.Shutdown(context.Background()) }()
 
 	j0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
 	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
@@ -86,8 +87,13 @@ func setupModules(t *testing.T) *Modules {
 	err = yaml.Unmarshal(b, &config)
 	require.Nil(t, err)
 
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-	})
-	return New(&config, r)
+	rep, _ := storage.New(&storage.Config{Type: storage.Memory})
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
+		},
+		rep.User(),
+		rep.BlockList(),
+	)
+	return New(&config, r, rep)
 }

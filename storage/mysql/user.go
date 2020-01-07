@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -13,23 +13,36 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+type mySQLUser struct {
+	*mySQLStorage
+	pool *pool.BufferPool
+}
+
+func newUser(db *sql.DB) *mySQLUser {
+	return &mySQLUser{
+		mySQLStorage: newStorage(db),
+		pool:         pool.NewBufferPool(),
+	}
+}
+
 // UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
-func (s *Storage) UpsertUser(ctx context.Context, u *model.User) error {
+func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	var presenceXML string
-	if u.LastPresence != nil {
-		buf := s.pool.Get()
-		if err := u.LastPresence.ToXML(buf, true); err != nil {
+	if usr.LastPresence != nil {
+		buf := u.pool.Get()
+		if err := usr.LastPresence.ToXML(buf, true); err != nil {
 			return err
 		}
 		presenceXML = buf.String()
-		s.pool.Put(buf)
+		u.pool.Put(buf)
 	}
 	columns := []string{"username", "password", "updated_at", "created_at"}
-	values := []interface{}{u.Username, u.Password, nowExpr, nowExpr}
+	values := []interface{}{usr.Username, usr.Password, nowExpr, nowExpr}
 
 	if len(presenceXML) > 0 {
 		columns = append(columns, []string{"last_presence", "last_presence_at"}...)
@@ -39,22 +52,22 @@ func (s *Storage) UpsertUser(ctx context.Context, u *model.User) error {
 	var suffixArgs []interface{}
 	if len(presenceXML) > 0 {
 		suffix = "ON DUPLICATE KEY UPDATE password = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
-		suffixArgs = []interface{}{u.Password, presenceXML}
+		suffixArgs = []interface{}{usr.Password, presenceXML}
 	} else {
 		suffix = "ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()"
-		suffixArgs = []interface{}{u.Password}
+		suffixArgs = []interface{}{usr.Password}
 	}
 	q := sq.Insert("users").
 		Columns(columns...).
 		Values(values...).
 		Suffix(suffix, suffixArgs...)
 
-	_, err := q.RunWith(s.db).ExecContext(ctx)
+	_, err := q.RunWith(u.db).ExecContext(ctx)
 	return err
 }
 
 // FetchUser retrieves from storage a user entity.
-func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, error) {
+func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
 	q := sq.Select("username", "password", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
@@ -63,7 +76,7 @@ func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, 
 	var presenceAt time.Time
 	var usr model.User
 
-	err := q.RunWith(s.db).
+	err := q.RunWith(u.db).
 		QueryRowContext(ctx).
 		Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
 	switch err {
@@ -88,10 +101,10 @@ func (s *Storage) FetchUser(ctx context.Context, username string) (*model.User, 
 }
 
 // DeleteUser deletes a user entity from storage.
-func (s *Storage) DeleteUser(ctx context.Context, username string) error {
-	return s.inTransaction(ctx, func(tx *sql.Tx) error {
+func (u *mySQLUser) DeleteUser(ctx context.Context, username string) error {
+	return u.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
-		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).Exec()
+		_, err = sq.Delete("offline_messages").Where(sq.Eq{"username": username}).RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -120,13 +133,13 @@ func (s *Storage) DeleteUser(ctx context.Context, username string) error {
 }
 
 // UserExists returns whether or not a user exists within storage.
-func (s *Storage) UserExists(ctx context.Context, username string) (bool, error) {
+func (u *mySQLUser) UserExists(ctx context.Context, username string) (bool, error) {
 	q := sq.Select("COUNT(*)").
 		From("users").
 		Where(sq.Eq{"username": username})
 
 	var count int
-	err := q.RunWith(s.db).QueryRowContext(ctx).Scan(&count)
+	err := q.RunWith(u.db).QueryRowContext(ctx).Scan(&count)
 	switch err {
 	case nil:
 		return count > 0, nil

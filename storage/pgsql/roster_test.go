@@ -40,7 +40,7 @@ func TestInsertRosterItem(t *testing.T) {
 		ri.Username,
 	}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 
 	mock.ExpectBegin()
 
@@ -76,7 +76,7 @@ func TestInsertRosterItem(t *testing.T) {
 }
 
 func TestDeleteRosterItem(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs("user").WillReturnResult(sqlmock.NewResult(0, 1))
@@ -93,7 +93,7 @@ func TestDeleteRosterItem(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO roster_versions (.+)").
 		WithArgs("user").WillReturnError(errGeneric)
@@ -107,7 +107,7 @@ func TestDeleteRosterItem(t *testing.T) {
 func TestFetchRosterItems(t *testing.T) {
 	var riColumns = []string{"user", "contact", "name", "subscription", "`groups`", "ask", "ver"}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
@@ -120,7 +120,7 @@ func TestFetchRosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterItems))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
@@ -129,7 +129,7 @@ func TestFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns).AddRow("ortuman", "romeo", "Romeo", "both", "", false, 0))
@@ -138,7 +138,7 @@ func TestFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnRows(sqlmock.NewRows(riColumns))
@@ -147,7 +147,7 @@ func TestFetchRosterItems(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, ri)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items (.+)").
 		WithArgs("ortuman", "romeo").
 		WillReturnError(errGeneric)
@@ -157,7 +157,7 @@ func TestFetchRosterItems(t *testing.T) {
 	require.Equal(t, errGeneric, err)
 
 	var riColumns2 = []string{"ris.user", "ris.contact", "ris.name", "ris.subscription", "ris.groups", "ris.ask", "ris.ver"}
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_items ris LEFT JOIN roster_groups g ON ris.username = g.username (.+)").
 		WithArgs("ortuman", "Family").
 		WillReturnRows(sqlmock.NewRows(riColumns2).AddRow("ortuman", "romeo", "Romeo", "both", `["Family"]`, false, 0))
@@ -184,7 +184,7 @@ func TestInsertRosterNotification(t *testing.T) {
 		presenceXML,
 		presenceXML,
 	}
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectExec("INSERT INTO roster_notifications (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(args...).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -193,7 +193,7 @@ func TestInsertRosterNotification(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectExec("INSERT INTO roster_notifications (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(args...).
 		WillReturnError(errGeneric)
@@ -204,7 +204,7 @@ func TestInsertRosterNotification(t *testing.T) {
 }
 
 func TestDeleteRosterNotification(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -212,7 +212,7 @@ func TestDeleteRosterNotification(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectExec("DELETE FROM roster_notifications (.+)").
 		WithArgs("user", "contact").WillReturnError(errGeneric)
 
@@ -224,7 +224,7 @@ func TestDeleteRosterNotification(t *testing.T) {
 func TestFetchRosterNotifications(t *testing.T) {
 	var rnColumns = []string{"user", "contact", "elements"}
 
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8</priority>"))
@@ -234,7 +234,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 1, len(rosterNotifications))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns))
@@ -244,7 +244,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(rosterNotifications))
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
@@ -253,7 +253,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Equal(t, errGeneric, err)
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT (.+) FROM roster_notifications (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows(rnColumns).AddRow("romeo", "contact", "<priority>8"))
@@ -264,7 +264,7 @@ func TestFetchRosterNotifications(t *testing.T) {
 }
 
 func TestStorageFetchRosterGroups(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newRosterMock()
 	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
 		WithArgs("ortuman").
 		WillReturnRows(sqlmock.NewRows([]string{"group"}).
@@ -279,7 +279,7 @@ func TestStorageFetchRosterGroups(t *testing.T) {
 	require.Equal(t, "Contacts", groups[0])
 	require.Equal(t, "News", groups[1])
 
-	s, mock = NewMock()
+	s, mock = newRosterMock()
 	mock.ExpectQuery("SELECT `group` FROM roster_groups WHERE username = (.+) GROUP BY (.+)").
 		WithArgs("ortuman").
 		WillReturnError(errGeneric)
@@ -290,4 +290,11 @@ func TestStorageFetchRosterGroups(t *testing.T) {
 	require.Nil(t, groups)
 	require.NotNil(t, err)
 	require.Equal(t, errGeneric, err)
+}
+
+func newRosterMock() (*pgSQLRoster, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &pgSQLRoster{
+		pgSQLStorage: s,
+	}, sqlMock
 }

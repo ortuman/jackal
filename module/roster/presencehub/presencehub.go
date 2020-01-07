@@ -14,8 +14,8 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/runqueue"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
+	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
@@ -33,18 +33,20 @@ type AvailablePresenceInfo struct {
 
 // PresenceHub represents global presence hub
 type PresenceHub struct {
-	router             *router.Router
 	runQueue           *runqueue.RunQueue
+	router             *router.Router
+	capsRep            repository.Capabilities
 	availablePresences sync.Map
 	capabilities       sync.Map
 	activeDiscoInfo    sync.Map
 }
 
 // New returns a new presence hub instance.
-func New(router *router.Router) *PresenceHub {
+func New(router *router.Router, capsRep repository.Capabilities) *PresenceHub {
 	return &PresenceHub{
-		router:   router,
 		runQueue: runqueue.New("presencehub"),
+		router:   router,
+		capsRep:  capsRep,
 	}
 }
 
@@ -57,7 +59,7 @@ func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Prese
 		capsKey := capabilitiesKey(c.Node, c.Ver)
 		_, ok := x.capabilities.Load(capsKey)
 		if !ok {
-			caps, err := storage.FetchCapabilities(ctx, c.Node, c.Ver) // try fetching from disk
+			caps, err := x.capsRep.FetchCapabilities(ctx, c.Node, c.Ver) // try fetching from disk
 			if err != nil {
 				return err, false
 			}
@@ -177,7 +179,7 @@ func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XEle
 		Ver:      ver,
 		Features: features,
 	}
-	if err := storage.InsertCapabilities(ctx, caps); err != nil { // save into disk
+	if err := x.capsRep.UpsertCapabilities(ctx, caps); err != nil { // save into disk
 		return err
 	}
 	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)

@@ -25,7 +25,8 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/util"
+	utilrand "github.com/ortuman/jackal/util/rand"
+	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pbkdf2"
@@ -105,7 +106,7 @@ var tt = []scramAuthTestCase{
 		id:          4,
 		scramType:   ScramSHA1,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(23),
+		cbBytes:     utilrand.RandomBytes(23),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -117,7 +118,7 @@ var tt = []scramAuthTestCase{
 		id:          5,
 		scramType:   ScramSHA256,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(32),
+		cbBytes:     utilrand.RandomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -129,7 +130,7 @@ var tt = []scramAuthTestCase{
 		id:          6,
 		scramType:   ScramSHA512,
 		usesCb:      true,
-		cbBytes:     util.RandomBytes(32),
+		cbBytes:     utilrand.RandomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -223,43 +224,41 @@ var tt = []scramAuthTestCase{
 
 func TestScramMechanisms(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
-	defer authTestTeardown()
+	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 
-	authr := NewScram(testStm, testTr, ScramSHA1, false)
+	authr := NewScram(testStm, testTr, ScramSHA1, false, s)
 	require.Equal(t, authr.Mechanism(), "SCRAM-SHA-1")
 	require.False(t, authr.UsesChannelBinding())
 
-	authr2 := NewScram(testStm, testTr, ScramSHA1, true)
+	authr2 := NewScram(testStm, testTr, ScramSHA1, true, s)
 	require.Equal(t, authr2.Mechanism(), "SCRAM-SHA-1-PLUS")
 	require.True(t, authr2.UsesChannelBinding())
 
-	authr3 := NewScram(testStm, testTr, ScramSHA256, false)
+	authr3 := NewScram(testStm, testTr, ScramSHA256, false, s)
 	require.Equal(t, authr3.Mechanism(), "SCRAM-SHA-256")
 	require.False(t, authr3.UsesChannelBinding())
 
-	authr4 := NewScram(testStm, testTr, ScramSHA256, true)
+	authr4 := NewScram(testStm, testTr, ScramSHA256, true, s)
 	require.Equal(t, authr4.Mechanism(), "SCRAM-SHA-256-PLUS")
 	require.True(t, authr4.UsesChannelBinding())
 
-	authr5 := NewScram(testStm, testTr, ScramSHA512, false)
+	authr5 := NewScram(testStm, testTr, ScramSHA512, false, s)
 	require.Equal(t, authr5.Mechanism(), "SCRAM-SHA-512")
 	require.False(t, authr5.UsesChannelBinding())
 
-	authr6 := NewScram(testStm, testTr, ScramSHA512, true)
+	authr6 := NewScram(testStm, testTr, ScramSHA512, true, s)
 	require.Equal(t, authr6.Mechanism(), "SCRAM-SHA-512-PLUS")
 	require.True(t, authr6.UsesChannelBinding())
 
-	authr7 := NewScram(testStm, testTr, ScramType(99), true)
+	authr7 := NewScram(testStm, testTr, ScramType(99), true, s)
 	require.Equal(t, authr7.Mechanism(), "")
 }
 
 func TestScramBadPayload(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
-	defer authTestTeardown()
+	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 
-	authr := NewScram(testStm, testTr, ScramSHA1, false)
+	authr := NewScram(testStm, testTr, ScramSHA1, false, s)
 
 	auth := xmpp.NewElementNamespace("auth", "urn:ietf:params:xml:ns:xmpp-sasl")
 	auth.SetAttribute("mechanism", authr.Mechanism())
@@ -288,10 +287,9 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	if tc.usesCb {
 		tr.cbBytes = tc.cbBytes
 	}
-	testStm, _ := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
-	defer authTestTeardown()
+	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
 
-	authr := NewScram(testStm, tr, tc.scramType, tc.usesCb)
+	authr := NewScram(testStm, tr, tc.scramType, tc.usesCb, s)
 
 	auth := xmpp.NewElementNamespace("auth", saslNamespace)
 	auth.SetAttribute("mechanism", authr.Mechanism())
@@ -381,7 +379,7 @@ func parseScramResponse(b64 string) (map[string]string, error) {
 	ret := map[string]string{}
 	s1 := strings.Split(string(s), ",")
 	for _, s0 := range s1 {
-		k, v := util.SplitKeyAndValue(s0, '=')
+		k, v := utilstring.SplitKeyAndValue(s0, '=')
 		ret[k] = v
 	}
 	return ret, nil

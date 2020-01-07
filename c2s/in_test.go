@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
@@ -25,19 +26,17 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	stm, _ := tUtilStreamInit(r)
+	stm, _ := tUtilStreamInit(r, userRep)
 	time.Sleep(time.Millisecond * 1500)
 	require.Equal(t, disconnected, stm.getState())
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
@@ -45,11 +44,10 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
 	// unsecured features
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 
 	elem := conn.outboundRead()
@@ -62,7 +60,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, connected, stm.getState())
 
 	// secured features
-	stm2, conn2 := tUtilStreamInit(r)
+	stm2, conn2 := tUtilStreamInit(r, userRep)
 	stm2.setSecured(true)
 
 	tUtilStreamOpen(conn2)
@@ -76,12 +74,11 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 
 	_ = conn.outboundRead() // read stream opening...
@@ -98,12 +95,11 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_FailAuthenticate(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	_, conn := tUtilStreamInit(r)
+	_, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -138,12 +134,11 @@ func TestStream_FailAuthenticate(t *testing.T) {
 }
 
 func TestStream_Compression(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -177,16 +172,17 @@ func TestStream_Compression(t *testing.T) {
 	require.Equal(t, "compressed", elem.Name())
 	require.Equal(t, "http://jabber.org/protocol/compress", elem.Namespace())
 
+	time.Sleep(time.Millisecond * 100) // wait until processed...
+
 	require.True(t, stm.isCompressed())
 }
 
 func TestStream_StartSession(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -204,12 +200,11 @@ func TestStream_StartSession(t *testing.T) {
 }
 
 func TestStream_SendIQ(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -241,12 +236,11 @@ func TestStream_SendIQ(t *testing.T) {
 }
 
 func TestStream_SendPresence(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -286,12 +280,11 @@ func TestStream_SendPresence(t *testing.T) {
 }
 
 func TestStream_SendMessage(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, _ := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -337,12 +330,11 @@ func TestStream_SendMessage(t *testing.T) {
 }
 
 func TestStream_SendToBlockedJID(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = storage.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
 
-	stm, conn := tUtilStreamInit(r)
+	stm, conn := tUtilStreamInit(r, userRep)
 	tUtilStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -358,7 +350,7 @@ func TestStream_SendToBlockedJID(t *testing.T) {
 
 	require.Equal(t, bound, stm.getState())
 
-	_ = storage.InsertBlockListItem(context.Background(), &model.BlockListItem{
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
 		Username: "user",
 		JID:      "hamlet@localhost",
 	})
@@ -423,10 +415,16 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit(r *router.Router) (*inStream, *fakeSocketConn) {
+func tUtilStreamInit(r *router.Router, userRep repository.User) (*inStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	stm := newStream("abcd1234", tUtilInStreamDefaultConfig(tr), tUtilInitModules(r), &component.Components{}, r)
+	stm := newStream(
+		"abcd1234",
+		tUtilInStreamDefaultConfig(tr),
+		tUtilInitModules(r),
+		&component.Components{},
+		r,
+		userRep)
 	return stm.(*inStream), conn
 }
 
@@ -446,5 +444,6 @@ func tUtilInitModules(r *router.Router) *module.Modules {
 	modules["roster"] = struct{}{}
 	modules["blocking_command"] = struct{}{}
 
-	return module.New(&module.Config{Enabled: modules}, r)
+	repContainer, _ := storage.New(&storage.Config{Type: storage.Memory})
+	return module.New(&module.Config{Enabled: modules}, r, repContainer)
 }

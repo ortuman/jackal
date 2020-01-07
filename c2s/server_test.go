@@ -17,16 +17,14 @@ import (
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/storage/memstorage"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/stretchr/testify/require"
 )
 
 func TestC2SSocketServer(t *testing.T) {
-	r, _, shutdown := setupTest("localhost")
-	defer shutdown()
+	r, _, _ := setupTest("localhost")
 
 	errCh := make(chan error)
 	cfg := Config{
@@ -64,7 +62,7 @@ func TestC2SSocketServer(t *testing.T) {
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*5))
 		defer cancel()
 
-		srv.shutdown(ctx)
+		_ = srv.shutdown(ctx)
 		errCh <- nil
 	}()
 	err := <-errCh
@@ -74,16 +72,16 @@ func TestC2SSocketServer(t *testing.T) {
 func TestC2SWebSocketServer(t *testing.T) {
 	privKeyFile := "../testdata/cert/test.server.key"
 	certFile := "../testdata/cert/test.server.crt"
-	cer, err := util.LoadCertificate(privKeyFile, certFile, "localhost")
+	cer, err := utiltls.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
-	r, _ := router.New(&router.Config{
-		Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
-	})
-	s := memstorage.New()
-	storage.Set(s)
-	defer storage.Unset()
-
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
+		},
+		memorystorage.NewUser(),
+		memorystorage.NewBlockList(),
+	)
 	errCh := make(chan error)
 	cfg := Config{
 		ID:               "srv-1234",

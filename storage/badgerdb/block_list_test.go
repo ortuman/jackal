@@ -17,8 +17,8 @@ import (
 func TestBadgerDB_BlockListItems(t *testing.T) {
 	t.Parallel()
 
-	h := tUtilBadgerDBSetup()
-	defer tUtilBadgerDBTeardown(h)
+	s, teardown := newBlockListMock()
+	defer teardown()
 
 	items := []model.BlockListItem{
 		{Username: "ortuman", JID: "juliet@jackal.im"},
@@ -26,26 +26,33 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 		{Username: "ortuman", JID: "romeo@jackal.im"},
 	}
 
-	require.Nil(t, h.db.InsertBlockListItem(context.Background(), &items[0]))
-	require.Nil(t, h.db.InsertBlockListItem(context.Background(), &items[1]))
-	require.Nil(t, h.db.InsertBlockListItem(context.Background(), &items[2]))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &items[0]))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &items[1]))
+	require.Nil(t, s.InsertBlockListItem(context.Background(), &items[2]))
 
-	sItems, err := h.db.FetchBlockListItems(context.Background(), "ortuman")
+	sItems, err := s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.True(t, reflect.DeepEqual(items, sItems))
 
-	err = h.db.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"})
+	err = s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "user@jackal.im"})
 	require.Nil(t, err)
 
 	items = append(items[:1], items[2:]...)
 
-	sItems, err = h.db.FetchBlockListItems(context.Background(), "ortuman")
+	sItems, err = s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Nil(t, err)
 	require.Equal(t, items, sItems)
 
-	require.Nil(t, h.db.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
-	require.Nil(t, h.db.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
+	require.Nil(t, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "juliet@jackal.im"}))
+	require.Nil(t, s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "romeo@jackal.im"}))
 
-	sItems, _ = h.db.FetchBlockListItems(context.Background(), "ortuman")
+	sItems, _ = s.FetchBlockListItems(context.Background(), "ortuman")
 	require.Equal(t, 0, len(sItems))
+}
+
+func newBlockListMock() (*badgerDBBlockList, func()) {
+	t := newT()
+	return &badgerDBBlockList{badgerDBStorage: newStorage(t.DB)}, func() {
+		t.teardown()
+	}
 }

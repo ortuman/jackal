@@ -21,6 +21,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 )
@@ -32,6 +33,7 @@ type server struct {
 	mods       *module.Modules
 	comps      *component.Components
 	router     *router.Router
+	userRep    repository.User
 	inConns    sync.Map
 	ln         net.Listener
 	wsSrv      *http.Server
@@ -139,7 +141,7 @@ func (s *server) startStream(tr transport.Transport) {
 		compression:      s.cfg.Compression,
 		onDisconnect:     s.unregisterStream,
 	}
-	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router)
+	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router, s.userRep)
 	s.registerStream(stm)
 }
 

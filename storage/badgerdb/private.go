@@ -12,31 +12,39 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+type badgerDBPrivate struct {
+	*badgerDBStorage
+}
+
+func newPrivate(db *badger.DB) *badgerDBPrivate {
+	return &badgerDBPrivate{badgerDBStorage: newStorage(db)}
+}
+
 // UpsertPrivateXML inserts a new private element into storage, or updates it in case it's been previously inserted.
-func (b *Storage) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
+func (b *badgerDBPrivate) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
 	return b.db.Update(func(tx *badger.Txn) error {
-		return b.upsert(r, b.privateElementsKey(username, namespace), tx)
+		return b.upsert(r, privateElementsKey(username, namespace), tx)
 	})
 }
 
 // FetchPrivateXML retrieves from storage a private element.
-func (b *Storage) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
+func (b *badgerDBPrivate) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	var r xmpp.Element
 	err := b.db.View(func(txn *badger.Txn) error {
-		return b.fetch(&r, b.privateElementsKey(username, namespace), txn)
+		return b.fetch(&r, privateElementsKey(username, namespace), txn)
 	})
 	switch err {
 	case nil:
 		return r.Elements().All(), nil
-	case errBadgerDBEntityNotFound:
+	case errEntityNotFound:
 		return nil, nil
 	default:
 		return nil, err
 	}
 }
 
-func (b *Storage) privateElementsKey(username, namespace string) []byte {
+func privateElementsKey(username, namespace string) []byte {
 	return []byte("privateElements:" + username + ":" + namespace)
 }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
 package mysql
 
 // DefaultPoolSize defines the default size of MySQL connection pool
@@ -21,7 +26,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&parsed); err != nil {
 		return err
 	}
-
 	*c = Config(parsed)
 
 	return nil

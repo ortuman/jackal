@@ -12,7 +12,7 @@ import (
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -29,6 +29,7 @@ type accessChecker struct {
 	accessModel         string
 	rosterAllowedGroups []string
 	affiliation         *pubsubmodel.Affiliation
+	rosterRep           repository.Roster
 }
 
 func (ac *accessChecker) checkAccess(ctx context.Context, j string) error {
@@ -77,7 +78,7 @@ func (ac *accessChecker) checkPresenceAccess(ctx context.Context, j string) (boo
 	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
-	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
+	ri, err := ac.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +90,7 @@ func (ac *accessChecker) checkRosterAccess(ctx context.Context, j string) (bool,
 	userJID, _ := jid.NewWithString(ac.host, true)
 	contactJID, _ := jid.NewWithString(j, true)
 
-	ri, err := storage.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
+	ri, err := ac.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}

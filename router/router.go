@@ -14,9 +14,9 @@ import (
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/storage"
+	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/util"
+	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/version"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -51,6 +51,8 @@ type Router struct {
 	defaultHostname string
 	hosts           map[string]tls.Certificate
 	streams         map[string][]stream.C2S
+	userRep         repository.User
+	blockListRep    repository.BlockList
 	cluster         Cluster
 	localStreams    map[string]stream.C2S
 	clusterStreams  map[string]map[string]*cluster.C2S
@@ -60,13 +62,15 @@ type Router struct {
 }
 
 // New returns an new empty router instance.
-func New(config *Config) (*Router, error) {
+func New(config *Config, userRep repository.User, blockListRep repository.BlockList) (*Router, error) {
 	r := &Router{
 		hosts:          make(map[string]tls.Certificate),
 		blockLists:     make(map[string][]*jid.JID),
 		streams:        make(map[string][]stream.C2S),
 		localStreams:   make(map[string]stream.C2S),
 		clusterStreams: make(map[string]map[string]*cluster.C2S),
+		userRep:        userRep,
+		blockListRep:   blockListRep,
 	}
 	if len(config.Hosts) > 0 {
 		for i, h := range config.Hosts {
@@ -76,7 +80,7 @@ func New(config *Config) (*Router, error) {
 			r.hosts[h.Name] = h.Certificate
 		}
 	} else {
-		cer, err := util.LoadCertificate("", "", defaultDomain)
+		cer, err := utiltls.LoadCertificate("", "", defaultDomain)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +282,7 @@ func (r *Router) getBlockList(ctx context.Context, username string) []*jid.JID {
 	if bl != nil {
 		return bl
 	}
-	blItems, err := storage.FetchBlockListItems(ctx, username)
+	blItems, err := r.blockListRep.FetchBlockListItems(ctx, username)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -340,7 +344,7 @@ func (r *Router) route(ctx context.Context, element xmpp.Stanza, ignoreBlocking 
 	}
 	recipients := r.streams[toJID.Node()]
 	if len(recipients) == 0 {
-		exists, err := storage.UserExists(ctx, toJID.Node())
+		exists, err := r.userRep.UserExists(ctx, toJID.Node())
 		if err != nil {
 			return err
 		}
