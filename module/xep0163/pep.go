@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -190,55 +191,60 @@ func (x *Pep) subscribeToAll(ctx context.Context, host string, subJID *jid.JID) 
 	if err != nil {
 		return err
 	}
-	for _, n := range nodes {
-		// upsert subscription
-		subID := subscriptionID(subJID.ToBareJID().String(), host, n.Name)
-		sub := pubsubmodel.Subscription{
-			SubID:        subID,
-			JID:          subJID.ToBareJID().String(),
-			Subscription: pubsubmodel.Subscribed,
-		}
-		if err := x.pubSubRep.UpsertNodeSubscription(ctx, &sub, host, n.Name); err != nil {
+	for _, node := range nodes {
+		if err := x.subscribeTo(ctx, &node, subJID); err != nil {
 			return err
 		}
-		log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", host, n.Name, subJID)
+	}
+	return nil
+}
 
-		// notify subscription update
-		affiliations, err := x.pubSubRep.FetchNodeAffiliations(ctx, host, n.Name)
-		if err != nil {
-			return err
-		}
-		subscriptionElem := xmpp.NewElementName("subscription")
-		subscriptionElem.SetAttribute("node", n.Name)
-		subscriptionElem.SetAttribute("jid", subJID.ToBareJID().String())
-		subscriptionElem.SetAttribute("subid", subID)
-		subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
+func (x *Pep) subscribeTo(ctx context.Context, n *pubsubmodel.Node, subJID *jid.JID) error {
+	// upsert subscription
+	subID := subscriptionID(subJID.ToBareJID().String(), n.Host, n.Name)
+	sub := pubsubmodel.Subscription{
+		SubID:        subID,
+		JID:          subJID.ToBareJID().String(),
+		Subscription: pubsubmodel.Subscribed,
+	}
+	if err := x.pubSubRep.UpsertNodeSubscription(ctx, &sub, n.Host, n.Name); err != nil {
+		return err
+	}
+	log.Infof("pep: subscription created (host: %s, node_id: %s, jid: %s)", n.Host, n.Name, subJID)
 
-		if n.Options.DeliverNotifications && n.Options.NotifySub {
-			x.notifyOwners(ctx, subscriptionElem, affiliations, host, n.Options.NotificationType)
+	// notify subscription update
+	affiliations, err := x.pubSubRep.FetchNodeAffiliations(ctx, n.Host, n.Name)
+	if err != nil {
+		return err
+	}
+	subscriptionElem := xmpp.NewElementName("subscription")
+	subscriptionElem.SetAttribute("node", n.Name)
+	subscriptionElem.SetAttribute("jid", subJID.ToBareJID().String())
+	subscriptionElem.SetAttribute("subid", subID)
+	subscriptionElem.SetAttribute("subscription", pubsubmodel.Subscribed)
+
+	if n.Options.DeliverNotifications && n.Options.NotifySub {
+		x.notifyOwners(ctx, subscriptionElem, affiliations, n.Host, n.Options.NotificationType)
+	}
+	// send last node item
+	switch n.Options.SendLastPublishedItem {
+	case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
+		var subAff *pubsubmodel.Affiliation
+		for _, aff := range affiliations {
+			if aff.JID == subJID.ToBareJID().String() {
+				subAff = &aff
+				break
+			}
 		}
-		// send last node item
-		switch n.Options.SendLastPublishedItem {
-		case pubsubmodel.OnSub, pubsubmodel.OnSubAndPresence:
-			var subAff *pubsubmodel.Affiliation
-			for _, aff := range affiliations {
-				if aff.JID == subJID.ToBareJID().String() {
-					subAff = &aff
-					break
-				}
-			}
-			accessChecker := &accessChecker{
-				host:                n.Host,
-				nodeID:              n.Name,
-				accessModel:         n.Options.AccessModel,
-				rosterAllowedGroups: n.Options.RosterGroupsAllowed,
-				affiliation:         subAff,
-				rosterRep:           x.rosterRep,
-			}
-			if err := x.sendLastPublishedItem(ctx, subJID, accessChecker, host, n.Name, n.Options.NotificationType); err != nil {
-				return err
-			}
+		accessChecker := &accessChecker{
+			host:                n.Host,
+			nodeID:              n.Name,
+			accessModel:         n.Options.AccessModel,
+			rosterAllowedGroups: n.Options.RosterGroupsAllowed,
+			affiliation:         subAff,
+			rosterRep:           x.rosterRep,
 		}
+		return x.sendLastPublishedItem(ctx, subJID, accessChecker, n.Host, n.Name, n.Options.NotificationType)
 	}
 	return nil
 }
@@ -1136,6 +1142,24 @@ func (x *Pep) createNode(ctx context.Context, node *pubsubmodel.Node) error {
 	}
 	if err := x.pubSubRep.UpsertNodeSubscription(ctx, ownerSub, node.Host, node.Name); err != nil {
 		return err
+	}
+	// auto-subscribe roster members
+	j, err := jid.NewWithString(node.Host, true)
+	if err != nil {
+		return err
+	}
+	rosterItems, _, err := x.rosterRep.FetchRosterItems(ctx, j.Node())
+	if err != nil {
+		return err
+	}
+	for _, ri := range rosterItems {
+		if ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom {
+			continue
+		}
+		subJID, _ := jid.NewWithString(ri.JID, true)
+		if err := x.subscribeTo(ctx, node, subJID); err != nil {
+			return err
+		}
 	}
 	x.registerDiscoItems(ctx)
 	return nil
