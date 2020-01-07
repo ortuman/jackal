@@ -132,7 +132,7 @@ func (c *Cluster) BroadcastMessage(ctx context.Context, msg *Message) {
 }
 
 // Shutdown shuts down cluster sub system.
-func (c *Cluster) Shutdown() error {
+func (c *Cluster) Shutdown(_ context.Context) error {
 	errCh := make(chan error, 1)
 	c.runQueue.Stop(func() {
 		errCh <- c.memberList.Shutdown()

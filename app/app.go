@@ -288,7 +288,7 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 			a.s2s.Shutdown(ctx)
 		}
 		if a.cluster != nil {
-			_ = a.cluster.Shutdown()
+			_ = a.cluster.Shutdown(ctx)
 		}
 		_ = a.comps.Shutdown(ctx)
 		_ = a.mods.Shutdown(ctx)
