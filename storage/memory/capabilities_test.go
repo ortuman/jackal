@@ -18,7 +18,7 @@ func TestMemoryStorage_InsertCapabilities(t *testing.T) {
 	s := NewCapabilities()
 	EnableMockedError()
 	err := s.UpsertCapabilities(context.Background(), &caps)
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 	err = s.UpsertCapabilities(context.Background(), &caps)
 	require.Nil(t, err)
@@ -31,7 +31,7 @@ func TestMemoryStorage_FetchCapabilities(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.FetchCapabilities(context.Background(), "n1", "1234A")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	cs, _ := s.FetchCapabilities(context.Background(), "n1", "1234B")

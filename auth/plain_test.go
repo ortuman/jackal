@@ -39,7 +39,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 
 	// storage error...
 	memorystorage.EnableMockedError()
-	require.Equal(t, authr.ProcessElement(context.Background(), elem), memorystorage.ErrMockedError)
+	require.Equal(t, authr.ProcessElement(context.Background(), elem), memorystorage.ErrMocked)
 	memorystorage.DisableMockedError()
 
 	// valid credentials...

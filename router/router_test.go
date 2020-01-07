@@ -15,7 +15,6 @@ import (
 
 	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/model"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -179,7 +178,7 @@ func TestRouter_Routing(t *testing.T) {
 	require.Equal(t, ErrNotExistingAccount, r.Route(context.Background(), iq))
 
 	memorystorage.EnableMockedError()
-	require.Equal(t, memorystorage.ErrMockedError, r.Route(context.Background(), iq))
+	require.Equal(t, memorystorage.ErrMocked, r.Route(context.Background(), iq))
 	memorystorage.DisableMockedError()
 
 	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "hamlet", Password: ""})
@@ -476,10 +475,6 @@ func TestRouter_Cluster(t *testing.T) {
 }
 
 func setupTest() (*Router, repository.User, repository.BlockList) {
-	storage.Unset()
-	s2 := memorystorage.New2()
-	storage.Set(s2)
-
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := New(

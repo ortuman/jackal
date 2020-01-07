@@ -18,7 +18,6 @@ import (
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
@@ -154,10 +153,6 @@ func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
 func setupTest(domain string) (*router.Router, repository.User, repository.BlockList) {
-	storage.Unset()
-	s2 := memorystorage.New2()
-	storage.Set(s2)
-
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(

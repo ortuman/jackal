@@ -16,7 +16,7 @@ import (
 )
 
 func TestStorage_PubSubNode(t *testing.T) {
-	s := New2()
+	s := NewPubSub()
 	node := &pubsubmodel.Node{
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings",
@@ -71,7 +71,7 @@ func TestStorage_PubSubNode(t *testing.T) {
 }
 
 func TestStorage_PubSubNodeItem(t *testing.T) {
-	s := New2()
+	s := NewPubSub()
 	item1 := &pubsubmodel.Item{
 		ID:        "id1",
 		Publisher: "ortuman@jackal.im",
@@ -117,7 +117,7 @@ func TestStorage_PubSubNodeItem(t *testing.T) {
 }
 
 func TestStorage_PubSubNodeAffiliation(t *testing.T) {
-	s := New2()
+	s := NewPubSub()
 	aff1 := &pubsubmodel.Affiliation{
 		JID:         "ortuman@jackal.im",
 		Affiliation: "publisher",
@@ -169,7 +169,7 @@ func TestStorage_PubSubNodeAffiliation(t *testing.T) {
 }
 
 func TestStorage_PubSubNodeSubscription(t *testing.T) {
-	s := New2()
+	s := NewPubSub()
 	node := &pubsubmodel.Node{
 		Host: "ortuman@jackal.im",
 		Name: "princely_musings",

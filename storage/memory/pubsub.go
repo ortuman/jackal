@@ -13,10 +13,18 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
-func (m *Storage) FetchHosts(_ context.Context) ([]string, error) {
+type PubSub struct {
+	*memoryStorage
+}
+
+func NewPubSub() *PubSub {
+	return &PubSub{memoryStorage: newStorage()}
+}
+
+func (m *PubSub) FetchHosts(_ context.Context) ([]string, error) {
 	var hosts []string
 	if err := m.inReadLock(func() error {
-		for k := range m.bytes {
+		for k := range m.b {
 			if !strings.HasPrefix(k, "pubSubHostNodes:") {
 				continue
 			}
@@ -45,21 +53,21 @@ func (m *Storage) FetchHosts(_ context.Context) ([]string, error) {
 	return hosts, nil
 }
 
-func (m *Storage) UpsertNode(_ context.Context, node *pubsubmodel.Node) error {
+func (m *PubSub) UpsertNode(_ context.Context, node *pubsubmodel.Node) error {
 	b, err := serializer.Serialize(node)
 	if err != nil {
 		return err
 	}
 	return m.inWriteLock(func() error {
-		m.bytes[pubSubNodesKey(node.Host, node.Name)] = b
+		m.b[pubSubNodesKey(node.Host, node.Name)] = b
 		return m.upsertHostNode(node)
 	})
 }
 
-func (m *Storage) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node, error) {
+func (m *PubSub) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubHostNodesKey(host)]
+		b = m.b[pubSubHostNodesKey(host)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -75,10 +83,10 @@ func (m *Storage) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node
 	return nodes, nil
 }
 
-func (m *Storage) FetchNode(_ context.Context, host, name string) (*pubsubmodel.Node, error) {
+func (m *PubSub) FetchNode(_ context.Context, host, name string) (*pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubNodesKey(host, name)]
+		b = m.b[pubSubNodesKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -93,10 +101,10 @@ func (m *Storage) FetchNode(_ context.Context, host, name string) (*pubsubmodel.
 	return &node, nil
 }
 
-func (m *Storage) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubmodel.Node, error) {
+func (m *PubSub) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubmodel.Node, error) {
 	var nodes []pubsubmodel.Node
 	if err := m.inReadLock(func() error {
-		for k, b := range m.bytes {
+		for k, b := range m.b {
 			if !strings.HasPrefix(k, "pubSubSubscriptions:") {
 				continue
 			}
@@ -120,7 +128,7 @@ func (m *Storage) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubm
 				// fetch pubsub node
 				var node pubsubmodel.Node
 
-				b := m.bytes[pubSubNodesKey(host, name)]
+				b := m.b[pubSubNodesKey(host, name)]
 				if b == nil {
 					continue
 				}
@@ -138,21 +146,21 @@ func (m *Storage) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubm
 	return nodes, nil
 }
 
-func (m *Storage) DeleteNode(_ context.Context, host, name string) error {
+func (m *PubSub) DeleteNode(_ context.Context, host, name string) error {
 	return m.inWriteLock(func() error {
-		delete(m.bytes, pubSubNodesKey(host, name))
-		delete(m.bytes, pubSubItemsKey(host, name))
-		delete(m.bytes, pubSubAffiliationsKey(host, name))
+		delete(m.b, pubSubNodesKey(host, name))
+		delete(m.b, pubSubItemsKey(host, name))
+		delete(m.b, pubSubAffiliationsKey(host, name))
 		return m.deleteHostNode(host, name)
 	})
 }
 
-func (m *Storage) UpsertNodeItem(_ context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
+func (m *PubSub) UpsertNodeItem(_ context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return m.inWriteLock(func() error {
 		var b []byte
 		var items []pubsubmodel.Item
 
-		b = m.bytes[pubSubItemsKey(host, name)]
+		b = m.b[pubSubItemsKey(host, name)]
 		if b != nil {
 			if err := serializer.DeserializeSlice(b, &items); err != nil {
 				return err
@@ -176,15 +184,15 @@ func (m *Storage) UpsertNodeItem(_ context.Context, item *pubsubmodel.Item, host
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubItemsKey(host, name)] = b
+		m.b[pubSubItemsKey(host, name)] = b
 		return nil
 	})
 }
 
-func (m *Storage) FetchNodeItems(_ context.Context, host, name string) ([]pubsubmodel.Item, error) {
+func (m *PubSub) FetchNodeItems(_ context.Context, host, name string) ([]pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubItemsKey(host, name)]
+		b = m.b[pubSubItemsKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -199,10 +207,10 @@ func (m *Storage) FetchNodeItems(_ context.Context, host, name string) ([]pubsub
 	return items, nil
 }
 
-func (m *Storage) FetchNodeItemsWithIDs(_ context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
+func (m *PubSub) FetchNodeItemsWithIDs(_ context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubItemsKey(host, name)]
+		b = m.b[pubSubItemsKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -226,10 +234,10 @@ func (m *Storage) FetchNodeItemsWithIDs(_ context.Context, host, name string, id
 	return filteredItems, nil
 }
 
-func (m *Storage) FetchNodeLastItem(_ context.Context, host, name string) (*pubsubmodel.Item, error) {
+func (m *PubSub) FetchNodeLastItem(_ context.Context, host, name string) (*pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubItemsKey(host, name)]
+		b = m.b[pubSubItemsKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -244,12 +252,12 @@ func (m *Storage) FetchNodeLastItem(_ context.Context, host, name string) (*pubs
 	return &items[len(items)-1], nil
 }
 
-func (m *Storage) UpsertNodeAffiliation(_ context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error {
+func (m *PubSub) UpsertNodeAffiliation(_ context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
 		var affiliations []pubsubmodel.Affiliation
 
-		b = m.bytes[pubSubAffiliationsKey(host, name)]
+		b = m.b[pubSubAffiliationsKey(host, name)]
 		if b != nil {
 			if err := serializer.DeserializeSlice(b, &affiliations); err != nil {
 				return err
@@ -270,12 +278,12 @@ func (m *Storage) UpsertNodeAffiliation(_ context.Context, affiliation *pubsubmo
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubAffiliationsKey(host, name)] = b
+		m.b[pubSubAffiliationsKey(host, name)] = b
 		return nil
 	})
 }
 
-func (m *Storage) FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error) {
+func (m *PubSub) FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error) {
 	affiliations, err := m.FetchNodeAffiliations(ctx, host, name)
 	if err != nil {
 		return nil, err
@@ -288,10 +296,10 @@ func (m *Storage) FetchNodeAffiliation(ctx context.Context, host, name, jid stri
 	return nil, nil
 }
 
-func (m *Storage) FetchNodeAffiliations(_ context.Context, host, name string) ([]pubsubmodel.Affiliation, error) {
+func (m *PubSub) FetchNodeAffiliations(_ context.Context, host, name string) ([]pubsubmodel.Affiliation, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubAffiliationsKey(host, name)]
+		b = m.b[pubSubAffiliationsKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -306,12 +314,12 @@ func (m *Storage) FetchNodeAffiliations(_ context.Context, host, name string) ([
 	return affiliations, nil
 }
 
-func (m *Storage) DeleteNodeAffiliation(_ context.Context, jid, host, name string) error {
+func (m *PubSub) DeleteNodeAffiliation(_ context.Context, jid, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
 		var affiliations []pubsubmodel.Affiliation
 
-		b = m.bytes[pubSubAffiliationsKey(host, name)]
+		b = m.b[pubSubAffiliationsKey(host, name)]
 		if b != nil {
 			if err := serializer.DeserializeSlice(b, &affiliations); err != nil {
 				return err
@@ -332,17 +340,17 @@ func (m *Storage) DeleteNodeAffiliation(_ context.Context, jid, host, name strin
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubAffiliationsKey(host, name)] = b
+		m.b[pubSubAffiliationsKey(host, name)] = b
 		return nil
 	})
 }
 
-func (m *Storage) UpsertNodeSubscription(_ context.Context, subscription *pubsubmodel.Subscription, host, name string) error {
+func (m *PubSub) UpsertNodeSubscription(_ context.Context, subscription *pubsubmodel.Subscription, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
 		var subscriptions []pubsubmodel.Subscription
 
-		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		b = m.b[pubSubSubscriptionsKey(host, name)]
 		if b != nil {
 			if err := serializer.DeserializeSlice(b, &subscriptions); err != nil {
 				return err
@@ -363,15 +371,15 @@ func (m *Storage) UpsertNodeSubscription(_ context.Context, subscription *pubsub
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubSubscriptionsKey(host, name)] = b
+		m.b[pubSubSubscriptionsKey(host, name)] = b
 		return nil
 	})
 }
 
-func (m *Storage) FetchNodeSubscriptions(_ context.Context, host, name string) ([]pubsubmodel.Subscription, error) {
+func (m *PubSub) FetchNodeSubscriptions(_ context.Context, host, name string) ([]pubsubmodel.Subscription, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
-		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		b = m.b[pubSubSubscriptionsKey(host, name)]
 		return nil
 	}); err != nil {
 		return nil, err
@@ -386,12 +394,12 @@ func (m *Storage) FetchNodeSubscriptions(_ context.Context, host, name string) (
 	return subscriptions, nil
 }
 
-func (m *Storage) DeleteNodeSubscription(_ context.Context, jid, host, name string) error {
+func (m *PubSub) DeleteNodeSubscription(_ context.Context, jid, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
 		var subscriptions []pubsubmodel.Subscription
 
-		b = m.bytes[pubSubSubscriptionsKey(host, name)]
+		b = m.b[pubSubSubscriptionsKey(host, name)]
 		if b != nil {
 			if err := serializer.DeserializeSlice(b, &subscriptions); err != nil {
 				return err
@@ -412,15 +420,15 @@ func (m *Storage) DeleteNodeSubscription(_ context.Context, jid, host, name stri
 		if err != nil {
 			return err
 		}
-		m.bytes[pubSubSubscriptionsKey(host, name)] = b
+		m.b[pubSubSubscriptionsKey(host, name)] = b
 		return nil
 	})
 }
 
-func (m *Storage) upsertHostNode(node *pubsubmodel.Node) error {
+func (m *PubSub) upsertHostNode(node *pubsubmodel.Node) error {
 	var nodes []pubsubmodel.Node
 
-	b := m.bytes[pubSubHostNodesKey(node.Host)]
+	b := m.b[pubSubHostNodesKey(node.Host)]
 	if b != nil {
 		if err := serializer.DeserializeSlice(b, &nodes); err != nil {
 			return err
@@ -443,14 +451,14 @@ func (m *Storage) upsertHostNode(node *pubsubmodel.Node) error {
 	if err != nil {
 		return err
 	}
-	m.bytes[pubSubHostNodesKey(node.Host)] = b
+	m.b[pubSubHostNodesKey(node.Host)] = b
 	return nil
 }
 
-func (m *Storage) deleteHostNode(host, name string) error {
+func (m *PubSub) deleteHostNode(host, name string) error {
 	var nodes []pubsubmodel.Node
 
-	b := m.bytes[pubSubHostNodesKey(host)]
+	b := m.b[pubSubHostNodesKey(host)]
 	if b != nil {
 		if err := serializer.DeserializeSlice(b, &nodes); err != nil {
 			return err
@@ -467,7 +475,7 @@ func (m *Storage) deleteHostNode(host, name string) error {
 	if err != nil {
 		return err
 	}
-	m.bytes[pubSubHostNodesKey(host)] = b
+	m.b[pubSubHostNodesKey(host)] = b
 	return nil
 }
 

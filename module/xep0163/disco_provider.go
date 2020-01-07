@@ -12,7 +12,6 @@ import (
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -34,6 +33,7 @@ var pepFeatures = []string{
 
 type discoInfoProvider struct {
 	rosterRep repository.Roster
+	pubSubRep repository.PubSub
 }
 
 func (p *discoInfoProvider) Identities(_ context.Context, _, _ *jid.JID, node string) []xep0030.Identity {
@@ -72,7 +72,7 @@ func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, 
 func (p *discoInfoProvider) hostNodes(ctx context.Context, host string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	nodes, err := storage.FetchNodes(ctx, host)
+	nodes, err := p.pubSubRep.FetchNodes(ctx, host)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -90,7 +90,7 @@ func (p *discoInfoProvider) hostNodes(ctx context.Context, host string) ([]xep00
 func (p *discoInfoProvider) nodeItems(ctx context.Context, host, node string) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 
-	n, err := storage.FetchNode(ctx, host, node)
+	n, err := p.pubSubRep.FetchNode(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError
@@ -99,7 +99,7 @@ func (p *discoInfoProvider) nodeItems(ctx context.Context, host, node string) ([
 		// does not exist
 		return nil, xmpp.ErrItemNotFound
 	}
-	nodeItems, err := storage.FetchNodeItems(ctx, host, node)
+	nodeItems, err := p.pubSubRep.FetchNodeItems(ctx, host, node)
 	if err != nil {
 		log.Error(err)
 		return nil, xmpp.ErrInternalServerError

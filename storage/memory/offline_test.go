@@ -24,7 +24,7 @@ func TestMemoryStorage_InsertOfflineMessage(t *testing.T) {
 
 	s := NewOffline()
 	EnableMockedError()
-	require.Equal(t, ErrMockedError, s.InsertOfflineMessage(context.Background(), m, "ortuman"))
+	require.Equal(t, ErrMocked, s.InsertOfflineMessage(context.Background(), m, "ortuman"))
 	DisableMockedError()
 
 	require.Nil(t, s.InsertOfflineMessage(context.Background(), m, "ortuman"))
@@ -42,7 +42,7 @@ func TestMemoryStorage_CountOfflineMessages(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.CountOfflineMessages(context.Background(), "ortuman")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	cnt, _ := s.CountOfflineMessages(context.Background(), "ortuman")
@@ -61,7 +61,7 @@ func TestMemoryStorage_FetchOfflineMessages(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.FetchOfflineMessages(context.Background(), "ortuman")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 	elems, _ := s.FetchOfflineMessages(context.Background(), "ortuman")
 	require.Equal(t, 1, len(elems))
@@ -78,7 +78,7 @@ func TestMemoryStorage_DeleteOfflineMessages(t *testing.T) {
 	_ = s.InsertOfflineMessage(context.Background(), m, "ortuman")
 
 	EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteOfflineMessages(context.Background(), "ortuman"))
+	require.Equal(t, ErrMocked, s.DeleteOfflineMessages(context.Background(), "ortuman"))
 	DisableMockedError()
 	require.Nil(t, s.DeleteOfflineMessages(context.Background(), "ortuman"))
 

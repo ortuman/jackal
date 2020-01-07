@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -71,12 +70,6 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 }
 
 func setupTest(domain string) (*router.Router, *memorystorage.Offline) {
-	// ===========================
-	storage.Unset()
-	s2 := memorystorage.New2()
-	storage.Set(s2)
-	// ===========================
-
 	s := memorystorage.NewOffline()
 	r, _ := router.New(
 		&router.Config{

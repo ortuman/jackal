@@ -60,7 +60,6 @@ type Application struct {
 	output           io.Writer
 	args             []string
 	logger           log.Logger
-	storage          storage.Storage
 	cluster          *cluster.Cluster
 	router           *router.Router
 	mods             *module.Modules
@@ -140,12 +139,6 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
-	// initialize storage (deprecated)
-	err = a.initStorage2(&cfg.Storage)
-	if err != nil {
-		return err
-	}
-
 	// initialize router
 	a.router, err = router.New(&cfg.Router, repContainer.User(), repContainer.BlockList())
 	if err != nil {
@@ -154,7 +147,7 @@ func (a *Application) Run() error {
 
 	// initialize cluster
 	if cfg.Cluster != nil {
-		if storage.IsClusterCompatible() {
+		if repContainer.IsClusterCompatible() {
 			a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
 			if err != nil {
 				return err
@@ -247,16 +240,6 @@ func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
 	return nil
 }
 
-func (a *Application) initStorage2(config *storage.Config) error {
-	s, err := storage.New2(config)
-	if err != nil {
-		return err
-	}
-	a.storage = s
-	storage.Set(a.storage)
-	return nil
-}
-
 func (a *Application) printLogo() {
 	for i := range logoStr {
 		log.Infof("%s", logoStr[i])
@@ -310,7 +293,6 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 		_ = a.comps.Shutdown(ctx)
 		_ = a.mods.Shutdown(ctx)
 
-		storage.Unset()
 		log.Unset()
 		c <- true
 	}()

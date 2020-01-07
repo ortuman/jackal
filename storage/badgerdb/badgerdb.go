@@ -21,6 +21,7 @@ type badgerDBContainer struct {
 	vCard     *badgerDBVCard
 	priv      *badgerDBPrivate
 	blockList *badgerDBBlockList
+	pubSub    *badgerDBPubSub
 	offline   *badgerDBOffline
 
 	db *badger.DB
@@ -45,6 +46,7 @@ func New(cfg *Config) (repository.Container, error) {
 	c.vCard = newVCard(c.db)
 	c.priv = newPrivate(c.db)
 	c.blockList = newBlockList(c.db)
+	c.pubSub = newPubSub(c.db)
 	c.offline = newOffline(c.db)
 
 	return &c, nil
@@ -56,6 +58,7 @@ func (c *badgerDBContainer) Capabilities() repository.Capabilities { return c.ca
 func (c *badgerDBContainer) VCard() repository.VCard               { return c.vCard }
 func (c *badgerDBContainer) Private() repository.Private           { return c.priv }
 func (c *badgerDBContainer) BlockList() repository.BlockList       { return c.blockList }
+func (c *badgerDBContainer) PubSub() repository.PubSub             { return c.pubSub }
 func (c *badgerDBContainer) Offline() repository.Offline           { return c.offline }
 
 func (c *badgerDBContainer) Close(_ context.Context) error { return c.db.Close() }

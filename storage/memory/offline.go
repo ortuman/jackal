@@ -66,18 +66,6 @@ func (m *Offline) DeleteOfflineMessages(_ context.Context, username string) erro
 	return m.deleteKey(offlineMessageKey(username))
 }
 
-func (m *Storage) fetchUserOfflineMessages(username string) ([]xmpp.Message, error) {
-	b := m.bytes[offlineMessageKey(username)]
-	if b == nil {
-		return nil, nil
-	}
-	var messages []xmpp.Message
-	if err := serializer.DeserializeSlice(b, &messages); err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
-
 func offlineMessageKey(username string) string {
 	return "offlineMessages:" + username
 }

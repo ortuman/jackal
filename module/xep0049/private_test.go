@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -161,12 +160,6 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 }
 
 func setupTest(domain string) (*router.Router, repository.Private) {
-	// ==========================
-	storage.Unset()
-	s2 := memorystorage.New2()
-	storage.Set(s2)
-	// ==========================
-
 	s := memorystorage.NewPrivate()
 	r, _ := router.New(
 		&router.Config{

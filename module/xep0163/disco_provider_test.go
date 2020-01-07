@@ -12,7 +12,6 @@ import (
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -46,18 +45,18 @@ func TestDiscoInfoProvider_Items(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "yard", true)
 
-	s := memorystorage.New2()
+	pubSubRep := memorystorage.NewPubSub()
 
-	storage.Set(s)
-	defer storage.Unset()
-
-	_ = s.UpsertNode(context.Background(), &pubsubmodel.Node{
+	_ = pubSubRep.UpsertNode(context.Background(), &pubsubmodel.Node{
 		Host:    "ortuman@jackal.im",
 		Name:    "princely_musings",
 		Options: defaultNodeOptions,
 	})
 	rosterRep := memorystorage.NewRoster()
-	dp := &discoInfoProvider{rosterRep: rosterRep}
+	dp := &discoInfoProvider{
+		rosterRep: rosterRep,
+		pubSubRep: pubSubRep,
+	}
 
 	items, err := dp.Items(context.Background(), j1, j2, "")
 	require.Nil(t, items)

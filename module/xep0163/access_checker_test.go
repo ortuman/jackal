@@ -11,7 +11,6 @@ import (
 
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/stretchr/testify/require"
 )
@@ -55,10 +54,6 @@ func TestAccessChecker_PresenceSubscription(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errPresenceSubscriptionRequired, err)
 
-	s := memorystorage.New2()
-	storage.Set(s)
-	defer storage.Unset()
-
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
@@ -83,10 +78,6 @@ func TestAccessChecker_RosterGroup(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, errNotInRosterGroup, err)
 
-	s := memorystorage.New2()
-	storage.Set(s)
-	defer storage.Unset()
-
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
 		JID:          "noelia@jackal.im",
@@ -110,15 +101,6 @@ func TestAccessChecker_Member(t *testing.T) {
 	err := ac.checkAccess(context.Background(), "noelia2@jackal.im")
 	require.NotNil(t, err)
 	require.Equal(t, errNotOnWhiteList, err)
-
-	s := memorystorage.New2()
-	storage.Set(s)
-	defer storage.Unset()
-
-	_ = s.UpsertNodeAffiliation(context.Background(), &pubsubmodel.Affiliation{
-		JID:         "noelia@jackal.im",
-		Affiliation: pubsubmodel.Member,
-	}, "ortuman@jackal.im", "princely_musings")
 
 	err = ac.checkAccess(context.Background(), "noelia@jackal.im")
 	require.Nil(t, err)

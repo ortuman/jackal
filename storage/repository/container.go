@@ -20,6 +20,8 @@ type Container interface {
 
 	BlockList() BlockList
 
+	PubSub() PubSub
+
 	Offline() Offline
 
 	Close(ctx context.Context) error

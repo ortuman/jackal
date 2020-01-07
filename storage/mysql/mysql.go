@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql" // SQL driver
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/repository"
 )
@@ -22,6 +23,7 @@ type mySQLContainer struct {
 	vCard     *mySQLVCard
 	priv      *mySQLPrivate
 	blockList *mySQLBlockList
+	pubSub    *mySQLPubSub
 	offline   *mySQLOffline
 
 	h      *sql.DB
@@ -55,6 +57,7 @@ func New(cfg *Config) (repository.Container, error) {
 	c.vCard = newVCard(c.h)
 	c.priv = newPrivate(c.h)
 	c.blockList = newBlockList(c.h)
+	c.pubSub = newPubSub(c.h)
 	c.offline = newOffline(c.h)
 
 	return c, nil
@@ -66,6 +69,7 @@ func (c *mySQLContainer) Capabilities() repository.Capabilities { return c.caps 
 func (c *mySQLContainer) VCard() repository.VCard               { return c.vCard }
 func (c *mySQLContainer) Private() repository.Private           { return c.priv }
 func (c *mySQLContainer) BlockList() repository.BlockList       { return c.blockList }
+func (c *mySQLContainer) PubSub() repository.PubSub             { return c.pubSub }
 func (c *mySQLContainer) Offline() repository.Offline           { return c.offline }
 
 func (c *mySQLContainer) Close(ctx context.Context) error {

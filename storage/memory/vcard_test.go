@@ -21,7 +21,7 @@ func TestMemoryStorage_InsertVCard(t *testing.T) {
 
 	s := NewVCard()
 	EnableMockedError()
-	require.Equal(t, ErrMockedError, s.UpsertVCard(context.Background(), vCard, "ortuman"))
+	require.Equal(t, ErrMocked, s.UpsertVCard(context.Background(), vCard, "ortuman"))
 	DisableMockedError()
 	require.Nil(t, s.UpsertVCard(context.Background(), vCard, "ortuman"))
 }
@@ -37,7 +37,7 @@ func TestMemoryStorage_FetchVCard(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.FetchVCard(context.Background(), "ortuman")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	elem, _ := s.FetchVCard(context.Background(), "ortuman")

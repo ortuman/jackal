@@ -17,7 +17,7 @@ import (
 )
 
 func TestPgSQLFetchPubSubHosts(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"host"})
 	rows.AddRow("ortuman@jackal.im")
 	rows.AddRow("noelia@jackal.im")
@@ -31,7 +31,7 @@ func TestPgSQLFetchPubSubHosts(t *testing.T) {
 	require.Equal(t, "ortuman@jackal.im", hosts[0])
 	require.Equal(t, "noelia@jackal.im", hosts[1])
 
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectQuery("SELECT DISTINCT\\(host\\) FROM pubsub_nodes").
 		WillReturnError(errGeneric)
 
@@ -42,7 +42,7 @@ func TestPgSQLFetchPubSubHosts(t *testing.T) {
 }
 
 func TestPgSQLUpsertPubSubNode(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO pubsub_nodes (.+) ON CONFLICT (.+) DO NOTHING").
 		WithArgs("host", "name").
@@ -74,7 +74,7 @@ func TestPgSQLUpsertPubSubNode(t *testing.T) {
 	require.Nil(t, err)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectQuery("SELECT name, value FROM pubsub_node_options WHERE (.+)").
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
@@ -90,7 +90,7 @@ func TestPgSQLUpsertPubSubNode(t *testing.T) {
 func TestPgSQLFetchPubSubNode(t *testing.T) {
 	var cols = []string{"name", "value"}
 
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows(cols)
 	rows.AddRow("pubsub#access_model", "presence")
 	rows.AddRow("pubsub#publish_model", "publishers")
@@ -111,7 +111,7 @@ func TestPgSQLFetchPubSubNode(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubNodes(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"name"})
 	rows.AddRow("princely_musings_1")
 	rows.AddRow("princely_musings_2")
@@ -146,7 +146,7 @@ func TestPgSQLFetchPubSubNodes(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubSubscribedNodes(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"host", "name"})
 	rows.AddRow("ortuman@jackal.im", "princely_musings_1")
 	rows.AddRow("ortuman@jackal.im", "princely_musings_2")
@@ -181,7 +181,7 @@ func TestPgSQLFetchPubSubSubscribedNodes(t *testing.T) {
 }
 
 func TestPgSQLDeletePubSubNode(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
@@ -214,7 +214,7 @@ func TestPgSQLDeletePubSubNode(t *testing.T) {
 func TestPgSQLUpsertPubSubNodeItem(t *testing.T) {
 	payload := xmpp.NewIQType(uuid.New().String(), xmpp.GetType)
 
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
@@ -242,7 +242,7 @@ func TestPgSQLUpsertPubSubNodeItem(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"item_id", "publisher", "payload"})
 	rows.AddRow("1234", "ortuman@jackal.im", "<message/>")
 	rows.AddRow("5678", "noelia@jackal.im", "<iq type='get'/>")
@@ -261,7 +261,7 @@ func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
 	require.Equal(t, "5678", items[1].ID)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectQuery("SELECT item_id, publisher, payload FROM pubsub_items WHERE node_id = (.+)").
 		WithArgs("ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
@@ -275,7 +275,7 @@ func TestPgSQLFetchPubSubNodeItems(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"item_id", "publisher", "payload"})
 	rows.AddRow("1234", "ortuman@jackal.im", "<message/>")
 	rows.AddRow("5678", "noelia@jackal.im", "<iq type='get'/>")
@@ -296,7 +296,7 @@ func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
 	require.Equal(t, "5678", items[1].ID)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectQuery("SELECT item_id, publisher, payload FROM pubsub_items WHERE (.+ IN (.+)) ORDER BY created_at").
 		WithArgs("ortuman@jackal.im", "princely_musings", "1234", "5678").
 		WillReturnError(errGeneric)
@@ -310,7 +310,7 @@ func TestPgSQLFetchPubSubNodeItemsWithID(t *testing.T) {
 }
 
 func TestPgSQLUpsertPubSubNodeAffiliation(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
@@ -333,7 +333,7 @@ func TestPgSQLUpsertPubSubNodeAffiliation(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubNodeAffiliations(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"jid", "affiliation"})
 	rows.AddRow("ortuman@jackal.im", "owner")
 	rows.AddRow("noelia@jackal.im", "publisher")
@@ -361,7 +361,7 @@ func TestPgSQLFetchPubSubNodeAffiliations(t *testing.T) {
 }
 
 func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
@@ -374,7 +374,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 	require.Nil(t, err)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectExec("DELETE FROM pubsub_affiliations WHERE (.+)").
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
@@ -388,7 +388,7 @@ func TestPgSQLDeletePubSubNodeAffiliation(t *testing.T) {
 }
 
 func TestPgSQLUpsertPubSubNodeSubscription(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT id FROM pubsub_nodes WHERE (.+)").
@@ -412,7 +412,7 @@ func TestPgSQLUpsertPubSubNodeSubscription(t *testing.T) {
 }
 
 func TestPgSQLFetchPubSubNodeSubscriptions(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 	rows := sqlmock.NewRows([]string{"subid", "jid", "subscription"})
 	rows.AddRow("1234", "ortuman@jackal.im", "subscribed")
 	rows.AddRow("5678", "noelia@jackal.im", "unsubscribed")
@@ -440,7 +440,7 @@ func TestPgSQLFetchPubSubNodeSubscriptions(t *testing.T) {
 }
 
 func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
-	s, mock := NewMock()
+	s, mock := newPubSubMock()
 
 	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
@@ -453,7 +453,7 @@ func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
 	require.Nil(t, err)
 
 	// error case
-	s, mock = NewMock()
+	s, mock = newPubSubMock()
 	mock.ExpectExec("DELETE FROM pubsub_subscriptions WHERE (.+)").
 		WithArgs("noeliac@jackal.im", "ortuman@jackal.im", "princely_musings").
 		WillReturnError(errGeneric)
@@ -464,4 +464,11 @@ func TestPgSQLDeletePubSubNodeSubscription(t *testing.T) {
 
 	require.NotNil(t, err)
 	require.Equal(t, errGeneric, err)
+}
+
+func newPubSubMock() (*pgSQLPubSub, sqlmock.Sqlmock) {
+	s, sqlMock := newStorageMock()
+	return &pgSQLPubSub{
+		pgSQLStorage: s,
+	}, sqlMock
 }

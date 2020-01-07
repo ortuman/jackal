@@ -137,7 +137,7 @@ func TestDigesMD5Authentication(t *testing.T) {
 
 	// storage error...
 	memorystorage.EnableMockedError()
-	require.Equal(t, memorystorage.ErrMockedError, helper.sendClientParamsResponse(clParams))
+	require.Equal(t, memorystorage.ErrMocked, helper.sendClientParamsResponse(clParams))
 	memorystorage.DisableMockedError()
 
 	// successful authentication...

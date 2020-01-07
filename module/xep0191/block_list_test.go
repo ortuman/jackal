@@ -15,7 +15,6 @@ import (
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -283,10 +282,6 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 }
 
 func setupTest(domain string) (*router.Router, repository.BlockList, repository.Roster) {
-	storage.Unset()
-	s2 := memorystorage.New2()
-	storage.Set(s2)
-
 	blockListRep := memorystorage.NewBlockList()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(

@@ -19,7 +19,8 @@ var (
 	invokeCount int32
 )
 
-var errMocked = errors.New("memstorage: mocked error")
+// ErrMocked represents in memory mocked error value.
+var ErrMocked = errors.New("memstorage: mocked error")
 
 type memoryStorage struct {
 	mu sync.RWMutex
@@ -163,7 +164,7 @@ func checkMockedError() error {
 	if mockErr {
 		invokeCount++
 		if invokeCount >= invokeLimit {
-			return errMocked
+			return ErrMocked
 		}
 	}
 	return nil

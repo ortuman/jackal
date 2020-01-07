@@ -30,7 +30,7 @@ func TestMemoryStorage_InsertRosterItem(t *testing.T) {
 	s := NewRoster()
 	EnableMockedError()
 	_, err := s.UpsertRosterItem(context.Background(), &ri)
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 	_, err = s.UpsertRosterItem(context.Background(), &ri)
 	require.Nil(t, err)
@@ -55,7 +55,7 @@ func TestMemoryStorage_FetchRosterItem(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.FetchRosterItem(context.Background(), "user", "contact")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	ri3, _ := s.FetchRosterItem(context.Background(), "user", "contact2")
@@ -103,7 +103,7 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 
 	EnableMockedError()
 	_, _, err := s.FetchRosterItems(context.Background(), "user")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	ris, _, _ := s.FetchRosterItems(context.Background(), "user")
@@ -144,7 +144,7 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 
 	EnableMockedError()
 	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
@@ -167,7 +167,7 @@ func TestMemoryStorage_InsertRosterNotification(t *testing.T) {
 	}
 	s := NewRoster()
 	EnableMockedError()
-	require.Equal(t, ErrMockedError, s.UpsertRosterNotification(context.Background(), &rn))
+	require.Equal(t, ErrMocked, s.UpsertRosterNotification(context.Background(), &rn))
 	DisableMockedError()
 	require.Nil(t, s.UpsertRosterNotification(context.Background(), &rn))
 }
@@ -194,7 +194,7 @@ func TestMemoryStorage_FetchRosterNotifications(t *testing.T) {
 
 	EnableMockedError()
 	_, err := s.FetchRosterNotifications(context.Background(), "romeo")
-	require.Equal(t, ErrMockedError, err)
+	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
 	rns, err := s.FetchRosterNotifications(context.Background(), "romeo")
@@ -214,7 +214,7 @@ func TestMemoryStorage_DeleteRosterNotification(t *testing.T) {
 	_ = s.UpsertRosterNotification(context.Background(), &rn1)
 
 	EnableMockedError()
-	require.Equal(t, ErrMockedError, s.DeleteRosterNotification(context.Background(), "ortuman", "romeo@jackal.im"))
+	require.Equal(t, ErrMocked, s.DeleteRosterNotification(context.Background(), "ortuman", "romeo@jackal.im"))
 	DisableMockedError()
 
 	require.Nil(t, s.DeleteRosterNotification(context.Background(), "ortuman", "romeo@jackal.im"))

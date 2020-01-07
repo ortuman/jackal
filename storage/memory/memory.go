@@ -18,6 +18,7 @@ type memoryContainer struct {
 	caps      *Capabilities
 	priv      *Private
 	blockList *BlockList
+	pubSub    *PubSub
 	offline   *Offline
 }
 
@@ -30,6 +31,7 @@ func New() (repository.Container, error) {
 	c.vCard = NewVCard()
 	c.priv = NewPrivate()
 	c.blockList = NewBlockList()
+	c.pubSub = NewPubSub()
 	c.offline = NewOffline()
 
 	return &c, nil
@@ -41,6 +43,7 @@ func (c *memoryContainer) Capabilities() repository.Capabilities { return c.caps
 func (c *memoryContainer) VCard() repository.VCard               { return c.vCard }
 func (c *memoryContainer) Private() repository.Private           { return c.priv }
 func (c *memoryContainer) BlockList() repository.BlockList       { return c.blockList }
+func (c *memoryContainer) PubSub() repository.PubSub             { return c.pubSub }
 func (c *memoryContainer) Offline() repository.Offline           { return c.offline }
 
 func (c *memoryContainer) Close(_ context.Context) error { return nil }
