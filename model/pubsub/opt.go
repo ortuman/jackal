@@ -34,12 +34,25 @@ const (
 )
 
 const (
-	Open             = "open"
-	Presence         = "presence"
-	Roster           = "roster"
-	WhiteList        = "whitelist"
-	Never            = "never"
-	OnSub            = "on_sub"
+	// Open represents 'open' access model.
+	Open = "open"
+
+	// Presence represents 'presence' access model.
+	Presence = "presence"
+
+	// Roster represents 'roster' access model.
+	Roster = "roster"
+
+	// WhiteList represents 'whitelist' access model.
+	WhiteList = "whitelist"
+
+	// Never represents 'never' send last published item option.
+	Never = "never"
+
+	// OnSub represents 'on_sub' send last published item option.
+	OnSub = "on_sub"
+
+	// OnSubAndPresence represents 'on_sub_and_presence' send last published item option.
 	OnSubAndPresence = "on_sub_and_presence"
 )
 
@@ -101,7 +114,7 @@ func NewOptionsFromMap(m map[string]string) (*Options, error) {
 	return opt, nil
 }
 
-// NewOptionsFromMap returns a new node Options instance derived from a submit form.
+// NewOptionsFromSubmitForm returns a new node Options instance derived from a submit form.
 func NewOptionsFromSubmitForm(form *xep0004.DataForm) (*Options, error) {
 	opt := &Options{}
 	fields := form.Fields
