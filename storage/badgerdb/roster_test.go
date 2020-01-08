@@ -69,7 +69,7 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, ri1, ri4)
 
-	gr, err := s.FetchRosterGroups(context.Background(), "ortuman")
+	gr, _ := s.FetchRosterGroups(context.Background(), "ortuman")
 	require.Len(t, gr, 4)
 
 	require.Contains(t, gr, "general")
@@ -88,7 +88,7 @@ func TestBadgerDB_RosterItems(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 0, len(ris))
 
-	gr, err = s.FetchRosterGroups(context.Background(), "ortuman")
+	gr, _ = s.FetchRosterGroups(context.Background(), "ortuman")
 	require.Len(t, gr, 0)
 }
 

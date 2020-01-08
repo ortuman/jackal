@@ -113,7 +113,7 @@ func TestMemoryStorage_FetchRosterItems(t *testing.T) {
 	ris, _, _ = s.FetchRosterItemsInGroups(context.Background(), "user", []string{"buddies"})
 	require.Equal(t, 1, len(ris))
 
-	gr, err := s.FetchRosterGroups(context.Background(), "user")
+	gr, _ := s.FetchRosterGroups(context.Background(), "user")
 	require.Len(t, gr, 4)
 
 	require.Contains(t, gr, "general")
@@ -136,14 +136,14 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 	s := NewRoster()
 	_, _ = s.UpsertRosterItem(context.Background(), &ri)
 
-	gr, err := s.FetchRosterGroups(context.Background(), "user")
+	gr, _ := s.FetchRosterGroups(context.Background(), "user")
 	require.Len(t, gr, 2)
 
 	require.Contains(t, gr, "general")
 	require.Contains(t, gr, "friends")
 
 	EnableMockedError()
-	_, err = s.DeleteRosterItem(context.Background(), "user", "contact")
+	_, err := s.DeleteRosterItem(context.Background(), "user", "contact")
 	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
@@ -155,7 +155,7 @@ func TestMemoryStorage_DeleteRosterItem(t *testing.T) {
 	ri2, _ := s.FetchRosterItem(context.Background(), "user", "contact")
 	require.Nil(t, ri2)
 
-	gr, err = s.FetchRosterGroups(context.Background(), "user")
+	gr, _ = s.FetchRosterGroups(context.Background(), "user")
 	require.Len(t, gr, 0)
 }
 
