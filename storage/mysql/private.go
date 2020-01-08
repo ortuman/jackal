@@ -26,8 +26,6 @@ func newPrivate(db *sql.DB) *mySQLPrivate {
 	}
 }
 
-// UpsertPrivateXML inserts a new private element into storage,
-// or updates it in case it's been previously inserted.
 func (s *mySQLPrivate) UpsertPrivateXML(ctx context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
@@ -47,7 +45,6 @@ func (s *mySQLPrivate) UpsertPrivateXML(ctx context.Context, privateXML []xmpp.X
 	return err
 }
 
-// FetchPrivateXML retrieves from storage a private element.
 func (s *mySQLPrivate) FetchPrivateXML(ctx context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	q := sq.Select("data").
 		From("private_storage").

@@ -12,10 +12,12 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// Offline represents an in-memory offline storage.
 type Offline struct {
 	*memoryStorage
 }
 
+// NewOffline returns an instance of Offline in-memory storage.
 func NewOffline() *Offline {
 	return &Offline{memoryStorage: newStorage()}
 }

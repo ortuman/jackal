@@ -20,7 +20,6 @@ func newOffline(db *badger.DB) *badgerDBOffline {
 	return &badgerDBOffline{badgerDBStorage: newStorage(db)}
 }
 
-// InsertOfflineMessage inserts a new message element into user's offline queue.
 func (b *badgerDBOffline) InsertOfflineMessage(_ context.Context, message *xmpp.Message, username string) error {
 	return b.db.Update(func(tx *badger.Txn) error {
 		var messages []xmpp.Message
@@ -32,7 +31,6 @@ func (b *badgerDBOffline) InsertOfflineMessage(_ context.Context, message *xmpp.
 	})
 }
 
-// CountOfflineMessages returns current length of user's offline queue.
 func (b *badgerDBOffline) CountOfflineMessages(_ context.Context, username string) (int, error) {
 	var cnt int
 	err := b.db.View(func(tx *badger.Txn) error {

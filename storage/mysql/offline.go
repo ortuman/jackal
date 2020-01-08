@@ -27,7 +27,6 @@ func newOffline(db *sql.DB) *mySQLOffline {
 	}
 }
 
-// InsertOfflineMessage inserts a new message element into user's offline queue.
 func (s *mySQLOffline) InsertOfflineMessage(ctx context.Context, message *xmpp.Message, username string) error {
 	q := sq.Insert("offline_messages").
 		Columns("username", "data", "created_at").
@@ -36,7 +35,6 @@ func (s *mySQLOffline) InsertOfflineMessage(ctx context.Context, message *xmpp.M
 	return err
 }
 
-// CountOfflineMessages returns current length of user's offline queue.
 func (s *mySQLOffline) CountOfflineMessages(ctx context.Context, username string) (int, error) {
 	q := sq.Select("COUNT(*)").
 		From("offline_messages").
@@ -53,7 +51,6 @@ func (s *mySQLOffline) CountOfflineMessages(ctx context.Context, username string
 	}
 }
 
-// FetchOfflineMessages retrieves from storage current user offline queue.
 func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string) ([]xmpp.Message, error) {
 	q := sq.Select("data").
 		From("offline_messages").
@@ -99,7 +96,6 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 	return messages, nil
 }
 
-// DeleteOfflineMessages clears a user offline queue.
 func (s *mySQLOffline) DeleteOfflineMessages(ctx context.Context, username string) error {
 	q := sq.Delete("offline_messages").Where(sq.Eq{"username": username})
 	_, err := q.RunWith(s.db).ExecContext(ctx)

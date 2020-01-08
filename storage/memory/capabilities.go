@@ -11,18 +11,22 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
+// Capabilities represents an in-memory capabilities storage.
 type Capabilities struct {
 	*memoryStorage
 }
 
+// NewCapabilities returns an instance of Capabilities in-memory storage.
 func NewCapabilities() *Capabilities {
 	return &Capabilities{memoryStorage: newStorage()}
 }
 
+// UpsertCapabilities inserts capabilities associated to a node+ver pair, or updates them if previously inserted..
 func (m *Capabilities) UpsertCapabilities(_ context.Context, caps *model.Capabilities) error {
 	return m.saveEntity(capabilitiesKey(caps.Node, caps.Ver), caps)
 }
 
+// FetchCapabilities fetches capabilities associated to a give node and ver.
 func (m *Capabilities) FetchCapabilities(_ context.Context, node, ver string) (*model.Capabilities, error) {
 	var caps model.Capabilities
 

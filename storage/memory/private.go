@@ -11,10 +11,12 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// Private represents an in-memory private storage.
 type Private struct {
 	*memoryStorage
 }
 
+// NewPrivate returns an instance of Private in-memory storage.
 func NewPrivate() *Private {
 	return &Private{memoryStorage: newStorage()}
 }

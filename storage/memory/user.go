@@ -11,10 +11,12 @@ import (
 	"github.com/ortuman/jackal/model"
 )
 
+// User represents an in-memory user storage.
 type User struct {
 	*memoryStorage
 }
 
+// NewUser returns an instance of User in-memory storage.
 func NewUser() *User {
 	return &User{memoryStorage: newStorage()}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/storage/repository"
 )
 
+// New initializes configured storage type and returns associated container.
 func New(config *Config) (repository.Container, error) {
 	switch config.Type {
 	case BadgerDB:

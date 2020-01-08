@@ -12,6 +12,7 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+// BlockList represents an in-memory block-list storage.
 type BlockList struct {
 	*memoryStorage
 }

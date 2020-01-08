@@ -14,14 +14,17 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+// Roster represents an in-memory roster storage.
 type Roster struct {
 	*memoryStorage
 }
 
+// NewRoster returns an instance of Roster in-memory storage.
 func NewRoster() *Roster {
 	return &Roster{memoryStorage: newStorage()}
 }
 
+// UpsertRosterItem inserts a new roster item entity into storage, or updates it if previously inserted.
 func (m *Roster) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	err := m.inWriteLock(func() error {
@@ -59,6 +62,7 @@ func (m *Roster) UpsertRosterItem(_ context.Context, ri *rostermodel.Item) (rost
 	return rv, err
 }
 
+// DeleteRosterItem deletes a roster item entity from storage.
 func (m *Roster) DeleteRosterItem(_ context.Context, user, contact string) (rostermodel.Version, error) {
 	var rv rostermodel.Version
 	if err := m.inWriteLock(func() error {
@@ -92,6 +96,7 @@ func (m *Roster) DeleteRosterItem(_ context.Context, user, contact string) (rost
 	return rv, nil
 }
 
+// FetchRosterItems retrieves from storage all roster item entities associated to a given user.
 func (m *Roster) FetchRosterItems(_ context.Context, user string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
@@ -110,6 +115,7 @@ func (m *Roster) FetchRosterItems(_ context.Context, user string) ([]rostermodel
 	return ris, rv, nil
 }
 
+// FetchRosterItemsInGroups retrieves from storage all roster item entities associated to a given user and a set of groups.
 func (m *Roster) FetchRosterItemsInGroups(_ context.Context, username string, groups []string) ([]rostermodel.Item, rostermodel.Version, error) {
 	var ris []rostermodel.Item
 	var rv rostermodel.Version
@@ -139,6 +145,7 @@ func (m *Roster) FetchRosterItemsInGroups(_ context.Context, username string, gr
 	return ris, rv, nil
 }
 
+// FetchRosterItem retrieves from storage a roster item entity.
 func (m *Roster) FetchRosterItem(_ context.Context, user, contact string) (*rostermodel.Item, error) {
 	var ret *rostermodel.Item
 	err := m.inReadLock(func() error {
@@ -157,6 +164,7 @@ func (m *Roster) FetchRosterItem(_ context.Context, user, contact string) (*rost
 	return ret, err
 }
 
+// UpsertRosterNotification inserts a new roster notification entity into storage, or updates it if previously inserted.
 func (m *Roster) UpsertRosterNotification(_ context.Context, rn *rostermodel.Notification) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(rn.Contact)
@@ -179,6 +187,7 @@ func (m *Roster) UpsertRosterNotification(_ context.Context, rn *rostermodel.Not
 	})
 }
 
+// DeleteRosterNotification deletes a roster notification entity from storage.
 func (m *Roster) DeleteRosterNotification(_ context.Context, contact, jid string) error {
 	return m.inWriteLock(func() error {
 		rns, fnErr := m.fetchRosterNotifications(contact)
@@ -195,6 +204,7 @@ func (m *Roster) DeleteRosterNotification(_ context.Context, contact, jid string
 	})
 }
 
+// FetchRosterNotification retrieves from storage a roster notification entity.
 func (m *Roster) FetchRosterNotification(_ context.Context, contact string, jid string) (*rostermodel.Notification, error) {
 	var ret *rostermodel.Notification
 	err := m.inReadLock(func() error {
@@ -213,6 +223,7 @@ func (m *Roster) FetchRosterNotification(_ context.Context, contact string, jid 
 	return ret, err
 }
 
+// FetchRosterNotifications retrieves from storage all roster notifications associated to a given user.
 func (m *Roster) FetchRosterNotifications(_ context.Context, contact string) ([]rostermodel.Notification, error) {
 	var rns []rostermodel.Notification
 	if err := m.inReadLock(func() error {
@@ -225,6 +236,7 @@ func (m *Roster) FetchRosterNotifications(_ context.Context, contact string) ([]
 	return rns, nil
 }
 
+// FetchRosterGroups retrieves all groups associated to a user roster.
 func (m *Roster) FetchRosterGroups(_ context.Context, username string) ([]string, error) {
 	var groups []string
 	if err := m.inReadLock(func() error {

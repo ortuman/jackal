@@ -11,10 +11,12 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// VCard represents an in-memory vCard storage.
 type VCard struct {
 	*memoryStorage
 }
 
+// NewVCard returns an instance of VCard in-memory storage.
 func NewVCard() *VCard {
 	return &VCard{memoryStorage: newStorage()}
 }

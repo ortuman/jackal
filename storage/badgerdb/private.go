@@ -20,7 +20,6 @@ func newPrivate(db *badger.DB) *badgerDBPrivate {
 	return &badgerDBPrivate{badgerDBStorage: newStorage(db)}
 }
 
-// UpsertPrivateXML inserts a new private element into storage, or updates it in case it's been previously inserted.
 func (b *badgerDBPrivate) UpsertPrivateXML(_ context.Context, privateXML []xmpp.XElement, namespace string, username string) error {
 	r := xmpp.NewElementName("r")
 	r.AppendElements(privateXML)
@@ -29,7 +28,6 @@ func (b *badgerDBPrivate) UpsertPrivateXML(_ context.Context, privateXML []xmpp.
 	})
 }
 
-// FetchPrivateXML retrieves from storage a private element.
 func (b *badgerDBPrivate) FetchPrivateXML(_ context.Context, namespace string, username string) ([]xmpp.XElement, error) {
 	var r xmpp.Element
 	err := b.db.View(func(txn *badger.Txn) error {

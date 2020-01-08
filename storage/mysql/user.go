@@ -30,7 +30,6 @@ func newUser(db *sql.DB) *mySQLUser {
 	}
 }
 
-// UpsertUser inserts a new user entity into storage, or updates it in case it's been previously inserted.
 func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	var presenceXML string
 	if usr.LastPresence != nil {
@@ -66,7 +65,6 @@ func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	return err
 }
 
-// FetchUser retrieves from storage a user entity.
 func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
 	q := sq.Select("username", "password", "last_presence", "last_presence_at").
 		From("users").
@@ -100,7 +98,6 @@ func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User
 	}
 }
 
-// DeleteUser deletes a user entity from storage.
 func (u *mySQLUser) DeleteUser(ctx context.Context, username string) error {
 	return u.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
@@ -132,7 +129,6 @@ func (u *mySQLUser) DeleteUser(ctx context.Context, username string) error {
 	})
 }
 
-// UserExists returns whether or not a user exists within storage.
 func (u *mySQLUser) UserExists(ctx context.Context, username string) (bool, error) {
 	q := sq.Select("COUNT(*)").
 		From("users").

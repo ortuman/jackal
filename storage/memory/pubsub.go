@@ -13,14 +13,17 @@ import (
 	"github.com/ortuman/jackal/model/serializer"
 )
 
+// PubSub represents an in-memory pubsub storage.
 type PubSub struct {
 	*memoryStorage
 }
 
+// NewPubSub returns an instance of PubSub in-memory storage.
 func NewPubSub() *PubSub {
 	return &PubSub{memoryStorage: newStorage()}
 }
 
+// FetchHosts returns all host identifiers.
 func (m *PubSub) FetchHosts(_ context.Context) ([]string, error) {
 	var hosts []string
 	if err := m.inReadLock(func() error {
@@ -53,6 +56,7 @@ func (m *PubSub) FetchHosts(_ context.Context) ([]string, error) {
 	return hosts, nil
 }
 
+// UpsertNode inserts a new pubsub node entity into storage, or updates it if previously inserted.
 func (m *PubSub) UpsertNode(_ context.Context, node *pubsubmodel.Node) error {
 	b, err := serializer.Serialize(node)
 	if err != nil {
@@ -64,6 +68,7 @@ func (m *PubSub) UpsertNode(_ context.Context, node *pubsubmodel.Node) error {
 	})
 }
 
+// FetchNode retrieves from storage a pubsub node entity.
 func (m *PubSub) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -83,6 +88,7 @@ func (m *PubSub) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node,
 	return nodes, nil
 }
 
+// FetchNodes retrieves from storage all node entities associated with a host.
 func (m *PubSub) FetchNode(_ context.Context, host, name string) (*pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -101,6 +107,7 @@ func (m *PubSub) FetchNode(_ context.Context, host, name string) (*pubsubmodel.N
 	return &node, nil
 }
 
+// FetchSubscribedNodes retrieves from storage all nodes to which a given jid is subscribed.
 func (m *PubSub) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubmodel.Node, error) {
 	var nodes []pubsubmodel.Node
 	if err := m.inReadLock(func() error {
@@ -146,6 +153,7 @@ func (m *PubSub) FetchSubscribedNodes(_ context.Context, jid string) ([]pubsubmo
 	return nodes, nil
 }
 
+// DeleteNode deletes a pubsub node from storage.
 func (m *PubSub) DeleteNode(_ context.Context, host, name string) error {
 	return m.inWriteLock(func() error {
 		delete(m.b, pubSubNodesKey(host, name))
@@ -155,6 +163,7 @@ func (m *PubSub) DeleteNode(_ context.Context, host, name string) error {
 	})
 }
 
+// UpsertNodeItem inserts a new pubsub node item entity into storage, or updates it if previously inserted.
 func (m *PubSub) UpsertNodeItem(_ context.Context, item *pubsubmodel.Item, host, name string, maxNodeItems int) error {
 	return m.inWriteLock(func() error {
 		var b []byte
@@ -189,6 +198,7 @@ func (m *PubSub) UpsertNodeItem(_ context.Context, item *pubsubmodel.Item, host,
 	})
 }
 
+// FetchNodeItems retrieves all items associated to a node.
 func (m *PubSub) FetchNodeItems(_ context.Context, host, name string) ([]pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -207,6 +217,7 @@ func (m *PubSub) FetchNodeItems(_ context.Context, host, name string) ([]pubsubm
 	return items, nil
 }
 
+// FetchNodeItemsWithIDs retrieves all items matching any of the passed identifiers.
 func (m *PubSub) FetchNodeItemsWithIDs(_ context.Context, host, name string, identifiers []string) ([]pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -234,6 +245,7 @@ func (m *PubSub) FetchNodeItemsWithIDs(_ context.Context, host, name string, ide
 	return filteredItems, nil
 }
 
+// FetchNodeLastItem retrieves last published node item.
 func (m *PubSub) FetchNodeLastItem(_ context.Context, host, name string) (*pubsubmodel.Item, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -252,6 +264,7 @@ func (m *PubSub) FetchNodeLastItem(_ context.Context, host, name string) (*pubsu
 	return &items[len(items)-1], nil
 }
 
+// UpsertNodeAffiliation inserts a new pubsub node affiliation into storage, or updates it if previously inserted.
 func (m *PubSub) UpsertNodeAffiliation(_ context.Context, affiliation *pubsubmodel.Affiliation, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
@@ -283,6 +296,7 @@ func (m *PubSub) UpsertNodeAffiliation(_ context.Context, affiliation *pubsubmod
 	})
 }
 
+// FetchNodeAffiliation retrieves a concrete node affiliation from storage.
 func (m *PubSub) FetchNodeAffiliation(ctx context.Context, host, name, jid string) (*pubsubmodel.Affiliation, error) {
 	affiliations, err := m.FetchNodeAffiliations(ctx, host, name)
 	if err != nil {
@@ -296,6 +310,7 @@ func (m *PubSub) FetchNodeAffiliation(ctx context.Context, host, name, jid strin
 	return nil, nil
 }
 
+// FetchNodeAffiliations retrieves all affiliations associated to a node.
 func (m *PubSub) FetchNodeAffiliations(_ context.Context, host, name string) ([]pubsubmodel.Affiliation, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -314,6 +329,7 @@ func (m *PubSub) FetchNodeAffiliations(_ context.Context, host, name string) ([]
 	return affiliations, nil
 }
 
+// DeleteNodeAffiliation deletes a pubsub node affiliation from storage.
 func (m *PubSub) DeleteNodeAffiliation(_ context.Context, jid, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
@@ -345,6 +361,7 @@ func (m *PubSub) DeleteNodeAffiliation(_ context.Context, jid, host, name string
 	})
 }
 
+// UpsertNodeSubscription inserts a new pubsub node subscription into storage, or updates it if previously inserted.
 func (m *PubSub) UpsertNodeSubscription(_ context.Context, subscription *pubsubmodel.Subscription, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
@@ -376,6 +393,7 @@ func (m *PubSub) UpsertNodeSubscription(_ context.Context, subscription *pubsubm
 	})
 }
 
+// FetchNodeSubscriptions retrieves all subscriptions associated to a node.
 func (m *PubSub) FetchNodeSubscriptions(_ context.Context, host, name string) ([]pubsubmodel.Subscription, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -394,6 +412,7 @@ func (m *PubSub) FetchNodeSubscriptions(_ context.Context, host, name string) ([
 	return subscriptions, nil
 }
 
+// DeleteNodeSubscription deletes a pubsub node subscription from storage.
 func (m *PubSub) DeleteNodeSubscription(_ context.Context, jid, host, name string) error {
 	return m.inWriteLock(func() error {
 		var b []byte
