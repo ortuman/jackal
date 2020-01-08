@@ -35,7 +35,7 @@ func TestBadgerDB_PrivateXML(t *testing.T) {
 
 func newPrivateMock() (*badgerDBPrivate, func()) {
 	t := newT()
-	return &badgerDBPrivate{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBPrivate{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

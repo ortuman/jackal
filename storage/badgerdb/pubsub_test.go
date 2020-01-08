@@ -200,7 +200,7 @@ func TestBadgerDB_PubSubSubscriptions(t *testing.T) {
 
 func newPubSubMock() (*badgerDBPubSub, func()) {
 	t := newT()
-	return &badgerDBPubSub{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBPubSub{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

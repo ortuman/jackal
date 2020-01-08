@@ -53,7 +53,7 @@ func TestBadgerDB_OfflineMessages(t *testing.T) {
 
 func newOfflineMock() (*badgerDBOffline, func()) {
 	t := newT()
-	return &badgerDBOffline{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBOffline{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

@@ -38,6 +38,7 @@ type pgSQLContainer struct {
 	doneCh     chan chan bool
 }
 
+// New initializes PgSQL storage and returns associated container.
 func New(cfg *Config) (repository.Container, error) {
 	c := &pgSQLContainer{doneCh: make(chan chan bool, 1)}
 

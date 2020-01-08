@@ -11,6 +11,7 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+// FormType represents form type constant value.
 const FormType = "FORM_TYPE"
 
 const (

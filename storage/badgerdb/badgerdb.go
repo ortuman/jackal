@@ -27,6 +27,7 @@ type badgerDBContainer struct {
 	db *badger.DB
 }
 
+// New initializes BadgerDB storage and returns associated container.
 func New(cfg *Config) (repository.Container, error) {
 	var c badgerDBContainer
 

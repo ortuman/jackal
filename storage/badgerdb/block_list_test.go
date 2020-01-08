@@ -52,7 +52,7 @@ func TestBadgerDB_BlockListItems(t *testing.T) {
 
 func newBlockListMock() (*badgerDBBlockList, func()) {
 	t := newT()
-	return &badgerDBBlockList{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBBlockList{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

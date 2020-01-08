@@ -134,7 +134,7 @@ func TestBadgerDB_RosterNotifications(t *testing.T) {
 
 func newRosterMock() (*badgerDBRoster, func()) {
 	t := newT()
-	return &badgerDBRoster{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBRoster{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

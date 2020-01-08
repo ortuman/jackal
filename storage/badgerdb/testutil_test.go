@@ -15,15 +15,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type T struct {
-	// DB provides the various functions required to interact with Badger.
-	DB *badger.DB
+type bgDBT struct {
+	db *badger.DB
 
 	dataDir string
 }
 
-func newT() *T {
-	t := &T{}
+func newT() *bgDBT {
+	t := &bgDBT{}
 	dir, _ := ioutil.TempDir("", "")
 	t.dataDir = dir + "/com.jackal.tests.badgerdb." + uuid.New().String()
 
@@ -37,11 +36,11 @@ func newT() *T {
 		_, _ = fmt.Fprintf(os.Stderr, "%v", err)
 		os.Exit(1)
 	}
-	t.DB = db
+	t.db = db
 	return t
 }
 
-func (t *T) teardown() {
-	_ = t.DB.Close()
+func (t *bgDBT) teardown() {
+	_ = t.db.Close()
 	_ = os.RemoveAll(t.dataDir)
 }

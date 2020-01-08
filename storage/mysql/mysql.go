@@ -30,6 +30,7 @@ type mySQLContainer struct {
 	doneCh chan chan bool
 }
 
+// New initializes MySQL storage and returns associated container.
 func New(cfg *Config) (repository.Container, error) {
 	var err error
 	c := &mySQLContainer{doneCh: make(chan chan bool, 1)}

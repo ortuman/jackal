@@ -36,7 +36,7 @@ func TestBadgerDB_Capabilities(t *testing.T) {
 
 func newCapabilitiesMock() (*badgerDBCapabilities, func()) {
 	t := newT()
-	return &badgerDBCapabilities{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBCapabilities{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

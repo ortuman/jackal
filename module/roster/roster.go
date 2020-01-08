@@ -599,7 +599,11 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'available' - user: %s", fromJID)
 
 		// register presence
-		if _, alreadyRegistered := x.presenceHub.RegisterPresence(ctx, presence); !alreadyRegistered && replyOnBehalf {
+		alreadyRegistered, err := x.presenceHub.RegisterPresence(ctx, presence)
+		if err != nil {
+			return err
+		}
+		if !alreadyRegistered && replyOnBehalf {
 			if err := x.deliverRosterPresences(ctx, userJID); err != nil {
 				return err
 			}

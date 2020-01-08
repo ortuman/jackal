@@ -17,10 +17,12 @@ type BlockList struct {
 	*memoryStorage
 }
 
+// NewBlockList returns an instance of BlockList in-memory storage.
 func NewBlockList() *BlockList {
 	return &BlockList{memoryStorage: newStorage()}
 }
 
+// InsertBlockListItem inserts a block list item entity into storage if not previously inserted.
 func (m *BlockList) InsertBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return m.updateInWriteLock(blockListItemKey(item.Username), func(b []byte) ([]byte, error) {
 		var items []model.BlockListItem
@@ -44,6 +46,7 @@ func (m *BlockList) InsertBlockListItem(_ context.Context, item *model.BlockList
 	})
 }
 
+// DeleteBlockListItem deletes a block list item entity from storage.
 func (m *BlockList) DeleteBlockListItem(_ context.Context, item *model.BlockListItem) error {
 	return m.updateInWriteLock(blockListItemKey(item.Username), func(b []byte) ([]byte, error) {
 		var items []model.BlockListItem
@@ -67,6 +70,7 @@ func (m *BlockList) DeleteBlockListItem(_ context.Context, item *model.BlockList
 	})
 }
 
+// FetchBlockListItems retrieves from storage all block list item entities associated to a given user.
 func (m *BlockList) FetchBlockListItems(_ context.Context, username string) ([]model.BlockListItem, error) {
 	var items []model.BlockListItem
 	_, err := m.getEntities(blockListItemKey(username), &items)

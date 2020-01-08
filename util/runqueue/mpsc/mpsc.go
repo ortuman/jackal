@@ -17,12 +17,14 @@ type node struct {
 	val  interface{}
 }
 
+// Queue represents a lock-free MPSC queue.
 type Queue struct {
 	head *node
 	tail *node
 	stub node
 }
 
+// New returns an empty Queue.
 func New() *Queue {
 	q := &Queue{}
 	q.head = &q.stub

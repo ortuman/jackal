@@ -22,6 +22,7 @@ type memoryContainer struct {
 	offline   *Offline
 }
 
+// New initializes in-memory storage and returns associated container.
 func New() (repository.Container, error) {
 	var c memoryContainer
 

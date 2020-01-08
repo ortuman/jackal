@@ -68,7 +68,7 @@ func (m *PubSub) UpsertNode(_ context.Context, node *pubsubmodel.Node) error {
 	})
 }
 
-// FetchNode retrieves from storage a pubsub node entity.
+// FetchNodes retrieves from storage all node entities associated with a host.
 func (m *PubSub) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {
@@ -88,7 +88,7 @@ func (m *PubSub) FetchNodes(_ context.Context, host string) ([]pubsubmodel.Node,
 	return nodes, nil
 }
 
-// FetchNodes retrieves from storage all node entities associated with a host.
+// FetchNode retrieves from storage a pubsub node entity.
 func (m *PubSub) FetchNode(_ context.Context, host, name string) (*pubsubmodel.Node, error) {
 	var b []byte
 	if err := m.inReadLock(func() error {

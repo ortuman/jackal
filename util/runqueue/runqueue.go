@@ -18,6 +18,7 @@ const (
 	running
 )
 
+// RunQueue represents a lock-free operation queue.
 type RunQueue struct {
 	name         string
 	queue        *mpsc.Queue
@@ -29,6 +30,7 @@ type RunQueue struct {
 type funcMessage struct{ fn func() }
 type stopMessage struct{ stopCb func() }
 
+// New returns an initialized lock-free operation queue.
 func New(name string) *RunQueue {
 	return &RunQueue{
 		name:  name,
@@ -36,6 +38,7 @@ func New(name string) *RunQueue {
 	}
 }
 
+// Run pushes a new operation function into the queue.
 func (m *RunQueue) Run(fn func()) {
 	if atomic.LoadInt32(&m.stopped) == 1 {
 		return
@@ -45,6 +48,10 @@ func (m *RunQueue) Run(fn func()) {
 	m.schedule()
 }
 
+// Stop signals the queue to stop running.
+//
+// Callback function represented by 'stopCb' its guaranteed to be immediately executed only if no job has been
+// previously scheduled.
 func (m *RunQueue) Stop(stopCb func()) {
 	if atomic.CompareAndSwapInt32(&m.stopped, 0, 1) {
 		if atomic.LoadInt32(&m.messageCount) > 0 {

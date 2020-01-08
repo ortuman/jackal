@@ -40,7 +40,7 @@ func TestBadgerDB_VCard(t *testing.T) {
 
 func newVCardMock() (*badgerDBVCard, func()) {
 	t := newT()
-	return &badgerDBVCard{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBVCard{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

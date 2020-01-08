@@ -47,7 +47,7 @@ func TestBadgerDB_User(t *testing.T) {
 
 func newUserMock() (*badgerDBUser, func()) {
 	t := newT()
-	return &badgerDBUser{badgerDBStorage: newStorage(t.DB)}, func() {
+	return &badgerDBUser{badgerDBStorage: newStorage(t.db)}, func() {
 		t.teardown()
 	}
 }

@@ -19,7 +19,6 @@ type BlockList interface {
 	// DeleteBlockListItem deletes a block list item entity from storage.
 	DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error
 
-	// FetchBlockListItems retrieves from storage all block list item entities
-	// associated to a given user.
+	// FetchBlockListItems retrieves from storage all block list item entities associated to a given user.
 	FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error)
 }

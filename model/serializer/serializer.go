@@ -26,7 +26,7 @@ type Deserializer interface {
 	FromBytes(buf *bytes.Buffer) error
 }
 
-// Serialize converts an slice of Serializer elements into its bytes representation.
+// SerializeSlice converts an slice of Serializer elements into its bytes representation.
 func SerializeSlice(slice interface{}) ([]byte, error) {
 	t := reflect.TypeOf(slice).Elem()
 	if t.Kind() != reflect.Slice {
@@ -58,7 +58,7 @@ func SerializeSlice(slice interface{}) ([]byte, error) {
 	return res, nil
 }
 
-// Deserialize reads an entity slice of Deserilizer elements from its bytes representation.
+// DeserializeSlice reads an entity slice of Deserilizer elements from its bytes representation.
 func DeserializeSlice(b []byte, slice interface{}) error {
 	t := reflect.TypeOf(slice).Elem()
 	if t.Kind() != reflect.Slice {

@@ -51,7 +51,7 @@ func New(router *router.Router, capsRep repository.Capabilities) *PresenceHub {
 }
 
 // RegisterPresence keeps track of a new client presence, requesting capabilities when necessary.
-func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Presence) (err error, alreadyRegistered bool) {
+func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Presence) (alreadyRegistered bool, err error) {
 	fromJID := presence.FromJID()
 
 	// check if caps were previously cached
@@ -61,7 +61,7 @@ func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Prese
 		if !ok {
 			caps, err := x.capsRep.FetchCapabilities(ctx, c.Node, c.Ver) // try fetching from disk
 			if err != nil {
-				return err, false
+				return false, err
 			}
 			if caps == nil {
 				x.requestCapabilities(ctx, c.Node, c.Ver, fromJID) // request capabilities
@@ -72,7 +72,7 @@ func (x *PresenceHub) RegisterPresence(ctx context.Context, presence *xmpp.Prese
 	}
 	// store available presence
 	_, loaded := x.availablePresences.LoadOrStore(fromJID, presence)
-	return nil, loaded
+	return loaded, nil
 }
 
 // UnregisterPresence removes a presence from the hub.
