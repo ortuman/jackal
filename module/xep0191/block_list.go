@@ -135,18 +135,20 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 	}
 	username := stm.Username()
 	for _, j := range jds {
-		if !x.isJIDInBlockList(j, blItems) {
-			err := x.blockListRep.InsertBlockListItem(ctx, &model.BlockListItem{
-				Username: username,
-				JID:      j.String(),
-			})
-			if err != nil {
-				log.Error(err)
-				stm.SendElement(ctx, iq.InternalServerError())
-				return
-			}
-			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
+		if x.isJIDInBlockList(j, blItems) {
+			continue
 		}
+		err := x.blockListRep.InsertBlockListItem(ctx, &model.BlockListItem{
+			Username: username,
+			JID:      j.String(),
+		})
+		if err != nil {
+			log.Error(err)
+			stm.SendElement(ctx, iq.InternalServerError())
+			return
+		}
+		// TODO(ortuman): send unavailable presence to the JID
+		x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
 	}
 	x.router.ReloadBlockList(username)
 
@@ -172,17 +174,19 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 	}
 	if len(jds) > 0 {
 		for _, j := range jds {
-			if x.isJIDInBlockList(j, blItems) {
-				if err := x.blockListRep.DeleteBlockListItem(ctx, &model.BlockListItem{
-					Username: username,
-					JID:      j.String(),
-				}); err != nil {
-					log.Error(err)
-					stm.SendElement(ctx, iq.InternalServerError())
-					return
-				}
-				x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
+			if !x.isJIDInBlockList(j, blItems) {
+				continue
 			}
+			if err := x.blockListRep.DeleteBlockListItem(ctx, &model.BlockListItem{
+				Username: username,
+				JID:      j.String(),
+			}); err != nil {
+				log.Error(err)
+				stm.SendElement(ctx, iq.InternalServerError())
+				return
+			}
+			// TODO(ortuman): send current presence to the JID
+			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	} else { // remove all block list items
 		for _, blItem := range blItems {
@@ -192,6 +196,8 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 				return
 			}
 			j, _ := jid.NewWithString(blItem.JID, true)
+
+			// TODO(ortuman): send current presence to the JID
 			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	}
