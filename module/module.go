@@ -10,8 +10,8 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/offline"
+	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/roster"
-	"github.com/ortuman/jackal/module/roster/presencehub"
 	"github.com/ortuman/jackal/module/xep0012"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/module/xep0049"
