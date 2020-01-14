@@ -147,7 +147,6 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 			stm.SendElement(ctx, iq.InternalServerError())
 			return
 		}
-		// TODO(ortuman): send unavailable presence to the JID
 		x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
 	}
 	x.router.ReloadBlockList(username)
@@ -185,7 +184,6 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 				stm.SendElement(ctx, iq.InternalServerError())
 				return
 			}
-			// TODO(ortuman): send current presence to the JID
 			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	} else { // remove all block list items
@@ -197,7 +195,6 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 			}
 			j, _ := jid.NewWithString(blItem.JID, true)
 
-			// TODO(ortuman): send current presence to the JID
 			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	}
@@ -219,18 +216,18 @@ func (x *BlockingCommand) pushIQ(ctx context.Context, elem xmpp.XElement, stm st
 	}
 }
 
-func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, jid *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
+func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, blockedJID *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
 	if x.presenceHub == nil {
 		// roster disabled
 		return
 	}
-	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(jid)
+	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(blockedJID)
 	for _, onlinePresence := range onlinePresences {
 		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {
 			continue
 		}
-		p := xmpp.NewPresence(presence.FromJID(), stm.JID().ToBareJID(), presenceType)
+		p := xmpp.NewPresence(stm.JID(), presence.FromJID(), presenceType)
 		if presenceType == xmpp.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
@@ -248,10 +245,9 @@ func (x *BlockingCommand) isJIDInBlockList(jid *jid.JID, blItems []model.BlockLi
 }
 
 func (x *BlockingCommand) isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) bool {
-	str := jid.String()
 	for _, ri := range ris {
-		if ri.JID == str && (ri.Subscription == rostermodel.SubscriptionTo || ri.Subscription == rostermodel.SubscriptionBoth) {
-			return true
+		if ri.JID == jid.String() {
+			return ri.Subscription == rostermodel.SubscriptionFrom || ri.Subscription == rostermodel.SubscriptionBoth
 		}
 	}
 	return false
