@@ -13,7 +13,7 @@ import (
 
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster/presencehub"
+	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
@@ -179,10 +179,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	x.ProcessIQ(context.Background(), iq)
 
 	// unavailable presence from *@jackal.im/jail
-	elem = stm1.ReceiveElement()
+	elem = stm4.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xmpp.UnavailableType, elem.Type())
-	require.Equal(t, "romeo@jackal.im/jail", elem.From())
+	require.Equal(t, "ortuman@jackal.im/balcony", elem.From())
 
 	// result IQ
 	elem = stm1.ReceiveElement()
@@ -198,12 +198,6 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.NotNil(t, block2)
 	item2 := block.Elements().Child("item")
 	require.NotNil(t, item2)
-
-	// ortuman@jackal.im/yard
-	elem = stm2.ReceiveElement()
-	require.Equal(t, "presence", elem.Name())
-	require.Equal(t, xmpp.UnavailableType, elem.Type())
-	require.Equal(t, "romeo@jackal.im/jail", elem.From())
 
 	elem = stm2.ReceiveElement()
 	require.Equal(t, "iq", elem.Name())
@@ -236,10 +230,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	x.ProcessIQ(context.Background(), iq)
 
 	// receive available presence from *@jackal.im/jail
-	elem = stm1.ReceiveElement()
+	elem = stm4.ReceiveElement()
 	require.Equal(t, "presence", elem.Name())
 	require.Equal(t, xmpp.AvailableType, elem.Type())
-	require.Equal(t, "romeo@jackal.im/jail", elem.From())
+	require.Equal(t, "ortuman@jackal.im/balcony", elem.From())
 
 	// result IQ
 	elem = stm1.ReceiveElement()

@@ -11,7 +11,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster/presencehub"
+	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
@@ -135,18 +135,19 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 	}
 	username := stm.Username()
 	for _, j := range jds {
-		if !x.isJIDInBlockList(j, blItems) {
-			err := x.blockListRep.InsertBlockListItem(ctx, &model.BlockListItem{
-				Username: username,
-				JID:      j.String(),
-			})
-			if err != nil {
-				log.Error(err)
-				stm.SendElement(ctx, iq.InternalServerError())
-				return
-			}
-			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
+		if x.isJIDInBlockList(j, blItems) {
+			continue
 		}
+		err := x.blockListRep.InsertBlockListItem(ctx, &model.BlockListItem{
+			Username: username,
+			JID:      j.String(),
+		})
+		if err != nil {
+			log.Error(err)
+			stm.SendElement(ctx, iq.InternalServerError())
+			return
+		}
+		x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
 	}
 	x.router.ReloadBlockList(username)
 
@@ -172,17 +173,18 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 	}
 	if len(jds) > 0 {
 		for _, j := range jds {
-			if x.isJIDInBlockList(j, blItems) {
-				if err := x.blockListRep.DeleteBlockListItem(ctx, &model.BlockListItem{
-					Username: username,
-					JID:      j.String(),
-				}); err != nil {
-					log.Error(err)
-					stm.SendElement(ctx, iq.InternalServerError())
-					return
-				}
-				x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
+			if !x.isJIDInBlockList(j, blItems) {
+				continue
 			}
+			if err := x.blockListRep.DeleteBlockListItem(ctx, &model.BlockListItem{
+				Username: username,
+				JID:      j.String(),
+			}); err != nil {
+				log.Error(err)
+				stm.SendElement(ctx, iq.InternalServerError())
+				return
+			}
+			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	} else { // remove all block list items
 		for _, blItem := range blItems {
@@ -192,6 +194,7 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 				return
 			}
 			j, _ := jid.NewWithString(blItem.JID, true)
+
 			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	}
@@ -213,18 +216,18 @@ func (x *BlockingCommand) pushIQ(ctx context.Context, elem xmpp.XElement, stm st
 	}
 }
 
-func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, jid *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
+func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, blockedJID *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
 	if x.presenceHub == nil {
 		// roster disabled
 		return
 	}
-	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(jid)
+	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(blockedJID)
 	for _, onlinePresence := range onlinePresences {
 		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {
 			continue
 		}
-		p := xmpp.NewPresence(presence.FromJID(), stm.JID().ToBareJID(), presenceType)
+		p := xmpp.NewPresence(stm.JID(), presence.FromJID(), presenceType)
 		if presenceType == xmpp.AvailableType {
 			p.AppendElements(presence.Elements().All())
 		}
@@ -242,10 +245,9 @@ func (x *BlockingCommand) isJIDInBlockList(jid *jid.JID, blItems []model.BlockLi
 }
 
 func (x *BlockingCommand) isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) bool {
-	str := jid.String()
 	for _, ri := range ris {
-		if ri.JID == str && (ri.Subscription == rostermodel.SubscriptionTo || ri.Subscription == rostermodel.SubscriptionBoth) {
-			return true
+		if ri.JID == jid.String() {
+			return ri.Subscription == rostermodel.SubscriptionFrom || ri.Subscription == rostermodel.SubscriptionBoth
 		}
 	}
 	return false

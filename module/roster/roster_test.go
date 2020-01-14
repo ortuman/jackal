@@ -13,7 +13,7 @@ import (
 
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/roster/presencehub"
+	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
