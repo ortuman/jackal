@@ -93,7 +93,10 @@ func (r *router) Certificates() []tls.Certificate {
 func (r *router) Route(ctx context.Context, stanza xmpp.Stanza) error {
 	toJID := stanza.ToJID()
 	if !r.IsLocalHost(toJID.Domain()) {
+		if r.s2s == nil {
+			return ErrFailedRemoteConnect
+		}
 		return r.s2s.Route(ctx, stanza)
 	}
-	return r.local.Router(ctx, stanza)
+	return r.local.Route(ctx, stanza)
 }

@@ -14,7 +14,7 @@ import (
 type localRouter struct {
 }
 
-func (r *localRouter) Router(ctx context.Context, stanza xmpp.Stanza) error {
+func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
 	// TODO(ortuman): implement me!
 	return nil
 }
