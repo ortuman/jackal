@@ -20,7 +20,26 @@ import (
 
 const defaultDomain = "localhost"
 
+type Type int
+
+const (
+	// Global represents a global router type.
+	Global = Type(iota)
+
+	// Local represents a C2S router type.
+	Local
+
+	// Cluster represents a cluster router type.
+	Cluster
+
+	// Remote represents a S2S router type.
+	Remote
+)
+
 type Router interface {
+	// Type returns router type.
+	Type() Type
+
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
 	Route(ctx context.Context, stanza xmpp.Stanza) error
@@ -55,7 +74,8 @@ type router struct {
 	defaultHostname string
 	hosts           map[string]tls.Certificate
 	local           *localRouter
-	s2s             *s2sRouter
+	cluster         Router
+	s2s             Router
 	blockListRep    repository.BlockList
 }
 
@@ -77,6 +97,10 @@ func New(config Config) (GlobalRouter, error) {
 		r.hosts[defaultDomain] = cer
 	}
 	return r, nil
+}
+
+func (r *router) Type() Type {
+	return Global
 }
 
 func (r *router) DefaultHostName() string {

@@ -27,6 +27,10 @@ func newLocalRouter(userRep repository.User) *localRouter {
 	}
 }
 
+func (r *localRouter) Type() Type {
+	return Local
+}
+
 func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
 	username := stanza.ToJID().Node()
 	r.mu.RLock()
