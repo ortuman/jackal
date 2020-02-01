@@ -12,6 +12,7 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/storage/repository"
+	"github.com/ortuman/jackal/stream"
 	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -30,6 +31,12 @@ type GlobalRouter interface {
 
 	// MustRoute forces stanza routing by ignoring user's blocking list.
 	MustRoute(ctx context.Context, stanza xmpp.Stanza) error
+
+	// Bind sets a c2s stream as bound.
+	Bind(ctx context.Context, stm stream.C2S)
+
+	// Unbind unbinds a previously bound c2s stream.
+	Unbind(ctx context.Context, j *jid.JID)
 
 	// DefaultHostName returns default local host name.
 	DefaultHostName() string
@@ -106,6 +113,14 @@ func (r *router) Route(ctx context.Context, stanza xmpp.Stanza) error {
 	return r.route(ctx, stanza, false)
 }
 
+func (r *router) Bind(ctx context.Context, stm stream.C2S) {
+	r.local.bind(stm)
+}
+
+func (r *router) Unbind(ctx context.Context, j *jid.JID) {
+	r.local.unbind(j.Node(), j.Resource())
+}
+
 func (r *router) route(ctx context.Context, stanza xmpp.Stanza, ignoreBlocking bool) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
@@ -129,6 +144,9 @@ func (r *router) isBlockedJID(ctx context.Context, j *jid.JID, username string) 
 	blockList, err := r.blockListRep.FetchBlockListItems(ctx, username)
 	if err != nil {
 		log.Error(err)
+		return false
+	}
+	if len(blockList) == 0 {
 		return false
 	}
 	blockListJIDs := make([]jid.JID, len(blockList))
