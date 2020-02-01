@@ -114,7 +114,7 @@ func (p *discoInfoProvider) nodeItems(ctx context.Context, host, node string) ([
 }
 
 func (p *discoInfoProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) bool {
-	if contact.Matches(userJID, jid.MatchesBare) {
+	if contact.MatchesWithOptions(userJID, jid.MatchesBare) {
 		return true
 	}
 	ri, err := p.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())

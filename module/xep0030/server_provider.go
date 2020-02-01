@@ -145,7 +145,7 @@ func (sp *serverProvider) unregisterAccountFeature(feature Feature) {
 }
 
 func (sp *serverProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) bool {
-	if contact.Matches(userJID, jid.MatchesBare) {
+	if contact.MatchesWithOptions(userJID, jid.MatchesBare) {
 		return true
 	}
 	ri, err := sp.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())

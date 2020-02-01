@@ -705,7 +705,7 @@ func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence)
 		_ = s.router.Route(ctx, presence)
 		return
 	}
-	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
+	replyOnBehalf := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
 
 	// update presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {

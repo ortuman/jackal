@@ -218,7 +218,7 @@ func (r *Router) UserStream(j *jid.JID) stream.C2S {
 
 	streams := r.streams[j.Node()]
 	for _, stm := range streams {
-		if j.Matches(stm.JID(), jid.MatchesFull) {
+		if j.MatchesWithOptions(stm.JID(), jid.MatchesFull) {
 			return stm
 		}
 	}
@@ -266,13 +266,13 @@ func (r *Router) MustRoute(ctx context.Context, stanza xmpp.Stanza) error {
 
 func (r *Router) jidMatchesBlockedJID(j, blockedJID *jid.JID) bool {
 	if blockedJID.IsFullWithUser() {
-		return j.Matches(blockedJID, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
+		return j.MatchesWithOptions(blockedJID, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
 	} else if blockedJID.IsFullWithServer() {
-		return j.Matches(blockedJID, jid.MatchesDomain|jid.MatchesResource)
+		return j.MatchesWithOptions(blockedJID, jid.MatchesDomain|jid.MatchesResource)
 	} else if blockedJID.IsBare() {
-		return j.Matches(blockedJID, jid.MatchesNode|jid.MatchesDomain)
+		return j.MatchesWithOptions(blockedJID, jid.MatchesNode|jid.MatchesDomain)
 	}
-	return j.Matches(blockedJID, jid.MatchesDomain)
+	return j.MatchesWithOptions(blockedJID, jid.MatchesDomain)
 }
 
 func (r *Router) getBlockList(ctx context.Context, username string) []*jid.JID {

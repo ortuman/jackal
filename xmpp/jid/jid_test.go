@@ -87,15 +87,15 @@ func TestMatchesJID(t *testing.T) {
 	j3, _ := jid.NewWithString("example.org", false)
 	j4, _ := jid.NewWithString("example.org/res1", false)
 	j6, _ := jid.NewWithString("ortuman@example2.org/res2", false)
-	require.True(t, j1.Matches(j1, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource))
-	require.True(t, j1.Matches(j2, jid.MatchesNode|jid.MatchesDomain))
-	require.True(t, j1.Matches(j3, jid.MatchesDomain))
-	require.True(t, j1.Matches(j4, jid.MatchesDomain|jid.MatchesResource))
+	require.True(t, j1.MatchesWithOptions(j1, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource))
+	require.True(t, j1.MatchesWithOptions(j2, jid.MatchesNode|jid.MatchesDomain))
+	require.True(t, j1.MatchesWithOptions(j3, jid.MatchesDomain))
+	require.True(t, j1.MatchesWithOptions(j4, jid.MatchesDomain|jid.MatchesResource))
 
-	require.False(t, j1.Matches(j2, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource))
-	require.False(t, j6.Matches(j2, jid.MatchesNode|jid.MatchesDomain))
-	require.False(t, j6.Matches(j3, jid.MatchesDomain))
-	require.False(t, j6.Matches(j4, jid.MatchesDomain|jid.MatchesResource))
+	require.False(t, j1.MatchesWithOptions(j2, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource))
+	require.False(t, j6.MatchesWithOptions(j2, jid.MatchesNode|jid.MatchesDomain))
+	require.False(t, j6.MatchesWithOptions(j3, jid.MatchesDomain))
+	require.False(t, j6.MatchesWithOptions(j4, jid.MatchesDomain|jid.MatchesResource))
 }
 
 func TestBadPrep(t *testing.T) {

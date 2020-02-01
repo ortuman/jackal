@@ -188,13 +188,13 @@ func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XEle
 
 func (x *PresenceHub) availableJIDMatchesJID(availableJID, j *jid.JID) bool {
 	if j.IsFullWithUser() {
-		return availableJID.Matches(j, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
+		return availableJID.MatchesWithOptions(j, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
 	} else if j.IsFullWithServer() {
-		return availableJID.Matches(j, jid.MatchesDomain|jid.MatchesResource)
+		return availableJID.MatchesWithOptions(j, jid.MatchesDomain|jid.MatchesResource)
 	} else if j.IsBare() {
-		return availableJID.Matches(j, jid.MatchesNode|jid.MatchesDomain)
+		return availableJID.MatchesWithOptions(j, jid.MatchesNode|jid.MatchesDomain)
 	}
-	return availableJID.Matches(j, jid.MatchesDomain)
+	return availableJID.MatchesWithOptions(j, jid.MatchesDomain)
 }
 
 func capabilitiesKey(node, ver string) string {

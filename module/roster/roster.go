@@ -592,7 +592,7 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 	userJID := fromJID.ToBareJID()
 	contactJID := presence.ToJID().ToBareJID()
 
-	replyOnBehalf := x.router.IsLocalHost(userJID.Domain()) && userJID.Matches(contactJID, jid.MatchesBare)
+	replyOnBehalf := x.router.IsLocalHost(userJID.Domain()) && userJID.MatchesWithOptions(contactJID, jid.MatchesBare)
 
 	// keep track of available presences
 	if presence.IsAvailable() {

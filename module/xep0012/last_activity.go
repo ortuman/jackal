@@ -130,7 +130,7 @@ func (x *LastActivity) sendReply(ctx context.Context, iq *xmpp.IQ, secs int, sta
 }
 
 func (x *LastActivity) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) (bool, error) {
-	if contact.Matches(userJID, jid.MatchesBare) {
+	if contact.MatchesWithOptions(userJID, jid.MatchesBare) {
 		return true, nil
 	}
 	ri, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())
