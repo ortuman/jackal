@@ -57,7 +57,8 @@ $ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yml
 Grant right to a dedicated 'jackal' user (replace `password` with your desired password).
 
 ```sh
-echo "GRANT ALL ON jackal.* TO 'jackal'@'localhost' IDENTIFIED BY 'password';" | mysql -h localhost -u root -p
+echo "CREATE USER IF NOT EXISTS 'jackal'@'localhost' IDENTIFIED BY 'password';" | mysql -h localhost -u root -p
+echo "GRANT ALL ON jackal.* TO 'jackal'@'localhost';" | mysql -h localhost -u root -p
 ```
 
 Create 'jackal' database (using previously created password).
