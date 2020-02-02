@@ -37,10 +37,8 @@ func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateSta
 	toJID := stanza.ToJID()
 
 	// validate if sender JID is blocked
-	if validateStanza {
-		if r.isBlockedJID(ctx, fromJID, toJID.Node()) {
-			return router.ErrBlockedJID
-		}
+	if validateStanza && r.isBlockedJID(ctx, fromJID, toJID.Node()) {
+		return router.ErrBlockedJID
 	}
 	username := stanza.ToJID().Node()
 	r.mu.RLock()
