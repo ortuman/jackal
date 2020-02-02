@@ -10,6 +10,8 @@ import (
 	"crypto/tls"
 	"testing"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
@@ -320,7 +322,7 @@ func setupTest(domain string) (router.GlobalRouter, *memorystorage.User) {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		userRep,
+		c2srouter.New(userRep),
 		memorystorage.NewBlockList(),
 	)
 	return r, userRep

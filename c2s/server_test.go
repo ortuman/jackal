@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+
 	"github.com/ortuman/jackal/stream"
 
 	"github.com/gorilla/websocket"
@@ -87,7 +89,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
 		},
-		memorystorage.NewUser(),
+		c2srouter.New(memorystorage.NewUser()),
 		memorystorage.NewBlockList(),
 	)
 	errCh := make(chan error)

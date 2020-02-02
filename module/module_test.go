@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
@@ -92,7 +94,7 @@ func setupModules(t *testing.T) *Modules {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 		},
-		rep.User(),
+		c2srouter.New(rep.User()),
 		rep.BlockList(),
 	)
 	return New(&config, r, rep)

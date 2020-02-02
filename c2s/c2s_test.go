@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
@@ -159,7 +161,7 @@ func setupTest(domain string) (router.GlobalRouter, repository.User, repository.
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		userRep,
+		c2srouter.New(userRep),
 		blockListRep,
 	)
 	return r, userRep, blockListRep
@@ -217,7 +219,7 @@ func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		userRep,
+		c2srouter.New(userRep),
 		blockListRep)
 
 	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, r, userRep, blockListRep)

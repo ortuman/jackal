@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/c2s"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
@@ -136,7 +137,9 @@ func (a *Application) Run() error {
 		return err
 	}
 	// initialize router
-	a.router, err = router.New(&cfg.Router, repContainer.User(), repContainer.BlockList())
+	localRouter := c2srouter.New(repContainer.User())
+
+	a.router, err = router.New(&cfg.Router, localRouter, repContainer.BlockList())
 	if err != nil {
 		return err
 	}

@@ -3,12 +3,13 @@
  * See the LICENSE file for more information.
  */
 
-package router
+package c2srouter
 
 import (
 	"context"
 	"sync"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -20,15 +21,11 @@ type localRouter struct {
 	userRep repository.User
 }
 
-func newLocalRouter(userRep repository.User) *localRouter {
+func New(userRep repository.User) *localRouter {
 	return &localRouter{
 		tbl:     make(map[string]*resources),
 		userRep: userRep,
 	}
-}
-
-func (r *localRouter) Type() Type {
-	return Local
 }
 
 func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
@@ -43,14 +40,14 @@ func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
 			return err
 		}
 		if exists {
-			return ErrNotAuthenticated
+			return router.ErrNotAuthenticated
 		}
-		return ErrNotExistingAccount
+		return router.ErrNotExistingAccount
 	}
 	return resources.route(ctx, stanza)
 }
 
-func (r *localRouter) bind(stm stream.C2S) {
+func (r *localRouter) Bind(stm stream.C2S) {
 	user := stm.Username()
 	r.mu.RLock()
 	res := r.tbl[user]
@@ -68,7 +65,7 @@ func (r *localRouter) bind(stm stream.C2S) {
 	res.bind(stm)
 }
 
-func (r *localRouter) unbind(user, resource string) {
+func (r *localRouter) Unbind(user, resource string) {
 	r.mu.RLock()
 	res := r.tbl[user]
 	r.mu.RUnlock()
@@ -84,18 +81,7 @@ func (r *localRouter) unbind(user, resource string) {
 	r.mu.Unlock()
 }
 
-func (r *localRouter) userStreams(username string) []stream.C2S {
-	r.mu.RLock()
-	res := r.tbl[username]
-	r.mu.RUnlock()
-
-	if res == nil {
-		return nil
-	}
-	return res.allStreams()
-}
-
-func (r *localRouter) userStream(username, resource string) stream.C2S {
+func (r *localRouter) Stream(username, resource string) stream.C2S {
 	r.mu.RLock()
 	res := r.tbl[username]
 	r.mu.RUnlock()
@@ -104,4 +90,15 @@ func (r *localRouter) userStream(username, resource string) stream.C2S {
 		return nil
 	}
 	return res.stream(resource)
+}
+
+func (r *localRouter) Streams(username string) []stream.C2S {
+	r.mu.RLock()
+	res := r.tbl[username]
+	r.mu.RUnlock()
+
+	if res == nil {
+		return nil
+	}
+	return res.allStreams()
 }

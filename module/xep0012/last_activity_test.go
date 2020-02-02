@@ -10,6 +10,8 @@ import (
 	"crypto/tls"
 	"testing"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/router"
@@ -144,7 +146,7 @@ func setupTest(domain string) (router.GlobalRouter, repository.User, repository.
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		userRep,
+		c2srouter.New(userRep),
 		memorystorage.NewBlockList(),
 	)
 	return r, userRep, rosterRep

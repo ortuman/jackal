@@ -3,12 +3,13 @@
  * See the LICENSE file for more information.
  */
 
-package router
+package c2srouter
 
 import (
 	"context"
 	"sync"
 
+	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -77,7 +78,7 @@ func (r *resources) route(ctx context.Context, stanza xmpp.Stanza) error {
 				return nil
 			}
 		}
-		return ErrResourceNotFound
+		return router.ErrResourceNotFound
 	}
 	switch stanza.(type) {
 	case *xmpp.Message:
