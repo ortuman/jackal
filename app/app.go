@@ -59,7 +59,7 @@ type Application struct {
 	output           io.Writer
 	args             []string
 	logger           log.Logger
-	router           router.GlobalRouter
+	router           router.Router
 	mods             *module.Modules
 	comps            *component.Components
 	c2s              *c2s.C2S
@@ -137,9 +137,10 @@ func (a *Application) Run() error {
 		return err
 	}
 	// initialize router
-	localRouter := c2srouter.New(repContainer.User())
-
-	a.router, err = router.New(&cfg.Router, localRouter, repContainer.BlockList())
+	a.router, err = router.New(
+		&cfg.Router,
+		c2srouter.New(repContainer.User(), repContainer.BlockList()),
+	)
 	if err != nil {
 		return err
 	}

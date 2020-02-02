@@ -24,14 +24,14 @@ const (
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
-	router      router.GlobalRouter
+	router      router.Router
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
 	runQueue    *runqueue.RunQueue
 }
 
 // New returns a disco info IQ handler module.
-func New(router router.GlobalRouter, rosterRep repository.Roster) *DiscoInfo {
+func New(router router.Router, rosterRep repository.Roster) *DiscoInfo {
 	di := &DiscoInfo{
 		router: router,
 		srvProvider: &serverProvider{

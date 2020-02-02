@@ -278,14 +278,14 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) (router.GlobalRouter, repository.BlockList, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.BlockList, repository.Roster) {
 	blockListRep := memorystorage.NewBlockList()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		blockListRep)
+		c2srouter.New(memorystorage.NewUser(), blockListRep),
+	)
 	return r, blockListRep, rosterRep
 }

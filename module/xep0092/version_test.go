@@ -76,13 +76,12 @@ func TestXEP0092(t *testing.T) {
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
 }
 
-func setupTest() router.GlobalRouter {
+func setupTest() router.Router {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r
 }

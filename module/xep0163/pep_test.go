@@ -914,7 +914,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
-func setupTest(domain string) (router.GlobalRouter, repository.Capabilities, repository.Roster, repository.PubSub) {
+func setupTest(domain string) (router.Router, repository.Capabilities, repository.Roster, repository.PubSub) {
 	capsRep := memorystorage.NewCapabilities()
 	rosterRep := memorystorage.NewRoster()
 	pubSubRep := memorystorage.NewPubSub()
@@ -922,8 +922,7 @@ func setupTest(domain string) (router.GlobalRouter, repository.Capabilities, rep
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r, capsRep, rosterRep, pubSubRep
 }

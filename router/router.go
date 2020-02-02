@@ -10,8 +10,6 @@ import (
 	"crypto/tls"
 	"sort"
 
-	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/xmpp"
@@ -21,13 +19,22 @@ import (
 const defaultDomain = "localhost"
 
 type Router interface {
+
+	// DefaultHostName returns default local host name.s
+	DefaultHostName() string
+
+	// IsLocalHost returns true if domain is a local server domain.
+	IsLocalHost(domain string) bool
+
+	// HostNames returns the list of all configured host names.
+	HostNames() []string
+
+	// Certificates returns an array of all configured domain certificates.
+	Certificates() []tls.Certificate
+
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
 	Route(ctx context.Context, stanza xmpp.Stanza) error
-}
-
-type GlobalRouter interface {
-	Router
 
 	// MustRoute forces stanza routing by ignoring user's blocking list.
 	MustRoute(ctx context.Context, stanza xmpp.Stanza) error
@@ -43,22 +50,12 @@ type GlobalRouter interface {
 
 	// LocalStreams returns all streams associated to a given username.
 	LocalStreams(username string) []stream.C2S
-
-	// DefaultHostName returns default local host name.s
-	DefaultHostName() string
-
-	// IsLocalHost returns true if domain is a local server domain.
-	IsLocalHost(domain string) bool
-
-	// HostNames returns the list of all configured host names.
-	HostNames() []string
-
-	// Certificates returns an array of all configured domain certificates.
-	Certificates() []tls.Certificate
 }
 
-type LocalRouter interface {
-	Router
+type C2SRouter interface {
+	// Route routes a stanza applying server rules for handling XML stanzas.
+	// (https://xmpp.org/rfcs/rfc3921.html#rules)
+	Route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error
 
 	// Bind sets a c2s stream as bound.
 	Bind(stm stream.C2S)
@@ -73,18 +70,22 @@ type LocalRouter interface {
 	Streams(username string) []stream.C2S
 }
 
+type S2SRouter interface {
+	// Route routes a stanza applying server rules for handling XML stanzas.
+	// (https://xmpp.org/rfcs/rfc3921.html#rules)
+	Route(ctx context.Context, stanza xmpp.Stanza) error
+}
+
 type router struct {
 	defaultHostname string
 	hosts           map[string]tls.Certificate
-	local           LocalRouter
-	s2s             Router
-	blockListRep    repository.BlockList
+	c2s             C2SRouter
+	s2s             S2SRouter
 }
 
-func New(config *Config, localRouter LocalRouter, blockListRep repository.BlockList) (GlobalRouter, error) {
+func New(config *Config, c2sRouter C2SRouter) (Router, error) {
 	r := &router{
-		hosts:        make(map[string]tls.Certificate),
-		blockListRep: blockListRep,
+		hosts: make(map[string]tls.Certificate),
 	}
 	if len(config.Hosts) > 0 {
 		for i, h := range config.Hosts {
@@ -101,7 +102,7 @@ func New(config *Config, localRouter LocalRouter, blockListRep repository.BlockL
 		r.defaultHostname = defaultDomain
 		r.hosts[defaultDomain] = cer
 	}
-	r.local = localRouter
+	r.c2s = c2sRouter
 	return r, nil
 }
 
@@ -132,66 +133,36 @@ func (r *router) Certificates() []tls.Certificate {
 }
 
 func (r *router) MustRoute(ctx context.Context, stanza xmpp.Stanza) error {
-	return r.route(ctx, stanza, true)
-}
-
-func (r *router) Route(ctx context.Context, stanza xmpp.Stanza) error {
 	return r.route(ctx, stanza, false)
 }
 
+func (r *router) Route(ctx context.Context, stanza xmpp.Stanza) error {
+	return r.route(ctx, stanza, true)
+}
+
 func (r *router) Bind(ctx context.Context, stm stream.C2S) {
-	r.local.Bind(stm)
+	r.c2s.Bind(stm)
 }
 
 func (r *router) Unbind(ctx context.Context, j *jid.JID) {
-	r.local.Unbind(j.Node(), j.Resource())
+	r.c2s.Unbind(j.Node(), j.Resource())
 }
 
 func (r *router) LocalStreams(username string) []stream.C2S {
-	return r.local.Streams(username)
+	return r.c2s.Streams(username)
 }
 
 func (r *router) LocalStream(username, resource string) stream.C2S {
-	return r.local.Stream(username, resource)
+	return r.c2s.Stream(username, resource)
 }
 
-func (r *router) route(ctx context.Context, stanza xmpp.Stanza, ignoreBlocking bool) error {
-	fromJID := stanza.FromJID()
+func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
 	toJID := stanza.ToJID()
-
-	// check if sender JID is blocked
-	if r.IsLocalHost(toJID.Domain()) && !ignoreBlocking {
-		if r.isBlockedJID(ctx, fromJID, toJID.Node()) {
-			return ErrBlockedJID
-		}
-	}
 	if !r.IsLocalHost(toJID.Domain()) {
 		if r.s2s == nil {
 			return ErrFailedRemoteConnect
 		}
 		return r.s2s.Route(ctx, stanza)
 	}
-	return r.local.Route(ctx, stanza)
-}
-
-func (r *router) isBlockedJID(ctx context.Context, j *jid.JID, username string) bool {
-	blockList, err := r.blockListRep.FetchBlockListItems(ctx, username)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-	if len(blockList) == 0 {
-		return false
-	}
-	blockListJIDs := make([]jid.JID, len(blockList))
-	for i, listItem := range blockList {
-		j, _ := jid.NewWithString(listItem.JID, true)
-		blockListJIDs[i] = *j
-	}
-	for _, blockedJID := range blockListJIDs {
-		if blockedJID.Matches(j) {
-			return true
-		}
-	}
-	return false
+	return r.c2s.Route(ctx, stanza, validateStanza)
 }

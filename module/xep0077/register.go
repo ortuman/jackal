@@ -33,13 +33,13 @@ type Config struct {
 // Register represents an in-band server stream module.
 type Register struct {
 	cfg      *Config
-	router   router.GlobalRouter
+	router   router.Router
 	runQueue *runqueue.RunQueue
 	rep      repository.User
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, disco *xep0030.DiscoInfo, router router.GlobalRouter, userRep repository.User) *Register {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router, userRep repository.User) *Register {
 	r := &Register{
 		cfg:      config,
 		router:   router,

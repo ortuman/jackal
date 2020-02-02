@@ -20,13 +20,13 @@ const privateNamespace = "jabber:iq:private"
 
 // Private represents a private storage server stream module.
 type Private struct {
-	router   router.GlobalRouter
+	router   router.Router
 	runQueue *runqueue.RunQueue
 	rep      repository.Private
 }
 
 // New returns a private storage IQ handler module.
-func New(router router.GlobalRouter, privRep repository.Private) *Private {
+func New(router router.Router, privRep repository.Private) *Private {
 	x := &Private{
 		router:   router,
 		runQueue: runqueue.New("xep0049"),

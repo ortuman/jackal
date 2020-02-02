@@ -316,14 +316,13 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	require.Equal(t, "5678", usr.Password)
 }
 
-func setupTest(domain string) (router.GlobalRouter, *memorystorage.User) {
+func setupTest(domain string) (router.Router, *memorystorage.User) {
 	userRep := memorystorage.NewUser()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(userRep),
-		memorystorage.NewBlockList(),
+		c2srouter.New(userRep, memorystorage.NewBlockList()),
 	)
 	return r, userRep
 }

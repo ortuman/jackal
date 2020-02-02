@@ -75,7 +75,7 @@ type Config struct {
 // Session represents an XMPP session between the two peers.
 type Session struct {
 	id           string
-	router       router.GlobalRouter
+	router       router.Router
 	tr           transport.Transport
 	pr           *xmpp.Parser
 	remoteDomain string
@@ -90,7 +90,7 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(id string, config *Config, router router.GlobalRouter) *Session {
+func New(id string, config *Config, router router.Router) *Session {
 	var parsingMode xmpp.ParsingMode
 	switch config.Transport.Type() {
 	case transport.Socket:

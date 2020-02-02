@@ -32,7 +32,7 @@ type server struct {
 	cfg             *Config
 	mods            *module.Modules
 	comps           *component.Components
-	router          router.GlobalRouter
+	router          router.Router
 	userRep         repository.User
 	blockListRep    repository.BlockList
 	inConnectionsMu sync.Mutex
@@ -44,7 +44,7 @@ type server struct {
 	listening       uint32
 }
 
-func newC2SServer(config *Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) c2sServer {
+func newC2SServer(config *Config, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) c2sServer {
 	return &server{
 		cfg:           config,
 		mods:          mods,

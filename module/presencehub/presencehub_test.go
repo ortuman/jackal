@@ -127,14 +127,13 @@ func TestPresenceHub_ProcessCapabilities(t *testing.T) {
 	require.Equal(t, "cool+feature", caps.Features[0])
 }
 
-func setupTest(domain string) (router.GlobalRouter, *memorystorage.Capabilities) {
+func setupTest(domain string) (router.Router, *memorystorage.Capabilities) {
 	s := memorystorage.NewCapabilities()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r, s
 }

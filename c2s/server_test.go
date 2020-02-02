@@ -89,8 +89,7 @@ func TestC2SWebSocketServer(t *testing.T) {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	errCh := make(chan error)
 	cfg := Config{

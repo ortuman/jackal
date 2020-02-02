@@ -71,14 +71,13 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
-func setupTest(domain string) (router.GlobalRouter, *memorystorage.Offline) {
+func setupTest(domain string) (router.Router, *memorystorage.Offline) {
 	s := memorystorage.NewOffline()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r, s
 }

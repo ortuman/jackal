@@ -19,7 +19,7 @@ import (
 )
 
 type serverProvider struct {
-	router          router.GlobalRouter
+	router          router.Router
 	rosterRep       repository.Roster
 	mu              sync.RWMutex
 	serverItems     []Item

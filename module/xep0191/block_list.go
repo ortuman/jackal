@@ -31,14 +31,14 @@ const (
 // BlockingCommand represents a blocking command IQ handler module.
 type BlockingCommand struct {
 	runQueue     *runqueue.RunQueue
-	router       router.GlobalRouter
+	router       router.Router
 	blockListRep repository.BlockList
 	rosterRep    repository.Roster
 	presenceHub  *presencehub.PresenceHub
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.GlobalRouter, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
 	b := &BlockingCommand{
 		runQueue:     runqueue.New("xep0191"),
 		router:       router,

@@ -154,15 +154,14 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) (router.GlobalRouter, repository.User, repository.BlockList) {
+func setupTest(domain string) (router.Router, repository.User, repository.BlockList) {
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(userRep),
-		blockListRep,
+		c2srouter.New(userRep, blockListRep),
 	)
 	return r, userRep, blockListRep
 }
@@ -210,7 +209,7 @@ func TestC2S_StartAndShutdown(t *testing.T) {
 
 func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 	srv := newFakeC2SServer()
-	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ router.GlobalRouter, _ repository.User, _ repository.BlockList) c2sServer {
+	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ router.Router, _ repository.User, _ repository.BlockList) c2sServer {
 		return srv
 	}
 	userRep := memorystorage.NewUser()
@@ -219,8 +218,8 @@ func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(userRep),
-		blockListRep)
+		c2srouter.New(userRep, blockListRep),
+	)
 
 	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, r, userRep, blockListRep)
 	return c2s, srv

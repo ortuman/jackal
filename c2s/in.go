@@ -40,7 +40,7 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
-	router         router.GlobalRouter
+	router         router.Router
 	userRep        repository.User
 	blockListRep   repository.BlockList
 	mods           *module.Modules
@@ -65,7 +65,7 @@ type inStream struct {
 	ctxCancelFn context.CancelFunc
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())
 	s := &inStream{
 		cfg:          config,

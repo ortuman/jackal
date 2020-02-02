@@ -43,7 +43,7 @@ type C2S struct {
 }
 
 // New returns a new instance of a c2s connection manager.
-func New(configs []Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) (*C2S, error) {
+func New(configs []Config, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) (*C2S, error) {
 	if len(configs) == 0 {
 		return nil, errors.New("at least one c2s configuration is required")
 	}

@@ -416,13 +416,12 @@ func TestSession_MapError(t *testing.T) {
 	require.Equal(t, &Error{UnderlyingErr: er}, sess.mapErrorToSessionError(er))
 }
 
-func setupTest(domain string) router.GlobalRouter {
+func setupTest(domain string) router.Router {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r
 }

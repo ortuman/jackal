@@ -9,26 +9,39 @@ import (
 	"context"
 	"sync"
 
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 type localRouter struct {
-	mu      sync.RWMutex
-	tbl     map[string]*resources
-	userRep repository.User
+	mu           sync.RWMutex
+	tbl          map[string]*resources
+	userRep      repository.User
+	blockListRep repository.BlockList
 }
 
-func New(userRep repository.User) *localRouter {
+func New(userRep repository.User, blockListRep repository.BlockList) router.C2SRouter {
 	return &localRouter{
-		tbl:     make(map[string]*resources),
-		userRep: userRep,
+		tbl:          make(map[string]*resources),
+		userRep:      userRep,
+		blockListRep: blockListRep,
 	}
 }
 
-func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
+func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
+	fromJID := stanza.FromJID()
+	toJID := stanza.ToJID()
+
+	// validate if sender JID is blocked
+	if validateStanza {
+		if r.isBlockedJID(ctx, fromJID, toJID.Node()) {
+			return router.ErrBlockedJID
+		}
+	}
 	username := stanza.ToJID().Node()
 	r.mu.RLock()
 	resources := r.tbl[username]
@@ -101,4 +114,26 @@ func (r *localRouter) Streams(username string) []stream.C2S {
 		return nil
 	}
 	return res.allStreams()
+}
+
+func (r *localRouter) isBlockedJID(ctx context.Context, j *jid.JID, username string) bool {
+	blockList, err := r.blockListRep.FetchBlockListItems(ctx, username)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	if len(blockList) == 0 {
+		return false
+	}
+	blockListJIDs := make([]jid.JID, len(blockList))
+	for i, listItem := range blockList {
+		j, _ := jid.NewWithString(listItem.JID, true)
+		blockListJIDs[i] = *j
+	}
+	for _, blockedJID := range blockListJIDs {
+		if blockedJID.Matches(j) {
+			return true
+		}
+	}
+	return false
 }

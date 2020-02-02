@@ -27,12 +27,12 @@ const offlineDeliveredCtxKey = "offline:delivered"
 type Offline struct {
 	cfg        *Config
 	runQueue   *runqueue.RunQueue
-	router     router.GlobalRouter
+	router     router.Router
 	offlineRep repository.Offline
 }
 
 // New returns an offline server stream module.
-func New(config *Config, disco *xep0030.DiscoInfo, router router.GlobalRouter, offlineRep repository.Offline) *Offline {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router, offlineRep repository.Offline) *Offline {
 	r := &Offline{
 		cfg:        config,
 		runQueue:   runqueue.New("xep0030"),

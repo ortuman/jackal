@@ -221,14 +221,13 @@ func testVCard() xmpp.XElement {
 	return vCard
 }
 
-func setupTest(domain string) (router.GlobalRouter, *memorystorage.VCard) {
+func setupTest(domain string) (router.Router, *memorystorage.VCard) {
 	s := memorystorage.NewVCard()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList(),
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 	)
 	return r, s
 }

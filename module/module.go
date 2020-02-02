@@ -57,13 +57,13 @@ type Modules struct {
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
 
-	router     router.GlobalRouter
+	router     router.Router
 	iqHandlers []IQHandler
 	all        []Module
 }
 
 // New returns a set of modules derived from a concrete configuration.
-func New(config *Config, router router.GlobalRouter, reps repository.Container) *Modules {
+func New(config *Config, router router.Router, reps repository.Container) *Modules {
 	var presenceHub = presencehub.New(router, reps.Capabilities())
 
 	m := &Modules{router: router}

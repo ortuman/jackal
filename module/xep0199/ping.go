@@ -60,7 +60,7 @@ type ping struct {
 // Ping represents a ping server stream module.
 type Ping struct {
 	cfg           *Config
-	router        router.GlobalRouter
+	router        router.Router
 	pings         map[string]*ping
 	activePingsMu sync.RWMutex
 	activePings   map[string]*ping
@@ -68,7 +68,7 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, router router.GlobalRouter) *Ping {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router) *Ping {
 	p := &Ping{
 		cfg:         config,
 		router:      router,

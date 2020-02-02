@@ -37,7 +37,7 @@ type Config struct {
 type Roster struct {
 	cfg         *Config
 	runQueue    *runqueue.RunQueue
-	router      router.GlobalRouter
+	router      router.Router
 	userRep     repository.User
 	rosterRep   repository.Roster
 	pep         *xep0163.Pep
@@ -45,7 +45,7 @@ type Roster struct {
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router router.GlobalRouter, userRep repository.User, rosterRep repository.Roster) *Roster {
+func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
 	r := &Roster{
 		cfg:         cfg,
 		runQueue:    runqueue.New("roster"),

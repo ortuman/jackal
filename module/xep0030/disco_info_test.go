@@ -189,13 +189,13 @@ func TestXEP0030_Provider(t *testing.T) {
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func setupTest(domain string) (router.GlobalRouter, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.Roster) {
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
-		c2srouter.New(memorystorage.NewUser()),
-		memorystorage.NewBlockList())
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+	)
 	return r, rosterRep
 }

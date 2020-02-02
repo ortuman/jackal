@@ -24,7 +24,7 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	router    router.GlobalRouter
+	router    router.Router
 	userRep   repository.User
 	rosterRep repository.Roster
 	startTime time.Time
@@ -32,7 +32,7 @@ type LastActivity struct {
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, router router.GlobalRouter, userRep repository.User, rosterRep repository.Roster) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router router.Router, userRep repository.User, rosterRep repository.Roster) *LastActivity {
 	x := &LastActivity{
 		runQueue:  runqueue.New("xep0012"),
 		router:    router,

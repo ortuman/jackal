@@ -35,12 +35,12 @@ type Config struct {
 // Version represents a version module.
 type Version struct {
 	cfg      *Config
-	router   router.GlobalRouter
+	router   router.Router
 	runQueue *runqueue.RunQueue
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, router router.GlobalRouter) *Version {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router) *Version {
 	v := &Version{
 		cfg:      config,
 		router:   router,

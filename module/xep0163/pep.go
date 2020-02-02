@@ -63,7 +63,7 @@ type commandContext struct {
 // Pep represents a Personal Eventing Protocol module.
 type Pep struct {
 	runQueue    *runqueue.RunQueue
-	router      router.GlobalRouter
+	router      router.Router
 	rosterRep   repository.Roster
 	pubSubRep   repository.PubSub
 	disco       *xep0030.DiscoInfo
@@ -72,7 +72,7 @@ type Pep struct {
 }
 
 // New returns a PEP command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.GlobalRouter, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.Router, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
 	p := &Pep{
 		runQueue:    runqueue.New("xep0163"),
 		rosterRep:   rosterRep,

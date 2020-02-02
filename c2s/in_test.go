@@ -419,7 +419,7 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 	time.Sleep(time.Millisecond * 100) // wait until stream internal state changes
 }
 
-func tUtilStreamInit(r router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) (*inStream, *fakeSocketConn) {
+func tUtilStreamInit(r router.Router, userRep repository.User, blockListRep repository.BlockList) (*inStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
 	stm := newStream(
@@ -444,7 +444,7 @@ func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
 	}
 }
 
-func tUtilInitModules(r router.GlobalRouter) *module.Modules {
+func tUtilInitModules(r router.Router) *module.Modules {
 	modules := map[string]struct{}{}
 	modules["roster"] = struct{}{}
 	modules["blocking_command"] = struct{}{}
