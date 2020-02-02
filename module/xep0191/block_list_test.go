@@ -92,7 +92,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	require.NotNil(t, bl)
 	require.Equal(t, 2, len(bl.Elements().Children("item")))
 
-	requested, _ := stm.GetContextValue(xep191RequestedContextKey).(bool)
+	requested, _ := stm.Value(xep191RequestedContextKey).(bool)
 	require.True(t, requested)
 
 	memorystorage.EnableMockedError()
@@ -142,8 +142,8 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	stm1.SetContextValue(xep191RequestedContextKey, true)
-	stm2.SetContextValue(xep191RequestedContextKey, true)
+	stm1.SetValue(xep191RequestedContextKey, true)
+	stm2.SetValue(xep191RequestedContextKey, true)
 
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",

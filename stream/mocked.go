@@ -56,13 +56,13 @@ func (m *MockC2S) Context() context.Context {
 	return m.ctx
 }
 
-func (m *MockC2S) GetContextValue(key interface{}) interface{} {
+func (m *MockC2S) Value(key interface{}) interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.ctx.Value(key)
 }
 
-func (m *MockC2S) SetContextValue(key, value interface{}) {
+func (m *MockC2S) SetValue(key, value interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.ctx = context.WithValue(m.ctx, key, value)

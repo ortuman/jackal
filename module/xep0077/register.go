@@ -96,7 +96,7 @@ func (x *Register) processIQ(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 			// ...send registration fields to requester entity...
 			x.sendRegistrationFields(ctx, iq, q, stm)
 		} else if iq.IsSet() {
-			registered, _ := stm.GetContextValue(xep077RegisteredCtxKey).(bool)
+			registered, _ := stm.Value(xep077RegisteredCtxKey).(bool)
 			if !registered {
 				// ...register a new user...
 				x.registerNewUser(ctx, iq, q, stm)
@@ -167,7 +167,7 @@ func (x *Register) registerNewUser(ctx context.Context, iq *xmpp.IQ, query xmpp.
 		return
 	}
 	stm.SendElement(ctx, iq.ResultIQ())
-	stm.SetContextValue(xep077RegisteredCtxKey, true) // mark as registered
+	stm.SetValue(xep077RegisteredCtxKey, true) // mark as registered
 }
 
 func (x *Register) cancelRegistration(ctx context.Context, iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {

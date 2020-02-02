@@ -30,8 +30,8 @@ type C2S interface {
 
 	Context() context.Context
 
-	GetContextValue(key interface{}) interface{}
-	SetContextValue(key, value interface{})
+	SetValue(key, value interface{})
+	Value(key interface{}) interface{}
 
 	Username() string
 	Domain() string

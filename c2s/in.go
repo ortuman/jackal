@@ -110,13 +110,13 @@ func (s *inStream) Context() context.Context {
 	return s.ctx
 }
 
-func (s *inStream) GetContextValue(key interface{}) interface{} {
+func (s *inStream) Value(key interface{}) interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.ctx.Value(key)
 }
 
-func (s *inStream) SetContextValue(key, value interface{}) {
+func (s *inStream) SetValue(key, value interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ctx = context.WithValue(s.ctx, key, value)

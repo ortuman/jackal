@@ -235,7 +235,7 @@ func TestStream_SendIQ(t *testing.T) {
 	require.Equal(t, iqID, elem.ID())
 	require.NotNil(t, elem.Elements().ChildNamespace("query", "jabber:iq:roster"))
 
-	requested, _ := stm.GetContextValue("roster:requested").(bool)
+	requested, _ := stm.Value("roster:requested").(bool)
 	require.True(t, requested)
 }
 

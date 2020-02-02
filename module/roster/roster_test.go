@@ -103,7 +103,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
 
-	requested, _ := stm.GetContextValue(rosterRequestedCtxKey).(bool)
+	requested, _ := stm.Value(rosterRequestedCtxKey).(bool)
 	require.True(t, requested)
 
 	// test versioning
@@ -148,7 +148,7 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
-	stm2.SetContextValue(rosterRequestedCtxKey, true)
+	stm2.SetValue(rosterRequestedCtxKey, true)
 
 	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()

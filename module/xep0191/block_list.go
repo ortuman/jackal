@@ -108,7 +108,7 @@ func (x *BlockingCommand) sendBlockList(ctx context.Context, iq *xmpp.IQ, stm st
 		itElem.SetAttribute("jid", blItem.JID)
 		blockList.AppendElement(itElem)
 	}
-	stm.SetContextValue(xep191RequestedContextKey, true)
+	stm.SetValue(xep191RequestedContextKey, true)
 
 	reply := iq.ResultIQ()
 	reply.AppendElement(blockList)
@@ -205,7 +205,7 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 func (x *BlockingCommand) pushIQ(ctx context.Context, elem xmpp.XElement, stm stream.C2S) {
 	streams := x.router.LocalStreams(stm.Username())
 	for _, stm := range streams {
-		requested, _ := stm.GetContextValue(xep191RequestedContextKey).(bool)
+		requested, _ := stm.Value(xep191RequestedContextKey).(bool)
 		if !requested {
 			continue
 		}
