@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/stream"
+
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
@@ -37,7 +39,13 @@ func TestC2SSocketServer(t *testing.T) {
 			Port: 9998,
 		},
 	}
-	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	srv := server{
+		cfg:           &cfg,
+		router:        r,
+		mods:          &module.Modules{},
+		comps:         &component.Components{},
+		inConnections: make(map[string]stream.C2S),
+	}
 	go srv.start()
 
 	go func() {
@@ -94,7 +102,13 @@ func TestC2SWebSocketServer(t *testing.T) {
 			Port:    9999,
 		},
 	}
-	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	srv := server{
+		cfg:           &cfg,
+		router:        r,
+		mods:          &module.Modules{},
+		comps:         &component.Components{},
+		inConnections: make(map[string]stream.C2S),
+	}
 	go srv.start()
 
 	go func() {

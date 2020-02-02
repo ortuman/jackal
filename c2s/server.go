@@ -29,18 +29,31 @@ import (
 var listenerProvider = net.Listen
 
 type server struct {
-	cfg          *Config
-	mods         *module.Modules
-	comps        *component.Components
-	router       router.GlobalRouter
-	userRep      repository.User
-	blockListRep repository.BlockList
-	inConns      sync.Map
-	ln           net.Listener
-	wsSrv        *http.Server
-	wsUpgrader   *websocket.Upgrader
-	stmSeq       uint64
-	listening    uint32
+	cfg             *Config
+	mods            *module.Modules
+	comps           *component.Components
+	router          router.GlobalRouter
+	userRep         repository.User
+	blockListRep    repository.BlockList
+	inConnectionsMu sync.Mutex
+	inConnections   map[string]stream.C2S
+	ln              net.Listener
+	wsSrv           *http.Server
+	wsUpgrader      *websocket.Upgrader
+	stmSeq          uint64
+	listening       uint32
+}
+
+func newC2SServer(config *Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) c2sServer {
+	return &server{
+		cfg:           config,
+		mods:          mods,
+		comps:         comps,
+		router:        router,
+		userRep:       userRep,
+		blockListRep:  blockListRep,
+		inConnections: make(map[string]stream.C2S),
+	}
 }
 
 func (s *server) start() {
@@ -122,7 +135,7 @@ func (s *server) shutdown(ctx context.Context) error {
 			}
 		}
 		// close all connections
-		c, err := closeConnections(ctx, &s.inConns)
+		c, err := s.closeConnections(ctx)
 		if err != nil {
 			return err
 		}
@@ -147,12 +160,18 @@ func (s *server) startStream(tr transport.Transport) {
 }
 
 func (s *server) registerStream(stm stream.C2S) {
-	s.inConns.Store(stm.ID(), stm)
+	s.inConnectionsMu.Lock()
+	s.inConnections[stm.ID()] = stm
+	s.inConnectionsMu.Unlock()
+
 	log.Infof("registered c2s stream... (id: %s)", stm.ID())
 }
 
 func (s *server) unregisterStream(stm stream.C2S) {
-	s.inConns.Delete(stm.ID())
+	s.inConnectionsMu.Lock()
+	delete(s.inConnections, stm.ID())
+	s.inConnectionsMu.Unlock()
+
 	log.Infof("unregistered c2s stream... (id: %s)", stm.ID())
 }
 
@@ -160,20 +179,18 @@ func (s *server) nextID() string {
 	return fmt.Sprintf("c2s:%s:%d", s.cfg.ID, atomic.AddUint64(&s.stmSeq, 1))
 }
 
-func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
-	connections.Range(func(_, v interface{}) bool {
-		stm := v.(stream.InStream)
+func (s *server) closeConnections(ctx context.Context) (count int, err error) {
+	s.inConnectionsMu.Lock()
+	for _, stm := range s.inConnections {
 		select {
 		case <-closeConn(ctx, stm):
 			count++
-			return true
 		case <-ctx.Done():
-			count = 0
-			err = ctx.Err()
-			return false
+			return 0, ctx.Err()
 		}
-	})
-	return
+	}
+	s.inConnectionsMu.Unlock()
+	return count, nil
 }
 
 func closeConn(ctx context.Context, stm stream.InStream) <-chan bool {

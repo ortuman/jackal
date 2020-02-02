@@ -33,16 +33,7 @@ type c2sServer interface {
 	shutdown(ctx context.Context) error
 }
 
-var createC2SServer = func(config *Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) c2sServer {
-	return &server{
-		cfg:          config,
-		mods:         mods,
-		comps:        comps,
-		router:       router,
-		userRep:      userRep,
-		blockListRep: blockListRep,
-	}
-}
+var createC2SServer = newC2SServer
 
 // C2S represents a client-to-server connection manager.
 type C2S struct {
