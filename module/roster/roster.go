@@ -148,7 +148,7 @@ func (x *Roster) sendRoster(ctx context.Context, iq *xmpp.IQ, query xmpp.XElemen
 			}
 		}
 	}
-	stm.SetBool(ctx, rosterRequestedCtxKey, true)
+	stm.SetContextValue(rosterRequestedCtxKey, true)
 	return nil
 }
 
@@ -709,7 +709,8 @@ func (x *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, to *jid.JID
 
 	streams := x.router.LocalStreams(to.Node())
 	for _, stm := range streams {
-		if !stm.GetBool(rosterRequestedCtxKey) {
+		requested, _ := stm.GetContextValue(rosterRequestedCtxKey).(bool)
+		if !requested {
 			continue
 		}
 		pushEl := xmpp.NewIQType(uuid.New(), xmpp.SetType)

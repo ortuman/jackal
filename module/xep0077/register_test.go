@@ -101,7 +101,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 	q.ClearElements()
 	iq.SetType(xmpp.SetType)
-	stm.SetBool(context.Background(), xep077RegisteredCtxKey, true)
+	stm.SetContextValue(xep077RegisteredCtxKey, true)
 
 	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()

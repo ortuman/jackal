@@ -52,7 +52,6 @@ func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza) error {
 
 func (r *localRouter) bind(stm stream.C2S) {
 	user := stm.Username()
-
 	r.mu.RLock()
 	res := r.tbl[user]
 	r.mu.RUnlock()
