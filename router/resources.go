@@ -33,6 +33,7 @@ func (r *resources) allStreams() []stream.C2S {
 func (r *resources) stream(resource string) stream.C2S {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	for _, stm := range r.streams {
 		if stm.Resource() == resource {
 			return stm
