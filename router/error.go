@@ -5,7 +5,7 @@
 
 package router
 
-import "github.com/pkg/errors"
+import "errors"
 
 var (
 	// ErrNotExistingAccount will be returned by Route method if destination user does not exist.
