@@ -74,7 +74,7 @@ func TestXEP0092(t *testing.T) {
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
 }
 
-func setupTest() *router.Router {
+func setupTest() router.GlobalRouter {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},

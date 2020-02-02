@@ -275,7 +275,7 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) (*router.Router, repository.BlockList, repository.Roster) {
+func setupTest(domain string) (router.GlobalRouter, repository.BlockList, repository.Roster) {
 	blockListRep := memorystorage.NewBlockList()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(

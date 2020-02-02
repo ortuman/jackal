@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2020 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -35,8 +35,8 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type tlsConfig struct {
-	CertFile    string `yaml:"cert_path"`
-	PrivKeyFile string `yaml:"privkey_path"`
+	CertFile       string `yaml:"cert_path"`
+	PrivateKeyFile string `yaml:"privkey_path"`
 }
 
 // HostConfig represents a host specific configuration.
@@ -57,7 +57,7 @@ func (c *HostConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	c.Name = p.Name
-	cer, err := utiltls.LoadCertificate(p.TLS.PrivKeyFile, p.TLS.CertFile, c.Name)
+	cer, err := utiltls.LoadCertificate(p.TLS.PrivateKeyFile, p.TLS.CertFile, c.Name)
 	if err != nil {
 		return err
 	}

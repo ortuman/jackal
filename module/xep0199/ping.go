@@ -60,7 +60,7 @@ type ping struct {
 // Ping represents a ping server stream module.
 type Ping struct {
 	cfg           *Config
-	router        *router.Router
+	router        router.GlobalRouter
 	pings         map[string]*ping
 	activePingsMu sync.RWMutex
 	activePings   map[string]*ping
@@ -68,7 +68,7 @@ type Ping struct {
 }
 
 // New returns an ping IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Ping {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.GlobalRouter) *Ping {
 	p := &Ping{
 		cfg:         config,
 		router:      router,
@@ -91,7 +91,7 @@ func (x *Ping) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a ping IQ taking according actions over the associated stream.
 func (x *Ping) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		stm := x.router.UserStream(iq.FromJID())
+		stm := x.router.LocalStream(iq.FromJID().Node(), iq.FromJID().Resource())
 		if stm == nil {
 			return
 		}

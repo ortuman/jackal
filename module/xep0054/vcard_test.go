@@ -219,7 +219,7 @@ func testVCard() xmpp.XElement {
 	return vCard
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.VCard) {
+func setupTest(domain string) (router.GlobalRouter, *memorystorage.VCard) {
 	s := memorystorage.NewVCard()
 	r, _ := router.New(
 		&router.Config{

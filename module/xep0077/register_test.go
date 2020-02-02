@@ -314,7 +314,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	require.Equal(t, "5678", usr.Password)
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.User) {
+func setupTest(domain string) (router.GlobalRouter, *memorystorage.User) {
 	userRep := memorystorage.NewUser()
 	r, _ := router.New(
 		&router.Config{

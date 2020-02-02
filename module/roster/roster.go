@@ -37,7 +37,7 @@ type Config struct {
 type Roster struct {
 	cfg         *Config
 	runQueue    *runqueue.RunQueue
-	router      *router.Router
+	router      router.GlobalRouter
 	userRep     repository.User
 	rosterRep   repository.Roster
 	pep         *xep0163.Pep
@@ -45,7 +45,7 @@ type Roster struct {
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router *router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
+func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router router.GlobalRouter, userRep repository.User, rosterRep repository.Roster) *Roster {
 	r := &Roster{
 		cfg:         cfg,
 		runQueue:    runqueue.New("roster"),
@@ -66,7 +66,7 @@ func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a roster IQ taking according actions over the associated stream.
 func (x *Roster) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		stm := x.router.UserStream(iq.FromJID())
+		stm := x.router.LocalStream(iq.FromJID().Node(), iq.FromJID().Resource())
 		if stm == nil {
 			return
 		}
@@ -707,7 +707,7 @@ func (x *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, to *jid.JID
 	}
 	query.AppendElement(ri.Element())
 
-	streams := x.router.UserStreams(to.Node())
+	streams := x.router.LocalStreams(to.Node())
 	for _, stm := range streams {
 		if !stm.GetBool(rosterRequestedCtxKey) {
 			continue
@@ -744,7 +744,7 @@ func (x *Roster) upsertNotification(ctx context.Context, contact string, userJID
 }
 
 func (x *Roster) routePresencesFrom(ctx context.Context, from *jid.JID, to *jid.JID, presenceType string) {
-	stms := x.router.UserStreams(from.Node())
+	stms := x.router.LocalStreams(from.Node())
 	for _, stm := range stms {
 		p := xmpp.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
 		if presence := stm.Presence(); presence != nil && presence.IsAvailable() {

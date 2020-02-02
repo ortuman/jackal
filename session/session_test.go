@@ -11,6 +11,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	stdxml "encoding/xml"
+	"errors"
 	"io"
 	"testing"
 	"time"
@@ -23,7 +24,6 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -414,7 +414,7 @@ func TestSession_MapError(t *testing.T) {
 	require.Equal(t, &Error{UnderlyingErr: er}, sess.mapErrorToSessionError(er))
 }
 
-func setupTest(domain string) *router.Router {
+func setupTest(domain string) router.GlobalRouter {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},

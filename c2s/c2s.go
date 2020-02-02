@@ -33,8 +33,15 @@ type c2sServer interface {
 	shutdown(ctx context.Context) error
 }
 
-var createC2SServer = func(config *Config, mods *module.Modules, comps *component.Components, router *router.Router, userRep repository.User) c2sServer {
-	return &server{cfg: config, mods: mods, comps: comps, router: router, userRep: userRep}
+var createC2SServer = func(config *Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) c2sServer {
+	return &server{
+		cfg:          config,
+		mods:         mods,
+		comps:        comps,
+		router:       router,
+		userRep:      userRep,
+		blockListRep: blockListRep,
+	}
 }
 
 // C2S represents a client-to-server connection manager.
@@ -45,13 +52,13 @@ type C2S struct {
 }
 
 // New returns a new instance of a c2s connection manager.
-func New(configs []Config, mods *module.Modules, comps *component.Components, router *router.Router, userRep repository.User) (*C2S, error) {
+func New(configs []Config, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) (*C2S, error) {
 	if len(configs) == 0 {
 		return nil, errors.New("at least one c2s configuration is required")
 	}
 	c := &C2S{servers: make(map[string]c2sServer)}
 	for _, config := range configs {
-		srv := createC2SServer(&config, mods, comps, router, userRep)
+		srv := createC2SServer(&config, mods, comps, router, userRep, blockListRep)
 		c.servers[config.ID] = srv
 	}
 	return c, nil

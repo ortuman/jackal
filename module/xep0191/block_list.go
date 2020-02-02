@@ -31,14 +31,14 @@ const (
 // BlockingCommand represents a blocking command IQ handler module.
 type BlockingCommand struct {
 	runQueue     *runqueue.RunQueue
-	router       *router.Router
+	router       router.GlobalRouter
 	blockListRep repository.BlockList
 	rosterRep    repository.Roster
 	presenceHub  *presencehub.PresenceHub
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.GlobalRouter, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
 	b := &BlockingCommand{
 		runQueue:     runqueue.New("xep0191"),
 		router:       router,
@@ -65,7 +65,7 @@ func (x *BlockingCommand) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a blocking command IQ taking according actions over the associated stream.
 func (x *BlockingCommand) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		stm := x.router.UserStream(iq.FromJID())
+		stm := x.router.LocalStream(iq.FromJID().Node(), iq.FromJID().Resource())
 		if stm == nil {
 			return
 		}
@@ -149,7 +149,6 @@ func (x *BlockingCommand) block(ctx context.Context, iq *xmpp.IQ, block xmpp.XEl
 		}
 		x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.UnavailableType, stm)
 	}
-	x.router.ReloadBlockList(username)
 
 	stm.SendElement(ctx, iq.ResultIQ())
 	x.pushIQ(ctx, block, stm)
@@ -198,14 +197,13 @@ func (x *BlockingCommand) unblock(ctx context.Context, iq *xmpp.IQ, unblock xmpp
 			x.broadcastPresenceMatchingJID(ctx, j, ris, xmpp.AvailableType, stm)
 		}
 	}
-	x.router.ReloadBlockList(username)
 
 	stm.SendElement(ctx, iq.ResultIQ())
 	x.pushIQ(ctx, unblock, stm)
 }
 
 func (x *BlockingCommand) pushIQ(ctx context.Context, elem xmpp.XElement, stm stream.C2S) {
-	streams := x.router.UserStreams(stm.Username())
+	streams := x.router.LocalStreams(stm.Username())
 	for _, stm := range streams {
 		if !stm.GetBool(xep191RequestedContextKey) {
 			continue

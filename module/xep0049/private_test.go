@@ -159,7 +159,7 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	require.Equal(t, "exodus:ns:2", q3.Elements().All()[0].Namespace())
 }
 
-func setupTest(domain string) (*router.Router, repository.Private) {
+func setupTest(domain string) (router.GlobalRouter, repository.Private) {
 	s := memorystorage.NewPrivate()
 	r, _ := router.New(
 		&router.Config{

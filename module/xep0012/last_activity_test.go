@@ -137,7 +137,7 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	memorystorage.DisableMockedError()
 }
 
-func setupTest(domain string) (*router.Router, repository.User, repository.Roster) {
+func setupTest(domain string) (router.GlobalRouter, repository.User, repository.Roster) {
 	userRep := memorystorage.NewUser()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(

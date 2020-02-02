@@ -69,7 +69,7 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	require.Equal(t, msgID, elem.ID())
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.Offline) {
+func setupTest(domain string) (router.GlobalRouter, *memorystorage.Offline) {
 	s := memorystorage.NewOffline()
 	r, _ := router.New(
 		&router.Config{

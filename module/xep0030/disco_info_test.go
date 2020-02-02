@@ -187,7 +187,7 @@ func TestXEP0030_Provider(t *testing.T) {
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func setupTest(domain string) (*router.Router, repository.Roster) {
+func setupTest(domain string) (router.GlobalRouter, repository.Roster) {
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
 		&router.Config{

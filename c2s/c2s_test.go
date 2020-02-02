@@ -92,8 +92,8 @@ func (c *fakeSocketConn) Write(b []byte) (n int, err error) {
 
 func (c *fakeSocketConn) Close() error {
 	if atomic.CompareAndSwapUint32(&c.closed, 0, 1) {
-		c.wr.Close()
-		c.rd.Close()
+		_ = c.wr.Close()
+		_ = c.rd.Close()
 		close(c.closeCh)
 		return nil
 	}
@@ -135,7 +135,7 @@ func (c *fakeSocketConn) loop() {
 	for {
 		select {
 		case b := <-c.wrCh:
-			c.wr.Write(b)
+			_, _ = c.wr.Write(b)
 		case <-c.closeCh:
 			return
 		}
@@ -152,7 +152,7 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) (*router.Router, repository.User, repository.BlockList) {
+func setupTest(domain string) (router.GlobalRouter, repository.User, repository.BlockList) {
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
@@ -187,7 +187,7 @@ func (s *fakeC2SServer) shutdown(ctx context.Context) error {
 }
 
 func TestC2S_StartAndShutdown(t *testing.T) {
-	c2s, fakeSrv := setupTestC2S()
+	c2s, fakeSrv := setupTestC2S("localhost")
 
 	c2s.Start()
 	select {
@@ -206,11 +206,20 @@ func TestC2S_StartAndShutdown(t *testing.T) {
 	}
 }
 
-func setupTestC2S() (*C2S, *fakeC2SServer) {
+func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 	srv := newFakeC2SServer()
-	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ *router.Router, _ repository.User) c2sServer {
+	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ router.GlobalRouter, _ repository.User, _ repository.BlockList) c2sServer {
 		return srv
 	}
-	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, &router.Router{}, memorystorage.NewUser())
+	userRep := memorystorage.NewUser()
+	blockListRep := memorystorage.NewBlockList()
+	r, _ := router.New(
+		&router.Config{
+			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
+		},
+		userRep,
+		blockListRep)
+
+	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, r, userRep, blockListRep)
 	return c2s, srv
 }

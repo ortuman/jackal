@@ -29,17 +29,18 @@ import (
 var listenerProvider = net.Listen
 
 type server struct {
-	cfg        *Config
-	mods       *module.Modules
-	comps      *component.Components
-	router     *router.Router
-	userRep    repository.User
-	inConns    sync.Map
-	ln         net.Listener
-	wsSrv      *http.Server
-	wsUpgrader *websocket.Upgrader
-	stmSeq     uint64
-	listening  uint32
+	cfg          *Config
+	mods         *module.Modules
+	comps        *component.Components
+	router       router.GlobalRouter
+	userRep      repository.User
+	blockListRep repository.BlockList
+	inConns      sync.Map
+	ln           net.Listener
+	wsSrv        *http.Server
+	wsUpgrader   *websocket.Upgrader
+	stmSeq       uint64
+	listening    uint32
 }
 
 func (s *server) start() {
@@ -141,7 +142,7 @@ func (s *server) startStream(tr transport.Transport) {
 		compression:      s.cfg.Compression,
 		onDisconnect:     s.unregisterStream,
 	}
-	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router, s.userRep)
+	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router, s.userRep, s.blockListRep)
 	s.registerStream(stm)
 }
 

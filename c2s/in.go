@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/auth"
-	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
@@ -41,8 +40,9 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
-	router         *router.Router
+	router         router.GlobalRouter
 	userRep        repository.User
+	blockListRep   repository.BlockList
 	mods           *module.Modules
 	comps          *component.Components
 	sess           *session.Session
@@ -65,16 +65,17 @@ type inStream struct {
 	context   map[string]interface{}
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router, userRep repository.User) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.GlobalRouter, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
 	s := &inStream{
-		cfg:      config,
-		router:   router,
-		userRep:  userRep,
-		mods:     mods,
-		comps:    comps,
-		id:       id,
-		context:  make(map[string]interface{}),
-		runQueue: runqueue.New(id),
+		cfg:          config,
+		router:       router,
+		userRep:      userRep,
+		blockListRep: blockListRep,
+		mods:         mods,
+		comps:        comps,
+		id:           id,
+		context:      make(map[string]interface{}),
+		runQueue:     runqueue.New(id),
 	}
 
 	// initialize stream context
@@ -608,7 +609,7 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 	}
 	// try binding...
 	var stm stream.C2S
-	streams := s.router.UserStreams(s.JID().Node())
+	streams := s.router.LocalStreams(s.JID().Node())
 	for _, s := range streams {
 		if s.Resource() == resource {
 			stm = s
@@ -862,10 +863,25 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession, u
 }
 
 func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
-	if j.IsServer() && s.router.IsLocalHost(j.Domain()) {
+	blockList, err := s.blockListRep.FetchBlockListItems(ctx, s.Username())
+	if err != nil {
+		log.Error(err)
 		return false
 	}
-	return s.router.IsBlockedJID(ctx, j, s.Username())
+	if len(blockList) == 0 {
+		return false
+	}
+	blockListJIDs := make([]jid.JID, len(blockList))
+	for i, listItem := range blockList {
+		j, _ := jid.NewWithString(listItem.JID, true)
+		blockListJIDs[i] = *j
+	}
+	for _, blockedJID := range blockListJIDs {
+		if blockedJID.Matches(j) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *inStream) restartSession() {
@@ -881,36 +897,12 @@ func (s *inStream) setContextValue(ctx context.Context, key string, value interf
 	s.contextMu.Lock()
 	s.context[key] = value
 	s.contextMu.Unlock()
-
-	// notify the whole roster about the context update.
-	if c := s.router.Cluster(); c != nil {
-		c.BroadcastMessage(ctx, &cluster.Message{
-			Type: cluster.MsgUpdateContext,
-			Node: c.LocalNode(),
-			Payloads: []cluster.MessagePayload{{
-				JID:     s.JID(),
-				Context: map[string]interface{}{key: value},
-			}},
-		})
-	}
 }
 
 func (s *inStream) setPresence(ctx context.Context, presence *xmpp.Presence) {
 	s.mu.Lock()
 	s.presence = presence
 	s.mu.Unlock()
-
-	// notify the whole cluster about the presence update
-	if c := s.router.Cluster(); c != nil {
-		c.BroadcastMessage(ctx, &cluster.Message{
-			Type: cluster.MsgUpdatePresence,
-			Node: c.LocalNode(),
-			Payloads: []cluster.MessagePayload{{
-				JID:    s.jid,
-				Stanza: presence,
-			}},
-		})
-	}
 }
 
 func (s *inStream) setJID(j *jid.JID) {

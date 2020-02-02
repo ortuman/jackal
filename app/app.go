@@ -21,12 +21,10 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/c2s"
-	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 	"github.com/pkg/errors"
@@ -60,11 +58,9 @@ type Application struct {
 	output           io.Writer
 	args             []string
 	logger           log.Logger
-	cluster          *cluster.Cluster
-	router           *router.Router
+	router           router.GlobalRouter
 	mods             *module.Modules
 	comps            *component.Components
-	s2s              *s2s.S2S
 	c2s              *c2s.C2S
 	debugSrv         *http.Server
 	waitStopCh       chan os.Signal
@@ -145,36 +141,12 @@ func (a *Application) Run() error {
 		return err
 	}
 
-	// initialize cluster
-	if cfg.Cluster != nil {
-		if repContainer.IsClusterCompatible() {
-			a.cluster, err = cluster.New(cfg.Cluster, a.router.ClusterDelegate())
-			if err != nil {
-				return err
-			}
-			if a.cluster != nil {
-				a.router.SetCluster(a.cluster)
-				if err := a.cluster.Join(); err != nil {
-					log.Warnf("%v", err)
-				}
-			}
-		} else {
-			log.Warnf("cluster mode disabled: storage type '%s' is not compatible", cfg.Storage.Type)
-		}
-	}
-
 	// initialize modules & components...
 	a.mods = module.New(&cfg.Modules, a.router, repContainer)
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
-	// start serving s2s...
-	a.s2s = s2s.New(cfg.S2S, a.mods, a.router)
-	if a.s2s != nil {
-		a.router.SetOutS2SProvider(a.s2s)
-		a.s2s.Start()
-	}
 	// start serving c2s...
-	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router, repContainer.User())
+	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router, repContainer.User(), repContainer.BlockList())
 	if err != nil {
 		return err
 	}
@@ -284,12 +256,7 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 			_ = a.debugSrv.Shutdown(ctx)
 		}
 		a.c2s.Shutdown(ctx)
-		if a.s2s != nil {
-			a.s2s.Shutdown(ctx)
-		}
-		if a.cluster != nil {
-			_ = a.cluster.Shutdown(ctx)
-		}
+
 		_ = a.comps.Shutdown(ctx)
 		_ = a.mods.Shutdown(ctx)
 

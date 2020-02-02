@@ -34,7 +34,7 @@ type AvailablePresenceInfo struct {
 // PresenceHub represents global presence hub
 type PresenceHub struct {
 	runQueue           *runqueue.RunQueue
-	router             *router.Router
+	router             router.GlobalRouter
 	capsRep            repository.Capabilities
 	availablePresences sync.Map
 	capabilities       sync.Map
@@ -42,7 +42,7 @@ type PresenceHub struct {
 }
 
 // New returns a new presence hub instance.
-func New(router *router.Router, capsRep repository.Capabilities) *PresenceHub {
+func New(router router.GlobalRouter, capsRep repository.Capabilities) *PresenceHub {
 	return &PresenceHub{
 		runQueue: runqueue.New("presencehub"),
 		router:   router,

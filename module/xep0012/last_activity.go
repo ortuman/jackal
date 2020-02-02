@@ -24,7 +24,7 @@ const lastActivityNamespace = "jabber:iq:last"
 
 // LastActivity represents a last activity stream module.
 type LastActivity struct {
-	router    *router.Router
+	router    router.GlobalRouter
 	userRep   repository.User
 	rosterRep repository.Roster
 	startTime time.Time
@@ -32,7 +32,7 @@ type LastActivity struct {
 }
 
 // New returns a last activity IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router, userRep repository.User, rosterRep repository.Roster) *LastActivity {
+func New(disco *xep0030.DiscoInfo, router router.GlobalRouter, userRep repository.User, rosterRep repository.Roster) *LastActivity {
 	x := &LastActivity{
 		runQueue:  runqueue.New("xep0012"),
 		router:    router,
@@ -95,7 +95,7 @@ func (x *LastActivity) sendServerUptime(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (x *LastActivity) sendUserLastActivity(ctx context.Context, iq *xmpp.IQ, to *jid.JID) {
-	if len(x.router.UserStreams(to.Node())) > 0 { // user is online
+	if len(x.router.LocalStreams(to.Node())) > 0 { // user is online
 		x.sendReply(ctx, iq, 0, "")
 		return
 	}

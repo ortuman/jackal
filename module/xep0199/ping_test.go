@@ -139,7 +139,7 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	require.Equal(t, "connection-timeout", err.Error())
 }
 
-func setupTest() *router.Router {
+func setupTest() router.GlobalRouter {
 	r, _ := router.New(
 		&router.Config{
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},

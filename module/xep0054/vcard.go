@@ -20,13 +20,13 @@ const vCardNamespace = "vcard-temp"
 
 // VCard represents a vCard server stream module.
 type VCard struct {
-	router   *router.Router
+	router   router.GlobalRouter
 	runQueue *runqueue.RunQueue
 	rep      repository.VCard
 }
 
 // New returns a vCard IQ handler module.
-func New(disco *xep0030.DiscoInfo, router *router.Router, rep repository.VCard) *VCard {
+func New(disco *xep0030.DiscoInfo, router router.GlobalRouter, rep repository.VCard) *VCard {
 	v := &VCard{
 		router:   router,
 		runQueue: runqueue.New("xep0054"),

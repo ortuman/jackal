@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package router2
+package router
 
 import (
 	"context"
@@ -22,6 +22,23 @@ func (r *resources) len() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.streams)
+}
+
+func (r *resources) allStreams() []stream.C2S {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.streams
+}
+
+func (r *resources) stream(resource string) stream.C2S {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, stm := range r.streams {
+		if stm.Resource() == resource {
+			return stm
+		}
+	}
+	return nil
 }
 
 func (r *resources) bind(stm stream.C2S) {

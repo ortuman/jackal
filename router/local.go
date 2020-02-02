@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package router2
+package router
 
 import (
 	"context"
@@ -83,4 +83,26 @@ func (r *localRouter) unbind(user, resource string) {
 		delete(r.tbl, user)
 	}
 	r.mu.Unlock()
+}
+
+func (r *localRouter) userStreams(username string) []stream.C2S {
+	r.mu.RLock()
+	res := r.tbl[username]
+	r.mu.RUnlock()
+
+	if res == nil {
+		return nil
+	}
+	return res.allStreams()
+}
+
+func (r *localRouter) userStream(username, resource string) stream.C2S {
+	r.mu.RLock()
+	res := r.tbl[username]
+	r.mu.RUnlock()
+
+	if res == nil {
+		return nil
+	}
+	return res.stream(resource)
 }
