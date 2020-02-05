@@ -73,7 +73,7 @@ func (r *resources) route(ctx context.Context, stanza xmpp.Stanza) error {
 	toJID := stanza.ToJID()
 	if toJID.IsFullWithUser() {
 		for _, stm := range r.streams {
-			if stm.Resource() == toJID.Resource() {
+			if p := stm.Presence(); p != nil && p.IsAvailable() && stm.Resource() == toJID.Resource() {
 				stm.SendElement(ctx, stanza)
 				return nil
 			}
@@ -83,23 +83,26 @@ func (r *resources) route(ctx context.Context, stanza xmpp.Stanza) error {
 	switch stanza.(type) {
 	case *xmpp.Message:
 		// send to highest priority stream
-		stm := r.streams[0]
 		var highestPriority int8
-		if p := stm.Presence(); p != nil {
-			highestPriority = p.Priority()
-		}
-		for i := 1; i < len(r.streams); i++ {
-			rcp := r.streams[i]
-			if p := rcp.Presence(); p != nil && p.Priority() > highestPriority {
-				stm = rcp
+		var recipient stream.C2S
+
+		for _, stm := range r.streams {
+			if p := stm.Presence(); p != nil && p.IsAvailable() && p.Priority() > highestPriority {
+				recipient = stm
 				highestPriority = p.Priority()
 			}
 		}
-		stm.SendElement(ctx, stanza)
+		if recipient == nil {
+			goto broadcast
+		}
+		recipient.SendElement(ctx, stanza)
+		return nil
+	}
 
-	default:
-		// broadcast toJID all streams
-		for _, stm := range r.streams {
+broadcast:
+	// broadcast toJID all streams
+	for _, stm := range r.streams {
+		if p := stm.Presence(); p != nil && p.IsAvailable() {
 			stm.SendElement(ctx, stanza)
 		}
 	}
