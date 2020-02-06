@@ -17,7 +17,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-type localRouter struct {
+type c2sRouter struct {
 	mu           sync.RWMutex
 	tbl          map[string]*resources
 	userRep      repository.User
@@ -25,14 +25,14 @@ type localRouter struct {
 }
 
 func New(userRep repository.User, blockListRep repository.BlockList) router.C2SRouter {
-	return &localRouter{
+	return &c2sRouter{
 		tbl:          make(map[string]*resources),
 		userRep:      userRep,
 		blockListRep: blockListRep,
 	}
 }
 
-func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
+func (r *c2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
@@ -58,7 +58,7 @@ func (r *localRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateSta
 	return resources.route(ctx, stanza)
 }
 
-func (r *localRouter) Bind(stm stream.C2S) {
+func (r *c2sRouter) Bind(stm stream.C2S) {
 	user := stm.Username()
 	r.mu.RLock()
 	res := r.tbl[user]
@@ -76,7 +76,7 @@ func (r *localRouter) Bind(stm stream.C2S) {
 	res.bind(stm)
 }
 
-func (r *localRouter) Unbind(user, resource string) {
+func (r *c2sRouter) Unbind(user, resource string) {
 	r.mu.RLock()
 	res := r.tbl[user]
 	r.mu.RUnlock()
@@ -92,7 +92,7 @@ func (r *localRouter) Unbind(user, resource string) {
 	r.mu.Unlock()
 }
 
-func (r *localRouter) Stream(username, resource string) stream.C2S {
+func (r *c2sRouter) Stream(username, resource string) stream.C2S {
 	r.mu.RLock()
 	res := r.tbl[username]
 	r.mu.RUnlock()
@@ -103,7 +103,7 @@ func (r *localRouter) Stream(username, resource string) stream.C2S {
 	return res.stream(resource)
 }
 
-func (r *localRouter) Streams(username string) []stream.C2S {
+func (r *c2sRouter) Streams(username string) []stream.C2S {
 	r.mu.RLock()
 	res := r.tbl[username]
 	r.mu.RUnlock()
@@ -114,7 +114,7 @@ func (r *localRouter) Streams(username string) []stream.C2S {
 	return res.allStreams()
 }
 
-func (r *localRouter) isBlockedJID(ctx context.Context, j *jid.JID, username string) bool {
+func (r *c2sRouter) isBlockedJID(ctx context.Context, j *jid.JID, username string) bool {
 	blockList, err := r.blockListRep.FetchBlockListItems(ctx, username)
 	if err != nil {
 		log.Error(err)
