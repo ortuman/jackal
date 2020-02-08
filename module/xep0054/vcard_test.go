@@ -51,6 +51,8 @@ func TestXEP0054_Set(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqID := uuid.New()
@@ -89,6 +91,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(nil, r, s)
@@ -125,6 +129,8 @@ func TestXEP0054_Get(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqSet := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -171,6 +177,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqSet := xmpp.NewIQType(uuid.New(), xmpp.SetType)

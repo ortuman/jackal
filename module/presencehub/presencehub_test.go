@@ -72,6 +72,8 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// register presence

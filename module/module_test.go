@@ -50,6 +50,8 @@ func TestModules_ProcessIQ(t *testing.T) {
 	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	stm := stream.NewMockC2S(uuid.New().String(), j0)
+	stm.SetPresence(xmpp.NewPresence(j0.ToBareJID(), j0, xmpp.AvailableType))
+
 	mods.router.Bind(context.Background(), stm)
 
 	iqID := uuid.New().String()

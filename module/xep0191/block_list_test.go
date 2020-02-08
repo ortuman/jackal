@@ -131,6 +131,11 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	stm3.SetAuthenticated(true)
 	stm4.SetAuthenticated(true)
 
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	stm3.SetPresence(xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	stm4.SetPresence(xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 	r.Bind(context.Background(), stm3)

@@ -308,6 +308,8 @@ func TestStream_SendMessage(t *testing.T) {
 	jTo, _ := jid.New("ortuman", "localhost", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", jTo)
+	stm2.SetPresence(xmpp.NewPresence(jTo, jTo, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm2)
 
 	msgID := uuid.New()

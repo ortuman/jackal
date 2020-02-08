@@ -48,6 +48,8 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
+	stm.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, s)
@@ -100,6 +102,8 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, s)

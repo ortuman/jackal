@@ -33,6 +33,8 @@ func TestXEP0163_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r, rosterRep, pubSubRep)
@@ -52,6 +54,8 @@ func TestXEP163_CreateNode(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r, rosterRep, pubSubRep)
@@ -85,6 +89,8 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	_ = pubSubRep.UpsertNode(context.Background(), &pubsubmodel.Node{
@@ -138,6 +144,9 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -231,6 +240,9 @@ func TestXEP163_DeleteNode(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -312,6 +324,8 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node
@@ -376,6 +390,8 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
@@ -435,6 +451,8 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node
@@ -499,6 +517,8 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
@@ -559,6 +579,9 @@ func TestXEP163_Subscribe(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -642,6 +665,8 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
@@ -704,6 +729,8 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -835,6 +862,8 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 

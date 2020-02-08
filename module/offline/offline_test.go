@@ -29,6 +29,8 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 	j2, _ := jid.New("juliet", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
+	stm.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(&Config{QueueSize: 1}, nil, r, s)
@@ -59,6 +61,8 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 
 	// deliver offline messages...
 	stm2 := stream.NewMockC2S("abcd", j2)
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm2)
 
 	x2 := New(&Config{QueueSize: 1}, nil, r, s)

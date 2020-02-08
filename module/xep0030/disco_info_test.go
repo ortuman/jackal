@@ -62,6 +62,8 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	srvJid, _ := jid.New("", "jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)
@@ -113,6 +115,8 @@ func TestXEP0030_SendItems(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)
@@ -157,6 +161,8 @@ func TestXEP0030_Provider(t *testing.T) {
 	compJID, _ := jid.New("", "test.jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)

@@ -226,6 +226,8 @@ func TestRoster_RemoveItem(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	rtr.Bind(context.Background(), stm)
 
 	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
@@ -266,6 +268,9 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
+
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 
 	rtr.Bind(context.Background(), stm1)
 	rtr.Bind(context.Background(), stm2)
@@ -369,6 +374,8 @@ func TestRoster_Probe(t *testing.T) {
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	stm.SetAuthenticated(true)
+
+	stm.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
 
 	rtr.Bind(context.Background(), stm)
 
