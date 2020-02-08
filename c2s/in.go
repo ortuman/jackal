@@ -835,7 +835,7 @@ func (s *inStream) restartSession() {
 		JID:           s.JID(),
 		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
-	}, s.router)
+	}, s.router.Hosts())
 	s.setState(connecting)
 }
 

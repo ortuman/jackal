@@ -12,7 +12,7 @@ import (
 
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/session"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/util/runqueue"
@@ -35,7 +35,7 @@ type outStream struct {
 	started       uint32
 	id            string
 	cfg           *streamConfig
-	router        router.Router
+	hosts         *host.Hosts
 	state         uint32
 	sess          *session.Session
 	secured       uint32
@@ -48,11 +48,11 @@ type outStream struct {
 	onDisconnect  func(s stream.S2SOut)
 }
 
-func newOutStream(router router.Router) *outStream {
+func newOutStream(hosts *host.Hosts) *outStream {
 	id := nextOutID()
 	return &outStream{
 		id:       id,
-		router:   router,
+		hosts:    hosts,
 		verifyCh: make(chan bool, 1),
 		discCh:   make(chan *streamerror.Error, 1),
 		runQueue: runqueue.New(id),
@@ -363,7 +363,7 @@ func (s *outStream) restartSession() {
 		RemoteDomain:  s.cfg.remoteDomain,
 		IsServer:      true,
 		IsInitiating:  true,
-	}, s.router)
+	}, s.hosts)
 	s.setState(outConnecting)
 }
 
