@@ -37,7 +37,7 @@ func (r *c2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, validateStanz
 	toJID := stanza.ToJID()
 
 	// validate if sender JID is blocked
-	if validateStanza && r.isBlockedJID(ctx, fromJID, toJID.Node()) {
+	if validateStanza && r.isBlockedJID(ctx, toJID, fromJID.Node()) {
 		return router.ErrBlockedJID
 	}
 	username := stanza.ToJID().Node()

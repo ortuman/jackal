@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
-
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"

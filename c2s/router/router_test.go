@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/model"
-
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
@@ -50,24 +49,39 @@ func TestRouter_Binding(t *testing.T) {
 }
 
 func TestRouter_Routing(t *testing.T) {
-	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	stm := stream.NewMockC2S("id-1", j)
+	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+	j2, _ := jid.NewWithString("romeo@jackal.im/deadlyresource", true)
+	stm1 := stream.NewMockC2S("id-1", j1)
+	stm2 := stream.NewMockC2S("id-2", j2)
 
-	r, userRep, _ := setupTest()
+	r, userRep, blockListRep := setupTest()
 
-	err := r.Route(context.Background(), xmpp.NewPresence(j, j, xmpp.AvailableType), true)
+	err := r.Route(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType), true)
 	require.Equal(t, router.ErrNotExistingAccount, err)
 
 	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "ortuman"})
+	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "romeo"})
 
-	err = r.Route(context.Background(), xmpp.NewPresence(j, j, xmpp.AvailableType), true)
+	err = r.Route(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType), true)
 	require.Equal(t, router.ErrNotAuthenticated, err)
 
-	r.Bind(stm)
-	stm.SetPresence(xmpp.NewPresence(j.ToBareJID(), j, xmpp.AvailableType))
+	r.Bind(stm1)
+	stm1.SetPresence(xmpp.NewPresence(j1.ToBareJID(), j1, xmpp.AvailableType))
 
-	err = r.Route(context.Background(), xmpp.NewPresence(j, j, xmpp.AvailableType), true)
+	err = r.Route(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType), true)
 	require.Nil(t, err)
+
+	// block jid
+	r.Bind(stm2)
+	stm2.SetPresence(xmpp.NewPresence(j2.ToBareJID(), j2, xmpp.AvailableType))
+
+	_ = blockListRep.InsertBlockListItem(context.Background(), &model.BlockListItem{
+		Username: "ortuman",
+		JID:      "jackal.im/deadlyresource",
+	})
+
+	err = r.Route(context.Background(), xmpp.NewPresence(j1.ToBareJID(), j2, xmpp.AvailableType), true)
+	require.Equal(t, router.ErrBlockedJID, err)
 }
 
 func setupTest() (router.C2SRouter, repository.User, repository.BlockList) {
