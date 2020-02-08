@@ -10,9 +10,8 @@ import (
 	"crypto/tls"
 	"sync"
 
-	"github.com/ortuman/jackal/router/host"
-
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 )
