@@ -162,6 +162,7 @@ func setupTest(domain string) (router.Router, repository.User, repository.BlockL
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		c2srouter.New(userRep, blockListRep),
+		nil,
 	)
 	return r, userRep, blockListRep
 }
@@ -219,6 +220,7 @@ func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		c2srouter.New(userRep, blockListRep),
+		nil,
 	)
 
 	c2s, _ := New([]Config{{}}, &module.Modules{}, &component.Components{}, r, userRep, blockListRep)

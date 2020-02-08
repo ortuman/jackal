@@ -83,7 +83,7 @@ type router struct {
 	s2s             S2SRouter
 }
 
-func New(config *Config, c2sRouter C2SRouter) (Router, error) {
+func New(config *Config, c2sRouter C2SRouter, s2sRouter S2SRouter) (Router, error) {
 	r := &router{
 		hosts: make(map[string]tls.Certificate),
 	}
@@ -103,6 +103,7 @@ func New(config *Config, c2sRouter C2SRouter) (Router, error) {
 		r.hosts[defaultDomain] = cer
 	}
 	r.c2s = c2sRouter
+	r.s2s = s2sRouter
 	return r, nil
 }
 

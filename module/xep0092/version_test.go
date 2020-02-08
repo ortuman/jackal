@@ -84,6 +84,7 @@ func setupTest() router.Router {
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 		},
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	return r
 }

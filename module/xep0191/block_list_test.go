@@ -291,6 +291,7 @@ func setupTest(domain string) (router.Router, repository.BlockList, repository.R
 			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
 		},
 		c2srouter.New(memorystorage.NewUser(), blockListRep),
+		nil,
 	)
 	return r, blockListRep, rosterRep
 }

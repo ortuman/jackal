@@ -97,6 +97,7 @@ func setupModules(t *testing.T) *Modules {
 			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
 		},
 		c2srouter.New(rep.User(), rep.BlockList()),
+		nil,
 	)
 	return New(&config, r, rep)
 }
