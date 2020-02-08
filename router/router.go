@@ -73,7 +73,7 @@ type C2SRouter interface {
 type S2SRouter interface {
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza xmpp.Stanza) error
+	Route(ctx context.Context, stanza xmpp.Stanza, localDomain string) error
 }
 
 type router struct {
@@ -163,7 +163,7 @@ func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza b
 		if r.s2s == nil {
 			return ErrFailedRemoteConnect
 		}
-		return r.s2s.Route(ctx, stanza)
+		return r.s2s.Route(ctx, stanza, r.defaultHostname)
 	}
 	return r.c2s.Route(ctx, stanza, validateStanza)
 }

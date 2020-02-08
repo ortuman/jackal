@@ -20,6 +20,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/s2s"
+
 	s2srouter "github.com/ortuman/jackal/s2s/router"
 
 	"github.com/ortuman/jackal/c2s"
@@ -142,7 +144,7 @@ func (a *Application) Run() error {
 	a.router, err = router.New(
 		&cfg.Router,
 		c2srouter.New(repContainer.User(), repContainer.BlockList()),
-		s2srouter.New(),
+		s2srouter.New(s2s.NewOutProvider()),
 	)
 	if err != nil {
 		return err
