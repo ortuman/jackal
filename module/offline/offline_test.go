@@ -11,8 +11,9 @@ import (
 	"testing"
 	"time"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
@@ -76,11 +77,11 @@ func TestOffline_ArchiveMessage(t *testing.T) {
 }
 
 func setupTest(domain string) (router.Router, *memorystorage.Offline) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	s := memorystorage.NewOffline()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 		nil,
 	)

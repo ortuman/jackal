@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
 	"github.com/google/uuid"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -91,11 +92,11 @@ func setupModules(t *testing.T) *Modules {
 	err = yaml.Unmarshal(b, &config)
 	require.Nil(t, err)
 
+	hosts, _ := host.New([]host.Config{{Name: "jackal.im", Certificate: tls.Certificate{}}})
+
 	rep, _ := storage.New(&storage.Config{Type: storage.Memory})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(rep.User(), rep.BlockList()),
 		nil,
 	)

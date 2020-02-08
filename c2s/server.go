@@ -97,7 +97,7 @@ func (s *server) listenSocketConn(address string) error {
 func (s *server) listenWebSocketConn(address string) error {
 	http.HandleFunc(s.cfg.Transport.URLPath, s.websocketUpgrade)
 
-	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: s.router.Certificates()}}
+	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: s.router.Hosts().Certificates()}}
 	s.wsUpgrader = &websocket.Upgrader{
 		Subprotocols: []string{"xmpp"},
 		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },

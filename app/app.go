@@ -20,16 +20,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ortuman/jackal/s2s"
-
-	s2srouter "github.com/ortuman/jackal/s2s/router"
-
 	"github.com/ortuman/jackal/c2s"
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
+	"github.com/ortuman/jackal/s2s"
+	s2srouter "github.com/ortuman/jackal/s2s/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 	"github.com/pkg/errors"
@@ -140,11 +139,16 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
+	// initialize hosts
+	hosts, err := host.New(cfg.Hosts)
+	if err != nil {
+		return err
+	}
 	// initialize router
 	a.router, err = router.New(
-		&cfg.Router,
+		hosts,
 		c2srouter.New(repContainer.User(), repContainer.BlockList()),
-		s2srouter.New(s2s.NewOutProvider()),
+		s2srouter.New(s2s.NewOutProvider(&cfg.S2S, hosts)),
 	)
 	if err != nil {
 		return err

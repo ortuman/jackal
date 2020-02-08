@@ -10,8 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -944,13 +945,13 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 }
 
 func setupTest(domain string) (router.Router, repository.Capabilities, repository.Roster, repository.PubSub) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	capsRep := memorystorage.NewCapabilities()
 	rosterRep := memorystorage.NewRoster()
 	pubSubRep := memorystorage.NewPubSub()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 		nil,
 	)

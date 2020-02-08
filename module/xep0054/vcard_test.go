@@ -10,8 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
@@ -230,11 +231,10 @@ func testVCard() xmpp.XElement {
 }
 
 func setupTest(domain string) (router.Router, *memorystorage.VCard) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	s := memorystorage.NewVCard()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 		nil,
 	)

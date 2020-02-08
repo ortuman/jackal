@@ -16,10 +16,10 @@ import (
 	"time"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
-
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
@@ -155,12 +155,12 @@ func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
 func setupTest(domain string) (router.Router, repository.User, repository.BlockList) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(userRep, blockListRep),
 		nil,
 	)
@@ -213,12 +213,13 @@ func setupTestC2S(domain string) (*C2S, *fakeC2SServer) {
 	createC2SServer = func(_ *Config, _ *module.Modules, _ *component.Components, _ router.Router, _ repository.User, _ repository.BlockList) c2sServer {
 		return srv
 	}
+
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	userRep := memorystorage.NewUser()
 	blockListRep := memorystorage.NewBlockList()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(userRep, blockListRep),
 		nil,
 	)

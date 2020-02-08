@@ -10,8 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
@@ -317,11 +318,10 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 }
 
 func setupTest(domain string) (router.Router, *memorystorage.User) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	userRep := memorystorage.NewUser()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(userRep, memorystorage.NewBlockList()),
 		nil,
 	)

@@ -369,7 +369,7 @@ func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !s.router.IsLocalHost(to) {
+	if len(to) > 0 && !s.router.Hosts().IsLocalHost(to) {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {

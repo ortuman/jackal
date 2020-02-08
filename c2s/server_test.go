@@ -13,15 +13,15 @@ import (
 	"testing"
 	"time"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
-
-	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/router/host"
 
 	"github.com/gorilla/websocket"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/stretchr/testify/require"
@@ -85,10 +85,9 @@ func TestC2SWebSocketServer(t *testing.T) {
 	cer, err := utiltls.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
+	hosts, _ := host.New([]host.Config{{Name: "localhost", Certificate: cer}})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
-		},
+		hosts,
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 		nil,
 	)

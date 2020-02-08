@@ -11,8 +11,9 @@ import (
 	"testing"
 	"time"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/presencehub"
@@ -284,12 +285,12 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 }
 
 func setupTest(domain string) (router.Router, repository.BlockList, repository.Roster) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	blockListRep := memorystorage.NewBlockList()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(memorystorage.NewUser(), blockListRep),
 		nil,
 	)

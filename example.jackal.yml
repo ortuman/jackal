@@ -32,12 +32,11 @@ storage:
 #  port: 5010
 #  hosts: [127.0.0.1:5009, 127.0.0.1:5011]
 
-router:
-  hosts:
-    - name: localhost
-      tls:
-        privkey_path: ""
-        cert_path: ""
+hosts:
+  - name: localhost
+    tls:
+      privkey_path: ""
+      cert_path: ""
 
 modules:
   enabled:

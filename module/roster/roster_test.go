@@ -11,8 +11,9 @@ import (
 	"testing"
 	"time"
 
-	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/router/host"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/presencehub"
@@ -479,12 +480,12 @@ func TestRoster_Subscription(t *testing.T) {
 }
 
 func setupTest(domain string) (router.Router, repository.User, repository.Roster) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	userRep := memorystorage.NewUser()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
+		hosts,
 		c2srouter.New(userRep, memorystorage.NewBlockList()),
 		nil,
 	)

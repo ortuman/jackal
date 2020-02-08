@@ -446,7 +446,7 @@ func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
 	s.setSecured(true)
 	s.writeElement(ctx, xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
+	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Hosts().Certificates()}, false)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -629,7 +629,7 @@ func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.Hosts().IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch s.router.Route(ctx, iq) {
 		case router.ErrResourceNotFound:

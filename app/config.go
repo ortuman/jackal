@@ -12,9 +12,10 @@ import (
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
+	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/storage"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 // debugConfig represents debug server configuration.
@@ -33,10 +34,11 @@ type Config struct {
 	Debug      debugConfig      `yaml:"debug"`
 	Logger     loggerConfig     `yaml:"logger"`
 	Storage    storage.Config   `yaml:"storage"`
-	Router     router.Config    `yaml:"router"`
+	Hosts      []host.Config    `yaml:"hosts"`
 	Modules    module.Config    `yaml:"modules"`
 	Components component.Config `yaml:"components"`
 	C2S        []c2s.Config     `yaml:"c2s"`
+	S2S        s2s.Config       `yaml:"s2s"`
 }
 
 // FromFile loads default global configuration from a specified file.

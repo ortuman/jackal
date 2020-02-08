@@ -7,9 +7,14 @@ package s2s
 
 import (
 	"context"
+	"crypto/tls"
 	"sync"
 
+	"github.com/ortuman/jackal/router/host"
+
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/transport"
 )
 
 type OutProvider interface {
@@ -17,13 +22,17 @@ type OutProvider interface {
 }
 
 type outProvider struct {
+	cfg            *Config
+	hosts          *host.Hosts
 	dialer         Dialer
 	mu             sync.RWMutex
 	outConnections map[string]stream.S2SOut
 }
 
-func NewOutProvider() OutProvider {
+func NewOutProvider(config *Config, hosts *host.Hosts) OutProvider {
 	return &outProvider{
+		cfg:            config,
+		hosts:          hosts,
 		outConnections: make(map[string]stream.S2SOut),
 	}
 }
@@ -37,7 +46,36 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 	if outStm != nil {
 		return outStm, nil
 	}
-	// TODO(ortuman) integrate dialer
+	conn, err := p.dialer.Dial(ctx, remoteDomain)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig := &tls.Config{
+		ServerName:   remoteDomain,
+		Certificates: p.hosts.Certificates(),
+	}
+	outStreamCfg := &streamConfig{
+		keyGen:          &keyGen{secret: p.cfg.DialbackSecret},
+		timeout:         p.cfg.Timeout,
+		localDomain:     localDomain,
+		remoteDomain:    remoteDomain,
+		transport:       transport.NewSocketTransport(conn, p.cfg.Transport.KeepAlive),
+		tls:             tlsConfig,
+		maxStanzaSize:   p.cfg.MaxStanzaSize,
+		onOutDisconnect: p.unregisterOutStream,
+	}
+	log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
+
+	println(outStreamCfg)
 
 	return nil, nil
+}
+
+func (p *outProvider) unregisterOutStream(stm stream.S2SOut) {
+	domainPair := stm.ID()
+	p.mu.Lock()
+	delete(p.outConnections, domainPair)
+	p.mu.Unlock()
+
+	log.Infof("unregistered s2s out stream... (domainpair: %s)", domainPair)
 }

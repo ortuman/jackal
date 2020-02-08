@@ -122,7 +122,7 @@ func (x *DiscoInfo) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if x.router.IsLocalHost(toJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(toJID.Domain()) {
 		if p := x.providers[toJID.String()]; p != nil {
 			prov = p
 		} else {
