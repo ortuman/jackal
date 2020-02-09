@@ -336,10 +336,10 @@ func tUtilOutStreamInit(t *testing.T, hosts *host.Hosts) (*outStream, *fakeSocke
 	return stm, conn
 }
 
-func tUtilOutStreamDefaultConfig() (*streamConfig, *fakeSocketConn) {
+func tUtilOutStreamDefaultConfig() (*outStreamConfig, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	return &streamConfig{
+	return &outStreamConfig{
 		remoteDomain:   "jabber.org",
 		connectTimeout: time.Second,
 		transport:      tr,

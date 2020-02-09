@@ -57,7 +57,7 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 
 	if err := p.registerOutStream(ctx, outStm.(*outStream), localDomain, remoteDomain); err != nil {
 		p.mu.Lock()
-		delete(p.outConnections, domainPair) // wipe out connection
+		delete(p.outConnections, domainPair) // something went wrong... wipe out connection
 		p.mu.Unlock()
 		return nil, err
 	}

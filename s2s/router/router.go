@@ -9,9 +9,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ortuman/jackal/s2s"
-
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/xmpp"
 )
 
