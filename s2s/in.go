@@ -331,7 +331,7 @@ func (s *inStream) authorizeDialbackKey(ctx context.Context, elem xmpp.XElement)
 	dbVerify.SetTo(elem.From())
 	dbVerify.SetText(elem.Text())
 
-	outStm, err := s.outProvider.getVerifyOut(dbVerify, s.router.Hosts().DefaultHostName(), elem.From())
+	outStm, err := s.outProvider.getVerifyOut(ctx, s.router.Hosts().DefaultHostName(), elem.From(), dbVerify)
 	if err != nil {
 		log.Error(err)
 		s.writeStanzaErrorResponse(ctx, elem, xmpp.ErrRemoteServerNotFound)

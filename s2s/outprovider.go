@@ -20,7 +20,7 @@ import (
 type OutProvider interface {
 	GetOut(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error)
 
-	getVerifyOut(dbVerify xmpp.XElement, localDomain, remoteDomain string) (*outStream, error)
+	getVerifyOut(ctx context.Context, localDomain, remoteDomain string, verifyElem xmpp.XElement) (*outStream, error)
 }
 
 type outProvider struct {
@@ -58,20 +58,26 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 	p.outConnections[domainPair] = outStm
 	p.mu.Unlock()
 
-	if err := p.registerOutStream(ctx, outStm.(*outStream), localDomain, remoteDomain); err != nil {
+	if err := p.startOutStream(ctx, outStm.(*outStream), localDomain, remoteDomain, nil, p.unregisterOutStream); err != nil {
 		p.mu.Lock()
 		delete(p.outConnections, domainPair) // something went wrong... wipe out connection
 		p.mu.Unlock()
 		return nil, err
 	}
+	log.Infof("registered s2s out stream... (domainpair: %s)", getDomainPair(localDomain, remoteDomain))
+
 	return outStm, nil
 }
 
-func (p *outProvider) getVerifyOut(dbVerify xmpp.XElement, localDomain, remoteDomain string) (*outStream, error) {
-	return nil, nil
+func (p *outProvider) getVerifyOut(ctx context.Context, localDomain, remoteDomain string, verifyElem xmpp.XElement) (*outStream, error) {
+	outStm := newOutStream(p.hosts)
+	if err := p.startOutStream(ctx, outStm, localDomain, remoteDomain, verifyElem, nil); err != nil {
+		return nil, err
+	}
+	return outStm, nil
 }
 
-func (p *outProvider) registerOutStream(ctx context.Context, outStm *outStream, localDomain, remoteDomain string) error {
+func (p *outProvider) startOutStream(ctx context.Context, outStm *outStream, localDomain, remoteDomain string, verifyElem xmpp.XElement, onDisconnect func(s stream.S2SOut)) error {
 	conn, err := p.dialer.Dial(ctx, remoteDomain)
 	if err != nil {
 		return err
@@ -88,12 +94,12 @@ func (p *outProvider) registerOutStream(ctx context.Context, outStm *outStream, 
 		transport:       transport.NewSocketTransport(conn, p.cfg.Transport.KeepAlive),
 		tls:             tlsConfig,
 		maxStanzaSize:   p.cfg.MaxStanzaSize,
-		onOutDisconnect: p.unregisterOutStream,
+		dbVerify:        verifyElem,
+		onOutDisconnect: onDisconnect,
 	}
 	if err := outStm.start(ctx, outStreamCfg); err != nil {
 		return err
 	}
-	log.Infof("registered s2s out stream... (domainpair: %s)", getDomainPair(localDomain, remoteDomain))
 	return nil
 }
 
