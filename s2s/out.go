@@ -34,7 +34,7 @@ const (
 type outStream struct {
 	started       uint32
 	id            string
-	cfg           *streamConfig
+	cfg           *outStreamConfig
 	hosts         *host.Hosts
 	state         uint32
 	sess          *session.Session
@@ -89,14 +89,14 @@ func (s *outStream) Disconnect(ctx context.Context, err error) {
 	<-waitCh
 }
 
-func (s *outStream) start(ctx context.Context, cfg *streamConfig) error {
-	if cfg.dbVerify != nil && cfg.dbVerify.Name() != "db:verify" {
-		return fmt.Errorf("wrong dialback verification element name: %s", cfg.dbVerify.Name())
+func (s *outStream) start(ctx context.Context, config *outStreamConfig) error {
+	if config.dbVerify != nil && config.dbVerify.Name() != "db:verify" {
+		return fmt.Errorf("wrong dialback verification element name: %s", config.dbVerify.Name())
 	}
 	if !atomic.CompareAndSwapUint32(&s.started, 0, 1) {
 		return fmt.Errorf("stream already started (domainpair: %s)", s.ID())
 	}
-	s.cfg = cfg
+	s.cfg = config
 
 	// start s2s out session
 	s.restartSession()

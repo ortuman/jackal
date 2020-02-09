@@ -66,7 +66,7 @@ func (r *c2sRouter) Bind(stm stream.C2S) {
 
 	if res == nil {
 		r.mu.Lock()
-		res = r.tbl[user] // double check
+		res = r.tbl[user] // 2nd check
 		if res == nil {
 			res = &resources{}
 			r.tbl[user] = res

@@ -128,3 +128,16 @@ type streamConfig struct {
 	onInDisconnect  func(s stream.S2SIn)
 	onOutDisconnect func(s stream.S2SOut)
 }
+
+type outStreamConfig struct {
+	keyGen          *keyGen
+	localDomain     string
+	remoteDomain    string
+	connectTimeout  time.Duration
+	timeout         time.Duration
+	tls             *tls.Config
+	transport       transport.Transport
+	maxStanzaSize   int
+	dbVerify        xmpp.XElement
+	onOutDisconnect func(s stream.S2SOut)
+}
