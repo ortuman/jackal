@@ -14,10 +14,13 @@ import (
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 type OutProvider interface {
 	GetOut(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error)
+
+	getVerifyOut(dbVerify xmpp.XElement, localDomain, remoteDomain string) (*outStream, error)
 }
 
 type outProvider struct {
@@ -62,6 +65,10 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 		return nil, err
 	}
 	return outStm, nil
+}
+
+func (p *outProvider) getVerifyOut(dbVerify xmpp.XElement, localDomain, remoteDomain string) (*outStream, error) {
+	return nil, nil
 }
 
 func (p *outProvider) registerOutStream(ctx context.Context, outStm *outStream, localDomain, remoteDomain string) error {

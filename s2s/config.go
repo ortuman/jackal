@@ -114,26 +114,21 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-type streamConfig struct {
-	keyGen          *keyGen
-	localDomain     string
-	remoteDomain    string
-	connectTimeout  time.Duration
-	timeout         time.Duration
-	tls             *tls.Config
-	transport       transport.Transport
-	maxStanzaSize   int
-	dbVerify        xmpp.XElement
-	dialer          *dialer
-	onInDisconnect  func(s stream.S2SIn)
-	onOutDisconnect func(s stream.S2SOut)
+type inStreamConfig struct {
+	keyGen         *keyGen
+	connectTimeout time.Duration
+	timeout        time.Duration
+	tls            *tls.Config
+	transport      transport.Transport
+	maxStanzaSize  int
+	outProvider    OutProvider
+	onInDisconnect func(s stream.S2SIn)
 }
 
 type outStreamConfig struct {
 	keyGen          *keyGen
 	localDomain     string
 	remoteDomain    string
-	connectTimeout  time.Duration
 	timeout         time.Duration
 	tls             *tls.Config
 	transport       transport.Transport

@@ -313,7 +313,7 @@ func tUtilOutStreamOpen(conn *fakeSocketConn) {
 `)
 }
 
-func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *streamConfig, conn *fakeSocketConn) *outStream {
+func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outStreamConfig, conn *fakeSocketConn) *outStream {
 	stm := newOutStream(hosts)
 	_ = stm.start(context.Background(), cfg)
 
@@ -340,10 +340,9 @@ func tUtilOutStreamDefaultConfig() (*outStreamConfig, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
 	return &outStreamConfig{
-		remoteDomain:   "jabber.org",
-		connectTimeout: time.Second,
-		transport:      tr,
-		maxStanzaSize:  8192,
-		keyGen:         &keyGen{secret: "s3cr3t"},
+		remoteDomain:  "jabber.org",
+		transport:     tr,
+		maxStanzaSize: 8192,
+		keyGen:        &keyGen{secret: "s3cr3t"},
 	}, conn
 }
