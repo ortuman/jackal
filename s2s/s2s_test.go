@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/router/host"
-
 	"github.com/ortuman/jackal/xmpp"
 )
 

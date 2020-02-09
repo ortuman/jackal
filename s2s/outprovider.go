@@ -58,7 +58,7 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 	p.outConnections[domainPair] = outStm
 	p.mu.Unlock()
 
-	if err := p.startOutStream(ctx, outStm.(*outStream), localDomain, remoteDomain, nil, p.unregisterOutStream); err != nil {
+	if err := p.startOut(ctx, outStm.(*outStream), localDomain, remoteDomain, nil, p.unregisterOut); err != nil {
 		p.mu.Lock()
 		delete(p.outConnections, domainPair) // something went wrong... wipe out connection
 		p.mu.Unlock()
@@ -71,13 +71,13 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 
 func (p *outProvider) getVerifyOut(ctx context.Context, localDomain, remoteDomain string, verifyElem xmpp.XElement) (*outStream, error) {
 	outStm := newOutStream(p.hosts)
-	if err := p.startOutStream(ctx, outStm, localDomain, remoteDomain, verifyElem, nil); err != nil {
+	if err := p.startOut(ctx, outStm, localDomain, remoteDomain, verifyElem, nil); err != nil {
 		return nil, err
 	}
 	return outStm, nil
 }
 
-func (p *outProvider) startOutStream(ctx context.Context, outStm *outStream, localDomain, remoteDomain string, verifyElem xmpp.XElement, onDisconnect func(s stream.S2SOut)) error {
+func (p *outProvider) startOut(ctx context.Context, outStm *outStream, localDomain, remoteDomain string, verifyElem xmpp.XElement, onDisconnect func(s stream.S2SOut)) error {
 	conn, err := p.dialer.Dial(ctx, remoteDomain)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (p *outProvider) startOutStream(ctx context.Context, outStm *outStream, loc
 	return nil
 }
 
-func (p *outProvider) unregisterOutStream(stm stream.S2SOut) {
+func (p *outProvider) unregisterOut(stm stream.S2SOut) {
 	domainPair := stm.ID()
 	p.mu.Lock()
 	delete(p.outConnections, domainPair)
