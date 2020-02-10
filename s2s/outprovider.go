@@ -20,6 +20,8 @@ import (
 type OutProvider interface {
 	GetOut(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error)
 
+	Shutdown(ctx context.Context) error
+
 	getVerifyOut(ctx context.Context, localDomain, remoteDomain string, verifyElem xmpp.XElement) (*outStream, error)
 }
 
@@ -35,6 +37,7 @@ func NewOutProvider(config *Config, hosts *host.Hosts) OutProvider {
 	return &outProvider{
 		cfg:            config,
 		hosts:          hosts,
+		dialer:         newDialer(),
 		outConnections: make(map[string]stream.S2SOut),
 	}
 }
@@ -64,7 +67,7 @@ func (p *outProvider) GetOut(ctx context.Context, localDomain, remoteDomain stri
 		p.mu.Unlock()
 		return nil, err
 	}
-	log.Infof("registered s2s out stream... (domainpair: %s)", getDomainPair(localDomain, remoteDomain))
+	log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
 
 	return outStm, nil
 }
@@ -75,6 +78,20 @@ func (p *outProvider) getVerifyOut(ctx context.Context, localDomain, remoteDomai
 		return nil, err
 	}
 	return outStm, nil
+}
+
+func (p *outProvider) Shutdown(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(p.outConnections) == 0 {
+		return nil
+	}
+	for _, conn := range p.outConnections {
+		conn.Disconnect(ctx, nil)
+	}
+	log.Infof("%s: closed %d out connection(s)", len(p.outConnections))
+
+	return nil
 }
 
 func (p *outProvider) startOut(ctx context.Context, outStm *outStream, localDomain, remoteDomain string, verifyElem xmpp.XElement, onDisconnect func(s stream.S2SOut)) error {

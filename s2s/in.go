@@ -40,18 +40,19 @@ type inStream struct {
 	sess          *session.Session
 	secured       uint32
 	authenticated uint32
-	outProvider   *outProvider
+	outProvider   OutProvider
 	runQueue      *runqueue.RunQueue
 }
 
-func newInStream(config *inStreamConfig, mods *module.Modules, router router.Router, outProvider *outProvider) *inStream {
+func newInStream(config *inStreamConfig, mods *module.Modules, outProvider OutProvider, router router.Router) *inStream {
 	id := nextInID()
 	s := &inStream{
-		id:       id,
-		cfg:      config,
-		router:   router,
-		mods:     mods,
-		runQueue: runqueue.New(id),
+		id:          id,
+		cfg:         config,
+		router:      router,
+		outProvider: outProvider,
+		mods:        mods,
+		runQueue:    runqueue.New(id),
 	}
 	// start s2s in session
 	s.restartSession()

@@ -26,10 +26,11 @@ type dialer struct {
 	dialContext dialFunc
 }
 
-func newDialer(srvResolve srvResolveFunc, dialContext dialFunc) *dialer {
+func newDialer() *dialer {
+	var d net.Dialer
 	return &dialer{
-		srvResolve:  srvResolve,
-		dialContext: dialContext,
+		srvResolve:  net.LookupSRV,
+		dialContext: d.DialContext,
 	}
 }
 

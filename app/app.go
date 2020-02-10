@@ -28,7 +28,6 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/s2s"
-	s2srouter "github.com/ortuman/jackal/s2s/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 	"github.com/pkg/errors"
@@ -65,6 +64,8 @@ type Application struct {
 	router           router.Router
 	mods             *module.Modules
 	comps            *component.Components
+	s2sOutProvider   s2s.OutProvider
+	s2s              *s2s.S2S
 	c2s              *c2s.C2S
 	debugSrv         *http.Server
 	waitStopCh       chan os.Signal
@@ -145,10 +146,15 @@ func (a *Application) Run() error {
 		return err
 	}
 	// initialize router
+	var s2sRouter router.S2SRouter
+
+	if cfg.S2S != nil {
+		a.s2sOutProvider = s2s.NewOutProvider(cfg.S2S, hosts)
+	}
 	a.router, err = router.New(
 		hosts,
 		c2srouter.New(repContainer.User(), repContainer.BlockList()),
-		s2srouter.New(s2s.NewOutProvider(&cfg.S2S, hosts)),
+		s2sRouter,
 	)
 	if err != nil {
 		return err
@@ -158,6 +164,11 @@ func (a *Application) Run() error {
 	a.mods = module.New(&cfg.Modules, a.router, repContainer)
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
+	// start serving s2s...
+	if cfg.S2S != nil {
+		a.s2s = s2s.New(cfg.S2S, a.mods, a.s2sOutProvider, a.router)
+		a.s2s.Start()
+	}
 	// start serving c2s...
 	a.c2s, err = c2s.New(cfg.C2S, a.mods, a.comps, a.router, repContainer.User(), repContainer.BlockList())
 	if err != nil {
@@ -272,6 +283,10 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 
 		_ = a.comps.Shutdown(ctx)
 		_ = a.mods.Shutdown(ctx)
+
+		if a.s2sOutProvider != nil {
+			_ = a.s2sOutProvider.Shutdown(ctx)
+		}
 
 		log.Unset()
 		c <- true

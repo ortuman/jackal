@@ -38,7 +38,7 @@ type Config struct {
 	Modules    module.Config    `yaml:"modules"`
 	Components component.Config `yaml:"components"`
 	C2S        []c2s.Config     `yaml:"c2s"`
-	S2S        s2s.Config       `yaml:"s2s"`
+	S2S        *s2s.Config      `yaml:"s2s"`
 }
 
 // FromFile loads default global configuration from a specified file.

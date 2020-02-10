@@ -15,6 +15,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
+
+	"github.com/ortuman/jackal/router"
+
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -183,7 +188,13 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) *host.Hosts {
+func setupTestRouter(domain string) (router.Router, *host.Hosts) {
+	hosts := setupTestHosts(domain)
+	r, _ := router.New(hosts, c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()), nil)
+	return r, hosts
+}
+
+func setupTestHosts(domain string) *host.Hosts {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	return hosts
 }
