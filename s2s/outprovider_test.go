@@ -1,0 +1,43 @@
+/*
+ * Copyright (c) 2020 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
+package s2s
+
+import (
+	"context"
+	"net"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestOutProvider_GetOut(t *testing.T) {
+	hosts := setupTestHosts(jackaDomain)
+
+	op := NewOutProvider(&Config{}, hosts)
+
+	op.(*outProvider).dialer.(*dialer).srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
+		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
+	}
+	op.(*outProvider).dialer.(*dialer).dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+		return newFakeSocketConn(), nil
+	}
+	out, err := op.GetOut(context.Background(), "jackal.im", "jabber.org")
+
+	require.NotNil(t, out)
+	require.Nil(t, err)
+
+	op.(*outProvider).mu.RLock()
+	require.Len(t, op.(*outProvider).outConnections, 1)
+	op.(*outProvider).mu.RUnlock()
+
+	out.Disconnect(context.Background(), nil)
+	time.Sleep(time.Millisecond * 100) // wait until unregistered
+
+	op.(*outProvider).mu.RLock()
+	require.Len(t, op.(*outProvider).outConnections, 0)
+	op.(*outProvider).mu.RUnlock()
+}
