@@ -35,7 +35,13 @@ func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain s
 	r.mu.RUnlock()
 
 	if rr == nil {
-		//
+		r.mu.Lock()
+		rr = r.remotes[domain] // avoid double initialization
+		if rr == nil {
+			rr = &remoteRouter{}
+			r.remotes[domain] = rr
+		}
+		r.mu.Unlock()
 	}
-	return nil
+	return rr.route(ctx, stanza)
 }
