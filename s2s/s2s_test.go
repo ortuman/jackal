@@ -16,17 +16,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/module"
-
-	"github.com/stretchr/testify/require"
-
 	c2srouter "github.com/ortuman/jackal/c2s/router"
-	memorystorage "github.com/ortuman/jackal/storage/memory"
-
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
-
 	"github.com/ortuman/jackal/router/host"
+	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/stretchr/testify/require"
 )
 
 const jackaDomain = "jackal.im"
