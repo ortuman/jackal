@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"sync"
+	"sync/atomic"
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router/host"
@@ -31,6 +32,7 @@ type outProvider struct {
 	dialer         Dialer
 	mu             sync.RWMutex
 	outConnections map[string]stream.S2SOut
+	isShuttingDown int32
 }
 
 func NewOutProvider(config *Config, hosts *host.Hosts) OutProvider {
@@ -81,13 +83,17 @@ func (p *outProvider) getVerifyOut(ctx context.Context, localDomain, remoteDomai
 }
 
 func (p *outProvider) Shutdown(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&p.isShuttingDown, 0, 1) {
+		return nil // already done
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if len(p.outConnections) == 0 {
 		return nil
 	}
-	for _, conn := range p.outConnections {
+	for k, conn := range p.outConnections {
 		conn.Disconnect(ctx, nil)
+		delete(p.outConnections, k)
 	}
 	log.Infof("%s: closed %d out connection(s)", len(p.outConnections))
 
@@ -121,6 +127,9 @@ func (p *outProvider) startOut(ctx context.Context, outStm *outStream, localDoma
 }
 
 func (p *outProvider) unregisterOut(stm stream.S2SOut) {
+	if atomic.LoadInt32(&p.isShuttingDown) == 1 {
+		return // do not unregister stream while shutting down to avoid deadlock
+	}
 	domainPair := stm.ID()
 	p.mu.Lock()
 	delete(p.outConnections, domainPair)
