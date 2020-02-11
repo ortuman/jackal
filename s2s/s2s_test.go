@@ -13,7 +13,12 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/ortuman/jackal/module"
+
+	"github.com/stretchr/testify/require"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
@@ -218,4 +223,33 @@ func (s *fakeS2SServer) start() {
 func (s *fakeS2SServer) shutdown(_ context.Context) error {
 	s.shutdownCh <- struct{}{}
 	return nil
+}
+
+func TestS2S_StartAndShutdown(t *testing.T) {
+	s2s, fakeSrv := setupTestS2S()
+
+	s2s.Start()
+	select {
+	case <-fakeSrv.startCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "s2s start timeout")
+	}
+
+	s2s.Shutdown(context.Background())
+	select {
+	case <-fakeSrv.shutdownCh:
+		break
+	case <-time.After(time.Millisecond * 250):
+		require.Fail(t, "s2s shutdown timeout")
+	}
+}
+
+func setupTestS2S() (*S2S, *fakeS2SServer) {
+	srv := newFakeS2SServer()
+	createS2SServer = func(_ *Config, _ *module.Modules, _ OutProvider, _ router.Router) s2sServer {
+		return srv
+	}
+	r, _ := router.New(nil, nil, nil)
+	return New(&Config{}, &module.Modules{}, NewOutProvider(&Config{}, nil), r), srv
 }
