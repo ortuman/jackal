@@ -9,6 +9,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/stream"
@@ -43,6 +44,7 @@ func (r *remoteRouter) route(ctx context.Context, stanza xmpp.Stanza) error {
 			outStm, err := r.outProvider.GetOut(ctx, r.localDomain, r.remoteDomain)
 			if err != nil {
 				r.mu.Unlock()
+				log.Error(err)
 				return router.ErrFailedRemoteConnect
 			}
 			stm = outStm
