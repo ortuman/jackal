@@ -643,6 +643,8 @@ func (x *Roster) deliverRosterPresences(ctx context.Context, userJID *jid.JID) e
 		return err
 	}
 	for _, item := range items {
+		log.Infof("TMP: item: %s, sub: %s", item.JID, item.Subscription)
+
 		switch item.Subscription {
 		case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 			contactJID := item.ContactJID()
