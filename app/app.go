@@ -28,6 +28,7 @@ import (
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/s2s"
+	s2srouter "github.com/ortuman/jackal/s2s/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/version"
 	"github.com/pkg/errors"
@@ -150,6 +151,7 @@ func (a *Application) Run() error {
 
 	if cfg.S2S != nil {
 		a.s2sOutProvider = s2s.NewOutProvider(cfg.S2S, hosts)
+		s2sRouter = s2srouter.New(a.s2sOutProvider)
 	}
 	a.router, err = router.New(
 		hosts,
