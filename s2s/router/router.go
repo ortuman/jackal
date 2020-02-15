@@ -32,12 +32,14 @@ func New(outProvider s2s.OutProvider) router.S2SRouter {
 func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain string) error {
 	domain := stanza.ToJID().Domain()
 
+	log.Infof("TMP: Initializing out conn: %s", domain)
+
 	r.mu.RLock()
 	rr := r.remotes[domain]
 	r.mu.RUnlock()
 
 	if rr == nil {
-		log.Infof("Initializing out conn: %s", domain)
+		log.Infof("TMP-2: Initializing out conn: %s", domain)
 
 		r.mu.Lock()
 		rr = r.remotes[domain] // avoid double initialization
