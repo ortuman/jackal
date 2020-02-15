@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/ortuman/jackal/router/host"
-
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"

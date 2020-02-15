@@ -52,17 +52,15 @@ type inStream struct {
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
 	runQueue       *runqueue.RunQueue
-
-	mu            sync.RWMutex
-	jid           *jid.JID
-	secured       bool
-	compressed    bool
-	authenticated bool
-	sessStarted   bool
-	presence      *xmpp.Presence
-
-	ctx         context.Context
-	ctxCancelFn context.CancelFunc
+	mu             sync.RWMutex
+	jid            *jid.JID
+	secured        bool
+	compressed     bool
+	authenticated  bool
+	sessStarted    bool
+	presence       *xmpp.Presence
+	ctx            context.Context
+	ctxCancelFn    context.CancelFunc
 }
 
 func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
