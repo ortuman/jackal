@@ -745,8 +745,10 @@ func (x *Roster) upsertNotification(ctx context.Context, contact string, userJID
 }
 
 func (x *Roster) routePresencesFrom(ctx context.Context, from *jid.JID, to *jid.JID, presenceType string) {
-	stms := x.router.LocalStreams(from.Node())
-	for _, stm := range stms {
+	log.Infof("routing presences from: %s", from.Node())
+
+	streams := x.router.LocalStreams(from.Node())
+	for _, stm := range streams {
 		p := xmpp.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
 		if presence := stm.Presence(); presence != nil && presence.IsAvailable() {
 			p.AppendElements(presence.Elements().All())
