@@ -74,6 +74,8 @@ func (r *c2sRouter) Bind(stm stream.C2S) {
 		r.mu.Unlock()
 	}
 	res.bind(stm)
+
+	log.Infof("bound c2s stream... (%s/%s)", stm.Username(), stm.Resource())
 }
 
 func (r *c2sRouter) Unbind(user, resource string) {
@@ -90,6 +92,8 @@ func (r *c2sRouter) Unbind(user, resource string) {
 		delete(r.tbl, user)
 	}
 	r.mu.Unlock()
+
+	log.Infof("unbound c2s stream... (%s/%s)", user, resource)
 }
 
 func (r *c2sRouter) Stream(username, resource string) stream.C2S {
