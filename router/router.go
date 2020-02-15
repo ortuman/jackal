@@ -8,8 +8,6 @@ package router
 import (
 	"context"
 
-	"github.com/ortuman/jackal/log"
-
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -111,7 +109,6 @@ func (r *router) LocalStream(username, resource string) stream.C2S {
 func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
 	toJID := stanza.ToJID()
 	if !r.hosts.IsLocalHost(toJID.Domain()) {
-		log.Infof("TMP: SO!")
 		if r.s2s == nil {
 			return ErrFailedRemoteConnect
 		}

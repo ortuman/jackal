@@ -32,8 +32,6 @@ func New(outProvider s2s.OutProvider) router.S2SRouter {
 func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain string) error {
 	domain := stanza.ToJID().Domain()
 
-	log.Infof("TMP: routing remote: %s", domain)
-
 	r.mu.RLock()
 	rr := r.remotes[domain]
 	r.mu.RUnlock()
