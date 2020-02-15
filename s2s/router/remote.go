@@ -24,9 +24,9 @@ type remoteRouter struct {
 	outStm       stream.S2SOut
 }
 
-func newRemoteRouter(domain, localDomain string, outProvider s2s.OutProvider) *remoteRouter {
+func newRemoteRouter(remoteDomain, localDomain string, outProvider s2s.OutProvider) *remoteRouter {
 	return &remoteRouter{
-		remoteDomain: domain,
+		remoteDomain: remoteDomain,
 		localDomain:  localDomain,
 		outProvider:  outProvider,
 	}
