@@ -33,6 +33,8 @@ func newRemoteRouter(remoteDomain, localDomain string, outProvider s2s.OutProvid
 }
 
 func (r *remoteRouter) route(ctx context.Context, stanza xmpp.Stanza) error {
+	log.Infof("routing stanza ot type %s to %s", stanza.Name(), r.remoteDomain)
+
 	r.mu.RLock()
 	stm := r.outStm
 	r.mu.RUnlock()

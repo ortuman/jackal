@@ -9,6 +9,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/ortuman/jackal/log"
+
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/xmpp"
@@ -35,6 +37,8 @@ func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain s
 	r.mu.RUnlock()
 
 	if rr == nil {
+		log.Infof("Initializing out conn: %s", domain)
+
 		r.mu.Lock()
 		rr = r.remotes[domain] // avoid double initialization
 		if rr == nil {

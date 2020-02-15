@@ -623,8 +623,6 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 }
 
 func (x *Roster) deliverRosterPresences(ctx context.Context, userJID *jid.JID) error {
-	log.Infof("TMP: delivering roster presences: %s", userJID.Node())
-
 	// first, deliver pending approval notifications...
 	rns, err := x.rosterRep.FetchRosterNotifications(ctx, userJID.Node())
 	if err != nil {
@@ -643,8 +641,6 @@ func (x *Roster) deliverRosterPresences(ctx context.Context, userJID *jid.JID) e
 		return err
 	}
 	for _, item := range items {
-		log.Infof("TMP: item: %s, sub: %s", item.JID, item.Subscription)
-
 		switch item.Subscription {
 		case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 			contactJID := item.ContactJID()
@@ -749,8 +745,6 @@ func (x *Roster) upsertNotification(ctx context.Context, contact string, userJID
 }
 
 func (x *Roster) routePresencesFrom(ctx context.Context, from *jid.JID, to *jid.JID, presenceType string) {
-	log.Infof("TMP: routing presences from: %s", from.Node())
-
 	streams := x.router.LocalStreams(from.Node())
 	for _, stm := range streams {
 		p := xmpp.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
