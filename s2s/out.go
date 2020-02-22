@@ -72,11 +72,11 @@ func (s *outStream) SendElement(ctx context.Context, elem xmpp.XElement) {
 }
 
 func (s *outStream) Disconnect(ctx context.Context, err error) {
+	if s.getState() == outDisconnected {
+		return
+	}
 	waitCh := make(chan struct{})
 	s.runQueue.Stop(func() {
-		if s.getState() == outDisconnected {
-			return
-		}
 		s.disconnect(ctx, err)
 		close(waitCh)
 	})
