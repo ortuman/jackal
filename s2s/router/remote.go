@@ -8,8 +8,6 @@ package s2srouter
 import (
 	"context"
 
-	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/xmpp"
 )
@@ -29,11 +27,7 @@ func newRemoteRouter(remoteDomain, localDomain string, outProvider s2s.OutProvid
 }
 
 func (r *remoteRouter) route(ctx context.Context, stanza xmpp.Stanza) error {
-	outStm, err := r.outProvider.GetOut(ctx, r.localDomain, r.remoteDomain)
-	if err != nil {
-		log.Error(err)
-		return router.ErrFailedRemoteConnect
-	}
+	outStm := r.outProvider.GetOut(r.localDomain, r.remoteDomain)
 	outStm.SendElement(ctx, stanza)
 	return nil
 }

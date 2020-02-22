@@ -367,7 +367,7 @@ func tUtilInStreamOpen(conn *fakeSocketConn) {
 	_, _ = conn.inboundWriteString(s)
 }
 
-func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inStreamConfig, *fakeSocketConn) {
+func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inConfig, *fakeSocketConn) {
 	modules := map[string]struct{}{}
 	modules["roster"] = struct{}{}
 	modules["last_activity"] = struct{}{}
@@ -396,7 +396,7 @@ func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inStre
 
 	conn := newFakeSocketConnWithPeerCerts(peerCerts)
 	tr := transport.NewSocketTransport(conn, 4096)
-	return &inStreamConfig{
+	return &inConfig{
 		connectTimeout: time.Second,
 		transport:      tr,
 		maxStanzaSize:  8192,

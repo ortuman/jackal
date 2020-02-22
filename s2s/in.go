@@ -30,7 +30,7 @@ const (
 
 type inStream struct {
 	id            string
-	cfg           *inStreamConfig
+	cfg           *inConfig
 	router        router.Router
 	mods          *module.Modules
 	localDomain   string
@@ -44,7 +44,7 @@ type inStream struct {
 	runQueue      *runqueue.RunQueue
 }
 
-func newInStream(config *inStreamConfig, mods *module.Modules, outProvider OutProvider, router router.Router) *inStream {
+func newInStream(config *inConfig, mods *module.Modules, outProvider OutProvider, router router.Router) *inStream {
 	id := nextInID()
 	s := &inStream{
 		id:          id,
@@ -332,16 +332,12 @@ func (s *inStream) authorizeDialbackKey(ctx context.Context, elem xmpp.XElement)
 	dbVerify.SetTo(elem.From())
 	dbVerify.SetText(elem.Text())
 
-	outStm, err := s.outProvider.getVerifyOut(ctx, s.router.Hosts().DefaultHostName(), elem.From(), dbVerify)
-	if err != nil {
-		log.Error(err)
-		s.writeStanzaErrorResponse(ctx, elem, xmpp.ErrRemoteServerNotFound)
-		return
-	}
+	outStm := s.outProvider.newOut(s.router.Hosts().DefaultHostName(), elem.From())
+	verifyCh := outStm.verify(ctx, dbVerify)
 
 	// wait remote server verification
 	select {
-	case valid := <-outStm.verify():
+	case valid := <-verifyCh:
 		reply := xmpp.NewElementName("db:result")
 		reply.SetFrom(elem.To())
 		reply.SetTo(elem.From())
@@ -450,8 +446,8 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession bo
 	if closeSession {
 		_ = s.sess.Close(ctx)
 	}
-	if s.cfg.onInDisconnect != nil {
-		s.cfg.onInDisconnect(s)
+	if s.cfg.onDisconnect != nil {
+		s.cfg.onDisconnect(s)
 	}
 
 	s.setState(inDisconnected)

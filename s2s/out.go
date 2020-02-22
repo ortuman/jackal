@@ -14,7 +14,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/session"
-	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -32,29 +32,31 @@ const (
 )
 
 type outStream struct {
-	started       uint32
 	id            string
-	cfg           *outStreamConfig
+	cfg           *outConfig
+	runQueue      *runqueue.RunQueue
 	hosts         *host.Hosts
+	dialer        Dialer
 	state         uint32
+	tr            transport.Transport
 	sess          *session.Session
 	secured       uint32
 	authenticated uint32
-	sendQueue     []xmpp.XElement
-	verified      chan xmpp.XElement
+	pendingSendQ  []xmpp.XElement
+	dbVerify      xmpp.XElement
 	verifyCh      chan bool
 	discCh        chan *streamerror.Error
-	runQueue      *runqueue.RunQueue
-	onDisconnect  func(s stream.S2SOut)
 }
 
-func newOutStream(hosts *host.Hosts) *outStream {
+func newOutStream(cfg *outConfig, hosts *host.Hosts, dialer Dialer) *outStream {
 	id := nextOutID()
 	return &outStream{
 		id:       id,
+		cfg:      cfg,
 		hosts:    hosts,
-		verifyCh: make(chan bool, 1),
-		discCh:   make(chan *streamerror.Error, 1),
+		dialer:   dialer,
+		state:    outConnecting,
+		discCh:   make(chan *streamerror.Error),
 		runQueue: runqueue.New(id),
 	}
 }
@@ -64,52 +66,54 @@ func (s *outStream) ID() string {
 }
 
 func (s *outStream) SendElement(ctx context.Context, elem xmpp.XElement) {
-	if s.getState() == outDisconnected {
-		return
-	}
 	s.runQueue.Run(func() {
-		if s.getState() != outVerified {
-			// send element after verification has been completed
-			s.sendQueue = append(s.sendQueue, elem)
-			return
-		}
-		s.writeElement(ctx, elem)
+		s.sendElement(ctx, elem)
 	})
 }
 
 func (s *outStream) Disconnect(ctx context.Context, err error) {
-	if s.getState() == outDisconnected {
-		return
-	}
 	waitCh := make(chan struct{})
-	s.runQueue.Run(func() {
+	s.runQueue.Stop(func() {
+		if s.getState() == outDisconnected {
+			return
+		}
 		s.disconnect(ctx, err)
 		close(waitCh)
 	})
 	<-waitCh
 }
 
-func (s *outStream) start(ctx context.Context, config *outStreamConfig) error {
-	if config.dbVerify != nil && config.dbVerify.Name() != "db:verify" {
-		return fmt.Errorf("wrong dialback verification element name: %s", config.dbVerify.Name())
+func (s *outStream) sendElement(ctx context.Context, elem xmpp.XElement) {
+	switch s.getState() {
+	case outVerified:
+		s.writeElement(ctx, elem)
+	case outConnecting, outDisconnected:
+		if err := s.reconnect(ctx); err != nil {
+			log.Error(err)
+			return
+		}
+		fallthrough
+	default:
+		// send element after verification has been completed
+		s.pendingSendQ = append(s.pendingSendQ, elem)
+		return
 	}
-	if !atomic.CompareAndSwapUint32(&s.started, 0, 1) {
-		return fmt.Errorf("stream already started (domainpair: %s)", s.ID())
-	}
-	s.cfg = config
-
-	// start s2s out session
-	s.restartSession()
-
-	go s.doRead() // start reading transport...
-
-	s.runQueue.Run(func() {
-		_ = s.sess.Open(ctx, nil)
-	})
-	return nil
 }
 
-func (s *outStream) verify() <-chan bool             { return s.verifyCh }
+func (s *outStream) verify(ctx context.Context, dbVerify xmpp.XElement) <-chan bool {
+	verifyCh := make(chan bool, 1)
+	s.runQueue.Run(func() {
+		s.dbVerify = dbVerify
+		s.verifyCh = verifyCh
+
+		if err := s.reconnect(ctx); err != nil {
+			log.Error(err)
+			return
+		}
+	})
+	return verifyCh
+}
+
 func (s *outStream) done() <-chan *streamerror.Error { return s.discCh }
 
 // runs on its own goroutine
@@ -118,9 +122,7 @@ func (s *outStream) doRead() {
 
 	ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
 	if sErr == nil {
-		s.runQueue.Run(func() {
-			s.readElement(ctx, elem)
-		})
+		s.runQueue.Run(func() { s.readElement(ctx, elem) })
 	} else {
 		s.runQueue.Run(func() {
 			if s.getState() == outDisconnected {
@@ -129,6 +131,26 @@ func (s *outStream) doRead() {
 			s.handleSessionError(ctx, sErr)
 		})
 	}
+}
+
+func (s *outStream) dial(ctx context.Context) error {
+	conn, err := s.dialer.Dial(ctx, s.cfg.remoteDomain)
+	if err != nil {
+		return err
+	}
+	s.tr = transport.NewSocketTransport(conn, s.cfg.keepAlive)
+	return nil
+}
+
+func (s *outStream) reconnect(ctx context.Context) error {
+	if err := s.dial(ctx); err != nil {
+		return err
+	}
+	s.restartSession()
+
+	go s.doRead() // start reading transport...
+
+	return s.sess.Open(ctx, nil)
 }
 
 func (s *outStream) handleElement(ctx context.Context, elem xmpp.XElement) {
@@ -168,9 +190,9 @@ func (s *outStream) handleConnected(ctx context.Context, elem xmpp.XElement) {
 
 	} else {
 		// authorize dialback key
-		if s.cfg.dbVerify != nil {
+		if s.dbVerify != nil {
 			s.setState(outAuthorizingDialbackKey)
-			s.writeElement(ctx, s.cfg.dbVerify)
+			s.writeElement(ctx, s.dbVerify)
 			return
 		}
 		if !s.isAuthenticated() {
@@ -216,10 +238,11 @@ func (s *outStream) handleSecuring(ctx context.Context, elem xmpp.XElement) {
 		s.disconnectWithStreamError(ctx, streamerror.ErrInvalidNamespace)
 		return
 	}
-	s.cfg.transport.StartTLS(s.cfg.tls, true)
+	s.tr.StartTLS(s.cfg.tls, true)
 
 	atomic.StoreUint32(&s.secured, 1)
 	s.restartSession()
+
 	_ = s.sess.Open(ctx, nil)
 }
 
@@ -273,10 +296,10 @@ func (s *outStream) handleAuthorizingDialbackKey(ctx context.Context, elem xmpp.
 
 func (s *outStream) finishVerification(ctx context.Context) {
 	// send pending elements...
-	for _, el := range s.sendQueue {
+	for _, el := range s.pendingSendQ {
 		s.writeElement(ctx, el)
 	}
-	s.sendQueue = nil
+	s.pendingSendQ = nil
 	s.setState(outVerified)
 }
 
@@ -333,7 +356,13 @@ func (s *outStream) disconnect(ctx context.Context, err error) {
 }
 
 func (s *outStream) disconnectWithStreamError(ctx context.Context, err *streamerror.Error) {
-	s.discCh <- err
+	// notify disconnection
+	select {
+	case s.discCh <- err:
+		break
+	default:
+		break
+	}
 	s.writeElement(ctx, err.Element())
 	s.disconnectClosingSession(ctx, true)
 }
@@ -342,23 +371,18 @@ func (s *outStream) disconnectClosingSession(ctx context.Context, closeSession b
 	if closeSession {
 		_ = s.sess.Close(ctx)
 	}
-	if s.cfg.onOutDisconnect != nil {
-		s.cfg.onOutDisconnect(s)
-	}
+	atomic.StoreUint32(&s.secured, 0)
+	atomic.StoreUint32(&s.authenticated, 0)
 
 	s.setState(outDisconnected)
-	_ = s.cfg.transport.Close()
-
-	s.runQueue.Stop(nil) // stop processing messages
-
-	close(s.discCh)
+	_ = s.tr.Close()
 }
 
 func (s *outStream) restartSession() {
 	j, _ := jid.New("", s.cfg.localDomain, "", true)
 	s.sess = session.New(s.id, &session.Config{
 		JID:           j,
-		Transport:     s.cfg.transport,
+		Transport:     s.tr,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.cfg.remoteDomain,
 		IsServer:      true,

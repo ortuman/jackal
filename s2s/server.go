@@ -90,13 +90,13 @@ func (s *server) listenConn(address string) error {
 }
 
 func (s *server) startInStream(tr transport.Transport) {
-	stm := newInStream(&inStreamConfig{
+	stm := newInStream(&inConfig{
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,
 		timeout:        s.cfg.Timeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
-		onInDisconnect: s.unregisterInStream,
+		onDisconnect:   s.unregisterInStream,
 	}, s.mods, s.outProvider, s.router)
 	s.registerInStream(stm)
 }

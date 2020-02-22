@@ -313,7 +313,7 @@ func tUtilOutStreamOpen(conn *fakeSocketConn) {
 `)
 }
 
-func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outStreamConfig, conn *fakeSocketConn) *outStream {
+func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outConfig, conn *fakeSocketConn) *outStream {
 	stm := newOutStream(hosts)
 	_ = stm.start(context.Background(), cfg)
 
@@ -336,10 +336,10 @@ func tUtilOutStreamInit(t *testing.T, hosts *host.Hosts) (*outStream, *fakeSocke
 	return stm, conn
 }
 
-func tUtilOutStreamDefaultConfig() (*outStreamConfig, *fakeSocketConn) {
+func tUtilOutStreamDefaultConfig() (*outConfig, *fakeSocketConn) {
 	conn := newFakeSocketConn()
 	tr := transport.NewSocketTransport(conn, 4096)
-	return &outStreamConfig{
+	return &outConfig{
 		remoteDomain:  "jabber.org",
 		transport:     tr,
 		maxStanzaSize: 8192,

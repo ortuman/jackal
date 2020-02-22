@@ -11,7 +11,6 @@ import (
 
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/xmpp"
 	"github.com/pkg/errors"
 )
 
@@ -114,7 +113,7 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-type inStreamConfig struct {
+type inConfig struct {
 	keyGen         *keyGen
 	connectTimeout time.Duration
 	timeout        time.Duration
@@ -122,17 +121,15 @@ type inStreamConfig struct {
 	transport      transport.Transport
 	maxStanzaSize  int
 	outProvider    OutProvider
-	onInDisconnect func(s stream.S2SIn)
+	onDisconnect   func(s stream.S2SIn)
 }
 
-type outStreamConfig struct {
-	keyGen          *keyGen
-	localDomain     string
-	remoteDomain    string
-	timeout         time.Duration
-	tls             *tls.Config
-	transport       transport.Transport
-	maxStanzaSize   int
-	dbVerify        xmpp.XElement
-	onOutDisconnect func(s stream.S2SOut)
+type outConfig struct {
+	keyGen        *keyGen
+	localDomain   string
+	remoteDomain  string
+	timeout       time.Duration
+	keepAlive     time.Duration
+	tls           *tls.Config
+	maxStanzaSize int
 }
