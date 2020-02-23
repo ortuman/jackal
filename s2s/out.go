@@ -88,7 +88,7 @@ func (s *outStream) sendElement(ctx context.Context, elem xmpp.XElement) {
 	case outVerified:
 		s.writeElement(ctx, elem)
 	case outConnecting, outDisconnected:
-		if err := s.reconnect(ctx); err != nil {
+		if err := s.start(ctx); err != nil {
 			log.Error(err)
 			return
 		}
@@ -112,7 +112,7 @@ func (s *outStream) verify(ctx context.Context, streamID, from, to, key string) 
 		s.dbVerify = dbVerify
 		s.verifyCh = verifyCh
 
-		if err := s.reconnect(ctx); err != nil {
+		if err := s.start(ctx); err != nil {
 			log.Error(err)
 			return
 		}
@@ -150,7 +150,7 @@ func (s *outStream) dial(ctx context.Context) error {
 	return nil
 }
 
-func (s *outStream) reconnect(ctx context.Context) error {
+func (s *outStream) start(ctx context.Context) error {
 	if err := s.dial(ctx); err != nil {
 		return err
 	}
@@ -158,9 +158,9 @@ func (s *outStream) reconnect(ctx context.Context) error {
 
 	go s.doRead() // start reading transport...
 
-	s.runQueue.Run(func() {
-		_ = s.sess.Open(ctx, nil)
-	})
+	// s.runQueue.Run(func() {
+	_ = s.sess.Open(ctx, nil)
+	// })
 	return nil
 }
 

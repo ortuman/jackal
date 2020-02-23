@@ -46,7 +46,7 @@ func TestOutProvider_Shutdown(t *testing.T) {
 		return newFakeSocketConn(), nil
 	}
 	out := op.GetOut("jackal.im", "jabber.org")
-	_ = out.(*outStream).reconnect(context.Background()) // start transport
+	_ = out.(*outStream).start(context.Background()) // start transport
 
 	require.NotNil(t, out)
 

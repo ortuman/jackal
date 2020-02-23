@@ -22,7 +22,7 @@ func TestOutStream_Disconnect(t *testing.T) {
 
 	cfg, dialer, conn := tUtilOutStreamDefaultConfig()
 	stm := newOutStream(cfg, h, dialer)
-	_ = stm.reconnect(context.Background())
+	_ = stm.start(context.Background())
 
 	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
@@ -249,7 +249,7 @@ func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outConfi
 		return conn, nil
 	}
 	stm := newOutStream(cfg, hosts, d)
-	_ = stm.reconnect(context.Background()) // start stream
+	_ = stm.start(context.Background()) // start stream
 
 	elem := conn.outboundRead()
 	require.Equal(t, "stream:stream", elem.Name())
@@ -261,7 +261,7 @@ func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outConfi
 func tUtilOutStreamInit(t *testing.T, hosts *host.Hosts) (*outStream, *fakeSocketConn) {
 	cfg, dialer, conn := tUtilOutStreamDefaultConfig()
 	stm := newOutStream(cfg, hosts, dialer)
-	_ = stm.reconnect(context.Background()) // start stream
+	_ = stm.start(context.Background()) // start stream
 
 	elem := conn.outboundRead()
 	require.Equal(t, "stream:stream", elem.Name())
