@@ -101,7 +101,7 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 		messages = append(messages, *msg)
 	}
 	for _, m := range messages {
-		log.Warnf("MSG-2: %s\n", m)
+		log.Warnf("MSG-2: %s\n", &m)
 	}
 	return messages, nil
 }
