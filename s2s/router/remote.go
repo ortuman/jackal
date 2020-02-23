@@ -8,26 +8,21 @@ package s2srouter
 import (
 	"context"
 
-	"github.com/ortuman/jackal/s2s"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 type remoteRouter struct {
-	remoteDomain string
-	localDomain  string
-	outProvider  s2s.OutProvider
+	outStm stream.S2SOut
 }
 
-func newRemoteRouter(remoteDomain, localDomain string, outProvider s2s.OutProvider) *remoteRouter {
+func newRemoteRouter(outStm stream.S2SOut) *remoteRouter {
 	return &remoteRouter{
-		remoteDomain: remoteDomain,
-		localDomain:  localDomain,
-		outProvider:  outProvider,
+		outStm: outStm,
 	}
 }
 
 func (r *remoteRouter) route(ctx context.Context, stanza xmpp.Stanza) error {
-	outStm := r.outProvider.GetOut(r.localDomain, r.remoteDomain)
-	outStm.SendElement(ctx, stanza)
+	r.outStm.SendElement(ctx, stanza)
 	return nil
 }

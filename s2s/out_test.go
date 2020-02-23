@@ -7,42 +7,23 @@ package s2s
 
 import (
 	"context"
+	"net"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/ortuman/jackal/router/host"
-	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func TestOutStream_Start(t *testing.T) {
-	h := setupTestHosts(jackaDomain)
-
-	cfg, _ := tUtilOutStreamDefaultConfig()
-	stm := newOutStream(h)
-	defer stm.Disconnect(context.Background(), nil)
-
-	// wrong verification name...
-	cfg.dbVerify = xmpp.NewElementName("foo")
-	err := stm.start(context.Background(), cfg)
-	require.NotNil(t, err)
-
-	cfg.dbVerify = nil
-	_ = stm.start(context.Background(), cfg)
-	err = stm.start(context.Background(), cfg)
-	require.NotNil(t, err) // already started
-}
-
 func TestOutStream_Disconnect(t *testing.T) {
 	h := setupTestHosts(jackaDomain)
 
-	cfg, conn := tUtilOutStreamDefaultConfig()
-	stm := newOutStream(h)
+	cfg, dialer, conn := tUtilOutStreamDefaultConfig()
+	stm := newOutStream(cfg, h, dialer)
+	_ = stm.reconnect(context.Background())
 
-	_ = stm.start(context.Background(), cfg)
 	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
@@ -98,57 +79,6 @@ func TestOutStream_Features(t *testing.T) {
 <stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"/>
 `)
 	require.True(t, conn.waitClose())
-}
-
-func TestOutStream_DBVerify(t *testing.T) {
-	h := setupTestHosts(jackaDomain)
-
-	cfg, conn := tUtilOutStreamDefaultConfig()
-	dbVerify := xmpp.NewElementName("db:verify")
-	key := uuid.New()
-	dbVerify.SetID("abcde")
-	dbVerify.SetFrom("jackal.im")
-	dbVerify.SetTo("jabber.org")
-	dbVerify.SetText(key)
-	cfg.dbVerify = dbVerify
-
-	stm := tUtilOutStreamInitWithConfig(t, h, cfg, conn)
-	atomic.StoreUint32(&stm.secured, 1)
-	tUtilOutStreamOpen(conn)
-
-	_, _ = conn.inboundWriteString(securedFeatures)
-	elem := conn.outboundRead()
-	require.Equal(t, "db:verify", elem.Name())
-	require.Equal(t, key, elem.Text())
-
-	// unsupported stanza...
-	_, _ = conn.inboundWriteString(`
-<dbverify/>
-`)
-	select {
-	case sErr := <-stm.done():
-		require.Equal(t, "unsupported-stanza-type", sErr.Error())
-	case <-time.After(time.Second):
-		require.Fail(t, "expecting session error")
-	}
-
-	cfg, conn = tUtilOutStreamDefaultConfig()
-	cfg.dbVerify = dbVerify
-	stm = tUtilOutStreamInitWithConfig(t, h, cfg, conn)
-	atomic.StoreUint32(&stm.secured, 1)
-	tUtilOutStreamOpen(conn)
-	_, _ = conn.inboundWriteString(securedFeatures)
-	_ = conn.outboundRead()
-
-	_, _ = conn.inboundWriteString(`
-<db:verify id='abcde' from='jabber.org' to='jackal.im' type='valid'/>
-`)
-	select {
-	case ok := <-stm.verify():
-		require.True(t, ok)
-	case <-time.After(time.Second):
-		require.Fail(t, "expecting dialback valid verification")
-	}
 }
 
 func TestOutStream_StartTLS(t *testing.T) {
@@ -314,8 +244,12 @@ func tUtilOutStreamOpen(conn *fakeSocketConn) {
 }
 
 func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outConfig, conn *fakeSocketConn) *outStream {
-	stm := newOutStream(hosts)
-	_ = stm.start(context.Background(), cfg)
+	d := newDialer()
+	d.dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+		return conn, nil
+	}
+	stm := newOutStream(cfg, hosts, d)
+	_ = stm.reconnect(context.Background()) // start stream
 
 	elem := conn.outboundRead()
 	require.Equal(t, "stream:stream", elem.Name())
@@ -325,9 +259,9 @@ func tUtilOutStreamInitWithConfig(t *testing.T, hosts *host.Hosts, cfg *outConfi
 }
 
 func tUtilOutStreamInit(t *testing.T, hosts *host.Hosts) (*outStream, *fakeSocketConn) {
-	cfg, conn := tUtilOutStreamDefaultConfig()
-	stm := newOutStream(hosts)
-	_ = stm.start(context.Background(), cfg)
+	cfg, dialer, conn := tUtilOutStreamDefaultConfig()
+	stm := newOutStream(cfg, hosts, dialer)
+	_ = stm.reconnect(context.Background()) // start stream
 
 	elem := conn.outboundRead()
 	require.Equal(t, "stream:stream", elem.Name())
@@ -336,13 +270,16 @@ func tUtilOutStreamInit(t *testing.T, hosts *host.Hosts) (*outStream, *fakeSocke
 	return stm, conn
 }
 
-func tUtilOutStreamDefaultConfig() (*outConfig, *fakeSocketConn) {
+func tUtilOutStreamDefaultConfig() (*outConfig, Dialer, *fakeSocketConn) {
 	conn := newFakeSocketConn()
-	tr := transport.NewSocketTransport(conn, 4096)
+	d := newDialer()
+	d.dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+		return conn, nil
+	}
 	return &outConfig{
 		remoteDomain:  "jabber.org",
-		transport:     tr,
 		maxStanzaSize: 8192,
+		keepAlive:     4096,
 		keyGen:        &keyGen{secret: "s3cr3t"},
-	}, conn
+	}, d, conn
 }

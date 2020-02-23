@@ -325,15 +325,10 @@ func (s *inStream) authorizeDialbackKey(ctx context.Context, elem xmpp.XElement)
 	}
 	log.Infof("authorizing dialback key: %s...", elem.Text())
 
-	// create verify element
-	dbVerify := xmpp.NewElementName("db:verify")
-	dbVerify.SetID(s.sess.StreamID())
-	dbVerify.SetFrom(elem.To())
-	dbVerify.SetTo(elem.From())
-	dbVerify.SetText(elem.Text())
-
+	// verify stream
 	outStm := s.outProvider.newOut(s.router.Hosts().DefaultHostName(), elem.From())
-	verifyCh := outStm.verify(ctx, dbVerify)
+
+	verifyCh := outStm.verify(ctx, s.sess.StreamID(), elem.To(), elem.From(), elem.Text())
 
 	// wait remote server verification
 	select {

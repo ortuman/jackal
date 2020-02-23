@@ -38,7 +38,7 @@ func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain s
 		r.mu.Lock()
 		rr = r.remotes[domain] // avoid double initialization
 		if rr == nil {
-			rr = newRemoteRouter(domain, localDomain, r.outProvider)
+			rr = newRemoteRouter(r.outProvider.GetOut(localDomain, domain))
 			r.remotes[domain] = rr
 		}
 		r.mu.Unlock()

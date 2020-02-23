@@ -100,9 +100,15 @@ func (s *outStream) sendElement(ctx context.Context, elem xmpp.XElement) {
 	}
 }
 
-func (s *outStream) verify(ctx context.Context, dbVerify xmpp.XElement) <-chan bool {
+func (s *outStream) verify(ctx context.Context, streamID, from, to, key string) <-chan bool {
 	verifyCh := make(chan bool, 1)
 	s.runQueue.Run(func() {
+		dbVerify := xmpp.NewElementName("db:verify")
+		dbVerify.SetID(streamID)
+		dbVerify.SetFrom(from)
+		dbVerify.SetTo(to)
+		dbVerify.SetText(key)
+
 		s.dbVerify = dbVerify
 		s.verifyCh = verifyCh
 

@@ -25,20 +25,12 @@ func TestOutProvider_GetOut(t *testing.T) {
 	op.(*outProvider).dialer.(*dialer).dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
 		return newFakeSocketConn(), nil
 	}
-	out, err := op.GetOut(context.Background(), "jackal.im", "jabber.org")
+	out := op.GetOut("jackal.im", "jabber.org")
 
 	require.NotNil(t, out)
-	require.Nil(t, err)
 
 	op.(*outProvider).mu.RLock()
 	require.Len(t, op.(*outProvider).outConnections, 1)
-	op.(*outProvider).mu.RUnlock()
-
-	out.Disconnect(context.Background(), nil)
-	time.Sleep(time.Millisecond * 100) // wait until unregistered
-
-	op.(*outProvider).mu.RLock()
-	require.Len(t, op.(*outProvider).outConnections, 0)
 	op.(*outProvider).mu.RUnlock()
 }
 
@@ -53,10 +45,10 @@ func TestOutProvider_Shutdown(t *testing.T) {
 	op.(*outProvider).dialer.(*dialer).dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
 		return newFakeSocketConn(), nil
 	}
-	out, err := op.GetOut(context.Background(), "jackal.im", "jabber.org")
+	out := op.GetOut("jackal.im", "jabber.org")
+	_ = out.(*outStream).reconnect(context.Background()) // start transport
 
 	require.NotNil(t, out)
-	require.Nil(t, err)
 
 	op.(*outProvider).mu.RLock()
 	require.Len(t, op.(*outProvider).outConnections, 1)
