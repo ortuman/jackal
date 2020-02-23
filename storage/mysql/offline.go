@@ -92,6 +92,9 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
 		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
+
+		log.Warnf("MSG: %s\n", msg)
+
 		if err != nil {
 			return nil, err
 		}
