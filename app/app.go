@@ -301,8 +301,8 @@ func (a *Application) doShutdown(ctx context.Context) error {
 		return err
 	}
 
-	if a.s2sOutProvider != nil {
-		if err := a.s2sOutProvider.Shutdown(ctx); err != nil {
+	if outProvider := a.s2sOutProvider; outProvider != nil {
+		if err := outProvider.Shutdown(ctx); err != nil {
 			return err
 		}
 	}

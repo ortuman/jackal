@@ -70,6 +70,8 @@ func (p *outProvider) Shutdown(ctx context.Context) error {
 	for _, conn := range p.outConnections {
 		conn.Disconnect(ctx, nil)
 	}
+	p.outConnections = nil
+
 	log.Infof("closed %d out connection(s)", len(p.outConnections))
 
 	return nil
