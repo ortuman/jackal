@@ -303,12 +303,12 @@ func (s *outStream) handleAuthorizingDialbackKey(ctx context.Context, elem xmpp.
 }
 
 func (s *outStream) finishVerification(ctx context.Context) {
+	s.setState(outVerified)
 	// send pending elements...
 	for _, el := range s.pendingSendQ {
 		s.writeElement(ctx, el)
 	}
 	s.pendingSendQ = nil
-	s.setState(outVerified)
 }
 
 func (s *outStream) writeStanzaErrorResponse(ctx context.Context, elem xmpp.XElement, stanzaErr *xmpp.StanzaError) {
