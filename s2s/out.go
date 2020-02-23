@@ -55,7 +55,7 @@ func newOutStream(cfg *outConfig, hosts *host.Hosts, dialer Dialer) *outStream {
 		cfg:      cfg,
 		hosts:    hosts,
 		dialer:   dialer,
-		state:    outConnecting,
+		state:    outDisconnected,
 		discCh:   make(chan *streamerror.Error),
 		runQueue: runqueue.New(id),
 	}
@@ -87,7 +87,7 @@ func (s *outStream) sendElement(ctx context.Context, elem xmpp.XElement) {
 	switch s.getState() {
 	case outVerified:
 		s.writeElement(ctx, elem)
-	case outConnecting, outDisconnected:
+	case outDisconnected:
 		if err := s.start(ctx); err != nil {
 			log.Error(err)
 			return
@@ -158,9 +158,7 @@ func (s *outStream) start(ctx context.Context) error {
 
 	go s.doRead() // start reading transport...
 
-	// s.runQueue.Run(func() {
 	_ = s.sess.Open(ctx, nil)
-	// })
 	return nil
 }
 
