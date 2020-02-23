@@ -158,7 +158,9 @@ func (s *outStream) reconnect(ctx context.Context) error {
 
 	go s.doRead() // start reading transport...
 
-	_ = s.sess.Open(ctx, nil)
+	s.runQueue.Run(func() {
+		_ = s.sess.Open(ctx, nil)
+	})
 	return nil
 }
 
@@ -305,6 +307,7 @@ func (s *outStream) handleAuthorizingDialbackKey(ctx context.Context, elem xmpp.
 
 func (s *outStream) finishVerification(ctx context.Context) {
 	s.setState(outVerified)
+
 	// send pending elements...
 	for _, el := range s.pendingSendQ {
 		s.writeElement(ctx, el)
