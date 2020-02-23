@@ -93,12 +93,15 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 		toJID, _ := jid.NewWithString(el.To(), true)
 		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
 
-		log.Warnf("MSG: %s\n", msg)
+		log.Warnf("MSG-1: %s\n", msg)
 
 		if err != nil {
 			return nil, err
 		}
 		messages = append(messages, *msg)
+	}
+	for _, m := range messages {
+		log.Warnf("MSG-2: %s\n", m)
 	}
 	return messages, nil
 }
