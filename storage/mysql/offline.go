@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/ortuman/jackal/log"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
@@ -87,12 +89,15 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 	for i, el := range elements {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
-		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
 
+		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
 		if err != nil {
 			return nil, err
 		}
 		messages[i] = *msg
+
+		log.Warnf("MSG-1: %s", msg)
+		log.Warnf("MSG-2: %s", &messages[i])
 	}
 	return messages, nil
 }
