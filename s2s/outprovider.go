@@ -81,8 +81,6 @@ func (p *outProvider) Shutdown(ctx context.Context) error {
 
 func (p *outProvider) newOut(localDomain, remoteDomain string) *outStream {
 	tlsConfig := &tls.Config{
-		MinVersion:   tls.VersionTLS11,
-		MaxVersion:   tls.VersionTLS12,
 		ServerName:   remoteDomain,
 		Certificates: p.hosts.Certificates(),
 	}

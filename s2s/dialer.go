@@ -46,6 +46,8 @@ func (d *dialer) Dial(ctx context.Context, remoteDomain string) (net.Conn, error
 	} else {
 		target = strings.TrimSuffix(address[0].Target, ".") + ":" + strconv.Itoa(int(address[0].Port))
 	}
+	log.Infof("dialing to %s", remoteDomain)
+
 	conn, err := d.dialContext(ctx, "tcp", target)
 	if err != nil {
 		return nil, err

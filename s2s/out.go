@@ -158,7 +158,8 @@ func (s *outStream) reconnect(ctx context.Context) error {
 
 	go s.doRead() // start reading transport...
 
-	return s.sess.Open(ctx, nil)
+	_ = s.sess.Open(ctx, nil)
+	return nil
 }
 
 func (s *outStream) handleElement(ctx context.Context, elem xmpp.XElement) {
