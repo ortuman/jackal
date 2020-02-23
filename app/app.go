@@ -289,8 +289,8 @@ func (a *Application) shutdown(ctx context.Context) <-chan bool {
 		if a.s2sOutProvider != nil {
 			_ = a.s2sOutProvider.Shutdown(ctx)
 		}
-
 		log.Unset()
+
 		c <- true
 	}()
 	return c

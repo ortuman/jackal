@@ -65,6 +65,13 @@ func (p *outProvider) GetOut(localDomain, remoteDomain string) stream.S2SOut {
 }
 
 func (p *outProvider) Shutdown(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, conn := range p.outConnections {
+		conn.Disconnect(ctx, nil)
+	}
+	log.Infof("closed %d out connection(s)", len(p.outConnections))
+
 	return nil
 }
 
