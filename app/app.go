@@ -278,20 +278,34 @@ func (a *Application) gracefullyShutdown() error {
 func (a *Application) shutdown(ctx context.Context) <-chan bool {
 	c := make(chan bool, 1)
 	go func() {
-		if a.debugSrv != nil {
-			_ = a.debugSrv.Shutdown(ctx)
+		if err := a.doShutdown(ctx); err != nil {
+			log.Warnf("failed to shutdown: %s", err)
 		}
-		a.c2s.Shutdown(ctx)
-
-		_ = a.comps.Shutdown(ctx)
-		_ = a.mods.Shutdown(ctx)
-
-		if a.s2sOutProvider != nil {
-			_ = a.s2sOutProvider.Shutdown(ctx)
-		}
-		log.Unset()
-
 		c <- true
 	}()
 	return c
+}
+
+func (a *Application) doShutdown(ctx context.Context) error {
+	if a.debugSrv != nil {
+		if err := a.debugSrv.Shutdown(ctx); err != nil {
+			return err
+		}
+	}
+	a.c2s.Shutdown(ctx)
+
+	if err := a.comps.Shutdown(ctx); err != nil {
+		return err
+	}
+	if err := a.mods.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	if a.s2sOutProvider != nil {
+		if err := a.s2sOutProvider.Shutdown(ctx); err != nil {
+			return err
+		}
+	}
+	log.Unset()
+	return nil
 }
