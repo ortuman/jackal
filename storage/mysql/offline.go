@@ -9,8 +9,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/ortuman/jackal/log"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
@@ -78,8 +76,6 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 	}
 	buf.WriteString("</r>")
 
-	log.Warnf("%s", buf.String())
-
 	parser := xmpp.NewParser(buf, xmpp.DefaultMode, 0)
 	rootEl, err := parser.ParseElement()
 	if err != nil {
@@ -87,21 +83,16 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 	}
 	elements := rootEl.Elements().All()
 
-	var messages []xmpp.Message
-	for _, el := range elements {
+	messages := make([]xmpp.Message, len(elements))
+	for i, el := range elements {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
 		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
 
-		log.Warnf("MSG-1: %s\n", msg)
-
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, *msg)
-	}
-	for _, m := range messages {
-		log.Warnf("MSG-2: %s\n", &m)
+		messages[i] = *msg
 	}
 	return messages, nil
 }
