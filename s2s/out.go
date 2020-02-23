@@ -134,7 +134,7 @@ func (s *outStream) doRead() {
 			if s.getState() == outDisconnected {
 				return // already disconnected...
 			}
-			log.Infof("s2s out stream disconnected... (domainpair: %s)", s.id)
+			log.Infof("s2s out stream disconnected... (domainpair: %s)", s.ID())
 
 			s.handleSessionError(ctx, sErr)
 		})
