@@ -134,6 +134,8 @@ func (s *outStream) doRead() {
 			if s.getState() == outDisconnected {
 				return // already disconnected...
 			}
+			log.Infof("s2s out disconnected: (id: %s)", s.ID())
+
 			s.handleSessionError(ctx, sErr)
 		})
 	}
@@ -320,7 +322,7 @@ func (s *outStream) writeStanzaErrorResponse(ctx context.Context, elem xmpp.XEle
 
 func (s *outStream) writeElement(ctx context.Context, elem xmpp.XElement) {
 	if err := s.sess.Send(ctx, elem); err != nil {
-		log.Errorf("%s: %v", s.ID(), err)
+		log.Error(err)
 	}
 }
 
