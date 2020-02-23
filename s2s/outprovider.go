@@ -74,7 +74,7 @@ func (p *outProvider) Shutdown(ctx context.Context) error {
 		conn.Disconnect(ctx, nil)
 		delete(p.outConnections, k)
 	}
-	log.Infof("%s: closed %d out connection(s)", len(p.outConnections))
+	log.Infof("closed %d out connection(s)", len(p.outConnections))
 
 	return nil
 }
