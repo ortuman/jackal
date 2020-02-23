@@ -9,8 +9,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/ortuman/jackal/log"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
@@ -95,12 +93,6 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 			return nil, err
 		}
 		messages[i] = *msg
-
-		log.Warnf("MSG-1: %s", msg)
-		log.Warnf("MSG-2: %s", &messages[i])
-	}
-	for _, msg := range messages {
-		log.Warnf("MSG-3: %s", &msg)
 	}
 	return messages, nil
 }
