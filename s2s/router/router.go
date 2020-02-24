@@ -7,6 +7,7 @@ package s2srouter
 
 import (
 	"context"
+	"github.com/ortuman/jackal/xmpp/jid"
 	"sync"
 
 	"github.com/ortuman/jackal/router"
@@ -45,4 +46,10 @@ func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain s
 		r.mu.Unlock()
 	}
 	return rr.route(ctx, stanza)
+}
+
+// PresencesMatching returns all presences that match a given pattern jid.
+func (r *s2sRouter) PresencesMatching(jid *jid.JID) []xmpp.Presence {
+	// TODO(ortuman): implement me!
+	return nil
 }
