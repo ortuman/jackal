@@ -198,7 +198,6 @@ func (r *c2sRouter) presencesMatchingAll(username, resource string) []xmpp.Prese
 		if stm := rs.stream(resource); stm != nil {
 			presences = append(presences, *stm.Presence())
 		}
-		return nil
 	}
 	r.mu.RUnlock()
 	return presences
