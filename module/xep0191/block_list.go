@@ -11,8 +11,8 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -34,11 +34,11 @@ type BlockingCommand struct {
 	router       router.Router
 	blockListRep repository.BlockList
 	rosterRep    repository.Roster
-	presenceHub  *presencehub.PresenceHub
+	presenceHub  *xep0115.PresenceHub
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, presenceHub *xep0115.PresenceHub, router router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
 	b := &BlockingCommand{
 		runQueue:     runqueue.New("xep0191"),
 		router:       router,

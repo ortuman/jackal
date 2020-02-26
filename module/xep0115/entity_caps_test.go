@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package presencehub
+package xep0115
 
 import (
 	"context"

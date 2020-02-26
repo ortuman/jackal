@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
@@ -41,11 +41,11 @@ type Roster struct {
 	userRep     repository.User
 	rosterRep   repository.Roster
 	pep         *xep0163.Pep
-	presenceHub *presencehub.PresenceHub
+	presenceHub *xep0115.PresenceHub
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
+func New(cfg *Config, presenceHub *xep0115.PresenceHub, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
 	r := &Roster{
 		cfg:         cfg,
 		runQueue:    runqueue.New("roster"),

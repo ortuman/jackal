@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package presencehub
+package xep0115
 
 import (
 	"context"
@@ -44,7 +44,7 @@ type PresenceHub struct {
 // New returns a new presence hub instance.
 func New(router router.Router, capsRep repository.Capabilities) *PresenceHub {
 	return &PresenceHub{
-		runQueue: runqueue.New("presencehub"),
+		runQueue: runqueue.New("xep0115"),
 		router:   router,
 		capsRep:  capsRep,
 	}
@@ -161,7 +161,7 @@ func (x *PresenceHub) processCapabilitiesIQ(ctx context.Context, query xmpp.XEle
 	nodeStr := query.Attributes().Get("node")
 	ss := strings.Split(nodeStr, "#")
 	if len(ss) != 2 {
-		return fmt.Errorf("presencehub: wrong node format: %s", nodeStr)
+		return fmt.Errorf("xep0115: wrong node format: %s", nodeStr)
 	}
 	node = ss[0]
 	ver = ss[1]

@@ -16,8 +16,8 @@ import (
 	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
@@ -898,7 +898,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
 	})
-	ph := presencehub.New(r, capsRep)
+	ph := xep0115.New(r, capsRep)
 
 	// register presence
 	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)

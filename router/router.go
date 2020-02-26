@@ -37,9 +37,6 @@ type Router interface {
 
 	// LocalStreams returns all streams associated to a given username.
 	LocalStreams(username string) []stream.C2S
-
-	// PresencesMatching returns all presences that match a given pattern jid.
-	PresencesMatching(jid *jid.JID) []xmpp.Presence
 }
 
 type C2SRouter interface {
@@ -58,18 +55,12 @@ type C2SRouter interface {
 
 	// Streams returns all streams associated to a given username.
 	Streams(username string) []stream.C2S
-
-	// PresencesMatching returns all presences that match a given pattern jid.
-	PresencesMatching(username, resource string) []xmpp.Presence
 }
 
 type S2SRouter interface {
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
 	Route(ctx context.Context, stanza xmpp.Stanza, localDomain string) error
-
-	// PresencesMatching returns all presences that match a given pattern jid.
-	PresencesMatching(jid *jid.JID) []xmpp.Presence
 }
 
 type router struct {
@@ -113,17 +104,6 @@ func (r *router) LocalStreams(username string) []stream.C2S {
 
 func (r *router) LocalStream(username, resource string) stream.C2S {
 	return r.c2s.Stream(username, resource)
-}
-
-// PresencesMatching returns all presences that match a given pattern jid.
-func (r *router) PresencesMatching(jid *jid.JID) []xmpp.Presence {
-	if !r.hosts.IsLocalHost(jid.Domain()) {
-		if r.s2s == nil {
-			return nil
-		}
-		return r.s2s.PresencesMatching(jid)
-	}
-	return r.c2s.PresencesMatching(jid.Node(), jid.Resource())
 }
 
 func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {

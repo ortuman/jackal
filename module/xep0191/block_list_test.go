@@ -16,7 +16,7 @@ import (
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
@@ -35,7 +35,7 @@ func TestXEP0191_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := presencehub.New(r, nil)
+	ph := xep0115.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -69,7 +69,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := presencehub.New(r, nil)
+	ph := xep0115.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -109,7 +109,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 func TestXEP191_BlockAndUnblock(t *testing.T) {
 	r, blockListRep, rosterRep := setupTest("jackal.im")
 
-	ph := presencehub.New(r, nil)
+	ph := xep0115.New(r, nil)
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
