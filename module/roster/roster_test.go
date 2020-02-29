@@ -337,19 +337,19 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 1, len(ph.AvailablePresencesMatchingJID(j1)))
+	require.Equal(t, 1, len(ph.PresencesMatchingJID(j1)))
 
 	j6, _ := jid.NewWithString("jackal.im", true)
-	require.Equal(t, 4, len(ph.AvailablePresencesMatchingJID(j6)))
+	require.Equal(t, 4, len(ph.PresencesMatchingJID(j6)))
 
 	j7, _ := jid.NewWithString("jabber.org", true)
-	require.Equal(t, 1, len(ph.AvailablePresencesMatchingJID(j7)))
+	require.Equal(t, 1, len(ph.PresencesMatchingJID(j7)))
 
 	j8, _ := jid.NewWithString("jackal.im/balcony", true)
-	require.Equal(t, 2, len(ph.AvailablePresencesMatchingJID(j8)))
+	require.Equal(t, 2, len(ph.PresencesMatchingJID(j8)))
 
 	j9, _ := jid.NewWithString("ortuman@jackal.im", true)
-	require.Equal(t, 2, len(ph.AvailablePresencesMatchingJID(j9)))
+	require.Equal(t, 2, len(ph.PresencesMatchingJID(j9)))
 
 	// send unavailable presences...
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType))
@@ -360,11 +360,11 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j1)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j6)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j7)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j8)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j9)))
+	require.Equal(t, 0, len(ph.PresencesMatchingJID(j1)))
+	require.Equal(t, 0, len(ph.PresencesMatchingJID(j6)))
+	require.Equal(t, 0, len(ph.PresencesMatchingJID(j7)))
+	require.Equal(t, 0, len(ph.PresencesMatchingJID(j8)))
+	require.Equal(t, 0, len(ph.PresencesMatchingJID(j9)))
 }
 
 func TestRoster_Probe(t *testing.T) {

@@ -123,6 +123,9 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
+	if len(cfg.AllocationID) == 0 {
+		return errors.New("alloc_id field is required")
+	}
 	// create PID file
 	if err := a.createPIDFile(cfg.PIDFile); err != nil {
 		return err

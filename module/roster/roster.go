@@ -35,25 +35,25 @@ type Config struct {
 
 // Roster represents a roster server stream module.
 type Roster struct {
-	cfg         *Config
-	runQueue    *runqueue.RunQueue
-	router      router.Router
-	userRep     repository.User
-	rosterRep   repository.Roster
-	pep         *xep0163.Pep
-	presenceHub *xep0115.PresenceHub
+	cfg        *Config
+	runQueue   *runqueue.RunQueue
+	router     router.Router
+	userRep    repository.User
+	rosterRep  repository.Roster
+	pep        *xep0163.Pep
+	entityCaps *xep0115.EntityCaps
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *xep0115.PresenceHub, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
+func New(cfg *Config, entityCaps *xep0115.EntityCaps, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
 	r := &Roster{
-		cfg:         cfg,
-		runQueue:    runqueue.New("roster"),
-		router:      router,
-		userRep:     userRep,
-		rosterRep:   rosterRep,
-		presenceHub: presenceHub,
-		pep:         pep,
+		cfg:        cfg,
+		runQueue:   runqueue.New("roster"),
+		router:     router,
+		userRep:    userRep,
+		rosterRep:  rosterRep,
+		entityCaps: entityCaps,
+		pep:        pep,
 	}
 	return r
 }
@@ -564,7 +564,7 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 	if ri == nil || (ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom) {
 		return nil // silently ignore
 	}
-	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
+	availPresences := x.entityCaps.PresencesMatchingJID(contactJID)
 	if len(availPresences) == 0 { // send last known presence
 		usr, err := x.userRep.FetchUser(ctx, contactJID.Node())
 		if err != nil {
@@ -599,7 +599,7 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'available' - user: %s", fromJID)
 
 		// register presence
-		alreadyRegistered, err := x.presenceHub.RegisterPresence(ctx, presence)
+		alreadyRegistered, err := x.entityCaps.RegisterPresence(ctx, presence)
 		if err != nil {
 			return err
 		}
@@ -613,7 +613,7 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'unavailable' - user: %s", fromJID)
 
 		// unregister presence
-		x.presenceHub.UnregisterPresence(ctx, presence)
+		x.entityCaps.UnregisterPresence(presence.FromJID())
 	}
 	if replyOnBehalf {
 		return x.broadcastPresence(ctx, presence)

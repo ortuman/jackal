@@ -45,6 +45,26 @@ CREATE TABLE IF NOT EXISTS users (
 
 SELECT enable_updated_at('users');
 
+-- presences
+
+CREATE TABLE IF NOT EXISTS presences (
+    username      VARCHAR(1023) NOT NULL,
+    domain        VARCHAR(1023) NOT NULL,
+    resource      VARCHAR(1023) NOT NULL,
+    presence      TEXT NOT NULL,
+    allocation_id VARCHAR(1023) NOT NULL,
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (username, domain, resource)
+);
+
+SELECT enable_updated_at('presences');
+
+CREATE INDEX IF NOT EXISTS i_presences_username_domain ON presences(username, domain);
+CREATE INDEX IF NOT EXISTS i_presences_domain_resource ON presences(domain, resource);
+CREATE INDEX IF NOT EXISTS i_presences_allocation_id ON presences(allocation_id);
+
 -- capabilities
 
 CREATE TABLE IF NOT EXISTS capabilities (

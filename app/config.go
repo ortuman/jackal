@@ -30,15 +30,16 @@ type loggerConfig struct {
 
 // Config represents a global configuration.
 type Config struct {
-	PIDFile    string           `yaml:"pid_path"`
-	Debug      debugConfig      `yaml:"debug"`
-	Logger     loggerConfig     `yaml:"logger"`
-	Storage    storage.Config   `yaml:"storage"`
-	Hosts      []host.Config    `yaml:"hosts"`
-	Modules    module.Config    `yaml:"modules"`
-	Components component.Config `yaml:"components"`
-	C2S        []c2s.Config     `yaml:"c2s"`
-	S2S        *s2s.Config      `yaml:"s2s"`
+	AllocationID string           `yaml:"alloc_id"`
+	PIDFile      string           `yaml:"pid_path"`
+	Debug        debugConfig      `yaml:"debug"`
+	Logger       loggerConfig     `yaml:"logger"`
+	Storage      storage.Config   `yaml:"storage"`
+	Hosts        []host.Config    `yaml:"hosts"`
+	Modules      module.Config    `yaml:"modules"`
+	Components   component.Config `yaml:"components"`
+	C2S          []c2s.Config     `yaml:"c2s"`
+	S2S          *s2s.Config      `yaml:"s2s"`
 }
 
 // FromFile loads default global configuration from a specified file.

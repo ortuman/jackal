@@ -34,17 +34,17 @@ type BlockingCommand struct {
 	router       router.Router
 	blockListRep repository.BlockList
 	rosterRep    repository.Roster
-	presenceHub  *xep0115.PresenceHub
+	entityCaps   *xep0115.EntityCaps
 }
 
 // New returns a blocking command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *xep0115.PresenceHub, router router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
+func New(disco *xep0030.DiscoInfo, entityCaps *xep0115.EntityCaps, router router.Router, rosterRep repository.Roster, blockListRep repository.BlockList) *BlockingCommand {
 	b := &BlockingCommand{
 		runQueue:     runqueue.New("xep0191"),
 		router:       router,
 		blockListRep: blockListRep,
 		rosterRep:    rosterRep,
-		presenceHub:  presenceHub,
+		entityCaps:   entityCaps,
 	}
 	if disco != nil {
 		disco.RegisterServerFeature(blockingCommandNamespace)
@@ -216,11 +216,11 @@ func (x *BlockingCommand) pushIQ(ctx context.Context, elem xmpp.XElement, stm st
 }
 
 func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, blockedJID *jid.JID, ris []rostermodel.Item, presenceType string, stm stream.C2S) {
-	if x.presenceHub == nil {
+	if x.entityCaps == nil {
 		// roster disabled
 		return
 	}
-	onlinePresences := x.presenceHub.AvailablePresencesMatchingJID(blockedJID)
+	onlinePresences := x.entityCaps.PresencesMatchingJID(blockedJID)
 	for _, onlinePresence := range onlinePresences {
 		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {

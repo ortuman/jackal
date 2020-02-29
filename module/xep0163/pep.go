@@ -62,24 +62,24 @@ type commandContext struct {
 
 // Pep represents a Personal Eventing Protocol module.
 type Pep struct {
-	runQueue    *runqueue.RunQueue
-	router      router.Router
-	rosterRep   repository.Roster
-	pubSubRep   repository.PubSub
-	disco       *xep0030.DiscoInfo
-	presenceHub *xep0115.PresenceHub
-	hosts       []string
+	runQueue   *runqueue.RunQueue
+	router     router.Router
+	rosterRep  repository.Roster
+	pubSubRep  repository.PubSub
+	disco      *xep0030.DiscoInfo
+	entityCaps *xep0115.EntityCaps
+	hosts      []string
 }
 
 // New returns a PEP command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *xep0115.PresenceHub, router router.Router, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
+func New(disco *xep0030.DiscoInfo, presenceHub *xep0115.EntityCaps, router router.Router, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
 	p := &Pep{
-		runQueue:    runqueue.New("xep0163"),
-		rosterRep:   rosterRep,
-		pubSubRep:   pubSubRep,
-		router:      router,
-		disco:       disco,
-		presenceHub: presenceHub,
+		runQueue:   runqueue.New("xep0163"),
+		rosterRep:  rosterRep,
+		pubSubRep:  pubSubRep,
+		router:     router,
+		disco:      disco,
+		entityCaps: presenceHub,
 	}
 	// register account identity and features
 	if disco != nil {
@@ -982,8 +982,8 @@ func (x *Pep) notify(
 			}
 		}
 
-		if ph := x.presenceHub; ph != nil {
-			onlinePresences := ph.AvailablePresencesMatchingJID(&toJID)
+		if ph := x.entityCaps; ph != nil {
+			onlinePresences := ph.PresencesMatchingJID(&toJID)
 
 			for _, onlinePresence := range onlinePresences {
 				caps := onlinePresence.Caps

@@ -10,11 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/router/host"
-
 	c2srouter "github.com/ortuman/jackal/c2s/router"
-	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
@@ -23,51 +21,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPresenceHub_RegisterPresence(t *testing.T) {
-	r, s := setupTest("jackal.im")
-
-	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
-	j3, _ := jid.New("noelia", "jackal.im", "yard", true)
-
-	p1 := xmpp.NewPresence(j1, j1, xmpp.AvailableType)
-	p2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
-	p3 := xmpp.NewPresence(j3, j3, xmpp.AvailableType)
-
-	_ = s.UpsertCapabilities(context.Background(), &model.Capabilities{
-		Node:     "http://code.google.com/p/exodus",
-		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
-		Features: []string{"princely_musings+notify"},
-	})
-
-	// register presence
-	c := xmpp.NewElementNamespace("c", "http://jabber.org/protocol/caps")
-	c.SetAttribute("hash", "sha-1")
-	c.SetAttribute("node", "http://code.google.com/p/exodus")
-	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
-	p2.AppendElement(c)
-
-	ph := New(r, s)
-	_, _ = ph.RegisterPresence(context.Background(), p1)
-	_, _ = ph.RegisterPresence(context.Background(), p2)
-	_, _ = ph.RegisterPresence(context.Background(), p3)
-
-	availablePresences := ph.AvailablePresencesMatchingJID(j3.ToBareJID())
-	require.Len(t, availablePresences, 2)
-
-	ph.UnregisterPresence(context.Background(), p3)
-
-	availablePresences = ph.AvailablePresencesMatchingJID(j2.ToBareJID())
-	require.Len(t, availablePresences, 1)
-
-	// check capabilities
-	caps := availablePresences[0].Caps
-	require.NotNil(t, caps)
-	require.Equal(t, "http://code.google.com/p/exodus", caps.Node)
-	require.Equal(t, "QgayPKawpkPSDYmwT/WM94uAlu0=", caps.Ver)
+func TestEntityCaps_RegisterPresence(t *testing.T) {
 }
 
-func TestPresenceHub_RequestCapabilities(t *testing.T) {
+func TestEntityCaps_RequestCapabilities(t *testing.T) {
 	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -99,7 +56,7 @@ func TestPresenceHub_RequestCapabilities(t *testing.T) {
 	require.Equal(t, "http://code.google.com/p/exodus#QgayPKawpkPSDYmwT/WM94uAlu0=", queryElem.Attributes().Get("node"))
 }
 
-func TestPresenceHub_ProcessCapabilities(t *testing.T) {
+func TestEntityCaps_ProcessCapabilities(t *testing.T) {
 	r, s := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
