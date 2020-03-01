@@ -221,7 +221,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
 	op := NewOutProvider(&Config{}, h)
-	op.(*outProvider).dialer.(*dialer).srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
+	op.dialer.(*dialer).srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
 	}
 
@@ -241,10 +241,10 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 
 	cfg, conn := tUtilInStreamDefaultConfig(t, false)
 	outConn := newFakeSocketConn()
-	op.(*outProvider).dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
+	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, op.(*outProvider).newOut, r)
+	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -263,10 +263,10 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	// authorize dialback key
 	cfg, conn = tUtilInStreamDefaultConfig(t, false)
 	outConn = newFakeSocketConn()
-	op.(*outProvider).dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
+	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, op.(*outProvider).newOut, r)
+	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -353,9 +353,9 @@ func TestStream_SendElement(t *testing.T) {
 	require.True(t, conn.waitClose())
 }
 
-func tUtilInStreamInit(t *testing.T, router router.Router, outS2SProvider OutProvider, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
+func tUtilInStreamInit(t *testing.T, router router.Router, outProvider *OutProvider, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
 	cfg, conn := tUtilInStreamDefaultConfig(t, loadPeerCertificate)
-	stm := newInStream(cfg, &module.Modules{}, outS2SProvider.(*outProvider).newOut, router)
+	stm := newInStream(cfg, &module.Modules{}, outProvider.newOut, router)
 	return stm, conn
 }
 

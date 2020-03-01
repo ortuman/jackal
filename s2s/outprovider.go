@@ -17,12 +17,7 @@ import (
 
 type newOutFunc = func(localDomain, remoteDomain string) *outStream
 
-type OutProvider interface {
-	GetOut(localDomain, remoteDomain string) stream.S2SOut
-	Shutdown(ctx context.Context) error
-}
-
-type outProvider struct {
+type OutProvider struct {
 	cfg            *Config
 	hosts          *host.Hosts
 	dialer         Dialer
@@ -30,8 +25,8 @@ type outProvider struct {
 	outConnections map[string]stream.S2SOut
 }
 
-func NewOutProvider(config *Config, hosts *host.Hosts) OutProvider {
-	return &outProvider{
+func NewOutProvider(config *Config, hosts *host.Hosts) *OutProvider {
+	return &OutProvider{
 		cfg:            config,
 		hosts:          hosts,
 		dialer:         newDialer(),
@@ -39,7 +34,7 @@ func NewOutProvider(config *Config, hosts *host.Hosts) OutProvider {
 	}
 }
 
-func (p *outProvider) GetOut(localDomain, remoteDomain string) stream.S2SOut {
+func (p *OutProvider) GetOut(localDomain, remoteDomain string) stream.S2SOut {
 	domainPair := getDomainPair(localDomain, remoteDomain)
 	p.mu.RLock()
 	outStm := p.outConnections[domainPair]
@@ -63,7 +58,7 @@ func (p *outProvider) GetOut(localDomain, remoteDomain string) stream.S2SOut {
 	return outStm
 }
 
-func (p *outProvider) Shutdown(ctx context.Context) error {
+func (p *OutProvider) Shutdown(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, conn := range p.outConnections {
@@ -76,7 +71,7 @@ func (p *outProvider) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (p *outProvider) newOut(localDomain, remoteDomain string) *outStream {
+func (p *OutProvider) newOut(localDomain, remoteDomain string) *outStream {
 	tlsConfig := &tls.Config{
 		ServerName:   remoteDomain,
 		Certificates: p.hosts.Certificates(),

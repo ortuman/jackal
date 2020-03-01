@@ -31,7 +31,6 @@ type mockedOutProvider struct {
 }
 
 func (p *mockedOutProvider) GetOut(_, _ string) stream.S2SOut { return p.outStm }
-func (p *mockedOutProvider) Shutdown(_ context.Context) error { return nil }
 
 func TestS2SRouter_Route(t *testing.T) {
 	outStm := &mockedOutS2S{}

@@ -9,20 +9,23 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
+
+type OutProvider interface {
+	GetOut(localDomain, remoteDomain string) stream.S2SOut
+}
 
 type remoteRouter struct {
 	mu           sync.RWMutex
 	localDomain  string
 	remoteDomain string
-	outProvider  s2s.OutProvider
+	outProvider  OutProvider
 	outStm       stream.S2SOut
 }
 
-func newRemoteRouter(localDomain, remoteDomain string, outProvider s2s.OutProvider) *remoteRouter {
+func newRemoteRouter(localDomain, remoteDomain string, outProvider OutProvider) *remoteRouter {
 	return &remoteRouter{
 		localDomain:  localDomain,
 		remoteDomain: remoteDomain,

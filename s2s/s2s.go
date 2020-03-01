@@ -39,12 +39,12 @@ var createS2SServer = func(config *Config, mods *module.Modules, newOutFn newOut
 type S2S struct {
 	started     uint32
 	srv         s2sServer
-	outProvider OutProvider
+	outProvider *OutProvider
 }
 
 // New returns a new instance of an s2s connection manager.
-func New(config *Config, mods *module.Modules, outS2SProvider OutProvider, router router.Router) *S2S {
-	return &S2S{srv: createS2SServer(config, mods, outS2SProvider.(*outProvider).newOut, router)}
+func New(config *Config, mods *module.Modules, outProvider *OutProvider, router router.Router) *S2S {
+	return &S2S{srv: createS2SServer(config, mods, outProvider.newOut, router)}
 }
 
 // Start initializes s2s manager.

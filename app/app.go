@@ -66,7 +66,7 @@ type Application struct {
 	router           router.Router
 	mods             *module.Modules
 	comps            *component.Components
-	s2sOutProvider   s2s.OutProvider
+	s2sOutProvider   *s2s.OutProvider
 	s2s              *s2s.S2S
 	c2s              *c2s.C2S
 	debugSrv         *http.Server
