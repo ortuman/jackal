@@ -1,7 +1,5 @@
 # Test basic configuration
 
-alloc_id: 43c0b14e
-
 pid_path: test.jackal.pid
 
 debug:

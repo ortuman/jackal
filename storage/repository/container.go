@@ -15,6 +15,9 @@ type Container interface {
 	// Roster method returns repository.Roster concrete implementation.
 	Roster() Roster
 
+	// Presences method returns repository.Presences concrete implementation.
+	Presences() Presences
+
 	// Capabilities method returns repository.Capabilities concrete implementation.
 	Capabilities() Capabilities
 
