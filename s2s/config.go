@@ -120,7 +120,6 @@ type inConfig struct {
 	tls            *tls.Config
 	transport      transport.Transport
 	maxStanzaSize  int
-	outProvider    OutProvider
 	onDisconnect   func(s stream.S2SIn)
 }
 

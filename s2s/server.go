@@ -27,18 +27,18 @@ type server struct {
 	cfg           *Config
 	router        router.Router
 	mods          *module.Modules
-	outProvider   OutProvider
+	newOutFn      newOutFunc
 	inConnections map[string]stream.S2SIn
 	ln            net.Listener
 	listening     uint32
 }
 
-func newServer(config *Config, mods *module.Modules, outProvider OutProvider, router router.Router) *server {
+func newServer(config *Config, mods *module.Modules, newOutFn newOutFunc, router router.Router) *server {
 	return &server{
 		cfg:           config,
 		router:        router,
 		mods:          mods,
-		outProvider:   outProvider,
+		newOutFn:      newOutFn,
 		inConnections: make(map[string]stream.S2SIn),
 	}
 }
@@ -97,7 +97,7 @@ func (s *server) startInStream(tr transport.Transport) {
 		timeout:        s.cfg.Timeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
 		onDisconnect:   s.unregisterInStream,
-	}, s.mods, s.outProvider, s.router)
+	}, s.mods, s.newOutFn, s.router)
 	s.registerInStream(stm)
 }
 

@@ -26,11 +26,11 @@ type s2sServer interface {
 	shutdown(ctx context.Context) error
 }
 
-var createS2SServer = func(config *Config, mods *module.Modules, outProvider OutProvider, router router.Router) s2sServer {
+var createS2SServer = func(config *Config, mods *module.Modules, newOutFn newOutFunc, router router.Router) s2sServer {
 	return newServer(
 		config,
 		mods,
-		outProvider,
+		newOutFn,
 		router,
 	)
 }
@@ -43,8 +43,8 @@ type S2S struct {
 }
 
 // New returns a new instance of an s2s connection manager.
-func New(config *Config, mods *module.Modules, outProvider OutProvider, router router.Router) *S2S {
-	return &S2S{srv: createS2SServer(config, mods, outProvider, router)}
+func New(config *Config, mods *module.Modules, outS2SProvider OutProvider, router router.Router) *S2S {
+	return &S2S{srv: createS2SServer(config, mods, outS2SProvider.(*outProvider).newOut, router)}
 }
 
 // Start initializes s2s manager.

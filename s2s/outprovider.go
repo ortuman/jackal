@@ -15,12 +15,11 @@ import (
 	"github.com/ortuman/jackal/stream"
 )
 
+type newOutFunc = func(localDomain, remoteDomain string) *outStream
+
 type OutProvider interface {
 	GetOut(localDomain, remoteDomain string) stream.S2SOut
-
 	Shutdown(ctx context.Context) error
-
-	newOut(localDomain, remoteDomain string) *outStream
 }
 
 type outProvider struct {
