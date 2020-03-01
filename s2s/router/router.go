@@ -7,24 +7,24 @@ package s2srouter
 
 import (
 	"context"
-	"github.com/ortuman/jackal/xmpp/jid"
 	"sync"
 
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 )
 
 type s2sRouter struct {
 	mu          sync.RWMutex
 	outProvider s2s.OutProvider
-	remotes     map[string]*remoteRouter
+	remotes     map[string]stream.S2SOut
 }
 
 func New(outProvider s2s.OutProvider) router.S2SRouter {
 	return &s2sRouter{
 		outProvider: outProvider,
-		remotes:     make(map[string]*remoteRouter),
+		remotes:     make(map[string]stream.S2SOut),
 	}
 }
 
@@ -32,24 +32,18 @@ func (r *s2sRouter) Route(ctx context.Context, stanza xmpp.Stanza, localDomain s
 	domain := stanza.ToJID().Domain()
 
 	r.mu.RLock()
-	rr := r.remotes[domain]
+	outStm := r.remotes[domain]
 	r.mu.RUnlock()
 
-	if rr == nil {
+	if outStm == nil {
 		r.mu.Lock()
-		rr = r.remotes[domain] // avoid double initialization
-		if rr == nil {
-			outStm := r.outProvider.GetOut(localDomain, domain)
-			rr = newRemoteRouter(outStm)
-			r.remotes[domain] = rr
+		outStm = r.remotes[domain] // avoid double initialization
+		if outStm == nil {
+			outStm = r.outProvider.GetOut(localDomain, domain)
+			r.remotes[domain] = outStm
 		}
 		r.mu.Unlock()
 	}
-	return rr.route(ctx, stanza)
-}
-
-// PresencesMatching returns all presences that match a given pattern jid.
-func (r *s2sRouter) PresencesMatching(jid *jid.JID) []xmpp.Presence {
-	// TODO(ortuman): implement me!
+	outStm.SendElement(ctx, stanza)
 	return nil
 }
