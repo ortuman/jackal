@@ -17,6 +17,7 @@ import (
 	"hash"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -24,7 +25,6 @@ import (
 	utilrand "github.com/ortuman/jackal/util/rand"
 	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -222,7 +222,7 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	}
 	s.user = user
 
-	s.srvNonce = cNonce + "-" + uuid.New()
+	s.srvNonce = cNonce + "-" + uuid.New().String()
 	s.salt = utilrand.RandomBytes(32)
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)

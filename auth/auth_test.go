@@ -9,11 +9,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/model"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func authTestSetup(user *model.User) (*stream.MockC2S, *memorystorage.User) {
 
 	j, _ := jid.New("mariana", "localhost", "res", true)
 
-	testStm := stream.NewMockC2S(uuid.New(), j)
+	testStm := stream.NewMockC2S(uuid.New().String(), j)
 
 	testStm.SetJID(j)
 	return testStm, s

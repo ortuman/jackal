@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
@@ -22,7 +23,6 @@ import (
 	"github.com/ortuman/jackal/transport/compress"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -222,7 +222,7 @@ func TestStream_SendIQ(t *testing.T) {
 	require.Equal(t, bound, stm.getState())
 
 	// request roster...
-	iqID := uuid.New()
+	iqID := uuid.New().String()
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:iq:roster"))
 
@@ -312,7 +312,7 @@ func TestStream_SendMessage(t *testing.T) {
 
 	r.Bind(context.Background(), stm2)
 
-	msgID := uuid.New()
+	msgID := uuid.New().String()
 	msg := xmpp.NewMessageType(msgID, xmpp.ChatType)
 	msg.SetFromJID(jFrom)
 	msg.SetToJID(jTo)

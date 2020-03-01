@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/c2s"
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/component"
@@ -123,9 +124,7 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
-	if len(cfg.AllocationID) == 0 {
-		return errors.New("alloc_id field is required")
-	}
+
 	// create PID file
 	if err := a.createPIDFile(cfg.PIDFile); err != nil {
 		return err
@@ -136,8 +135,11 @@ func (a *Application) Run() error {
 		return err
 	}
 
+	// generate allocation identifier
+	allocID := uuid.New().String()
+
 	// show jackal's fancy logo
-	a.printLogo()
+	a.printLogo(allocID)
 
 	// initialize storage
 	repContainer, err := storage.New(&cfg.Storage)
@@ -241,12 +243,12 @@ func (a *Application) initLogger(config *loggerConfig, output io.Writer) error {
 	return nil
 }
 
-func (a *Application) printLogo() {
+func (a *Application) printLogo(allocID string) {
 	for i := range logoStr {
 		log.Infof("%s", logoStr[i])
 	}
 	log.Infof("")
-	log.Infof("jackal %v\n", version.ApplicationVersion)
+	log.Infof("jackal %v - allocation_id: %s\n", version.ApplicationVersion, allocID)
 }
 
 func (a *Application) initDebugServer(port int) error {

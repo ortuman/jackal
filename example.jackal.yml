@@ -1,7 +1,5 @@
 # jackal default configuration file
 
-alloc_id: 0af996ed
-
 pid_path: jackal.pid
 
 debug:

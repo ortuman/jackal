@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	streamerror "github.com/ortuman/jackal/errors"
@@ -26,7 +27,6 @@ import (
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
 )
 
 const (
@@ -549,7 +549,7 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 	if resourceElem := bind.Elements().Child("resource"); resourceElem != nil {
 		resource = resourceElem.Text()
 	} else {
-		resource = uuid.New()
+		resource = uuid.New().String()
 	}
 	// try binding...
 	var stm stream.C2S
@@ -563,7 +563,7 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 		switch s.cfg.resourceConflict {
 		case Override:
 			// override the resource with a server-generated resourcepart...
-			resource = uuid.New()
+			resource = uuid.New().String()
 		case Replace:
 			// terminate the session of the currently connected client...
 			stm.Disconnect(ctx, streamerror.ErrResourceConstraint)
