@@ -243,7 +243,7 @@ func TestS2S_StartAndShutdown(t *testing.T) {
 
 func setupTestS2S() (*S2S, *fakeS2SServer) {
 	srv := newFakeS2SServer()
-	createS2SServer = func(_ *Config, _ *module.Modules, _ OutProvider, _ router.Router) s2sServer {
+	createS2SServer = func(_ *Config, _ *module.Modules, _ newOutFunc, _ router.Router) s2sServer {
 		return srv
 	}
 	r, _ := router.New(nil, nil, nil)
