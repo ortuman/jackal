@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 
 	sq "github.com/Masterminds/squirrel"
-
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
@@ -36,17 +35,30 @@ func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Pres
 	if err := presence.ToXML(buf, true); err != nil {
 		return err
 	}
+	var node, ver string
+	if caps := presence.Capabilities(); caps != nil {
+		node = caps.Node
+		ver = caps.Ver
+	}
 	rawXML := buf.String()
 
 	q := sq.Insert("presences").
-		Columns("username", "domain", "resource", "presence", "allocation_id", "updated_at", "created_at").
-		Values(jid.Node(), jid.Domain(), jid.Resource(), allocationID, rawXML, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE presence = ?, updated_at = NOW()", rawXML)
+		Columns("username", "domain", "resource", "presence", "allocation_id", "node", "ver", "updated_at", "created_at").
+		Values(jid.Node(), jid.Domain(), jid.Resource(), allocationID, rawXML, node, ver, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE presence = ?, node = ?, ver = ?, allocation_id = ?, updated_at = NOW()", rawXML, node, ver, allocationID)
 	_, err := q.RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
 func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*xmpp.Presence, *model.Capabilities, error) {
+	/*
+	   	SELECT presence, c.node, c.ver, c.features FROM presences p, capabilities AS c
+	       WHERE username = 'ortuman'
+	         AND domain = 'jackal.im'
+	         AND resource = 'Conversations.rXh3'
+	         AND p.node = c.node
+	         AND p.ver = c.ver
+	*/
 	return nil, nil, nil
 }
 
