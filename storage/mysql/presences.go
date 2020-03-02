@@ -31,7 +31,19 @@ func newPresences(db *sql.DB) *mySQLPresences {
 }
 
 func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Presence, jid *jid.JID, allocationID string) error {
-	return nil
+	buf := s.pool.Get()
+	defer s.pool.Put(buf)
+	if err := presence.ToXML(buf, true); err != nil {
+		return err
+	}
+	rawXML := buf.String()
+
+	q := sq.Insert("presences").
+		Columns("username", "domain", "resource", "presence", "allocation_id", "updated_at", "created_at").
+		Values(jid.Node(), jid.Domain(), jid.Resource(), allocationID, rawXML, nowExpr, nowExpr).
+		Suffix("ON DUPLICATE KEY UPDATE presence = ?, updated_at = NOW()", rawXML)
+	_, err := q.RunWith(s.db).ExecContext(ctx)
+	return err
 }
 
 func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*xmpp.Presence, *model.Capabilities, error) {
