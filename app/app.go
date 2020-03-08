@@ -146,6 +146,10 @@ func (a *Application) Run() error {
 	if err != nil {
 		return err
 	}
+	if err := repContainer.Presences().ClearPresences(context.Background()); err != nil {
+		return err
+	}
+
 	// initialize hosts
 	hosts, err := host.New(cfg.Hosts)
 	if err != nil {
