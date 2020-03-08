@@ -42,8 +42,8 @@ func (m *Presences) DeletePresence(ctx context.Context, jid *jid.JID) error {
 	return nil
 }
 
-// DeleteAllocationPresences removes from storage all presences associated to a given allocation.
-func (m *Presences) DeleteAllocationPresences(ctx context.Context, allocationID string) error {
+// ClearAllocationPresences removes from storage all presences associated to a given allocation.
+func (m *Presences) ClearAllocationPresences(ctx context.Context, allocationID string) error {
 	return nil
 }
 

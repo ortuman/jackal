@@ -21,8 +21,8 @@ type Presences interface {
 	// DeletePresence removes from storage a concrete registered presence.
 	DeletePresence(ctx context.Context, jid *jid.JID) error
 
-	// DeleteAllocationPresences removes from storage all presences associated to a given allocation.
-	DeleteAllocationPresences(ctx context.Context, allocationID string) error
+	// ClearAllocationPresences removes from storage all presences associated to a given allocation.
+	ClearAllocationPresences(ctx context.Context, allocationID string) error
 
 	// UpsertCapabilities inserts capabilities associated to a node+ver pair, or updates them if previously inserted..
 	UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error

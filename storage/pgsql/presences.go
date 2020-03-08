@@ -52,7 +52,7 @@ func (s *pgSQLPresences) DeletePresence(ctx context.Context, jid *jid.JID) error
 	return err
 }
 
-func (s *pgSQLPresences) DeleteAllocationPresences(ctx context.Context, allocationID string) error {
+func (s *pgSQLPresences) ClearAllocationPresences(ctx context.Context, allocationID string) error {
 	_, err := sq.Delete("presences").
 		Where(sq.Eq{"allocation_id": allocationID}).
 		RunWith(s.db).ExecContext(ctx)

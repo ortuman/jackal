@@ -91,7 +91,7 @@ func (s *mySQLPresences) DeletePresence(ctx context.Context, jid *jid.JID) error
 	return err
 }
 
-func (s *mySQLPresences) DeleteAllocationPresences(ctx context.Context, allocationID string) error {
+func (s *mySQLPresences) ClearAllocationPresences(ctx context.Context, allocationID string) error {
 	_, err := sq.Delete("presences").
 		Where(sq.Eq{"allocation_id": allocationID}).
 		RunWith(s.db).ExecContext(ctx)
