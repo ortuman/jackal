@@ -10,7 +10,7 @@ import (
 
 type Presences interface {
 	// UpsertPresence inserts or updates a presence and links it to certain allocation.
-	// On insertion loaded return parameter will be true.
+	// On insertion 'inserted' return parameter will be true.
 	UpsertPresence(ctx context.Context, presence *xmpp.Presence, jid *jid.JID, allocationID string) (inserted bool, err error)
 
 	// FetchPresence retrieves from storage a previously registered presence.
