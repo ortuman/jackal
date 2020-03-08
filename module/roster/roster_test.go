@@ -30,7 +30,7 @@ import (
 func TestRoster_MatchesIQ(t *testing.T) {
 	rtr, userRep, rosterRep := setupTest("jackal.im")
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -47,7 +47,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
@@ -95,7 +95,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), ri2)
 
-	r = New(&Config{Versioning: true}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r = New(&Config{Versioning: true}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -132,7 +132,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	memorystorage.EnableMockedError()
-	r = New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r = New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -153,7 +153,7 @@ func TestRoster_Update(t *testing.T) {
 	stm2.SetAuthenticated(true)
 	stm2.SetValue(rosterRequestedCtxKey, true)
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	rtr.Bind(context.Background(), stm1)
@@ -231,7 +231,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	// remove item
@@ -301,7 +301,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
 	})
 
-	ph := xep0115.New(rtr, nil)
+	ph := xep0115.New(rtr, nil, "alloc-1234")
 	r := New(&Config{}, ph, nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
@@ -337,19 +337,24 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 1, len(ph.PresencesMatchingJID(j1)))
+	ln1, _ := ph.PresencesMatchingJID(context.Background(), j1)
+	require.Equal(t, 1, len(ln1))
 
 	j6, _ := jid.NewWithString("jackal.im", true)
-	require.Equal(t, 4, len(ph.PresencesMatchingJID(j6)))
+	ln6, _ := ph.PresencesMatchingJID(context.Background(), j6)
+	require.Equal(t, 4, len(ln6))
 
 	j7, _ := jid.NewWithString("jabber.org", true)
-	require.Equal(t, 1, len(ph.PresencesMatchingJID(j7)))
+	ln7, _ := ph.PresencesMatchingJID(context.Background(), j7)
+	require.Equal(t, 1, len(ln7))
 
 	j8, _ := jid.NewWithString("jackal.im/balcony", true)
-	require.Equal(t, 2, len(ph.PresencesMatchingJID(j8)))
+	ln8, _ := ph.PresencesMatchingJID(context.Background(), j8)
+	require.Equal(t, 2, len(ln8))
 
 	j9, _ := jid.NewWithString("ortuman@jackal.im", true)
-	require.Equal(t, 2, len(ph.PresencesMatchingJID(j9)))
+	ln9, _ := ph.PresencesMatchingJID(context.Background(), j9)
+	require.Equal(t, 2, len(ln9))
 
 	// send unavailable presences...
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType))
@@ -360,11 +365,16 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 0, len(ph.PresencesMatchingJID(j1)))
-	require.Equal(t, 0, len(ph.PresencesMatchingJID(j6)))
-	require.Equal(t, 0, len(ph.PresencesMatchingJID(j7)))
-	require.Equal(t, 0, len(ph.PresencesMatchingJID(j8)))
-	require.Equal(t, 0, len(ph.PresencesMatchingJID(j9)))
+	ln1, _ = ph.PresencesMatchingJID(context.Background(), j1)
+	ln6, _ = ph.PresencesMatchingJID(context.Background(), j6)
+	ln7, _ = ph.PresencesMatchingJID(context.Background(), j7)
+	ln8, _ = ph.PresencesMatchingJID(context.Background(), j8)
+	ln9, _ = ph.PresencesMatchingJID(context.Background(), j9)
+	require.Equal(t, 0, len(ln1))
+	require.Equal(t, 0, len(ln6))
+	require.Equal(t, 0, len(ln7))
+	require.Equal(t, 0, len(ln8))
+	require.Equal(t, 0, len(ln9))
 }
 
 func TestRoster_Probe(t *testing.T) {
@@ -380,7 +390,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	_ = userRep.UpsertUser(context.Background(), &model.User{
@@ -415,7 +425,7 @@ func TestRoster_Subscription(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 
-	r := New(&Config{}, xep0115.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))

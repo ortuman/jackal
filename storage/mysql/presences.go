@@ -160,6 +160,25 @@ func (s *mySQLPresences) UpsertCapabilities(ctx context.Context, caps *capsmodel
 	return err
 }
 
+func (s *mySQLPresences) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
+	var b string
+	err := sq.Select("features").From("capabilities").
+		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
+		RunWith(s.db).QueryRowContext(ctx).Scan(&b)
+	switch err {
+	case nil:
+		var caps capsmodel.Capabilities
+		if err := json.NewDecoder(strings.NewReader(b)).Decode(&caps.Features); err != nil {
+			return nil, err
+		}
+		return &caps, nil
+	case sql.ErrNoRows:
+		return nil, nil
+	default:
+		return nil, err
+	}
+}
+
 func scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON string) (*capsmodel.PresenceCaps, error) {
 	parser := xmpp.NewParser(strings.NewReader(rawXML), xmpp.DefaultMode, 0)
 	elem, err := parser.ParseElement()

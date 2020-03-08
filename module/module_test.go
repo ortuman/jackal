@@ -100,5 +100,5 @@ func setupModules(t *testing.T) *Modules {
 		c2srouter.New(rep.User(), rep.BlockList()),
 		nil,
 	)
-	return New(&config, r, rep)
+	return New(&config, r, rep, "alloc-1234")
 }

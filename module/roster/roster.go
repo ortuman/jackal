@@ -564,7 +564,10 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 	if ri == nil || (ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom) {
 		return nil // silently ignore
 	}
-	availPresences := x.entityCaps.PresencesMatchingJID(contactJID)
+	availPresences, err := x.entityCaps.PresencesMatchingJID(ctx, contactJID)
+	if err != nil {
+		return err
+	}
 	if len(availPresences) == 0 { // send last known presence
 		usr, err := x.userRep.FetchUser(ctx, contactJID.Node())
 		if err != nil {
@@ -613,7 +616,9 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'unavailable' - user: %s", fromJID)
 
 		// unregister presence
-		x.entityCaps.UnregisterPresence(presence.FromJID())
+		if err := x.entityCaps.UnregisterPresence(ctx, presence.FromJID()); err != nil {
+			return err
+		}
 	}
 	if replyOnBehalf {
 		return x.broadcastPresence(ctx, presence)

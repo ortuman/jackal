@@ -983,7 +983,10 @@ func (x *Pep) notify(
 		}
 
 		if ph := x.entityCaps; ph != nil {
-			onlinePresences := ph.PresencesMatchingJID(&toJID)
+			onlinePresences, err := ph.PresencesMatchingJID(ctx, &toJID)
+			if err != nil {
+				log.Error(err)
+			}
 
 			for _, onlinePresence := range onlinePresences {
 				caps := onlinePresence.Caps

@@ -141,6 +141,37 @@ func TestMySQLPresences_UpsertCapabilities(t *testing.T) {
 	require.Equal(t, errMySQLStorage, err)
 }
 
+func TestMySQLPresences_FetchCapabilities(t *testing.T) {
+	s, mock := newPresencesMock()
+	rows := sqlmock.NewRows([]string{"features"})
+	rows.AddRow(`["jabber:iq:last"]`)
+
+	mock.ExpectQuery("SELECT features FROM capabilities WHERE \\(node = . AND ver = .\\)").
+		WithArgs("n1", "1234A").
+		WillReturnRows(rows)
+
+	caps, err := s.FetchCapabilities(context.Background(), "n1", "1234A")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.Nil(t, err)
+	require.Equal(t, 1, len(caps.Features))
+	require.Equal(t, "jabber:iq:last", caps.Features[0])
+
+	// error case
+	s, mock = newPresencesMock()
+	mock.ExpectQuery("SELECT features FROM capabilities WHERE \\(node = . AND ver = .\\)").
+		WithArgs("n1", "1234A").
+		WillReturnError(errMySQLStorage)
+
+	caps, err = s.FetchCapabilities(context.Background(), "n1", "1234A")
+
+	require.Nil(t, mock.ExpectationsWereMet())
+
+	require.NotNil(t, err)
+	require.Nil(t, caps)
+}
+
 func newPresencesMock() (*mySQLPresences, sqlmock.Sqlmock) {
 	s, sqlMock := newStorageMock()
 	return &mySQLPresences{

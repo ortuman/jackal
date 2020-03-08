@@ -11,9 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	capsmodel "github.com/ortuman/jackal/model/capabilities"
-
 	"github.com/ortuman/jackal/log"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/util/runqueue"
@@ -26,28 +25,24 @@ const (
 	discoInfoNamespace = "http://jabber.org/protocol/disco#info"
 )
 
-// AvailablePresenceInfo contains an active presence reference along with its capabilities.
-type AvailablePresenceInfo struct {
-	Presence *xmpp.Presence
-	Caps     *capsmodel.Capabilities
-}
-
 // EntityCaps represents global entity capabilities module
 type EntityCaps struct {
-	runQueue           *runqueue.RunQueue
-	router             router.Router
-	capsRep            repository.Capabilities
-	availablePresences sync.Map
-	capabilities       sync.Map
-	activeDiscoInfo    sync.Map
+	allocationID    string
+	runQueue        *runqueue.RunQueue
+	router          router.Router
+	presencesRep    repository.Presences
+	mu              sync.RWMutex
+	activeDiscoInfo map[string]bool
 }
 
 // New returns a new presence hub instance.
-func New(router router.Router, capsRep repository.Capabilities) *EntityCaps {
+func New(router router.Router, presencesRep repository.Presences, allocationID string) *EntityCaps {
 	return &EntityCaps{
-		runQueue: runqueue.New("xep0115"),
-		router:   router,
-		capsRep:  capsRep,
+		runQueue:        runqueue.New("xep0115"),
+		router:          router,
+		presencesRep:    presencesRep,
+		allocationID:    allocationID,
+		activeDiscoInfo: make(map[string]bool),
 	}
 }
 
@@ -62,18 +57,23 @@ func (x *EntityCaps) RegisterPresence(ctx context.Context, presence *xmpp.Presen
 		}
 	}
 	// store available presence
-	_, loaded := x.availablePresences.LoadOrStore(fromJID, presence)
-	return loaded, nil
+	inserted, err := x.presencesRep.UpsertPresence(ctx, presence, fromJID, x.allocationID)
+	if err != nil {
+		return false, err
+	}
+	return inserted, nil
 }
 
 // UnregisterPresence removes a presence from the hub.
-func (x *EntityCaps) UnregisterPresence(jid *jid.JID) {
-	x.availablePresences.Delete(jid)
+func (x *EntityCaps) UnregisterPresence(ctx context.Context, jid *jid.JID) error {
+	return x.presencesRep.DeletePresence(ctx, jid)
 }
 
 // MatchesIQ returns whether or not an IQ should be processed by the roster module.
 func (x *EntityCaps) MatchesIQ(iq *xmpp.IQ) bool {
-	_, ok := x.activeDiscoInfo.Load(iq.ID())
+	x.mu.RLock()
+	defer x.mu.RUnlock()
+	_, ok := x.activeDiscoInfo[iq.ID()]
 	return ok && iq.IsResult()
 }
 
@@ -93,32 +93,12 @@ func (x *EntityCaps) Shutdown() error {
 }
 
 // PresencesMatchingJID returns current online presences matching a given JID.
-func (x *EntityCaps) PresencesMatchingJID(j *jid.JID) []AvailablePresenceInfo {
-	var ret []AvailablePresenceInfo
-	x.availablePresences.Range(func(_, value interface{}) bool {
-		switch presence := value.(type) {
-		case *xmpp.Presence:
-			if !x.availableJIDMatchesJID(presence.FromJID(), j) {
-				return true
-			}
-			availPresenceInfo := AvailablePresenceInfo{Presence: presence}
-			if c := presence.Capabilities(); c != nil {
-				if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
-					switch caps := caps.(type) {
-					case *capsmodel.Capabilities:
-						availPresenceInfo.Caps = caps
-					}
-				}
-			}
-			ret = append(ret, availPresenceInfo)
-		}
-		return true
-	})
-	return ret
+func (x *EntityCaps) PresencesMatchingJID(ctx context.Context, jid *jid.JID) ([]capsmodel.PresenceCaps, error) {
+	return x.presencesRep.FetchPresencesMatchingJID(ctx, jid)
 }
 
 func (x *EntityCaps) registerCapabilities(ctx context.Context, node, ver string, jid *jid.JID) error {
-	caps, err := x.capsRep.FetchCapabilities(ctx, node, ver) // try fetching from disk
+	caps, err := x.presencesRep.FetchCapabilities(ctx, node, ver) // try fetching from disk
 	if err != nil {
 		return err
 	}
@@ -143,7 +123,9 @@ func (x *EntityCaps) requestCapabilities(ctx context.Context, node, ver string, 
 	srvJID, _ := jid.NewWithString(x.router.Hosts().DefaultHostName(), true)
 
 	iqID := uuid.New()
-	x.activeDiscoInfo.Store(iqID, true)
+	x.mu.Lock()
+	x.activeDiscoInfo[iqID] = true
+	x.mu.Unlock()
 
 	iq := xmpp.NewIQType(iqID, xmpp.GetType)
 	iq.SetFromJID(srvJID)
@@ -182,24 +164,5 @@ func (x *EntityCaps) processCapabilitiesIQ(ctx context.Context, query xmpp.XElem
 		Ver:      ver,
 		Features: features,
 	}
-	if err := x.capsRep.UpsertCapabilities(ctx, caps); err != nil { // save into disk
-		return err
-	}
-	x.capabilities.Store(capabilitiesKey(caps.Node, caps.Ver), caps)
-	return nil
-}
-
-func (x *EntityCaps) availableJIDMatchesJID(availableJID, j *jid.JID) bool {
-	if j.IsFullWithUser() {
-		return availableJID.MatchesWithOptions(j, jid.MatchesNode|jid.MatchesDomain|jid.MatchesResource)
-	} else if j.IsFullWithServer() {
-		return availableJID.MatchesWithOptions(j, jid.MatchesDomain|jid.MatchesResource)
-	} else if j.IsBare() {
-		return availableJID.MatchesWithOptions(j, jid.MatchesNode|jid.MatchesDomain)
-	}
-	return availableJID.MatchesWithOptions(j, jid.MatchesDomain)
-}
-
-func capabilitiesKey(node, ver string) string {
-	return node + "#" + ver
+	return x.presencesRep.UpsertCapabilities(ctx, caps)
 }

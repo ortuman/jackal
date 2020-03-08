@@ -18,9 +18,6 @@ type Container interface {
 	// Presences method returns repository.Presences concrete implementation.
 	Presences() Presences
 
-	// Capabilities method returns repository.Capabilities concrete implementation.
-	Capabilities() Capabilities
-
 	// VCard method returns repository.VCard concrete implementation.
 	VCard() VCard
 

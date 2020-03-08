@@ -53,3 +53,7 @@ func (m *Presences) ClearPresences(ctx context.Context) error {
 func (m *Presences) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	return nil
 }
+
+func (m *Presences) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
+	return nil, nil
+}

@@ -63,8 +63,8 @@ type Modules struct {
 }
 
 // New returns a set of modules derived from a concrete configuration.
-func New(config *Config, router router.Router, reps repository.Container) *Modules {
-	var presenceHub = xep0115.New(router, reps.Capabilities())
+func New(config *Config, router router.Router, reps repository.Container, allocationID string) *Modules {
+	var presenceHub = xep0115.New(router, reps.Presences(), allocationID)
 
 	m := &Modules{router: router}
 

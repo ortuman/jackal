@@ -30,4 +30,7 @@ type Presences interface {
 
 	// UpsertCapabilities inserts capabilities associated to a node+ver pair, or updates them if previously inserted..
 	UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error
+
+	// FetchCapabilities fetches capabilities associated to a give node and ver.
+	FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error)
 }

@@ -20,7 +20,6 @@ type mySQLContainer struct {
 	user      *mySQLUser
 	roster    *mySQLRoster
 	presences *mySQLPresences
-	caps      *mySQLCapabilities
 	vCard     *mySQLVCard
 	priv      *mySQLPrivate
 	blockList *mySQLBlockList
@@ -56,7 +55,6 @@ func New(cfg *Config) (repository.Container, error) {
 	c.user = newUser(c.h)
 	c.roster = newRoster(c.h)
 	c.presences = newPresences(c.h)
-	c.caps = newCapabilities(c.h)
 	c.vCard = newVCard(c.h)
 	c.priv = newPrivate(c.h)
 	c.blockList = newBlockList(c.h)
@@ -66,15 +64,14 @@ func New(cfg *Config) (repository.Container, error) {
 	return c, nil
 }
 
-func (c *mySQLContainer) User() repository.User                 { return c.user }
-func (c *mySQLContainer) Roster() repository.Roster             { return c.roster }
-func (c *mySQLContainer) Presences() repository.Presences       { return c.presences }
-func (c *mySQLContainer) Capabilities() repository.Capabilities { return c.caps }
-func (c *mySQLContainer) VCard() repository.VCard               { return c.vCard }
-func (c *mySQLContainer) Private() repository.Private           { return c.priv }
-func (c *mySQLContainer) BlockList() repository.BlockList       { return c.blockList }
-func (c *mySQLContainer) PubSub() repository.PubSub             { return c.pubSub }
-func (c *mySQLContainer) Offline() repository.Offline           { return c.offline }
+func (c *mySQLContainer) User() repository.User           { return c.user }
+func (c *mySQLContainer) Roster() repository.Roster       { return c.roster }
+func (c *mySQLContainer) Presences() repository.Presences { return c.presences }
+func (c *mySQLContainer) VCard() repository.VCard         { return c.vCard }
+func (c *mySQLContainer) Private() repository.Private     { return c.priv }
+func (c *mySQLContainer) BlockList() repository.BlockList { return c.blockList }
+func (c *mySQLContainer) PubSub() repository.PubSub       { return c.pubSub }
+func (c *mySQLContainer) Offline() repository.Offline     { return c.offline }
 
 func (c *mySQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

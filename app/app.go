@@ -168,7 +168,7 @@ func (a *Application) Run() error {
 	}
 
 	// initialize modules & components...
-	a.mods = module.New(&cfg.Modules, a.router, repContainer)
+	a.mods = module.New(&cfg.Modules, a.router, repContainer, allocID)
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
 	// start serving s2s...

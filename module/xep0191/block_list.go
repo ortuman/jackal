@@ -220,7 +220,11 @@ func (x *BlockingCommand) broadcastPresenceMatchingJID(ctx context.Context, bloc
 		// roster disabled
 		return
 	}
-	onlinePresences := x.entityCaps.PresencesMatchingJID(blockedJID)
+	onlinePresences, err := x.entityCaps.PresencesMatchingJID(ctx, blockedJID)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	for _, onlinePresence := range onlinePresences {
 		presence := onlinePresence.Presence
 		if !x.isSubscribedTo(presence.FromJID().ToBareJID(), ris) {
