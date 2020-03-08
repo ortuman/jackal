@@ -9,6 +9,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/ortuman/jackal/model"
@@ -51,15 +52,28 @@ func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Pres
 }
 
 func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*xmpp.Presence, *model.Capabilities, error) {
-	/*
-	   	SELECT presence, c.node, c.ver, c.features FROM presences p, capabilities AS c
-	       WHERE username = 'ortuman'
-	         AND domain = 'jackal.im'
-	         AND resource = 'Conversations.rXh3'
-	         AND p.node = c.node
-	         AND p.ver = c.ver
-	*/
-	return nil, nil, nil
+	var rawXML, node, ver, featuresJSON string
+
+	q := sq.Select("presence", "c.node", "c.ver", "c.features").
+		From("presences AS p, capabilities AS c").
+		Where(sq.And{
+			sq.Eq{"username": jid.Node()},
+			sq.Eq{"domain": jid.Domain()},
+			sq.Eq{"resource": jid.Resource()},
+			sq.Expr("p.node = c.node"),
+			sq.Expr("p.ver = c.ver"),
+		}).
+		RunWith(s.db)
+
+	err := q.ScanContext(ctx, &rawXML, &node, &ver, &featuresJSON)
+	switch err {
+	case nil:
+		return scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON)
+	case sql.ErrNoRows:
+		return nil, nil, nil
+	default:
+		return nil, nil, err
+	}
 }
 
 func (s *mySQLPresences) FetchPresencesMatchingJID(ctx context.Context, jid *jid.JID) ([]xmpp.Presence, []model.Capabilities, error) {
@@ -95,4 +109,30 @@ func (s *mySQLPresences) UpsertCapabilities(ctx context.Context, caps *model.Cap
 		Suffix("ON DUPLICATE KEY UPDATE features = ?, updated_at = NOW()", b).
 		RunWith(s.db).ExecContext(ctx)
 	return err
+}
+
+func scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON string) (*xmpp.Presence, *model.Capabilities, error) {
+	parser := xmpp.NewParser(strings.NewReader(rawXML), xmpp.DefaultMode, 0)
+	elem, err := parser.ParseElement()
+	if err != nil {
+		return nil, nil, err
+	}
+	fromJID, _ := jid.NewWithString(elem.From(), true)
+	toJID, _ := jid.NewWithString(elem.To(), true)
+
+	presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
+	if err != nil {
+		return nil, nil, err
+	}
+	var caps *model.Capabilities
+	if len(featuresJSON) > 0 {
+		caps = &model.Capabilities{
+			Node: node,
+			Ver:  ver,
+		}
+		if err := json.NewDecoder(strings.NewReader(featuresJSON)).Decode(&caps.Features); err != nil {
+			return nil, nil, err
+		}
+	}
+	return presence, caps, nil
 }
