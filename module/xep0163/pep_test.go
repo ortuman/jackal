@@ -10,10 +10,11 @@ import (
 	"crypto/tls"
 	"testing"
 
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
 	"github.com/ortuman/jackal/router/host"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
-	"github.com/ortuman/jackal/model"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -893,7 +894,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = capsRep.UpsertCapabilities(context.Background(), &model.Capabilities{
+	_ = capsRep.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},

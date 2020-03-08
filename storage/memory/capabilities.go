@@ -8,7 +8,7 @@ package memorystorage
 import (
 	"context"
 
-	"github.com/ortuman/jackal/model"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
 )
 
 // Capabilities represents an in-memory capabilities storage.
@@ -22,13 +22,13 @@ func NewCapabilities() *Capabilities {
 }
 
 // UpsertCapabilities inserts capabilities associated to a node+ver pair, or updates them if previously inserted..
-func (m *Capabilities) UpsertCapabilities(_ context.Context, caps *model.Capabilities) error {
+func (m *Capabilities) UpsertCapabilities(_ context.Context, caps *capsmodel.Capabilities) error {
 	return m.saveEntity(capabilitiesKey(caps.Node, caps.Ver), caps)
 }
 
 // FetchCapabilities fetches capabilities associated to a give node and ver.
-func (m *Capabilities) FetchCapabilities(_ context.Context, node, ver string) (*model.Capabilities, error) {
-	var caps model.Capabilities
+func (m *Capabilities) FetchCapabilities(_ context.Context, node, ver string) (*capsmodel.Capabilities, error) {
+	var caps capsmodel.Capabilities
 
 	ok, err := m.getEntity(capabilitiesKey(node, ver), &caps)
 	switch err {

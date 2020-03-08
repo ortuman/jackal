@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS presences (
     domain        VARCHAR(1023) NOT NULL,
     resource      VARCHAR(1023) NOT NULL,
     presence      TEXT NOT NULL,
+    node          VARCHAR(1023) NOT NULL,
+    ver           VARCHAR(1023) NOT NULL,
     allocation_id VARCHAR(1023) NOT NULL,
     updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package model
+package capsmodel
 
 import (
 	"bytes"

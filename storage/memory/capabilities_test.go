@@ -9,12 +9,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/model"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestMemoryStorage_InsertCapabilities(t *testing.T) {
-	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
+	caps := capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
 	s := NewCapabilities()
 	EnableMockedError()
 	err := s.UpsertCapabilities(context.Background(), &caps)
@@ -25,7 +26,7 @@ func TestMemoryStorage_InsertCapabilities(t *testing.T) {
 }
 
 func TestMemoryStorage_FetchCapabilities(t *testing.T) {
-	caps := model.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
+	caps := capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: []string{"ns"}}
 	s := NewCapabilities()
 	_ = s.UpsertCapabilities(context.Background(), &caps)
 

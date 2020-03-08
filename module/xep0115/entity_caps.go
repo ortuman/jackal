@@ -11,8 +11,9 @@ import (
 	"strings"
 	"sync"
 
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/util/runqueue"
@@ -28,7 +29,7 @@ const (
 // AvailablePresenceInfo contains an active presence reference along with its capabilities.
 type AvailablePresenceInfo struct {
 	Presence *xmpp.Presence
-	Caps     *model.Capabilities
+	Caps     *capsmodel.Capabilities
 }
 
 // EntityCaps represents global entity capabilities module
@@ -104,7 +105,7 @@ func (x *EntityCaps) PresencesMatchingJID(j *jid.JID) []AvailablePresenceInfo {
 			if c := presence.Capabilities(); c != nil {
 				if caps, _ := x.capabilities.Load(capabilitiesKey(c.Node, c.Ver)); caps != nil {
 					switch caps := caps.(type) {
-					case *model.Capabilities:
+					case *capsmodel.Capabilities:
 						availPresenceInfo.Caps = caps
 					}
 				}
@@ -176,7 +177,7 @@ func (x *EntityCaps) processCapabilitiesIQ(ctx context.Context, query xmpp.XElem
 	for _, featureElem := range featureElems {
 		features = append(features, featureElem.Attributes().Get("var"))
 	}
-	caps := &model.Capabilities{
+	caps := &capsmodel.Capabilities{
 		Node:     node,
 		Ver:      ver,
 		Features: features,

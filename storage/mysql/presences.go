@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -30,11 +30,11 @@ func newPresences(db *sql.DB) *mySQLPresences {
 	}
 }
 
-func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Presence, jid *jid.JID, allocationID string) error {
+func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Presence, jid *jid.JID, allocationID string) (inserted bool, err error) {
 	buf := s.pool.Get()
 	defer s.pool.Put(buf)
 	if err := presence.ToXML(buf, true); err != nil {
-		return err
+		return false, err
 	}
 	var node, ver string
 	if caps := presence.Capabilities(); caps != nil {
@@ -44,14 +44,21 @@ func (s *mySQLPresences) UpsertPresence(ctx context.Context, presence *xmpp.Pres
 	rawXML := buf.String()
 
 	q := sq.Insert("presences").
-		Columns("username", "domain", "resource", "presence", "allocation_id", "node", "ver", "updated_at", "created_at").
-		Values(jid.Node(), jid.Domain(), jid.Resource(), allocationID, rawXML, node, ver, nowExpr, nowExpr).
+		Columns("username", "domain", "resource", "presence", "node", "ver", "allocation_id", "updated_at", "created_at").
+		Values(jid.Node(), jid.Domain(), jid.Resource(), rawXML, node, ver, allocationID, nowExpr, nowExpr).
 		Suffix("ON DUPLICATE KEY UPDATE presence = ?, node = ?, ver = ?, allocation_id = ?, updated_at = NOW()", rawXML, node, ver, allocationID)
-	_, err := q.RunWith(s.db).ExecContext(ctx)
-	return err
+	stmRes, err := q.RunWith(s.db).ExecContext(ctx)
+	if err != nil {
+		return false, err
+	}
+	affectedRows, err := stmRes.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return affectedRows == 1, nil
 }
 
-func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*xmpp.Presence, *model.Capabilities, error) {
+func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*capsmodel.PresenceCaps, error) {
 	var rawXML, node, ver, featuresJSON string
 
 	q := sq.Select("presence", "c.node", "c.ver", "c.features").
@@ -70,14 +77,51 @@ func (s *mySQLPresences) FetchPresence(ctx context.Context, jid *jid.JID) (*xmpp
 	case nil:
 		return scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON)
 	case sql.ErrNoRows:
-		return nil, nil, nil
+		return nil, nil
 	default:
-		return nil, nil, err
+		return nil, err
 	}
 }
 
-func (s *mySQLPresences) FetchPresencesMatchingJID(ctx context.Context, jid *jid.JID) ([]xmpp.Presence, []model.Capabilities, error) {
-	return nil, nil, nil
+func (s *mySQLPresences) FetchPresencesMatchingJID(ctx context.Context, jid *jid.JID) ([]capsmodel.PresenceCaps, error) {
+	var preds sq.And
+	if len(jid.Node()) > 0 {
+		preds = append(preds, sq.Eq{"username": jid.Node()})
+	}
+	if len(jid.Domain()) > 0 {
+		preds = append(preds, sq.Eq{"domain": jid.Domain()})
+	}
+	if len(jid.Resource()) > 0 {
+		preds = append(preds, sq.Eq{"resource": jid.Resource()})
+	}
+	preds = append(preds, sq.Expr("p.node = c.node"))
+	preds = append(preds, sq.Expr("p.ver = c.ver"))
+
+	q := sq.Select("presence", "c.node", "c.ver", "c.features").
+		From("presences AS p, capabilities AS c").
+		Where(preds).
+		RunWith(s.db)
+
+	rows, err := q.QueryContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var res []capsmodel.PresenceCaps
+	for rows.Next() {
+		var rawXML, node, ver, featuresJSON string
+
+		if err := rows.Scan(&rawXML, &node, &ver, &featuresJSON); err != nil {
+			return nil, err
+		}
+		presenceCaps, err := scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, *presenceCaps)
+	}
+	return res, nil
 }
 
 func (s *mySQLPresences) DeletePresence(ctx context.Context, jid *jid.JID) error {
@@ -91,14 +135,19 @@ func (s *mySQLPresences) DeletePresence(ctx context.Context, jid *jid.JID) error
 	return err
 }
 
-func (s *mySQLPresences) ClearAllocationPresences(ctx context.Context, allocationID string) error {
+func (s *mySQLPresences) DeleteAllocationPresences(ctx context.Context, allocationID string) error {
 	_, err := sq.Delete("presences").
 		Where(sq.Eq{"allocation_id": allocationID}).
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }
 
-func (s *mySQLPresences) UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+func (s *mySQLPresences) ClearPresences(ctx context.Context) error {
+	_, err := sq.Delete("presences").RunWith(s.db).ExecContext(ctx)
+	return err
+}
+
+func (s *mySQLPresences) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
@@ -111,28 +160,31 @@ func (s *mySQLPresences) UpsertCapabilities(ctx context.Context, caps *model.Cap
 	return err
 }
 
-func scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON string) (*xmpp.Presence, *model.Capabilities, error) {
+func scanPresenceAndCapabilties(rawXML, node, ver, featuresJSON string) (*capsmodel.PresenceCaps, error) {
 	parser := xmpp.NewParser(strings.NewReader(rawXML), xmpp.DefaultMode, 0)
 	elem, err := parser.ParseElement()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	fromJID, _ := jid.NewWithString(elem.From(), true)
 	toJID, _ := jid.NewWithString(elem.To(), true)
 
 	presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	var caps *model.Capabilities
+	var res capsmodel.PresenceCaps
+
+	res.Presence = presence
 	if len(featuresJSON) > 0 {
-		caps = &model.Capabilities{
+		res.Caps = &capsmodel.Capabilities{
 			Node: node,
 			Ver:  ver,
 		}
-		if err := json.NewDecoder(strings.NewReader(featuresJSON)).Decode(&caps.Features); err != nil {
-			return nil, nil, err
+
+		if err := json.NewDecoder(strings.NewReader(featuresJSON)).Decode(&res.Caps.Features); err != nil {
+			return nil, err
 		}
 	}
-	return presence, caps, nil
+	return &res, nil
 }

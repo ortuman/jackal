@@ -11,8 +11,9 @@ import (
 	"encoding/json"
 	"strings"
 
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model"
 )
 
 type pgSQLCapabilities struct {
@@ -25,7 +26,7 @@ func newCapabilities(db *sql.DB) *pgSQLCapabilities {
 	}
 }
 
-func (s *pgSQLCapabilities) UpsertCapabilities(ctx context.Context, caps *model.Capabilities) error {
+func (s *pgSQLCapabilities) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	b, err := json.Marshal(caps.Features)
 	if err != nil {
 		return err
@@ -38,14 +39,14 @@ func (s *pgSQLCapabilities) UpsertCapabilities(ctx context.Context, caps *model.
 	return err
 }
 
-func (s *pgSQLCapabilities) FetchCapabilities(ctx context.Context, node, ver string) (*model.Capabilities, error) {
+func (s *pgSQLCapabilities) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
 	var b string
 	err := sq.Select("features").From("capabilities").
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
 		RunWith(s.db).QueryRowContext(ctx).Scan(&b)
 	switch err {
 	case nil:
-		var caps model.Capabilities
+		var caps capsmodel.Capabilities
 		if err := json.NewDecoder(strings.NewReader(b)).Decode(&caps.Features); err != nil {
 			return nil, err
 		}

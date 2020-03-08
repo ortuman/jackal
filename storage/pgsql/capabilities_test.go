@@ -10,8 +10,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +26,7 @@ func TestPgSQLUpsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b, b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err := s.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
@@ -37,7 +38,7 @@ func TestPgSQLUpsertCapabilities(t *testing.T) {
 		WithArgs("n1", "1234A", b, b).
 		WillReturnError(errGeneric)
 
-	err = s.UpsertCapabilities(context.Background(), &model.Capabilities{Node: "n1", Ver: "1234A", Features: features})
+	err = s.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: features})
 
 	require.Nil(t, mock.ExpectationsWereMet())
 
