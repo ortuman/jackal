@@ -10,16 +10,14 @@ import (
 	"crypto/tls"
 	"testing"
 
-	capsmodel "github.com/ortuman/jackal/model/capabilities"
-
-	"github.com/ortuman/jackal/router/host"
-
 	c2srouter "github.com/ortuman/jackal/c2s/router"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -899,7 +897,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
 	})
-	ph := xep0115.New(r, capsRep)
+	ph := xep0115.New(r, capsRep, "alloc-1234")
 
 	// register presence
 	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
@@ -945,10 +943,10 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
-func setupTest(domain string) (router.Router, repository.Capabilities, repository.Roster, repository.PubSub) {
+func setupTest(domain string) (router.Router, repository.Presences, repository.Roster, repository.PubSub) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 
-	capsRep := memorystorage.NewCapabilities()
+	capsRep := memorystorage.NewPresences()
 	rosterRep := memorystorage.NewRoster()
 	pubSubRep := memorystorage.NewPubSub()
 	r, _ := router.New(

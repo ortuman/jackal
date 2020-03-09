@@ -35,7 +35,7 @@ func TestXEP0191_Matching(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := xep0115.New(r, nil)
+	ph := xep0115.New(r, nil, "alloc-1234")
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -69,7 +69,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := xep0115.New(r, nil)
+	ph := xep0115.New(r, nil, "alloc-1234")
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -109,7 +109,7 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 func TestXEP191_BlockAndUnblock(t *testing.T) {
 	r, blockListRep, rosterRep := setupTest("jackal.im")
 
-	ph := xep0115.New(r, nil)
+	ph := xep0115.New(r, nil, "alloc-1234")
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
