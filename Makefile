@@ -1,8 +1,8 @@
 install:
-	@export go install -ldflags="-s -w" github.com/ortuman/jackal
+	@go install -ldflags="-s -w" github.com/ortuman/jackal
 
 install-tools:
-	@export go get -u \
+	@go get -u \
 		golang.org/x/lint/golint \
 		golang.org/x/tools/cmd/goimports
 
