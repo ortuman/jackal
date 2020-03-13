@@ -1,8 +1,8 @@
 install:
-	@export GO111MODULE=on && go install -ldflags="-s -w" github.com/ortuman/jackal
+	@export go install -ldflags="-s -w" github.com/ortuman/jackal
 
 install-tools:
-	@export GO111MODULE=on && go get -u \
+	@export go get -u \
 		golang.org/x/lint/golint \
 		golang.org/x/tools/cmd/goimports
 
@@ -14,7 +14,7 @@ fmt: install-tools
 
 build:
 	@echo "Building binary..."
-	@export GO111MODULE=on && go build -ldflags="-s -w"
+	@export go build -ldflags="-s -w"
 
 test:
 	@echo "Running tests..."
@@ -34,7 +34,7 @@ lint: install-tools
 
 dockerimage:
 	@echo "Building binary..."
-	@env GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w"
+	@env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w"
 	@echo "Building docker image..."
 	@docker build -f dockerfiles/Dockerfile -t ortuman/jackal .
 

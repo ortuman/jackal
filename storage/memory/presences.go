@@ -123,7 +123,7 @@ func (m *Presences) DeleteAllocationPresences(ctx context.Context, _ string) err
 func (m *Presences) ClearPresences(_ context.Context) error {
 	return m.inWriteLock(func() error {
 		for k := range m.b {
-			if !strings.HasPrefix("presences:", k) {
+			if !strings.HasPrefix(k, "presences:") {
 				continue
 			}
 			delete(m.b, k)
