@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	envInstanceID = "JACKAL_INSTANCE_ID"
+	envAllocationID = "JACKAL_ALLOCATION_ID"
 
 	defaultShutDownWaitTime = time.Duration(5) * time.Second
 )
@@ -138,7 +138,7 @@ func (a *Application) Run() error {
 	}
 
 	// set allocation identifier
-	allocID := os.Getenv(envInstanceID)
+	allocID := os.Getenv(envAllocationID)
 	if len(allocID) == 0 {
 		allocID = uuid.New().String()
 	}
