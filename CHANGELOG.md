@@ -6,6 +6,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.9.0] - 2020-02-15
 ### Changed
-- New service architecture
-
+- Router implementation refactoring
 
