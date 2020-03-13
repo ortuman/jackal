@@ -32,12 +32,11 @@ storage:
 #  port: 5010
 #  hosts: [127.0.0.1:5009, 127.0.0.1:5011]
 
-router:
-  hosts:
-    - name: localhost
-      tls:
-        privkey_path: ""
-        cert_path: ""
+hosts:
+  - name: localhost
+    tls:
+      privkey_path: ""
+      cert_path: ""
 
 modules:
   enabled:
@@ -97,12 +96,12 @@ c2s:
       - scram_sha_256
       - scram_sha_512
 
-#s2s:
-#    dial_timeout: 15
-#    dialback_secret: s3cr3tf0rd14lb4ck
-#    max_stanza_size: 131072
-#
-#    transport:
-#      bind_addr: 0.0.0.0
-#      port: 5269
-#      keep_alive: 600
+s2s:
+    dial_timeout: 15
+    dialback_secret: s3cr3tf0rd14lb4ck
+    max_stanza_size: 131072
+
+    transport:
+      bind_addr: 0.0.0.0
+      port: 5269
+      keep_alive: 600

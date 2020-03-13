@@ -15,10 +15,6 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/module/offline"
-	"github.com/ortuman/jackal/module/xep0077"
-	"github.com/ortuman/jackal/module/xep0092"
-	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
@@ -30,17 +26,21 @@ import (
 )
 
 func TestStream_ConnectTimeout(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, _ := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+
+	stm, _ := tUtilInStreamInit(t, r, op, false)
 	time.Sleep(time.Millisecond * 1500)
 	require.Equal(t, inDisconnected, stm.getState())
 }
 
 func TestStream_Disconnect(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	stm.Disconnect(context.Background(), nil)
 	require.True(t, conn.waitClose())
 
@@ -48,10 +48,12 @@ func TestStream_Disconnect(t *testing.T) {
 }
 
 func TestStream_Features(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
+
+	op := NewOutProvider(&Config{}, h)
 
 	// unsecured features
-	stm, conn := tUtilInStreamInit(t, r, false)
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 
 	elem := conn.outboundRead()
@@ -63,7 +65,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, inConnected, stm.getState())
 
 	// secured features
-	stm, conn = tUtilInStreamInit(t, r, false)
+	stm, conn = tUtilInStreamInit(t, r, op, false)
 	atomic.StoreUint32(&stm.secured, 1)
 	tUtilInStreamOpen(conn)
 
@@ -76,7 +78,7 @@ func TestStream_Features(t *testing.T) {
 	require.Equal(t, inConnected, stm.getState())
 
 	// secured features (authenticated)
-	stm, conn = tUtilInStreamInit(t, r, false)
+	stm, conn = tUtilInStreamInit(t, r, op, false)
 	atomic.StoreUint32(&stm.secured, 1)
 	atomic.StoreUint32(&stm.authenticated, 1)
 	tUtilInStreamOpen(conn)
@@ -91,9 +93,11 @@ func TestStream_Features(t *testing.T) {
 }
 
 func TestStream_TLS(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -102,7 +106,7 @@ func TestStream_TLS(t *testing.T) {
 	_, _ = conn.inboundWriteString(`<starttls xmlns="foo:ns"/>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, r, false)
+	stm, conn = tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -111,7 +115,7 @@ func TestStream_TLS(t *testing.T) {
 	_, _ = conn.inboundWriteString(`<foo xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, r, false)
+	stm, conn = tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -127,9 +131,11 @@ func TestStream_TLS(t *testing.T) {
 }
 
 func TestStream_Authenticate(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -139,14 +145,14 @@ func TestStream_Authenticate(t *testing.T) {
 	_, _ = conn.inboundWriteString(`<auth xmlns="foo:ns" mechanism="EXTERNAL">=</auth>`)
 	require.True(t, conn.waitClose())
 
-	stm, conn = tUtilInStreamInit(t, r, true)
+	stm, conn = tUtilInStreamInit(t, r, op, true)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
 	atomic.StoreUint32(&stm.secured, 1)
 
 	// failed peer certificate...
-	stm, conn = tUtilInStreamInit(t, r, false)
+	stm, conn = tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -158,7 +164,7 @@ func TestStream_Authenticate(t *testing.T) {
 	require.Equal(t, saslNamespace, elem.Namespace())
 
 	// invalid mechanism...
-	stm, conn = tUtilInStreamInit(t, r, true)
+	stm, conn = tUtilInStreamInit(t, r, op, true)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -177,9 +183,11 @@ func TestStream_Authenticate(t *testing.T) {
 }
 
 func TestStream_DialbackVerify(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -210,9 +218,14 @@ func TestStream_DialbackVerify(t *testing.T) {
 }
 
 func TestStream_DialbackAuthorize(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	op := NewOutProvider(&Config{}, h)
+	op.dialer.(*dialer).srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
+		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
+	}
+
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -227,15 +240,11 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
 	cfg, conn := tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}, router: r}
-	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
-		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
-	}
 	outConn := newFakeSocketConn()
-	cfg.dialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
+	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, r)
+	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -253,15 +262,11 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 
 	// authorize dialback key
 	cfg, conn = tUtilInStreamDefaultConfig(t, false)
-	cfg.dialer = &dialer{cfg: &Config{DialTimeout: time.Second}, router: r}
-	cfg.dialer.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
-		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
-	}
 	outConn = newFakeSocketConn()
-	cfg.dialer.dialTimeout = func(_, _ string, _ time.Duration) (net.Conn, error) {
+	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, r)
+	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -273,8 +278,8 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 
 	_, _ = outConn.inboundWriteString(`
 <?xml version="1.0"?>
-<stream:stream xmlns="jabber:server" 
- xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" 
+<stream:stream xmlns="jabber:server"
+ xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback"
  from="jackal.im" version="1.0">
 <stream:features>
  <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls">
@@ -292,8 +297,8 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 
 	_, _ = outConn.inboundWriteString(`
 <?xml version="1.0"?>
-<stream:stream xmlns="jabber:server" 
- xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" 
+<stream:stream xmlns="jabber:server"
+ xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback"
  from="jackal.im" version="1.0">
 <stream:features>
   <dialback xmlns="urn:xmpp:features:dialback">
@@ -312,15 +317,19 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 }
 
 func TestStream_SendElement(t *testing.T) {
-	r := setupTest(jackaDomain)
+	r, h := setupTestRouter(jackaDomain)
+
+	op := NewOutProvider(&Config{}, h)
 
 	fromJID, _ := jid.New("ortuman", "localhost", "garden", true)
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
 
 	stm2 := stream.NewMockC2S("abcd7890", toJID)
+	stm2.SetPresence(xmpp.NewPresence(toJID, toJID, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm2)
 
-	stm, conn := tUtilInStreamInit(t, r, false)
+	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
 	_ = conn.outboundRead() // read stream features...
@@ -344,9 +353,9 @@ func TestStream_SendElement(t *testing.T) {
 	require.True(t, conn.waitClose())
 }
 
-func tUtilInStreamInit(t *testing.T, router *router.Router, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
+func tUtilInStreamInit(t *testing.T, router router.Router, outProvider *OutProvider, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
 	cfg, conn := tUtilInStreamDefaultConfig(t, loadPeerCertificate)
-	stm := newInStream(cfg, &module.Modules{}, router)
+	stm := newInStream(cfg, &module.Modules{}, outProvider.newOut, router)
 	return stm, conn
 }
 
@@ -358,7 +367,7 @@ func tUtilInStreamOpen(conn *fakeSocketConn) {
 	_, _ = conn.inboundWriteString(s)
 }
 
-func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*streamConfig, *fakeSocketConn) {
+func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inConfig, *fakeSocketConn) {
 	modules := map[string]struct{}{}
 	modules["roster"] = struct{}{}
 	modules["last_activity"] = struct{}{}
@@ -387,14 +396,7 @@ func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*stream
 
 	conn := newFakeSocketConnWithPeerCerts(peerCerts)
 	tr := transport.NewSocketTransport(conn, 4096)
-	return &streamConfig{
-		modConfig: &module.Config{
-			Enabled:      modules,
-			Offline:      offline.Config{QueueSize: 10},
-			Registration: xep0077.Config{AllowRegistration: true, AllowChange: true},
-			Version:      xep0092.Config{ShowOS: true},
-			Ping:         xep0199.Config{SendInterval: 5, Send: true},
-		},
+	return &inConfig{
 		connectTimeout: time.Second,
 		transport:      tr,
 		maxStanzaSize:  8192,

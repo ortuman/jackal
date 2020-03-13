@@ -35,12 +35,12 @@ type Config struct {
 // Version represents a version module.
 type Version struct {
 	cfg      *Config
-	router   *router.Router
+	router   router.Router
 	runQueue *runqueue.RunQueue
 }
 
 // New returns a version IQ handler module.
-func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Version {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router) *Version {
 	v := &Version{
 		cfg:      config,
 		router:   router,
@@ -52,8 +52,7 @@ func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router) *Versi
 	return v
 }
 
-// MatchesIQ returns whether or not an IQ should be
-// processed by the version module.
+// MatchesIQ returns whether or not an IQ should be processed by the version module.
 func (x *Version) MatchesIQ(iq *xmpp.IQ) bool {
 	return iq.IsGet() && iq.Elements().ChildNamespace("query", versionNamespace) != nil && iq.ToJID().IsServer()
 }

@@ -44,11 +44,13 @@ func newFakeWebSocketConn() *fakeWebSocketConn {
 	}
 }
 
-func (c *fakeWebSocketConn) NextReader() (messageType int, r io.Reader, err error) { return 0, c.r, nil }
-func (c *fakeWebSocketConn) NextWriter(int) (writer io.WriteCloser, err error)     { return c.w, nil }
-func (c *fakeWebSocketConn) Close() error                                          { c.closed = true; return nil }
-func (c *fakeWebSocketConn) SetReadDeadline(t time.Time) error                     { return nil }
-func (c *fakeWebSocketConn) UnderlyingConn() net.Conn                              { return &tls.Conn{} }
+func (c *fakeWebSocketConn) NextReader() (messageType int, r io.Reader, err error) {
+	return 0, c.r, nil
+}
+func (c *fakeWebSocketConn) NextWriter(int) (writer io.WriteCloser, err error) { return c.w, nil }
+func (c *fakeWebSocketConn) Close() error                                      { c.closed = true; return nil }
+func (c *fakeWebSocketConn) SetReadDeadline(t time.Time) error                 { return nil }
+func (c *fakeWebSocketConn) UnderlyingConn() net.Conn                          { return &tls.Conn{} }
 
 func TestWebSocketTransport(t *testing.T) {
 	buff := make([]byte, 4096)

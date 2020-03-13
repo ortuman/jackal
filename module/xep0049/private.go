@@ -20,13 +20,13 @@ const privateNamespace = "jabber:iq:private"
 
 // Private represents a private storage server stream module.
 type Private struct {
-	router   *router.Router
+	router   router.Router
 	runQueue *runqueue.RunQueue
 	rep      repository.Private
 }
 
 // New returns a private storage IQ handler module.
-func New(router *router.Router, privRep repository.Private) *Private {
+func New(router router.Router, privRep repository.Private) *Private {
 	x := &Private{
 		router:   router,
 		runQueue: runqueue.New("xep0049"),
@@ -111,23 +111,23 @@ func (x *Private) getPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) 
 func (x *Private) setPrivate(ctx context.Context, iq *xmpp.IQ, q xmpp.XElement) {
 	nsElements := map[string][]xmpp.XElement{}
 
-	for _, privElement := range q.Elements().All() {
-		ns := privElement.Namespace()
+	for _, prvElement := range q.Elements().All() {
+		ns := prvElement.Namespace()
 		if len(ns) == 0 {
 			_ = x.router.Route(ctx, iq.BadRequestError())
 			return
 		}
-		if !x.isValidNamespace(privElement.Namespace()) {
+		if !x.isValidNamespace(prvElement.Namespace()) {
 			_ = x.router.Route(ctx, iq.NotAcceptableError())
 			return
 		}
-		elems := nsElements[ns]
-		if elems == nil {
-			elems = []xmpp.XElement{privElement}
+		elements := nsElements[ns]
+		if elements == nil {
+			elements = []xmpp.XElement{prvElement}
 		} else {
-			elems = append(elems, privElement)
+			elements = append(elements, prvElement)
 		}
-		nsElements[ns] = elems
+		nsElements[ns] = elements
 	}
 	fromJID := iq.FromJID()
 	for ns, elements := range nsElements {

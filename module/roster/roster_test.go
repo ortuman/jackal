@@ -11,10 +11,12 @@ import (
 	"testing"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -25,9 +27,9 @@ import (
 )
 
 func TestRoster_MatchesIQ(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -37,14 +39,14 @@ func TestRoster_MatchesIQ(t *testing.T) {
 }
 
 func TestRoster_FetchRoster(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
@@ -92,7 +94,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	}
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), ri2)
 
-	r = New(&Config{Versioning: true}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r = New(&Config{Versioning: true}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -102,7 +104,9 @@ func TestRoster_FetchRoster(t *testing.T) {
 
 	query2 := elem.Elements().ChildNamespace("query", rosterNamespace)
 	require.Equal(t, 2, query2.Elements().Count())
-	require.True(t, stm.GetBool(rosterRequestedCtxKey))
+
+	requested, _ := stm.Value(rosterRequestedCtxKey).(bool)
+	require.True(t, requested)
 
 	// test versioning
 	iq = xmpp.NewIQType(uuid.New(), xmpp.GetType)
@@ -127,7 +131,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 	require.Equal(t, "romeo@jackal.im", item.Attributes().Get("jid"))
 
 	memorystorage.EnableMockedError()
-	r = New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r = New(&Config{}, xep0115.New(rtr, nil, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessIQ(context.Background(), iq)
@@ -137,7 +141,7 @@ func TestRoster_FetchRoster(t *testing.T) {
 }
 
 func TestRoster_Update(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "garden", true)
 	j2, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -146,9 +150,9 @@ func TestRoster_Update(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
-	stm2.SetBool(context.Background(), rosterRequestedCtxKey, true)
+	stm2.SetValue(rosterRequestedCtxKey, true)
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	rtr.Bind(context.Background(), stm1)
@@ -204,7 +208,7 @@ func TestRoster_Update(t *testing.T) {
 }
 
 func TestRoster_RemoveItem(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	// insert contact's roster item
 	_, _ = rosterRep.UpsertRosterItem(context.Background(), &rostermodel.Item{
@@ -222,9 +226,11 @@ func TestRoster_RemoveItem(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	// remove item
@@ -250,7 +256,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 }
 
 func TestRoster_OnlineJIDs(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
@@ -262,6 +268,9 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 	stm1.SetAuthenticated(true)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
 	stm2.SetAuthenticated(true)
+
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 
 	rtr.Bind(context.Background(), stm1)
 	rtr.Bind(context.Background(), stm2)
@@ -291,7 +300,7 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 		Presence: xmpp.NewPresence(j3.ToBareJID(), j1.ToBareJID(), xmpp.SubscribeType),
 	})
 
-	ph := presencehub.New(rtr, nil)
+	ph := xep0115.New(rtr, presencesRep, "alloc-1234")
 	r := New(&Config{}, ph, nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
@@ -327,19 +336,24 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 1, len(ph.AvailablePresencesMatchingJID(j1)))
+	ln1, _ := ph.PresencesMatchingJID(context.Background(), j1)
+	require.Equal(t, 1, len(ln1))
 
 	j6, _ := jid.NewWithString("jackal.im", true)
-	require.Equal(t, 4, len(ph.AvailablePresencesMatchingJID(j6)))
+	ln6, _ := ph.PresencesMatchingJID(context.Background(), j6)
+	require.Equal(t, 4, len(ln6))
 
 	j7, _ := jid.NewWithString("jabber.org", true)
-	require.Equal(t, 1, len(ph.AvailablePresencesMatchingJID(j7)))
+	ln7, _ := ph.PresencesMatchingJID(context.Background(), j7)
+	require.Equal(t, 1, len(ln7))
 
 	j8, _ := jid.NewWithString("jackal.im/balcony", true)
-	require.Equal(t, 2, len(ph.AvailablePresencesMatchingJID(j8)))
+	ln8, _ := ph.PresencesMatchingJID(context.Background(), j8)
+	require.Equal(t, 2, len(ln8))
 
 	j9, _ := jid.NewWithString("ortuman@jackal.im", true)
-	require.Equal(t, 2, len(ph.AvailablePresencesMatchingJID(j9)))
+	ln9, _ := ph.PresencesMatchingJID(context.Background(), j9)
+	require.Equal(t, 2, len(ln9))
 
 	// send unavailable presences...
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1, j1.ToBareJID(), xmpp.UnavailableType))
@@ -350,15 +364,20 @@ func TestRoster_OnlineJIDs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j1)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j6)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j7)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j8)))
-	require.Equal(t, 0, len(ph.AvailablePresencesMatchingJID(j9)))
+	ln1, _ = ph.PresencesMatchingJID(context.Background(), j1)
+	ln6, _ = ph.PresencesMatchingJID(context.Background(), j6)
+	ln7, _ = ph.PresencesMatchingJID(context.Background(), j7)
+	ln8, _ = ph.PresencesMatchingJID(context.Background(), j8)
+	ln9, _ = ph.PresencesMatchingJID(context.Background(), j9)
+	require.Equal(t, 0, len(ln1))
+	require.Equal(t, 0, len(ln6))
+	require.Equal(t, 0, len(ln7))
+	require.Equal(t, 0, len(ln8))
+	require.Equal(t, 0, len(ln9))
 }
 
 func TestRoster_Probe(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
@@ -366,9 +385,11 @@ func TestRoster_Probe(t *testing.T) {
 	stm := stream.NewMockC2S(uuid.New(), j1)
 	stm.SetAuthenticated(true)
 
+	stm.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	rtr.Bind(context.Background(), stm)
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	_ = userRep.UpsertUser(context.Background(), &model.User{
@@ -398,12 +419,12 @@ func TestRoster_Probe(t *testing.T) {
 }
 
 func TestRoster_Subscription(t *testing.T) {
-	rtr, userRep, rosterRep := setupTest("jackal.im")
+	rtr, userRep, presencesRep, rosterRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
 
-	r := New(&Config{}, presencehub.New(rtr, nil), nil, rtr, userRep, rosterRep)
+	r := New(&Config{}, xep0115.New(rtr, presencesRep, "alloc-1234"), nil, rtr, userRep, rosterRep)
 	defer func() { _ = r.Shutdown() }()
 
 	r.ProcessPresence(context.Background(), xmpp.NewPresence(j1.ToBareJID(), j2.ToBareJID(), xmpp.SubscribeType))
@@ -467,15 +488,16 @@ func TestRoster_Subscription(t *testing.T) {
 	require.Equal(t, rostermodel.SubscriptionNone, ri.Subscription)
 }
 
-func setupTest(domain string) (*router.Router, repository.User, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.User, repository.Presences, repository.Roster) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	userRep := memorystorage.NewUser()
+	presencesRep := memorystorage.NewPresences()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		userRep,
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(userRep, memorystorage.NewBlockList()),
+		nil,
 	)
-	return r, userRep, rosterRep
+	return r, userRep, presencesRep, rosterRep
 }

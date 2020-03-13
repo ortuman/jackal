@@ -10,12 +10,14 @@ import (
 	"crypto/tls"
 	"testing"
 
-	"github.com/ortuman/jackal/model"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
+	capsmodel "github.com/ortuman/jackal/model/capabilities"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -31,6 +33,8 @@ func TestXEP0163_Matching(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r, rosterRep, pubSubRep)
@@ -50,6 +54,8 @@ func TestXEP163_CreateNode(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	p := New(nil, nil, r, rosterRep, pubSubRep)
@@ -83,6 +89,8 @@ func TestXEP163_GetNodeConfiguration(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	_ = pubSubRep.UpsertNode(context.Background(), &pubsubmodel.Node{
@@ -136,6 +144,9 @@ func TestXEP163_SetNodeConfiguration(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -229,6 +240,9 @@ func TestXEP163_DeleteNode(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -310,6 +324,8 @@ func TestXEP163_UpdateAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node
@@ -374,6 +390,8 @@ func TestXEP163_RetrieveAffiliations(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
@@ -433,6 +451,8 @@ func TestXEP163_UpdateSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node
@@ -497,6 +517,8 @@ func TestXEP163_RetrieveSubscriptions(t *testing.T) {
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 
 	// create node and affiliations
@@ -557,6 +579,9 @@ func TestXEP163_Subscribe(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -640,6 +665,8 @@ func TestXEP163_Unsubscribe(t *testing.T) {
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm2)
 
 	// create node and affiliations
@@ -702,6 +729,8 @@ func TestXEP163_RetrieveItems(t *testing.T) {
 
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -827,12 +856,14 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {
-	r, capsRep, rosterRep, pubSubRep := setupTest("jackal.im")
+	r, presencesRep, rosterRep, pubSubRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 	r.Bind(context.Background(), stm1)
 	r.Bind(context.Background(), stm2)
 
@@ -861,12 +892,12 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = capsRep.UpsertCapabilities(context.Background(), &model.Capabilities{
+	_ = presencesRep.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
 	})
-	ph := presencehub.New(r, capsRep)
+	caps := xep0115.New(r, presencesRep, "alloc-1234")
 
 	// register presence
 	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
@@ -876,10 +907,10 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	pr2.AppendElement(c)
 
-	_, _ = ph.RegisterPresence(context.Background(), pr2)
+	_, _ = caps.RegisterPresence(context.Background(), pr2)
 
 	// process pubsub command
-	p := New(nil, ph, r, rosterRep, pubSubRep)
+	p := New(nil, caps, r, rosterRep, pubSubRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -912,16 +943,16 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	require.Equal(t, "bnd81g37d61f49fgn581", itemsEl.Elements().Child("item").Attributes().Get("id"))
 }
 
-func setupTest(domain string) (*router.Router, repository.Capabilities, repository.Roster, repository.PubSub) {
-	capsRep := memorystorage.NewCapabilities()
+func setupTest(domain string) (router.Router, repository.Presences, repository.Roster, repository.PubSub) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
+	presencesRep := memorystorage.NewPresences()
 	rosterRep := memorystorage.NewRoster()
 	pubSubRep := memorystorage.NewPubSub()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
-	return r, capsRep, rosterRep, pubSubRep
+	return r, presencesRep, rosterRep, pubSubRep
 }

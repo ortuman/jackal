@@ -23,14 +23,24 @@ import (
 var listenerProvider = net.Listen
 
 type server struct {
-	cfg       *Config
-	router    *router.Router
-	mods      *module.Modules
-	dialer    *dialer
-	inConns   sync.Map
-	outConns  sync.Map
-	ln        net.Listener
-	listening uint32
+	mu            sync.RWMutex
+	cfg           *Config
+	router        router.Router
+	mods          *module.Modules
+	newOutFn      newOutFunc
+	inConnections map[string]stream.S2SIn
+	ln            net.Listener
+	listening     uint32
+}
+
+func newServer(config *Config, mods *module.Modules, newOutFn newOutFunc, router router.Router) *server {
+	return &server{
+		cfg:           config,
+		router:        router,
+		mods:          mods,
+		newOutFn:      newOutFn,
+		inConnections: make(map[string]stream.S2SIn),
+	}
 }
 
 func (s *server) start() {
@@ -52,13 +62,7 @@ func (s *server) shutdown(ctx context.Context) error {
 			return err
 		}
 		// close all connections...
-		c, err := closeConnections(ctx, &s.outConns)
-		if err != nil {
-			return err
-		}
-		log.Infof("%s: closed %d out connection(s)", s.cfg.ID, c)
-
-		c, err = closeConnections(ctx, &s.inConns)
+		c, err := s.closeConnections(ctx)
 		if err != nil {
 			return err
 		}
@@ -85,66 +89,47 @@ func (s *server) listenConn(address string) error {
 	return nil
 }
 
-func (s *server) getOrDial(ctx context.Context, localDomain, remoteDomain string) (stream.S2SOut, error) {
-	domainPair := localDomain + ":" + remoteDomain
-	stm, loaded := s.outConns.LoadOrStore(domainPair, newOutStream(s.router))
-	if !loaded {
-		outCfg, err := s.dialer.dial(localDomain, remoteDomain)
-		if err != nil {
-			log.Error(err)
-			s.outConns.Delete(domainPair)
-			return nil, err
-		}
-		outCfg.onOutDisconnect = s.unregisterOutStream
-
-		_ = stm.(*outStream).start(ctx, outCfg)
-		log.Infof("registered s2s out stream... (domainpair: %s)", domainPair)
-	}
-	return stm.(*outStream), nil
-}
-
-func (s *server) unregisterOutStream(stm stream.S2SOut) {
-	domainPair := stm.ID()
-	s.outConns.Delete(domainPair)
-	log.Infof("unregistered s2s out stream... (domainpair: %s)", domainPair)
-}
-
 func (s *server) startInStream(tr transport.Transport) {
-	stm := newInStream(&streamConfig{
+	stm := newInStream(&inConfig{
 		keyGen:         &keyGen{s.cfg.DialbackSecret},
 		transport:      tr,
 		connectTimeout: s.cfg.ConnectTimeout,
 		timeout:        s.cfg.Timeout,
 		maxStanzaSize:  s.cfg.MaxStanzaSize,
-		dialer:         s.dialer,
-		onInDisconnect: s.unregisterInStream,
-	}, s.mods, s.router)
+		onDisconnect:   s.unregisterInStream,
+	}, s.mods, s.newOutFn, s.router)
 	s.registerInStream(stm)
 }
 
 func (s *server) registerInStream(stm stream.S2SIn) {
-	s.inConns.Store(stm.ID(), stm)
+	s.mu.Lock()
+	s.inConnections[stm.ID()] = stm
+	s.mu.Unlock()
+
 	log.Infof("registered s2s in stream... (id: %s)", stm.ID())
 }
 
 func (s *server) unregisterInStream(stm stream.S2SIn) {
-	s.inConns.Delete(stm.ID())
+	s.mu.Lock()
+	delete(s.inConnections, stm.ID())
+	s.mu.Unlock()
+
 	log.Infof("unregistered s2s in stream... (id: %s)", stm.ID())
 }
 
-func closeConnections(ctx context.Context, connections *sync.Map) (count int, err error) {
-	connections.Range(func(_, v interface{}) bool {
-		stm := v.(stream.InStream)
+func (s *server) closeConnections(ctx context.Context) (count int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, stm := range s.inConnections {
 		select {
 		case <-closeConn(ctx, stm):
 			count++
-			return true
 		case <-ctx.Done():
 			err = ctx.Err()
-			return false
+			return 0, err
 		}
-	})
-	return
+	}
+	return count, nil
 }
 
 func closeConn(ctx context.Context, stm stream.InStream) <-chan bool {

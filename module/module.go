@@ -10,7 +10,6 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/module/offline"
-	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0012"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -18,6 +17,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
@@ -57,14 +57,14 @@ type Modules struct {
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
 
-	router     *router.Router
+	router     router.Router
 	iqHandlers []IQHandler
 	all        []Module
 }
 
 // New returns a set of modules derived from a concrete configuration.
-func New(config *Config, router *router.Router, reps repository.Container) *Modules {
-	var presenceHub = presencehub.New(router, reps.Capabilities())
+func New(config *Config, router router.Router, reps repository.Container, allocationID string) *Modules {
+	var presenceHub = xep0115.New(router, reps.Presences(), allocationID)
 
 	m := &Modules{router: router}
 

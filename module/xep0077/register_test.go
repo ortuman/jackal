@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
@@ -101,7 +104,7 @@ func TestXEP0077_NotAuthenticatedErrors(t *testing.T) {
 
 	q.ClearElements()
 	iq.SetType(xmpp.SetType)
-	stm.SetBool(context.Background(), xep077RegisteredCtxKey, true)
+	stm.SetValue(xep077RegisteredCtxKey, true)
 
 	x.ProcessIQ(context.Background(), iq)
 	elem = stm.ReceiveElement()
@@ -314,14 +317,13 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	require.Equal(t, "5678", usr.Password)
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.User) {
+func setupTest(domain string) (router.Router, *memorystorage.User) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	userRep := memorystorage.NewUser()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		userRep,
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(userRep, memorystorage.NewBlockList()),
+		nil,
 	)
 	return r, userRep
 }

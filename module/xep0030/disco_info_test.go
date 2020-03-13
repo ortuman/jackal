@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
@@ -60,6 +63,8 @@ func TestXEP0030_SendFeatures(t *testing.T) {
 	srvJid, _ := jid.New("", "jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)
@@ -111,6 +116,8 @@ func TestXEP0030_SendItems(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)
@@ -155,6 +162,8 @@ func TestXEP0030_Provider(t *testing.T) {
 	compJID, _ := jid.New("", "test.jackal.im", "", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, rosterRep)
@@ -187,13 +196,13 @@ func TestXEP0030_Provider(t *testing.T) {
 	require.Equal(t, xmpp.ErrItemNotFound.Error(), elem.Error().Elements().All()[0].Name())
 }
 
-func setupTest(domain string) (*router.Router, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.Roster) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList())
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
+	)
 	return r, rosterRep
 }

@@ -12,7 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/router/host"
+
 	"github.com/google/uuid"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage"
 	"github.com/ortuman/jackal/stream"
@@ -48,6 +51,8 @@ func TestModules_ProcessIQ(t *testing.T) {
 	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	stm := stream.NewMockC2S(uuid.New().String(), j0)
+	stm.SetPresence(xmpp.NewPresence(j0.ToBareJID(), j0, xmpp.AvailableType))
+
 	mods.router.Bind(context.Background(), stm)
 
 	iqID := uuid.New().String()
@@ -87,13 +92,13 @@ func setupModules(t *testing.T) *Modules {
 	err = yaml.Unmarshal(b, &config)
 	require.Nil(t, err)
 
+	hosts, _ := host.New([]host.Config{{Name: "jackal.im", Certificate: tls.Certificate{}}})
+
 	rep, _ := storage.New(&storage.Config{Type: storage.Memory})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-		},
-		rep.User(),
-		rep.BlockList(),
+		hosts,
+		c2srouter.New(rep.User(), rep.BlockList()),
+		nil,
 	)
-	return New(&config, r, rep)
+	return New(&config, r, rep, "alloc-1234")
 }

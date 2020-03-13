@@ -27,12 +27,12 @@ const offlineDeliveredCtxKey = "offline:delivered"
 type Offline struct {
 	cfg        *Config
 	runQueue   *runqueue.RunQueue
-	router     *router.Router
+	router     router.Router
 	offlineRep repository.Offline
 }
 
 // New returns an offline server stream module.
-func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router, offlineRep repository.Offline) *Offline {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router, offlineRep repository.Offline) *Offline {
 	r := &Offline{
 		cfg:        config,
 		runQueue:   runqueue.New("xep0030"),
@@ -95,7 +95,8 @@ func (x *Offline) archiveMessage(ctx context.Context, message *xmpp.Message) {
 }
 
 func (x *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) {
-	if stm.GetBool(offlineDeliveredCtxKey) {
+	delivered, _ := stm.Value(offlineDeliveredCtxKey).(bool)
+	if delivered {
 		return // already delivered
 	}
 	// deliver offline messages
@@ -110,13 +111,13 @@ func (x *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) {
 	}
 	log.Infof("delivering offline messages: %s... count: %d", userJID, len(messages))
 
-	for _, m := range messages {
-		_ = x.router.Route(ctx, &m)
+	for i := 0; i < len(messages); i++ {
+		_ = x.router.Route(ctx, &messages[i])
 	}
 	if err := x.offlineRep.DeleteOfflineMessages(ctx, userJID.Node()); err != nil {
 		log.Error(err)
 	}
-	stm.SetBool(ctx, offlineDeliveredCtxKey, true)
+	stm.SetValue(offlineDeliveredCtxKey, true)
 }
 
 func isMessageArchivable(message *xmpp.Message) bool {

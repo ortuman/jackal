@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
@@ -49,6 +52,8 @@ func TestXEP0054_Set(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqID := uuid.New()
@@ -87,6 +92,8 @@ func TestXEP0054_SetError(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(nil, r, s)
@@ -123,6 +130,8 @@ func TestXEP0054_Get(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqSet := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -169,6 +178,8 @@ func TestXEP0054_GetError(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	iqSet := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -219,14 +230,13 @@ func testVCard() xmpp.XElement {
 	return vCard
 }
 
-func setupTest(domain string) (*router.Router, *memorystorage.VCard) {
+func setupTest(domain string) (router.Router, *memorystorage.VCard) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	s := memorystorage.NewVCard()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	return r, s
 }

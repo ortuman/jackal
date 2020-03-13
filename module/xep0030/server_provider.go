@@ -19,7 +19,7 @@ import (
 )
 
 type serverProvider struct {
-	router          *router.Router
+	router          router.Router
 	rosterRep       repository.Roster
 	mu              sync.RWMutex
 	serverItems     []Item
@@ -48,7 +48,7 @@ func (sp *serverProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, no
 	} else {
 		// add account resources
 		if sp.isSubscribedTo(ctx, toJID, fromJID) {
-			streams := sp.router.UserStreams(toJID.Node())
+			streams := sp.router.LocalStreams(toJID.Node())
 			for _, stm := range streams {
 				items = append(items, Item{Jid: stm.JID().String()})
 			}
@@ -145,7 +145,7 @@ func (sp *serverProvider) unregisterAccountFeature(feature Feature) {
 }
 
 func (sp *serverProvider) isSubscribedTo(ctx context.Context, contact *jid.JID, userJID *jid.JID) bool {
-	if contact.Matches(userJID, jid.MatchesBare) {
+	if contact.MatchesWithOptions(userJID, jid.MatchesBare) {
 		return true
 	}
 	ri, err := sp.rosterRep.FetchRosterItem(ctx, userJID.Node(), contact.ToBareJID().String())

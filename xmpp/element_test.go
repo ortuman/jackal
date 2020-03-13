@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,7 +26,7 @@ func TestElement_NewElement(t *testing.T) {
 
 func TestElement_NewError(t *testing.T) {
 	j, _ := jid.New("", "jackal.im", "", true)
-	e1 := NewIQType(uuid.New(), GetType)
+	e1 := NewIQType(uuid.New().String(), GetType)
 	e1.SetFromJID(j)
 	e1.SetToJID(j)
 	e2 := NewErrorStanzaFromStanza(e1, ErrNotAuthorized, nil)

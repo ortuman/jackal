@@ -24,14 +24,14 @@ const (
 // DiscoInfo represents a disco info server stream module.
 type DiscoInfo struct {
 	mu          sync.RWMutex
-	router      *router.Router
+	router      router.Router
 	srvProvider *serverProvider
 	providers   map[string]InfoProvider
 	runQueue    *runqueue.RunQueue
 }
 
 // New returns a disco info IQ handler module.
-func New(router *router.Router, rosterRep repository.Roster) *DiscoInfo {
+func New(router router.Router, rosterRep repository.Roster) *DiscoInfo {
 	di := &DiscoInfo{
 		router: router,
 		srvProvider: &serverProvider{
@@ -122,7 +122,7 @@ func (x *DiscoInfo) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
 	var prov InfoProvider
-	if x.router.IsLocalHost(toJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(toJID.Domain()) {
 		if p := x.providers[toJID.String()]; p != nil {
 			prov = p
 		} else {

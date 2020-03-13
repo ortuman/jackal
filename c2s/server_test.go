@@ -13,11 +13,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/router/host"
+
 	"github.com/gorilla/websocket"
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
 	utiltls "github.com/ortuman/jackal/util/tls"
 	"github.com/stretchr/testify/require"
@@ -37,7 +41,13 @@ func TestC2SSocketServer(t *testing.T) {
 			Port: 9998,
 		},
 	}
-	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	srv := server{
+		cfg:           &cfg,
+		router:        r,
+		mods:          &module.Modules{},
+		comps:         &component.Components{},
+		inConnections: make(map[string]stream.C2S),
+	}
 	go srv.start()
 
 	go func() {
@@ -75,12 +85,11 @@ func TestC2SWebSocketServer(t *testing.T) {
 	cer, err := utiltls.LoadCertificate(privKeyFile, certFile, "localhost")
 	require.Nil(t, err)
 
+	hosts, _ := host.New([]host.Config{{Name: "localhost", Certificate: cer}})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "localhost", Certificate: cer}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	errCh := make(chan error)
 	cfg := Config{
@@ -94,7 +103,13 @@ func TestC2SWebSocketServer(t *testing.T) {
 			Port:    9999,
 		},
 	}
-	srv := server{cfg: &cfg, router: r, mods: &module.Modules{}, comps: &component.Components{}}
+	srv := server{
+		cfg:           &cfg,
+		router:        r,
+		mods:          &module.Modules{},
+		comps:         &component.Components{},
+		inConnections: make(map[string]stream.C2S),
+	}
 	go srv.start()
 
 	go func() {

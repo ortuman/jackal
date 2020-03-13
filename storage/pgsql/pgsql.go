@@ -26,7 +26,7 @@ var pingTimeout = 10 * time.Second
 type pgSQLContainer struct {
 	user      *pgSQLUser
 	roster    *pgSQLRoster
-	caps      *pgSQLCapabilities
+	presences *pgSQLPresences
 	vCard     *pgSQLVCard
 	priv      *pgSQLPrivate
 	blockList *pgSQLBlockList
@@ -63,7 +63,7 @@ func New(cfg *Config) (repository.Container, error) {
 
 	c.user = newUser(c.h)
 	c.roster = newRoster(c.h)
-	c.caps = newCapabilities(c.h)
+	c.presences = newPresences(c.h)
 	c.vCard = newVCard(c.h)
 	c.priv = newPrivate(c.h)
 	c.blockList = newBlockList(c.h)
@@ -73,14 +73,14 @@ func New(cfg *Config) (repository.Container, error) {
 	return c, nil
 }
 
-func (c *pgSQLContainer) User() repository.User                 { return c.user }
-func (c *pgSQLContainer) Roster() repository.Roster             { return c.roster }
-func (c *pgSQLContainer) Capabilities() repository.Capabilities { return c.caps }
-func (c *pgSQLContainer) VCard() repository.VCard               { return c.vCard }
-func (c *pgSQLContainer) Private() repository.Private           { return c.priv }
-func (c *pgSQLContainer) BlockList() repository.BlockList       { return c.blockList }
-func (c *pgSQLContainer) PubSub() repository.PubSub             { return c.pubSub }
-func (c *pgSQLContainer) Offline() repository.Offline           { return c.offline }
+func (c *pgSQLContainer) User() repository.User           { return c.user }
+func (c *pgSQLContainer) Roster() repository.Roster       { return c.roster }
+func (c *pgSQLContainer) Presences() repository.Presences { return c.presences }
+func (c *pgSQLContainer) VCard() repository.VCard         { return c.vCard }
+func (c *pgSQLContainer) Private() repository.Private     { return c.priv }
+func (c *pgSQLContainer) BlockList() repository.BlockList { return c.blockList }
+func (c *pgSQLContainer) PubSub() repository.PubSub       { return c.pubSub }
+func (c *pgSQLContainer) Offline() repository.Offline     { return c.offline }
 
 func (c *pgSQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

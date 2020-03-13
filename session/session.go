@@ -17,7 +17,7 @@ import (
 
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -75,7 +75,7 @@ type Config struct {
 // Session represents an XMPP session between the two peers.
 type Session struct {
 	id           string
-	router       *router.Router
+	hosts        *host.Hosts
 	tr           transport.Transport
 	pr           *xmpp.Parser
 	remoteDomain string
@@ -90,7 +90,7 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(id string, config *Config, router *router.Router) *Session {
+func New(id string, config *Config, hosts *host.Hosts) *Session {
 	var parsingMode xmpp.ParsingMode
 	switch config.Transport.Type() {
 	case transport.Socket:
@@ -100,7 +100,7 @@ func New(id string, config *Config, router *router.Router) *Session {
 	}
 	s := &Session{
 		id:           id,
-		router:       router,
+		hosts:        hosts,
 		tr:           config.Transport,
 		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
 		remoteDomain: config.RemoteDomain,
@@ -174,10 +174,14 @@ func (s *Session) Open(ctx context.Context, featuresElem xmpp.XElement) error {
 		s.mu.RUnlock()
 	}
 	ops.SetAttribute("version", "1.0")
-	ops.ToXML(buf, includeClosing)
+	if err := ops.ToXML(buf, includeClosing); err != nil {
+		return err
+	}
 
 	if featuresElem != nil {
-		featuresElem.ToXML(buf, true)
+		if err := featuresElem.ToXML(buf, true); err != nil {
+			return err
+		}
 	}
 	openStr := buf.String()
 	log.Debugf("SEND(%s): %s", s.id, openStr)
@@ -222,7 +226,9 @@ func (s *Session) Send(ctx context.Context, elem xmpp.XElement) error {
 
 	s.setWriteDeadline(ctx)
 
-	elem.ToXML(s.tr, true)
+	if err := elem.ToXML(s.tr, true); err != nil {
+		return err
+	}
 	return s.tr.Flush()
 }
 
@@ -369,7 +375,7 @@ func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 		}
 	}
 	to := elem.To()
-	if len(to) > 0 && !s.router.IsLocalHost(to) {
+	if len(to) > 0 && !s.hosts.IsLocalHost(to) {
 		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
 	}
 	if elem.Version() != "1.0" {

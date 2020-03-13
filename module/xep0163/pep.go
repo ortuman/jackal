@@ -14,9 +14,9 @@ import (
 	"github.com/ortuman/jackal/log"
 	pubsubmodel "github.com/ortuman/jackal/model/pubsub"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/util/runqueue"
@@ -62,24 +62,24 @@ type commandContext struct {
 
 // Pep represents a Personal Eventing Protocol module.
 type Pep struct {
-	runQueue    *runqueue.RunQueue
-	router      *router.Router
-	rosterRep   repository.Roster
-	pubSubRep   repository.PubSub
-	disco       *xep0030.DiscoInfo
-	presenceHub *presencehub.PresenceHub
-	hosts       []string
+	runQueue   *runqueue.RunQueue
+	router     router.Router
+	rosterRep  repository.Roster
+	pubSubRep  repository.PubSub
+	disco      *xep0030.DiscoInfo
+	entityCaps *xep0115.EntityCaps
+	hosts      []string
 }
 
 // New returns a PEP command IQ handler module.
-func New(disco *xep0030.DiscoInfo, presenceHub *presencehub.PresenceHub, router *router.Router, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
+func New(disco *xep0030.DiscoInfo, presenceHub *xep0115.EntityCaps, router router.Router, rosterRep repository.Roster, pubSubRep repository.PubSub) *Pep {
 	p := &Pep{
-		runQueue:    runqueue.New("xep0163"),
-		rosterRep:   rosterRep,
-		pubSubRep:   pubSubRep,
-		router:      router,
-		disco:       disco,
-		presenceHub: presenceHub,
+		runQueue:   runqueue.New("xep0163"),
+		rosterRep:  rosterRep,
+		pubSubRep:  pubSubRep,
+		router:     router,
+		disco:      disco,
+		entityCaps: presenceHub,
 	}
 	// register account identity and features
 	if disco != nil {
@@ -982,8 +982,11 @@ func (x *Pep) notify(
 			}
 		}
 
-		if ph := x.presenceHub; ph != nil {
-			onlinePresences := ph.AvailablePresencesMatchingJID(&toJID)
+		if ph := x.entityCaps; ph != nil {
+			onlinePresences, err := ph.PresencesMatchingJID(ctx, &toJID)
+			if err != nil {
+				log.Error(err)
+			}
 
 			for _, onlinePresence := range onlinePresences {
 				caps := onlinePresence.Caps

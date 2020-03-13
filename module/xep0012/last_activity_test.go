@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/router"
@@ -59,6 +62,8 @@ func TestXEP0012_GetServerLastActivity(t *testing.T) {
 	j2, _ := jid.New("ortuman", "jackal.im", "garden", true)
 
 	stm := stream.NewMockC2S("abcd", j2)
+	stm.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+
 	defer stm.Disconnect(context.Background(), nil)
 
 	x := New(nil, r, userRep, rosterRep)
@@ -84,8 +89,12 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "garden", true)
+
 	stm1 := stream.NewMockC2S(uuid.New(), j1)
+	stm1.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	stm2 := stream.NewMockC2S(uuid.New(), j2)
+	stm2.SetPresence(xmpp.NewPresence(j2, j2, xmpp.AvailableType))
 
 	x := New(nil, r, userRep, rosterRep)
 	defer func() { _ = x.Shutdown() }()
@@ -137,15 +146,15 @@ func TestXEP0012_GetOnlineUserLastActivity(t *testing.T) {
 	memorystorage.DisableMockedError()
 }
 
-func setupTest(domain string) (*router.Router, repository.User, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.User, repository.Roster) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+
 	userRep := memorystorage.NewUser()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		userRep,
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(userRep, memorystorage.NewBlockList()),
+		nil,
 	)
 	return r, userRep, rosterRep
 }

@@ -33,13 +33,13 @@ type Config struct {
 // Register represents an in-band server stream module.
 type Register struct {
 	cfg      *Config
-	router   *router.Router
+	router   router.Router
 	runQueue *runqueue.RunQueue
 	rep      repository.User
 }
 
 // New returns an in-band registration IQ handler.
-func New(config *Config, disco *xep0030.DiscoInfo, router *router.Router, userRep repository.User) *Register {
+func New(config *Config, disco *xep0030.DiscoInfo, router router.Router, userRep repository.User) *Register {
 	r := &Register{
 		cfg:      config,
 		router:   router,
@@ -60,7 +60,7 @@ func (x *Register) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes an in-band registration IQ taking according actions over the associated stream.
 func (x *Register) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		if stm := x.router.UserStream(iq.FromJID()); stm != nil {
+		if stm := x.router.LocalStream(iq.FromJID().Node(), iq.FromJID().Resource()); stm != nil {
 			x.processIQ(ctx, iq, stm)
 		}
 	})
@@ -96,7 +96,8 @@ func (x *Register) processIQ(ctx context.Context, iq *xmpp.IQ, stm stream.C2S) {
 			// ...send registration fields to requester entity...
 			x.sendRegistrationFields(ctx, iq, q, stm)
 		} else if iq.IsSet() {
-			if !stm.GetBool(xep077RegisteredCtxKey) {
+			registered, _ := stm.Value(xep077RegisteredCtxKey).(bool)
+			if !registered {
 				// ...register a new user...
 				x.registerNewUser(ctx, iq, q, stm)
 			} else {
@@ -166,7 +167,7 @@ func (x *Register) registerNewUser(ctx context.Context, iq *xmpp.IQ, query xmpp.
 		return
 	}
 	stm.SendElement(ctx, iq.ResultIQ())
-	stm.SetBool(ctx, xep077RegisteredCtxKey, true) // mark as registered
+	stm.SetValue(xep077RegisteredCtxKey, true) // mark as registered
 }
 
 func (x *Register) cancelRegistration(ctx context.Context, iq *xmpp.IQ, query xmpp.XElement, stm stream.C2S) {

@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
@@ -139,13 +142,12 @@ func TestXEP0199_Disconnect(t *testing.T) {
 	require.Equal(t, "connection-timeout", err.Error())
 }
 
-func setupTest() *router.Router {
+func setupTest() router.Router {
+	hosts, _ := host.New([]host.Config{{Name: "jackal.im", Certificate: tls.Certificate{}}})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	return r
 }

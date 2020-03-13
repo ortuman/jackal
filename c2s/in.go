@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/auth"
-	"github.com/ortuman/jackal/cluster"
 	"github.com/ortuman/jackal/component"
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
@@ -27,7 +27,6 @@ import (
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
 )
 
 const (
@@ -41,8 +40,9 @@ const (
 
 type inStream struct {
 	cfg            *streamConfig
-	router         *router.Router
+	router         router.Router
 	userRep        repository.User
+	blockListRep   repository.BlockList
 	mods           *module.Modules
 	comps          *component.Components
 	sess           *session.Session
@@ -52,29 +52,30 @@ type inStream struct {
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
 	runQueue       *runqueue.RunQueue
-
-	mu            sync.RWMutex
-	jid           *jid.JID
-	secured       bool
-	compressed    bool
-	authenticated bool
-	sessStarted   bool
-	presence      *xmpp.Presence
-
-	contextMu sync.RWMutex
-	context   map[string]interface{}
+	mu             sync.RWMutex
+	jid            *jid.JID
+	secured        bool
+	compressed     bool
+	authenticated  bool
+	sessStarted    bool
+	presence       *xmpp.Presence
+	ctx            context.Context
+	ctxCancelFn    context.CancelFunc
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router *router.Router, userRep repository.User) stream.C2S {
+func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
+	ctx, ctxCancelFn := context.WithCancel(context.Background())
 	s := &inStream{
-		cfg:      config,
-		router:   router,
-		userRep:  userRep,
-		mods:     mods,
-		comps:    comps,
-		id:       id,
-		context:  make(map[string]interface{}),
-		runQueue: runqueue.New(id),
+		cfg:          config,
+		router:       router,
+		userRep:      userRep,
+		blockListRep: blockListRep,
+		mods:         mods,
+		comps:        comps,
+		id:           id,
+		runQueue:     runqueue.New(id),
+		ctx:          ctx,
+		ctxCancelFn:  ctxCancelFn,
 	}
 
 	// initialize stream context
@@ -101,79 +102,22 @@ func (s *inStream) ID() string {
 	return s.id
 }
 
-// Context returns a copy of the stream associated context.
-func (s *inStream) Context() map[string]interface{} {
-	m := make(map[string]interface{})
-	s.contextMu.RLock()
-	for k, v := range s.context {
-		m[k] = v
-	}
-	s.contextMu.RUnlock()
-	return m
+func (s *inStream) Context() context.Context {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.ctx
 }
 
-// SetString associates a string context value to a key.
-func (s *inStream) SetString(ctx context.Context, key string, value string) {
-	s.setContextValue(ctx, key, value)
+func (s *inStream) Value(key interface{}) interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.ctx.Value(key)
 }
 
-// GetString returns the context value associated with the key as a string.
-func (s *inStream) GetString(key string) string {
-	var ret string
-	s.contextMu.RLock()
-	defer s.contextMu.RUnlock()
-	if s, ok := s.context[key].(string); ok {
-		ret = s
-	}
-	return ret
-}
-
-// SetInt associates an integer context value to a key.
-func (s *inStream) SetInt(ctx context.Context, key string, value int) {
-	s.setContextValue(ctx, key, value)
-}
-
-// GetInt returns the context value associated with the key as an integer.
-func (s *inStream) GetInt(key string) int {
-	var ret int
-	s.contextMu.RLock()
-	defer s.contextMu.RUnlock()
-	if i, ok := s.context[key].(int); ok {
-		ret = i
-	}
-	return ret
-}
-
-// SetFloat associates a float context value to a key.
-func (s *inStream) SetFloat(ctx context.Context, key string, value float64) {
-	s.setContextValue(ctx, key, value)
-}
-
-// GetFloat returns the context value associated with the key as a float64.
-func (s *inStream) GetFloat(key string) float64 {
-	var ret float64
-	s.contextMu.RLock()
-	defer s.contextMu.RUnlock()
-	if f, ok := s.context[key].(float64); ok {
-		ret = f
-	}
-	return ret
-}
-
-// SetBool associates a boolean context value to a key.
-func (s *inStream) SetBool(ctx context.Context, key string, value bool) {
-	s.setContextValue(ctx, key, value)
-}
-
-// GetBool returns the context value associated with the key as a boolean.
-func (s *inStream) GetBool(key string) bool {
-	var ret bool
-	s.contextMu.RLock()
-	defer s.contextMu.RUnlock()
-	if b, ok := s.context[key].(bool); ok {
-		ret = b
-	}
-	return ret
+func (s *inStream) SetValue(key, value interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ctx = context.WithValue(s.ctx, key, value)
 }
 
 // Username returns current stream username.
@@ -235,6 +179,7 @@ func (s *inStream) Disconnect(ctx context.Context, err error) {
 	waitCh := make(chan struct{})
 	s.runQueue.Run(func() {
 		s.disconnect(ctx, err)
+		s.ctxCancelFn()
 		close(waitCh)
 	})
 	<-waitCh
@@ -499,7 +444,7 @@ func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
 	s.setSecured(true)
 	s.writeElement(ctx, xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Certificates()}, false)
+	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Hosts().Certificates()}, false)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -604,11 +549,11 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 	if resourceElem := bind.Elements().Child("resource"); resourceElem != nil {
 		resource = resourceElem.Text()
 	} else {
-		resource = uuid.New()
+		resource = uuid.New().String()
 	}
 	// try binding...
 	var stm stream.C2S
-	streams := s.router.UserStreams(s.JID().Node())
+	streams := s.router.LocalStreams(s.JID().Node())
 	for _, s := range streams {
 		if s.Resource() == resource {
 			stm = s
@@ -618,7 +563,7 @@ func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
 		switch s.cfg.resourceConflict {
 		case Override:
 			// override the resource with a server-generated resourcepart...
-			resource = uuid.New()
+			resource = uuid.New().String()
 		case Replace:
 			// terminate the session of the currently connected client...
 			stm.Disconnect(ctx, streamerror.ErrResourceConstraint)
@@ -682,7 +627,7 @@ func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.Hosts().IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch s.router.Route(ctx, iq) {
 		case router.ErrResourceNotFound:
@@ -705,11 +650,11 @@ func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence)
 		_ = s.router.Route(ctx, presence)
 		return
 	}
-	replyOnBehalf := s.JID().Matches(presence.ToJID(), jid.MatchesBare)
+	replyOnBehalf := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
 
 	// update presence
 	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
-		s.setPresence(ctx, presence)
+		s.setPresence(presence)
 	}
 	// process presence
 	if r := s.mods.Roster; r != nil {
@@ -862,10 +807,25 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession, u
 }
 
 func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
-	if j.IsServer() && s.router.IsLocalHost(j.Domain()) {
+	blockList, err := s.blockListRep.FetchBlockListItems(ctx, s.Username())
+	if err != nil {
+		log.Error(err)
 		return false
 	}
-	return s.router.IsBlockedJID(ctx, j, s.Username())
+	if len(blockList) == 0 {
+		return false
+	}
+	blockListJIDs := make([]jid.JID, len(blockList))
+	for i, listItem := range blockList {
+		j, _ := jid.NewWithString(listItem.JID, true)
+		blockListJIDs[i] = *j
+	}
+	for _, blockedJID := range blockListJIDs {
+		if blockedJID.Matches(j) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *inStream) restartSession() {
@@ -873,44 +833,14 @@ func (s *inStream) restartSession() {
 		JID:           s.JID(),
 		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
-	}, s.router)
+	}, s.router.Hosts())
 	s.setState(connecting)
 }
 
-func (s *inStream) setContextValue(ctx context.Context, key string, value interface{}) {
-	s.contextMu.Lock()
-	s.context[key] = value
-	s.contextMu.Unlock()
-
-	// notify the whole roster about the context update.
-	if c := s.router.Cluster(); c != nil {
-		c.BroadcastMessage(ctx, &cluster.Message{
-			Type: cluster.MsgUpdateContext,
-			Node: c.LocalNode(),
-			Payloads: []cluster.MessagePayload{{
-				JID:     s.JID(),
-				Context: map[string]interface{}{key: value},
-			}},
-		})
-	}
-}
-
-func (s *inStream) setPresence(ctx context.Context, presence *xmpp.Presence) {
+func (s *inStream) setPresence(presence *xmpp.Presence) {
 	s.mu.Lock()
 	s.presence = presence
 	s.mu.Unlock()
-
-	// notify the whole cluster about the presence update
-	if c := s.router.Cluster(); c != nil {
-		c.BroadcastMessage(ctx, &cluster.Message{
-			Type: cluster.MsgUpdatePresence,
-			Node: c.LocalNode(),
-			Payloads: []cluster.MessagePayload{{
-				JID:    s.jid,
-				Stanza: presence,
-			}},
-		})
-	}
 }
 
 func (s *inStream) setJID(j *jid.JID) {

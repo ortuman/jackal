@@ -13,7 +13,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
-	"github.com/ortuman/jackal/module/presencehub"
+	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/module/xep0163"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/storage/repository"
@@ -35,25 +35,25 @@ type Config struct {
 
 // Roster represents a roster server stream module.
 type Roster struct {
-	cfg         *Config
-	runQueue    *runqueue.RunQueue
-	router      *router.Router
-	userRep     repository.User
-	rosterRep   repository.Roster
-	pep         *xep0163.Pep
-	presenceHub *presencehub.PresenceHub
+	cfg        *Config
+	runQueue   *runqueue.RunQueue
+	router     router.Router
+	userRep    repository.User
+	rosterRep  repository.Roster
+	pep        *xep0163.Pep
+	entityCaps *xep0115.EntityCaps
 }
 
 // New returns a roster server stream module.
-func New(cfg *Config, presenceHub *presencehub.PresenceHub, pep *xep0163.Pep, router *router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
+func New(cfg *Config, entityCaps *xep0115.EntityCaps, pep *xep0163.Pep, router router.Router, userRep repository.User, rosterRep repository.Roster) *Roster {
 	r := &Roster{
-		cfg:         cfg,
-		runQueue:    runqueue.New("roster"),
-		router:      router,
-		userRep:     userRep,
-		rosterRep:   rosterRep,
-		presenceHub: presenceHub,
-		pep:         pep,
+		cfg:        cfg,
+		runQueue:   runqueue.New("roster"),
+		router:     router,
+		userRep:    userRep,
+		rosterRep:  rosterRep,
+		entityCaps: entityCaps,
+		pep:        pep,
 	}
 	return r
 }
@@ -66,7 +66,7 @@ func (x *Roster) MatchesIQ(iq *xmpp.IQ) bool {
 // ProcessIQ processes a roster IQ taking according actions over the associated stream.
 func (x *Roster) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	x.runQueue.Run(func() {
-		stm := x.router.UserStream(iq.FromJID())
+		stm := x.router.LocalStream(iq.FromJID().Node(), iq.FromJID().Resource())
 		if stm == nil {
 			return
 		}
@@ -148,7 +148,7 @@ func (x *Roster) sendRoster(ctx context.Context, iq *xmpp.IQ, query xmpp.XElemen
 			}
 		}
 	}
-	stm.SetBool(ctx, rosterRequestedCtxKey, true)
+	stm.SetValue(rosterRequestedCtxKey, true)
 	return nil
 }
 
@@ -247,7 +247,7 @@ func (x *Roster) removeItem(ctx context.Context, ri *rostermodel.Item, stm strea
 		x.unsubscribeFromVirtualNodes(ctx, userJID.String(), contactJID)
 	}
 
-	if x.router.IsLocalHost(contactJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		cntRi, err := x.rosterRep.FetchRosterItem(ctx, contactJID.Node(), userJID.String())
 		if err != nil {
 			return err
@@ -311,7 +311,7 @@ func (x *Roster) processSubscribe(ctx context.Context, presence *xmpp.Presence) 
 
 	log.Infof("processing 'subscribe' - contact: %s (%s)", contactJID, userJID)
 
-	if x.router.IsLocalHost(userJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(userJID.Domain()) {
 		usrRi, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -344,7 +344,7 @@ func (x *Roster) processSubscribe(ctx context.Context, presence *xmpp.Presence) 
 	p := xmpp.NewPresence(userJID, contactJID, xmpp.SubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if x.router.IsLocalHost(contactJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		// archive roster approval notification
 		if err := x.upsertNotification(ctx, contactJID.Node(), userJID, p); err != nil {
 			return err
@@ -360,7 +360,7 @@ func (x *Roster) processSubscribed(ctx context.Context, presence *xmpp.Presence)
 
 	log.Infof("processing 'subscribed' - user: %s (%s)", userJID, contactJID)
 
-	if x.router.IsLocalHost(contactJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		_, err := x.deleteNotification(ctx, contactJID.Node(), userJID)
 		if err != nil {
 			return err
@@ -395,7 +395,7 @@ func (x *Roster) processSubscribed(ctx context.Context, presence *xmpp.Presence)
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.SubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if x.router.IsLocalHost(userJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(userJID.Domain()) {
 		usrRi, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -428,7 +428,7 @@ func (x *Roster) processUnsubscribe(ctx context.Context, presence *xmpp.Presence
 	log.Infof("processing 'unsubscribe' - contact: %s (%s)", contactJID, userJID)
 
 	var usrSub string
-	if x.router.IsLocalHost(userJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(userJID.Domain()) {
 		usrRi, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -451,7 +451,7 @@ func (x *Roster) processUnsubscribe(ctx context.Context, presence *xmpp.Presence
 	p := xmpp.NewPresence(userJID, contactJID, xmpp.UnsubscribeType)
 	p.AppendElements(presence.Elements().All())
 
-	if x.router.IsLocalHost(contactJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		cntRi, err := x.rosterRep.FetchRosterItem(ctx, contactJID.Node(), userJID.String())
 		if err != nil {
 			return err
@@ -485,7 +485,7 @@ func (x *Roster) processUnsubscribed(ctx context.Context, presence *xmpp.Presenc
 	log.Infof("processing 'unsubscribed' - user: %s (%s)", userJID, contactJID)
 
 	var cntSub string
-	if x.router.IsLocalHost(contactJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		deleted, err := x.deleteNotification(ctx, contactJID.Node(), userJID)
 		if err != nil {
 			return err
@@ -519,7 +519,7 @@ routePresence:
 	p := xmpp.NewPresence(contactJID, userJID, xmpp.UnsubscribedType)
 	p.AppendElements(presence.Elements().All())
 
-	if x.router.IsLocalHost(userJID.Domain()) {
+	if x.router.Hosts().IsLocalHost(userJID.Domain()) {
 		usrRi, err := x.rosterRep.FetchRosterItem(ctx, userJID.Node(), contactJID.String())
 		if err != nil {
 			return err
@@ -553,7 +553,7 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 
 	log.Infof("processing 'probe' - user: %s (%s)", userJID, contactJID)
 
-	if !x.router.IsLocalHost(contactJID.Domain()) {
+	if !x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 		_ = x.router.Route(ctx, presence)
 		return nil
 	}
@@ -564,7 +564,10 @@ func (x *Roster) processProbePresence(ctx context.Context, presence *xmpp.Presen
 	if ri == nil || (ri.Subscription != rostermodel.SubscriptionBoth && ri.Subscription != rostermodel.SubscriptionFrom) {
 		return nil // silently ignore
 	}
-	availPresences := x.presenceHub.AvailablePresencesMatchingJID(contactJID)
+	availPresences, err := x.entityCaps.PresencesMatchingJID(ctx, contactJID)
+	if err != nil {
+		return err
+	}
 	if len(availPresences) == 0 { // send last known presence
 		usr, err := x.userRep.FetchUser(ctx, contactJID.Node())
 		if err != nil {
@@ -592,18 +595,18 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 	userJID := fromJID.ToBareJID()
 	contactJID := presence.ToJID().ToBareJID()
 
-	replyOnBehalf := x.router.IsLocalHost(userJID.Domain()) && userJID.Matches(contactJID, jid.MatchesBare)
+	replyOnBehalf := x.router.Hosts().IsLocalHost(userJID.Domain()) && userJID.MatchesWithOptions(contactJID, jid.MatchesBare)
 
 	// keep track of available presences
 	if presence.IsAvailable() {
 		log.Infof("processing 'available' - user: %s", fromJID)
 
 		// register presence
-		alreadyRegistered, err := x.presenceHub.RegisterPresence(ctx, presence)
+		inserted, err := x.entityCaps.RegisterPresence(ctx, presence)
 		if err != nil {
 			return err
 		}
-		if !alreadyRegistered && replyOnBehalf {
+		if inserted && replyOnBehalf {
 			if err := x.deliverRosterPresences(ctx, userJID); err != nil {
 				return err
 			}
@@ -613,7 +616,9 @@ func (x *Roster) processAvailablePresence(ctx context.Context, presence *xmpp.Pr
 		log.Infof("processing 'unavailable' - user: %s", fromJID)
 
 		// unregister presence
-		x.presenceHub.UnregisterPresence(ctx, presence)
+		if err := x.entityCaps.UnregisterPresence(ctx, presence.FromJID()); err != nil {
+			return err
+		}
 	}
 	if replyOnBehalf {
 		return x.broadcastPresence(ctx, presence)
@@ -644,7 +649,7 @@ func (x *Roster) deliverRosterPresences(ctx context.Context, userJID *jid.JID) e
 		switch item.Subscription {
 		case rostermodel.SubscriptionTo, rostermodel.SubscriptionBoth:
 			contactJID := item.ContactJID()
-			if !x.router.IsLocalHost(contactJID.Domain()) {
+			if !x.router.Hosts().IsLocalHost(contactJID.Domain()) {
 				_ = x.router.Route(ctx, xmpp.NewPresence(userJID, contactJID, xmpp.ProbeType))
 				continue
 			}
@@ -707,9 +712,10 @@ func (x *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, to *jid.JID
 	}
 	query.AppendElement(ri.Element())
 
-	streams := x.router.UserStreams(to.Node())
+	streams := x.router.LocalStreams(to.Node())
 	for _, stm := range streams {
-		if !stm.GetBool(rosterRequestedCtxKey) {
+		requested, _ := stm.Value(rosterRequestedCtxKey).(bool)
+		if !requested {
 			continue
 		}
 		pushEl := xmpp.NewIQType(uuid.New(), xmpp.SetType)
@@ -744,8 +750,8 @@ func (x *Roster) upsertNotification(ctx context.Context, contact string, userJID
 }
 
 func (x *Roster) routePresencesFrom(ctx context.Context, from *jid.JID, to *jid.JID, presenceType string) {
-	stms := x.router.UserStreams(from.Node())
-	for _, stm := range stms {
+	streams := x.router.LocalStreams(from.Node())
+	for _, stm := range streams {
 		p := xmpp.NewPresence(stm.JID(), to.ToBareJID(), presenceType)
 		if presence := stm.Presence(); presence != nil && presence.IsAvailable() {
 			p.AppendElements(presence.Elements().All())

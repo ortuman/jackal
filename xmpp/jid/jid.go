@@ -168,8 +168,20 @@ func (j *JID) IsFullWithUser() bool {
 	return len(j.node) > 0 && len(j.resource) > 0
 }
 
-// Matches returns true if two JID's are equivalent.
-func (j *JID) Matches(j2 *JID, options MatchingOptions) bool {
+// Matches tells whether or not j2 matches j.
+func (j *JID) Matches(j2 *JID) bool {
+	if j.IsFullWithUser() {
+		return j.MatchesWithOptions(j2, MatchesNode|MatchesDomain|MatchesResource)
+	} else if j.IsFullWithServer() {
+		return j.MatchesWithOptions(j2, MatchesDomain|MatchesResource)
+	} else if j.IsBare() {
+		return j.MatchesWithOptions(j2, MatchesNode|MatchesDomain)
+	}
+	return j.MatchesWithOptions(j2, MatchesDomain)
+}
+
+// MatchesWithOptions tells whether two jids are equivalent based on matching options.
+func (j *JID) MatchesWithOptions(j2 *JID, options MatchingOptions) bool {
 	if (options&MatchesNode) > 0 && j.node != j2.node {
 		return false
 	}

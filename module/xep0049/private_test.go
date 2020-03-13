@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
@@ -46,6 +49,8 @@ func TestXEP0049_InvalidIQ(t *testing.T) {
 	j2, _ := jid.New("romeo", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j1)
+	stm.SetPresence(xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, s)
@@ -98,6 +103,8 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S("abcd", j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	x := New(r, s)
@@ -159,14 +166,13 @@ func TestXEP0049_SetAndGetPrivate(t *testing.T) {
 	require.Equal(t, "exodus:ns:2", q3.Elements().All()[0].Namespace())
 }
 
-func setupTest(domain string) (*router.Router, repository.Private) {
+func setupTest(domain string) (router.Router, repository.Private) {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	s := memorystorage.NewPrivate()
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	return r, s
 }

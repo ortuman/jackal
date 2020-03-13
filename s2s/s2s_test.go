@@ -16,10 +16,11 @@ import (
 	"testing"
 	"time"
 
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -143,8 +144,10 @@ func (c *fakeSocketConn) ConnectionState() tls.ConnectionState {
 	return st
 }
 
-func (c *fakeSocketConn) inboundWriteString(s string) (n int, err error) { return c.rd.Write([]byte(s)) }
-func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error)       { return c.rd.Write(b) }
+func (c *fakeSocketConn) inboundWriteString(s string) (n int, err error) {
+	return c.rd.Write([]byte(s))
+}
+func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) { return c.rd.Write(b) }
 
 func (c *fakeSocketConn) outboundRead() xmpp.XElement {
 	var elem xmpp.XElement
@@ -188,30 +191,26 @@ var (
 func (a fakeAddr) Network() string { return "net" }
 func (a fakeAddr) String() string  { return "str" }
 
-func setupTest(domain string) *router.Router {
-	userRep := memorystorage.NewUser()
-	blockListRep := memorystorage.NewBlockList()
-	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: domain, Certificate: tls.Certificate{}}},
-		},
-		userRep,
-		blockListRep,
-	)
-	return r
+func setupTestRouter(domain string) (router.Router, *host.Hosts) {
+	hosts := setupTestHosts(domain)
+	r, _ := router.New(hosts, c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()), nil)
+	return r, hosts
+}
+
+func setupTestHosts(domain string) *host.Hosts {
+	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
+	return hosts
 }
 
 type fakeS2SServer struct {
-	startCh     chan struct{}
-	shutdownCh  chan struct{}
-	getOrDialCh chan struct{}
+	startCh    chan struct{}
+	shutdownCh chan struct{}
 }
 
 func newFakeS2SServer() *fakeS2SServer {
 	return &fakeS2SServer{
-		startCh:     make(chan struct{}, 1),
-		shutdownCh:  make(chan struct{}, 1),
-		getOrDialCh: make(chan struct{}, 1),
+		startCh:    make(chan struct{}, 1),
+		shutdownCh: make(chan struct{}, 1),
 	}
 }
 
@@ -222,11 +221,6 @@ func (s *fakeS2SServer) start() {
 func (s *fakeS2SServer) shutdown(_ context.Context) error {
 	s.shutdownCh <- struct{}{}
 	return nil
-}
-
-func (s *fakeS2SServer) getOrDial(_ context.Context, _, _ string) (stream.S2SOut, error) {
-	s.getOrDialCh <- struct{}{}
-	return nil, nil
 }
 
 func TestS2S_StartAndShutdown(t *testing.T) {
@@ -240,14 +234,6 @@ func TestS2S_StartAndShutdown(t *testing.T) {
 		require.Fail(t, "s2s start timeout")
 	}
 
-	_, _ = s2s.GetOut(context.Background(), "jackal.im", "jabber.org")
-	select {
-	case <-fakeSrv.getOrDialCh:
-		break
-	case <-time.After(time.Millisecond * 250):
-		require.Fail(t, "s2s getOrDial timeout")
-	}
-
 	s2s.Shutdown(context.Background())
 	select {
 	case <-fakeSrv.shutdownCh:
@@ -259,8 +245,9 @@ func TestS2S_StartAndShutdown(t *testing.T) {
 
 func setupTestS2S() (*S2S, *fakeS2SServer) {
 	srv := newFakeS2SServer()
-	createS2SServer = func(_ *Config, _ *module.Modules, _ *router.Router) s2sServer {
+	createS2SServer = func(_ *Config, _ *module.Modules, _ newOutFunc, _ router.Router) s2sServer {
 		return srv
 	}
-	return New(&Config{}, &module.Modules{}, &router.Router{}), srv
+	r, _ := router.New(nil, nil, nil)
+	return New(&Config{}, &module.Modules{}, NewOutProvider(&Config{}, nil), r), srv
 }

@@ -30,8 +30,8 @@ const (
 
 type inStream struct {
 	id            string
-	cfg           *streamConfig
-	router        *router.Router
+	cfg           *inConfig
+	router        router.Router
 	mods          *module.Modules
 	localDomain   string
 	remoteDomain  string
@@ -40,15 +40,17 @@ type inStream struct {
 	sess          *session.Session
 	secured       uint32
 	authenticated uint32
+	newOut        newOutFunc
 	runQueue      *runqueue.RunQueue
 }
 
-func newInStream(config *streamConfig, mods *module.Modules, router *router.Router) *inStream {
+func newInStream(config *inConfig, mods *module.Modules, newOutFn newOutFunc, router router.Router) *inStream {
 	id := nextInID()
 	s := &inStream{
 		id:       id,
 		cfg:      config,
 		router:   router,
+		newOut:   newOutFn,
 		mods:     mods,
 		runQueue: runqueue.New(id),
 	}
@@ -120,7 +122,7 @@ func (s *inStream) handleConnecting(ctx context.Context, elem xmpp.XElement) {
 		s.connectTm = nil
 	}
 	// assign domain pair
-	s.localDomain = s.router.DefaultHostName()
+	s.localDomain = s.router.Hosts().DefaultHostName()
 	s.remoteDomain = elem.From()
 
 	// open stream session
@@ -134,9 +136,9 @@ func (s *inStream) handleConnecting(ctx context.Context, elem xmpp.XElement) {
 	features.SetAttribute("version", "1.0")
 
 	if !s.isSecured() {
-		starttls := xmpp.NewElementNamespace("starttls", tlsNamespace)
-		starttls.AppendElement(xmpp.NewElementName("required"))
-		features.AppendElement(starttls)
+		startTLS := xmpp.NewElementNamespace("starttls", tlsNamespace)
+		startTLS.AppendElement(xmpp.NewElementName("required"))
+		features.AppendElement(startTLS)
 		s.setState(inConnected)
 		_ = s.sess.Open(ctx, features)
 		return
@@ -210,7 +212,7 @@ func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence)
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && s.router.IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && s.router.Hosts().IsLocalHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch s.router.Route(ctx, iq) {
 		case router.ErrResourceNotFound:
@@ -265,7 +267,7 @@ func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
 	s.cfg.transport.StartTLS(&tls.Config{
 		ServerName:   s.localDomain,
 		ClientAuth:   tls.VerifyClientCertIfGiven,
-		Certificates: s.router.Certificates(),
+		Certificates: s.router.Hosts().Certificates(),
 	}, false)
 	atomic.StoreUint32(&s.secured, 1)
 
@@ -317,32 +319,20 @@ func (s *inStream) failAuthentication(ctx context.Context, reason, text string) 
 }
 
 func (s *inStream) authorizeDialbackKey(ctx context.Context, elem xmpp.XElement) {
-	if !s.router.IsLocalHost(elem.To()) {
+	if !s.router.Hosts().IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(ctx, elem, xmpp.ErrItemNotFound)
 		return
 	}
 	log.Infof("authorizing dialback key: %s...", elem.Text())
 
-	outCfg, err := s.cfg.dialer.dial(s.router.DefaultHostName(), elem.From())
-	if err != nil {
-		log.Error(err)
-		s.writeStanzaErrorResponse(ctx, elem, xmpp.ErrRemoteServerNotFound)
-		return
-	}
-	// create verify element
-	dbVerify := xmpp.NewElementName("db:verify")
-	dbVerify.SetID(s.sess.StreamID())
-	dbVerify.SetFrom(elem.To())
-	dbVerify.SetTo(elem.From())
-	dbVerify.SetText(elem.Text())
-	outCfg.dbVerify = dbVerify
+	// verify stream
+	outStm := s.newOut(s.router.Hosts().DefaultHostName(), elem.From())
 
-	outStm := newOutStream(s.router)
-	_ = outStm.start(ctx, outCfg)
+	verifyCh := outStm.verify(ctx, s.sess.StreamID(), elem.To(), elem.From(), elem.Text())
 
 	// wait remote server verification
 	select {
-	case valid := <-outStm.verify():
+	case valid := <-verifyCh:
 		reply := xmpp.NewElementName("db:result")
 		reply.SetFrom(elem.To())
 		reply.SetTo(elem.From())
@@ -364,7 +354,7 @@ func (s *inStream) authorizeDialbackKey(ctx context.Context, elem xmpp.XElement)
 }
 
 func (s *inStream) verifyDialbackKey(ctx context.Context, elem xmpp.XElement) {
-	if !s.router.IsLocalHost(elem.To()) {
+	if !s.router.Hosts().IsLocalHost(elem.To()) {
 		s.writeStanzaErrorResponse(ctx, elem, xmpp.ErrItemNotFound)
 		return
 	}
@@ -451,8 +441,8 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession bo
 	if closeSession {
 		_ = s.sess.Close(ctx)
 	}
-	if s.cfg.onInDisconnect != nil {
-		s.cfg.onInDisconnect(s)
+	if s.cfg.onDisconnect != nil {
+		s.cfg.onDisconnect(s)
 	}
 
 	s.setState(inDisconnected)
@@ -462,14 +452,14 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession bo
 }
 
 func (s *inStream) restartSession() {
-	j, _ := jid.New("", s.cfg.localDomain, "", true)
+	j, _ := jid.New("", s.localDomain, "", true)
 	s.sess = session.New(s.id, &session.Config{
 		JID:           j,
 		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.remoteDomain,
 		IsServer:      true,
-	}, s.router)
+	}, s.router.Hosts())
 	s.setState(inConnecting)
 }
 

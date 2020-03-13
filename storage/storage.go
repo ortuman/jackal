@@ -8,7 +8,6 @@ package storage
 import (
 	"fmt"
 
-	"github.com/ortuman/jackal/storage/badgerdb"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/mysql"
 	"github.com/ortuman/jackal/storage/pgsql"
@@ -18,8 +17,6 @@ import (
 // New initializes configured storage type and returns associated container.
 func New(config *Config) (repository.Container, error) {
 	switch config.Type {
-	case BadgerDB:
-		return badgerdb.New(config.BadgerDB)
 	case MySQL:
 		return mysql.New(config.MySQL)
 	case PostgreSQL:

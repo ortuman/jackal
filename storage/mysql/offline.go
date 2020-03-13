@@ -81,17 +81,18 @@ func (s *mySQLOffline) FetchOfflineMessages(ctx context.Context, username string
 	if err != nil {
 		return nil, err
 	}
-	elems := rootEl.Elements().All()
+	elements := rootEl.Elements().All()
 
-	var messages []xmpp.Message
-	for _, el := range elems {
+	messages := make([]xmpp.Message, len(elements))
+	for i, el := range elements {
 		fromJID, _ := jid.NewWithString(el.From(), true)
 		toJID, _ := jid.NewWithString(el.To(), true)
+
 		msg, err := xmpp.NewMessageFromElement(el, fromJID, toJID)
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, *msg)
+		messages[i] = *msg
 	}
 	return messages, nil
 }

@@ -10,6 +10,9 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/ortuman/jackal/router/host"
+
+	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/router"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/stream"
@@ -27,6 +30,8 @@ func TestXEP0092(t *testing.T) {
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
+	stm.SetPresence(xmpp.NewPresence(j, j, xmpp.AvailableType))
+
 	r.Bind(context.Background(), stm)
 
 	cfg := Config{}
@@ -74,13 +79,12 @@ func TestXEP0092(t *testing.T) {
 	require.Equal(t, osString, ver.Elements().Child("os").Text())
 }
 
-func setupTest() *router.Router {
+func setupTest() router.Router {
+	hosts, _ := host.New([]host.Config{{Name: "jackal.im", Certificate: tls.Certificate{}}})
 	r, _ := router.New(
-		&router.Config{
-			Hosts: []router.HostConfig{{Name: "jackal.im", Certificate: tls.Certificate{}}},
-		},
-		memorystorage.NewUser(),
-		memorystorage.NewBlockList(),
+		hosts,
+		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
+		nil,
 	)
 	return r
 }

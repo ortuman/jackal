@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ortuman/jackal/storage/badgerdb"
 	"github.com/ortuman/jackal/storage/mysql"
 	"github.com/ortuman/jackal/storage/pgsql"
 )
@@ -24,9 +23,6 @@ const (
 	// PostgreSQL represents a PostgreSQL storage type.
 	PostgreSQL
 
-	// BadgerDB represents a BadgerDB storage type.
-	BadgerDB
-
 	// Memory represents a in-memstorage storage type.
 	Memory
 )
@@ -34,7 +30,6 @@ const (
 var typeStringMap = map[Type]string{
 	MySQL:      "MySQL",
 	PostgreSQL: "PostgreSQL",
-	BadgerDB:   "BadgerDB",
 	Memory:     "Memory",
 }
 
@@ -45,14 +40,12 @@ type Config struct {
 	Type       Type
 	MySQL      *mysql.Config
 	PostgreSQL *pgsql.Config
-	BadgerDB   *badgerdb.Config
 }
 
 type storageProxyType struct {
-	Type       string           `yaml:"type"`
-	MySQL      *mysql.Config    `yaml:"mysql"`
-	PostgreSQL *pgsql.Config    `yaml:"pgsql"`
-	BadgerDB   *badgerdb.Config `yaml:"badgerdb"`
+	Type       string        `yaml:"type"`
+	MySQL      *mysql.Config `yaml:"mysql"`
+	PostgreSQL *pgsql.Config `yaml:"pgsql"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -77,13 +70,6 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		c.Type = PostgreSQL
 		c.PostgreSQL = p.PostgreSQL
-
-	case "badgerdb":
-		if p.BadgerDB == nil {
-			return errors.New("storage.Config: couldn't read BadgerDB configuration")
-		}
-		c.Type = BadgerDB
-		c.BadgerDB = p.BadgerDB
 
 	case "memory":
 		c.Type = Memory
