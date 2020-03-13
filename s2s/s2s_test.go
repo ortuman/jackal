@@ -144,8 +144,10 @@ func (c *fakeSocketConn) ConnectionState() tls.ConnectionState {
 	return st
 }
 
-func (c *fakeSocketConn) inboundWriteString(s string) (n int, err error) { return c.rd.Write([]byte(s)) }
-func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error)       { return c.rd.Write(b) }
+func (c *fakeSocketConn) inboundWriteString(s string) (n int, err error) {
+	return c.rd.Write([]byte(s))
+}
+func (c *fakeSocketConn) inboundWrite(b []byte) (n int, err error) { return c.rd.Write(b) }
 
 func (c *fakeSocketConn) outboundRead() xmpp.XElement {
 	var elem xmpp.XElement
