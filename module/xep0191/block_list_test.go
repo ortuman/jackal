@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/router/host"
-
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
@@ -28,14 +27,14 @@ import (
 )
 
 func TestXEP0191_Matching(t *testing.T) {
-	r, blockListRep, rosterRep := setupTest("jackal.im")
+	r, presencesRep, blockListRep, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := xep0115.New(r, nil, "alloc-1234")
+	ph := xep0115.New(r, presencesRep, "alloc-1234")
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -62,14 +61,14 @@ func TestXEP0191_Matching(t *testing.T) {
 }
 
 func TestXEP0191_GetBlockList(t *testing.T) {
-	r, blockListRep, rosterRep := setupTest("jackal.im")
+	r, presencesRep, blockListRep, rosterRep := setupTest("jackal.im")
 
 	j, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	stm := stream.NewMockC2S(uuid.New(), j)
 	r.Bind(context.Background(), stm)
 
-	ph := xep0115.New(r, nil, "alloc-1234")
+	ph := xep0115.New(r, presencesRep, "alloc-1234")
 	defer func() { _ = ph.Shutdown() }()
 
 	x := New(nil, ph, r, rosterRep, blockListRep)
@@ -107,12 +106,12 @@ func TestXEP0191_GetBlockList(t *testing.T) {
 }
 
 func TestXEP191_BlockAndUnblock(t *testing.T) {
-	r, blockListRep, rosterRep := setupTest("jackal.im")
+	r, presencesRep, blockListRep, rosterRep := setupTest("jackal.im")
 
-	ph := xep0115.New(r, nil, "alloc-1234")
-	defer func() { _ = ph.Shutdown() }()
+	caps := xep0115.New(r, presencesRep, "alloc-1234")
+	defer func() { _ = caps.Shutdown() }()
 
-	x := New(nil, ph, r, rosterRep, blockListRep)
+	x := New(nil, caps, r, rosterRep, blockListRep)
 	defer func() { _ = x.Shutdown() }()
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -143,10 +142,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	r.Bind(context.Background(), stm4)
 
 	// register presences
-	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j2, j2, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j3, j3, xmpp.AvailableType))
-	_, _ = ph.RegisterPresence(context.Background(), xmpp.NewPresence(j4, j4, xmpp.AvailableType))
+	_, _ = caps.RegisterPresence(context.Background(), xmpp.NewPresence(j1, j1, xmpp.AvailableType))
+	_, _ = caps.RegisterPresence(context.Background(), xmpp.NewPresence(j2, j2, xmpp.AvailableType))
+	_, _ = caps.RegisterPresence(context.Background(), xmpp.NewPresence(j3, j3, xmpp.AvailableType))
+	_, _ = caps.RegisterPresence(context.Background(), xmpp.NewPresence(j4, j4, xmpp.AvailableType))
 
 	time.Sleep(time.Millisecond * 150) // wait until processed...
 
@@ -284,9 +283,10 @@ func TestXEP191_BlockAndUnblock(t *testing.T) {
 	require.Equal(t, 0, len(blItems))
 }
 
-func setupTest(domain string) (router.Router, repository.BlockList, repository.Roster) {
+func setupTest(domain string) (router.Router, repository.Presences, repository.BlockList, repository.Roster) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 
+	presencesRep := memorystorage.NewPresences()
 	blockListRep := memorystorage.NewBlockList()
 	rosterRep := memorystorage.NewRoster()
 	r, _ := router.New(
@@ -294,5 +294,5 @@ func setupTest(domain string) (router.Router, repository.BlockList, repository.R
 		c2srouter.New(memorystorage.NewUser(), blockListRep),
 		nil,
 	)
-	return r, blockListRep, rosterRep
+	return r, presencesRep, blockListRep, rosterRep
 }

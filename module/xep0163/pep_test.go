@@ -856,7 +856,7 @@ func TestXEP163_SubscribeToAll(t *testing.T) {
 }
 
 func TestXEP163_FilteredNotifications(t *testing.T) {
-	r, capsRep, rosterRep, pubSubRep := setupTest("jackal.im")
+	r, presencesRep, rosterRep, pubSubRep := setupTest("jackal.im")
 
 	j1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	j2, _ := jid.New("noelia", "jackal.im", "balcony", true)
@@ -892,12 +892,12 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	}, "ortuman@jackal.im", "princely_musings")
 
 	// set capabilities
-	_ = capsRep.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{
+	_ = presencesRep.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{
 		Node:     "http://code.google.com/p/exodus",
 		Ver:      "QgayPKawpkPSDYmwT/WM94uAlu0=",
 		Features: []string{"princely_musings+notify"},
 	})
-	ph := xep0115.New(r, capsRep, "alloc-1234")
+	caps := xep0115.New(r, presencesRep, "alloc-1234")
 
 	// register presence
 	pr2 := xmpp.NewPresence(j2, j2, xmpp.AvailableType)
@@ -907,10 +907,10 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 	c.SetAttribute("ver", "QgayPKawpkPSDYmwT/WM94uAlu0=")
 	pr2.AppendElement(c)
 
-	_, _ = ph.RegisterPresence(context.Background(), pr2)
+	_, _ = caps.RegisterPresence(context.Background(), pr2)
 
 	// process pubsub command
-	p := New(nil, ph, r, rosterRep, pubSubRep)
+	p := New(nil, caps, r, rosterRep, pubSubRep)
 
 	iqID := uuid.New()
 	iq := xmpp.NewIQType(iqID, xmpp.SetType)
@@ -946,7 +946,7 @@ func TestXEP163_FilteredNotifications(t *testing.T) {
 func setupTest(domain string) (router.Router, repository.Presences, repository.Roster, repository.PubSub) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 
-	capsRep := memorystorage.NewPresences()
+	presencesRep := memorystorage.NewPresences()
 	rosterRep := memorystorage.NewRoster()
 	pubSubRep := memorystorage.NewPubSub()
 	r, _ := router.New(
@@ -954,5 +954,5 @@ func setupTest(domain string) (router.Router, repository.Presences, repository.R
 		c2srouter.New(memorystorage.NewUser(), memorystorage.NewBlockList()),
 		nil,
 	)
-	return r, capsRep, rosterRep, pubSubRep
+	return r, presencesRep, rosterRep, pubSubRep
 }
