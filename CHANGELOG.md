@@ -6,13 +6,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.9.0] - 2020-02-15
 ### Changed
-- New router implementation
+- New service architecture
 
-## [0.8.2] - 2020-01-14
-### Fixed
-- Blocking Command implementation
-
-## [0.8.1] - 2020-01-07
-### Added
-- Added context support
 
