@@ -66,7 +66,6 @@ func (m *Presences) FetchPresence(_ context.Context, jid *jid.JID) (*capsmodel.P
 // FetchPresencesMatchingJID retrives all storage presences matching a certain JID
 func (m *Presences) FetchPresencesMatchingJID(ctx context.Context, j *jid.JID) ([]capsmodel.PresenceCaps, error) {
 	var usePrefix, useSuffix bool
-
 	var res []capsmodel.PresenceCaps
 
 	if j.IsFullWithUser() {
