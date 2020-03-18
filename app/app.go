@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -37,6 +38,8 @@ import (
 
 const (
 	envAllocationID = "JACKAL_ALLOCATION_ID"
+
+	darwinOpenMax = 10240
 
 	defaultShutDownWaitTime = time.Duration(5) * time.Second
 )
@@ -181,6 +184,9 @@ func (a *Application) Run() error {
 	a.comps = component.New(&cfg.Components, a.mods.DiscoInfo)
 
 	// start serving s2s...
+	if err := a.setRLimit(); err != nil {
+		return err
+	}
 	if cfg.S2S != nil {
 		a.s2s = s2s.New(cfg.S2S, a.mods, a.s2sOutProvider, a.router)
 		a.s2s.Start()
@@ -258,6 +264,26 @@ func (a *Application) printLogo(allocID string) {
 	}
 	log.Infof("")
 	log.Infof("jackal %v - allocation_id: %s\n", version.ApplicationVersion, allocID)
+}
+
+func (a *Application) setRLimit() error {
+	var rLim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLim); err != nil {
+		return err
+	}
+	if rLim.Cur < rLim.Max {
+		switch runtime.GOOS {
+		case "darwin":
+			// The max file limit is 10240, even though
+			// the max returned by Getrlimit is 1<<63-1.
+			// This is OPEN_MAX in sys/syslimits.h.
+			rLim.Cur = darwinOpenMax
+		default:
+			rLim.Cur = rLim.Max
+		}
+		return syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLim)
+	}
+	return nil
 }
 
 func (a *Application) initDebugServer(port int) error {
