@@ -82,7 +82,7 @@ func (s *server) listenConn(address string) error {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startInStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			go s.startInStream(transport.NewSocketTransport(conn))
 			continue
 		}
 	}
@@ -90,14 +90,20 @@ func (s *server) listenConn(address string) error {
 }
 
 func (s *server) startInStream(tr transport.Transport) {
-	stm := newInStream(&inConfig{
-		keyGen:         &keyGen{s.cfg.DialbackSecret},
-		transport:      tr,
-		connectTimeout: s.cfg.ConnectTimeout,
-		timeout:        s.cfg.Timeout,
-		maxStanzaSize:  s.cfg.MaxStanzaSize,
-		onDisconnect:   s.unregisterInStream,
-	}, s.mods, s.newOutFn, s.router)
+	stm := newInStream(
+		&inConfig{
+			keyGen:         &keyGen{s.cfg.DialbackSecret},
+			connectTimeout: s.cfg.ConnectTimeout,
+			keepAlive:      s.cfg.KeepAlive,
+			timeout:        s.cfg.Timeout,
+			maxStanzaSize:  s.cfg.MaxStanzaSize,
+			onDisconnect:   s.unregisterInStream,
+		},
+		tr,
+		s.mods,
+		s.newOutFn,
+		s.router,
+	)
 	s.registerInStream(stm)
 }
 

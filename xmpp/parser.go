@@ -15,8 +15,7 @@ import (
 const rootElementIndex = -1
 
 const (
-	streamName            = "stream"
-	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
+	streamName = "stream"
 )
 
 // ParsingMode defines the way in which special parsed element
@@ -29,9 +28,6 @@ const (
 
 	// SocketStream treats incoming elements as provided from a socket transport.
 	SocketStream
-
-	// WebSocketStream treats incoming elements as provided from a websocket transport.
-	WebSocketStream
 )
 
 // ErrTooLargeStanza is returned by ReadElement when the size of
@@ -111,9 +107,7 @@ func (p *Parser) ParseElement() (XElement, error) {
 done:
 	p.lastOffset = p.dec.InputOffset()
 	ret := p.nextElement
-	if p.mode == WebSocketStream && ret.Name() == "close" && ret.Namespace() == framedStreamNamespace {
-		return nil, ErrStreamClosedByPeer
-	}
+
 	p.nextElement = nil
 	return ret, nil
 }

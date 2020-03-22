@@ -73,7 +73,6 @@ type TransportConfig struct {
 	Type        transport.Type
 	BindAddress string
 	Port        int
-	KeepAlive   time.Duration
 	URLPath     string
 }
 
@@ -96,9 +95,6 @@ func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	case "", "socket":
 		t.Type = transport.Socket
 
-	case "websocket":
-		t.Type = transport.WebSocket
-
 	default:
 		return fmt.Errorf("c2s.TransportConfig: unrecognized transport type: %s", p.Type)
 	}
@@ -114,10 +110,6 @@ func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	if t.Port == 0 {
 		t.Port = defaultTransportPort
 	}
-	t.KeepAlive = time.Duration(p.KeepAlive) * time.Second
-	if t.KeepAlive == 0 {
-		t.KeepAlive = defaultTransportKeepAlive
-	}
 	return nil
 }
 
@@ -132,6 +124,7 @@ type Config struct {
 	ID               string
 	ConnectTimeout   time.Duration
 	Timeout          time.Duration
+	KeepAlive        time.Duration
 	MaxStanzaSize    int
 	ResourceConflict ResourceConflictPolicy
 	Transport        TransportConfig
@@ -145,6 +138,7 @@ type configProxy struct {
 	TLS              TLSConfig       `yaml:"tls"`
 	ConnectTimeout   int             `yaml:"connect_timeout"`
 	Timeout          int             `yaml:"timeout"`
+	KeepAlive        int             `yaml:"keep_alive"`
 	MaxStanzaSize    int             `yaml:"max_stanza_size"`
 	ResourceConflict string          `yaml:"resource_conflict"`
 	Transport        TransportConfig `yaml:"transport"`
@@ -166,6 +160,10 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	cfg.Timeout = time.Duration(p.Timeout) * time.Second
 	if cfg.Timeout == 0 {
 		cfg.Timeout = defaultTimeout
+	}
+	cfg.KeepAlive = time.Duration(p.KeepAlive) * time.Second
+	if cfg.KeepAlive == 0 {
+		cfg.KeepAlive = defaultTransportKeepAlive
 	}
 	cfg.MaxStanzaSize = p.MaxStanzaSize
 	if cfg.MaxStanzaSize == 0 {
@@ -200,9 +198,9 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type streamConfig struct {
-	transport        transport.Transport
 	connectTimeout   time.Duration
 	timeout          time.Duration
+	keepAlive        time.Duration
 	maxStanzaSize    int
 	resourceConflict ResourceConflictPolicy
 	sasl             []string

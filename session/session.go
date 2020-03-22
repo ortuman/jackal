@@ -8,7 +8,6 @@ package session
 import (
 	"context"
 	stdxml "encoding/xml"
-	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -52,10 +51,6 @@ type Config struct {
 	// JID defines an initial session JID.
 	JID *jid.JID
 
-	// Transport provides the underlying session transport
-	// that will be used to send and received elements.
-	Transport transport.Transport
-
 	// MaxStanzaSize defines the maximum stanza size that
 	// can be read from the session transport.
 	MaxStanzaSize int
@@ -90,19 +85,17 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(id string, config *Config, hosts *host.Hosts) *Session {
+func New(id string, config *Config, tr transport.Transport, hosts *host.Hosts) *Session {
 	var parsingMode xmpp.ParsingMode
-	switch config.Transport.Type() {
+	switch tr.Type() {
 	case transport.Socket:
 		parsingMode = xmpp.SocketStream
-	case transport.WebSocket:
-		parsingMode = xmpp.WebSocketStream
 	}
 	s := &Session{
 		id:           id,
 		hosts:        hosts,
-		tr:           config.Transport,
-		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
+		tr:           tr,
+		pr:           xmpp.NewParser(tr, parsingMode, config.MaxStanzaSize),
 		remoteDomain: config.RemoteDomain,
 		isServer:     config.IsServer,
 		isInitiating: config.IsInitiating,
@@ -154,11 +147,6 @@ func (s *Session) Open(ctx context.Context, featuresElem xmpp.XElement) error {
 		}
 		buf.WriteString(`<?xml version="1.0"?>`)
 
-	case transport.WebSocket:
-		ops = xmpp.NewElementName("open")
-		ops.SetAttribute("xmlns", framedStreamNamespace)
-		includeClosing = true
-
 	default:
 		return nil
 	}
@@ -207,8 +195,6 @@ func (s *Session) Close(ctx context.Context) error {
 	switch s.tr.Type() {
 	case transport.Socket:
 		_, err = io.WriteString(s.tr, "</stream:stream>")
-	case transport.WebSocket:
-		_, err = io.WriteString(s.tr, fmt.Sprintf(`<close xmlns="%s" />`, framedStreamNamespace))
 	}
 	if err != nil {
 		return err
@@ -363,14 +349,6 @@ func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
 			return &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
 		}
 		if elem.Namespace() != s.namespace() || elem.Attributes().Get("xmlns:stream") != streamNamespace {
-			return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
-		}
-
-	case transport.WebSocket:
-		if elem.Name() != "open" {
-			return &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
-		}
-		if elem.Namespace() != framedStreamNamespace {
 			return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
 		}
 	}

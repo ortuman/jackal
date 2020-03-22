@@ -28,7 +28,7 @@ import (
 func TestStream_ConnectTimeout(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	stm, _ := tUtilInStreamInit(t, r, op, false)
 	time.Sleep(time.Millisecond * 1500)
@@ -50,7 +50,7 @@ func TestStream_Disconnect(t *testing.T) {
 func TestStream_Features(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	// unsecured features
 	stm, conn := tUtilInStreamInit(t, r, op, false)
@@ -95,7 +95,7 @@ func TestStream_Features(t *testing.T) {
 func TestStream_TLS(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
@@ -133,7 +133,7 @@ func TestStream_TLS(t *testing.T) {
 func TestStream_Authenticate(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
@@ -185,7 +185,7 @@ func TestStream_Authenticate(t *testing.T) {
 func TestStream_DialbackVerify(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	stm, conn := tUtilInStreamInit(t, r, op, false)
 	tUtilInStreamOpen(conn)
@@ -220,7 +220,7 @@ func TestStream_DialbackVerify(t *testing.T) {
 func TestStream_DialbackAuthorize(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 	op.dialer.(*dialer).srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
 		return "", []*net.SRV{{Target: "jackal.im", Port: 5269}}, nil
 	}
@@ -239,12 +239,12 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error"))
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("item-not-found"))
 
-	cfg, conn := tUtilInStreamDefaultConfig(t, false)
+	cfg, tr, conn := tUtilInStreamDefaultConfig(t, false)
 	outConn := newFakeSocketConn()
 	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
+	stm = newInStream(cfg, tr, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -261,12 +261,12 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 	require.NotNil(t, elem.Elements().Child("error").Elements().Child("remote-server-timeout"))
 
 	// authorize dialback key
-	cfg, conn = tUtilInStreamDefaultConfig(t, false)
+	cfg, tr, conn = tUtilInStreamDefaultConfig(t, false)
 	outConn = newFakeSocketConn()
 	op.dialer.(*dialer).dialContext = func(ctx context.Context, network, address string) (conn net.Conn, err error) {
 		return outConn, nil
 	}
-	stm = newInStream(cfg, &module.Modules{}, op.newOut, r)
+	stm = newInStream(cfg, tr, &module.Modules{}, op.newOut, r)
 
 	tUtilInStreamOpen(conn)
 	_ = conn.outboundRead() // read stream opening...
@@ -319,7 +319,7 @@ func TestStream_DialbackAuthorize(t *testing.T) {
 func TestStream_SendElement(t *testing.T) {
 	r, h := setupTestRouter(jackaDomain)
 
-	op := NewOutProvider(&Config{}, h)
+	op := NewOutProvider(&Config{KeepAlive: time.Second}, h)
 
 	fromJID, _ := jid.New("ortuman", "localhost", "garden", true)
 	toJID, _ := jid.New("ortuman", "jackal.im", "garden", true)
@@ -354,8 +354,8 @@ func TestStream_SendElement(t *testing.T) {
 }
 
 func tUtilInStreamInit(t *testing.T, router router.Router, outProvider *OutProvider, loadPeerCertificate bool) (*inStream, *fakeSocketConn) {
-	cfg, conn := tUtilInStreamDefaultConfig(t, loadPeerCertificate)
-	stm := newInStream(cfg, &module.Modules{}, outProvider.newOut, router)
+	cfg, tr, conn := tUtilInStreamDefaultConfig(t, loadPeerCertificate)
+	stm := newInStream(cfg, tr, &module.Modules{}, outProvider.newOut, router)
 	return stm, conn
 }
 
@@ -367,7 +367,7 @@ func tUtilInStreamOpen(conn *fakeSocketConn) {
 	_, _ = conn.inboundWriteString(s)
 }
 
-func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inConfig, *fakeSocketConn) {
+func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inConfig, transport.Transport, *fakeSocketConn) {
 	modules := map[string]struct{}{}
 	modules["roster"] = struct{}{}
 	modules["last_activity"] = struct{}{}
@@ -395,11 +395,11 @@ func tUtilInStreamDefaultConfig(t *testing.T, loadPeerCertificate bool) (*inConf
 	}
 
 	conn := newFakeSocketConnWithPeerCerts(peerCerts)
-	tr := transport.NewSocketTransport(conn, 4096)
+	tr := transport.NewSocketTransport(conn)
 	return &inConfig{
 		connectTimeout: time.Second,
-		transport:      tr,
+		keepAlive:      time.Second,
 		maxStanzaSize:  8192,
 		keyGen:         &keyGen{secret: "s3cr3t"},
-	}, conn
+	}, tr, conn
 }

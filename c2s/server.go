@@ -7,13 +7,13 @@ package c2s
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/component"
@@ -67,9 +67,6 @@ func (s *server) start() {
 	switch s.cfg.Transport.Type {
 	case transport.Socket:
 		err = s.listenSocketConn(address)
-	case transport.WebSocket:
-		err = s.listenWebSocketConn(address)
-		break
 	}
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -87,38 +84,11 @@ func (s *server) listenSocketConn(address string) error {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			go s.startStream(transport.NewSocketTransport(conn), s.cfg.KeepAlive)
 			continue
 		}
 	}
 	return nil
-}
-
-func (s *server) listenWebSocketConn(address string) error {
-	http.HandleFunc(s.cfg.Transport.URLPath, s.websocketUpgrade)
-
-	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: s.router.Hosts().Certificates()}}
-	s.wsUpgrader = &websocket.Upgrader{
-		Subprotocols: []string{"xmpp"},
-		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
-	}
-
-	// start listening
-	ln, err := listenerProvider("tcp", address)
-	if err != nil {
-		return err
-	}
-	atomic.StoreUint32(&s.listening, 1)
-	return s.wsSrv.ServeTLS(ln, "", "")
-}
-
-func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
-	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
 }
 
 func (s *server) shutdown(ctx context.Context) error {
@@ -127,10 +97,6 @@ func (s *server) shutdown(ctx context.Context) error {
 		switch s.cfg.Transport.Type {
 		case transport.Socket:
 			if err := s.ln.Close(); err != nil {
-				return err
-			}
-		case transport.WebSocket:
-			if err := s.wsSrv.Shutdown(ctx); err != nil {
 				return err
 			}
 		}
@@ -144,18 +110,18 @@ func (s *server) shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (s *server) startStream(tr transport.Transport) {
+func (s *server) startStream(tr transport.Transport, keepAlive time.Duration) {
 	cfg := &streamConfig{
-		transport:        tr,
 		resourceConflict: s.cfg.ResourceConflict,
 		connectTimeout:   s.cfg.ConnectTimeout,
+		keepAlive:        s.cfg.KeepAlive,
 		timeout:          s.cfg.Timeout,
 		maxStanzaSize:    s.cfg.MaxStanzaSize,
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,
 		onDisconnect:     s.unregisterStream,
 	}
-	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router, s.userRep, s.blockListRep)
+	stm := newStream(s.nextID(), cfg, tr, s.mods, s.comps, s.router, s.userRep, s.blockListRep)
 	s.registerStream(stm)
 }
 

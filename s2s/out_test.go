@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/ortuman/jackal/router/host"
 	"github.com/ortuman/jackal/xmpp"
@@ -279,7 +280,7 @@ func tUtilOutStreamDefaultConfig() (*outConfig, Dialer, *fakeSocketConn) {
 	return &outConfig{
 		remoteDomain:  "jabber.org",
 		maxStanzaSize: 8192,
-		keepAlive:     4096,
+		keepAlive:     time.Second,
 		keyGen:        &keyGen{secret: "s3cr3t"},
 	}, d, conn
 }

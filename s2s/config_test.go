@@ -28,18 +28,15 @@ bind_addr: 0.0.0.0
 	require.Nil(t, err)
 	require.Equal(t, "0.0.0.0", trCfg.BindAddress)
 	require.Equal(t, 5269, trCfg.Port)
-	require.Equal(t, time.Duration(600)*time.Second, trCfg.KeepAlive)
 
 	rawCfg = `
 bind_addr: 127.0.0.1
 port: 5999
-keep_alive: 200
 `
 	err = yaml.Unmarshal([]byte(rawCfg), &trCfg)
 	require.Nil(t, err)
 	require.Equal(t, "127.0.0.1", trCfg.BindAddress)
 	require.Equal(t, 5999, trCfg.Port)
-	require.Equal(t, time.Duration(200)*time.Second, trCfg.KeepAlive)
 }
 
 func TestConfig(t *testing.T) {
