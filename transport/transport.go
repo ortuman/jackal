@@ -20,9 +20,6 @@ type Type int
 const (
 	// Socket represents a socket transport type.
 	Socket Type = iota + 1
-
-	// WebSocket represents a websocket transport type.
-	WebSocket
 )
 
 // String returns TransportType string representation.
@@ -30,8 +27,6 @@ func (tt Type) String() string {
 	switch tt {
 	case Socket:
 		return "socket"
-	case WebSocket:
-		return "websocket"
 	}
 	return ""
 }

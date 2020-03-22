@@ -45,12 +45,6 @@ func TestTransportConfig(t *testing.T) {
 	require.Equal(t, transport.Socket, s.Type)
 	require.Equal(t, "0.0.0.0", s.BindAddress)
 	require.Equal(t, 5222, s.Port)
-
-	err = yaml.Unmarshal([]byte("{type: websocket, url_path: /xmpp/ws}"), &s)
-	require.Nil(t, err)
-
-	require.Equal(t, transport.WebSocket, s.Type)
-	require.Equal(t, 5222, s.Port)
 }
 
 func TestConfig(t *testing.T) {

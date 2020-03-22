@@ -7,7 +7,6 @@ package c2s
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -68,9 +67,6 @@ func (s *server) start() {
 	switch s.cfg.Transport.Type {
 	case transport.Socket:
 		err = s.listenSocketConn(address)
-	case transport.WebSocket:
-		err = s.listenWebSocketConn(address)
-		break
 	}
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -95,43 +91,12 @@ func (s *server) listenSocketConn(address string) error {
 	return nil
 }
 
-func (s *server) listenWebSocketConn(address string) error {
-	http.HandleFunc(s.cfg.Transport.URLPath, s.websocketUpgrade)
-
-	s.wsSrv = &http.Server{TLSConfig: &tls.Config{Certificates: s.router.Hosts().Certificates()}}
-	s.wsUpgrader = &websocket.Upgrader{
-		Subprotocols: []string{"xmpp"},
-		CheckOrigin:  func(r *http.Request) bool { return r.Header.Get("Sec-WebSocket-Protocol") == "xmpp" },
-	}
-
-	// start listening
-	ln, err := listenerProvider("tcp", address)
-	if err != nil {
-		return err
-	}
-	atomic.StoreUint32(&s.listening, 1)
-	return s.wsSrv.ServeTLS(ln, "", "")
-}
-
-func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
-	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	s.startStream(transport.NewWebSocketTransport(conn), s.cfg.KeepAlive)
-}
-
 func (s *server) shutdown(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&s.listening, 1, 0) {
 		// stop listening
 		switch s.cfg.Transport.Type {
 		case transport.Socket:
 			if err := s.ln.Close(); err != nil {
-				return err
-			}
-		case transport.WebSocket:
-			if err := s.wsSrv.Shutdown(ctx); err != nil {
 				return err
 			}
 		}

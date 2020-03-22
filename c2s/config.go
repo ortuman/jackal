@@ -95,9 +95,6 @@ func (t *TransportConfig) UnmarshalYAML(unmarshal func(interface{}) error) error
 	case "", "socket":
 		t.Type = transport.Socket
 
-	case "websocket":
-		t.Type = transport.WebSocket
-
 	default:
 		return fmt.Errorf("c2s.TransportConfig: unrecognized transport type: %s", p.Type)
 	}

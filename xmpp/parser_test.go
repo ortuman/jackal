@@ -56,11 +56,6 @@ func TestParser_Close(t *testing.T) {
 	p := xmpp.NewParser(strings.NewReader(src), xmpp.SocketStream, 0)
 	_, err := p.ParseElement()
 	require.Equal(t, xmpp.ErrStreamClosedByPeer, err)
-
-	src = `<close xmlns="urn:ietf:params:xml:ns:xmpp-framing" />\n`
-	p = xmpp.NewParser(strings.NewReader(src), xmpp.WebSocketStream, 0)
-	_, err = p.ParseElement()
-	require.Equal(t, xmpp.ErrStreamClosedByPeer, err)
 }
 
 func TestParser_ParseSeveralElements(t *testing.T) {
