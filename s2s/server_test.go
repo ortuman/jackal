@@ -23,10 +23,10 @@ func TestS2SSocketServer(t *testing.T) {
 	errCh := make(chan error)
 	cfg := Config{
 		ConnectTimeout: time.Second * time.Duration(5),
+		KeepAlive:      time.Duration(600) * time.Second,
 		MaxStanzaSize:  8192,
 		Transport: TransportConfig{
-			Port:      12778,
-			KeepAlive: time.Duration(600) * time.Second,
+			Port: 12778,
 		},
 	}
 	srv := newServer(&cfg, nil, nil, r)

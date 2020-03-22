@@ -52,10 +52,6 @@ type Config struct {
 	// JID defines an initial session JID.
 	JID *jid.JID
 
-	// Transport provides the underlying session transport
-	// that will be used to send and received elements.
-	Transport transport.Transport
-
 	// MaxStanzaSize defines the maximum stanza size that
 	// can be read from the session transport.
 	MaxStanzaSize int
@@ -90,9 +86,9 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(id string, config *Config, hosts *host.Hosts) *Session {
+func New(id string, config *Config, tr transport.Transport, hosts *host.Hosts) *Session {
 	var parsingMode xmpp.ParsingMode
-	switch config.Transport.Type() {
+	switch tr.Type() {
 	case transport.Socket:
 		parsingMode = xmpp.SocketStream
 	case transport.WebSocket:
@@ -101,8 +97,8 @@ func New(id string, config *Config, hosts *host.Hosts) *Session {
 	s := &Session{
 		id:           id,
 		hosts:        hosts,
-		tr:           config.Transport,
-		pr:           xmpp.NewParser(config.Transport, parsingMode, config.MaxStanzaSize),
+		tr:           tr,
+		pr:           xmpp.NewParser(tr, parsingMode, config.MaxStanzaSize),
 		remoteDomain: config.RemoteDomain,
 		isServer:     config.IsServer,
 		isInitiating: config.IsInitiating,

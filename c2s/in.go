@@ -46,13 +46,15 @@ type inStream struct {
 	mods           *module.Modules
 	comps          *component.Components
 	sess           *session.Session
+	tr             transport.Transport
+	mu             sync.RWMutex
 	id             string
 	connectTm      *time.Timer
+	readTimeoutTm  *time.Timer
 	state          uint32
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
 	runQueue       *runqueue.RunQueue
-	mu             sync.RWMutex
 	jid            *jid.JID
 	secured        bool
 	compressed     bool
@@ -63,10 +65,11 @@ type inStream struct {
 	ctxCancelFn    context.CancelFunc
 }
 
-func newStream(id string, config *streamConfig, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
+func newStream(id string, config *streamConfig, tr transport.Transport, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
 	ctx, ctxCancelFn := context.WithCancel(context.Background())
 	s := &inStream{
 		cfg:          config,
+		tr:           tr,
 		router:       router,
 		userRep:      userRep,
 		blockListRep: blockListRep,
@@ -79,7 +82,7 @@ func newStream(id string, config *streamConfig, mods *module.Modules, comps *com
 	}
 
 	// initialize stream context
-	secured := !(config.transport.Type() == transport.Socket)
+	secured := !(tr.Type() == transport.Socket)
 	s.setSecured(secured)
 	s.setJID(&jid.JID{})
 
@@ -179,14 +182,13 @@ func (s *inStream) Disconnect(ctx context.Context, err error) {
 	waitCh := make(chan struct{})
 	s.runQueue.Run(func() {
 		s.disconnect(ctx, err)
-		s.ctxCancelFn()
 		close(waitCh)
 	})
 	<-waitCh
 }
 
 func (s *inStream) initializeAuthenticators() {
-	tr := s.cfg.transport
+	tr := s.tr
 	var authenticators []auth.Authenticator
 	for _, a := range s.cfg.sasl {
 		switch a {
@@ -266,7 +268,7 @@ func (s *inStream) handleConnecting(ctx context.Context, elem xmpp.XElement) {
 func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 	var features []xmpp.XElement
 
-	isSocketTr := s.cfg.transport.Type() == transport.Socket
+	isSocketTr := s.tr.Type() == transport.Socket
 
 	if isSocketTr && !s.IsSecured() {
 		startTLS := xmpp.NewElementName("starttls")
@@ -302,7 +304,7 @@ func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
 func (s *inStream) authenticatedFeatures() []xmpp.XElement {
 	var features []xmpp.XElement
 
-	isSocketTr := s.cfg.transport.Type() == transport.Socket
+	isSocketTr := s.tr.Type() == transport.Socket
 
 	// attach compression feature
 	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
@@ -444,7 +446,7 @@ func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
 	s.setSecured(true)
 	s.writeElement(ctx, xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{Certificates: s.router.Hosts().Certificates()}, false)
+	s.tr.StartTLS(&tls.Config{Certificates: s.router.Hosts().Certificates()}, false)
 
 	log.Infof("secured stream... id: %s", s.id)
 	s.restartSession()
@@ -470,7 +472,7 @@ func (s *inStream) compress(ctx context.Context, elem xmpp.XElement) {
 	}
 	s.writeElement(ctx, xmpp.NewElementNamespace("compressed", compressProtocolNamespace))
 
-	s.cfg.transport.EnableCompression(s.cfg.compression.Level)
+	s.tr.EnableCompression(s.cfg.compression.Level)
 	s.setCompressed(true)
 
 	log.Infof("compressed stream... id: %s", s.id)
@@ -698,7 +700,9 @@ sendMessage:
 
 // Runs on it's own goroutine
 func (s *inStream) doRead() {
+	s.scheduleReadTimeout()
 	elem, sErr := s.sess.Receive()
+	s.cancelReadTimeout()
 
 	ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
 	if sErr == nil {
@@ -796,12 +800,14 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession, u
 	if unbind {
 		s.router.Unbind(ctx, s.JID())
 	}
+	s.ctxCancelFn()
+
 	// notify disconnection
 	if s.cfg.onDisconnect != nil {
 		s.cfg.onDisconnect(s)
 	}
 	s.setState(disconnected)
-	_ = s.cfg.transport.Close()
+	_ = s.tr.Close()
 
 	s.runQueue.Stop(nil) // stop processing messages
 }
@@ -831,9 +837,8 @@ func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
 func (s *inStream) restartSession() {
 	s.sess = session.New(s.id, &session.Config{
 		JID:           s.JID(),
-		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
-	}, s.router.Hosts())
+	}, s.tr, s.router.Hosts())
 	s.setState(connecting)
 }
 
@@ -883,6 +888,25 @@ func (s *inStream) setSessionStarted(sessStarted bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessStarted = sessStarted
+}
+
+func (s *inStream) scheduleReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm = time.AfterFunc(s.cfg.keepAlive, s.readTimeout)
+	s.mu.Unlock()
+}
+
+func (s *inStream) cancelReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm.Stop()
+	s.mu.Unlock()
+}
+
+func (s *inStream) readTimeout() {
+	s.runQueue.Run(func() {
+		ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
+		s.disconnect(ctx, streamerror.ErrConnectionTimeout)
+	})
 }
 
 func (s *inStream) setState(state uint32) {

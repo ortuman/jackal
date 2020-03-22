@@ -81,7 +81,7 @@ func (p *OutProvider) newOut(localDomain, remoteDomain string) *outStream {
 		timeout:       p.cfg.Timeout,
 		localDomain:   localDomain,
 		remoteDomain:  remoteDomain,
-		keepAlive:     p.cfg.Transport.KeepAlive,
+		keepAlive:     p.cfg.KeepAlive,
 		tls:           tlsConfig,
 		maxStanzaSize: p.cfg.MaxStanzaSize,
 	}

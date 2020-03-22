@@ -23,19 +23,16 @@ type WebSocketConn interface {
 	NextWriter(int) (io.WriteCloser, error)
 	Close() error
 	UnderlyingConn() net.Conn
-	SetReadDeadline(t time.Time) error
 }
 
 type webSocketTransport struct {
-	conn      WebSocketConn
-	keepAlive time.Duration
+	conn WebSocketConn
 }
 
 // NewWebSocketTransport creates a socket class stream transport.
-func NewWebSocketTransport(conn WebSocketConn, keepAlive time.Duration) Transport {
+func NewWebSocketTransport(conn WebSocketConn) Transport {
 	wst := &webSocketTransport{
-		conn:      conn,
-		keepAlive: keepAlive,
+		conn: conn,
 	}
 	return wst
 }
@@ -44,9 +41,6 @@ func (w *webSocketTransport) Read(p []byte) (n int, err error) {
 	_, r, err := w.conn.NextReader()
 	if err != nil {
 		return 0, err
-	}
-	if w.keepAlive > 0 {
-		_ = w.conn.SetReadDeadline(time.Now().Add(w.keepAlive))
 	}
 	return r.Read(p)
 }

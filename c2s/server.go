@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ortuman/jackal/component"
@@ -87,7 +88,7 @@ func (s *server) listenSocketConn(address string) error {
 	for atomic.LoadUint32(&s.listening) == 1 {
 		conn, err := ln.Accept()
 		if err == nil {
-			go s.startStream(transport.NewSocketTransport(conn, s.cfg.Transport.KeepAlive))
+			go s.startStream(transport.NewSocketTransport(conn), s.cfg.KeepAlive)
 			continue
 		}
 	}
@@ -118,7 +119,7 @@ func (s *server) websocketUpgrade(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		return
 	}
-	s.startStream(transport.NewWebSocketTransport(conn, s.cfg.Transport.KeepAlive))
+	s.startStream(transport.NewWebSocketTransport(conn), s.cfg.KeepAlive)
 }
 
 func (s *server) shutdown(ctx context.Context) error {
@@ -144,18 +145,18 @@ func (s *server) shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (s *server) startStream(tr transport.Transport) {
+func (s *server) startStream(tr transport.Transport, keepAlive time.Duration) {
 	cfg := &streamConfig{
-		transport:        tr,
 		resourceConflict: s.cfg.ResourceConflict,
 		connectTimeout:   s.cfg.ConnectTimeout,
+		keepAlive:        s.cfg.KeepAlive,
 		timeout:          s.cfg.Timeout,
 		maxStanzaSize:    s.cfg.MaxStanzaSize,
 		sasl:             s.cfg.SASL,
 		compression:      s.cfg.Compression,
 		onDisconnect:     s.unregisterStream,
 	}
-	stm := newStream(s.nextID(), cfg, s.mods, s.comps, s.router, s.userRep, s.blockListRep)
+	stm := newStream(s.nextID(), cfg, tr, s.mods, s.comps, s.router, s.userRep, s.blockListRep)
 	s.registerStream(stm)
 }
 

@@ -71,6 +71,8 @@ c2s:
   - id: default
 
     connect_timeout: 5
+    keep_alive: 120
+
     max_stanza_size: 65536
     resource_conflict: replace  # [override, replace, reject]
 
@@ -78,7 +80,6 @@ c2s:
       type: socket # websocket
       bind_addr: 0.0.0.0
       port: 5222
-      keep_alive: 120
       # url_path: /xmpp/ws
 
     compression:
@@ -93,10 +94,10 @@ c2s:
 
 s2s:
     dial_timeout: 15
+    keep_alive: 600
     dialback_secret: s3cr3tf0rd14lb4ck
     max_stanza_size: 131072
 
     transport:
       bind_addr: 0.0.0.0
       port: 5269
-      keep_alive: 600

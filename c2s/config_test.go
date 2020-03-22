@@ -8,7 +8,6 @@ package c2s
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
@@ -46,14 +45,12 @@ func TestTransportConfig(t *testing.T) {
 	require.Equal(t, transport.Socket, s.Type)
 	require.Equal(t, "0.0.0.0", s.BindAddress)
 	require.Equal(t, 5222, s.Port)
-	require.Equal(t, time.Second*time.Duration(120), s.KeepAlive)
 
 	err = yaml.Unmarshal([]byte("{type: websocket, url_path: /xmpp/ws}"), &s)
 	require.Nil(t, err)
 
 	require.Equal(t, transport.WebSocket, s.Type)
 	require.Equal(t, 5222, s.Port)
-	require.Equal(t, time.Second*time.Duration(120), s.KeepAlive)
 }
 
 func TestConfig(t *testing.T) {

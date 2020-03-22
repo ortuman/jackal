@@ -8,7 +8,9 @@ package s2s
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	streamerror "github.com/ortuman/jackal/errors"
 	"github.com/ortuman/jackal/log"
@@ -39,7 +41,9 @@ type outStream struct {
 	dialer        Dialer
 	state         uint32
 	tr            transport.Transport
+	mu            sync.RWMutex
 	sess          *session.Session
+	readTimeoutTm *time.Timer
 	secured       uint32
 	authenticated uint32
 	pendingSendQ  []xmpp.XElement
@@ -124,7 +128,9 @@ func (s *outStream) done() <-chan *streamerror.Error { return s.discCh }
 
 // runs on its own goroutine
 func (s *outStream) doRead() {
+	s.scheduleReadTimeout()
 	elem, sErr := s.sess.Receive()
+	s.cancelReadTimeout()
 
 	ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
 	if sErr == nil {
@@ -146,7 +152,7 @@ func (s *outStream) dial(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.tr = transport.NewSocketTransport(conn, s.cfg.keepAlive)
+	s.tr = transport.NewSocketTransport(conn)
 	return nil
 }
 
@@ -156,9 +162,10 @@ func (s *outStream) start(ctx context.Context) error {
 	}
 	s.restartSession()
 
+	_ = s.sess.Open(ctx, nil)
+
 	go s.doRead() // start reading transport...
 
-	_ = s.sess.Open(ctx, nil)
 	return nil
 }
 
@@ -392,13 +399,31 @@ func (s *outStream) restartSession() {
 	j, _ := jid.New("", s.cfg.localDomain, "", true)
 	s.sess = session.New(s.id, &session.Config{
 		JID:           j,
-		Transport:     s.tr,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.cfg.remoteDomain,
 		IsServer:      true,
 		IsInitiating:  true,
-	}, s.hosts)
+	}, s.tr, s.hosts)
 	s.setState(outConnecting)
+}
+
+func (s *outStream) scheduleReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm = time.AfterFunc(s.cfg.keepAlive, s.readTimeout)
+	s.mu.Unlock()
+}
+
+func (s *outStream) cancelReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm.Stop()
+	s.mu.Unlock()
+}
+
+func (s *outStream) readTimeout() {
+	s.runQueue.Run(func() {
+		ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
+		s.disconnect(ctx, streamerror.ErrConnectionTimeout)
+	})
 }
 
 func (s *outStream) isSecured() bool {

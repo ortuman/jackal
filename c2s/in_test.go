@@ -423,10 +423,11 @@ func tUtilStreamStartSession(conn *fakeSocketConn, t *testing.T) {
 
 func tUtilStreamInit(r router.Router, userRep repository.User, blockListRep repository.BlockList) (*inStream, *fakeSocketConn) {
 	conn := newFakeSocketConn()
-	tr := transport.NewSocketTransport(conn, 4096)
+	tr := transport.NewSocketTransport(conn)
 	stm := newStream(
 		"abcd1234",
-		tUtilInStreamDefaultConfig(tr),
+		tUtilInStreamDefaultConfig(),
+		tr,
 		tUtilInitModules(r),
 		&component.Components{},
 		r,
@@ -435,10 +436,10 @@ func tUtilStreamInit(r router.Router, userRep repository.User, blockListRep repo
 	return stm.(*inStream), conn
 }
 
-func tUtilInStreamDefaultConfig(tr transport.Transport) *streamConfig {
+func tUtilInStreamDefaultConfig() *streamConfig {
 	return &streamConfig{
 		connectTimeout:   time.Second,
-		transport:        tr,
+		keepAlive:        time.Second,
 		maxStanzaSize:    8192,
 		resourceConflict: Reject,
 		compression:      CompressConfig{Level: compress.DefaultCompression},

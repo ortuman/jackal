@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/session"
+	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -36,7 +38,10 @@ type inStream struct {
 	localDomain   string
 	remoteDomain  string
 	state         uint32
+	tr            transport.Transport
+	mu            sync.RWMutex
 	connectTm     *time.Timer
+	readTimeoutTm *time.Timer
 	sess          *session.Session
 	secured       uint32
 	authenticated uint32
@@ -44,11 +49,12 @@ type inStream struct {
 	runQueue      *runqueue.RunQueue
 }
 
-func newInStream(config *inConfig, mods *module.Modules, newOutFn newOutFunc, router router.Router) *inStream {
+func newInStream(config *inConfig, tr transport.Transport, mods *module.Modules, newOutFn newOutFunc, router router.Router) *inStream {
 	id := nextInID()
 	s := &inStream{
 		id:       id,
 		cfg:      config,
+		tr:       tr,
 		router:   router,
 		newOut:   newOutFn,
 		mods:     mods,
@@ -89,7 +95,9 @@ func (s *inStream) connectTimeout() {
 
 // runs on its own goroutine
 func (s *inStream) doRead() {
+	s.scheduleReadTimeout()
 	elem, sErr := s.sess.Receive()
+	s.cancelReadTimeout()
 
 	ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
 	if sErr == nil {
@@ -264,7 +272,7 @@ func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
 	}
 	s.writeElement(ctx, xmpp.NewElementNamespace("proceed", tlsNamespace))
 
-	s.cfg.transport.StartTLS(&tls.Config{
+	s.tr.StartTLS(&tls.Config{
 		ServerName:   s.localDomain,
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 		Certificates: s.router.Hosts().Certificates(),
@@ -285,7 +293,7 @@ func (s *inStream) startAuthentication(ctx context.Context, elem xmpp.XElement) 
 		return
 	}
 	// validate initiating server certificate
-	certs := s.cfg.transport.PeerCertificates()
+	certs := s.tr.PeerCertificates()
 	for _, cert := range certs {
 		for _, dnsName := range cert.DNSNames {
 			if dnsName == s.remoteDomain {
@@ -446,7 +454,7 @@ func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession bo
 	}
 
 	s.setState(inDisconnected)
-	_ = s.cfg.transport.Close()
+	_ = s.tr.Close()
 
 	s.runQueue.Stop(nil) // stop processing messages
 }
@@ -455,12 +463,30 @@ func (s *inStream) restartSession() {
 	j, _ := jid.New("", s.localDomain, "", true)
 	s.sess = session.New(s.id, &session.Config{
 		JID:           j,
-		Transport:     s.cfg.transport,
 		MaxStanzaSize: s.cfg.maxStanzaSize,
 		RemoteDomain:  s.remoteDomain,
 		IsServer:      true,
-	}, s.router.Hosts())
+	}, s.tr, s.router.Hosts())
 	s.setState(inConnecting)
+}
+
+func (s *inStream) scheduleReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm = time.AfterFunc(s.cfg.keepAlive, s.readTimeout)
+	s.mu.Unlock()
+}
+
+func (s *inStream) cancelReadTimeout() {
+	s.mu.Lock()
+	s.readTimeoutTm.Stop()
+	s.mu.Unlock()
+}
+
+func (s *inStream) readTimeout() {
+	s.runQueue.Run(func() {
+		ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
+		s.disconnect(ctx, streamerror.ErrConnectionTimeout)
+	})
 }
 
 func (s *inStream) isSecured() bool {
