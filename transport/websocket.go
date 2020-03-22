@@ -84,11 +84,9 @@ func (w *webSocketTransport) SetWriteDeadline(d time.Time) error {
 	return w.conn.UnderlyingConn().SetWriteDeadline(d)
 }
 
-func (w *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {
-}
+func (w *webSocketTransport) StartTLS(_ *tls.Config, _ bool) {}
 
-func (w *webSocketTransport) EnableCompression(_ compress.Level) {
-}
+func (w *webSocketTransport) EnableCompression(_ compress.Level) {}
 
 func (w *webSocketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	if tlsConn, ok := w.conn.UnderlyingConn().(tlsStateQueryable); ok {
