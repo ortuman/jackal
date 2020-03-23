@@ -627,7 +627,8 @@ func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
-	replyOnBehalf := !toJID.IsFullWithUser() && s.router.Hosts().IsLocalHost(toJID.Domain())
+	replyOnBehalf := !toJID.IsFullWithUser() && (s.router.Hosts().IsLocalHost(toJID.Domain()) ||
+		s.router.Hosts().IsConferenceHost(toJID.Domain()))
 	if !replyOnBehalf {
 		switch s.router.Route(ctx, iq) {
 		case router.ErrResourceNotFound:
@@ -646,6 +647,12 @@ func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence) {
+	// check if the stanza is directed to the muc service
+	if s.router.Hosts().IsConferenceHost(presence.ToJID().Domain()) {
+		s.mods.Muc.ProcessPresence(ctx, presence)
+		return
+	}
+
 	if presence.ToJID().IsFullWithUser() {
 		_ = s.router.Route(ctx, presence)
 		return

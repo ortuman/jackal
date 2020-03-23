@@ -8,6 +8,7 @@ package module
 import (
 	"fmt"
 
+	"github.com/ortuman/jackal/module/muc"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0077"
@@ -23,6 +24,7 @@ type Config struct {
 	Registration xep0077.Config
 	Version      xep0092.Config
 	Ping         xep0199.Config
+	Muc          muc.Config
 }
 
 type configProxy struct {
@@ -32,6 +34,7 @@ type configProxy struct {
 	Registration xep0077.Config `yaml:"mod_registration"`
 	Version      xep0092.Config `yaml:"mod_version"`
 	Ping         xep0199.Config `yaml:"mod_ping"`
+	Muc          muc.Config     `yaml:"mod_muc"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.
@@ -45,7 +48,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	for _, mod := range p.Enabled {
 		switch mod {
 		case "roster", "last_activity", "private", "vcard", "registration", "pep", "version", "blocking_command",
-			"ping", "offline":
+			"ping", "offline", "muc":
 			break
 		default:
 			return fmt.Errorf("module.Config: unrecognized module: %s", mod)
@@ -58,5 +61,6 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	cfg.Registration = p.Registration
 	cfg.Version = p.Version
 	cfg.Ping = p.Ping
+	cfg.Muc = p.Muc
 	return nil
 }

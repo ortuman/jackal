@@ -38,4 +38,10 @@ type Container interface {
 
 	// IsClusterCompatible tells whether or not container instance can be safely used across multiple cluster nodes.
 	IsClusterCompatible() bool
+
+	// Room method returns respository.Room concrete implementation
+	Room() Room
+
+	// Occupant method returns repository.Occupant concrete implementation
+	Occupant() Occupant
 }

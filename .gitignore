@@ -41,3 +41,6 @@ vendor/
 
 # Binary 
 jackal
+
+# Configuration file
+config.yml

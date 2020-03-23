@@ -45,6 +45,7 @@ modules:
     - blocking_command # XEP-0191: Blocking Command
     - ping             # XEP-0199: XMPP Ping
     - offline          # Offline storage
+    - muc              # XEP-0045: Multi-User Chat
 
   mod_roster:
     versioning: true
@@ -66,6 +67,9 @@ modules:
   mod_ping:
     send: no
     send_interval: 60
+
+  mod_muc:
+    service: conference.localhost
 
 c2s:
   - id: default

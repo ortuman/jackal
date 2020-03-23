@@ -17,6 +17,7 @@ const defaultDomain = "localhost"
 type Hosts struct {
 	defaultHostname string
 	hosts           map[string]tls.Certificate
+	mucHostname     string
 }
 
 func New(hostsConfig []Config) (*Hosts, error) {
@@ -65,4 +66,12 @@ func (h *Hosts) Certificates() []tls.Certificate {
 		certs = append(certs, cer)
 	}
 	return certs
+}
+
+func (h *Hosts) AddMucHostname(hostname string) {
+	h.mucHostname = hostname
+}
+
+func (h *Hosts) IsConferenceHost(domain string) bool {
+	return domain == h.mucHostname
 }
