@@ -38,8 +38,6 @@ type server struct {
 	inConnectionsMu sync.Mutex
 	inConnections   map[string]stream.C2S
 	ln              net.Listener
-	wsSrv           *http.Server
-	wsUpgrader      *websocket.Upgrader
 	stmSeq          uint64
 	listening       uint32
 }
