@@ -6,19 +6,12 @@
 package utilrand
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
 )
 
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
-
-// RandomBytes generates a random bytes slice of length 'len'.
-func RandomBytes(len int) []byte {
-	b := make([]byte, len)
-	for i := 0; i < len; i++ {
-		b[i] = byte(rand.Intn(256))
-	}
-	return b
+// RandomBytes generates a random bytes slice of length 'l'.
+func RandomBytes(l int) ([]byte, error) {
+	b := make([]byte, l)
+	_, err := rand.Read(b)
+	return b, err
 }

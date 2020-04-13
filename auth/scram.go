@@ -223,7 +223,10 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	s.user = user
 
 	s.srvNonce = cNonce + "-" + uuid.New().String()
-	s.salt = utilrand.RandomBytes(32)
+	s.salt, err = utilrand.RandomBytes(32)
+	if err != nil {
+		return err
+	}
 	sb64 := base64.StdEncoding.EncodeToString(s.salt)
 	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
 
