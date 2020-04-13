@@ -14,7 +14,7 @@ fmt: install-tools
 
 build:
 	@echo "Building binary..."
-	@export go build -ldflags="-s -w"
+	@go build -ldflags="-s -w"
 
 test:
 	@echo "Running tests..."
