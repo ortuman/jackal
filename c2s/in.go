@@ -189,6 +189,7 @@ func (s *inStream) Disconnect(ctx context.Context, err error) {
 
 func (s *inStream) initializeAuthenticators() {
 	tr := s.tr
+	hasChannelBinding := len(tr.ChannelBindingBytes(transport.TLSUnique)) > 0
 	var authenticators []auth.Authenticator
 	for _, a := range s.cfg.sasl {
 		switch a {
@@ -200,15 +201,21 @@ func (s *inStream) initializeAuthenticators() {
 
 		case "scram_sha_1":
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, false, s.userRep))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, true, s.userRep))
+			if hasChannelBinding {
+				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, true, s.userRep))
+			}
 
 		case "scram_sha_256":
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, false, s.userRep))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true, s.userRep))
+			if hasChannelBinding {
+				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true, s.userRep))
+			}
 
 		case "scram_sha_512":
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, false, s.userRep))
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true, s.userRep))
+			if hasChannelBinding {
+				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true, s.userRep))
+			}
 		}
 	}
 	s.authenticators = authenticators

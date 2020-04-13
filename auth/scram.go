@@ -291,12 +291,15 @@ func (s *Scram) parseParameters(str string) error {
 	}
 	gs2BindFlag := sp[0]
 
+	// https://tools.ietf.org/html/rfc5801#section-5
 	switch gs2BindFlag {
-	case "y":
+	case "p":
+		// Channel binding is supported and required.
 		if !s.usesCb {
 			return ErrSASLNotAuthorized
 		}
-	case "n":
+	case "n", "y":
+		// Channel binding is not supported, or is supported but is not required.
 		break
 	default:
 		if !strings.HasPrefix(gs2BindFlag, "p=") {
