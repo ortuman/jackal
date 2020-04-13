@@ -14,7 +14,7 @@ import (
 )
 
 func TestMemoryStorage_InsertUser(t *testing.T) {
-	u := model.User{Username: "ortuman", Password: "1234"}
+	u := model.User{Username: "ortuman", PasswordScramSHA1: []byte("sha1")}
 	s := NewUser()
 	EnableMockedError()
 	err := s.UpsertUser(context.Background(), &u)
@@ -36,7 +36,7 @@ func TestMemoryStorage_UserExists(t *testing.T) {
 }
 
 func TestMemoryStorage_FetchUser(t *testing.T) {
-	u := model.User{Username: "ortuman", Password: "1234"}
+	u := model.User{Username: "ortuman", PasswordScramSHA1: []byte("sha1")}
 	s := NewUser()
 	_ = s.UpsertUser(context.Background(), &u)
 
@@ -53,7 +53,7 @@ func TestMemoryStorage_FetchUser(t *testing.T) {
 }
 
 func TestMemoryStorage_DeleteUser(t *testing.T) {
-	u := model.User{Username: "ortuman", Password: "1234"}
+	u := model.User{Username: "ortuman", PasswordScramSHA1: []byte("sha1")}
 	s := NewUser()
 	_ = s.UpsertUser(context.Background(), &u)
 

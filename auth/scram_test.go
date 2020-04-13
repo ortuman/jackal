@@ -210,7 +210,15 @@ var tt = []scramAuthTestCase{
 
 func TestScramMechanisms(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	passwordScramSHA1 := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha1.New)
+	passwordScramSHA256 := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha256.New)
+	testStm, s := authTestSetup(&model.User{
+		Username:            "ortuman",
+		PasswordScramSHA1:   passwordScramSHA1,
+		PasswordScramSHA256: passwordScramSHA256,
+		Salt:                []byte(salt),
+		IterationCount:      iterationCount,
+	})
 
 	authr := NewScram(testStm, testTr, ScramSHA1, false, s)
 	require.Equal(t, authr.Mechanism(), "SCRAM-SHA-1")
@@ -234,7 +242,13 @@ func TestScramMechanisms(t *testing.T) {
 
 func TestScramBadPayload(t *testing.T) {
 	testTr := &fakeTransport{}
-	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	passwordScramSHA1 := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha1.New)
+	testStm, s := authTestSetup(&model.User{
+		Username:          "ortuman",
+		PasswordScramSHA1: passwordScramSHA1,
+		Salt:              []byte(salt),
+		IterationCount:    iterationCount,
+	})
 
 	authr := NewScram(testStm, testTr, ScramSHA1, false, s)
 
@@ -265,7 +279,15 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) error {
 	if tc.usesCb {
 		tr.cbBytes = tc.cbBytes
 	}
-	testStm, s := authTestSetup(&model.User{Username: "ortuman", Password: "1234"})
+	passwordScramSHA1 := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha1.New)
+	passwordScramSHA256 := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha256.New)
+	testStm, s := authTestSetup(&model.User{
+		Username:            "ortuman",
+		PasswordScramSHA1:   passwordScramSHA1,
+		PasswordScramSHA256: passwordScramSHA256,
+		Salt:                []byte(salt),
+		IterationCount:      iterationCount,
+	})
 
 	authr := NewScram(testStm, tr, tc.scramType, tc.usesCb, s)
 

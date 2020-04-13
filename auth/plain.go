@@ -8,6 +8,8 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 
 	"github.com/ortuman/jackal/storage/repository"
@@ -67,14 +69,18 @@ func (p *Plain) ProcessElement(ctx context.Context, elem xmpp.XElement) error {
 		return ErrSASLIncorrectEncoding
 	}
 	username := string(s[1])
-	password := string(s[2])
+	password := s[2]
 
 	// validate user and password
 	user, err := p.userRep.FetchUser(ctx, username)
-	if err != nil {
+	switch {
+	case err != nil:
 		return err
+	case user == nil:
+		return ErrSASLNotAuthorized
 	}
-	if user == nil || user.Password != password {
+	expectedPassword := SaltedPassword(password, user.Salt, user.IterationCount, sha256.New)
+	if subtle.ConstantTimeCompare(user.PasswordScramSHA256, expectedPassword) != 1 {
 		return ErrSASLNotAuthorized
 	}
 	p.username = username

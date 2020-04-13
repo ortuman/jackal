@@ -7,11 +7,13 @@ package xep0077
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"testing"
 
 	"github.com/ortuman/jackal/router/host"
 
+	"github.com/ortuman/jackal/auth"
 	c2srouter "github.com/ortuman/jackal/c2s/router"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
@@ -22,6 +24,21 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
+
+func newUser() *model.User {
+	const (
+		password       = "1234"
+		iterationCount = 1
+		salt           = "salt"
+	)
+	passwordScramSHA256 := auth.SaltedPassword([]byte(password), []byte(salt), iterationCount, sha256.New)
+	return &model.User{
+		Username:            "ortuman",
+		PasswordScramSHA256: passwordScramSHA256,
+		Salt:                []byte(salt),
+		IterationCount:      iterationCount,
+	}
+}
 
 func TestXEP0077_Matching(t *testing.T) {
 	r, s := setupTest("jackal.im")
@@ -177,7 +194,7 @@ func TestXEP0077_RegisterUser(t *testing.T) {
 	require.Equal(t, xmpp.ErrBadRequest.Error(), elem.Error().Elements().All()[0].Name())
 
 	// already existing user...
-	_ = s.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
+	_ = s.UpsertUser(context.Background(), newUser())
 	username.SetText("ortuman")
 	password.SetText("5678")
 	x.ProcessIQ(context.Background(), iq)
@@ -214,7 +231,7 @@ func TestXEP0077_CancelRegistration(t *testing.T) {
 	x := New(&Config{}, nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = s.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
+	_ = s.UpsertUser(context.Background(), newUser())
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)
@@ -267,7 +284,7 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 	x := New(&Config{}, nil, r, s)
 	defer func() { _ = x.Shutdown() }()
 
-	_ = s.UpsertUser(context.Background(), &model.User{Username: "ortuman", Password: "1234"})
+	_ = s.UpsertUser(context.Background(), newUser())
 
 	iq := xmpp.NewIQType(uuid.New(), xmpp.SetType)
 	iq.SetFromJID(j)
@@ -314,7 +331,9 @@ func TestXEP0077_ChangePassword(t *testing.T) {
 
 	usr, _ := s.FetchUser(context.Background(), "ortuman")
 	require.NotNil(t, usr)
-	require.Equal(t, "5678", usr.Password)
+
+	passwordScramSHA256 := auth.SaltedPassword([]byte("5678"), usr.Salt, usr.IterationCount, sha256.New)
+	require.Equal(t, passwordScramSHA256, usr.PasswordScramSHA256)
 }
 
 func setupTest(domain string) (router.Router, *memorystorage.User) {

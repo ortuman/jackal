@@ -35,12 +35,15 @@ $$ LANGUAGE plpgsql;
 -- users
 
 CREATE TABLE IF NOT EXISTS users (
-    username            VARCHAR(1023) PRIMARY KEY,
-    password            TEXT NOT NULL,
-    last_presence       TEXT NOT NULL,
-    last_presence_at    TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    username              VARCHAR(1023) PRIMARY KEY,
+    password_scram_sha1   BYTEA NOT NULL,
+    password_scram_sha256 BYTEA NOT NULL,
+    salt                  BYTEA NOT NULL,
+    iteration_count       INTEGER NOT NULL,
+    last_presence         TEXT NOT NULL,
+    last_presence_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 SELECT enable_updated_at('users');

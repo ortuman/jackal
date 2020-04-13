@@ -7,7 +7,11 @@ package xep0077
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha1"
+	"crypto/sha256"
 
+	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -19,9 +23,12 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const registerNamespace = "jabber:iq:register"
-
-const xep077RegisteredCtxKey = "xep0077:registered"
+const (
+	registerNamespace      = "jabber:iq:register"
+	xep077RegisteredCtxKey = "xep0077:registered"
+	saltLen                = 32
+	iterationCount         = 10000
+)
 
 // Config represents XMPP In-Band Registration module (XEP-0077) configuration.
 type Config struct {
@@ -156,10 +163,25 @@ func (x *Register) registerNewUser(ctx context.Context, iq *xmpp.IQ, query xmpp.
 		stm.SendElement(ctx, iq.ConflictError())
 		return
 	}
+
+	salt := make([]byte, saltLen)
+	_, err = rand.Read(salt)
+	if err != nil {
+		log.Error(err)
+		stm.SendElement(ctx, iq.InternalServerError())
+		return
+	}
 	user := model.User{
-		Username:     userEl.Text(),
-		Password:     passwordEl.Text(),
-		LastPresence: xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
+		Username: userEl.Text(),
+		PasswordScramSHA1: auth.SaltedPassword(
+			[]byte(passwordEl.Text()), salt, iterationCount, sha1.New,
+		),
+		PasswordScramSHA256: auth.SaltedPassword(
+			[]byte(passwordEl.Text()), salt, iterationCount, sha256.New,
+		),
+		Salt:           salt,
+		IterationCount: iterationCount,
+		LastPresence:   xmpp.NewPresence(stm.JID(), stm.JID(), xmpp.UnavailableType),
 	}
 	if err := x.rep.UpsertUser(ctx, &user); err != nil {
 		log.Error(err)
@@ -211,13 +233,25 @@ func (x *Register) changePassword(ctx context.Context, password string, username
 		stm.SendElement(ctx, iq.ResultIQ())
 		return
 	}
-	if user.Password != password {
-		user.Password = password
-		if err := x.rep.UpsertUser(ctx, user); err != nil {
-			log.Error(err)
-			stm.SendElement(ctx, iq.InternalServerError())
-			return
-		}
+
+	user.Salt = make([]byte, saltLen)
+	_, err = rand.Read(user.Salt)
+	if err != nil {
+		log.Error(err)
+		stm.SendElement(ctx, iq.InternalServerError())
+		return
+	}
+	user.IterationCount = iterationCount
+	user.PasswordScramSHA1 = auth.SaltedPassword(
+		[]byte(password), user.Salt, user.IterationCount, sha1.New,
+	)
+	user.PasswordScramSHA256 = auth.SaltedPassword(
+		[]byte(password), user.Salt, user.IterationCount, sha256.New,
+	)
+	if err := x.rep.UpsertUser(ctx, user); err != nil {
+		log.Error(err)
+		stm.SendElement(ctx, iq.InternalServerError())
+		return
 	}
 	stm.SendElement(ctx, iq.ResultIQ())
 }

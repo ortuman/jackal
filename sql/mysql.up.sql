@@ -6,12 +6,15 @@
 -- users
 
 CREATE TABLE IF NOT EXISTS users (
-    username         VARCHAR(256) PRIMARY KEY,
-    password         TEXT NOT NULL,
-    last_presence    TEXT NOT NULL,
-    last_presence_at DATETIME NOT NULL,
-    updated_at       DATETIME NOT NULL,
-    created_at       DATETIME NOT NULL
+    username              VARCHAR(256) PRIMARY KEY,
+    password_scram_sha1   BLOB NOT NULL,
+    password_scram_sha256 BLOB NOT NULL,
+    salt                  BLOB NOT NULL,
+    iteration_count       INTEGER NOT NULL,
+    last_presence         TEXT NOT NULL,
+    last_presence_at      DATETIME NOT NULL,
+    updated_at            DATETIME NOT NULL,
+    created_at            DATETIME NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- presences

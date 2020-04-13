@@ -9,9 +9,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"hash"
@@ -37,8 +37,6 @@ const (
 	// ScramSHA256 represents SCRAM-SHA-256 authentication method.
 	ScramSHA256
 )
-
-const iterationsCount = 4096
 
 type scramState int
 
@@ -81,20 +79,18 @@ func (s *scramParameters) String() string {
 
 // Scram represents a SCRAM authenticator.
 type Scram struct {
+	authenticated bool
+	usesCb        bool
 	stm           stream.C2S
 	userRep       repository.User
 	tr            transport.Transport
 	tp            ScramType
-	usesCb        bool
 	h             func() hash.Hash
-	hKeyLen       int
 	state         scramState
 	params        *scramParameters
 	user          *model.User
-	salt          []byte
 	srvNonce      string
 	firstMessage  string
-	authenticated bool
 }
 
 // NewScram returns a new scram authenticator instance.
@@ -110,10 +106,8 @@ func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesC
 	switch s.tp {
 	case ScramSHA1:
 		s.h = sha1.New
-		s.hKeyLen = sha1.Size
 	case ScramSHA256:
 		s.h = sha256.New
-		s.hKeyLen = sha256.Size
 	}
 	return s
 }
@@ -181,7 +175,6 @@ func (s *Scram) Reset() {
 	s.state = startScramState
 	s.params = nil
 	s.user = nil
-	s.salt = nil
 	s.srvNonce = ""
 	s.firstMessage = ""
 }
@@ -200,23 +193,17 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	if len(username) == 0 || len(cNonce) == 0 {
 		return ErrSASLMalformedRequest
 	}
-	user, err := s.userRep.FetchUser(ctx, username)
-	if err != nil {
+	s.user, err = s.userRep.FetchUser(ctx, username)
+	switch {
+	case err != nil:
 		return err
-	}
-	if user == nil {
+	case s.user == nil:
 		return ErrSASLNotAuthorized
 	}
-	s.user = user
 
 	s.srvNonce = cNonce + "-" + uuid.New().String()
-	s.salt = make([]byte, 32)
-	_, err = rand.Read(s.salt)
-	if err != nil {
-		return err
-	}
-	sb64 := base64.StdEncoding.EncodeToString(s.salt)
-	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, iterationsCount)
+	sb64 := base64.StdEncoding.EncodeToString(s.user.Salt)
+	s.firstMessage = fmt.Sprintf("r=%s,s=%s,i=%d", s.srvNonce, sb64, s.user.IterationCount)
 
 	respElem := xmpp.NewElementNamespace("challenge", saslNamespace)
 	respElem.SetText(base64.StdEncoding.EncodeToString([]byte(s.firstMessage)))
@@ -235,7 +222,19 @@ func (s *Scram) handleChallenged(ctx context.Context, elem xmpp.XElement) error 
 	initialMessage := s.params.String()
 	clientFinalMessageBare := fmt.Sprintf("c=%s,r=%s", c, s.srvNonce)
 
-	saltedPassword := s.pbkdf2([]byte(s.user.Password))
+	var saltedPassword []byte
+	switch s.tp {
+	case ScramSHA1:
+		saltedPassword = s.user.PasswordScramSHA1
+	case ScramSHA256:
+		saltedPassword = s.user.PasswordScramSHA256
+	default:
+		// This should never be reached, if it does it indicates that a serious bug
+		// was introduced somewhere, so make sure we get a report about it instead
+		// of just failing auth.
+		panic("invalid auth mechanism used")
+	}
+
 	clientKey := s.hmac([]byte("Client Key"), saltedPassword)
 	storedKey := s.hash(clientKey)
 	authMessage := initialMessage + "," + s.firstMessage + "," + clientFinalMessageBare
@@ -249,7 +248,7 @@ func (s *Scram) handleChallenged(ctx context.Context, elem xmpp.XElement) error 
 	serverSignature := s.hmac([]byte(authMessage), serverKey)
 
 	clientFinalMessage := clientFinalMessageBare + ",p=" + base64.StdEncoding.EncodeToString(clientProof)
-	if clientFinalMessage != p {
+	if subtle.ConstantTimeCompare([]byte(clientFinalMessage), []byte(p)) != 1 {
 		return ErrSASLNotAuthorized
 	}
 	v := "v=" + base64.StdEncoding.EncodeToString(serverSignature)
@@ -331,10 +330,6 @@ func (s *Scram) getCBindInputString() string {
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func (s *Scram) pbkdf2(b []byte) []byte {
-	return pbkdf2.Key(b, s.salt, iterationsCount, s.hKeyLen, s.h)
-}
-
 func (s *Scram) hmac(b []byte, key []byte) []byte {
 	m := hmac.New(s.h, key)
 	m.Write(b)
@@ -345,4 +340,16 @@ func (s *Scram) hash(b []byte) []byte {
 	h := s.h()
 	h.Write(b)
 	return h.Sum(nil)
+}
+
+// SaltedPassword computes a salted password using the HMAC variant of PBKDF2.
+//
+// For OWASP recommendations for tuning PBKDF2 see:
+// https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+//
+// For NIST recommendations, see: the legacy SP 800-132 and SP 80063b §5.1.1.2
+// Memorized Secret Verifiers.
+func SaltedPassword(password, salt []byte, iterationCount int, h func() hash.Hash) []byte {
+	hKeyLen := h().Size()
+	return pbkdf2.Key(password, salt, iterationCount, hKeyLen, h)
 }

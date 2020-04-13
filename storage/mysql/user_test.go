@@ -23,11 +23,18 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
 	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
 
-	user := model.User{Username: "ortuman", Password: "1234", LastPresence: p}
+	user := model.User{
+		Username:            "ortuman",
+		PasswordScramSHA1:   []byte("sha1"),
+		PasswordScramSHA256: []byte("sha1"),
+		Salt:                []byte("salt"),
+		IterationCount:      10000,
+		LastPresence:        p,
+	}
 
 	s, mock := newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
+		WithArgs("ortuman", user.PasswordScramSHA1, user.PasswordScramSHA256, user.Salt, user.IterationCount, p.String(), user.PasswordScramSHA1, user.PasswordScramSHA256, user.Salt, user.IterationCount, p.String()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err := s.UpsertUser(context.Background(), &user)
@@ -36,7 +43,7 @@ func TestMySQLStorageInsertUser(t *testing.T) {
 
 	s, mock = newUserMock()
 	mock.ExpectExec("INSERT INTO users (.+) ON DUPLICATE KEY UPDATE (.+)").
-		WithArgs("ortuman", "1234", p.String(), "1234", p.String()).
+		WithArgs("ortuman", user.PasswordScramSHA1, user.PasswordScramSHA256, user.Salt, user.IterationCount, p.String(), user.PasswordScramSHA1, user.PasswordScramSHA256, user.Salt, user.IterationCount, p.String()).
 		WillReturnError(errMocked)
 
 	err = s.UpsertUser(context.Background(), &user)
@@ -81,7 +88,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	to, _ := jid.NewWithString("ortuman@jackal.im", true)
 	p := xmpp.NewPresence(from, to, xmpp.UnavailableType)
 
-	var userColumns = []string{"username", "password", "last_presence", "last_presence_at"}
+	var userColumns = []string{"username", "password_scram_sha1", "password_scram_sha2", "salt", "iteration_count", "last_presence", "last_presence_at"}
 
 	s, mock := newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
@@ -95,7 +102,7 @@ func TestMySQLStorageFetchUser(t *testing.T) {
 	s, mock = newUserMock()
 	mock.ExpectQuery("SELECT (.+) FROM users (.+)").
 		WithArgs("ortuman").
-		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "1234", p.String(), time.Now()))
+		WillReturnRows(sqlmock.NewRows(userColumns).AddRow("ortuman", "sha1", "sha2", "salt", 1234, p.String(), time.Now()))
 	_, err := s.FetchUser(context.Background(), "ortuman")
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)

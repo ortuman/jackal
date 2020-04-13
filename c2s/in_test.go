@@ -7,10 +7,13 @@ package c2s
 
 import (
 	"context"
+	"crypto/sha1"
+	"crypto/sha256"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
@@ -24,6 +27,23 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
 )
+
+func newUser() *model.User {
+	const (
+		password       = "pencil"
+		iterationCount = 1
+		salt           = "salt"
+	)
+	passwordScramSHA1 := auth.SaltedPassword([]byte(password), []byte(salt), iterationCount, sha1.New)
+	passwordScramSHA256 := auth.SaltedPassword([]byte(password), []byte(salt), iterationCount, sha256.New)
+	return &model.User{
+		Username:            "user",
+		PasswordScramSHA1:   passwordScramSHA1,
+		PasswordScramSHA256: passwordScramSHA256,
+		Salt:                []byte(salt),
+		IterationCount:      iterationCount,
+	}
+}
 
 func TestStream_ConnectTimeout(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
@@ -76,7 +96,7 @@ func TestStream_Features(t *testing.T) {
 func TestStream_TLS(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -97,7 +117,7 @@ func TestStream_TLS(t *testing.T) {
 func TestStream_FailAuthenticate(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	_, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -131,7 +151,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 func TestStream_Compression(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -175,7 +195,7 @@ func TestStream_Compression(t *testing.T) {
 func TestStream_StartSession(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -197,7 +217,7 @@ func TestStream_StartSession(t *testing.T) {
 func TestStream_SendIQ(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -234,7 +254,7 @@ func TestStream_SendIQ(t *testing.T) {
 func TestStream_SendPresence(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -278,7 +298,7 @@ func TestStream_SendPresence(t *testing.T) {
 func TestStream_SendMessage(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)
@@ -330,7 +350,7 @@ func TestStream_SendMessage(t *testing.T) {
 func TestStream_SendToBlockedJID(t *testing.T) {
 	r, userRep, blockListRep := setupTest("localhost")
 
-	_ = userRep.UpsertUser(context.Background(), &model.User{Username: "user", Password: "pencil"})
+	_ = userRep.UpsertUser(context.Background(), newUser())
 
 	stm, conn := tUtilStreamInit(r, userRep, blockListRep)
 	tUtilStreamOpen(conn)

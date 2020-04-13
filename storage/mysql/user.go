@@ -40,8 +40,8 @@ func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 		presenceXML = buf.String()
 		u.pool.Put(buf)
 	}
-	columns := []string{"username", "password", "updated_at", "created_at"}
-	values := []interface{}{usr.Username, usr.Password, nowExpr, nowExpr}
+	columns := []string{"username", "password_scram_sha1", "password_scram_sha256", "salt", "iteration_count", "updated_at", "created_at"}
+	values := []interface{}{usr.Username, usr.PasswordScramSHA1, usr.PasswordScramSHA256, usr.Salt, usr.IterationCount, nowExpr, nowExpr}
 
 	if len(presenceXML) > 0 {
 		columns = append(columns, []string{"last_presence", "last_presence_at"}...)
@@ -50,11 +50,11 @@ func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	var suffix string
 	var suffixArgs []interface{}
 	if len(presenceXML) > 0 {
-		suffix = "ON DUPLICATE KEY UPDATE password = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
-		suffixArgs = []interface{}{usr.Password, presenceXML}
+		suffix = "ON DUPLICATE KEY UPDATE password_scram_sha1 = ?, password_scram_sha256 = ?, salt = ?, iteration_count = ?, last_presence = ?, last_presence_at = NOW(), updated_at = NOW()"
+		suffixArgs = []interface{}{usr.PasswordScramSHA1, usr.PasswordScramSHA256, usr.Salt, usr.IterationCount, presenceXML}
 	} else {
-		suffix = "ON DUPLICATE KEY UPDATE password = ?, updated_at = NOW()"
-		suffixArgs = []interface{}{usr.Password}
+		suffix = "ON DUPLICATE KEY UPDATE password_scram_sha1 = ?, password_scram_sha256 = ?, salt = ?, updated_at = NOW()"
+		suffixArgs = []interface{}{usr.PasswordScramSHA1, usr.PasswordScramSHA256, usr.Salt, usr.IterationCount}
 	}
 	q := sq.Insert("users").
 		Columns(columns...).
@@ -66,7 +66,7 @@ func (u *mySQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 }
 
 func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
-	q := sq.Select("username", "password", "last_presence", "last_presence_at").
+	q := sq.Select("username", "password_scram_sha1", "password_scram_sha256", "salt", "iteration_count", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
 
@@ -76,7 +76,7 @@ func (u *mySQLUser) FetchUser(ctx context.Context, username string) (*model.User
 
 	err := q.RunWith(u.db).
 		QueryRowContext(ctx).
-		Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
+		Scan(&usr.Username, &usr.PasswordScramSHA1, &usr.PasswordScramSHA256, &usr.Salt, &usr.IterationCount, &presenceXML, &presenceAt)
 	switch err {
 	case nil:
 		if len(presenceXML) > 0 {

@@ -8,6 +8,7 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"testing"
 
@@ -17,10 +18,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	password       = "1234"
+	iterationCount = 1
+	salt           = "salt"
+)
+
 func TestAuthPlainAuthentication(t *testing.T) {
 	var err error
 
-	testStm, s := authTestSetup(&model.User{Username: "mariana", Password: "1234"})
+	saltedPassword := SaltedPassword([]byte(password), []byte(salt), iterationCount, sha256.New)
+	testStm, s := authTestSetup(&model.User{
+		Username:            "mariana",
+		PasswordScramSHA256: saltedPassword,
+		IterationCount:      iterationCount,
+		Salt:                []byte(salt),
+	})
 
 	authr := NewPlain(testStm, s)
 	require.Equal(t, authr.Mechanism(), "PLAIN")
@@ -34,7 +47,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	buf.WriteByte(0)
 	buf.WriteString("mariana")
 	buf.WriteByte(0)
-	buf.WriteString("1234")
+	buf.WriteString(password)
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	// storage error...
@@ -69,7 +82,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	buf.WriteByte(0)
 	buf.WriteString("mariana")
 	buf.WriteByte(0)
-	buf.WriteString("1234")
+	buf.WriteString(password)
 	buf.WriteByte(0)
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
@@ -82,7 +95,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	buf.WriteByte(0)
 	buf.WriteString("ortuman")
 	buf.WriteByte(0)
-	buf.WriteString("1234")
+	buf.WriteString(password)
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	authr.Reset()
@@ -94,7 +107,7 @@ func TestAuthPlainAuthentication(t *testing.T) {
 	buf.WriteByte(0)
 	buf.WriteString("mariana")
 	buf.WriteByte(0)
-	buf.WriteString("12345")
+	buf.WriteString(password + "5")
 	elem.SetText(base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	authr.Reset()

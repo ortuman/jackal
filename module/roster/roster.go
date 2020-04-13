@@ -679,9 +679,12 @@ func (x *Roster) broadcastPresence(ctx context.Context, presence *xmpp.Presence)
 		return err
 	} else if usr != nil {
 		return x.userRep.UpsertUser(ctx, &model.User{
-			Username:     usr.Username,
-			Password:     usr.Password,
-			LastPresence: presence,
+			Username:            usr.Username,
+			PasswordScramSHA1:   usr.PasswordScramSHA1,
+			PasswordScramSHA256: usr.PasswordScramSHA256,
+			Salt:                usr.Salt,
+			IterationCount:      usr.IterationCount,
+			LastPresence:        presence,
 		})
 	}
 	return nil

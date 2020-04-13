@@ -46,13 +46,13 @@ func (u *pgSQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 	q := sq.Insert("users")
 
 	if len(presenceXML) > 0 {
-		q = q.Columns("username", "password", "last_presence", "last_presence_at").
-			Values(usr.Username, usr.Password, presenceXML, nowExpr).
-			Suffix("ON CONFLICT (username) DO UPDATE SET password = $2, last_presence = $3, last_presence_at = NOW()")
+		q = q.Columns("username", "password_scram_sha1", "password_scram_sha256", "salt", "iteration_count", "last_presence", "last_presence_at").
+			Values(usr.Username, usr.PasswordScramSHA1, usr.PasswordScramSHA256, usr.Salt, usr.IterationCount, presenceXML, nowExpr).
+			Suffix("ON CONFLICT (username) DO UPDATE SET password_scram_sha1 = $2, password_scram_sha256 = $3, salt = $4, iteration_count = $5, last_presence = $6, last_presence_at = NOW()")
 	} else {
-		q = q.Columns("username", "password").
-			Values(usr.Username, usr.Password).
-			Suffix("ON CONFLICT (username) DO UPDATE SET password = $2")
+		q = q.Columns("username", "password_scram_sha1", "password_scram_sha256", "salt", "iteration_count").
+			Values(usr.Username, usr.PasswordScramSHA1, usr.PasswordScramSHA256, usr.Salt, usr.IterationCount).
+			Suffix("ON CONFLICT (username) DO UPDATE SET password_scram_sha1 = $2, password_scram_sha256 = $3, salt = $4, iteration_count = $5")
 	}
 	_, err := q.RunWith(u.db).ExecContext(ctx)
 	return err
@@ -60,7 +60,7 @@ func (u *pgSQLUser) UpsertUser(ctx context.Context, usr *model.User) error {
 
 // FetchUser retrieves from storage a user entity.
 func (u *pgSQLUser) FetchUser(ctx context.Context, username string) (*model.User, error) {
-	q := sq.Select("username", "password", "last_presence", "last_presence_at").
+	q := sq.Select("username", "password_scram_sha1", "password_scram_sha256", "salt", "iteration_count", "last_presence", "last_presence_at").
 		From("users").
 		Where(sq.Eq{"username": username})
 
@@ -68,7 +68,7 @@ func (u *pgSQLUser) FetchUser(ctx context.Context, username string) (*model.User
 	var presenceAt time.Time
 	var usr model.User
 
-	err := q.RunWith(u.db).QueryRowContext(ctx).Scan(&usr.Username, &usr.Password, &presenceXML, &presenceAt)
+	err := q.RunWith(u.db).QueryRowContext(ctx).Scan(&usr.Username, &usr.PasswordScramSHA1, &usr.PasswordScramSHA256, &usr.Salt, &usr.IterationCount, &presenceXML, &presenceAt)
 	switch err {
 	case nil:
 		if len(presenceXML) > 0 {
