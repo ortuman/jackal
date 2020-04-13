@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,12 +26,20 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	utilrand "github.com/ortuman/jackal/util/rand"
 	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/pbkdf2"
 )
+
+func randomBytes(l int) []byte {
+	b := make([]byte, l)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 type fakeTransport struct {
 	cbBytes []byte
@@ -106,7 +115,7 @@ var tt = []scramAuthTestCase{
 		id:          4,
 		scramType:   ScramSHA1,
 		usesCb:      true,
-		cbBytes:     utilrand.RandomBytes(23),
+		cbBytes:     randomBytes(23),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -118,7 +127,7 @@ var tt = []scramAuthTestCase{
 		id:          5,
 		scramType:   ScramSHA256,
 		usesCb:      true,
-		cbBytes:     utilrand.RandomBytes(32),
+		cbBytes:     randomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",
@@ -130,7 +139,7 @@ var tt = []scramAuthTestCase{
 		id:          6,
 		scramType:   ScramSHA512,
 		usesCb:      true,
-		cbBytes:     utilrand.RandomBytes(32),
+		cbBytes:     randomBytes(32),
 		gs2BindFlag: "p=tls-unique",
 		authID:      "a=jackal.im",
 		n:           "ortuman",

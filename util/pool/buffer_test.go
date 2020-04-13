@@ -6,10 +6,10 @@
 package pool
 
 import (
+	"math/rand"
 	"reflect"
 	"testing"
 
-	utilrand "github.com/ortuman/jackal/util/rand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,13 @@ func TestBufferPool_GetAndPut(t *testing.T) {
 	require.Equal(t, "*bytes.Buffer", reflect.ValueOf(buf).Type().String())
 
 	buf = p.Get()
-	buf.Write(utilrand.RandomBytes(randomBytesLength))
+
+	randomBytes := make([]byte, randomBytesLength)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		t.Errorf("error reading random bytes: %v", err)
+	}
+	buf.Write(randomBytes)
 	require.Equal(t, randomBytesLength, buf.Len())
 	p.Put(buf)
 	buf = p.Get()

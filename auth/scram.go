@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -22,7 +23,6 @@ import (
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/transport"
-	utilrand "github.com/ortuman/jackal/util/rand"
 	utilstring "github.com/ortuman/jackal/util/string"
 	"github.com/ortuman/jackal/xmpp"
 	"golang.org/x/crypto/pbkdf2"
@@ -223,7 +223,8 @@ func (s *Scram) handleStart(ctx context.Context, elem xmpp.XElement) error {
 	s.user = user
 
 	s.srvNonce = cNonce + "-" + uuid.New().String()
-	s.salt, err = utilrand.RandomBytes(32)
+	s.salt = make([]byte, 32)
+	_, err = rand.Read(s.salt)
 	if err != nil {
 		return err
 	}
