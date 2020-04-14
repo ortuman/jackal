@@ -196,9 +196,6 @@ func (s *inStream) initializeAuthenticators() {
 		case "plain":
 			authenticators = append(authenticators, auth.NewPlain(s, s.userRep))
 
-		case "digest_md5":
-			authenticators = append(authenticators, auth.NewDigestMD5(s, s.userRep))
-
 		case "scram_sha_1":
 			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, false, s.userRep))
 			if hasChannelBinding {

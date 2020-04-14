@@ -111,12 +111,7 @@ func TestStream_FailAuthenticate(t *testing.T) {
 	elem := conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
 
-	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
-
-	elem = conn.outboundRead()
-	require.Equal(t, "challenge", elem.Name())
-
-	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9Im9ydHVtYW4iLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
+	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AHVzZXIAYQ==</auth>`))
 
 	elem = conn.outboundRead()
 	require.Equal(t, "failure", elem.Name())
@@ -379,19 +374,9 @@ func tUtilStreamOpen(conn *fakeSocketConn) {
 }
 
 func tUtilStreamAuthenticate(conn *fakeSocketConn, t *testing.T) {
-	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>`))
+	_, _ = conn.inboundWrite([]byte(`<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="PLAIN">AHVzZXIAcGVuY2ls</auth>`))
 
 	elem := conn.outboundRead()
-	require.Equal(t, "challenge", elem.Name())
-
-	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">dXNlcm5hbWU9InVzZXIiLHJlYWxtPSJsb2NhbGhvc3QiLG5vbmNlPSJuY3prcXJFb3Uyait4ek1pcUgxV1lBdHh6dlNCSzFVbHNOejNLQUJsSjd3PSIsY25vbmNlPSJlcHNMSzhFQU8xVWVFTUpLVjdZNXgyYUtqaHN2UXpSMGtIdFM0ZGljdUFzPSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTVmODRmNTk2YWE4ODc0OWY2ZjZkZTYyZjliNjhkN2I2LGNoYXJzZXQ9dXRmLTg=</response>`))
-
-	elem = conn.outboundRead()
-	require.Equal(t, "challenge", elem.Name())
-
-	_, _ = conn.inboundWrite([]byte(`<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`))
-
-	elem = conn.outboundRead()
 	require.Equal(t, "success", elem.Name())
 }
 
