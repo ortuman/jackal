@@ -99,6 +99,9 @@ func (s *pgSQLPubSub) FetchNode(ctx context.Context, host, name string) (*pubsub
 	if err != nil {
 		return nil, err
 	}
+	if opts == nil {
+		return nil, nil // not found
+	}
 	return &pubsubmodel.Node{
 		Host:    host,
 		Name:    name,
