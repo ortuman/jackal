@@ -152,9 +152,9 @@ func (s *pgSQLPresences) UpsertCapabilities(ctx context.Context, caps *capsmodel
 		return err
 	}
 	_, err = sq.Insert("capabilities").
-		Columns("node", "ver", "features", "updated_at", "created_at").
-		Values(caps.Node, caps.Ver, b, nowExpr, nowExpr).
-		Suffix("ON DUPLICATE KEY UPDATE features = ?, updated_at = NOW()", b).
+		Columns("node", "ver", "features").
+		Values(caps.Node, caps.Ver, b).
+		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $3").
 		RunWith(s.db).ExecContext(ctx)
 	return err
 }

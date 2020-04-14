@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	capsmodel "github.com/ortuman/jackal/model/capabilities"
+
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ortuman/jackal/util/pool"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -118,8 +119,8 @@ func TestPgSQLPresences_UpsertCapabilities(t *testing.T) {
 	b, _ := json.Marshal(&features)
 
 	s, mock := newPresencesMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON DUPLICATE KEY UPDATE features = \\?, updated_at = NOW\\(\\)").
-		WithArgs("n1", "1234A", b, b).
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON CONFLICT (.+) DO UPDATE SET features = (.+)").
+		WithArgs("n1", "1234A", b).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err := s.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: features})
@@ -130,8 +131,8 @@ func TestPgSQLPresences_UpsertCapabilities(t *testing.T) {
 
 	// error case
 	s, mock = newPresencesMock()
-	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON DUPLICATE KEY UPDATE features = \\?, updated_at = NOW\\(\\)").
-		WithArgs("n1", "1234A", b, b).
+	mock.ExpectExec("INSERT INTO capabilities (.+) VALUES (.+) ON CONFLICT (.+) DO UPDATE SET features = (.+)").
+		WithArgs("n1", "1234A", b).
 		WillReturnError(errGeneric)
 
 	err = s.UpsertCapabilities(context.Background(), &capsmodel.Capabilities{Node: "n1", Ver: "1234A", Features: features})
