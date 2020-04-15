@@ -207,12 +207,6 @@ func (s *inStream) initializeAuthenticators() {
 			if hasChannelBinding {
 				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true, s.userRep))
 			}
-
-		case "scram_sha_512":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, false, s.userRep))
-			if hasChannelBinding {
-				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA512, true, s.userRep))
-			}
 		}
 	}
 	s.authenticators = authenticators

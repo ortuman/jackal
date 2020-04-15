@@ -87,10 +87,8 @@ c2s:
 
     sasl:
       - plain
-      - digest_md5
       - scram_sha_1
       - scram_sha_256
-      - scram_sha_512
 
 s2s:
     dial_timeout: 15

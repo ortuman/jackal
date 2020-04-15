@@ -12,7 +12,6 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
 	"hash"
@@ -37,9 +36,6 @@ const (
 
 	// ScramSHA256 represents SCRAM-SHA-256 authentication method.
 	ScramSHA256
-
-	// ScramSHA512 represents SCRAM-SHA-512 authentication method.
-	ScramSHA512
 )
 
 const iterationsCount = 4096
@@ -118,9 +114,6 @@ func NewScram(stm stream.C2S, tr transport.Transport, scramType ScramType, usesC
 	case ScramSHA256:
 		s.h = sha256.New
 		s.hKeyLen = sha256.Size
-	case ScramSHA512:
-		s.h = sha512.New
-		s.hKeyLen = sha512.Size
 	}
 	return s
 }
@@ -139,12 +132,6 @@ func (s *Scram) Mechanism() string {
 			return "SCRAM-SHA-256-PLUS"
 		}
 		return "SCRAM-SHA-256"
-
-	case ScramSHA512:
-		if s.usesCb {
-			return "SCRAM-SHA-512-PLUS"
-		}
-		return "SCRAM-SHA-512"
 	}
 	return ""
 }
