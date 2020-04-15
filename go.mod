@@ -7,7 +7,6 @@ require (
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/google/uuid v1.1.1
-	github.com/gorilla/websocket v1.4.1
 	github.com/lib/pq v1.3.0
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
 	github.com/pborman/uuid v1.2.0
@@ -19,5 +18,4 @@ require (
 	golang.org/x/text v0.3.0
 	google.golang.org/appengine v1.3.0 // indirect
 	gopkg.in/yaml.v2 v2.2.7
-
 )

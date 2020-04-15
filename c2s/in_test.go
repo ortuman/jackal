@@ -7,7 +7,6 @@ package c2s
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -222,8 +221,6 @@ func TestStream_SendIQ(t *testing.T) {
 	iq.AppendElement(xmpp.NewElementNamespace("query", "jabber:iq:roster"))
 
 	_, _ = conn.inboundWrite([]byte(iq.String()))
-
-	fmt.Println("4")
 
 	elem := conn.outboundRead()
 	require.Equal(t, "iq", elem.Name())
