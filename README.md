@@ -14,7 +14,7 @@ An XMPP server written in Go.
 
 <div align="center">
     <a href="#">
-        <img src="./.github/gopher.png">
+        <img src="https://images.gitads.io/jackal" href="https://tracking.gitads.io/?repo=jackal">
     </a>
 </div>
 
