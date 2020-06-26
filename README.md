@@ -12,10 +12,6 @@ An XMPP server written in Go.
 [![Docker Pulls](https://img.shields.io/docker/pulls/ortuman/jackal.svg)](https://hub.docker.com/r/ortuman/jackal/)
 [![Join the chat at https://gitter.im/jackal-im/jackal](https://badges.gitter.im/jackal-im/jackal.svg)](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-## About
-
-jackal is a free, open-source, high performance XMPP server which aims to be known for its stability, simple configuration and low resource consumption.
-
 ## Sponshorship
 
 <div align="center">
@@ -23,6 +19,10 @@ jackal is a free, open-source, high performance XMPP server which aims to be kno
         <img src="https://images.gitads.io/jackal">
     </a>
 </div>
+
+## About
+
+jackal is a free, open-source, high performance XMPP server which aims to be known for its stability, simple configuration and low resource consumption.
 
 ## Features
 
