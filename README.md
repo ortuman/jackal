@@ -12,7 +12,7 @@ An XMPP server written in Go.
 [![Docker Pulls](https://img.shields.io/docker/pulls/ortuman/jackal.svg)](https://hub.docker.com/r/ortuman/jackal/)
 [![Join the chat at https://gitter.im/jackal-im/jackal](https://badges.gitter.im/jackal-im/jackal.svg)](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-## Sponshorship
+## Sponsorship
 
 <div align="center">
     <a href="https://tracking.gitads.io/?repo=jackal">
