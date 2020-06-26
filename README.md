@@ -13,8 +13,8 @@ An XMPP server written in Go.
 [![Join the chat at https://gitter.im/jackal-im/jackal](https://badges.gitter.im/jackal-im/jackal.svg)](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 <div align="center">
-    <a href="#">
-        <img src="https://images.gitads.io/jackal" href="https://tracking.gitads.io/?repo=jackal">
+    <a href="https://tracking.gitads.io/?repo=jackal">
+        <img src="https://images.gitads.io/jackal">
     </a>
 </div>
 
