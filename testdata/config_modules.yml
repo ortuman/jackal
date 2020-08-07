@@ -10,6 +10,7 @@ enabled:
   - blocking_command
   - ping
   - offline
+  - muc
 
 mod_roster:
   versioning: true
@@ -28,3 +29,6 @@ mod_version:
 mod_ping:
   send: no
   send_interval: 60
+
+mod_muc:
+  service: conference.jackal.im

@@ -25,6 +25,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const totalModuleCount = 11
+
 type fakeModule struct {
 	shutdownCh chan bool
 }
@@ -40,7 +42,7 @@ func TestModules_New(t *testing.T) {
 	mods := setupModules(t)
 	defer func() { _ = mods.Shutdown(context.Background()) }()
 
-	require.Equal(t, 10, len(mods.all))
+	require.Equal(t, totalModuleCount, len(mods.all))
 }
 
 func TestModules_ProcessIQ(t *testing.T) {

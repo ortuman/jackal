@@ -13,6 +13,7 @@ import (
 	"github.com/ortuman/jackal/storage/repository"
 )
 
+// TODO change the name of this type, Service is a terrible name
 type Service struct {
 	cfg         *Config
 	disco       *xep0030.DiscoInfo
@@ -40,4 +41,10 @@ func New(cfg *Config, disco *xep0030.DiscoInfo, reps repository.Container, route
 
 func (s *Service) GetMucHostname() string {
 	return s.cfg.MucHost
+}
+
+func (s *Service) Shutdown() error {
+	// TODO for some reason every module has a runqueue, and it needs to be closed here, figure out
+	// why this is the case
+	return nil
 }
