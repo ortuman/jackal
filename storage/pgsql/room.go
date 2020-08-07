@@ -12,6 +12,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/util/pool"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 type pgSQLRoom struct {
@@ -31,21 +32,21 @@ func (r *pgSQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 	q := sq.Insert("rooms")
 
 	q = q.Columns("name").
-		Values(room.Name)
+		Values(room.RoomJID.String())
 
 	_, err := q.RunWith(r.db).ExecContext(ctx)
 	return err
 }
 
 // FetchRoom retrieves from storage a room entity.
-func (r *pgSQLRoom) FetchRoom(ctx context.Context, roomName string) (*mucmodel.Room, error) {
+func (r *pgSQLRoom) FetchRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.Room, error) {
 	q := sq.Select("name").
 		From("rooms").
-		Where(sq.Eq{"name": roomName})
+		Where(sq.Eq{"name": roomJID.String()})
 
 	var room mucmodel.Room
 
-	err := q.RunWith(r.db).QueryRowContext(ctx).Scan(&room.Name)
+	err := q.RunWith(r.db).QueryRowContext(ctx).Scan(room.RoomJID)
 	switch err {
 	case nil:
 		return &room, nil
@@ -57,10 +58,10 @@ func (r *pgSQLRoom) FetchRoom(ctx context.Context, roomName string) (*mucmodel.R
 }
 
 // DeleteRoom deletes a room entity from storage.
-func (r *pgSQLRoom) DeleteRoom(ctx context.Context, roomName string) error {
+func (r *pgSQLRoom) DeleteRoom(ctx context.Context, roomJID *jid.JID) error {
 	return r.inTransaction(ctx, func(tx *sql.Tx) error {
 		var err error
-		_, err = sq.Delete("rooms").Where(sq.Eq{"name": roomName}).RunWith(tx).ExecContext(ctx)
+		_, err = sq.Delete("rooms").Where(sq.Eq{"name": roomJID.String()}).RunWith(tx).ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -69,10 +70,10 @@ func (r *pgSQLRoom) DeleteRoom(ctx context.Context, roomName string) error {
 }
 
 // RoomExists returns whether or not a room exists within storage.
-func (r *pgSQLRoom) RoomExists(ctx context.Context, roomName string) (bool, error) {
+func (r *pgSQLRoom) RoomExists(ctx context.Context, roomJID *jid.JID) (bool, error) {
 	var count int
 
-	q := sq.Select("COUNT(*)").From("rooms").Where(sq.Eq{"name": roomName})
+	q := sq.Select("COUNT(*)").From("rooms").Where(sq.Eq{"name": roomJID.String()})
 	err := q.RunWith(r.db).QueryRowContext(ctx).Scan(&count)
 	switch err {
 	case nil:

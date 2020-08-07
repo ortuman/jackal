@@ -51,8 +51,8 @@ func setupDiscoMuc(cfg *Config, disco *xep0030.DiscoInfo, mucService *Service) {
 func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, _ string) []xep0030.Identity {
 	var identities []xep0030.Identity
 	if len(toJID.Node()) > 0 {
-		roomName := toJID.Node()
-		room := p.getRoom(ctx, roomName)
+		roomJID := toJID
+		room := p.getRoom(ctx, roomJID)
 		if room != nil {
 			// TODO replace room.Name with room.Description once it is added
 			identities = append(identities, xep0030.Identity{Type: "text", Category: "conference",
@@ -104,8 +104,8 @@ func (p *discoInfoProvider) allRooms(ctx context.Context) ([]xep0030.Item, *xmpp
 	return items, nil
 }
 
-func (p *discoInfoProvider) getRoom(ctx context.Context, roomName string) *mucmodel.Room {
-	r, err := p.roomRep.FetchRoom(ctx, roomName)
+func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
+	r, err := p.roomRep.FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
 		return nil

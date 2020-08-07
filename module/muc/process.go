@@ -19,10 +19,11 @@ func (s *Service) ProcessPresence(ctx context.Context, presence *xmpp.Presence) 
 	if xEl != nil && xEl.Text() == "" {
 		from := presence.FromJID()
 		to := presence.ToJID()
-		roomName := to.Node()
+		// TODO this is a placeholder, user needs to enter a roomname
+		roomName := "Chatroom"
 		roomJID := to.ToBareJID()
 		nick := to.Resource()
-		exists, _ := s.reps.Room().RoomExists(ctx, roomName)
+		exists, _ := s.reps.Room().RoomExists(ctx, roomJID)
 		if exists {
 			log.Infof("Room exists")
 		} else {

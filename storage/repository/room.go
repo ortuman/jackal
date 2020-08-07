@@ -8,6 +8,7 @@ package repository
 import (
 	"context"
 	mucmodel "github.com/ortuman/jackal/model/muc"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 // Room defines room repository operations
@@ -16,11 +17,11 @@ type Room interface {
 	UpsertRoom(ctx context.Context, room *mucmodel.Room) error
 
 	// DeleteRoom deletes a room entity from storage.
-	DeleteRoom(ctx context.Context, roomName string) error
+	DeleteRoom(ctx context.Context, roomJID *jid.JID) error
 
 	// FetchRoom retrieves a room entity from storage.
-	FetchRoom(ctx context.Context, roomName string) (*mucmodel.Room, error)
+	FetchRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.Room, error)
 
 	// RoomExists tells whether or not a room exists within storage.
-	RoomExists(ctx context.Context, roomName string) (bool, error)
+	RoomExists(ctx context.Context, roomJID *jid.JID) (bool, error)
 }
