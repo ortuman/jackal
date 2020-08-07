@@ -45,6 +45,7 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.OccupantsCnt); err != nil {
 		return err
 	}
+	r.Occupants = make(map[string]*Occupant)
 	for i := 0; i < r.OccupantsCnt; i++ {
 		o, err := NewOccupantFromBytes(buf)
 		if err != nil {
