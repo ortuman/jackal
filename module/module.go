@@ -9,11 +9,11 @@ import (
 	"context"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module/muc"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0012"
 	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/module/xep0045"
 	"github.com/ortuman/jackal/module/xep0049"
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0077"
@@ -57,7 +57,7 @@ type Modules struct {
 	Pep          *xep0163.Pep
 	BlockingCmd  *xep0191.BlockingCommand
 	Ping         *xep0199.Ping
-	Muc          *muc.Service
+	Muc          *xep0045.Muc
 
 	router     router.Router
 	iqHandlers []IQHandler
@@ -148,9 +148,9 @@ func New(config *Config, router router.Router, reps repository.Container, alloca
 
 	// XEP-0045: Multi-User Chat (https://xmpp.org/extensions/xep-0045.html)
 	if _, ok := config.Enabled["muc"]; ok {
-		m.Muc = muc.New(&config.Muc, m.DiscoInfo, reps, router)
+		m.Muc = xep0045.New(&config.Muc, m.DiscoInfo, reps, router)
 		m.all = append(m.all, m.Muc)
-		// TODO not sure if this is supposed to be an IQhandler as well, if it is add it
+		// TODO this is an IQhandler as well, add it
 	}
 
 	return m

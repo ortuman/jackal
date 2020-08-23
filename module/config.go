@@ -8,9 +8,9 @@ package module
 import (
 	"fmt"
 
-	"github.com/ortuman/jackal/module/muc"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0045"
 	"github.com/ortuman/jackal/module/xep0077"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0199"
@@ -24,7 +24,7 @@ type Config struct {
 	Registration xep0077.Config
 	Version      xep0092.Config
 	Ping         xep0199.Config
-	Muc          muc.Config
+	Muc          xep0045.Config
 }
 
 type configProxy struct {
@@ -34,7 +34,7 @@ type configProxy struct {
 	Registration xep0077.Config `yaml:"mod_registration"`
 	Version      xep0092.Config `yaml:"mod_version"`
 	Ping         xep0199.Config `yaml:"mod_ping"`
-	Muc          muc.Config     `yaml:"mod_muc"`
+	Muc          xep0045.Config `yaml:"mod_muc"`
 }
 
 // UnmarshalYAML satisfies Unmarshaler interface.

@@ -108,7 +108,7 @@ func (r *router) LocalStream(username, resource string) stream.C2S {
 
 func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
 	toJID := stanza.ToJID()
-	if !r.hosts.IsLocalHost(toJID.Domain()) {
+	if !r.hosts.IsLocalHost(toJID.Domain()) && !r.hosts.IsConferenceHost(toJID.Domain()) {
 		if r.s2s == nil {
 			return ErrFailedRemoteConnect
 		}

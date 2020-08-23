@@ -1,4 +1,9 @@
-package muc
+/*
+ * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * See the LICENSE file for more information.
+ */
+
+package xep0045
 
 import (
 	"testing"

@@ -627,6 +627,8 @@ func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
 
+	// TODO not sure if this is the correct way to redirect the message, check if fullwithuser
+	// is necessary, but I think it is
 	replyOnBehalf := !toJID.IsFullWithUser() && (s.router.Hosts().IsLocalHost(toJID.Domain()) ||
 		s.router.Hosts().IsConferenceHost(toJID.Domain()))
 	if !replyOnBehalf {
@@ -647,7 +649,7 @@ func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence) {
-	// check if the stanza is directed to the muc service
+	// is the presence stanza directed to the conference service?
 	if s.router.Hosts().IsConferenceHost(presence.ToJID().Domain()) {
 		s.mods.Muc.ProcessPresence(ctx, presence)
 		return

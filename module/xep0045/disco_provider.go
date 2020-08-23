@@ -3,7 +3,7 @@
  * See the LICENSE file for more information.
  */
 
-package muc
+package xep0045
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 // TODO possible add other namespaces (#owner, #user etc.)
 const mucNamespace = "http://jabber.org/protocol/muc"
+const mucNamespaceUser = "http://jabber.org/protocol/muc#user"
 
 var mucFeature = []string{
 	"http://jabber.org/protocol/muc",
@@ -31,10 +32,10 @@ var roomFeature = []string{
 
 type discoInfoProvider struct {
 	roomRep repository.Room
-	service *Service
+	service *Muc
 }
 
-func setupDiscoMuc(cfg *Config, disco *xep0030.DiscoInfo, mucService *Service) {
+func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
 	item := xep0030.Item{
 		Jid:  cfg.MucHost,
 		Name: "Chatroom Service",
@@ -94,10 +95,10 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomName string) 
 func (p *discoInfoProvider) allRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
 	// TODO return all of the rooms as described in Section 6.3
 	var items []xep0030.Item
-	for _, r := range p.service.publicRooms {
+	for _, r := range p.service.allRooms {
 		item := xep0030.Item{
 			Jid:  r.RoomJID.String(),
-			Name: r.Desc,
+			Name: r.Name,
 		}
 		items = append(items, item)
 	}
