@@ -15,7 +15,8 @@ import (
 
 const defaultDesc = "Chatroom"
 
-func (s *Muc) newRoom(ctx context.Context, from, to, roomJID *jid.JID, roomName, ownerNick string, locked bool) error {
+func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNick string, locked bool) error {
+	roomJID := to.ToBareJID()
 	roomExists, _ := s.reps.Room().RoomExists(ctx, roomJID)
 	// TODO this will probably be deleted since presence stanza to an existing room means join the
 	// room

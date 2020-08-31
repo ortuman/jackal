@@ -61,9 +61,8 @@ func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {
 func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	from := presence.FromJID()
 	to := presence.ToJID()
-	roomJID := to.ToBareJID()
 	nick := to.Resource()
-	roomName := roomJID.Node()
+	roomName := to.Node()
 
 	// TODO write all of the checks, return appropriate error codes if data is not valid
 
@@ -80,13 +79,13 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 		log.Infof("NOT LOCKED")
 	}
 
-	err := s.newRoom(ctx, from, to, roomJID, roomName, nick, locked)
+	err := s.newRoom(ctx, from, to, roomName, nick, locked)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	log.Infof("New room created, room JID is %s", roomJID.String())
+	log.Infof("New room created, room JID is %s", to.ToBareJID().String())
 	err = s.sendRoomCreateAck(ctx, to, from)
 	if err != nil {
 		log.Error(err)
