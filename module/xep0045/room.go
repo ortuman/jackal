@@ -41,14 +41,18 @@ func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNic
 func (s *Muc) createRoom(ctx context.Context, name string, roomJID *jid.JID, owner *mucmodel.Occupant, locked bool) (*mucmodel.Room, error) {
 	m := make(map[string]*mucmodel.Occupant)
 	m[owner.Nick] = owner
+	nicks := make(map[string]string)
+	nicks[owner.FullJID.ToBareJID().String()] = owner.Nick
+
 	r := &mucmodel.Room{
-		Name:         name,
-		RoomJID:      roomJID,
-		Desc:         defaultDesc,
-		Config:       getDefaultRoomConfig(),
-		OccupantsCnt: 1,
-		Occupants:    m,
-		Locked:       locked,
+		Name:           name,
+		RoomJID:        roomJID,
+		Desc:           defaultDesc,
+		Config:         getDefaultRoomConfig(),
+		OccupantsCnt:   1,
+		NickToOccupant: m,
+		UserToNick:     nicks,
+		Locked:         locked,
 	}
 	err := s.reps.Room().UpsertRoom(ctx, r)
 	if err != nil {

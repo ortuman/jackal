@@ -18,6 +18,8 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 )
 
+const dataNamespace = "jabber:x:data"
+
 type Muc struct {
 	cfg   *Config
 	disco *xep0030.DiscoInfo
@@ -48,6 +50,31 @@ func New(cfg *Config, disco *xep0030.DiscoInfo, reps repository.Container, route
 		setupDiscoService(cfg, disco, s)
 	}
 	return s
+}
+
+// accepting all IQs aimed at the conference service
+func (s *Muc) MatchesIQ(iq *xmpp.IQ) bool {
+	return s.router.Hosts().IsConferenceHost(iq.ToJID().Domain())
+}
+
+func (s *Muc) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
+	s.runQueue.Run(func() {
+		s.processIQ(ctx, iq)
+	})
+}
+
+func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
+	roomJID := iq.ToJID()
+	room, err := s.reps.Room().FetchRoom(ctx, roomJID)
+	if err != nil {
+		_ = s.router.Route(ctx, iq.InternalServerError())
+		return
+	}
+	if room == nil {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return
+	}
+	// TODO continue here for instant room creation
 }
 
 func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {

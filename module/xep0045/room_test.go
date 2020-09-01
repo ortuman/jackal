@@ -30,7 +30,7 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 	room, err := muc.createRoom(nil, "testroom", roomJID, o, true)
 	require.Nil(t, err)
 	require.NotNil(t, room)
-	require.Equal(t, room.Occupants["nick"].FullJID.String(), fullJID.String())
+	require.Equal(t, room.NickToOccupant["nick"].FullJID.String(), fullJID.String())
 
 	roomMem, err := c.Room().FetchRoom(nil, roomJID)
 	require.Nil(t, err)
@@ -51,6 +51,7 @@ func TestXEP0045_NewRoom(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, roomMem)
 	require.Equal(t, to.ToBareJID().String(), roomMem.RoomJID.String())
+	require.Equal(t, "nick", roomMem.UserToNick[from.ToBareJID().String()])
 	require.Equal(t, muc.allRooms[0].RoomJID.String(), to.ToBareJID().String())
 
 	oMem, err := c.Occupant().FetchOccupant(nil, to)

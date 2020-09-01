@@ -20,6 +20,7 @@ import (
 // TODO possible add other namespaces (#owner, #user etc.)
 const mucNamespace = "http://jabber.org/protocol/muc"
 const mucNamespaceUser = "http://jabber.org/protocol/muc#user"
+const mucNamespaceOwner = "http://jabber.org/protocol/muc#owner"
 
 var mucFeature = []string{
 	"http://jabber.org/protocol/muc",

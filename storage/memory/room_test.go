@@ -98,7 +98,8 @@ func getTestRoom() mucmodel.Room{
 			Desc: "Room for Testing",
 			Config: &rc,
 			OccupantsCnt: 0,
-			Occupants: make(map[string]*mucmodel.Occupant),
+			NickToOccupant: make(map[string]*mucmodel.Occupant),
+			UserToNick: make(map[string]string),
 			Locked: false,
 		}
 }

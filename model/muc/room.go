@@ -14,13 +14,14 @@ import (
 
 type Room struct {
 	// TODO Show name in the discovery instead of the default "Chatroom"
-	Name         string
-	RoomJID      *jid.JID
-	Desc         string
-	Config       *RoomConfig
-	OccupantsCnt int
-	Occupants    map[string]*Occupant //key is the room nickname
-	Locked       bool
+	Name           string
+	RoomJID        *jid.JID
+	Desc           string
+	Config         *RoomConfig
+	OccupantsCnt   int
+	NickToOccupant map[string]*Occupant //key is the room nickname
+	UserToNick     map[string]string  //mapping user bare jid to the room nickname
+	Locked         bool
 }
 
 // FromBytes deserializes a Room entity from it's gob binary representation.
@@ -45,13 +46,15 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.OccupantsCnt); err != nil {
 		return err
 	}
-	r.Occupants = make(map[string]*Occupant)
+	r.NickToOccupant = make(map[string]*Occupant)
+	r.UserToNick = make(map[string]string)
 	for i := 0; i < r.OccupantsCnt; i++ {
 		o, err := NewOccupantFromBytes(buf)
 		if err != nil {
 			return err
 		}
-		r.Occupants[o.Nick] = o
+		r.NickToOccupant[o.Nick] = o
+		r.UserToNick[o.FullJID.ToBareJID().String()] = o.Nick
 	}
 	if err := dec.Decode(&r.Locked); err != nil {
 		return err
@@ -77,7 +80,7 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.OccupantsCnt); err != nil {
 		return err
 	}
-	for _, occ := range r.Occupants {
+	for _, occ := range r.NickToOccupant {
 		if err := occ.ToBytes(buf); err != nil {
 			return err
 		}

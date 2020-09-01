@@ -72,6 +72,41 @@ func TestXEP0045_NewRoomFromPresence(t *testing.T) {
 	//make sure the room is locked
 	require.True(t, roomMem.Locked)
 }
+/*
+func TestXEP0045_NewInstantRoom(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	defer func() { _ = muc.Shutdown() }()
+
+	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	to, _ := jid.New("room", "conference.jackal.im", "", true)
+
+	stm := stream.NewMockC2S(uuid.New(), from)
+	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
+	r.Bind(context.Background(), stm)
+
+	// creating a locked room
+	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	require.Nil(t, err)
+	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	require.Nil(t, err)
+	require.True(t, room.Locked)
+
+	// sending an instant room request into the stream
+	x := xmpp.NewElementNamespace("x", dataNamespace).SetAttribute("type", "submit")
+	query := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(x)
+	iq := xmpp.NewElementName("iq").SetID("create1").SetType("set").AppendElement(query)
+	request, err := xmpp.NewIQFromElement(iq, from, to)
+	require.Nil(t, err)
+
+	// the room should be unlocked now
+	require.True(t, muc.MatchesIQ(request))
+	muc.ProcessIQ(context.Background(), request)
+	require.False(t, room.Locked)
+
+	require.NotNil(t, to)
+}
+*/
 
 func TestXEP0045_LegacyGroupchatRoomFromPresence(t *testing.T) {
 	r, c := setupTest("jackal.im")

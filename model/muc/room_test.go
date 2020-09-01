@@ -36,6 +36,8 @@ func TestModelRoom(t *testing.T){
 	}
 	occMap := make(map[string]*Occupant)
 	occMap[o.Nick] = o
+	userMap := make(map[string]string)
+	userMap[o.FullJID.ToBareJID().String()] = o.Nick
 
 	r1 := Room{
 		Name: "Test Room",
@@ -43,7 +45,8 @@ func TestModelRoom(t *testing.T){
 		Desc: "Test Description",
 		Config: &rc,
 		OccupantsCnt: 1,
-		Occupants: occMap,
+		NickToOccupant: occMap,
+		UserToNick: userMap,
 		Locked: true,
 	}
 
@@ -57,6 +60,7 @@ func TestModelRoom(t *testing.T){
 	require.Equal(t, r1.Desc, r2.Desc)
 	require.Equal(t, rc.Password, r2.Config.Password)
 	require.Equal(t, r1.OccupantsCnt, r2.OccupantsCnt)
-	require.Equal(t, o.FullJID, r2.Occupants[o.Nick].FullJID)
+	require.Equal(t, o.FullJID, r2.NickToOccupant[o.Nick].FullJID)
+	require.Equal(t, o.Nick, r2.UserToNick[o.FullJID.ToBareJID().String()])
 	require.Equal(t, r1.Locked, r2.Locked)
 }

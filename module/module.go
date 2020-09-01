@@ -150,7 +150,7 @@ func New(config *Config, router router.Router, reps repository.Container, alloca
 	if _, ok := config.Enabled["muc"]; ok {
 		m.Muc = xep0045.New(&config.Muc, m.DiscoInfo, reps, router)
 		m.all = append(m.all, m.Muc)
-		// TODO this is an IQhandler as well, add it
+		m.iqHandlers = append(m.iqHandlers, m.Muc)
 	}
 
 	return m
