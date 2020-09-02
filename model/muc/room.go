@@ -19,8 +19,8 @@ type Room struct {
 	Desc           string
 	Config         *RoomConfig
 	OccupantsCnt   int
-	NickToOccupant map[string]*Occupant //key is the room nickname
-	UserToNick     map[string]string  //mapping user bare jid to the room nickname
+	NickToOccupant map[string]*Occupant //mapping nick in the room to the occupant
+	UserToOccupant map[string]*Occupant //mapping user bare jid to the occupant
 	Locked         bool
 }
 
@@ -47,14 +47,14 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	r.NickToOccupant = make(map[string]*Occupant)
-	r.UserToNick = make(map[string]string)
+	r.UserToOccupant = make(map[string]*Occupant)
 	for i := 0; i < r.OccupantsCnt; i++ {
 		o, err := NewOccupantFromBytes(buf)
 		if err != nil {
 			return err
 		}
 		r.NickToOccupant[o.Nick] = o
-		r.UserToNick[o.FullJID.ToBareJID().String()] = o.Nick
+		r.UserToOccupant[o.FullJID.ToBareJID().String()] = o
 	}
 	if err := dec.Decode(&r.Locked); err != nil {
 		return err

@@ -99,7 +99,7 @@ func getTestRoom() mucmodel.Room{
 			Config: &rc,
 			OccupantsCnt: 0,
 			NickToOccupant: make(map[string]*mucmodel.Occupant),
-			UserToNick: make(map[string]string),
+			UserToOccupant: make(map[string]*mucmodel.Occupant),
 			Locked: false,
 		}
 }

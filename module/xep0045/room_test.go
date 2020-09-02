@@ -51,7 +51,7 @@ func TestXEP0045_NewRoom(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, roomMem)
 	require.Equal(t, to.ToBareJID().String(), roomMem.RoomJID.String())
-	require.Equal(t, "nick", roomMem.UserToNick[from.ToBareJID().String()])
+	require.Equal(t, "nick", roomMem.UserToOccupant[from.ToBareJID().String()].Nick)
 	require.Equal(t, muc.allRooms[0].RoomJID.String(), to.ToBareJID().String())
 
 	oMem, err := c.Occupant().FetchOccupant(nil, to)
