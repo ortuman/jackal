@@ -67,6 +67,7 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	roomJID := iq.ToJID()
 	room, err := s.reps.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
+		log.Error(err)
 		_ = s.router.Route(ctx, iq.InternalServerError())
 		return
 	}
@@ -74,7 +75,14 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
 	}
-	// TODO continue here for instant room creation
+
+	switch {
+	case isIQForInstantRoomCreate(iq):
+		s.createInstantRoom(ctx, room, iq)
+	default:
+		_ = s.router.Route(ctx, iq.BadRequestError())
+	}
+
 }
 
 func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {

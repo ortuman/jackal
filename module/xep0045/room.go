@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -65,6 +67,29 @@ func (s *Muc) sendRoomCreateAck(ctx context.Context, from, to *jid.JID) error {
 	el := getAckStanza(from, to)
 	err := s.router.Route(ctx, el)
 	return err
+}
+
+func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	fromJID, err := jid.NewWithString(iq.From(), true)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.InternalServerError())
+		return
+	}
+	nick, ok := room.UserToNick[fromJID.ToBareJID().String()]
+	if !ok {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return
+	}
+	occupant := room.NickToOccupant[nick]
+	if occupant.Affiliation != "owner" {
+		_ = s.router.Route(ctx, iq.NotAuthorizedError())
+		return
+	}
+
+	room.Locked = false
+	s.reps.Room().UpsertRoom(ctx, room)
+	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
 func getDefaultRoomConfig() *mucmodel.RoomConfig {

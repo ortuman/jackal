@@ -38,3 +38,24 @@ func newStatusElement(code string) *xmpp.Element {
 	s.SetAttribute("code", code)
 	return s
 }
+
+func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {
+	if !iq.IsSet() {
+		return false
+	}
+	query := iq.Elements().Child("query")
+	if query == nil {
+		return false
+	}
+	if query.Namespace() != mucNamespaceOwner || query.Elements().Count() != 1 {
+		return false
+	}
+	x := query.Elements().Child("x")
+	if x == nil {
+		return false
+	}
+	if x.Namespace() != "jabber:x:data" || x.Type() != "submit" || x.Elements().Count() != 0 {
+		return false
+	}
+	return true
+}
