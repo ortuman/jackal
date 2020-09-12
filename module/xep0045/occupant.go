@@ -12,17 +12,14 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const moderatorRole = "moderator"
-const ownerAff = "owner"
-
 func (s *Muc) createOwner(ctx context.Context, occJID *jid.JID, nick string, fullJID *jid.JID) (*mucmodel.Occupant, error) {
 	o := &mucmodel.Occupant{
 		OccupantJID: occJID,
 		Nick:        nick,
 		FullJID:     fullJID,
-		Affiliation: ownerAff,
-		Role:        moderatorRole,
 	}
+	o.SetAffiliation("owner")
+	o.SetRole("moderator")
 	err := s.reps.Occupant().UpsertOccupant(ctx, o)
 	if err != nil {
 		return nil, err

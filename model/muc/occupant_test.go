@@ -20,8 +20,8 @@ func TestModelOccupant(t *testing.T){
 		OccupantJID: jOcc,
 		Nick: "mynick",
 		FullJID: jFull,
-		Affiliation: "owner",
-		Role: "moderator",
+		affiliation: "owner",
+		role: "moderator",
 	}
 
 	buf := new(bytes.Buffer)
@@ -32,6 +32,6 @@ func TestModelOccupant(t *testing.T){
 	require.Equal(t, o1.OccupantJID.String(), o2.OccupantJID.String())
 	require.Equal(t, o1.Nick, o2.Nick)
 	require.Equal(t, o1.FullJID.String(), o2.FullJID.String())
-	require.Equal(t, o1.Affiliation, o2.Affiliation)
-	require.Equal(t, o1.Role, o2.Role)
+	require.Equal(t, o1.affiliation, o2.affiliation)
+	require.Equal(t, o1.role, o2.role)
 }

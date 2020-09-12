@@ -30,8 +30,8 @@ func TestModelRoom(t *testing.T){
 		OccupantJID: jOcc,
 		Nick: "mynick",
 		FullJID: jFull,
-		Affiliation: "owner",
-		Role: "moderator",
+		affiliation: "owner",
+		role: "moderator",
 	}
 	occMap := make(map[string]*Occupant)
 	occMap[o.Nick] = o

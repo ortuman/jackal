@@ -105,7 +105,7 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		_ = s.router.Route(ctx, iq.BadRequestError())
 		return nil, false
 	}
-	if occ.Affiliation != "owner" {
+	if !occ.IsOwner() {
 		_ = s.router.Route(ctx, iq.ForbiddenError())
 		return nil, false
 	}

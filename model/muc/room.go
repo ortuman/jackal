@@ -107,7 +107,7 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 
 func (r *Room) GetAdmins() (admins []string) {
 	for jid, occ := range r.UserToOccupant {
-		if occ.Affiliation == Admin {
+		if occ.IsAdmin() {
 			admins = append(admins, jid)
 		}
 	}
@@ -116,7 +116,7 @@ func (r *Room) GetAdmins() (admins []string) {
 
 func (r *Room) GetOwners() (owners []string) {
 	for jid, occ := range r.UserToOccupant {
-		if occ.Affiliation == Owner {
+		if occ.IsOwner() {
 			owners = append(owners, jid)
 		}
 	}

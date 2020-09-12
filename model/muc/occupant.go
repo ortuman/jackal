@@ -7,6 +7,7 @@ package mucmodel
 
 import (
 	"bytes"
+	"fmt"
 	"encoding/gob"
 
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -14,30 +15,28 @@ import (
 
 const (
 	// Affiliations
-	Member = "member"
+	member = "member"
 
-	Admin = "admin"
+	admin = "admin"
 
-	Owner = "owner"
+	owner = "owner"
 
-	Outcast = "outcast"
+	outcast = "outcast"
 
 	// Roles
-	Mod = "mod"
+	moderator = "moderator"
 
-	Participant = "participant"
+	participant = "participant"
 
-	Visitor = "visitor"
+	visitor = "visitor"
 )
 
 type Occupant struct {
 	OccupantJID *jid.JID
 	Nick        string
 	FullJID     *jid.JID
-	// TODO change the type from string and
-	// make getters and setters
-	Affiliation string
-	Role        string
+	affiliation string
+	role        string
 }
 
 // FromBytes deserializes an Occupant entity from it's gob binary representation.
@@ -56,10 +55,10 @@ func (o *Occupant) FromBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	o.FullJID = f
-	if err := dec.Decode(&o.Affiliation); err != nil {
+	if err := dec.Decode(&o.affiliation); err != nil {
 		return err
 	}
-	if err := dec.Decode(&o.Role); err != nil {
+	if err := dec.Decode(&o.role); err != nil {
 		return err
 	}
 	return nil
@@ -77,10 +76,10 @@ func (o *Occupant) ToBytes(buf *bytes.Buffer) error {
 	if err := o.FullJID.ToBytes(buf); err != nil {
 		return err
 	}
-	if err := enc.Encode(&o.Affiliation); err != nil {
+	if err := enc.Encode(&o.affiliation); err != nil {
 		return err
 	}
-	if err := enc.Encode(&o.Role); err != nil {
+	if err := enc.Encode(&o.role); err != nil {
 		return err
 	}
 	return nil
@@ -93,4 +92,52 @@ func NewOccupantFromBytes(buf *bytes.Buffer) (*Occupant, error) {
 		return nil, err
 	}
 	return o, nil
+}
+
+func (o *Occupant) SetAffiliation(aff string) error {
+	switch aff {
+	case owner, admin, member, outcast:
+		o.affiliation = aff
+	default:
+		return fmt.Errorf("occupant: this type of affiliation is not supported - %s", aff)
+	}
+	return nil
+}
+
+func (o *Occupant) SetRole(role string) error {
+	switch role {
+	case moderator, participant, visitor:
+		o.role = role
+	default:
+		return fmt.Errorf("occupant: this type of role is not supported - %s", role)
+	}
+	return nil
+}
+
+func (o *Occupant) IsVisitor() bool {
+	return o.role == visitor
+}
+
+func (o *Occupant) IsParticipant() bool {
+	return o.role == participant
+}
+
+func (o *Occupant) IsModerator() bool {
+	return o.role == moderator
+}
+
+func (o *Occupant) IsOwner() bool {
+	return o.affiliation == owner
+}
+
+func (o *Occupant) IsAdmin() bool {
+	return o.affiliation == admin
+}
+
+func (o *Occupant) IsMember() bool {
+	return o.affiliation == member
+}
+
+func (o *Occupant) IsOutcast() bool {
+	return o.affiliation == outcast
 }

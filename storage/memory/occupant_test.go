@@ -20,8 +20,9 @@ func TestMemoryStorage_InsertOccupant(t *testing.T) {
 		OccupantJID: j,
 		Nick: "ortuman",
 		FullJID: j,
-		Affiliation: "Owner",
-		Role: "Moderator"}
+	}
+	o.SetAffiliation("owner")
+	o.SetRole("moderator")
 	s := NewOccupant()
 	EnableMockedError()
 	err := s.UpsertOccupant(context.Background(), &o)
@@ -48,8 +49,9 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 		OccupantJID: j,
 		Nick: "ortuman",
 		FullJID: j,
-		Affiliation: "Owner",
-		Role: "Moderator"}
+	}
+	o.SetAffiliation("owner")
+	o.SetRole("moderator")
 	s.saveEntity(occKey(j), &o)
 	ok, err = s.OccupantExists(context.Background(), j)
 	require.Nil(t, err)
@@ -62,8 +64,9 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 		OccupantJID: j,
 		Nick: "ortuman",
 		FullJID: j,
-		Affiliation: "Owner",
-		Role: "Moderator"}
+	}
+	o.SetAffiliation("owner")
+	o.SetRole("moderator")
 	s := NewOccupant()
 	_ = s.UpsertOccupant(context.Background(), &o)
 
@@ -86,8 +89,9 @@ func TestMemoryStorage_DeleteOccupant(t *testing.T) {
 		OccupantJID: j,
 		Nick: "ortuman",
 		FullJID: j,
-		Affiliation: "Owner",
-		Role: "Moderator"}
+	}
+	o.SetAffiliation("owner")
+	o.SetRole("moderator")
 	s := NewOccupant()
 	_ = s.UpsertOccupant(context.Background(), &o)
 
