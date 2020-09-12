@@ -8,6 +8,7 @@ package mucmodel
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -23,20 +24,36 @@ const (
 )
 
 type RoomConfig struct {
-	Public          bool
-	Persistent      bool
-	PwdProtected    bool
-	Password        string
-	Open            bool
-	Moderated       bool
-	RealJIDDisc     string
-	SendPM          string
-	AllowInvites    bool
-	AllowSubjChange bool
-	EnableLogging   bool
-	CanGetMemberList   []string
-	MaxOccCnt       int
-	HistCnt         int
+	Public           bool
+	Persistent       bool
+	PwdProtected     bool
+	Password         string
+	Open             bool
+	Moderated        bool
+	AllowInvites     bool
+	MaxOccCnt        int
+	HistCnt          int
+	RealJIDDisc      string
+	SendPM           string
+	CanGetMemberList []string
+	AllowSubjChange  bool
+	EnableLogging    bool
+}
+
+type roomConfigProxy struct {
+	Public           bool   `yaml:public`
+	Persistent       bool   `yaml:persistent`
+	PwdProtected     bool   `yaml:password_protected`
+	Open             bool   `yaml:"open"`
+	Moderated        bool   `yaml:"moderated"`
+	AllowInvites     bool   `yaml:"allow_invites"`
+	HistCnt          int    `yaml:"history_length"`
+	MaxOccCnt        int    `yaml:"occupant_count"`
+	RealJIDDisc      string `yaml:"real_jid_discovery"`
+	SendPM           string `yaml:"send_pm"`
+	CanGetMemberList string `yaml:"can_get_member_list"`
+	AllowSubjChange  bool   `yaml:"allow_subject_change"`
+	EnableLogging    bool   `yaml:"enable_logging"`
 }
 
 // FromBytes deserializes a RoomConfig entity from it's gob binary representation.
@@ -146,4 +163,36 @@ func NewConfigFromBytes(buf *bytes.Buffer) (*RoomConfig, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+// Getting RoomConfig defaults for the whole service
+func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	p := roomConfigProxy{}
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
+	r.Public = p.Public
+	r.Persistent = p.Persistent
+	r.PwdProtected = p.PwdProtected
+	r.Open = p.Open
+	r.Moderated = p.Moderated
+	r.AllowInvites = p.AllowInvites
+	r.HistCnt = p.HistCnt
+	r.MaxOccCnt = p.MaxOccCnt
+	r.AllowSubjChange = p.AllowSubjChange
+	r.EnableLogging = p.EnableLogging
+	// TODO type of these should not be string, change
+	r.RealJIDDisc = p.RealJIDDisc
+	r.SendPM = p.SendPM
+	switch p.CanGetMemberList {
+	case All, "":
+		r.CanGetMemberList = []string{Mods, Participants, Visitors}
+	case Mods:
+		r.CanGetMemberList = []string{Mods}
+	case None:
+		r.CanGetMemberList = []string{}
+	default:
+		return errors.New("muc_room_defaults: invalid setting for can_get_member_list")
+	}
+	return nil
 }

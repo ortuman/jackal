@@ -131,6 +131,13 @@ func (s *Muc) GetMucHostname() string {
 	return s.cfg.MucHost
 }
 
+func (s *Muc) GetDefaultRoomConfig() *mucmodel.RoomConfig {
+	conf := s.cfg.RoomDefaults
+	// need to do a deep copy of the slice
+	copy(conf.CanGetMemberList, s.cfg.RoomDefaults.CanGetMemberList)
+	return &conf
+}
+
 func (s *Muc) Shutdown() error {
 	c := make(chan struct{})
 	s.runQueue.Stop(func() { close(c) })

@@ -12,14 +12,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestMucConfig(t *testing.T) {
-	badCfg := `service:`
+const cfgExample = `
+host: conference.localhost
+name: "Test Server"
+`
+
+func TestXEP0045_MucConfig(t *testing.T) {
+	badCfg := `host:`
 	cfg := &Config{}
 	err := yaml.Unmarshal([]byte(badCfg), &cfg)
 	require.NotNil(t, err)
 
-	goodCfg := `service: conference.jackal.im`
+	goodCfg := cfgExample
 	cfg = &Config{}
 	err = yaml.Unmarshal([]byte(goodCfg), &cfg)
 	require.Nil(t, err)
+	require.Equal(t, cfg.MucHost, "conference.localhost")
+	require.Equal(t, cfg.Name, "Test Server")
+	require.NotNil(t, cfg.RoomDefaults)
 }

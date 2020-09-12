@@ -50,7 +50,7 @@ func (s *Muc) createRoom(ctx context.Context, name string, roomJID *jid.JID, own
 		Name:           name,
 		RoomJID:        roomJID,
 		Desc:           defaultDesc,
-		Config:         getDefaultRoomConfig(),
+		Config:         s.GetDefaultRoomConfig(),
 		OccupantsCnt:   1,
 		NickToOccupant: m,
 		UserToOccupant: nicks,
@@ -110,24 +110,4 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		return nil, false
 	}
 	return occ, true
-}
-
-func getDefaultRoomConfig() *mucmodel.RoomConfig {
-	return &mucmodel.RoomConfig{
-		Public:          true,
-		Persistent:      true,
-		PwdProtected:    false,
-		Open:            true,
-		Moderated:       false,
-		RealJIDDisc:     mucmodel.All,
-		SendPM:          mucmodel.All,
-		AllowInvites:    false,
-		AllowSubjChange: true,
-		EnableLogging:   true,
-		CanGetMemberList: []string{mucmodel.Mods,
-			mucmodel.Participants,
-			mucmodel.Visitors},
-		MaxOccCnt: -1,
-		HistCnt:   200,
-	}
 }

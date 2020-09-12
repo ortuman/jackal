@@ -31,4 +31,20 @@ mod_ping:
   send_interval: 60
 
 mod_muc:
-  service: conference.jackal.im
+  host: conference.jackal.im
+  name: "Chatroom Server"
+  room_defaults:
+    public: true
+    persistent: true
+    password_protected: false
+    open: true
+    moderated: false
+    allow_invites: false
+    allow_subject_change: true
+    enable_logging: true
+    history_length: 20
+    occupant_count: -1 # -1 means don't set the limit
+    # options for the next ones are "all", "moderators" and "none"
+    real_jid_discovery: "all"
+    send_private_messages: "all"
+    can_get_member_list: "all"

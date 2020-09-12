@@ -10,7 +10,23 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
+
+const cfgExample = `
+public: true
+persistent: true
+password_protected: false
+moderated: false
+allow_invites: false
+allow_subject_change: true
+enable_logging: true
+history_length: 20
+occupant_count: -1
+real_jid_discovery: "all"
+send_private_messages: "moderators"
+can_get_member_list: "none"
+`
 
 func TestModelRoomConfig(t *testing.T){
 	rc1 := RoomConfig{
@@ -33,4 +49,19 @@ func TestModelRoomConfig(t *testing.T){
 	require.Equal(t, rc1.Password, rc2.Password)
 	require.Equal(t, rc1.Open, rc2.Open)
 	require.Equal(t, rc1.Moderated, rc2.Moderated)
+}
+
+func TestUnmarshalYamlRoomConfig(t *testing.T){
+	badCfg := `public: "public"`
+	cfg := &RoomConfig{}
+	err := yaml.Unmarshal([]byte(badCfg), &cfg)
+	require.NotNil(t, err)
+
+	goodCfg := cfgExample
+	cfg = &RoomConfig{}
+	err = yaml.Unmarshal([]byte(goodCfg), &cfg)
+	require.Nil(t, err)
+	require.True(t, cfg.Public)
+	require.False(t, cfg.PwdProtected)
+	require.False(t, cfg.Open)
 }
