@@ -79,6 +79,8 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	switch {
 	case isIQForInstantRoomCreate(iq):
 		s.createInstantRoom(ctx, room, iq)
+	case isIQForRoomConfigRequest(iq):
+		s.sendRoomConfiguration(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
@@ -100,8 +102,6 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	roomName := to.Node()
 
 	// TODO write all of the checks, return appropriate error codes if data is not valid
-
-	// TODO there is an error here atm
 	locked := false
 	xEl := presence.Elements().ChildNamespace("x", mucNamespace)
 	if xEl != nil && xEl.Text() == "" {

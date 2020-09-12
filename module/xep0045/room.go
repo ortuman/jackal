@@ -53,7 +53,7 @@ func (s *Muc) createRoom(ctx context.Context, name string, roomJID *jid.JID, own
 		Config:         getDefaultRoomConfig(),
 		OccupantsCnt:   1,
 		NickToOccupant: m,
-		UserToOccupant:     nicks,
+		UserToOccupant: nicks,
 		Locked:         locked,
 	}
 	err := s.reps.Room().UpsertRoom(ctx, r)
@@ -70,34 +70,64 @@ func (s *Muc) sendRoomCreateAck(ctx context.Context, from, to *jid.JID) error {
 }
 
 func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	fromJID, err := jid.NewWithString(iq.From(), true)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.InternalServerError())
-		return
-	}
-	occ, ok := room.UserToOccupant[fromJID.ToBareJID().String()]
+	_, ok := s.getOwnerFromIQ(ctx, room, iq)
 	if !ok {
-		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
 	}
-	if occ.Affiliation != "owner" {
-		_ = s.router.Route(ctx, iq.NotAuthorizedError())
-		return
-	}
-
 	room.Locked = false
 	s.reps.Room().UpsertRoom(ctx, room)
 	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
+func (s *Muc) sendRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	_, ok := s.getOwnerFromIQ(ctx, room, iq)
+	if !ok {
+		return
+	}
+	configForm := getRoomConfigForm(room)
+	stanza := getFormStanza(iq, configForm)
+	err := s.router.Route(ctx, stanza)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.BadRequestError())
+	}
+}
+
+func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, bool) {
+	fromJID, err := jid.NewWithString(iq.From(), true)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return nil, false
+	}
+	occ, ok := room.UserToOccupant[fromJID.ToBareJID().String()]
+	if !ok {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return nil, false
+	}
+	if occ.Affiliation != "owner" {
+		_ = s.router.Route(ctx, iq.ForbiddenError())
+		return nil, false
+	}
+	return occ, true
+}
+
 func getDefaultRoomConfig() *mucmodel.RoomConfig {
 	return &mucmodel.RoomConfig{
-		Public:       true,
-		Persistent:   true,
-		PwdProtected: false,
-		Open:         true,
-		Moderated:    false,
-		NonAnonymous: true,
+		Public:          true,
+		Persistent:      true,
+		PwdProtected:    false,
+		Open:            true,
+		Moderated:       false,
+		RealJIDDisc:     mucmodel.All,
+		SendPM:          mucmodel.All,
+		AllowInvites:    true,
+		AllowSubjChange: true,
+		EnableLogging:   true,
+		CanGetMemberList: []string{mucmodel.Mods,
+			mucmodel.Participants,
+			mucmodel.Visitors},
+		MaxOccCnt: -1,
+		HistCnt:   200,
 	}
 }

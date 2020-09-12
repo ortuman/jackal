@@ -12,10 +12,30 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+const (
+	// Affiliations
+	Member = "member"
+
+	Admin = "admin"
+
+	Owner = "owner"
+
+	Outcast = "outcast"
+
+	// Roles
+	Mod = "mod"
+
+	Participant = "participant"
+
+	Visitor = "visitor"
+)
+
 type Occupant struct {
 	OccupantJID *jid.JID
 	Nick        string
 	FullJID     *jid.JID
+	// TODO change the type from string and
+	// make getters and setters
 	Affiliation string
 	Role        string
 }

@@ -13,11 +13,13 @@ import (
 )
 
 type Room struct {
+	Config *RoomConfig
 	// TODO Show name in the discovery instead of the default "Chatroom"
 	Name           string
 	RoomJID        *jid.JID
 	Desc           string
-	Config         *RoomConfig
+	Subject        string
+	Language       string
 	OccupantsCnt   int
 	NickToOccupant map[string]*Occupant //mapping nick in the room to the occupant
 	UserToOccupant map[string]*Occupant //mapping user bare jid to the occupant
@@ -36,6 +38,12 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 	}
 	r.RoomJID = j
 	if err := dec.Decode(&r.Desc); err != nil {
+		return err
+	}
+	if err := dec.Decode(&r.Subject); err != nil {
+		return err
+	}
+	if err := dec.Decode(&r.Language); err != nil {
 		return err
 	}
 	c, err := NewConfigFromBytes(buf)
@@ -74,6 +82,12 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Desc); err != nil {
 		return err
 	}
+	if err := enc.Encode(&r.Subject); err != nil {
+		return err
+	}
+	if err := enc.Encode(&r.Language); err != nil {
+		return err
+	}
 	if err := r.Config.ToBytes(buf); err != nil {
 		return err
 	}
@@ -89,4 +103,22 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	return nil
+}
+
+func (r *Room) GetAdmins() (admins []string) {
+	for jid, occ := range r.UserToOccupant {
+		if occ.Affiliation == Admin {
+			admins = append(admins, jid)
+		}
+	}
+	return
+}
+
+func (r *Room) GetOwners() (owners []string) {
+	for jid, occ := range r.UserToOccupant {
+		if occ.Affiliation == Owner {
+			owners = append(owners, jid)
+		}
+	}
+	return
 }

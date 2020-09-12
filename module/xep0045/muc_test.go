@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ortuman/jackal/stream"
 	"github.com/pborman/uuid"
+	"github.com/ortuman/jackal/module/xep0004"
 )
 
 func TestXEP0045_NewService(t *testing.T) {
@@ -140,6 +141,57 @@ func TestXEP0045_LegacyGroupchatRoomFromPresence(t *testing.T) {
 	require.Equal(t, to.ToBareJID().String(), roomMem.RoomJID.String())
 	//make sure the room is NOT locked (this is the only difference from MUC)
 	require.False(t, roomMem.Locked)
+}
+
+func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	defer func() { _ = muc.Shutdown() }()
+
+	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	to, _ := jid.New("room", "conference.jackal.im", "", true)
+
+	stm := stream.NewMockC2S(uuid.New(), from)
+	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
+	r.Bind(context.Background(), stm)
+
+	// creating a locked room
+	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	require.Nil(t, err)
+	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	require.Nil(t, err)
+	require.True(t, room.Locked)
+
+	// request configuration form
+	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
+	iq := xmpp.NewElementName("iq").SetID("create1").SetType("get").AppendElement(query)
+	request, err := xmpp.NewIQFromElement(iq, from, to)
+	require.Nil(t, err)
+
+	// sending an instant room request into the stream
+	require.True(t, muc.MatchesIQ(request))
+	muc.ProcessIQ(context.Background(), request)
+
+	// receive the room configuration form
+	ack := stm.ReceiveElement()
+	require.NotNil(t, ack)
+	require.Equal(t, ack.From(), to.String())
+	require.Equal(t, ack.To(), from.String())
+	require.Equal(t, ack.Name(), "iq")
+	require.Equal(t, ack.Type(), "result")
+	require.Equal(t, ack.ID(), "create1")
+
+	queryResult := ack.Elements().Child("query")
+	require.NotNil(t, queryResult)
+	require.Equal(t, queryResult.Namespace(), mucNamespaceOwner)
+
+	formElement := queryResult.Elements().Child("x")
+	require.NotNil(t, formElement)
+	form, err := xep0004.NewFormFromElement(formElement)
+	require.Nil(t, err)
+	require.Equal(t, form.Type, xep0004.Form)
+	// the total number of fields should be 23
+	require.Equal(t, len(form.Fields), 23)
 }
 
 func setupTest(domain string) (router.Router, repository.Container) {
