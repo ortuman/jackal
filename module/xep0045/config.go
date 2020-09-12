@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO potentially add more things for configuration, e.g. can anyone create rooms?
 type Config struct {
 	MucHost string
 }

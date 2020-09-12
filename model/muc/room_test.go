@@ -22,7 +22,6 @@ func TestModelRoom(t *testing.T){
 		Password: "pwd",
 		Open: true,
 		Moderated: true,
-		NonAnonymous: false,
 	}
 
 	jOcc, _ := jid.NewWithString("room@conference.jackal.im/mynick", true)

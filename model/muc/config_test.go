@@ -20,7 +20,6 @@ func TestModelRoomConfig(t *testing.T){
 		Password: "pwd",
 		Open: true,
 		Moderated: true,
-		NonAnonymous: false,
 	}
 
 	buf := new(bytes.Buffer)
@@ -34,5 +33,4 @@ func TestModelRoomConfig(t *testing.T){
 	require.Equal(t, rc1.Password, rc2.Password)
 	require.Equal(t, rc1.Open, rc2.Open)
 	require.Equal(t, rc1.Moderated, rc2.Moderated)
-	require.Equal(t, rc1.NonAnonymous, rc2.NonAnonymous)
 }

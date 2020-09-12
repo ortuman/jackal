@@ -121,7 +121,7 @@ func getDefaultRoomConfig() *mucmodel.RoomConfig {
 		Moderated:       false,
 		RealJIDDisc:     mucmodel.All,
 		SendPM:          mucmodel.All,
-		AllowInvites:    true,
+		AllowInvites:    false,
 		AllowSubjChange: true,
 		EnableLogging:   true,
 		CanGetMemberList: []string{mucmodel.Mods,

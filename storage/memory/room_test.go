@@ -88,7 +88,6 @@ func getTestRoom() mucmodel.Room{
 		PwdProtected: false,
 		Open:         true,
 		Moderated:    false,
-		NonAnonymous: true,
 	}
 	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
 
