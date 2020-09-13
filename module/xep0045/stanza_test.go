@@ -8,6 +8,8 @@ package xep0045
 import (
 	"testing"
 
+	mucmodel "github.com/ortuman/jackal/model/muc"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/require"
@@ -27,7 +29,7 @@ func TestXEP0045_NewStatus(t *testing.T) {
 	require.Equal(t, status.Attributes().Get("code"), "200")
 }
 
-func TestXEP0045_GetAck(t *testing.T) {
+func TestXEP0045_GetAckStanza(t *testing.T) {
 	from, _ := jid.New("ortuman", "test.org", "balcony", false)
 	to, _ := jid.New("ortuman", "example.org", "garden", false)
 	message := getAckStanza(from, to)
@@ -41,17 +43,34 @@ func TestXEP0045_GetAck(t *testing.T) {
 		newItemElement("owner", "moderator").String())
 }
 
+func TestXEP0045_GetFormStanza(t *testing.T) {
+	from, _ := jid.New("ortuman", "test.org", "balcony", false)
+	to, _ := jid.New("ortuman", "example.org", "garden", false)
+	iq := &xmpp.IQ{}
+	iq.SetFromJID(from)
+	iq.SetToJID(to)
+	iq.SetID("create")
+
+	room := &mucmodel.Room{Config: &mucmodel.RoomConfig{}}
+	form := getRoomConfigForm(room)
+	require.NotNil(t, form)
+	require.Equal(t, 23, len(form.Fields))
+
+	formStanza := getFormStanza(iq, form)
+	require.NotNil(t, formStanza)
+}
+
 func TestXEP0045_InstantRoomCreateIQ(t *testing.T) {
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	to, _ := jid.New("room", "conference.jackal.im", "", true)
 
-	falseX := xmpp.NewElementNamespace("x", dataNamespace).SetAttribute("type", "not_submit")
+	falseX := xmpp.NewElementNamespace("x", xep0004.FormNamespace).SetAttribute("type", "not_submit")
 	falseQuery := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(falseX)
 	falseIQ := xmpp.NewElementName("iq").SetID("create1").SetType("set").AppendElement(falseQuery)
 	falseRequest, _ := xmpp.NewIQFromElement(falseIQ, from, to)
 	require.False(t, isIQForInstantRoomCreate(falseRequest))
 
-	x := xmpp.NewElementNamespace("x", dataNamespace).SetAttribute("type", "submit")
+	x := xmpp.NewElementNamespace("x", xep0004.FormNamespace).SetAttribute("type", "submit")
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(x)
 	iq := xmpp.NewElementName("iq").SetID("create1").SetType("set").AppendElement(query)
 	request, _ := xmpp.NewIQFromElement(iq, from, to)

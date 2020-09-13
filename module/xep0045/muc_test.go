@@ -6,21 +6,21 @@
 package xep0045
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
-	"context"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/host"
 	memorystorage "github.com/ortuman/jackal/storage/memory"
 	"github.com/ortuman/jackal/storage/repository"
+	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/stretchr/testify/require"
-	"github.com/ortuman/jackal/stream"
 	"github.com/pborman/uuid"
-	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0045_NewService(t *testing.T) {
@@ -94,7 +94,7 @@ func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 	require.True(t, room.Locked)
 
 	// instant room create iq
-	x := xmpp.NewElementNamespace("x", dataNamespace).SetAttribute("type", "submit")
+	x := xmpp.NewElementNamespace("x", xep0004.FormNamespace).SetAttribute("type", "submit")
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(x)
 	iq := xmpp.NewElementName("iq").SetID("create1").SetType("set").AppendElement(query)
 	request, err := xmpp.NewIQFromElement(iq, from, to)
@@ -170,6 +170,7 @@ func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 
 	// sending an instant room request into the stream
 	require.True(t, muc.MatchesIQ(request))
+	require.True(t, isIQForRoomConfigRequest(request))
 	muc.ProcessIQ(context.Background(), request)
 
 	// receive the room configuration form

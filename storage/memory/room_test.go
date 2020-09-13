@@ -10,20 +10,20 @@ import (
 	"testing"
 
 	mucmodel "github.com/ortuman/jackal/model/muc"
-	"github.com/stretchr/testify/require"
 	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-
 func TestMemoryStorage_InsertRoom(t *testing.T) {
-	r := getTestRoom()
+	r := GetTestRoom()
 	s := NewRoom()
 	EnableMockedError()
-	err := s.UpsertRoom(context.Background(), &r)
+	err := s.UpsertRoom(context.Background(), r)
 	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
-	err = s.UpsertRoom(context.Background(), &r)
+	err = s.UpsertRoom(context.Background(), r)
 	require.Nil(t, err)
 }
 
@@ -39,9 +39,9 @@ func TestMemoryStorage_RoomExists(t *testing.T) {
 	require.Nil(t, err)
 	require.False(t, ok)
 
-	r := getTestRoom()
+	r := GetTestRoom()
 	require.Equal(t, r.RoomJID, j)
-	s.saveEntity(roomKey(r.RoomJID), &r)
+	s.saveEntity(roomKey(r.RoomJID), r)
 	ok, err = s.RoomExists(context.Background(), j)
 	require.Nil(t, err)
 	require.True(t, ok)
@@ -49,9 +49,9 @@ func TestMemoryStorage_RoomExists(t *testing.T) {
 
 func TestMemoryStorage_FetchRoom(t *testing.T) {
 	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
-	r := getTestRoom()
+	r := GetTestRoom()
 	s := NewRoom()
-	_ = s.UpsertRoom(context.Background(), &r)
+	_ = s.UpsertRoom(context.Background(), r)
 
 	EnableMockedError()
 	_, err := s.FetchRoom(context.Background(), j)
@@ -64,13 +64,14 @@ func TestMemoryStorage_FetchRoom(t *testing.T) {
 
 	roomFromMemory, _ = s.FetchRoom(context.Background(), j)
 	require.NotNil(t, roomFromMemory)
+	assert.EqualValues(t, r, roomFromMemory)
 }
 
 func TestMemoryStorage_DeleteRoom(t *testing.T) {
 	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
-	r := getTestRoom()
+	r := GetTestRoom()
 	s := NewRoom()
-	_ = s.UpsertRoom(context.Background(), &r)
+	_ = s.UpsertRoom(context.Background(), r)
 
 	EnableMockedError()
 	require.Equal(t, ErrMocked, s.DeleteRoom(context.Background(), j))
@@ -81,7 +82,7 @@ func TestMemoryStorage_DeleteRoom(t *testing.T) {
 	require.Nil(t, room)
 }
 
-func getTestRoom() mucmodel.Room{
+func GetTestRoom() *mucmodel.Room {
 	rc := mucmodel.RoomConfig{
 		Public:       true,
 		Persistent:   true,
@@ -91,14 +92,14 @@ func getTestRoom() mucmodel.Room{
 	}
 	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
 
-	return mucmodel.Room {
-		Name: "testRoom",
-			RoomJID: j,
-			Desc: "Room for Testing",
-			Config: &rc,
-			OccupantsCnt: 0,
-			NickToOccupant: make(map[string]*mucmodel.Occupant),
-			UserToOccupant: make(map[string]*mucmodel.Occupant),
-			Locked: false,
-		}
+	return &mucmodel.Room{
+		Name:           "testRoom",
+		RoomJID:        j,
+		Desc:           "Room for Testing",
+		Config:         &rc,
+		OccupantsCnt:   0,
+		NickToOccupant: make(map[string]*mucmodel.Occupant),
+		UserToOccupant: make(map[string]*mucmodel.Occupant),
+		Locked:         false,
+	}
 }

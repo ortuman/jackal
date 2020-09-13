@@ -60,7 +60,7 @@ func TestXEP0045_NewRoom(t *testing.T) {
 	require.Equal(t, from.String(), oMem.FullJID.String())
 }
 
-func TestXEP0045_SendAck(t *testing.T) {
+func TestXEP0045_SendRoomCreateAck(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	from, _ := jid.New("room", "conference.jackal.im", "nick", true)
 	to, _ := jid.New("ortuman", "jackal.im", "balcony", true)

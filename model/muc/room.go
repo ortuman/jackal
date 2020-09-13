@@ -13,16 +13,17 @@ import (
 )
 
 type Room struct {
-	Config *RoomConfig
-	// TODO Show name in the discovery instead of the default "Chatroom"
+	Config         *RoomConfig
 	Name           string
 	RoomJID        *jid.JID
 	Desc           string
 	Subject        string
 	Language       string
 	OccupantsCnt   int
-	NickToOccupant map[string]*Occupant //mapping nick in the room to the occupant
-	UserToOccupant map[string]*Occupant //mapping user bare jid to the occupant
+	//mapping nick in the room to the occupant
+	NickToOccupant map[string]*Occupant
+	//mapping user bare jid to the occupant
+	UserToOccupant map[string]*Occupant
 	Locked         bool
 }
 

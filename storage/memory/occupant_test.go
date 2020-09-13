@@ -10,16 +10,17 @@ import (
 	"testing"
 
 	mucmodel "github.com/ortuman/jackal/model/muc"
-	"github.com/stretchr/testify/require"
 	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMemoryStorage_InsertOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick: "ortuman",
-		FullJID: j,
+		Nick:        "ortuman",
+		FullJID:     j,
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
@@ -47,8 +48,8 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick: "ortuman",
-		FullJID: j,
+		Nick:        "ortuman",
+		FullJID:     j,
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
@@ -60,15 +61,15 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 
 func TestMemoryStorage_FetchOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	o := mucmodel.Occupant{
+	o := &mucmodel.Occupant{
 		OccupantJID: j,
-		Nick: "ortuman",
-		FullJID: j,
+		Nick:        "ortuman",
+		FullJID:     j,
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
 	s := NewOccupant()
-	_ = s.UpsertOccupant(context.Background(), &o)
+	_ = s.UpsertOccupant(context.Background(), o)
 
 	EnableMockedError()
 	_, err := s.FetchOccupant(context.Background(), j)
@@ -81,14 +82,15 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 
 	occ, _ = s.FetchOccupant(context.Background(), j)
 	require.NotNil(t, occ)
+	assert.EqualValues(t, o, occ)
 }
 
 func TestMemoryStorage_DeleteOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick: "ortuman",
-		FullJID: j,
+		Nick:        "ortuman",
+		FullJID:     j,
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")

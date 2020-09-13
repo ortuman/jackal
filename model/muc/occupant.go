@@ -96,7 +96,7 @@ func NewOccupantFromBytes(buf *bytes.Buffer) (*Occupant, error) {
 
 func (o *Occupant) SetAffiliation(aff string) error {
 	switch aff {
-	case owner, admin, member, outcast:
+	case owner, admin, member, outcast, None:
 		o.affiliation = aff
 	default:
 		return fmt.Errorf("occupant: this type of affiliation is not supported - %s", aff)
@@ -106,7 +106,7 @@ func (o *Occupant) SetAffiliation(aff string) error {
 
 func (o *Occupant) SetRole(role string) error {
 	switch role {
-	case moderator, participant, visitor:
+	case moderator, participant, visitor, None:
 		o.role = role
 	default:
 		return fmt.Errorf("occupant: this type of role is not supported - %s", role)

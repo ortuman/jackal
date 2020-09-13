@@ -15,8 +15,6 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const defaultDesc = "Chatroom"
-
 func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNick string, locked bool) error {
 	roomJID := to.ToBareJID()
 	roomExists, _ := s.reps.Room().RoomExists(ctx, roomJID)
@@ -49,7 +47,6 @@ func (s *Muc) createRoom(ctx context.Context, name string, roomJID *jid.JID, own
 	r := &mucmodel.Room{
 		Name:           name,
 		RoomJID:        roomJID,
-		Desc:           defaultDesc,
 		Config:         s.GetDefaultRoomConfig(),
 		OccupantsCnt:   1,
 		NickToOccupant: m,

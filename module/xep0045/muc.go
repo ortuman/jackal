@@ -19,13 +19,12 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const dataNamespace = "jabber:x:data"
-
 type Muc struct {
 	cfg   *Config
 	disco *xep0030.DiscoInfo
 	reps  repository.Container
-	allRooms []*jid.JID // room JIDs of all rooms on the service
+	// room JIDs of all rooms on the service
+	allRooms []*jid.JID
 	router   router.Router
 	runQueue *runqueue.RunQueue
 	mu       sync.RWMutex

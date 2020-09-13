@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
@@ -28,14 +29,22 @@ send_private_messages: "moderators"
 can_get_member_list: ""
 `
 
-func TestModelRoomConfig(t *testing.T){
+func TestModelRoomConfig(t *testing.T) {
 	rc1 := RoomConfig{
-		Public: true,
-		Persistent: true,
-		PwdProtected: true,
-		Password: "pwd",
-		Open: true,
-		Moderated: true,
+		Public:           true,
+		Persistent:       true,
+		PwdProtected:     true,
+		Password:         "pwd",
+		Open:             true,
+		Moderated:        true,
+		AllowInvites:     true,
+		MaxOccCnt:        20,
+		HistCnt:          50,
+		AllowSubjChange:  false,
+		EnableLogging:    true,
+		realJIDDisc:      "all",
+		sendPM:           "",
+		canGetMemberList: "moderators",
 	}
 
 	buf := new(bytes.Buffer)
@@ -43,15 +52,11 @@ func TestModelRoomConfig(t *testing.T){
 
 	rc2 := RoomConfig{}
 	require.Nil(t, rc2.FromBytes(buf))
-	require.Equal(t, rc1.Public, rc2.Public)
-	require.Equal(t, rc1.Persistent, rc2.Persistent)
-	require.Equal(t, rc1.PwdProtected, rc2.PwdProtected)
-	require.Equal(t, rc1.Password, rc2.Password)
-	require.Equal(t, rc1.Open, rc2.Open)
-	require.Equal(t, rc1.Moderated, rc2.Moderated)
+
+	assert.EqualValues(t, rc1, rc2)
 }
 
-func TestUnmarshalYamlRoomConfig(t *testing.T){
+func TestUnmarshalYamlRoomConfig(t *testing.T) {
 	badCfg := `public: "public"`
 	cfg := &RoomConfig{}
 	err := yaml.Unmarshal([]byte(badCfg), &cfg)
@@ -64,4 +69,39 @@ func TestUnmarshalYamlRoomConfig(t *testing.T){
 	require.True(t, cfg.Public)
 	require.False(t, cfg.PwdProtected)
 	require.False(t, cfg.Open)
+}
+
+func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
+	cfg := &RoomConfig{}
+	err := cfg.SetWhoCanRealJIDDisc("fail")
+	require.NotNil(t, err)
+	err = cfg.SetWhoCanRealJIDDisc(All)
+	require.Nil(t, err)
+	require.Equal(t, All, cfg.GetRealJIDDisc())
+
+	err = cfg.SetWhoCanSendPM("fail")
+	require.NotNil(t, err)
+	err = cfg.SetWhoCanSendPM(Moderators)
+	require.Nil(t, err)
+	require.Equal(t, Moderators, cfg.GetSendPM())
+
+	err = cfg.SetWhoCanGetMemberList("fail")
+	require.NotNil(t, err)
+	err = cfg.SetWhoCanGetMemberList(None)
+	require.Nil(t, err)
+	require.Equal(t, None, cfg.GetCanGetMemberList())
+}
+
+func TestOccupantPermissionsRoomConfig(t *testing.T) {
+	cfg := &RoomConfig{
+		realJIDDisc:      "all",
+		sendPM:           "",
+		canGetMemberList: "moderators",
+	}
+	o := &Occupant{
+		role: moderator,
+	}
+	require.True(t, cfg.OccupantCanDiscoverRealJID(o))
+	require.False(t, cfg.OccupantCanSendPM(o))
+	require.True(t, cfg.OccupantCanGetMemberList(o))
 }
