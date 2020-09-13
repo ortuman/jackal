@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/util/runqueue"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 const dataNamespace = "jabber:x:data"
@@ -24,9 +25,7 @@ type Muc struct {
 	cfg   *Config
 	disco *xep0030.DiscoInfo
 	reps  repository.Container
-	// TODO maybe switch this into a list of strings (so that it doesn't get out of sync with
-	// storage)
-	allRooms []*mucmodel.Room
+	allRooms []*jid.JID // room JIDs of all rooms on the service
 	router   router.Router
 	runQueue *runqueue.RunQueue
 	mu       sync.RWMutex
@@ -101,7 +100,8 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	nick := to.Resource()
 	roomName := to.Node()
 
-	// TODO write all of the checks, return appropriate error codes if data is not valid
+	// TODO once all presence handling is written, write all of the checks, return
+	// appropriate error codes if data is not valid
 	locked := false
 	xEl := presence.Elements().ChildNamespace("x", mucNamespace)
 	if xEl != nil && xEl.Text() == "" {
@@ -133,8 +133,6 @@ func (s *Muc) GetMucHostname() string {
 
 func (s *Muc) GetDefaultRoomConfig() *mucmodel.RoomConfig {
 	conf := s.cfg.RoomDefaults
-	// need to do a deep copy of the slice
-	copy(conf.CanGetMemberList, s.cfg.RoomDefaults.CanGetMemberList)
 	return &conf
 }
 

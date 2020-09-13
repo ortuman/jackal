@@ -30,12 +30,12 @@ func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNic
 	if err != nil {
 		return err
 	}
-	room, err := s.createRoom(ctx, roomName, roomJID, owner, locked)
+	_, err = s.createRoom(ctx, roomName, roomJID, owner, locked)
 	if err != nil {
 		return err
 	}
 	s.mu.Lock()
-	s.allRooms = append(s.allRooms, room)
+	s.allRooms = append(s.allRooms, roomJID)
 	s.mu.Unlock()
 	return nil
 }

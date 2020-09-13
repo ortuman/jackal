@@ -8,7 +8,7 @@ package mucmodel
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 const (
@@ -16,11 +16,11 @@ const (
 
 	Participants = "participants"
 
-	Mods = "moderators"
+	Moderators = "moderators"
 
 	Visitors = "visitors"
 
-	None = "none"
+	None = ""
 )
 
 type RoomConfig struct {
@@ -33,11 +33,11 @@ type RoomConfig struct {
 	AllowInvites     bool
 	MaxOccCnt        int
 	HistCnt          int
-	RealJIDDisc      string
-	SendPM           string
-	CanGetMemberList []string
 	AllowSubjChange  bool
 	EnableLogging    bool
+	realJIDDisc      string
+	sendPM           string
+	canGetMemberList string
 }
 
 type roomConfigProxy struct {
@@ -79,10 +79,10 @@ func (r *RoomConfig) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.RealJIDDisc); err != nil {
+	if err := dec.Decode(&r.realJIDDisc); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.SendPM); err != nil {
+	if err := dec.Decode(&r.sendPM); err != nil {
 		return err
 	}
 	if err := dec.Decode(&r.AllowInvites); err != nil {
@@ -94,7 +94,7 @@ func (r *RoomConfig) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.EnableLogging); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.CanGetMemberList); err != nil {
+	if err := dec.Decode(&r.canGetMemberList); err != nil {
 		return err
 	}
 	if err := dec.Decode(&r.MaxOccCnt); err != nil {
@@ -129,10 +129,10 @@ func (r *RoomConfig) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.RealJIDDisc); err != nil {
+	if err := enc.Encode(&r.realJIDDisc); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.SendPM); err != nil {
+	if err := enc.Encode(&r.sendPM); err != nil {
 		return err
 	}
 	if err := enc.Encode(&r.AllowInvites); err != nil {
@@ -144,7 +144,7 @@ func (r *RoomConfig) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.EnableLogging); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.CanGetMemberList); err != nil {
+	if err := enc.Encode(&r.canGetMemberList); err != nil {
 		return err
 	}
 	if err := enc.Encode(&r.MaxOccCnt); err != nil {
@@ -181,18 +181,98 @@ func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	r.MaxOccCnt = p.MaxOccCnt
 	r.AllowSubjChange = p.AllowSubjChange
 	r.EnableLogging = p.EnableLogging
-	// TODO type of these should not be string, change
-	r.RealJIDDisc = p.RealJIDDisc
-	r.SendPM = p.SendPM
-	switch p.CanGetMemberList {
-	case All, "":
-		r.CanGetMemberList = []string{Mods, Participants, Visitors}
-	case Mods:
-		r.CanGetMemberList = []string{Mods}
-	case None:
-		r.CanGetMemberList = []string{}
-	default:
-		return errors.New("muc_room_defaults: invalid setting for can_get_member_list")
+	err := r.SetWhoCanRealJIDDisc(p.RealJIDDisc)
+	if err != nil {
+		return err
+	}
+	err = r.SetWhoCanSendPM(p.SendPM)
+	if err != nil {
+		return err
+	}
+	err = r.SetWhoCanGetMemberList(p.CanGetMemberList)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func (r *RoomConfig) SetWhoCanRealJIDDisc(s string) error {
+	switch s {
+	case All, Moderators, None:
+		r.realJIDDisc = s
+	default:
+		return fmt.Errorf("muc_config: cannot set who can discover real JIDs to %s", s)
+	}
+	return nil
+}
+
+func (r *RoomConfig) GetRealJIDDisc() string {
+	return r.realJIDDisc
+}
+
+func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
+	var hasPermission bool
+	switch r.realJIDDisc {
+	case All:
+		hasPermission = true
+	case None:
+		hasPermission = false
+	case Moderators:
+		hasPermission = o.IsModerator()
+	}
+	return hasPermission
+}
+
+func (r *RoomConfig) SetWhoCanSendPM(s string) error {
+	switch s {
+	case All, Moderators, None:
+		r.sendPM = s
+	default:
+		return fmt.Errorf("muc_config: cannot set who can send private messages to %s", s)
+	}
+	return nil
+}
+
+func (r *RoomConfig) GetSendPM() string {
+	return r.sendPM
+}
+
+func (r *RoomConfig) OccupantCanSendPM(o *Occupant) bool {
+	var hasPermission bool
+	switch r.sendPM {
+	case All:
+		hasPermission = true
+	case None:
+		hasPermission = false
+	case Moderators:
+		hasPermission = o.IsModerator()
+	}
+	return hasPermission
+}
+
+func (r *RoomConfig) SetWhoCanGetMemberList(s string) error {
+	switch s {
+	case All, Moderators, None:
+		r.canGetMemberList = s
+	default:
+		return fmt.Errorf("muc_config: cannot set who can get member list to %s", s)
+	}
+	return nil
+}
+
+func (r *RoomConfig) GetCanGetMemberList() string {
+	return r.canGetMemberList
+}
+
+func (r *RoomConfig) OccupantCanGetMemberList(o *Occupant) bool {
+	var hasPermission bool
+	switch r.canGetMemberList {
+	case All:
+		hasPermission = true
+	case None:
+		hasPermission = false
+	case Moderators:
+		hasPermission = o.IsModerator()
+	}
+	return hasPermission
 }

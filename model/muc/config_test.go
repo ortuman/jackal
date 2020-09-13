@@ -25,7 +25,7 @@ history_length: 20
 occupant_count: -1
 real_jid_discovery: "all"
 send_private_messages: "moderators"
-can_get_member_list: "none"
+can_get_member_list: ""
 `
 
 func TestModelRoomConfig(t *testing.T){

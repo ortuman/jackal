@@ -15,12 +15,16 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-const defaultRoomConfigInstructions = `
+const (
+	initialRoomConfigInstructions = `
 Your room has been created!
 To accept the default configuration, click OK. To
 select a different configuration, please complete
 this form.
 `
+
+	roomConfigInstructions = "Complete this form to modify the configuration of your room"
+)
 
 const (
 	ConfigName = "muc#roomconfig_roomname"
@@ -187,11 +191,10 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Var:    ConfigAllowPM,
 		Type:   xep0004.ListSingle,
 		Label:  "Roles that May Send Private Messages",
-		Values: []string{room.Config.SendPM},
+		Values: []string{room.Config.GetSendPM()},
 		Options: []xep0004.Option{
 			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
-			xep0004.Option{Label: "Anyone with Voice", Value: mucmodel.Participants},
-			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Mods},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
 			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
 		},
 	})
@@ -209,13 +212,13 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigMemberList,
-		Type:   xep0004.ListMulti,
-		Label:  "Roles and Affiliations that May Retrieve Member List",
-		Values: room.Config.CanGetMemberList,
+		Type:   xep0004.ListSingle,
+		Label:  "Who Can Retrieve Member List",
+		Values: []string{room.Config.GetCanGetMemberList()},
 		Options: []xep0004.Option{
-			xep0004.Option{Label: "Participants", Value: mucmodel.Participants},
-			xep0004.Option{Label: "Moderators", Value: mucmodel.Mods},
-			xep0004.Option{Label: "Visitors", Value: mucmodel.Visitors},
+			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
+			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
 		},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
@@ -290,10 +293,10 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Var:    ConfigWhoIs,
 		Type:   xep0004.ListSingle,
 		Label:  "Who May Discover Real JIDs",
-		Values: []string{room.Config.RealJIDDisc},
+		Values: []string{room.Config.GetRealJIDDisc()},
 		Options: []xep0004.Option{
 			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
-			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Mods},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
 			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
 		},
 	})
@@ -314,10 +317,9 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 
 func getRoomConfigInstructions(room *mucmodel.Room) (instr string) {
 	if room.Locked {
-		instr = defaultRoomConfigInstructions
+		instr = initialRoomConfigInstructions
 	} else {
-		// TODO this needs to be changed to represent the room as it is at the moment
-		instr = defaultRoomConfigInstructions
+		instr = roomConfigInstructions
 	}
 	return
 }

@@ -39,7 +39,7 @@ type discoInfoProvider struct {
 func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
 	item := xep0030.Item{
 		Jid:  cfg.MucHost,
-		Name: "Chatroom Service",
+		Name: cfg.Name,
 	}
 	disco.RegisterServerItem(item)
 	disco.RegisterServerFeature(mucNamespace)
@@ -98,8 +98,8 @@ func (p *discoInfoProvider) allRooms(ctx context.Context) ([]xep0030.Item, *xmpp
 	var items []xep0030.Item
 	for _, r := range p.service.allRooms {
 		item := xep0030.Item{
-			Jid:  r.RoomJID.String(),
-			Name: r.Name,
+			Jid:  r.String(),
+			Name: "TODO fetch the room from memory based on the jid and display info",
 		}
 		items = append(items, item)
 	}

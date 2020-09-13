@@ -44,7 +44,7 @@ mod_muc:
     enable_logging: true
     history_length: 20
     occupant_count: -1 # -1 means don't set the limit
-    # options for the next ones are "all", "moderators" and "none"
+    # options for the next ones are "all", "moderators" and ""
     real_jid_discovery: "all"
     send_private_messages: "all"
     can_get_member_list: "all"

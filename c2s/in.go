@@ -626,11 +626,8 @@ func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
 
 func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	toJID := iq.ToJID()
-
-	// TODO not sure if this is the correct way to redirect the message, check if fullwithuser
-	// is necessary, but I think it is
-	replyOnBehalf := !toJID.IsFullWithUser() && (s.router.Hosts().IsLocalHost(toJID.Domain()) ||
-		s.router.Hosts().IsConferenceHost(toJID.Domain()))
+	replyOnBehalf := !toJID.IsFullWithUser() && (s.router.Hosts().IsLocalHost(toJID.Domain())) ||
+		s.router.Hosts().IsConferenceHost(toJID.Domain())
 	if !replyOnBehalf {
 		switch s.router.Route(ctx, iq) {
 		case router.ErrResourceNotFound:
