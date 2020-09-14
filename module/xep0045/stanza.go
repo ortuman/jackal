@@ -176,27 +176,23 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Values: []string{room.Language},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigChangeSubj,
-		Type:   xep0004.Boolean,
-		Label:  "Allow Occupants to Change Subject?",
-		Values: []string{boolToStr(room.Config.AllowSubjChange)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigHistory,
 		Type:   xep0004.TextSingle,
 		Label:  "Maximum Number of History Messages Returned by Room",
 		Values: []string{strconv.Itoa(room.Config.HistCnt)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigAllowPM,
-		Type:   xep0004.ListSingle,
-		Label:  "Roles that May Send Private Messages",
-		Values: []string{room.Config.GetSendPM()},
-		Options: []xep0004.Option{
-			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
-			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
-			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
-		},
+		Var:   ConfigPubSub,
+		Type:  xep0004.TextSingle,
+		Label: "Associated pubsub node",
+		// TODO this is the field that's not being used at the moment
+		Values: []string{""},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigChangeSubj,
+		Type:   xep0004.Boolean,
+		Label:  "Allow Occupants to Change Subject?",
+		Values: []string{boolToStr(room.Config.AllowSubjChange)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigAllowInvites,
@@ -211,38 +207,6 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Values: []string{boolToStr(room.Config.EnableLogging)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigMemberList,
-		Type:   xep0004.ListSingle,
-		Label:  "Who Can Retrieve Member List",
-		Values: []string{room.Config.GetCanGetMemberList()},
-		Options: []xep0004.Option{
-			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
-			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
-			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
-		},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:   ConfigPubSub,
-		Type:  xep0004.TextSingle,
-		Label: "Associated pubsub node",
-		// TODO this is the field that's not being used at the moment
-		Values: []string{""},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigMaxUsers,
-		Type:   xep0004.ListSingle,
-		Label:  "Maximum Number of Occupants (-1 for unlimited)",
-		Values: []string{strconv.Itoa(room.Config.MaxOccCnt)},
-		Options: []xep0004.Option{
-			xep0004.Option{Label: "10", Value: "10"},
-			xep0004.Option{Label: "20", Value: "20"},
-			xep0004.Option{Label: "30", Value: "30"},
-			xep0004.Option{Label: "50", Value: "50"},
-			xep0004.Option{Label: "100", Value: "100"},
-			xep0004.Option{Label: "-1", Value: "-1"},
-		},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigMembersOnly,
 		Type:   xep0004.Boolean,
 		Label:  "Make Room Members Only?",
@@ -253,12 +217,6 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Type:   xep0004.Boolean,
 		Label:  "Make Room Moderated?",
 		Values: []string{boolToStr(room.Config.Moderated)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigPwdProtected,
-		Type:   xep0004.Boolean,
-		Label:  "Password Required to Enter?",
-		Values: []string{boolToStr(room.Config.PwdProtected)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigPersistent,
@@ -280,6 +238,12 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Values: []string{boolToStr(room.Config.Public)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigPwdProtected,
+		Type:   xep0004.Boolean,
+		Label:  "Password Required to Enter?",
+		Values: []string{boolToStr(room.Config.PwdProtected)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
 		Type:   xep0004.Fixed,
 		Values: []string{"If the password is required to enter the room, specify it below"},
 	})
@@ -288,6 +252,42 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Type:   xep0004.TextSingle,
 		Label:  "Password",
 		Values: []string{boolToStr(room.Config.Public)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigAllowPM,
+		Type:   xep0004.ListSingle,
+		Label:  "Roles that May Send Private Messages",
+		Values: []string{room.Config.GetSendPM()},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
+			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigMemberList,
+		Type:   xep0004.ListSingle,
+		Label:  "Who Can Retrieve Member List",
+		Values: []string{room.Config.GetCanGetMemberList()},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
+			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigMaxUsers,
+		Type:   xep0004.ListSingle,
+		Label:  "Maximum Number of Occupants (-1 for unlimited)",
+		Values: []string{strconv.Itoa(room.Config.MaxOccCnt)},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "10", Value: "10"},
+			xep0004.Option{Label: "20", Value: "20"},
+			xep0004.Option{Label: "30", Value: "30"},
+			xep0004.Option{Label: "50", Value: "50"},
+			xep0004.Option{Label: "100", Value: "100"},
+			xep0004.Option{Label: "-1", Value: "-1"},
+		},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigWhoIs,
