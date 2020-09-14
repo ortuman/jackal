@@ -17,19 +17,26 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-// TODO possible add other namespaces (#owner, #user etc.)
-const mucNamespace = "http://jabber.org/protocol/muc"
-const mucNamespaceUser = "http://jabber.org/protocol/muc#user"
-const mucNamespaceOwner = "http://jabber.org/protocol/muc#owner"
+const (
+	mucNamespace           = "http://jabber.org/protocol/muc"
+	mucNamespaceUser       = "http://jabber.org/protocol/muc#user"
+	mucNamespaceOwner      = "http://jabber.org/protocol/muc#owner"
+	mucNamespaceStableID   = "http://jabber.org/protocol/muc#stable_id"
+	mucNamespaceRoomConfig = "http://jabber.org/protocol/muc#roomconfig"
 
-var mucFeature = []string{
-	"http://jabber.org/protocol/muc",
-}
-
-// TODO declare different room features once they are added
-var roomFeature = []string{
-	"add_room_features (section 6.4)",
-}
+	mucHidden        = "muc_hidden"
+	mucPublic        = "muc_public"
+	mucMembersOnly   = "muc_membersonly"
+	mucOpen          = "muc_open"
+	mucModerated     = "muc_moderated"
+	mucUnmoderated   = "muc_unmoderated"
+	mucNonAnonymous  = "muc_nonanonymous"
+	mucSemiAnonymous = "muc_nonanonymous"
+	mucPwdProtected  = "muc_passwordprotected"
+	mucUnsecured     = "muc_unsecured"
+	mucPersistent    = "muc_persistent"
+	mucTemporary     = "muc_temporary"
+)
 
 type discoInfoProvider struct {
 	roomRep repository.Room
@@ -50,29 +57,26 @@ func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
 	disco.RegisterProvider(cfg.MucHost, provider)
 }
 
-func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, _ string) []xep0030.Identity {
+func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
-	if len(toJID.Node()) > 0 {
-		roomJID := toJID
-		room := p.getRoom(ctx, roomJID)
+	if node != "" {
+		room := p.getRoom(ctx, toJID)
 		if room != nil {
-			// TODO replace room.Name with room.Description once it is added
 			identities = append(identities, xep0030.Identity{Type: "text", Category: "conference",
 				Name: room.Name})
 		}
 	} else {
 		identities = append(identities, xep0030.Identity{Type: "text", Category: "conference",
-			Name: "Chat Service"})
+			Name: p.service.cfg.Name})
 	}
 	return identities
 }
 
-func (p *discoInfoProvider) Features(_ context.Context, toJID, fromJID *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
-	if len(toJID.Node()) > 0 {
-		// TODO to be changed once the room features are added
-		return roomFeature, nil
+func (p *discoInfoProvider) Features(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	if node != "" {
+		return p.roomFeatures(ctx, toJID)
 	} else {
-		return mucFeature, nil
+		return []string{mucNamespace}, nil
 	}
 }
 
@@ -81,29 +85,54 @@ func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*x
 }
 
 func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
-	if len(toJID.Node()) > 0 {
-		return p.roomOccupants(ctx, toJID.Node())
+	if node != "" {
+		return p.roomOccupants(ctx, toJID)
+	} else {
+		return p.publicRooms(ctx)
 	}
-	return p.allRooms(ctx)
 }
 
-func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomName string) ([]xep0030.Item, *xmpp.StanzaError) {
-	// TODO implement this function as shown in Section 6.5 once occupants are added
+func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
+	room := p.getRoom(ctx, roomJID)
+	if room == nil {
+		return nil, xmpp.ErrItemNotFound
+	}
+	if room.Config.GetCanGetMemberList() == mucmodel.All {
+		for nick, _ := range room.NickToOccupant {
+			items = append(items, xep0030.Item{Jid: (roomJID.String() + nick + "/")})
+		}
+	}
 	return items, nil
 }
 
-func (p *discoInfoProvider) allRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
-	// TODO return all of the rooms as described in Section 6.3
+func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 	for _, r := range p.service.allRooms {
-		item := xep0030.Item{
-			Jid:  r.String(),
-			Name: "TODO fetch the room from memory based on the jid and display info",
+		room := p.getRoom(ctx, r)
+		if room == nil {
+			return nil, xmpp.ErrInternalServerError
 		}
-		items = append(items, item)
+		if room.Config.Public {
+			item := xep0030.Item{
+				Jid:  room.RoomJID.String(),
+				Name: room.Name,
+			}
+			items = append(items, item)
+		}
 	}
 	return items, nil
+}
+
+func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) ([]xep0030.Feature, *xmpp.StanzaError) {
+	room := p.getRoom(ctx, roomJID)
+	if room == nil {
+		return nil, xmpp.ErrItemNotFound
+	}
+
+	features := getRoomFeatures(room)
+
+	return features, nil
 }
 
 func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
@@ -113,4 +142,45 @@ func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucm
 		return nil
 	}
 	return r
+}
+
+func getRoomFeatures(room *mucmodel.Room) []string {
+	features := []string{mucNamespace, mucNamespaceStableID, mucNamespaceRoomConfig}
+
+	if room.Config.Public {
+		features = append(features, mucPublic)
+	} else {
+		features = append(features, mucHidden)
+	}
+
+	if room.Config.Open {
+		features = append(features, mucOpen)
+	} else {
+		features = append(features, mucMembersOnly)
+	}
+
+	if room.Config.Moderated {
+		features = append(features, mucModerated)
+	} else {
+		features = append(features, mucUnmoderated)
+	}
+
+	if room.Config.GetRealJIDDisc() == mucmodel.All {
+		features = append(features, mucNonAnonymous)
+	} else {
+		features = append(features, mucSemiAnonymous)
+	}
+
+	if room.Config.PwdProtected {
+		features = append(features, mucPwdProtected)
+	} else {
+		features = append(features, mucUnsecured)
+	}
+
+	if room.Config.Persistent {
+		features = append(features, mucPersistent)
+	} else {
+		features = append(features, mucTemporary)
+	}
+	return features
 }
