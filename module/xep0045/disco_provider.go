@@ -12,7 +12,6 @@ import (
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
-	"github.com/ortuman/jackal/storage/repository"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -39,7 +38,6 @@ const (
 )
 
 type discoInfoProvider struct {
-	roomRep repository.Room
 	service *Muc
 }
 
@@ -72,7 +70,7 @@ func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, n
 	return identities
 }
 
-func (p *discoInfoProvider) Features(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Features(ctx context.Context, toJID, _ *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
 	if node != "" {
 		return p.roomFeatures(ctx, toJID)
 	} else {
@@ -84,7 +82,7 @@ func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*x
 	return nil, nil
 }
 
-func (p *discoInfoProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoInfoProvider) Items(ctx context.Context, toJID, _ *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
 	if node != "" {
 		return p.roomOccupants(ctx, toJID)
 	} else {
@@ -100,7 +98,7 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 	}
 	if room.Config.GetCanGetMemberList() == mucmodel.All {
 		for nick, _ := range room.NickToOccupant {
-			items = append(items, xep0030.Item{Jid: (roomJID.String() + nick + "/")})
+			items = append(items, xep0030.Item{Jid: (roomJID.String() + "/" + nick + "/")})
 		}
 	}
 	return items, nil
@@ -136,7 +134,7 @@ func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) 
 }
 
 func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
-	r, err := p.roomRep.FetchRoom(ctx, roomJID)
+	r, err := p.service.reps.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
 		return nil
