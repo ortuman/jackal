@@ -97,8 +97,8 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 		return nil, xmpp.ErrItemNotFound
 	}
 	if room.Config.GetCanGetMemberList() == mucmodel.All {
-		for nick, _ := range room.NickToOccupant {
-			items = append(items, xep0030.Item{Jid: (roomJID.String() + "/" + nick + "/")})
+		for _, occJID := range room.UserToOccupant {
+			items = append(items, xep0030.Item{Jid: occJID.String()})
 		}
 	}
 	return items, nil

@@ -13,18 +13,16 @@ import (
 )
 
 type Room struct {
-	Config         *RoomConfig
-	Name           string
-	RoomJID        *jid.JID
-	Desc           string
-	Subject        string
-	Language       string
-	OccupantsCnt   int
-	//mapping nick in the room to the occupant
-	NickToOccupant map[string]*Occupant
-	//mapping user bare jid to the occupant
-	UserToOccupant map[string]*Occupant
-	Locked         bool
+	Config            *RoomConfig
+	Name              string
+	RoomJID           *jid.JID
+	Desc              string
+	Subject           string
+	Language          string
+	Locked            bool
+	numberOfOccupants int
+	//mapping user bare jid to the occupant JID
+	UserToOccupant map[jid.JID]jid.JID
 }
 
 // FromBytes deserializes a Room entity from it's gob binary representation.
@@ -52,18 +50,20 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	r.Config = c
-	if err := dec.Decode(&r.OccupantsCnt); err != nil {
+	if err := dec.Decode(&r.numberOfOccupants); err != nil {
 		return err
 	}
-	r.NickToOccupant = make(map[string]*Occupant)
-	r.UserToOccupant = make(map[string]*Occupant)
-	for i := 0; i < r.OccupantsCnt; i++ {
-		o, err := NewOccupantFromBytes(buf)
+	r.UserToOccupant = make(map[jid.JID]jid.JID)
+	for i := 0; i < r.numberOfOccupants; i++ {
+		userJID, err := jid.NewFromBytes(buf)
 		if err != nil {
 			return err
 		}
-		r.NickToOccupant[o.Nick] = o
-		r.UserToOccupant[o.FullJID.ToBareJID().String()] = o
+		occJID, err := jid.NewFromBytes(buf)
+		if err != nil {
+			return err
+		}
+		r.UserToOccupant[*userJID] = *occJID
 	}
 	if err := dec.Decode(&r.Locked); err != nil {
 		return err
@@ -92,11 +92,14 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := r.Config.ToBytes(buf); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.OccupantsCnt); err != nil {
+	if err := enc.Encode(&r.numberOfOccupants); err != nil {
 		return err
 	}
-	for _, occ := range r.NickToOccupant {
-		if err := occ.ToBytes(buf); err != nil {
+	for userJID, occJID := range r.UserToOccupant {
+		if err := userJID.ToBytes(buf); err != nil {
+			return err
+		}
+		if err := occJID.ToBytes(buf); err != nil {
 			return err
 		}
 	}
@@ -106,20 +109,18 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (r *Room) GetAdmins() (admins []string) {
-	for jid, occ := range r.UserToOccupant {
-		if occ.IsAdmin() {
-			admins = append(admins, jid)
-		}
-	}
-	return
+func (r *Room) AddOccupant(o *Occupant) {
+	r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
+	r.numberOfOccupants++
 }
 
-func (r *Room) GetOwners() (owners []string) {
-	for jid, occ := range r.UserToOccupant {
-		if occ.IsOwner() {
-			owners = append(owners, jid)
-		}
-	}
-	return
+// TODO continue this once the maps are fixed
+/*
+func (r *Room) SetAdmin(j string) error{
+
 }
+
+func (r *Room) SetOwner(j string) error{
+
+}
+*/

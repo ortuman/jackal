@@ -7,6 +7,7 @@ package xep0045
 
 import (
 	"testing"
+	"context"
 
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -46,13 +47,16 @@ func TestXEP0045_GetAckStanza(t *testing.T) {
 func TestXEP0045_GetFormStanza(t *testing.T) {
 	from, _ := jid.New("ortuman", "test.org", "balcony", false)
 	to, _ := jid.New("ortuman", "example.org", "garden", false)
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im", Name: "Chat Service"}, nil, c, r)
+
 	iq := &xmpp.IQ{}
 	iq.SetFromJID(from)
 	iq.SetToJID(to)
 	iq.SetID("create")
 
 	room := &mucmodel.Room{Config: &mucmodel.RoomConfig{}}
-	form := getRoomConfigForm(room)
+	form := muc.getRoomConfigForm(context.Background(), room)
 	require.NotNil(t, form)
 	require.Equal(t, 23, len(form.Fields))
 

@@ -14,6 +14,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestXEP0045_CreateRoom(t *testing.T) {
@@ -30,7 +31,8 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 	room, err := muc.createRoom(nil, "testroom", roomJID, o, true)
 	require.Nil(t, err)
 	require.NotNil(t, room)
-	require.Equal(t, room.NickToOccupant["nick"].FullJID.String(), fullJID.String())
+	require.NotNil(t, room.UserToOccupant[*fullJID.ToBareJID()])
+	assert.EqualValues(t, room.UserToOccupant[*fullJID.ToBareJID()], *occJID)
 
 	roomMem, err := c.Room().FetchRoom(nil, roomJID)
 	require.Nil(t, err)
@@ -50,14 +52,14 @@ func TestXEP0045_NewRoom(t *testing.T) {
 	roomMem, err := c.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
 	require.NotNil(t, roomMem)
-	require.Equal(t, to.ToBareJID().String(), roomMem.RoomJID.String())
-	require.Equal(t, "nick", roomMem.UserToOccupant[from.ToBareJID().String()].Nick)
+	assert.EqualValues(t, to.ToBareJID(), roomMem.RoomJID)
+	assert.EqualValues(t, *to, roomMem.UserToOccupant[*from.ToBareJID()])
 	require.Equal(t, muc.allRooms[0].String(), to.ToBareJID().String())
 
 	oMem, err := c.Occupant().FetchOccupant(nil, to)
 	require.Nil(t, err)
 	require.NotNil(t, oMem)
-	require.Equal(t, from.String(), oMem.FullJID.String())
+	assert.EqualValues(t, from.ToBareJID(), oMem.BareJID)
 }
 
 func TestXEP0045_SendRoomCreateAck(t *testing.T) {

@@ -7,6 +7,7 @@ package xep0045
 
 import (
 	"strconv"
+	"context"
 
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
@@ -146,7 +147,25 @@ func isIQForRoomConfigRequest(iq *xmpp.IQ) bool {
 	return true
 }
 
-func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
+func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
+	if !iq.IsSet() {
+		return false
+	}
+	query := iq.Elements().Child("query")
+	if query == nil {
+		return false
+	}
+	if query.Namespace() != mucNamespaceOwner || query.Elements().Count() != 1 {
+		return false
+	}
+	form := query.Elements().Child("x")
+	if form == nil || form.Namespace() != xep0004.FormNamespace || form.Type() != "submit" {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep0004.DataForm {
 	form := &xep0004.DataForm{
 		Type:         xep0004.Form,
 		Title:        "Configuration for " + room.Name + "Room",
@@ -251,7 +270,7 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Var:    ConfigPwd,
 		Type:   xep0004.TextSingle,
 		Label:  "Password",
-		Values: []string{boolToStr(room.Config.Public)},
+		Values: []string{room.Config.Password},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigAllowPM,
@@ -304,13 +323,13 @@ func getRoomConfigForm(room *mucmodel.Room) *xep0004.DataForm {
 		Var:    ConfigAdmins,
 		Type:   xep0004.JidMulti,
 		Label:  "Full List of Room Admins",
-		Values: room.GetAdmins(),
+		Values: s.GetRoomAdmins(ctx, room),
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigOwners,
 		Type:   xep0004.JidMulti,
 		Label:  "Full List of Room Owners",
-		Values: room.GetOwners(),
+		Values: s.GetRoomOwners(ctx, room),
 	})
 	return form
 }

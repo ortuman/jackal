@@ -69,7 +69,7 @@ func TestXEP0045_NewRoomFromPresence(t *testing.T) {
 	oMem, err := c.Occupant().FetchOccupant(nil, to)
 	require.Nil(t, err)
 	require.NotNil(t, oMem)
-	require.Equal(t, from.String(), oMem.FullJID.String())
+	require.Equal(t, from.ToBareJID().String(), oMem.BareJID.String())
 	//make sure the room is locked
 	require.True(t, roomMem.Locked)
 }
@@ -195,6 +195,58 @@ func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 	require.Equal(t, len(form.Fields), 23)
 }
 
+func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	defer func() { _ = muc.Shutdown() }()
+
+	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	to, _ := jid.New("room", "conference.jackal.im", "", true)
+
+	stm := stream.NewMockC2S(uuid.New(), from)
+	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
+	r.Bind(context.Background(), stm)
+
+	// creating a locked room
+	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	require.Nil(t, err)
+	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	require.Nil(t, err)
+	require.True(t, room.Locked)
+	require.NotEqual(t, room.Name, "Configured Room")
+
+	// get the room configuration form and change the fields
+	configForm := muc.getRoomConfigForm(context.Background(), room)
+	require.NotNil(t, configForm)
+	configForm.Type = xep0004.Submit
+	for _, field := range configForm.Fields {
+		switch field.Var {
+		case ConfigName:
+			field.Values = []string{"Configured Room"}
+		}
+	}
+
+	// generate the form submission IQ stanza
+	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
+	query.AppendElement(configForm.Element())
+	e := xmpp.NewElementName("iq").SetID("create").SetType("set").AppendElement(query)
+	stanza, err := xmpp.NewIQFromElement(e, from, to)
+	require.Nil(t, err)
+
+	// sending the configuration form
+	require.True(t, muc.MatchesIQ(stanza))
+	require.True(t, isIQForRoomConfigSubmission(stanza))
+	muc.ProcessIQ(context.Background(), stanza)
+
+	// TODO continue once the maps are fixed
+	/*
+		confRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
+		require.Nil(t, err)
+		require.False(t, confRoom.Locked)
+		require.NotEqual(t, confRoom.Name, "Configured Room")
+	*/
+}
+
 func setupTest(domain string) (router.Router, repository.Container) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	rep, _ := memorystorage.New()
@@ -205,3 +257,51 @@ func setupTest(domain string) (router.Router, repository.Container) {
 	)
 	return r, rep
 }
+
+// TODO REFACTOR this one to do what it is supposed
+/*
+func TestModelRoomAdminsAndOwners(t *testing.T){
+	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
+	rc := RoomConfig{
+		Open: true,
+	}
+	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
+	o1 := &Occupant{
+		Nick: "mynick",
+		BareJID: j1,
+		OccupantJID: j1,
+		affiliation: "admin",
+	}
+	j2, _ := jid.NewWithString("milos@jackal.im", true)
+	o2 := &Occupant{
+		Nick: "mynick2",
+		BareJID: j2,
+		OccupantJID: j2,
+		affiliation: "owner",
+	}
+	occMap := make(map[string]*Occupant)
+	occMap[o1.Nick] = o1
+	occMap[o2.Nick] = o2
+	userMap := make(map[string]*Occupant)
+	userMap[o1.BareJID.String()] = o1
+	userMap[o2.BareJID.String()] = o2
+
+	r := Room{
+		RoomJID: rJID,
+		Config: &rc,
+		NickToOccupant: occMap,
+		UserToOccupant: userMap,
+	}
+
+	admins := r.GetAdmins()
+	owners := r.GetOwners()
+
+	require.NotNil(t, admins)
+	require.Equal(t, len(admins), 1)
+	require.Equal(t, admins[0], j1.String())
+
+	require.NotNil(t, owners)
+	require.Equal(t, len(owners), 1)
+	require.Equal(t, owners[0], j2.String())
+}
+*/

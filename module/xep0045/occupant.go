@@ -16,7 +16,7 @@ func (s *Muc) createOwner(ctx context.Context, occJID *jid.JID, nick string, ful
 	o := &mucmodel.Occupant{
 		OccupantJID: occJID,
 		Nick:        nick,
-		FullJID:     fullJID,
+		BareJID:     fullJID.ToBareJID(),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")

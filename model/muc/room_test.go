@@ -9,37 +9,35 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func TestModelRoom(t *testing.T){
+func TestModelRoom(t *testing.T) {
 	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
 	rc := RoomConfig{
 		Open: true,
 	}
 	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
 	o := &Occupant{
-		Nick: "mynick",
-		FullJID: jFull,
+		Nick:        "mynick",
+		BareJID:     jFull,
 		OccupantJID: jFull,
 	}
-	occMap := make(map[string]*Occupant)
-	occMap[o.Nick] = o
-	userMap := make(map[string]*Occupant)
-	userMap[o.FullJID.ToBareJID().String()] = o
+	userMap := make(map[jid.JID]jid.JID)
+	userMap[*o.BareJID.ToBareJID()] = *jFull
 
 	r1 := Room{
-		Name: "Test Room",
-		RoomJID: rJID,
-		Desc: "Test Description",
-		Language: "eng",
-		Config: &rc,
-		OccupantsCnt: 1,
-		NickToOccupant: occMap,
-		UserToOccupant: userMap,
-		Locked: true,
+		Config:            &rc,
+		Name:              "Test Room",
+		RoomJID:           rJID,
+		Desc:              "Test Description",
+		Subject:           "Test Subject",
+		Language:          "eng",
+		numberOfOccupants: 1,
+		UserToOccupant:    userMap,
+		Locked:            true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -47,50 +45,26 @@ func TestModelRoom(t *testing.T){
 
 	r2 := Room{}
 	require.Nil(t, r2.FromBytes(buf))
-	assert.EqualValues(t, r1, r2)
+	requireRoomsAreEqual(t, r1, r2)
+
+	newJID, _ := jid.NewWithString("milos@jackal.im/laptop", true)
+	o2 := &Occupant{
+		Nick:        "milos",
+		BareJID:     newJID,
+		OccupantJID: newJID,
+	}
+	require.Equal(t, r2.numberOfOccupants, 1)
+	r2.AddOccupant(o2)
+	require.Equal(t, r2.numberOfOccupants, 2)
 }
 
-func TestModelRoomAdminsAndOwners(t *testing.T){
-	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
-	rc := RoomConfig{
-		Open: true,
-	}
-	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
-	o1 := &Occupant{
-		Nick: "mynick",
-		FullJID: j1,
-		OccupantJID: j1,
-		affiliation: "admin",
-	}
-	j2, _ := jid.NewWithString("milos@jackal.im", true)
-	o2 := &Occupant{
-		Nick: "mynick2",
-		FullJID: j2,
-		OccupantJID: j2,
-		affiliation: "owner",
-	}
-	occMap := make(map[string]*Occupant)
-	occMap[o1.Nick] = o1
-	occMap[o2.Nick] = o2
-	userMap := make(map[string]*Occupant)
-	userMap[o1.FullJID.ToBareJID().String()] = o1
-	userMap[o2.FullJID.ToBareJID().String()] = o2
-
-	r := Room{
-		RoomJID: rJID,
-		Config: &rc,
-		NickToOccupant: occMap,
-		UserToOccupant: userMap,
-	}
-
-	admins := r.GetAdmins()
-	owners := r.GetOwners()
-
-	require.NotNil(t, admins)
-	require.Equal(t, len(admins), 1)
-	require.Equal(t, admins[0], j1.String())
-
-	require.NotNil(t, owners)
-	require.Equal(t, len(owners), 1)
-	require.Equal(t, owners[0], j2.String())
+func requireRoomsAreEqual(t *testing.T, r1, r2 Room) {
+	assert.EqualValues(t, *r1.Config, *r2.Config)
+	require.Equal(t, r1.Name, r2.Name)
+	require.Equal(t, r1.Desc, r2.Desc)
+	require.Equal(t, r1.Subject, r2.Subject)
+	require.Equal(t, r1.Language, r2.Language)
+	require.Equal(t, r1.Locked, r2.Locked)
+	require.Equal(t, r1.numberOfOccupants, r2.numberOfOccupants)
+	require.Equal(t, r1.RoomJID.String(), r2.RoomJID.String())
 }

@@ -20,7 +20,7 @@ func TestModelOccupant(t *testing.T){
 	o1 := Occupant{
 		OccupantJID: jOcc,
 		Nick: "mynick",
-		FullJID: jFull,
+		BareJID: jFull,
 		affiliation: "owner",
 		role: "moderator",
 	}

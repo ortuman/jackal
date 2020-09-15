@@ -79,6 +79,8 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 		s.createInstantRoom(ctx, room, iq)
 	case isIQForRoomConfigRequest(iq):
 		s.sendRoomConfiguration(ctx, room, iq)
+	case isIQForRoomConfigSubmission(iq):
+		s.processRoomConfiguration(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
@@ -140,4 +142,40 @@ func (s *Muc) Shutdown() error {
 	s.runQueue.Stop(func() { close(c) })
 	<-c
 	return nil
+}
+
+func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) (admins []string) {
+	for _, occJID := range r.UserToOccupant {
+		o, err := s.GetOccupant(ctx, &occJID)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		if o.IsAdmin() {
+			admins = append(admins, occJID.String())
+		}
+	}
+	return
+}
+
+func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) (owners []string) {
+	for _, occJID := range r.UserToOccupant {
+		o, err := s.GetOccupant(ctx, &occJID)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		if o.IsOwner() {
+			owners = append(owners, occJID.String())
+		}
+	}
+	return
+}
+
+func (s *Muc) GetOccupant(ctx context.Context, occJID *jid.JID) (*mucmodel.Occupant, error) {
+	return s.reps.Occupant().FetchOccupant(ctx, occJID)
+}
+
+func (s *Muc) GetRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.Room, error) {
+	return s.reps.Room().FetchRoom(ctx, roomJID)
 }

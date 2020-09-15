@@ -25,5 +25,5 @@ func TestXEP0045_NewOccupantOwner(t *testing.T) {
 	oMem, err := c.Occupant().FetchOccupant(nil, occJID)
 	require.Nil(t, err)
 	require.NotNil(t, oMem)
-	require.Equal(t, o.FullJID.String(), oMem.FullJID.String())
+	require.Equal(t, o.BareJID.String(), oMem.BareJID.String())
 }

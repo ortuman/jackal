@@ -69,7 +69,7 @@ func TestXEP0045_DiscoItems(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, i)
 	require.Len(t, i, 1)
-	require.Equal(t, i[0].Jid, "publicroom@conference.jackal.im/ortuman/")
+	require.Equal(t, i[0].Jid, "publicroom@conference.jackal.im/ortuman")
 }
 
 func setupDiscoTest() *discoInfoProvider {
@@ -90,11 +90,12 @@ func setupDiscoTest() *discoInfoProvider {
 		Name:    "Public room",
 		Config:  publicRc,
 		RoomJID: pJID,
-		OccupantsCnt: 1,
+		UserToOccupant: make(map[jid.JID]jid.JID),
 	}
 	publicRoom.Config.SetWhoCanGetMemberList("all")
-	o := &mucmodel.Occupant{Nick: "ortuman", OccupantJID: pJID, FullJID: pJID}
-	publicRoom.NickToOccupant = map[string]*mucmodel.Occupant{"ortuman": o}
+	oJID, _ := jid.New("publicroom", "conference.jackal.im", "ortuman", true)
+	o := &mucmodel.Occupant{Nick: "ortuman", OccupantJID: oJID, BareJID: pJID}
+	publicRoom.AddOccupant(o)
 
 	muc.reps.Room().UpsertRoom(context.Background(), &publicRoom)
 	muc.reps.Room().UpsertRoom(context.Background(), &hiddenRoom)

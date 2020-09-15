@@ -92,14 +92,14 @@ func GetTestRoom() *mucmodel.Room {
 	}
 	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
 
-	return &mucmodel.Room{
+	r := &mucmodel.Room{
 		Name:           "testRoom",
 		RoomJID:        j,
 		Desc:           "Room for Testing",
 		Config:         &rc,
-		OccupantsCnt:   0,
-		NickToOccupant: make(map[string]*mucmodel.Occupant),
-		UserToOccupant: make(map[string]*mucmodel.Occupant),
+		UserToOccupant: make(map[jid.JID]jid.JID),
 		Locked:         false,
 	}
+
+	return r
 }
