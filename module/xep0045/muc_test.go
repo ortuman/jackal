@@ -213,17 +213,39 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	require.Nil(t, err)
 	room, err := muc.reps.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
+	// these two fields changed in the configuration
 	require.True(t, room.Locked)
 	require.NotEqual(t, room.Name, "Configured Room")
+
+	// occupant to be promoted into an admin
+	milosJID, _ := jid.New("milos", "jackal.im", "office", true)
+	occJID, _ := jid.New("room", "conference.jackal.im", "milos", true)
+	o := &mucmodel.Occupant{
+		OccupantJID: occJID,
+		Nick: "milos",
+		BareJID: milosJID,
+	}
+	muc.reps.Occupant().UpsertOccupant(context.Background(), o)
+	room.AddOccupant(o)
+	// TODO this saving of the room should be done inside addoccupant function
+	muc.reps.Room().UpsertRoom(context.Background(), room)
 
 	// get the room configuration form and change the fields
 	configForm := muc.getRoomConfigForm(context.Background(), room)
 	require.NotNil(t, configForm)
 	configForm.Type = xep0004.Submit
-	for _, field := range configForm.Fields {
+	for i, field := range configForm.Fields {
 		switch field.Var {
 		case ConfigName:
-			field.Values = []string{"Configured Room"}
+			configForm.Fields[i].Values = []string{"Configured Room"}
+		case ConfigAdmins:
+			configForm.Fields[i].Values = []string{milosJID.ToBareJID().String()}
+		case ConfigMaxUsers:
+			configForm.Fields[i].Values = []string{"23"}
+		case ConfigWhoIs:
+			configForm.Fields[i].Values = []string{"moderators"}
+		case ConfigPublic:
+			configForm.Fields[i].Values = []string{"0"}
 		}
 	}
 
@@ -242,13 +264,23 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	// receive the response
 	ack := stm.ReceiveElement()
 	require.NotNil(t, ack)
-	//require.Equal(t, ack.Type(), "result")
-	//require.Equal(t, ack.Elements().Count(), 0)
+	require.Equal(t, ack.Type(), "result")
+	require.Equal(t, ack.Elements().Count(), 0)
 
+	// confirm the fields have changed
 	confRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
 	require.False(t, confRoom.Locked)
-	require.NotEqual(t, confRoom.Name, "Configured Room")
+	require.Equal(t, confRoom.Name, "Configured Room")
+	require.Equal(t, confRoom.Config.MaxOccCnt, 23)
+	require.False(t, confRoom.Config.Public)
+	require.Equal(t, confRoom.Config.GetRealJIDDisc(), "moderators")
+
+	// occupant got promoted to admin
+	updatedOcc, err := c.Occupant().FetchOccupant(context.Background(), occJID)
+	require.Nil(t, err)
+	require.NotNil(t, updatedOcc)
+	require.True(t, updatedOcc.IsAdmin())
 }
 
 func TestModelRoomAdminsAndOwners(t *testing.T) {

@@ -99,7 +99,7 @@ func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room,
 
 	ok = s.updateRoomWithForm(ctx, room, form)
 	if !ok {
-		_ = s.router.Route(ctx, iq.BadRequestError())
+		_ = s.router.Route(ctx, iq.NotAcceptableError())
 		return
 	}
 
@@ -225,6 +225,8 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 	if room.Config.PwdProtected && room.Config.Password == "" {
 		ok = false
 	}
+
+	//room.Name = "TEST"
 
 	if ok {
 		room.Locked = false
