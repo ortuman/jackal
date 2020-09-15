@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	c2srouter "github.com/ortuman/jackal/c2s/router"
+	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/host"
@@ -247,6 +248,55 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	*/
 }
 
+func TestModelRoomAdminsAndOwners(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	defer func() { _ = muc.Shutdown() }()
+
+	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
+	rc := mucmodel.RoomConfig{
+		Open: true,
+	}
+	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
+	o1 := &mucmodel.Occupant{
+		Nick:        "mynick",
+		BareJID:     j1,
+		OccupantJID: j1,
+	}
+	o1.SetAffiliation("admin")
+	j2, _ := jid.NewWithString("milos@jackal.im", true)
+	o2 := &mucmodel.Occupant{
+		Nick:        "mynick2",
+		BareJID:     j2,
+		OccupantJID: j2,
+	}
+	o2.SetAffiliation("owner")
+	occMap := make(map[jid.JID]jid.JID)
+	occMap[*o1.BareJID] = *o1.OccupantJID
+	occMap[*o2.BareJID] = *o2.OccupantJID
+
+	room := &mucmodel.Room{
+		RoomJID:        rJID,
+		Config:         &rc,
+		UserToOccupant: occMap,
+	}
+
+	muc.reps.Occupant().UpsertOccupant(context.Background(), o1)
+	muc.reps.Occupant().UpsertOccupant(context.Background(), o2)
+	muc.reps.Room().UpsertRoom(context.Background(), room)
+
+	admins := muc.GetRoomAdmins(context.Background(), room)
+	owners := muc.GetRoomOwners(context.Background(), room)
+
+	require.NotNil(t, admins)
+	require.Equal(t, len(admins), 1)
+	require.Equal(t, admins[0], j1.String())
+
+	require.NotNil(t, owners)
+	require.Equal(t, len(owners), 1)
+	require.Equal(t, owners[0], j2.String())
+}
+
 func setupTest(domain string) (router.Router, repository.Container) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	rep, _ := memorystorage.New()
@@ -257,51 +307,3 @@ func setupTest(domain string) (router.Router, repository.Container) {
 	)
 	return r, rep
 }
-
-// TODO REFACTOR this one to do what it is supposed
-/*
-func TestModelRoomAdminsAndOwners(t *testing.T){
-	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
-	rc := RoomConfig{
-		Open: true,
-	}
-	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
-	o1 := &Occupant{
-		Nick: "mynick",
-		BareJID: j1,
-		OccupantJID: j1,
-		affiliation: "admin",
-	}
-	j2, _ := jid.NewWithString("milos@jackal.im", true)
-	o2 := &Occupant{
-		Nick: "mynick2",
-		BareJID: j2,
-		OccupantJID: j2,
-		affiliation: "owner",
-	}
-	occMap := make(map[string]*Occupant)
-	occMap[o1.Nick] = o1
-	occMap[o2.Nick] = o2
-	userMap := make(map[string]*Occupant)
-	userMap[o1.BareJID.String()] = o1
-	userMap[o2.BareJID.String()] = o2
-
-	r := Room{
-		RoomJID: rJID,
-		Config: &rc,
-		NickToOccupant: occMap,
-		UserToOccupant: userMap,
-	}
-
-	admins := r.GetAdmins()
-	owners := r.GetOwners()
-
-	require.NotNil(t, admins)
-	require.Equal(t, len(admins), 1)
-	require.Equal(t, admins[0], j1.String())
-
-	require.NotNil(t, owners)
-	require.Equal(t, len(owners), 1)
-	require.Equal(t, owners[0], j2.String())
-}
-*/
