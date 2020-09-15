@@ -33,7 +33,7 @@ func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNic
 		return err
 	}
 	s.mu.Lock()
-	s.allRooms = append(s.allRooms, roomJID)
+	s.allRooms = append(s.allRooms, *roomJID)
 	s.mu.Unlock()
 	return nil
 }

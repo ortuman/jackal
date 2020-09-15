@@ -106,8 +106,9 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 
 func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
+	p.service.mu.Lock()
 	for _, r := range p.service.allRooms {
-		room := p.getRoom(ctx, r)
+		room := p.getRoom(ctx, &r)
 		if room == nil {
 			return nil, xmpp.ErrInternalServerError
 		}
@@ -119,6 +120,7 @@ func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *x
 			items = append(items, item)
 		}
 	}
+	p.service.mu.Unlock()
 	return items, nil
 }
 

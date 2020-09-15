@@ -24,7 +24,7 @@ type Muc struct {
 	disco *xep0030.DiscoInfo
 	reps  repository.Container
 	// room JIDs of all rooms on the service
-	allRooms []*jid.JID
+	allRooms []jid.JID
 	router   router.Router
 	runQueue *runqueue.RunQueue
 	mu       sync.RWMutex

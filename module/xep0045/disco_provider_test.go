@@ -99,8 +99,8 @@ func setupDiscoTest() *discoInfoProvider {
 
 	muc.reps.Room().UpsertRoom(context.Background(), &publicRoom)
 	muc.reps.Room().UpsertRoom(context.Background(), &hiddenRoom)
-	muc.allRooms = append(muc.allRooms, hiddenRoom.RoomJID)
-	muc.allRooms = append(muc.allRooms, publicRoom.RoomJID)
+	muc.allRooms = append(muc.allRooms, *hiddenRoom.RoomJID)
+	muc.allRooms = append(muc.allRooms, *publicRoom.RoomJID)
 
 	return &discoInfoProvider{service: muc}
 }
