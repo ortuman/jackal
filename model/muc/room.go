@@ -113,14 +113,3 @@ func (r *Room) AddOccupant(o *Occupant) {
 	r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
 	r.numberOfOccupants++
 }
-
-// TODO continue this once the maps are fixed
-/*
-func (r *Room) SetAdmin(j string) error{
-
-}
-
-func (r *Room) SetOwner(j string) error{
-
-}
-*/

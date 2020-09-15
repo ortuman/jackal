@@ -97,7 +97,7 @@ func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room,
 		return
 	}
 
-	ok = s.updateRoomWithForm(room, form)
+	ok = s.updateRoomWithForm(ctx, room, form)
 	if !ok {
 		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
@@ -106,7 +106,7 @@ func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room,
 	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
-func (s *Muc) updateRoomWithForm(room *mucmodel.Room, form *xep0004.DataForm) (ok bool) {
+func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form *xep0004.DataForm) (ok bool) {
 	ok = true
 	for _, field := range form.Fields {
 		if len(field.Values) == 0 {
@@ -196,27 +196,41 @@ func (s *Muc) updateRoomWithForm(room *mucmodel.Room, form *xep0004.DataForm) (o
 				ok = false
 			}
 			room.Config.MaxOccCnt = n
-			// TODO continue once the maps are fixed
-			/*
-				case ConfigAdmins:
-					for _, j := range field.Values {
-						err := room.SetAdmin(j)
-						if err != nil{
-							ok = false
-						}
-					}
-				case ConfigOwners:
-					for _, j := range field.Values {
-						err := room.SetOwner(j)
-						if err != nil{
-							ok = false
-						}
-					}
-			*/
+		case ConfigAdmins:
+			for _, j := range field.Values {
+				bareJID, err := jid.NewWithString(j, false)
+				if err != nil {
+					ok = false
+				}
+				err = s.SetRoomAdmin(ctx, room, bareJID)
+				if err != nil {
+					ok = false
+				}
+			}
+		case ConfigOwners:
+			for _, j := range field.Values {
+				bareJID, err := jid.NewWithString(j, false)
+				if err != nil {
+					ok = false
+				}
+				err = s.SetRoomOwner(ctx, room, bareJID)
+				if err != nil {
+					ok = false
+				}
+			}
 		}
-
 	}
-	//check the password thing
+
+	// the password has to be specified if it is required to enter the room
+	if room.Config.PwdProtected && room.Config.Password == "" {
+		ok = false
+	}
+
+	if ok {
+		room.Locked = false
+		s.reps.Room().UpsertRoom(ctx, room)
+	}
+
 	return ok
 }
 

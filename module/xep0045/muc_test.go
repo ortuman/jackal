@@ -202,7 +202,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "", true)
+	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
@@ -211,7 +211,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	// creating a locked room
 	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
 	require.Nil(t, err)
-	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	room, err := muc.reps.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
 	require.True(t, room.Locked)
 	require.NotEqual(t, room.Name, "Configured Room")
@@ -231,7 +231,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
 	query.AppendElement(configForm.Element())
 	e := xmpp.NewElementName("iq").SetID("create").SetType("set").AppendElement(query)
-	stanza, err := xmpp.NewIQFromElement(e, from, to)
+	stanza, err := xmpp.NewIQFromElement(e, from, to.ToBareJID())
 	require.Nil(t, err)
 
 	// sending the configuration form
@@ -239,13 +239,16 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	require.True(t, isIQForRoomConfigSubmission(stanza))
 	muc.ProcessIQ(context.Background(), stanza)
 
-	// TODO continue once the maps are fixed
-	/*
-		confRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
-		require.Nil(t, err)
-		require.False(t, confRoom.Locked)
-		require.NotEqual(t, confRoom.Name, "Configured Room")
-	*/
+	// receive the response
+	ack := stm.ReceiveElement()
+	require.NotNil(t, ack)
+	//require.Equal(t, ack.Type(), "result")
+	//require.Equal(t, ack.Elements().Count(), 0)
+
+	confRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	require.Nil(t, err)
+	require.False(t, confRoom.Locked)
+	require.NotEqual(t, confRoom.Name, "Configured Room")
 }
 
 func TestModelRoomAdminsAndOwners(t *testing.T) {

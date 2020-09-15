@@ -7,6 +7,7 @@ package xep0045
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/ortuman/jackal/log"
@@ -62,7 +63,7 @@ func (s *Muc) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
-	roomJID := iq.ToJID()
+	roomJID := iq.ToJID().ToBareJID()
 	room, err := s.reps.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
@@ -159,17 +160,67 @@ func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) (admins []str
 }
 
 func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) (owners []string) {
-	for _, occJID := range r.UserToOccupant {
+	for bareJID, occJID := range r.UserToOccupant {
 		o, err := s.GetOccupant(ctx, &occJID)
 		if err != nil {
 			log.Error(err)
 			return nil
 		}
 		if o.IsOwner() {
-			owners = append(owners, occJID.String())
+			owners = append(owners, bareJID.String())
 		}
 	}
 	return
+}
+
+func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
+	// check if the occupant is in the room
+	occJID, ok := room.UserToOccupant[*adminJID]
+	if !ok {
+		return fmt.Errorf("muc: requested admin is not a room occupant")
+	}
+
+	occupant, err := s.GetOccupant(ctx, &occJID)
+	if err != nil {
+		return err
+	}
+
+	err = occupant.SetAffiliation("admin")
+	if err != nil {
+		return err
+	}
+
+	err = s.reps.Occupant().UpsertOccupant(ctx, occupant)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *jid.JID) error {
+	// check if the occupant is in the room
+	occJID, found := room.UserToOccupant[*ownerJID]
+	if !found {
+		return fmt.Errorf("muc: requested owner is not a room occupant")
+	}
+
+	occupant, err := s.GetOccupant(ctx, &occJID)
+	if err != nil {
+		return err
+	}
+
+	err = occupant.SetAffiliation("owner")
+	if err != nil {
+		return err
+	}
+
+	err = s.reps.Occupant().UpsertOccupant(ctx, occupant)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Muc) GetOccupant(ctx context.Context, occJID *jid.JID) (*mucmodel.Occupant, error) {
