@@ -7,7 +7,6 @@ package xep0045
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/ortuman/jackal/log"
@@ -17,19 +16,40 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID, roomName, ownerNick string, locked bool) error {
-	roomJID := occJID.ToBareJID()
-	roomExists, _ := s.repo.Room().RoomExists(ctx, roomJID)
-	if roomExists {
-		return fmt.Errorf("Room %s already exists", roomName)
+func (s *Muc) enterRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
+	if room == nil {
+		err := s.newRoomRequest(ctx, room, presence)
+		if err != nil {
+			_ = s.router.Route(ctx, presence.InternalServerError())
+			return
+		}
+		log.Infof("muc: New room created, room JID is %s", presence.ToJID().ToBareJID().String())
+	} else {
+
 	}
+}
+
+func (s *Muc) newRoomRequest(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
+	err := s.newRoom(ctx, presence.FromJID(), presence.ToJID())
+	if err != nil {
+		return err
+	}
+	err = s.sendRoomCreateAck(ctx, presence.ToJID(), presence.FromJID())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID) error {
+	roomJID := occJID.ToBareJID()
 
 	owner, err := s.createOwner(ctx, occJID, userJID)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.createRoom(ctx, roomJID, owner, locked)
+	_, err = s.createRoom(ctx, roomJID, owner)
 	if err != nil {
 		return err
 	}
@@ -41,13 +61,13 @@ func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID, roomName, o
 	return nil
 }
 
-func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.Occupant, locked bool) (*mucmodel.Room, error) {
+func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.Occupant) (*mucmodel.Room, error) {
 	r := &mucmodel.Room{
 		Config:         s.GetDefaultRoomConfig(),
 		Name:           roomJID.Node(),
 		RoomJID:        roomJID,
 		UserToOccupant: make(map[jid.JID]jid.JID),
-		Locked:         locked,
+		Locked:         true,
 	}
 
 	r.AddOccupant(owner)

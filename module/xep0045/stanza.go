@@ -165,6 +165,17 @@ func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
 	return true
 }
 
+func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
+	if presence.Elements().Count() != 1 {
+		return false
+	}
+	x := presence.Elements().ChildNamespace("x", mucNamespace)
+	if x == nil || x.Text() != "" || x.Elements().Count() != 0 {
+		return false
+	}
+	return true
+}
+
 func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep0004.DataForm {
 	form := &xep0004.DataForm{
 		Type:         xep0004.Form,

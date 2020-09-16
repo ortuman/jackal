@@ -28,7 +28,7 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 	require.Nil(t, err)
 
 	roomJID, _ := jid.New("room", "conference.jackal.im", "", true)
-	room, err := muc.createRoom(nil, roomJID, o, true)
+	room, err := muc.createRoom(nil, roomJID, o)
 	require.Nil(t, err)
 	require.NotNil(t, room)
 	require.NotNil(t, room.UserToOccupant[*fullJID.ToBareJID()])
@@ -46,7 +46,7 @@ func TestXEP0045_NewRoom(t *testing.T) {
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-	err := muc.newRoom(nil, from, to, "room", "nick", false)
+	err := muc.newRoom(nil, from, to)
 	require.Nil(t, err)
 
 	roomMem, err := c.Room().FetchRoom(nil, to.ToBareJID())

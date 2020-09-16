@@ -88,7 +88,7 @@ func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 	r.Bind(context.Background(), stm)
 
 	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	err := muc.newRoom(context.Background(), from, to)
 	require.Nil(t, err)
 	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
@@ -115,35 +115,6 @@ func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 	require.False(t, updatedRoom.Locked)
 }
 
-func TestXEP0045_LegacyGroupchatRoomFromPresence(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
-	defer func() { _ = muc.Shutdown() }()
-
-	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-
-	stm := stream.NewMockC2S(uuid.New(), from)
-	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
-	r.Bind(context.Background(), stm)
-
-	// no <x> element, in order to support legacy groupchat 1.0
-	p := xmpp.NewElementName("presence")
-	presence, _ := xmpp.NewPresenceFromElement(p, from, to)
-
-	muc.ProcessPresence(context.Background(), presence)
-
-	// sender receives the appropriate response
-	ack := stm.ReceiveElement()
-	require.Equal(t, ack.String(), getAckStanza(to, from).String())
-
-	// the room is created
-	roomMem, _ := c.Room().FetchRoom(nil, to.ToBareJID())
-	require.Equal(t, to.ToBareJID().String(), roomMem.RoomJID.String())
-	//make sure the room is NOT locked (this is the only difference from MUC)
-	require.False(t, roomMem.Locked)
-}
-
 func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
@@ -157,7 +128,7 @@ func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 	r.Bind(context.Background(), stm)
 
 	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	err := muc.newRoom(context.Background(), from, to)
 	require.Nil(t, err)
 	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
@@ -209,7 +180,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	r.Bind(context.Background(), stm)
 
 	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
+	err := muc.newRoom(context.Background(), from, to)
 	require.Nil(t, err)
 	room, err := muc.repo.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)

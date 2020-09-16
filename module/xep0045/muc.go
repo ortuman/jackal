@@ -94,39 +94,20 @@ func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {
 	})
 }
 
-// TODO this function only handles room creation atm, it should probably be split into create/
-// send a msg
-// TODO this whole function is a mess, fix this once additional presence stuff is added
 func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
-	from := presence.FromJID()
-	to := presence.ToJID()
-	nick := to.Resource()
-	roomName := to.Node()
-
-	// TODO once all presence handling is written, write all of the checks, return
-	// appropriate error codes if data is not valid
-	locked := false
-	xEl := presence.Elements().ChildNamespace("x", mucNamespace)
-	if xEl != nil && xEl.Text() == "" {
-		locked = true
-	}
-
-	if locked {
-		log.Infof("LOCKED")
-	} else {
-		log.Infof("NOT LOCKED")
-	}
-
-	err := s.newRoom(ctx, from, to, roomName, nick, locked)
+	roomJID := presence.ToJID().ToBareJID()
+	room, err := s.repo.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
 		return
 	}
 
-	log.Infof("New room created, room JID is %s", to.ToBareJID().String())
-	err = s.sendRoomCreateAck(ctx, to, from)
-	if err != nil {
-		log.Error(err)
+	switch {
+	case isPresenceToEnterRoom(presence):
+		s.enterRoom(ctx, room, presence)
+	default:
+		_ = s.router.Route(ctx, presence.BadRequestError())
 	}
 }
 
