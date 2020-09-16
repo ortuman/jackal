@@ -24,11 +24,11 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 
 	occJID, _ := jid.New("room", "conference.jackal.im", "nick", true)
 	fullJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	o, err := muc.createOwner(nil, occJID, "nick", fullJID)
+	o, err := muc.createOwner(nil, occJID, fullJID)
 	require.Nil(t, err)
 
 	roomJID, _ := jid.New("room", "conference.jackal.im", "", true)
-	room, err := muc.createRoom(nil, "testroom", roomJID, o, true)
+	room, err := muc.createRoom(nil, roomJID, o, true)
 	require.Nil(t, err)
 	require.NotNil(t, room)
 	require.NotNil(t, room.UserToOccupant[*fullJID.ToBareJID()])

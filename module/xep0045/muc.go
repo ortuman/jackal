@@ -23,7 +23,7 @@ import (
 type Muc struct {
 	cfg   *Config
 	disco *xep0030.DiscoInfo
-	reps  repository.Container
+	repo  repository.Container
 	// room JIDs of all rooms on the service
 	allRooms []jid.JID
 	router   router.Router
@@ -31,7 +31,7 @@ type Muc struct {
 	mu       sync.RWMutex
 }
 
-func New(cfg *Config, disco *xep0030.DiscoInfo, reps repository.Container, router router.Router) *Muc {
+func New(cfg *Config, disco *xep0030.DiscoInfo, repo repository.Container, router router.Router) *Muc {
 	// muc service needs a separate hostname
 	if len(cfg.MucHost) == 0 || router.Hosts().IsLocalHost(cfg.MucHost) {
 		log.Errorf("Muc service could not be started - invalid hostname")
@@ -40,7 +40,7 @@ func New(cfg *Config, disco *xep0030.DiscoInfo, reps repository.Container, route
 	s := &Muc{
 		cfg:      cfg,
 		disco:    disco,
-		reps:     reps,
+		repo:     repo,
 		router:   router,
 		runQueue: runqueue.New("muc"),
 	}
@@ -64,7 +64,7 @@ func (s *Muc) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 
 func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	roomJID := iq.ToJID().ToBareJID()
-	room, err := s.reps.Room().FetchRoom(ctx, roomJID)
+	room, err := s.repo.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
 		_ = s.router.Route(ctx, iq.InternalServerError())
@@ -96,6 +96,7 @@ func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {
 
 // TODO this function only handles room creation atm, it should probably be split into create/
 // send a msg
+// TODO this whole function is a mess, fix this once additional presence stuff is added
 func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	from := presence.FromJID()
 	to := presence.ToJID()
@@ -175,9 +176,9 @@ func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) (owners []str
 
 func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
 	// check if the occupant is in the room
-	occJID, ok := room.UserToOccupant[*adminJID]
-	if !ok {
-		return fmt.Errorf("muc: requested admin is not a room occupant")
+	occJID, found := room.UserToOccupant[*adminJID]
+	if !found {
+		return fmt.Errorf("muc: user has to enter the room before it can be made admin")
 	}
 
 	occupant, err := s.GetOccupant(ctx, &occJID)
@@ -190,7 +191,7 @@ func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *j
 		return err
 	}
 
-	err = s.reps.Occupant().UpsertOccupant(ctx, occupant)
+	err = s.repo.Occupant().UpsertOccupant(ctx, occupant)
 	if err != nil {
 		return err
 	}
@@ -202,7 +203,7 @@ func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *j
 	// check if the occupant is in the room
 	occJID, found := room.UserToOccupant[*ownerJID]
 	if !found {
-		return fmt.Errorf("muc: requested owner is not a room occupant")
+		return fmt.Errorf("muc: user has to enter the room before it can be made owner")
 	}
 
 	occupant, err := s.GetOccupant(ctx, &occJID)
@@ -215,7 +216,7 @@ func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *j
 		return err
 	}
 
-	err = s.reps.Occupant().UpsertOccupant(ctx, occupant)
+	err = s.repo.Occupant().UpsertOccupant(ctx, occupant)
 	if err != nil {
 		return err
 	}
@@ -223,10 +224,15 @@ func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *j
 	return nil
 }
 
+func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
+	room.AddOccupant(occupant)
+	return s.repo.Room().UpsertRoom(ctx, room)
+}
+
 func (s *Muc) GetOccupant(ctx context.Context, occJID *jid.JID) (*mucmodel.Occupant, error) {
-	return s.reps.Occupant().FetchOccupant(ctx, occJID)
+	return s.repo.Occupant().FetchOccupant(ctx, occJID)
 }
 
 func (s *Muc) GetRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.Room, error) {
-	return s.reps.Room().FetchRoom(ctx, roomJID)
+	return s.repo.Room().FetchRoom(ctx, roomJID)
 }

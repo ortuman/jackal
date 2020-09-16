@@ -211,7 +211,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	// creating a locked room
 	err := muc.newRoom(context.Background(), from, to, "room", "nick", true)
 	require.Nil(t, err)
-	room, err := muc.reps.Room().FetchRoom(nil, to.ToBareJID())
+	room, err := muc.repo.Room().FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
 	// these two fields changed in the configuration
 	require.True(t, room.Locked)
@@ -222,13 +222,12 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	occJID, _ := jid.New("room", "conference.jackal.im", "milos", true)
 	o := &mucmodel.Occupant{
 		OccupantJID: occJID,
-		Nick: "milos",
 		BareJID: milosJID,
 	}
-	muc.reps.Occupant().UpsertOccupant(context.Background(), o)
+	muc.repo.Occupant().UpsertOccupant(context.Background(), o)
 	room.AddOccupant(o)
 	// TODO this saving of the room should be done inside addoccupant function
-	muc.reps.Room().UpsertRoom(context.Background(), room)
+	muc.repo.Room().UpsertRoom(context.Background(), room)
 
 	// get the room configuration form and change the fields
 	configForm := muc.getRoomConfigForm(context.Background(), room)
@@ -294,14 +293,12 @@ func TestModelRoomAdminsAndOwners(t *testing.T) {
 	}
 	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
 	o1 := &mucmodel.Occupant{
-		Nick:        "mynick",
 		BareJID:     j1,
 		OccupantJID: j1,
 	}
 	o1.SetAffiliation("admin")
 	j2, _ := jid.NewWithString("milos@jackal.im", true)
 	o2 := &mucmodel.Occupant{
-		Nick:        "mynick2",
 		BareJID:     j2,
 		OccupantJID: j2,
 	}
@@ -316,9 +313,9 @@ func TestModelRoomAdminsAndOwners(t *testing.T) {
 		UserToOccupant: occMap,
 	}
 
-	muc.reps.Occupant().UpsertOccupant(context.Background(), o1)
-	muc.reps.Occupant().UpsertOccupant(context.Background(), o2)
-	muc.reps.Room().UpsertRoom(context.Background(), room)
+	muc.repo.Occupant().UpsertOccupant(context.Background(), o1)
+	muc.repo.Occupant().UpsertOccupant(context.Background(), o2)
+	muc.repo.Room().UpsertRoom(context.Background(), room)
 
 	admins := muc.GetRoomAdmins(context.Background(), room)
 	owners := muc.GetRoomOwners(context.Background(), room)

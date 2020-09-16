@@ -42,8 +42,8 @@ func TestModelRoomConfig(t *testing.T) {
 		HistCnt:          50,
 		AllowSubjChange:  false,
 		EnableLogging:    true,
-		realJIDDisc:      "all",
-		sendPM:           "",
+		canRealJIDDisc:      "all",
+		canSendPM:           "",
 		canGetMemberList: "moderators",
 	}
 
@@ -94,8 +94,8 @@ func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 
 func TestOccupantPermissionsRoomConfig(t *testing.T) {
 	cfg := &RoomConfig{
-		realJIDDisc:      "all",
-		sendPM:           "",
+		canRealJIDDisc:      "all",
+		canSendPM:           "",
 		canGetMemberList: "moderators",
 	}
 	o := &Occupant{

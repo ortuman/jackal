@@ -19,7 +19,6 @@ func TestModelOccupant(t *testing.T){
 	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
 	o1 := Occupant{
 		OccupantJID: jOcc,
-		Nick: "mynick",
 		BareJID: jFull,
 		affiliation: "owner",
 		role: "moderator",

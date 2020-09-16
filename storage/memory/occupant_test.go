@@ -19,7 +19,6 @@ func TestMemoryStorage_InsertOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick:        "ortuman",
 		BareJID:     j,
 	}
 	o.SetAffiliation("owner")
@@ -48,7 +47,6 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick:        "ortuman",
 		BareJID:     j,
 	}
 	o.SetAffiliation("owner")
@@ -63,7 +61,6 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	o := &mucmodel.Occupant{
 		OccupantJID: j,
-		Nick:        "ortuman",
 		BareJID:     j,
 	}
 	o.SetAffiliation("owner")
@@ -89,7 +86,6 @@ func TestMemoryStorage_DeleteOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	o := mucmodel.Occupant{
 		OccupantJID: j,
-		Nick:        "ortuman",
 		BareJID:     j,
 	}
 	o.SetAffiliation("owner")

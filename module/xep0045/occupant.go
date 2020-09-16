@@ -12,15 +12,14 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func (s *Muc) createOwner(ctx context.Context, occJID *jid.JID, nick string, fullJID *jid.JID) (*mucmodel.Occupant, error) {
+func (s *Muc) createOwner(ctx context.Context, occJID *jid.JID, userJID *jid.JID) (*mucmodel.Occupant, error) {
 	o := &mucmodel.Occupant{
 		OccupantJID: occJID,
-		Nick:        nick,
-		BareJID:     fullJID.ToBareJID(),
+		BareJID:     userJID.ToBareJID(),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	err := s.reps.Occupant().UpsertOccupant(ctx, o)
+	err := s.repo.Occupant().UpsertOccupant(ctx, o)
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,6 @@ func TestModelRoom(t *testing.T) {
 	}
 	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
 	o := &Occupant{
-		Nick:        "mynick",
 		BareJID:     jFull,
 		OccupantJID: jFull,
 	}
@@ -49,7 +48,6 @@ func TestModelRoom(t *testing.T) {
 
 	newJID, _ := jid.NewWithString("milos@jackal.im/laptop", true)
 	o2 := &Occupant{
-		Nick:        "milos",
 		BareJID:     newJID,
 		OccupantJID: newJID,
 	}

@@ -33,7 +33,6 @@ const (
 
 type Occupant struct {
 	OccupantJID *jid.JID
-	Nick        string
 	BareJID     *jid.JID
 	affiliation string
 	role        string
@@ -47,9 +46,6 @@ func (o *Occupant) FromBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	o.OccupantJID = j
-	if err := dec.Decode(&o.Nick); err != nil {
-		return err
-	}
 	f, err := jid.NewFromBytes(buf)
 	if err != nil {
 		return err
@@ -68,9 +64,6 @@ func (o *Occupant) FromBytes(buf *bytes.Buffer) error {
 func (o *Occupant) ToBytes(buf *bytes.Buffer) error {
 	enc := gob.NewEncoder(buf)
 	if err := o.OccupantJID.ToBytes(buf); err != nil {
-		return err
-	}
-	if err := enc.Encode(&o.Nick); err != nil {
 		return err
 	}
 	if err := o.BareJID.ToBytes(buf); err != nil {

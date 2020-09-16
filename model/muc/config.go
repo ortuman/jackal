@@ -35,8 +35,8 @@ type RoomConfig struct {
 	HistCnt          int
 	AllowSubjChange  bool
 	EnableLogging    bool
-	realJIDDisc      string
-	sendPM           string
+	canRealJIDDisc   string
+	canSendPM        string
 	canGetMemberList string
 }
 
@@ -49,8 +49,8 @@ type roomConfigProxy struct {
 	AllowInvites     bool   `yaml:"allow_invites"`
 	HistCnt          int    `yaml:"history_length"`
 	MaxOccCnt        int    `yaml:"occupant_count"`
-	RealJIDDisc      string `yaml:"real_jid_discovery"`
-	SendPM           string `yaml:"send_pm"`
+	CanRealJIDDisc   string `yaml:"real_jid_discovery"`
+	CanSendPM        string `yaml:"send_pm"`
 	CanGetMemberList string `yaml:"can_get_member_list"`
 	AllowSubjChange  bool   `yaml:"allow_subject_change"`
 	EnableLogging    bool   `yaml:"enable_logging"`
@@ -79,10 +79,10 @@ func (r *RoomConfig) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.realJIDDisc); err != nil {
+	if err := dec.Decode(&r.canRealJIDDisc); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.sendPM); err != nil {
+	if err := dec.Decode(&r.canSendPM); err != nil {
 		return err
 	}
 	if err := dec.Decode(&r.AllowInvites); err != nil {
@@ -129,10 +129,10 @@ func (r *RoomConfig) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.realJIDDisc); err != nil {
+	if err := enc.Encode(&r.canRealJIDDisc); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.sendPM); err != nil {
+	if err := enc.Encode(&r.canSendPM); err != nil {
 		return err
 	}
 	if err := enc.Encode(&r.AllowInvites); err != nil {
@@ -181,11 +181,11 @@ func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	r.MaxOccCnt = p.MaxOccCnt
 	r.AllowSubjChange = p.AllowSubjChange
 	r.EnableLogging = p.EnableLogging
-	err := r.SetWhoCanRealJIDDisc(p.RealJIDDisc)
+	err := r.SetWhoCanRealJIDDisc(p.CanRealJIDDisc)
 	if err != nil {
 		return err
 	}
-	err = r.SetWhoCanSendPM(p.SendPM)
+	err = r.SetWhoCanSendPM(p.CanSendPM)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func (r *RoomConfig) SetWhoCanRealJIDDisc(s string) error {
 	switch s {
 	case All, Moderators, None:
-		r.realJIDDisc = s
+		r.canRealJIDDisc = s
 	default:
 		return fmt.Errorf("muc_config: cannot set who can discover real JIDs to %s", s)
 	}
@@ -207,12 +207,12 @@ func (r *RoomConfig) SetWhoCanRealJIDDisc(s string) error {
 }
 
 func (r *RoomConfig) GetRealJIDDisc() string {
-	return r.realJIDDisc
+	return r.canRealJIDDisc
 }
 
 func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
 	var hasPermission bool
-	switch r.realJIDDisc {
+	switch r.canRealJIDDisc {
 	case All:
 		hasPermission = true
 	case None:
@@ -226,7 +226,7 @@ func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
 func (r *RoomConfig) SetWhoCanSendPM(s string) error {
 	switch s {
 	case All, Moderators, None:
-		r.sendPM = s
+		r.canSendPM = s
 	default:
 		return fmt.Errorf("muc_config: cannot set who can send private messages to %s", s)
 	}
@@ -234,12 +234,12 @@ func (r *RoomConfig) SetWhoCanSendPM(s string) error {
 }
 
 func (r *RoomConfig) GetSendPM() string {
-	return r.sendPM
+	return r.canSendPM
 }
 
 func (r *RoomConfig) OccupantCanSendPM(o *Occupant) bool {
 	var hasPermission bool
-	switch r.sendPM {
+	switch r.canSendPM {
 	case All:
 		hasPermission = true
 	case None:

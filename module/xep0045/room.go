@@ -17,37 +17,41 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func (s *Muc) newRoom(ctx context.Context, from, to *jid.JID, roomName, ownerNick string, locked bool) error {
-	roomJID := to.ToBareJID()
-	roomExists, _ := s.reps.Room().RoomExists(ctx, roomJID)
+func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID, roomName, ownerNick string, locked bool) error {
+	roomJID := occJID.ToBareJID()
+	roomExists, _ := s.repo.Room().RoomExists(ctx, roomJID)
 	if roomExists {
 		return fmt.Errorf("Room %s already exists", roomName)
 	}
 
-	owner, err := s.createOwner(ctx, to, ownerNick, from)
+	owner, err := s.createOwner(ctx, occJID, userJID)
 	if err != nil {
 		return err
 	}
-	_, err = s.createRoom(ctx, roomName, roomJID, owner, locked)
+
+	_, err = s.createRoom(ctx, roomJID, owner, locked)
 	if err != nil {
 		return err
 	}
+
 	s.mu.Lock()
 	s.allRooms = append(s.allRooms, *roomJID)
 	s.mu.Unlock()
+
 	return nil
 }
 
-func (s *Muc) createRoom(ctx context.Context, name string, roomJID *jid.JID, owner *mucmodel.Occupant, locked bool) (*mucmodel.Room, error) {
+func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.Occupant, locked bool) (*mucmodel.Room, error) {
 	r := &mucmodel.Room{
 		Config:         s.GetDefaultRoomConfig(),
-		Name:           name,
+		Name:           roomJID.Node(),
 		RoomJID:        roomJID,
 		UserToOccupant: make(map[jid.JID]jid.JID),
 		Locked:         locked,
 	}
+
 	r.AddOccupant(owner)
-	err := s.reps.Room().UpsertRoom(ctx, r)
+	err := s.repo.Room().UpsertRoom(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +70,11 @@ func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xm
 		return
 	}
 	room.Locked = false
-	s.reps.Room().UpsertRoom(ctx, room)
+	err := s.repo.Room().UpsertRoom(ctx, room)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.InternalServerError())
+	}
 	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
@@ -226,11 +234,9 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 		ok = false
 	}
 
-	//room.Name = "TEST"
-
 	if ok {
 		room.Locked = false
-		s.reps.Room().UpsertRoom(ctx, room)
+		s.repo.Room().UpsertRoom(ctx, room)
 	}
 
 	return ok

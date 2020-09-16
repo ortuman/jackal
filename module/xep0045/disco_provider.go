@@ -136,7 +136,7 @@ func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) 
 }
 
 func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
-	r, err := p.service.reps.Room().FetchRoom(ctx, roomJID)
+	r, err := p.service.repo.Room().FetchRoom(ctx, roomJID)
 	if err != nil {
 		log.Error(err)
 		return nil

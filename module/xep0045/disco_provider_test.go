@@ -94,11 +94,11 @@ func setupDiscoTest() *discoInfoProvider {
 	}
 	publicRoom.Config.SetWhoCanGetMemberList("all")
 	oJID, _ := jid.New("publicroom", "conference.jackal.im", "ortuman", true)
-	o := &mucmodel.Occupant{Nick: "ortuman", OccupantJID: oJID, BareJID: pJID}
+	o := &mucmodel.Occupant{OccupantJID: oJID, BareJID: pJID}
 	publicRoom.AddOccupant(o)
 
-	muc.reps.Room().UpsertRoom(context.Background(), &publicRoom)
-	muc.reps.Room().UpsertRoom(context.Background(), &hiddenRoom)
+	muc.repo.Room().UpsertRoom(context.Background(), &publicRoom)
+	muc.repo.Room().UpsertRoom(context.Background(), &hiddenRoom)
 	muc.allRooms = append(muc.allRooms, *hiddenRoom.RoomJID)
 	muc.allRooms = append(muc.allRooms, *publicRoom.RoomJID)
 
