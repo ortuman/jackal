@@ -6,9 +6,10 @@
 package xep0045
 
 import (
-	"strconv"
 	"context"
+	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
@@ -71,6 +72,28 @@ const (
 	ConfigWhoIs = "muc#roomconfig_whois"
 )
 
+func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID) xmpp.Stanza {
+	x := newOccupantAffiliationRoleElement(o)
+	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
+	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return p
+}
+
+func getOccupantConfirmStanza(o *mucmodel.Occupant, to *jid.JID) xmpp.Stanza {
+	x := newOccupantAffiliationRoleElement(o).AppendElement(newStatusElement("110"))
+	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
+	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return p
+}
+
 func getAckStanza(from, to *jid.JID) xmpp.Stanza {
 	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
 	e.AppendElement(newItemElement("owner", "moderator"))
@@ -101,6 +124,12 @@ func getFormStanza(iq *xmpp.IQ, form *xep0004.DataForm) xmpp.Stanza {
 
 func newItemElement(affiliation, role string) *xmpp.Element {
 	i := xmpp.NewElementName("item")
+	if affiliation == "" {
+		affiliation = "none"
+	}
+	if role == "" {
+		role = "none"
+	}
 	i.SetAttribute("affiliation", affiliation)
 	i.SetAttribute("role", role)
 	return i
@@ -110,6 +139,12 @@ func newStatusElement(code string) *xmpp.Element {
 	s := xmpp.NewElementName("status")
 	s.SetAttribute("code", code)
 	return s
+}
+
+func newOccupantAffiliationRoleElement(o *mucmodel.Occupant) *xmpp.Element {
+	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
+	e.AppendElement(newItemElement(o.GetAffiliation(), o.GetRole()))
+	return e
 }
 
 func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {

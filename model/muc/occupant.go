@@ -97,6 +97,10 @@ func (o *Occupant) SetAffiliation(aff string) error {
 	return nil
 }
 
+func (o *Occupant) GetAffiliation() string {
+	return o.affiliation
+}
+
 func (o *Occupant) SetRole(role string) error {
 	switch role {
 	case moderator, participant, visitor, None:
@@ -105,6 +109,10 @@ func (o *Occupant) SetRole(role string) error {
 		return fmt.Errorf("occupant: this type of role is not supported - %s", role)
 	}
 	return nil
+}
+
+func (o *Occupant) GetRole() string {
+	return o.role
 }
 
 func (o *Occupant) IsVisitor() bool {

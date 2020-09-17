@@ -75,6 +75,61 @@ func TestXEP0045_NewRoomFromPresence(t *testing.T) {
 	require.True(t, roomMem.Locked)
 }
 
+func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	defer func() { _ = muc.Shutdown() }()
+
+	// existing room
+	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
+	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
+	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID}
+	owner.SetAffiliation("owner")
+	muc.repo.Occupant().UpsertOccupant(nil, owner)
+	ownerStm := stream.NewMockC2S(uuid.New(), ownerUserJID)
+	ownerStm.SetPresence(xmpp.NewPresence(ownerUserJID.ToBareJID(), ownerUserJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	roomJID := ownerOccJID.ToBareJID()
+	room := &mucmodel.Room{
+		Config: muc.GetDefaultRoomConfig(),
+		RoomJID: roomJID,
+		Locked: false,
+		UserToOccupant: make(map[jid.JID]jid.JID),
+	}
+	muc.AddOccupantToRoom(nil, room, owner)
+
+	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
+
+	stm := stream.NewMockC2S(uuid.New(), from)
+	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
+	r.Bind(context.Background(), stm)
+
+	e := xmpp.NewElementNamespace("x", mucNamespace)
+	p := xmpp.NewElementName("presence").AppendElement(e)
+	presence, _ := xmpp.NewPresenceFromElement(p, from, to)
+
+	muc.ProcessPresence(context.Background(), presence)
+
+	// sender receives the appropriate response
+	ack := stm.ReceiveElement()
+	require.NotNil(t, ack)
+
+	// owner receives the appropriate response
+	ownerAck := ownerStm.ReceiveElement()
+	require.NotNil(t, ownerAck)
+
+	// sender receives the final confirmation response
+	ackFinal := stm.ReceiveElement()
+	require.NotNil(t, ackFinal)
+
+	// user is in the room
+	occ, err := muc.repo.Occupant().FetchOccupant(nil, to)
+	require.Nil(t, err)
+	require.NotNil(t, occ)
+}
+
 func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)

@@ -25,8 +25,90 @@ func (s *Muc) enterRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp
 		}
 		log.Infof("muc: New room created, room JID is %s", presence.ToJID().ToBareJID().String())
 	} else {
-
+		err := s.joinExistingRoom(ctx, room, presence)
+		if err != nil {
+			_ = s.router.Route(ctx, presence.InternalServerError())
+			return
+		}
 	}
+}
+
+func (s *Muc) joinExistingRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
+	// check if this user is already in the room
+	_, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
+	if found {
+		return nil
+	}
+
+	// nick for the occupant has to be provided
+	if !presence.ToJID().IsFull() {
+		_ = s.router.Route(ctx, presence.JidMalformedError())
+		return nil
+	}
+
+	// occupant should not already be present
+	exists, err := s.repo.Occupant().OccupantExists(ctx, presence.ToJID())
+	if err != nil {
+		return err
+	}
+	if exists {
+		_ = s.router.Route(ctx, presence.BadRequestError())
+		return nil
+	}
+
+	occ, err := s.newOccupant(ctx, presence.FromJID(), presence.ToJID())
+	if err != nil {
+		return err
+	}
+
+	err = s.AddOccupantToRoom(ctx, room, occ)
+	if err != nil {
+		return err
+	}
+
+	err = s.sendEnterRoomAck(ctx, room, presence)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
+	newOccupant, err := s.repo.Occupant().FetchOccupant(ctx, presence.ToJID())
+	if err != nil {
+		return err
+	}
+	for usrJID, occJID := range room.UserToOccupant {
+		// skip the user entering the room
+		if usrJID.String() == newOccupant.BareJID.String() {
+			continue
+		}
+		o, err := s.repo.Occupant().FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		p := getOccupantStatusStanza(o, presence.FromJID())
+		_ = s.router.Route(ctx, p)
+		p = getOccupantStatusStanza(newOccupant, &usrJID)
+		_ = s.router.Route(ctx, p)
+	}
+	// final notification to the occupant with status code 110
+	p := getOccupantConfirmStanza(newOccupant, newOccupant.BareJID)
+	_ = s.router.Route(ctx, p)
+	return nil
+}
+
+func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
+	o := &mucmodel.Occupant{
+		OccupantJID: occJID,
+		BareJID:     userJID.ToBareJID(),
+	}
+	err := s.repo.Occupant().UpsertOccupant(ctx, o)
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 
 func (s *Muc) newRoomRequest(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
