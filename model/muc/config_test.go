@@ -39,10 +39,8 @@ func TestModelRoomConfig(t *testing.T) {
 		Moderated:        true,
 		AllowInvites:     true,
 		MaxOccCnt:        20,
-		HistCnt:          50,
 		AllowSubjChange:  false,
-		EnableLogging:    true,
-		canRealJIDDisc:      "all",
+		NonAnonymous:      true,
 		canSendPM:           "",
 		canGetMemberList: "moderators",
 	}
@@ -73,13 +71,7 @@ func TestUnmarshalYamlRoomConfig(t *testing.T) {
 
 func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 	cfg := &RoomConfig{}
-	err := cfg.SetWhoCanRealJIDDisc("fail")
-	require.NotNil(t, err)
-	err = cfg.SetWhoCanRealJIDDisc(All)
-	require.Nil(t, err)
-	require.Equal(t, All, cfg.GetRealJIDDisc())
-
-	err = cfg.SetWhoCanSendPM("fail")
+	err := cfg.SetWhoCanSendPM("fail")
 	require.NotNil(t, err)
 	err = cfg.SetWhoCanSendPM(Moderators)
 	require.Nil(t, err)
@@ -94,14 +86,12 @@ func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 
 func TestOccupantPermissionsRoomConfig(t *testing.T) {
 	cfg := &RoomConfig{
-		canRealJIDDisc:      "all",
 		canSendPM:           "",
 		canGetMemberList: "moderators",
 	}
 	o := &Occupant{
 		role: moderator,
 	}
-	require.True(t, cfg.OccupantCanDiscoverRealJID(o))
 	require.False(t, cfg.OccupantCanSendPM(o))
 	require.True(t, cfg.OccupantCanGetMemberList(o))
 }

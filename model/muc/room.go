@@ -20,9 +20,11 @@ type Room struct {
 	Subject           string
 	Language          string
 	Locked            bool
-	numberOfOccupants int
 	//mapping user bare jid to the occupant JID
 	UserToOccupant map[jid.JID]jid.JID
+	// a set of invited users' bare JIDs who haven't accepted the invitation yet
+	InvitedUsers    map[jid.JID]bool
+	occupantsOnline int
 }
 
 // FromBytes deserializes a Room entity from it's gob binary representation.
@@ -50,11 +52,12 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 		return err
 	}
 	r.Config = c
-	if err := dec.Decode(&r.numberOfOccupants); err != nil {
+	var numberOfOccupants int
+	if err := dec.Decode(&numberOfOccupants); err != nil {
 		return err
 	}
 	r.UserToOccupant = make(map[jid.JID]jid.JID)
-	for i := 0; i < r.numberOfOccupants; i++ {
+	for i := 0; i < numberOfOccupants; i++ {
 		userJID, err := jid.NewFromBytes(buf)
 		if err != nil {
 			return err
@@ -66,6 +69,21 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 		r.UserToOccupant[*userJID] = *occJID
 	}
 	if err := dec.Decode(&r.Locked); err != nil {
+		return err
+	}
+	var invitedUsersCount int
+	if err := dec.Decode(&invitedUsersCount); err != nil {
+		return err
+	}
+	r.InvitedUsers = make(map[jid.JID]bool)
+	for i := 0; i < invitedUsersCount; i++ {
+		userJID, err := jid.NewFromBytes(buf)
+		if err != nil {
+			return err
+		}
+		r.InvitedUsers[*userJID] = true
+	}
+	if err := dec.Decode(&r.occupantsOnline); err != nil {
 		return err
 	}
 	return nil
@@ -92,7 +110,7 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := r.Config.ToBytes(buf); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.numberOfOccupants); err != nil {
+	if err := enc.Encode(len(r.UserToOccupant)); err != nil {
 		return err
 	}
 	for userJID, occJID := range r.UserToOccupant {
@@ -106,10 +124,35 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Locked); err != nil {
 		return err
 	}
+	if err := enc.Encode(len(r.InvitedUsers)); err != nil {
+		return err
+	}
+	for userJID, _ := range r.InvitedUsers {
+		if err := userJID.ToBytes(buf); err != nil {
+			return err
+		}
+	}
+	if err := enc.Encode(&r.occupantsOnline); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *Room) AddOccupant(o *Occupant) {
-	r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
-	r.numberOfOccupants++
+	// remove from the list of invited users
+	_, invited := r.InvitedUsers[*o.BareJID.ToBareJID()]
+	if invited {
+		delete(r.InvitedUsers, *o.BareJID.ToBareJID())
+	}
+
+	// if this is a new occupant, add it to the map
+	_, found := r.UserToOccupant[*o.BareJID.ToBareJID()]
+	if !found {
+		r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
+	}
+	r.occupantsOnline++
+}
+
+func (r *Room) Full() bool {
+	return r.occupantsOnline >= r.Config.MaxOccCnt
 }

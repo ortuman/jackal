@@ -83,7 +83,7 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	// existing room
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
-	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID}
+	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID.ToBareJID()}
 	owner.SetAffiliation("owner")
 	muc.repo.Occupant().UpsertOccupant(nil, owner)
 	ownerStm := stream.NewMockC2S(uuid.New(), ownerUserJID)
@@ -92,21 +92,30 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 
 	roomJID := ownerOccJID.ToBareJID()
 	room := &mucmodel.Room{
-		Config: muc.GetDefaultRoomConfig(),
-		RoomJID: roomJID,
-		Locked: false,
+		Config:         muc.GetDefaultRoomConfig(),
+		RoomJID:        roomJID,
+		Locked:         false,
 		UserToOccupant: make(map[jid.JID]jid.JID),
+		InvitedUsers:   make(map[jid.JID]bool),
 	}
+	room.Config.NonAnonymous = true
+	room.Config.PwdProtected = true
+	room.Config.Password = "secret"
+	room.Config.Open = false
+	room.Subject = "Room for testing"
 	muc.AddOccupantToRoom(nil, room, owner)
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
+	room.InvitedUsers[*from.ToBareJID()] = true
+	muc.repo.Room().UpsertRoom(nil, room)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
 	r.Bind(context.Background(), stm)
 
-	e := xmpp.NewElementNamespace("x", mucNamespace)
+	pwd := xmpp.NewElementName("password").SetText("secret")
+	e := xmpp.NewElementNamespace("x", mucNamespace).AppendElement(pwd)
 	p := xmpp.NewElementName("presence").AppendElement(e)
 	presence, _ := xmpp.NewPresenceFromElement(p, from, to)
 
@@ -120,9 +129,13 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	ownerAck := ownerStm.ReceiveElement()
 	require.NotNil(t, ownerAck)
 
-	// sender receives the final confirmation response
-	ackFinal := stm.ReceiveElement()
-	require.NotNil(t, ackFinal)
+	// sender receives the self-presence
+	ackSelf := stm.ReceiveElement()
+	require.NotNil(t, ackSelf)
+
+	// sender receives the room subject
+	ackSubj := stm.ReceiveElement()
+	require.NotNil(t, ackSubj)
 
 	// user is in the room
 	occ, err := muc.repo.Occupant().FetchOccupant(nil, to)
@@ -218,8 +231,8 @@ func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 	form, err := xep0004.NewFormFromElement(formElement)
 	require.Nil(t, err)
 	require.Equal(t, form.Type, xep0004.Form)
-	// the total number of fields should be 23
-	require.Equal(t, len(form.Fields), 23)
+	// the total number of fields should be 20
+	require.Equal(t, len(form.Fields), 19)
 }
 
 func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
@@ -248,11 +261,10 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	occJID, _ := jid.New("room", "conference.jackal.im", "milos", true)
 	o := &mucmodel.Occupant{
 		OccupantJID: occJID,
-		BareJID: milosJID,
+		BareJID:     milosJID,
 	}
 	muc.repo.Occupant().UpsertOccupant(context.Background(), o)
 	room.AddOccupant(o)
-	// TODO this saving of the room should be done inside addoccupant function
 	muc.repo.Room().UpsertRoom(context.Background(), room)
 
 	// get the room configuration form and change the fields
@@ -268,7 +280,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 		case ConfigMaxUsers:
 			configForm.Fields[i].Values = []string{"23"}
 		case ConfigWhoIs:
-			configForm.Fields[i].Values = []string{"moderators"}
+			configForm.Fields[i].Values = []string{"1"}
 		case ConfigPublic:
 			configForm.Fields[i].Values = []string{"0"}
 		}
@@ -299,7 +311,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	require.Equal(t, confRoom.Name, "Configured Room")
 	require.Equal(t, confRoom.Config.MaxOccCnt, 23)
 	require.False(t, confRoom.Config.Public)
-	require.Equal(t, confRoom.Config.GetRealJIDDisc(), "moderators")
+	require.True(t, confRoom.Config.NonAnonymous)
 
 	// occupant got promoted to admin
 	updatedOcc, err := c.Occupant().FetchOccupant(context.Background(), occJID)

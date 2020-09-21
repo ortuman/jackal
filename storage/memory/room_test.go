@@ -99,6 +99,7 @@ func GetTestRoom() *mucmodel.Room {
 		Config:         &rc,
 		UserToOccupant: make(map[jid.JID]jid.JID),
 		Locked:         false,
+		InvitedUsers:   make(map[jid.JID]bool),
 	}
 
 	return r

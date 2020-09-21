@@ -32,10 +32,8 @@ type RoomConfig struct {
 	Moderated        bool
 	AllowInvites     bool
 	MaxOccCnt        int
-	HistCnt          int
 	AllowSubjChange  bool
-	EnableLogging    bool
-	canRealJIDDisc   string
+	NonAnonymous     bool
 	canSendPM        string
 	canGetMemberList string
 }
@@ -47,13 +45,11 @@ type roomConfigProxy struct {
 	Open             bool   `yaml:"open"`
 	Moderated        bool   `yaml:"moderated"`
 	AllowInvites     bool   `yaml:"allow_invites"`
-	HistCnt          int    `yaml:"history_length"`
 	MaxOccCnt        int    `yaml:"occupant_count"`
-	CanRealJIDDisc   string `yaml:"real_jid_discovery"`
+	NonAnonymous   bool `yaml:"non_anonmous"`
 	CanSendPM        string `yaml:"send_pm"`
 	CanGetMemberList string `yaml:"can_get_member_list"`
 	AllowSubjChange  bool   `yaml:"allow_subject_change"`
-	EnableLogging    bool   `yaml:"enable_logging"`
 }
 
 // FromBytes deserializes a RoomConfig entity from it's gob binary representation.
@@ -79,7 +75,7 @@ func (r *RoomConfig) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.canRealJIDDisc); err != nil {
+	if err := dec.Decode(&r.NonAnonymous); err != nil {
 		return err
 	}
 	if err := dec.Decode(&r.canSendPM); err != nil {
@@ -91,16 +87,10 @@ func (r *RoomConfig) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&r.AllowSubjChange); err != nil {
 		return err
 	}
-	if err := dec.Decode(&r.EnableLogging); err != nil {
-		return err
-	}
 	if err := dec.Decode(&r.canGetMemberList); err != nil {
 		return err
 	}
 	if err := dec.Decode(&r.MaxOccCnt); err != nil {
-		return err
-	}
-	if err := dec.Decode(&r.HistCnt); err != nil {
 		return err
 	}
 	return nil
@@ -129,7 +119,7 @@ func (r *RoomConfig) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Moderated); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.canRealJIDDisc); err != nil {
+	if err := enc.Encode(&r.NonAnonymous); err != nil {
 		return err
 	}
 	if err := enc.Encode(&r.canSendPM); err != nil {
@@ -141,16 +131,10 @@ func (r *RoomConfig) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.AllowSubjChange); err != nil {
 		return err
 	}
-	if err := enc.Encode(&r.EnableLogging); err != nil {
-		return err
-	}
 	if err := enc.Encode(&r.canGetMemberList); err != nil {
 		return err
 	}
 	if err := enc.Encode(&r.MaxOccCnt); err != nil {
-		return err
-	}
-	if err := enc.Encode(&r.HistCnt); err != nil {
 		return err
 	}
 	return nil
@@ -177,15 +161,10 @@ func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	r.Open = p.Open
 	r.Moderated = p.Moderated
 	r.AllowInvites = p.AllowInvites
-	r.HistCnt = p.HistCnt
 	r.MaxOccCnt = p.MaxOccCnt
 	r.AllowSubjChange = p.AllowSubjChange
-	r.EnableLogging = p.EnableLogging
-	err := r.SetWhoCanRealJIDDisc(p.CanRealJIDDisc)
-	if err != nil {
-		return err
-	}
-	err = r.SetWhoCanSendPM(p.CanSendPM)
+	r.NonAnonymous = p.NonAnonymous
+	err := r.SetWhoCanSendPM(p.CanSendPM)
 	if err != nil {
 		return err
 	}
@@ -194,33 +173,6 @@ func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	return nil
-}
-
-func (r *RoomConfig) SetWhoCanRealJIDDisc(s string) error {
-	switch s {
-	case All, Moderators, None:
-		r.canRealJIDDisc = s
-	default:
-		return fmt.Errorf("muc_config: cannot set who can discover real JIDs to %s", s)
-	}
-	return nil
-}
-
-func (r *RoomConfig) GetRealJIDDisc() string {
-	return r.canRealJIDDisc
-}
-
-func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
-	var hasPermission bool
-	switch r.canRealJIDDisc {
-	case All:
-		hasPermission = true
-	case None:
-		hasPermission = false
-	case Moderators:
-		hasPermission = o.IsModerator()
-	}
-	return hasPermission
 }
 
 func (r *RoomConfig) SetWhoCanSendPM(s string) error {
@@ -275,4 +227,11 @@ func (r *RoomConfig) OccupantCanGetMemberList(o *Occupant) bool {
 		hasPermission = o.IsModerator()
 	}
 	return hasPermission
+}
+
+func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
+	if r.NonAnonymous {
+		return true
+	}
+	return o.IsModerator()
 }

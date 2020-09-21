@@ -33,8 +33,6 @@ const (
 
 	ConfigDesc = "muc#roomconfig_roomdesc"
 
-	ConfigHistory = "muc#maxhistoryfetch"
-
 	ConfigAllowPM = "muc#roomconfig_allowpm"
 
 	ConfigAllowInvites = "muc#roomconfig_allowinvites"
@@ -63,18 +61,27 @@ const (
 
 	ConfigPwd = "muc#roomconfig_roomsecret"
 
-	ConfigEnableLogging = "muc#roomconfig_enablelogging"
-
 	ConfigPubSub = "muc#roomconfig_pubsub"
-
-	ConfigPresenceBroadcast = "muc#roomconfig_presencebroadcast"
 
 	ConfigWhoIs = "muc#roomconfig_whois"
 )
 
-func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID) xmpp.Stanza {
-	x := newOccupantAffiliationRoleElement(o)
+func getPasswordFromPresence(presence *xmpp.Presence) string {
+	x := presence.Elements().ChildNamespace("x", mucNamespace)
+	if x == nil {
+		return ""
+	}
+	pwd := x.Elements().Child("password")
+	if pwd == nil {
+		return ""
+	}
+	return pwd.Text()
+}
+
+func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID, includeUserJID bool) xmpp.Stanza {
+	x := newOccupantAffiliationRoleElement(o, includeUserJID)
 	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
+
 	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
 	if err != nil {
 		log.Error(err)
@@ -83,15 +90,30 @@ func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID) xmpp.Stanza {
 	return p
 }
 
-func getOccupantConfirmStanza(o *mucmodel.Occupant, to *jid.JID) xmpp.Stanza {
-	x := newOccupantAffiliationRoleElement(o).AppendElement(newStatusElement("110"))
-	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
+func getOccupantConfirmStanza(o *mucmodel.Occupant, to *jid.JID, nonAnonymous bool, id string) xmpp.Stanza {
+	x := newOccupantAffiliationRoleElement(o, false).AppendElement(newStatusElement("110"))
+	if nonAnonymous {
+		x.AppendElement(newStatusElement("100"))
+	}
+	el := xmpp.NewElementName("presence").AppendElement(x).SetID(id)
 	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
 	if err != nil {
 		log.Error(err)
 		return nil
 	}
 	return p
+}
+
+func getRoomSubjectStanza(subject string, from, to *jid.JID) xmpp.Stanza {
+	s := xmpp.NewElementName("subject").SetText(subject)
+	m := xmpp.NewElementName("message").SetType("groupchat").SetID(uuid.New().String())
+	m.AppendElement(s)
+	message, err := xmpp.NewMessageFromElement(m, from, to)
+	if err != nil{
+		log.Error(err)
+		return nil
+	}
+	return message
 }
 
 func getAckStanza(from, to *jid.JID) xmpp.Stanza {
@@ -141,9 +163,13 @@ func newStatusElement(code string) *xmpp.Element {
 	return s
 }
 
-func newOccupantAffiliationRoleElement(o *mucmodel.Occupant) *xmpp.Element {
+func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID bool) *xmpp.Element {
+	item := newItemElement(o.GetAffiliation(), o.GetRole())
+	if includeUserJID {
+		item.SetAttribute("jid", o.BareJID.String())
+	}
 	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
-	e.AppendElement(newItemElement(o.GetAffiliation(), o.GetRole()))
+	e.AppendElement(item)
 	return e
 }
 
@@ -201,11 +227,11 @@ func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
 }
 
 func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
-	if presence.Elements().Count() != 1 {
+	if presence.Elements().Count() != 1 || presence.Type() != "" {
 		return false
 	}
 	x := presence.Elements().ChildNamespace("x", mucNamespace)
-	if x == nil || x.Text() != "" || x.Elements().Count() != 0 {
+	if x == nil || x.Text() != "" {
 		return false
 	}
 	return true
@@ -241,19 +267,6 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 		Values: []string{room.Language},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigHistory,
-		Type:   xep0004.TextSingle,
-		Label:  "Maximum Number of History Messages Returned by Room",
-		Values: []string{strconv.Itoa(room.Config.HistCnt)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:   ConfigPubSub,
-		Type:  xep0004.TextSingle,
-		Label: "Associated pubsub node",
-		// TODO this is the field that's not being used at the moment
-		Values: []string{""},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigChangeSubj,
 		Type:   xep0004.Boolean,
 		Label:  "Allow Occupants to Change Subject?",
@@ -264,12 +277,6 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 		Type:   xep0004.Boolean,
 		Label:  "Allow Occupants to Invite Others?",
 		Values: []string{boolToStr(room.Config.AllowInvites)},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigEnableLogging,
-		Type:   xep0004.Boolean,
-		Label:  "Enable Public Logging?",
-		Values: []string{boolToStr(room.Config.EnableLogging)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigMembersOnly,
@@ -290,17 +297,16 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 		Values: []string{boolToStr(room.Config.Persistent)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
-		// TODO this field not used at the moment (it should not be boolean)
-		Var:    ConfigPresenceBroadcast,
-		Type:   xep0004.Boolean,
-		Label:  "Roles for which Presence is Broadcasted?",
-		Values: []string{"0"},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigPublic,
 		Type:   xep0004.Boolean,
 		Label:  "Make Room Publicly Searchable?",
 		Values: []string{boolToStr(room.Config.Public)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigWhoIs,
+		Type:   xep0004.Boolean,
+		Label:  "Make room NonAnonymous? (show real JIDs)",
+		Values: []string{boolToStr(room.Config.NonAnonymous)},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    ConfigPwdProtected,
@@ -351,18 +357,8 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 			xep0004.Option{Label: "30", Value: "30"},
 			xep0004.Option{Label: "50", Value: "50"},
 			xep0004.Option{Label: "100", Value: "100"},
+			xep0004.Option{Label: "500", Value: "100"},
 			xep0004.Option{Label: "-1", Value: "-1"},
-		},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigWhoIs,
-		Type:   xep0004.ListSingle,
-		Label:  "Who May Discover Real JIDs",
-		Values: []string{room.Config.GetRealJIDDisc()},
-		Options: []xep0004.Option{
-			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
-			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
-			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
 		},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{

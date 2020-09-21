@@ -27,16 +27,19 @@ func TestModelRoom(t *testing.T) {
 	userMap := make(map[jid.JID]jid.JID)
 	userMap[*o.BareJID.ToBareJID()] = *jFull
 
+	invitedMap := make(map[jid.JID]bool)
+	invitedMap[*o.BareJID.ToBareJID()] = true
+
 	r1 := Room{
-		Config:            &rc,
-		Name:              "Test Room",
-		RoomJID:           rJID,
-		Desc:              "Test Description",
-		Subject:           "Test Subject",
-		Language:          "eng",
-		numberOfOccupants: 1,
-		UserToOccupant:    userMap,
-		Locked:            true,
+		Config:         &rc,
+		Name:           "Test Room",
+		RoomJID:        rJID,
+		Desc:           "Test Description",
+		Subject:        "Test Subject",
+		Language:       "eng",
+		UserToOccupant: userMap,
+		InvitedUsers:   invitedMap,
+		Locked:         true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -44,25 +47,14 @@ func TestModelRoom(t *testing.T) {
 
 	r2 := Room{}
 	require.Nil(t, r2.FromBytes(buf))
-	requireRoomsAreEqual(t, r1, r2)
+	assert.EqualValues(t, r1, r2)
 
 	newJID, _ := jid.NewWithString("milos@jackal.im/laptop", true)
 	o2 := &Occupant{
 		BareJID:     newJID,
 		OccupantJID: newJID,
 	}
-	require.Equal(t, r2.numberOfOccupants, 1)
+	require.Equal(t, len(r2.UserToOccupant), 1)
 	r2.AddOccupant(o2)
-	require.Equal(t, r2.numberOfOccupants, 2)
-}
-
-func requireRoomsAreEqual(t *testing.T, r1, r2 Room) {
-	assert.EqualValues(t, *r1.Config, *r2.Config)
-	require.Equal(t, r1.Name, r2.Name)
-	require.Equal(t, r1.Desc, r2.Desc)
-	require.Equal(t, r1.Subject, r2.Subject)
-	require.Equal(t, r1.Language, r2.Language)
-	require.Equal(t, r1.Locked, r2.Locked)
-	require.Equal(t, r1.numberOfOccupants, r2.numberOfOccupants)
-	require.Equal(t, r1.RoomJID.String(), r2.RoomJID.String())
+	require.Equal(t, len(r2.UserToOccupant), 2)
 }

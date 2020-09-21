@@ -165,7 +165,7 @@ func getRoomFeatures(room *mucmodel.Room) []string {
 		features = append(features, mucUnmoderated)
 	}
 
-	if room.Config.GetRealJIDDisc() == mucmodel.All {
+	if room.Config.NonAnonymous {
 		features = append(features, mucNonAnonymous)
 	} else {
 		features = append(features, mucSemiAnonymous)
