@@ -7,8 +7,8 @@ package mucmodel
 
 import (
 	"bytes"
-	"fmt"
 	"encoding/gob"
+	"fmt"
 
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -32,10 +32,12 @@ const (
 )
 
 type Occupant struct {
-	OccupantJID *jid.JID
-	BareJID     *jid.JID
-	affiliation string
-	role        string
+	OccupantJID     *jid.JID
+	BareJID         *jid.JID
+	affiliation     string
+	role            string
+	// a set of different resources that the user uses to access this occupant
+	Resources map[string]bool
 }
 
 // FromBytes deserializes an Occupant entity from it's gob binary representation.
@@ -57,6 +59,18 @@ func (o *Occupant) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&o.role); err != nil {
 		return err
 	}
+	var numResources int
+	if err := dec.Decode(&numResources); err != nil {
+		return err
+	}
+	o.Resources = make(map[string]bool)
+	for i := 0; i < numResources; i++ {
+		var res string
+		if err := dec.Decode(&res); err != nil {
+			return err
+		}
+		o.Resources[res] = true
+	}
 	return nil
 }
 
@@ -74,6 +88,14 @@ func (o *Occupant) ToBytes(buf *bytes.Buffer) error {
 	}
 	if err := enc.Encode(&o.role); err != nil {
 		return err
+	}
+	if err := enc.Encode(len(o.Resources)); err != nil {
+		return err
+	}
+	for res, _ := range o.Resources {
+		if err := enc.Encode(&res); err != nil {
+			return err
+		}
 	}
 	return nil
 }

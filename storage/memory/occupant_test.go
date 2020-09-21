@@ -62,6 +62,7 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 	o := &mucmodel.Occupant{
 		OccupantJID: j,
 		BareJID:     j,
+		Resources:   make(map[string]bool),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")

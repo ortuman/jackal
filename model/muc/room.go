@@ -139,7 +139,7 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 }
 
 func (r *Room) AddOccupant(o *Occupant) {
-	// remove from the list of invited users
+	// if this user was invited, remove from the list of invited users
 	_, invited := r.InvitedUsers[*o.BareJID.ToBareJID()]
 	if invited {
 		delete(r.InvitedUsers, *o.BareJID.ToBareJID())
@@ -149,7 +149,10 @@ func (r *Room) AddOccupant(o *Occupant) {
 	_, found := r.UserToOccupant[*o.BareJID.ToBareJID()]
 	if !found {
 		r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
+		// if it's a member-only room, add the affiliation "member"
+		o.SetAffiliation("member")
 	}
+
 	r.occupantsOnline++
 }
 

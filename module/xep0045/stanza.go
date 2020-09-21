@@ -90,7 +90,7 @@ func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID, includeUserJID b
 	return p
 }
 
-func getOccupantConfirmStanza(o *mucmodel.Occupant, to *jid.JID, nonAnonymous bool, id string) xmpp.Stanza {
+func getOccupantSelfPresenceStanza(o *mucmodel.Occupant, to *jid.JID, nonAnonymous bool, id string) xmpp.Stanza {
 	x := newOccupantAffiliationRoleElement(o, false).AppendElement(newStatusElement("110"))
 	if nonAnonymous {
 		x.AppendElement(newStatusElement("100"))

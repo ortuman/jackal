@@ -22,6 +22,7 @@ func TestModelOccupant(t *testing.T){
 		BareJID: jFull,
 		affiliation: "owner",
 		role: "moderator",
+		Resources: make(map[string]bool),
 	}
 
 	buf := new(bytes.Buffer)
