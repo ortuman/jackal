@@ -61,6 +61,11 @@ func (s *Muc) occupantCanEnterRoom(ctx context.Context, room *mucmodel.Room, pre
 	userJID := presence.FromJID()
 	occupantJID := presence.ToJID()
 
+	occupant, err := s.repo.Occupant().FetchOccupant(ctx, occupantJID)
+	if err != nil {
+		return false, err
+	}
+
 	// no one can enter a locked room
 	if room.Locked {
 		_ = s.router.Route(ctx, presence.ItemNotFoundError())
@@ -73,65 +78,76 @@ func (s *Muc) occupantCanEnterRoom(ctx context.Context, room *mucmodel.Room, pre
 		return false, nil
 	}
 
-	// check if the user, who is already in the room, is entering with a different nickname
-	oJID, registered := room.UserToOccupant[*userJID.ToBareJID()]
-	if registered && oJID.String() != occupantJID.String() {
-		_ = s.router.Route(ctx, presence.NotAcceptableError())
+	errStanza := checkNicknameConflict(room, occupant, userJID, occupantJID, presence)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
 		return false, nil
 	}
 
-	// check if another user is trying to use an already occupied nickname
-	nickTaken, err := s.repo.Occupant().OccupantExists(ctx, occupantJID)
-	if err != nil {
-		return false, err
-	}
-	if !registered && nickTaken {
-		_ = s.router.Route(ctx, presence.ConflictError())
+	errStanza = checkPassword(room, presence)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
 		return false, nil
 	}
 
-	// if password required, make sure that it is correctly supplied
-	if room.Config.PwdProtected {
-		pwd := getPasswordFromPresence(presence)
-		if pwd != room.Config.Password {
-			_ = s.router.Route(ctx, presence.NotAuthorizedError())
-			return false, nil
-		}
-	}
-
-	// if members-only room, check that the occupant is a member
-	if !room.Config.Open {
-		isMember, err := s.userIsMember(ctx, room, userJID.ToBareJID())
-		if err != nil {
-			return false, err
-		}
-		if !isMember {
-			_ = s.router.Route(ctx, presence.RegistrationRequiredError())
-			return false, nil
-		}
+	errStanza = checkOccupantMembership(room, occupant, userJID, presence)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return false, nil
 	}
 
 	// check if this occupant is banned
-	banned, err := s.userIsBanned(ctx, room, userJID.ToBareJID())
-	if err != nil {
-		return false, err
-	}
-	if banned {
+	if occupant != nil && occupant.IsOutcast() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return false, nil
 	}
 
 	// check if the maximum number of occupants is reached
-	occ, err := s.repo.Occupant().FetchOccupant(ctx, occupantJID)
-	if err != nil {
-		return false, err
-	}
-	if occ != nil && !occ.IsOwner() && !occ.IsAdmin() && room.Full() {
+	if occupant != nil && !occupant.IsOwner() && !occupant.IsAdmin() && room.Full() {
 		_ = s.router.Route(ctx, presence.ServiceUnavailableError())
 		return false, nil
 	}
 
 	return true, nil
+}
+
+func checkNicknameConflict(room *mucmodel.Room, newOccupant *mucmodel.Occupant,
+	userJID, occupantJID *jid.JID, presence *xmpp.Presence) xmpp.Stanza {
+	// check if the user, who is already in the room, is entering with a different nickname
+	oJID, registered := room.UserToOccupant[*userJID.ToBareJID()]
+	if registered && oJID.String() != occupantJID.String() {
+		return presence.NotAcceptableError()
+	}
+
+	// check if another user is trying to use an already occupied nickname
+	if !registered && newOccupant != nil {
+		return presence.ConflictError()
+	}
+
+	return nil
+}
+
+func checkPassword(room *mucmodel.Room, presence *xmpp.Presence) xmpp.Stanza {
+	// if password required, make sure that it is correctly supplied
+	if room.Config.PwdProtected {
+		pwd := getPasswordFromPresence(presence)
+		if pwd != room.Config.Password {
+			return presence.NotAuthorizedError()
+		}
+	}
+	return nil
+}
+
+func checkOccupantMembership(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID,
+	presence *xmpp.Presence) xmpp.Stanza {
+	// if members-only room, check that the occupant is a member
+	if !room.Config.Open {
+		isMember := userIsMember(room, occupant, userJID.ToBareJID())
+		if !isMember {
+			return presence.RegistrationRequiredError()
+		}
+	}
+	return nil
 }
 
 func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
@@ -171,7 +187,6 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 
 	return nil
 }
-
 
 func (s *Muc) newRoomRequest(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
 	err := s.newRoom(ctx, presence.FromJID(), presence.ToJID())
@@ -420,39 +435,15 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 	return occ, true
 }
 
-func (s *Muc) userIsMember(ctx context.Context, room *mucmodel.Room, userJID *jid.JID) (bool, error) {
+func userIsMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
 	_, invited := room.InvitedUsers[*userJID]
 	if invited {
-		return true, nil
+		return true
 	}
 
-	occJID, found := room.UserToOccupant[*userJID.ToBareJID()]
-	if found {
-		occupant, err := s.repo.Occupant().FetchOccupant(ctx, &occJID)
-		if err != nil {
-			return false, err
-		}
-		if occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember() {
-			return true, nil
-		}
+	if occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember() {
+		return true
 	}
 
-	return false, nil
-
-}
-
-func (s *Muc) userIsBanned(ctx context.Context, room *mucmodel.Room, userJID *jid.JID) (bool, error) {
-	occJID, found := room.UserToOccupant[*userJID.ToBareJID()]
-	if found {
-		occupant, err := s.repo.Occupant().FetchOccupant(ctx, &occJID)
-		if err != nil {
-			return false, err
-		}
-		if occupant.IsOutcast() {
-			return true, nil
-		}
-	}
-
-	return false, nil
-
+	return false
 }
