@@ -214,6 +214,3 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 
 	return nil
 }
-
-
-

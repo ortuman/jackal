@@ -7,8 +7,10 @@ package xep0045
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -96,6 +98,104 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 		return nil, err
 	}
 	return r, nil
+}
+
+func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
+	_, invited := room.InvitedUsers[*userJID]
+	if invited {
+		return true
+	}
+
+	if occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember() {
+		return true
+	}
+
+	return false
+}
+
+func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) []string {
+	admins := make([]string, 0)
+	for _, occJID := range r.UserToOccupant {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		if o.IsAdmin() {
+			admins = append(admins, occJID.String())
+		}
+	}
+	return admins
+}
+
+func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) []string {
+	owners := make([]string, 0)
+	for bareJID, occJID := range r.UserToOccupant {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		if o.IsOwner() {
+			owners = append(owners, bareJID.String())
+		}
+	}
+	return owners
+}
+
+func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
+	// check if the occupant is in the room
+	occJID, found := room.UserToOccupant[*adminJID]
+	if !found {
+		return fmt.Errorf("muc: user has to enter the room before it can be made admin")
+	}
+
+	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		return err
+	}
+
+	err = occupant.SetAffiliation("admin")
+	if err != nil {
+		return err
+	}
+
+	err = s.repOccupant.UpsertOccupant(ctx, occupant)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *jid.JID) error {
+	// check if the occupant is in the room
+	occJID, found := room.UserToOccupant[*ownerJID]
+	if !found {
+		return fmt.Errorf("muc: user has to enter the room before it can be made owner")
+	}
+
+	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		return err
+	}
+
+	err = occupant.SetAffiliation("owner")
+	if err != nil {
+		return err
+	}
+
+	err = s.repOccupant.UpsertOccupant(ctx, occupant)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
+	room.AddOccupant(occupant)
+	return s.repRoom.UpsertRoom(ctx, room)
 }
 
 func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep0004.DataForm {
@@ -361,19 +461,6 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 	}
 
 	return ok
-}
-
-func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
-	_, invited := room.InvitedUsers[*userJID]
-	if invited {
-		return true
-	}
-
-	if occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember() {
-		return true
-	}
-
-	return false
 }
 
 func boolToStr(value bool) string {

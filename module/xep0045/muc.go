@@ -7,7 +7,6 @@ package xep0045
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/ortuman/jackal/log"
@@ -128,89 +127,4 @@ func (s *Muc) Shutdown() error {
 	s.runQueue.Stop(func() { close(c) })
 	<-c
 	return nil
-}
-
-func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) []string {
-	admins := make([]string, 0)
-	for _, occJID := range r.UserToOccupant {
-		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		if o.IsAdmin() {
-			admins = append(admins, occJID.String())
-		}
-	}
-	return admins
-}
-
-func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) []string {
-	owners := make([]string, 0)
-	for bareJID, occJID := range r.UserToOccupant {
-		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		if o.IsOwner() {
-			owners = append(owners, bareJID.String())
-		}
-	}
-	return owners
-}
-
-func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
-	// check if the occupant is in the room
-	occJID, found := room.UserToOccupant[*adminJID]
-	if !found {
-		return fmt.Errorf("muc: user has to enter the room before it can be made admin")
-	}
-
-	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		return err
-	}
-
-	err = occupant.SetAffiliation("admin")
-	if err != nil {
-		return err
-	}
-
-	err = s.repOccupant.UpsertOccupant(ctx, occupant)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *jid.JID) error {
-	// check if the occupant is in the room
-	occJID, found := room.UserToOccupant[*ownerJID]
-	if !found {
-		return fmt.Errorf("muc: user has to enter the room before it can be made owner")
-	}
-
-	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		return err
-	}
-
-	err = occupant.SetAffiliation("owner")
-	if err != nil {
-		return err
-	}
-
-	err = s.repOccupant.UpsertOccupant(ctx, occupant)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
-	room.AddOccupant(occupant)
-	return s.repRoom.UpsertRoom(ctx, room)
 }
