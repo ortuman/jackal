@@ -192,25 +192,33 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		if err != nil {
 			return err
 		}
-		// notify the user of the new occupant
-		p := getOccupantStatusStanza(o, presence.FromJID(),
-			room.Config.OccupantCanDiscoverRealJID(o))
-		_ = s.router.Route(ctx, p)
+		// notify the new occupant of the existing occupant
+		for resource, _ := range newOccupant.Resources {
+			to := addResourceToBareJID(newOccupant.BareJID, resource)
+			p := getOccupantStatusStanza(o, to, room.Config.OccupantCanDiscoverRealJID(o))
+			_ = s.router.Route(ctx, p)
+		}
 
-		// notify the new occupant about the user
-		p = getOccupantStatusStanza(newOccupant, &usrJID,
-			room.Config.OccupantCanDiscoverRealJID(newOccupant))
-		_ = s.router.Route(ctx, p)
+		// notify the existing occupant of the new occupant
+		for resource, _ := range o.Resources {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p := getOccupantStatusStanza(newOccupant, to,
+				room.Config.OccupantCanDiscoverRealJID(newOccupant))
+			_ = s.router.Route(ctx, p)
+		}
 	}
 
 	// final notification to the new occupant with status codes (self-presence)
-	p := getOccupantSelfPresenceStanza(newOccupant, newOccupant.BareJID, room.Config.NonAnonymous,
-		presence.ID())
-	_ = s.router.Route(ctx, p)
+	for resource, _ := range newOccupant.Resources {
+		to := addResourceToBareJID(newOccupant.BareJID, resource)
+		p := getOccupantSelfPresenceStanza(newOccupant, to, room.Config.NonAnonymous,
+			presence.ID())
+		_ = s.router.Route(ctx, p)
 
-	// send the room subject
-	subj := getRoomSubjectStanza(room.Subject, room.RoomJID, presence.FromJID().ToBareJID())
-	_ = s.router.Route(ctx, subj)
+		// send the room subject
+		subj := getRoomSubjectStanza(room.Subject, room.RoomJID, to)
+		_ = s.router.Route(ctx, subj)
+	}
 
 	return nil
 }

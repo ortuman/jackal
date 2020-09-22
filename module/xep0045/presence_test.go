@@ -26,11 +26,15 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 	// existing room
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
-	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID.ToBareJID()}
+	owner := &mucmodel.Occupant{
+		OccupantJID: ownerOccJID,
+		BareJID: ownerUserJID.ToBareJID(),
+		Resources: map[string]bool{"phone": true},
+	}
 	owner.SetAffiliation("owner")
 	muc.repOccupant.UpsertOccupant(nil, owner)
 	ownerStm := stream.NewMockC2S(uuid.New(), ownerUserJID)
-	ownerStm.SetPresence(xmpp.NewPresence(ownerUserJID.ToBareJID(), ownerUserJID, xmpp.AvailableType))
+	ownerStm.SetPresence(xmpp.NewPresence(ownerUserJID, ownerUserJID, xmpp.AvailableType))
 	r.Bind(context.Background(), ownerStm)
 
 	roomJID := ownerOccJID.ToBareJID()
@@ -54,7 +58,7 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 	muc.repRoom.UpsertRoom(nil, room)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
-	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
+	stm.SetPresence(xmpp.NewPresence(from, from, xmpp.AvailableType))
 	r.Bind(context.Background(), stm)
 
 	pwd := xmpp.NewElementName("password").SetText("secret")

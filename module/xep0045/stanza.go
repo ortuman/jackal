@@ -57,7 +57,7 @@ func getRoomSubjectStanza(subject string, from, to *jid.JID) xmpp.Stanza {
 	m := xmpp.NewElementName("message").SetType("groupchat").SetID(uuid.New().String())
 	m.AppendElement(s)
 	message, err := xmpp.NewMessageFromElement(m, from, to)
-	if err != nil{
+	if err != nil {
 		log.Error(err)
 		return nil
 	}
@@ -119,4 +119,9 @@ func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID bool
 	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
 	e.AppendElement(item)
 	return e
+}
+
+func addResourceToBareJID(bareJID *jid.JID, resource string) *jid.JID {
+	res, _ := jid.NewWithString(bareJID.String() + "/" + resource, true)
+	return res
 }
