@@ -14,8 +14,8 @@ import (
 
 type Room struct {
 	Config            *RoomConfig
-	Name              string
 	RoomJID           *jid.JID
+	Name              string
 	Desc              string
 	Subject           string
 	Language          string
@@ -143,14 +143,16 @@ func (r *Room) AddOccupant(o *Occupant) {
 	_, invited := r.InvitedUsers[*o.BareJID.ToBareJID()]
 	if invited {
 		delete(r.InvitedUsers, *o.BareJID.ToBareJID())
+		// if it's a member-only room, add the affiliation "member"
+		if !r.Config.Open {
+			o.SetAffiliation("member")
+		}
 	}
 
 	// if this is a new occupant, add it to the map
 	_, found := r.UserToOccupant[*o.BareJID.ToBareJID()]
 	if !found {
 		r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
-		// if it's a member-only room, add the affiliation "member"
-		o.SetAffiliation("member")
 	}
 
 	r.occupantsOnline++

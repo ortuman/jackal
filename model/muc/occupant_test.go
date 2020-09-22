@@ -19,11 +19,12 @@ func TestModelOccupant(t *testing.T){
 	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
 	o1 := Occupant{
 		OccupantJID: jOcc,
-		BareJID: jFull,
+		BareJID: jFull.ToBareJID(),
 		affiliation: "owner",
 		role: "moderator",
 		Resources: make(map[string]bool),
 	}
+	o1.Resources[jFull.Resource()] = true
 
 	buf := new(bytes.Buffer)
 	require.Nil(t, o1.ToBytes(buf))

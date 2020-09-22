@@ -46,7 +46,7 @@ type roomConfigProxy struct {
 	Moderated        bool   `yaml:"moderated"`
 	AllowInvites     bool   `yaml:"allow_invites"`
 	MaxOccCnt        int    `yaml:"occupant_count"`
-	NonAnonymous   bool `yaml:"non_anonmous"`
+	NonAnonymous     bool   `yaml:"non_anonymous"`
 	CanSendPM        string `yaml:"send_pm"`
 	CanGetMemberList string `yaml:"can_get_member_list"`
 	AllowSubjChange  bool   `yaml:"allow_subject_change"`

@@ -9,196 +9,57 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
-	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func (s *Muc) enterRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
-	if room == nil {
-		err := s.newRoomRequest(ctx, room, presence)
-		if err != nil {
-			_ = s.router.Route(ctx, presence.InternalServerError())
-			return
-		}
-		log.Infof("muc: New room created, room JID is %s", presence.ToJID().ToBareJID().String())
-	} else {
-		err := s.joinExistingRoom(ctx, room, presence)
-		if err != nil {
-			_ = s.router.Route(ctx, presence.InternalServerError())
-			return
-		}
-	}
-}
+const (
+	initialRoomConfigInstructions = `
+Your room has been created!
+To accept the default configuration, click OK. To
+select a different configuration, please complete
+this form.
+`
 
-func (s *Muc) joinExistingRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
-	ok, err := s.occupantCanEnterRoom(ctx, room, presence)
-	if !ok || err != nil {
-		return err
-	}
+	roomConfigInstructions = "Complete this form to modify the configuration of your room"
 
-	occ, err := s.newOccupant(ctx, presence.FromJID(), presence.ToJID())
-	if err != nil {
-		return err
-	}
+	ConfigName = "muc#roomconfig_roomname"
 
-	err = s.AddOccupantToRoom(ctx, room, occ)
-	if err != nil {
-		return err
-	}
+	ConfigDesc = "muc#roomconfig_roomdesc"
 
-	err = s.sendEnterRoomAck(ctx, room, presence)
-	if err != nil {
-		return err
-	}
+	ConfigAllowPM = "muc#roomconfig_allowpm"
 
-	return nil
-}
+	ConfigAllowInvites = "muc#roomconfig_allowinvites"
 
-func (s *Muc) occupantCanEnterRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) (bool, error) {
-	userJID := presence.FromJID()
-	occupantJID := presence.ToJID()
+	ConfigChangeSubj = "muc#roomconfig_changesubject"
 
-	occupant, err := s.repo.Occupant().FetchOccupant(ctx, occupantJID)
-	if err != nil {
-		return false, err
-	}
+	ConfigMemberList = "muc#roomconfig_getmemberlist"
 
-	// no one can enter a locked room
-	if room.Locked {
-		_ = s.router.Route(ctx, presence.ItemNotFoundError())
-		return false, nil
-	}
+	ConfigLanguage = "muc#roomconfig_lang"
 
-	// nick for the occupant has to be provided
-	if !occupantJID.IsFull() {
-		_ = s.router.Route(ctx, presence.JidMalformedError())
-		return false, nil
-	}
+	ConfigMaxUsers = "muc#roomconfig_maxusers"
 
-	errStanza := checkNicknameConflict(room, occupant, userJID, occupantJID, presence)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return false, nil
-	}
+	ConfigMembersOnly = "muc#roomconfig_membersonly"
 
-	errStanza = checkPassword(room, presence)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return false, nil
-	}
+	ConfigModerated = "muc#roomconfig_moderatedroom"
 
-	errStanza = checkOccupantMembership(room, occupant, userJID, presence)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return false, nil
-	}
+	ConfigPwdProtected = "muc#roomconfig_passwordprotectedroom"
 
-	// check if this occupant is banned
-	if occupant != nil && occupant.IsOutcast() {
-		_ = s.router.Route(ctx, presence.ForbiddenError())
-		return false, nil
-	}
+	ConfigPersistent = "muc#roomconfig_persistentroom"
 
-	// check if the maximum number of occupants is reached
-	if occupant != nil && !occupant.IsOwner() && !occupant.IsAdmin() && room.Full() {
-		_ = s.router.Route(ctx, presence.ServiceUnavailableError())
-		return false, nil
-	}
+	ConfigPublic = "muc#roomconfig_publicroom"
 
-	return true, nil
-}
+	ConfigAdmins = "muc#roomconfig_roomadmins"
 
-func checkNicknameConflict(room *mucmodel.Room, newOccupant *mucmodel.Occupant,
-	userJID, occupantJID *jid.JID, presence *xmpp.Presence) xmpp.Stanza {
-	// check if the user, who is already in the room, is entering with a different nickname
-	oJID, registered := room.UserToOccupant[*userJID.ToBareJID()]
-	if registered && oJID.String() != occupantJID.String() {
-		return presence.NotAcceptableError()
-	}
+	ConfigOwners = "muc#roomconfig_roomowners"
 
-	// check if another user is trying to use an already occupied nickname
-	if !registered && newOccupant != nil {
-		return presence.ConflictError()
-	}
+	ConfigPwd = "muc#roomconfig_roomsecret"
 
-	return nil
-}
+	ConfigPubSub = "muc#roomconfig_pubsub"
 
-func checkPassword(room *mucmodel.Room, presence *xmpp.Presence) xmpp.Stanza {
-	// if password required, make sure that it is correctly supplied
-	if room.Config.PwdProtected {
-		pwd := getPasswordFromPresence(presence)
-		if pwd != room.Config.Password {
-			return presence.NotAuthorizedError()
-		}
-	}
-	return nil
-}
-
-func checkOccupantMembership(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID,
-	presence *xmpp.Presence) xmpp.Stanza {
-	// if members-only room, check that the occupant is a member
-	if !room.Config.Open {
-		isMember := userIsMember(room, occupant, userJID.ToBareJID())
-		if !isMember {
-			return presence.RegistrationRequiredError()
-		}
-	}
-	return nil
-}
-
-func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
-	newOccupant, err := s.repo.Occupant().FetchOccupant(ctx, presence.ToJID())
-	if err != nil {
-		return err
-	}
-
-	for usrJID, occJID := range room.UserToOccupant {
-		// skip the user entering the room
-		if usrJID.String() == newOccupant.BareJID.String() {
-			continue
-		}
-		o, err := s.repo.Occupant().FetchOccupant(ctx, &occJID)
-		if err != nil {
-			return err
-		}
-		// notify the user of the new occupant
-		p := getOccupantStatusStanza(o, presence.FromJID(),
-			room.Config.OccupantCanDiscoverRealJID(o))
-		_ = s.router.Route(ctx, p)
-
-		// notify the new occupant about the user
-		p = getOccupantStatusStanza(newOccupant, &usrJID,
-			room.Config.OccupantCanDiscoverRealJID(newOccupant))
-		_ = s.router.Route(ctx, p)
-	}
-
-	// final notification to the new occupant with status codes (self-presence)
-	p := getOccupantSelfPresenceStanza(newOccupant, newOccupant.BareJID, room.Config.NonAnonymous,
-		presence.ID())
-	_ = s.router.Route(ctx, p)
-
-	// send the room subject
-	subj := getRoomSubjectStanza(room.Subject, room.RoomJID, presence.FromJID().ToBareJID())
-	_ = s.router.Route(ctx, subj)
-
-	return nil
-}
-
-func (s *Muc) newRoomRequest(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
-	err := s.newRoom(ctx, presence.FromJID(), presence.ToJID())
-	if err != nil {
-		return err
-	}
-	err = s.sendRoomCreateAck(ctx, presence.ToJID(), presence.FromJID())
-	if err != nil {
-		return err
-	}
-	return nil
-}
+	ConfigWhoIs = "muc#roomconfig_whois"
+)
 
 func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID) error {
 	roomJID := occJID.ToBareJID()
@@ -230,67 +91,159 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 	}
 
 	r.AddOccupant(owner)
-	err := s.repo.Room().UpsertRoom(ctx, r)
+	err := s.repRoom.UpsertRoom(ctx, r)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
-func (s *Muc) sendRoomCreateAck(ctx context.Context, from, to *jid.JID) error {
-	el := getAckStanza(from, to)
-	err := s.router.Route(ctx, el)
-	return err
+func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep0004.DataForm {
+	form := &xep0004.DataForm{
+		Type:         xep0004.Form,
+		Title:        "Configuration for " + room.Name + "Room",
+		Instructions: getRoomConfigInstructions(room),
+	}
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    xep0004.FormType,
+		Type:   xep0004.Hidden,
+		Values: []string{"http://jabber.org/protocol/muc#roomconfig"},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigName,
+		Type:   xep0004.TextSingle,
+		Label:  "Natural-Language Room Name",
+		Values: []string{room.Name},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigDesc,
+		Type:   xep0004.TextSingle,
+		Label:  "Short description of Room",
+		Values: []string{room.Desc},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigLanguage,
+		Type:   xep0004.TextSingle,
+		Label:  "Natural Language for Room Discussion",
+		Values: []string{room.Language},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigChangeSubj,
+		Type:   xep0004.Boolean,
+		Label:  "Allow Occupants to Change Subject?",
+		Values: []string{boolToStr(room.Config.AllowSubjChange)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigAllowInvites,
+		Type:   xep0004.Boolean,
+		Label:  "Allow Occupants to Invite Others?",
+		Values: []string{boolToStr(room.Config.AllowInvites)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigMembersOnly,
+		Type:   xep0004.Boolean,
+		Label:  "Make Room Members Only?",
+		Values: []string{boolToStr(!room.Config.Open)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigModerated,
+		Type:   xep0004.Boolean,
+		Label:  "Make Room Moderated?",
+		Values: []string{boolToStr(room.Config.Moderated)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigPersistent,
+		Type:   xep0004.Boolean,
+		Label:  "Make Room Persistent?",
+		Values: []string{boolToStr(room.Config.Persistent)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigPublic,
+		Type:   xep0004.Boolean,
+		Label:  "Make Room Publicly Searchable?",
+		Values: []string{boolToStr(room.Config.Public)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigWhoIs,
+		Type:   xep0004.Boolean,
+		Label:  "Make room NonAnonymous? (show real JIDs)",
+		Values: []string{boolToStr(room.Config.NonAnonymous)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigPwdProtected,
+		Type:   xep0004.Boolean,
+		Label:  "Password Required to Enter?",
+		Values: []string{boolToStr(room.Config.PwdProtected)},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Type:   xep0004.Fixed,
+		Values: []string{"If the password is required to enter the room, specify it below"},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigPwd,
+		Type:   xep0004.TextSingle,
+		Label:  "Password",
+		Values: []string{room.Config.Password},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigAllowPM,
+		Type:   xep0004.ListSingle,
+		Label:  "Roles that May Send Private Messages",
+		Values: []string{room.Config.GetSendPM()},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
+			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigMemberList,
+		Type:   xep0004.ListSingle,
+		Label:  "Who Can Retrieve Member List",
+		Values: []string{room.Config.GetCanGetMemberList()},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
+			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
+			xep0004.Option{Label: "Nobody", Value: mucmodel.None},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigMaxUsers,
+		Type:   xep0004.ListSingle,
+		Label:  "Maximum Number of Occupants (-1 for unlimited)",
+		Values: []string{strconv.Itoa(room.Config.MaxOccCnt)},
+		Options: []xep0004.Option{
+			xep0004.Option{Label: "10", Value: "10"},
+			xep0004.Option{Label: "20", Value: "20"},
+			xep0004.Option{Label: "30", Value: "30"},
+			xep0004.Option{Label: "50", Value: "50"},
+			xep0004.Option{Label: "100", Value: "100"},
+			xep0004.Option{Label: "500", Value: "100"},
+			xep0004.Option{Label: "-1", Value: "-1"},
+		},
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigAdmins,
+		Type:   xep0004.JidMulti,
+		Label:  "Full List of Room Admins",
+		Values: s.GetRoomAdmins(ctx, room),
+	})
+	form.Fields = append(form.Fields, xep0004.Field{
+		Var:    ConfigOwners,
+		Type:   xep0004.JidMulti,
+		Label:  "Full List of Room Owners",
+		Values: s.GetRoomOwners(ctx, room),
+	})
+	return form
 }
 
-func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
-		return
+func getRoomConfigInstructions(room *mucmodel.Room) (instr string) {
+	if room.Locked {
+		instr = initialRoomConfigInstructions
+	} else {
+		instr = roomConfigInstructions
 	}
-	room.Locked = false
-	err := s.repo.Room().UpsertRoom(ctx, room)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.InternalServerError())
-	}
-	_ = s.router.Route(ctx, iq.ResultIQ())
-}
-
-func (s *Muc) sendRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
-		return
-	}
-	configForm := s.getRoomConfigForm(ctx, room)
-	stanza := getFormStanza(iq, configForm)
-	err := s.router.Route(ctx, stanza)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.BadRequestError())
-	}
-}
-
-func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
-		return
-	}
-
-	form, err := xep0004.NewFormFromElement(iq.Elements().Child("query").Elements().Child("x"))
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return
-	}
-
-	ok = s.updateRoomWithForm(ctx, room, form)
-	if !ok {
-		_ = s.router.Route(ctx, iq.NotAcceptableError())
-		return
-	}
-
-	_ = s.router.Route(ctx, iq.ResultIQ())
+	return
 }
 
 func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form *xep0004.DataForm) (ok bool) {
@@ -404,38 +357,13 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 
 	if ok {
 		room.Locked = false
-		s.repo.Room().UpsertRoom(ctx, room)
+		s.repRoom.UpsertRoom(ctx, room)
 	}
 
 	return ok
 }
 
-func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, bool) {
-	fromJID, err := jid.NewWithString(iq.From(), true)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return nil, false
-	}
-	occJID, ok := room.UserToOccupant[*fromJID.ToBareJID()]
-	if !ok {
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return nil, false
-	}
-	occ, err := s.GetOccupant(ctx, &occJID)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return nil, false
-	}
-	if !occ.IsOwner() {
-		_ = s.router.Route(ctx, iq.ForbiddenError())
-		return nil, false
-	}
-	return occ, true
-}
-
-func userIsMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
+func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
 	_, invited := room.InvitedUsers[*userJID]
 	if invited {
 		return true
@@ -446,4 +374,11 @@ func userIsMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid
 	}
 
 	return false
+}
+
+func boolToStr(value bool) string {
+	if value {
+		return "1"
+	}
+	return "0"
 }

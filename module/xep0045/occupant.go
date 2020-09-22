@@ -9,8 +9,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/ortuman/jackal/xmpp"
 )
 
 func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
@@ -20,7 +22,7 @@ func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	err = s.repo.Occupant().UpsertOccupant(ctx, o)
+	err = s.repOccupant.UpsertOccupant(ctx, o)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +31,7 @@ func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 
 func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
 	// check if the occupant already exists
-	o, err := s.repo.Occupant().FetchOccupant(ctx, occJID)
+	o, err := s.repOccupant.FetchOccupant(ctx, occJID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +46,39 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 			BareJID:     userJID.ToBareJID(),
 			Resources:   make(map[string]bool),
 		}
-		err := s.repo.Occupant().UpsertOccupant(ctx, o)
+		err := s.repOccupant.UpsertOccupant(ctx, o)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return o, nil
+}
+
+func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, bool) {
+	fromJID, err := jid.NewWithString(iq.From(), true)
+	if err != nil {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return nil, false
+	}
+
+	occJID, ok := room.UserToOccupant[*fromJID.ToBareJID()]
+	if !ok {
+		_ = s.router.Route(ctx, iq.ForbiddenError())
+		return nil, false
+	}
+
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.InternalServerError())
+		return nil, false
+	}
+
+	if !occ.IsOwner() {
+		_ = s.router.Route(ctx, iq.ForbiddenError())
+		return nil, false
+	}
+
+	return occ, true
 }

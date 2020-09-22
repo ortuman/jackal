@@ -20,9 +20,11 @@ func TestMemoryStorage_InsertOccupant(t *testing.T) {
 	o := mucmodel.Occupant{
 		OccupantJID: j,
 		BareJID:     j,
+		Resources:   make(map[string]bool),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
+	o.Resources["yard"] = true
 	s := NewOccupant()
 	EnableMockedError()
 	err := s.UpsertOccupant(context.Background(), &o)
@@ -48,9 +50,11 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 	o := mucmodel.Occupant{
 		OccupantJID: j,
 		BareJID:     j,
+		Resources:   make(map[string]bool),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
+	o.Resources["yard"] = true
 	s.saveEntity(occKey(j), &o)
 	ok, err = s.OccupantExists(context.Background(), j)
 	require.Nil(t, err)
@@ -66,6 +70,7 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
+	o.Resources["yard"] = true
 	s := NewOccupant()
 	_ = s.UpsertOccupant(context.Background(), o)
 
@@ -88,9 +93,11 @@ func TestMemoryStorage_DeleteOccupant(t *testing.T) {
 	o := mucmodel.Occupant{
 		OccupantJID: j,
 		BareJID:     j,
+		Resources:   make(map[string]bool),
 	}
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
+	o.Resources["yard"] = true
 	s := NewOccupant()
 	_ = s.UpsertOccupant(context.Background(), &o)
 

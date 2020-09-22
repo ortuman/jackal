@@ -27,10 +27,10 @@ import (
 func TestXEP0045_NewService(t *testing.T) {
 	r, c := setupTest("jackal.im")
 
-	failedMuc := New(&Config{MucHost: "jackal.im"}, nil, c, r)
+	failedMuc := New(&Config{MucHost: "jackal.im"}, nil, r, c.Room(), c.Occupant())
 	require.Nil(t, failedMuc)
 
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	require.False(t, muc.router.Hosts().IsConferenceHost("jackal.im"))
@@ -41,7 +41,7 @@ func TestXEP0045_NewService(t *testing.T) {
 
 func TestXEP0045_NewRoomFromPresence(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -77,7 +77,7 @@ func TestXEP0045_NewRoomFromPresence(t *testing.T) {
 
 func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	// existing room
@@ -85,7 +85,7 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
 	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID.ToBareJID()}
 	owner.SetAffiliation("owner")
-	muc.repo.Occupant().UpsertOccupant(nil, owner)
+	muc.repOccupant.UpsertOccupant(nil, owner)
 	ownerStm := stream.NewMockC2S(uuid.New(), ownerUserJID)
 	ownerStm.SetPresence(xmpp.NewPresence(ownerUserJID.ToBareJID(), ownerUserJID, xmpp.AvailableType))
 	r.Bind(context.Background(), ownerStm)
@@ -108,7 +108,7 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
 	room.InvitedUsers[*from.ToBareJID()] = true
-	muc.repo.Room().UpsertRoom(nil, room)
+	muc.repRoom.UpsertRoom(nil, room)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
@@ -138,14 +138,14 @@ func TestXEP0045_EnterRoomFromPresence(t *testing.T) {
 	require.NotNil(t, ackSubj)
 
 	// user is in the room
-	occ, err := muc.repo.Occupant().FetchOccupant(nil, to)
+	occ, err := muc.repOccupant.FetchOccupant(nil, to)
 	require.Nil(t, err)
 	require.NotNil(t, occ)
 }
 
 func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -185,7 +185,7 @@ func TestXEP0045_NewInstantRoomFromIQ(t *testing.T) {
 
 func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -237,7 +237,7 @@ func TestXEP0045_NewReservedRoomGetConfig(t *testing.T) {
 
 func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -250,7 +250,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 	// creating a locked room
 	err := muc.newRoom(context.Background(), from, to)
 	require.Nil(t, err)
-	room, err := muc.repo.Room().FetchRoom(nil, to.ToBareJID())
+	room, err := muc.repRoom.FetchRoom(nil, to.ToBareJID())
 	require.Nil(t, err)
 	// these two fields changed in the configuration
 	require.True(t, room.Locked)
@@ -263,9 +263,9 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 		OccupantJID: occJID,
 		BareJID:     milosJID,
 	}
-	muc.repo.Occupant().UpsertOccupant(context.Background(), o)
+	muc.repOccupant.UpsertOccupant(context.Background(), o)
 	room.AddOccupant(o)
-	muc.repo.Room().UpsertRoom(context.Background(), room)
+	muc.repRoom.UpsertRoom(context.Background(), room)
 
 	// get the room configuration form and change the fields
 	configForm := muc.getRoomConfigForm(context.Background(), room)
@@ -322,7 +322,7 @@ func TestXEP0045_NewReservedRoomSubmitConfig(t *testing.T) {
 
 func TestModelRoomAdminsAndOwners(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
@@ -334,34 +334,44 @@ func TestModelRoomAdminsAndOwners(t *testing.T) {
 		BareJID:     j1,
 		OccupantJID: j1,
 	}
-	o1.SetAffiliation("admin")
+	o1.SetAffiliation("")
+	muc.repOccupant.UpsertOccupant(context.Background(), o1)
+
 	j2, _ := jid.NewWithString("milos@jackal.im", true)
 	o2 := &mucmodel.Occupant{
 		BareJID:     j2,
 		OccupantJID: j2,
 	}
-	o2.SetAffiliation("owner")
-	occMap := make(map[jid.JID]jid.JID)
-	occMap[*o1.BareJID] = *o1.OccupantJID
-	occMap[*o2.BareJID] = *o2.OccupantJID
+	o2.SetAffiliation("")
+	muc.repOccupant.UpsertOccupant(context.Background(), o2)
 
+	occMap := make(map[jid.JID]jid.JID)
 	room := &mucmodel.Room{
 		RoomJID:        rJID,
 		Config:         &rc,
 		UserToOccupant: occMap,
 	}
 
-	muc.repo.Occupant().UpsertOccupant(context.Background(), o1)
-	muc.repo.Occupant().UpsertOccupant(context.Background(), o2)
-	muc.repo.Room().UpsertRoom(context.Background(), room)
+	err := muc.AddOccupantToRoom(context.Background(), room, o1)
+	require.Nil(t, err)
+	err = muc.AddOccupantToRoom(context.Background(), room, o2)
+	require.Nil(t, err)
 
 	admins := muc.GetRoomAdmins(context.Background(), room)
 	owners := muc.GetRoomOwners(context.Background(), room)
+	require.NotNil(t, admins)
+	require.Equal(t, len(admins), 0)
+	require.NotNil(t, owners)
+	require.Equal(t, len(owners), 0)
 
+	muc.SetRoomAdmin(context.Background(), room, o1.OccupantJID)
+	admins = muc.GetRoomAdmins(context.Background(), room)
 	require.NotNil(t, admins)
 	require.Equal(t, len(admins), 1)
 	require.Equal(t, admins[0], j1.String())
 
+	muc.SetRoomOwner(context.Background(), room, o2.OccupantJID)
+	owners = muc.GetRoomOwners(context.Background(), room)
 	require.NotNil(t, owners)
 	require.Equal(t, len(owners), 1)
 	require.Equal(t, owners[0], j2.String())

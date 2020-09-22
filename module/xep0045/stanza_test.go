@@ -48,7 +48,7 @@ func TestXEP0045_GetFormStanza(t *testing.T) {
 	from, _ := jid.New("ortuman", "test.org", "balcony", false)
 	to, _ := jid.New("ortuman", "example.org", "garden", false)
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im", Name: "Chat Service"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 
 	iq := &xmpp.IQ{}
 	iq.SetFromJID(from)

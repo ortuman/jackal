@@ -74,7 +74,8 @@ func TestXEP0045_DiscoItems(t *testing.T) {
 
 func setupDiscoTest() *discoInfoProvider {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im", Name: "Chat Service"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im", Name: "Chat Service"}, nil, r, c.Room(),
+		c.Occupant())
 
 	hiddenRc := &mucmodel.RoomConfig{Public: false}
 	hJID, _ := jid.New("secretroom", "conference.jackal.im", "", true)
@@ -97,8 +98,8 @@ func setupDiscoTest() *discoInfoProvider {
 	o := &mucmodel.Occupant{OccupantJID: oJID, BareJID: pJID}
 	publicRoom.AddOccupant(o)
 
-	muc.repo.Room().UpsertRoom(context.Background(), &publicRoom)
-	muc.repo.Room().UpsertRoom(context.Background(), &hiddenRoom)
+	muc.repRoom.UpsertRoom(context.Background(), &publicRoom)
+	muc.repRoom.UpsertRoom(context.Background(), &hiddenRoom)
 	muc.allRooms = append(muc.allRooms, *hiddenRoom.RoomJID)
 	muc.allRooms = append(muc.allRooms, *publicRoom.RoomJID)
 

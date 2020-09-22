@@ -19,7 +19,7 @@ import (
 
 func TestXEP0045_CreateRoom(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	occJID, _ := jid.New("room", "conference.jackal.im", "nick", true)
@@ -41,7 +41,7 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 
 func TestXEP0045_NewRoom(t *testing.T) {
 	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
@@ -71,7 +71,7 @@ func TestXEP0045_SendRoomCreateAck(t *testing.T) {
 	stm.SetPresence(xmpp.NewPresence(to.ToBareJID(), to, xmpp.AvailableType))
 	r.Bind(context.Background(), stm)
 
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, c, r)
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
 	defer func() { _ = muc.Shutdown() }()
 
 	err := muc.sendRoomCreateAck(nil, from, to)

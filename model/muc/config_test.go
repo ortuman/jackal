@@ -24,8 +24,8 @@ allow_subject_change: true
 enable_logging: true
 history_length: 20
 occupant_count: -1
-real_jid_discovery: "all"
-send_private_messages: "moderators"
+non_anonymous: true
+send_pm: "moderators"
 can_get_member_list: ""
 `
 
@@ -40,8 +40,8 @@ func TestModelRoomConfig(t *testing.T) {
 		AllowInvites:     true,
 		MaxOccCnt:        20,
 		AllowSubjChange:  false,
-		NonAnonymous:      true,
-		canSendPM:           "",
+		NonAnonymous:     true,
+		canSendPM:        "",
 		canGetMemberList: "moderators",
 	}
 
@@ -67,6 +67,8 @@ func TestUnmarshalYamlRoomConfig(t *testing.T) {
 	require.True(t, cfg.Public)
 	require.False(t, cfg.PwdProtected)
 	require.False(t, cfg.Open)
+	require.True(t, cfg.NonAnonymous)
+	require.Equal(t, cfg.GetSendPM(), Moderators)
 }
 
 func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
@@ -86,7 +88,7 @@ func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 
 func TestOccupantPermissionsRoomConfig(t *testing.T) {
 	cfg := &RoomConfig{
-		canSendPM:           "",
+		canSendPM:        "",
 		canGetMemberList: "moderators",
 	}
 	o := &Occupant{

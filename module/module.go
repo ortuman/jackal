@@ -148,7 +148,7 @@ func New(config *Config, router router.Router, reps repository.Container, alloca
 
 	// XEP-0045: Multi-User Chat (https://xmpp.org/extensions/xep-0045.html)
 	if _, ok := config.Enabled["muc"]; ok {
-		m.Muc = xep0045.New(&config.Muc, m.DiscoInfo, reps, router)
+		m.Muc = xep0045.New(&config.Muc, m.DiscoInfo, router, reps.Room(), reps.Occupant())
 		m.all = append(m.all, m.Muc)
 		m.iqHandlers = append(m.iqHandlers, m.Muc)
 	}
