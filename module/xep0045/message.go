@@ -15,13 +15,20 @@ import (
 )
 
 func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	// the groupmessage should be addressed to the whole room, not a particular occupant
+	if message.ToJID().IsFull(){
+		_ = s.router.Route(ctx, message.BadRequestError())
+		return
+	}
+
+	// check if user is allowed to send a groupchat message
 	if !s.userHasVoice(ctx, room, message.FromJID(), message) {
 		return
 	}
 
-	senderOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
 	for _, occJID := range room.UserToOccupant {
-		s.messageOccupant(ctx, &occJID, &senderOccupantJID, message)
+		s.messageOccupant(ctx, &occJID, &sendersOccupantJID, message)
 	}
 	return
 }
