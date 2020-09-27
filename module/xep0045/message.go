@@ -14,9 +14,55 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	// private message should be addressed to a particular occupant, not the whole room
+	if !message.ToJID().IsFull() {
+		_ = s.router.Route(ctx, message.BadRequestError())
+		return
+	}
+
+	// check if user is allowed to send the pm
+	if !s.userCanPMOccupant(ctx, room, message.FromJID(), message.ToJID(), message) {
+		return
+	}
+
+	// send the PM
+	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	s.messageOccupant(ctx, message.ToJID(), &sendersOccupantJID, message)
+}
+
+func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID, occJID *jid.JID, message *xmpp.Message) bool {
+	// check if user is in the room
+	usrOccJID, found := room.UserToOccupant[*usrJID.ToBareJID()]
+	if !found {
+		_ = s.router.Route(ctx, message.NotAcceptableError())
+		return false
+	}
+
+	// check if user can send private messages in this room
+	usrOcc, err := s.repOccupant.FetchOccupant(ctx, &usrOccJID)
+	if err != nil || usrOcc == nil {
+		_ = s.router.Route(ctx, message.InternalServerError())
+		return false
+	}
+	if !room.Config.OccupantCanSendPM(usrOcc) {
+		_ = s.router.Route(ctx, message.NotAcceptableError())
+		return false
+	}
+
+	// check if the target occupant exists
+	occ, err := s.repOccupant.FetchOccupant(ctx, occJID)
+	if err != nil || occ == nil {
+		_ = s.router.Route(ctx, message.ItemNotFoundError())
+		return false
+	}
+
+	return true
+}
+
 func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	// the groupmessage should be addressed to the whole room, not a particular occupant
-	if message.ToJID().IsFull(){
+	if message.ToJID().IsFull() {
 		_ = s.router.Route(ctx, message.BadRequestError())
 		return
 	}

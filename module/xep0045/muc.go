@@ -135,6 +135,10 @@ func (s *Muc) processMessage(ctx context.Context, message *xmpp.Message) {
 	switch {
 	case message.IsGroupChat():
 		s.messageEveryone(ctx, room, message)
+	case message.IsChat() || message.Type() == "":
+		s.sendPM(ctx, room, message)
+	default:
+		_ = s.router.Route(ctx, message.BadRequestError())
 	}
 }
 
