@@ -37,7 +37,7 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	}
 
 	if o != nil && userJID.ToBareJID().String() != o.BareJID.String() {
-		return nil, fmt.Errorf("xep0045_occupant: User cannot use another user's occupant JID")
+		return nil, fmt.Errorf("xep0045_occupant: User cannot use another user's occupant nick")
 	}
 
 	// if the occupant does not exist, create it, otherwise add the new resource to the map

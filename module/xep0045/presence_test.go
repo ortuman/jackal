@@ -132,7 +132,7 @@ func TestXEP0045_OccupantCanEnterRoom(t *testing.T) {
 	defer func() { _ = muc.Shutdown() }()
 
 	// create room and its owner
-	room, owner := getRoomAndOwner(muc)
+	room, owner := getTestRoomAndOwner(muc)
 
 	// owner's c2s stream
 	stm := stream.NewMockC2S(uuid.New(), owner.BareJID)
@@ -160,7 +160,7 @@ func TestXEP0045_OccupantCanEnterRoom(t *testing.T) {
 	room.Locked = false
 }
 
-func getRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
+func getTestRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 	roomConfig := &mucmodel.RoomConfig{
 		PwdProtected: true,
 		Password:     "secret",
@@ -177,7 +177,11 @@ func getRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
-	owner := &mucmodel.Occupant{OccupantJID: ownerOccJID, BareJID: ownerUserJID.ToBareJID()}
+	owner := &mucmodel.Occupant{
+		OccupantJID: ownerOccJID,
+		BareJID: ownerUserJID.ToBareJID(),
+		Resources: map[string]bool{ownerUserJID.Resource(): true},
+	}
 	owner.SetAffiliation("owner")
 
 	muc.repOccupant.UpsertOccupant(nil, owner)

@@ -15,7 +15,7 @@ import (
 )
 
 func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
-	if presence.Elements().Count() != 1 || presence.Type() != "" {
+	if presence.Type() != "" {
 		return false
 	}
 	x := presence.Elements().ChildNamespace("x", mucNamespace)

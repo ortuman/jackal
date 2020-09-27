@@ -89,6 +89,7 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 		Name:           roomJID.Node(),
 		RoomJID:        roomJID,
 		UserToOccupant: make(map[jid.JID]jid.JID),
+		InvitedUsers:   make(map[jid.JID]bool),
 		Locked:         true,
 	}
 
@@ -362,42 +363,49 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 		case ConfigChangeSubj:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.AllowSubjChange = n
 		case ConfigAllowInvites:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.AllowInvites = n
 		case ConfigMembersOnly:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.Open = n
 		case ConfigModerated:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.Moderated = n
 		case ConfigPersistent:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.Persistent = n
 		case ConfigPublic:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.Public = n
 		case ConfigPwdProtected:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.PwdProtected = n
@@ -406,44 +414,58 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 		case ConfigAllowPM:
 			err := room.Config.SetWhoCanSendPM(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 		case ConfigMemberList:
 			err := room.Config.SetWhoCanGetMemberList(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 		case ConfigWhoIs:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.NonAnonymous = n
 		case ConfigMaxUsers:
 			n, err := strconv.Atoi(field.Values[0])
 			if err != nil {
+				log.Error(err)
 				ok = false
 			}
 			room.Config.MaxOccCnt = n
 		case ConfigAdmins:
 			for _, j := range field.Values {
+				if j == "" {
+					continue
+				}
 				bareJID, err := jid.NewWithString(j, false)
 				if err != nil {
+					log.Error(err)
 					ok = false
 				}
 				err = s.SetRoomAdmin(ctx, room, bareJID)
 				if err != nil {
+					log.Error(err)
 					ok = false
 				}
 			}
 		case ConfigOwners:
 			for _, j := range field.Values {
+				if j == "" {
+					continue
+				}
 				bareJID, err := jid.NewWithString(j, false)
 				if err != nil {
+					log.Error(err)
 					ok = false
 				}
 				err = s.SetRoomOwner(ctx, room, bareJID)
 				if err != nil {
+					log.Error(err)
 					ok = false
 				}
 			}
@@ -452,6 +474,7 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 
 	// the password has to be specified if it is required to enter the room
 	if room.Config.PwdProtected && room.Config.Password == "" {
+		log.Infof("Password required but not supplied by the room owner")
 		ok = false
 	}
 

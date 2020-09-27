@@ -113,6 +113,31 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	}
 }
 
+func (s *Muc) ProcessMessage(ctx context.Context, message *xmpp.Message) {
+	s.runQueue.Run(func() {
+		s.processMessage(ctx, message)
+	})
+}
+
+func (s *Muc) processMessage(ctx context.Context, message *xmpp.Message) {
+	roomJID := message.ToJID().ToBareJID()
+	room, err := s.repRoom.FetchRoom(ctx, roomJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, message.InternalServerError())
+		return
+	}
+	if room == nil {
+		_ = s.router.Route(ctx, message.ItemNotFoundError())
+		return
+	}
+
+	switch {
+	case message.IsGroupChat():
+		s.messageEveryone(ctx, room, message)
+	}
+}
+
 func (s *Muc) GetMucHostname() string {
 	return s.cfg.MucHost
 }

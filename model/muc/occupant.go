@@ -137,6 +137,10 @@ func (o *Occupant) GetRole() string {
 	return o.role
 }
 
+func (o *Occupant) HasNoRole() bool {
+	return o.role == None
+}
+
 func (o *Occupant) IsVisitor() bool {
 	return o.role == visitor
 }
@@ -147,6 +151,10 @@ func (o *Occupant) IsParticipant() bool {
 
 func (o *Occupant) IsModerator() bool {
 	return o.role == moderator
+}
+
+func (o *Occupant) HasNoAffiliation() bool {
+	return o.affiliation == None
 }
 
 func (o *Occupant) IsOwner() bool {

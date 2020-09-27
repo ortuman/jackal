@@ -678,6 +678,11 @@ func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence)
 func (s *inStream) processMessage(ctx context.Context, message *xmpp.Message) {
 	msg := message
 
+	if s.router.Hosts().IsConferenceHost(message.ToJID().Domain()) {
+		s.mods.Muc.ProcessMessage(ctx, message)
+		return
+	}
+
 sendMessage:
 	err := s.router.Route(ctx, msg)
 	switch err {
