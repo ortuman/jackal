@@ -17,6 +17,103 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
 )
+func TestXEP0045_ChangeStatus(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+	ownerStm := stream.NewMockC2S(uuid.New(), ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	stUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	stOccJID, _ := jid.New("room", "conference.jackal.im", "temp", true)
+	tempOcc := &mucmodel.Occupant{
+		OccupantJID: stOccJID,
+		BareJID: stUserJID.ToBareJID(),
+		Resources: map[string]bool{"temp": true},
+	}
+	tempOcc.SetAffiliation("admin")
+	muc.repOccupant.UpsertOccupant(nil, tempOcc)
+	muc.AddOccupantToRoom(nil, room, tempOcc)
+
+	// presence to change the nick
+	p := xmpp.NewElementName("presence")
+	show := xmpp.NewElementName("show").SetText("xa")
+	p.AppendElement(show)
+	status := xmpp.NewElementName("status").SetText("my new status")
+	p.AppendElement(status)
+	presence, _ := xmpp.NewPresenceFromElement(p, stUserJID, stOccJID)
+	require.True(t, isChangingStatus(presence))
+
+	muc.changeStatus(nil, room, presence)
+
+	// the user receives status update
+	statusStanza := ownerStm.ReceiveElement()
+	require.NotNil(t, statusStanza)
+	require.NotNil(t, statusStanza.Elements().Child("status"))
+	require.NotNil(t, statusStanza.Elements().Child("show"))
+}
+
+func TestXEP0045_ChangeNickname(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	newOccJID, _ := jid.New("room", "conference.jackal.im", "newnick", true)
+	// make sure this nick does not already exist
+	occNew, err := muc.repOccupant.FetchOccupant(nil, newOccJID)
+	require.Nil(t, err)
+	require.Nil(t, occNew)
+
+	// make sure the current nickname exists
+	jidBefore, found := room.UserToOccupant[*owner.BareJID]
+	require.True(t, found)
+	require.Equal(t, jidBefore.String(), owner.OccupantJID.String())
+	occBefore, err := muc.repOccupant.FetchOccupant(nil, &jidBefore)
+	require.Nil(t, err)
+	require.NotNil(t, occBefore)
+
+	ownerStm := stream.NewMockC2S(uuid.New(), ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	// presence to change the nick
+	p := xmpp.NewElementName("presence")
+	presence, _ := xmpp.NewPresenceFromElement(p, ownerFullJID, newOccJID)
+	require.NotNil(t, presence)
+
+	muc.changeNickname(nil, room, presence)
+
+	// the user receives unavailable stanza
+	ackUnavailable := ownerStm.ReceiveElement()
+	require.NotNil(t, ackUnavailable)
+	require.Equal(t, ackUnavailable.Type(), "unavailable")
+
+	// the user receives presence stanza
+	ackPresence := ownerStm.ReceiveElement()
+	require.NotNil(t, ackPresence)
+	require.Equal(t, ackPresence.From(), newOccJID.String())
+
+	// old nick is deleted
+	occBefore, err = muc.repOccupant.FetchOccupant(nil, &jidBefore)
+	require.Nil(t, err)
+	require.Nil(t, occBefore)
+
+	// new nick is added
+	jidAfter, found := room.UserToOccupant[*owner.BareJID]
+	require.True(t, found)
+	require.Equal(t, jidAfter.String(), newOccJID.String())
+	occAfter, err := muc.repOccupant.FetchOccupant(nil, newOccJID)
+	require.Nil(t, err)
+	require.NotNil(t, occAfter)
+	require.Equal(t, occAfter.BareJID.String(), owner.BareJID.String())
+}
 
 func TestXEP0045_JoinExistingRoom(t *testing.T) {
 	r, c := setupTest("jackal.im")

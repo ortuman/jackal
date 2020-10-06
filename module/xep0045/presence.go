@@ -8,11 +8,145 @@ package xep0045
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+func isChangingStatus(presence *xmpp.Presence) bool {
+	status := presence.Elements().Child("show")
+	show := presence.Elements().Child("show")
+	if status == nil && show == nil {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
+	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
+	if !found || occJID.String() != presence.ToJID().String() {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
+		return
+	}
+
+	o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if o.IsVisitor() {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
+		return
+	}
+
+	err := s.sendStatus(ctx, room, o, presence)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+	}
+
+}
+
+func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmodel.Occupant,
+	presence *xmpp.Presence) error {
+	presence.SetFromJID(sender.OccupantJID)
+
+	for _, occJID := range room.UserToOccupant {
+		if occJID.String() == sender.OccupantJID.String() {
+			continue
+		}
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		xEl := newOccupantAffiliationRoleElement(sender, room.Config.OccupantCanDiscoverRealJID(o))
+		for resource, _ := range o.Resources {
+			to := addResourceToBareJID(o.BareJID, resource)
+			presence.SetFromJID(sender.OccupantJID)
+			presence.SetToJID(to)
+			presence.SetID(uuid.New().String())
+			presence.AppendElement(xEl)
+			err = s.router.Route(ctx, presence)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
+	if s.newNickIsTaken(ctx, presence) {
+		return
+	}
+
+	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
+	if !found {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
+		return
+	}
+
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+		return
+	}
+
+	// change the occupant's JID
+	s.repOccupant.DeleteOccupant(ctx, &occJID)
+	occ.OccupantJID = presence.ToJID()
+	s.repOccupant.UpsertOccupant(ctx, occ)
+
+	// update the room
+	room.UserToOccupant[*presence.FromJID().ToBareJID()] = *occ.OccupantJID
+	s.repRoom.UpsertRoom(ctx, room)
+
+	// send the unavailable and presence stanzas to the room members
+	err = s.sendNickChangeAck(ctx, room, &occJID, occ.OccupantJID, presence)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+	}
+}
+
+func (s *Muc) sendNickChangeAck(ctx context.Context, room *mucmodel.Room,
+	oldJID, newJID *jid.JID, presence *xmpp.Presence) error {
+	for _, occJID := range room.UserToOccupant {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		selfNotifying := (occJID.String() == newJID.String())
+		for resource, _ := range o.Resources {
+			to := addResourceToBareJID(o.BareJID, resource)
+
+			// send unavailable stanza
+			p := getOccupantUnavailableStanza(o, oldJID, to, selfNotifying,
+				room.Config.OccupantCanDiscoverRealJID(o))
+			_ = s.router.Route(ctx, p)
+
+			// send new status stanza
+			p = getOccupantStatusStanza(o, to, selfNotifying,
+				room.Config.OccupantCanDiscoverRealJID(o))
+			_ = s.router.Route(ctx, p)
+		}
+	}
+	return nil
+}
+
+func (s *Muc) newNickIsTaken(ctx context.Context, presence *xmpp.Presence) bool {
+	o, err := s.repOccupant.FetchOccupant(ctx, presence.ToJID())
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+		return true
+	}
+	if o != nil {
+		_ = s.router.Route(ctx, presence.ConflictError())
+		return true
+	}
+	return false
+}
 
 func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
 	if presence.Type() != "" {
@@ -195,14 +329,14 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		// notify the new occupant of the existing occupant
 		for resource, _ := range newOccupant.Resources {
 			to := addResourceToBareJID(newOccupant.BareJID, resource)
-			p := getOccupantStatusStanza(o, to, room.Config.OccupantCanDiscoverRealJID(o))
+			p := getOccupantStatusStanza(o, to, false, room.Config.OccupantCanDiscoverRealJID(o))
 			_ = s.router.Route(ctx, p)
 		}
 
 		// notify the existing occupant of the new occupant
 		for resource, _ := range o.Resources {
 			to := addResourceToBareJID(o.BareJID, resource)
-			p := getOccupantStatusStanza(newOccupant, to,
+			p := getOccupantStatusStanza(newOccupant, to, false,
 				room.Config.OccupantCanDiscoverRealJID(newOccupant))
 			_ = s.router.Route(ctx, p)
 		}

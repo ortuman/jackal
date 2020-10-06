@@ -108,8 +108,10 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	switch {
 	case isPresenceToEnterRoom(presence):
 		s.enterRoom(ctx, room, presence)
+	case isChangingStatus(presence):
+		s.changeStatus(ctx, room, presence)
 	default:
-		_ = s.router.Route(ctx, presence.BadRequestError())
+		s.changeNickname(ctx, room, presence)
 	}
 }
 

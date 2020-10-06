@@ -155,7 +155,23 @@ func (r *Room) AddOccupant(o *Occupant) {
 		r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
 	}
 
+	r.SetDefaultRole(o)
+
 	r.occupantsOnline++
+}
+
+func (r *Room) SetDefaultRole(o *Occupant) {
+	if o.IsOwner() || o.IsAdmin() {
+		o.SetRole(moderator)
+		return
+	}
+
+	if r.Config.Moderated && o.GetAffiliation() == "" {
+		o.SetRole(visitor)
+		return
+	}
+
+	o.SetRole(participant)
 }
 
 func (r *Room) Full() bool {

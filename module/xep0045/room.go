@@ -196,6 +196,12 @@ func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *j
 
 func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
 	room.AddOccupant(occupant)
+
+	err := s.repOccupant.UpsertOccupant(ctx, occupant)
+	if err != nil {
+		return err
+	}
+
 	return s.repRoom.UpsertRoom(ctx, room)
 }
 

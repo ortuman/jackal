@@ -14,6 +14,26 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
+	selfNotifying, includeUserJID bool) xmpp.Stanza {
+	// get the x element
+	x := newOccupantAffiliationRoleElement(o, includeUserJID)
+	x.SetAttribute("nick", o.OccupantJID.Resource())
+	x.AppendElement(newStatusElement("303"))
+	if selfNotifying {
+		x.AppendElement(newStatusElement("110"))
+	}
+
+	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
+	el.SetType("unavailable")
+	p, err := xmpp.NewPresenceFromElement(el, from, to)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return p
+}
+
 func getPasswordFromPresence(presence *xmpp.Presence) string {
 	x := presence.Elements().ChildNamespace("x", mucNamespace)
 	if x == nil {
@@ -26,8 +46,12 @@ func getPasswordFromPresence(presence *xmpp.Presence) string {
 	return pwd.Text()
 }
 
-func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID, includeUserJID bool) xmpp.Stanza {
+func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID, selfNotifying,
+	includeUserJID bool) xmpp.Stanza {
 	x := newOccupantAffiliationRoleElement(o, includeUserJID)
+	if selfNotifying {
+		x.AppendElement(newStatusElement("110"))
+	}
 	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
 
 	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
@@ -122,6 +146,6 @@ func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID bool
 }
 
 func addResourceToBareJID(bareJID *jid.JID, resource string) *jid.JID {
-	res, _ := jid.NewWithString(bareJID.String() + "/" + resource, true)
+	res, _ := jid.NewWithString(bareJID.String()+"/"+resource, true)
 	return res
 }
