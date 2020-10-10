@@ -14,9 +14,10 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
 func TestXEP0045_ChangeStatus(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
@@ -32,8 +33,8 @@ func TestXEP0045_ChangeStatus(t *testing.T) {
 	stOccJID, _ := jid.New("room", "conference.jackal.im", "temp", true)
 	tempOcc := &mucmodel.Occupant{
 		OccupantJID: stOccJID,
-		BareJID: stUserJID.ToBareJID(),
-		Resources: map[string]bool{"temp": true},
+		BareJID:     stUserJID.ToBareJID(),
+		Resources:   map[string]bool{"temp": true},
 	}
 	tempOcc.SetAffiliation("admin")
 	muc.repOccupant.UpsertOccupant(nil, tempOcc)
@@ -125,8 +126,8 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
 	owner := &mucmodel.Occupant{
 		OccupantJID: ownerOccJID,
-		BareJID: ownerUserJID.ToBareJID(),
-		Resources: map[string]bool{"phone": true},
+		BareJID:     ownerUserJID.ToBareJID(),
+		Resources:   map[string]bool{"phone": true},
 	}
 	owner.SetAffiliation("owner")
 	muc.repOccupant.UpsertOccupant(nil, owner)
@@ -263,6 +264,7 @@ func getTestRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 		Password:     "secret",
 		Open:         false,
 		MaxOccCnt:    1,
+		AllowInvites: true,
 	}
 	roomJID, _ := jid.New("room", "conference.jackal.im", "", true)
 	room := &mucmodel.Room{
@@ -276,8 +278,8 @@ func getTestRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
 	owner := &mucmodel.Occupant{
 		OccupantJID: ownerOccJID,
-		BareJID: ownerUserJID.ToBareJID(),
-		Resources: map[string]bool{ownerUserJID.Resource(): true},
+		BareJID:     ownerUserJID.ToBareJID(),
+		Resources:   map[string]bool{ownerUserJID.Resource(): true},
 	}
 	owner.SetAffiliation("owner")
 

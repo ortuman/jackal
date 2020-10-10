@@ -135,6 +135,10 @@ func (s *Muc) processMessage(ctx context.Context, message *xmpp.Message) {
 	}
 
 	switch {
+	case isInvite(message):
+		s.inviteUser(ctx, room, message)
+	case isDeclineInvitation(message):
+		s.declineInvitation(ctx, room, message)
 	case message.IsGroupChat():
 		s.messageEveryone(ctx, room, message)
 	case message.IsChat() || message.Type() == "":

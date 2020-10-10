@@ -14,6 +14,85 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func isDeclineInvitation(message *xmpp.Message) bool {
+	x := message.Elements().Child("x")
+	if x == nil || x.Namespace() != mucNamespaceUser {
+		return false
+	}
+	decline := x.Elements().Child("decline")
+	if decline == nil {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) declineInvitation(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	_, invited := room.InvitedUsers[*message.FromJID().ToBareJID()]
+	if !invited {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+		return
+	}
+
+	// delete the user from the list of invited
+	delete(room.InvitedUsers, *message.FromJID().ToBareJID())
+	s.repRoom.UpsertRoom(ctx, room)
+
+	s.forwardDeclineToUser(ctx, room, message)
+}
+
+func (s *Muc) forwardDeclineToUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	msg := getDeclineStanza(room, message)
+	_ = s.router.Route(ctx, msg)
+}
+
+func isInvite(message *xmpp.Message) bool {
+	x := message.Elements().Child("x")
+	if x == nil || x.Namespace() != mucNamespaceUser {
+		return false
+	}
+	invite := x.Elements().Child("invite")
+	if invite == nil {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) inviteUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+
+	if !s.userHasVoice(ctx, room, message.FromJID(), message) {
+		return
+	}
+
+	occJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	occ, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if !room.Config.AllowInvites || (!room.Config.Open && !occ.IsAdmin() && !occ.IsOwner()) {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+		return
+	}
+
+	// add to the list of invited users
+	invJID := getInvitedUserJID(message)
+	room.InvitedUsers[*invJID] = true
+	s.repRoom.UpsertRoom(ctx, room)
+
+	s.forwardInviteToUser(ctx, room, message)
+}
+
+func (s *Muc) forwardInviteToUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	inviteFrom := message.FromJID()
+	inviteTo := getInvitedUserJID(message)
+
+	msg := getInvitationStanza(room, inviteFrom, inviteTo, message)
+
+	_ = s.router.Route(ctx, msg)
+}
+
+func getInvitedUserJID(message *xmpp.Message) *jid.JID {
+	invJIDStr := message.Elements().Child("x").Elements().Child("invite").Attributes().Get("to")
+	invJID, _ := jid.NewWithString(invJIDStr, true)
+	return invJID
+}
+
 func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	// private message should be addressed to a particular occupant, not the whole room
 	if !message.ToJID().IsFull() {

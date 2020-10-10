@@ -14,6 +14,46 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getDeclineStanza(room *mucmodel.Room, message *xmpp.Message) xmpp.Stanza {
+	toStr := message.Elements().Child("x").Elements().Child("decline").Attributes().Get("to")
+	to, _ := jid.NewWithString(toStr, true)
+
+	declineEl := xmpp.NewElementName("decline").SetAttribute("from",
+		message.FromJID().ToBareJID().String())
+	reasonEl := message.Elements().Child("x").Elements().Child("decline").Elements().Child("reason")
+	if reasonEl != nil {
+		declineEl.AppendElement(reasonEl)
+	}
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(declineEl)
+	msgEl := xmpp.NewElementName("message").AppendElement(xEl).SetID(message.ID())
+	msg, err := xmpp.NewMessageFromElement(msgEl, room.RoomJID, to)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return msg
+}
+
+func getInvitationStanza(room *mucmodel.Room, inviteFrom, inviteTo *jid.JID, message *xmpp.Message) xmpp.Stanza {
+	inviteEl := xmpp.NewElementName("invite").SetAttribute("from", inviteFrom.String())
+	reasonEl := message.Elements().Child("x").Elements().Child("invite").Elements().Child("reason")
+	if reasonEl != nil {
+		inviteEl.AppendElement(reasonEl)
+	}
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(inviteEl)
+	if room.Config.PwdProtected {
+		pwdEl := xmpp.NewElementName("password").SetText(room.Config.Password)
+		xEl.AppendElement(pwdEl)
+	}
+	msgEl := xmpp.NewElementName("message").AppendElement(xEl).SetID(message.ID())
+	msg, err := xmpp.NewMessageFromElement(msgEl, room.RoomJID, inviteTo)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return msg
+}
+
 func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
 	selfNotifying, includeUserJID bool) xmpp.Stanza {
 	// get the x element

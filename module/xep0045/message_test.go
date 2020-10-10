@@ -16,6 +16,76 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
+func TestXEP0045_DeclineInvite(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	room.InvitedUsers[*regularUserJID.ToBareJID()] = true
+	muc.repRoom.UpsertRoom(nil, room)
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	// user declines the invitation
+	reason := xmpp.NewElementName("reason").SetText("Sorry, not for me!")
+	invite := xmpp.NewElementName("decline").SetAttribute("to", owner.BareJID.String())
+	invite.AppendElement(reason)
+	x := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(invite)
+	m := xmpp.NewElementName("message").SetID("id-decline").AppendElement(x)
+	msg, err := xmpp.NewMessageFromElement(m, regularUserJID, room.RoomJID)
+	require.Nil(t, err)
+
+	require.True(t, isDeclineInvitation(msg))
+	muc.declineInvitation(nil, room, msg)
+
+	decline := ownerStm.ReceiveElement()
+	require.Equal(t, decline.From(), room.RoomJID.String())
+	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
+	_, found := room.InvitedUsers[*regularUserJID.ToBareJID()]
+	require.False(t, found)
+}
+
+func TestXEP0045_SendInvite(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	regStm := stream.NewMockC2S("id-2", regularUserJID)
+	regStm.SetPresence(xmpp.NewPresence(regularUserJID.ToBareJID(), regularUserJID, xmpp.AvailableType))
+	r.Bind(context.Background(), regStm)
+
+	// make sure user is not already invited
+	_, found := room.InvitedUsers[*regularUserJID.ToBareJID()]
+	require.False(t, found)
+
+	// owner sends the invitation
+	reason := xmpp.NewElementName("reason").SetText("Join me!")
+	invite := xmpp.NewElementName("invite").SetAttribute("to", regularUserJID.ToBareJID().String())
+	invite.AppendElement(reason)
+	x := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(invite)
+	m := xmpp.NewElementName("message").SetID("id-invite").AppendElement(x)
+	msg, err := xmpp.NewMessageFromElement(m, ownerFullJID, room.RoomJID)
+	require.Nil(t, err)
+
+	require.True(t, isInvite(msg))
+	muc.inviteUser(context.Background(), room, msg)
+
+	inviteStanza := regStm.ReceiveElement()
+	require.Equal(t, inviteStanza.From(), room.RoomJID.String())
+
+	updatedRoom, _ := muc.repRoom.FetchRoom(nil, room.RoomJID)
+	_, found = updatedRoom.InvitedUsers[*regularUserJID.ToBareJID()]
+	require.True(t, found)
+}
 
 func TestXEP0045_MessageEveryone(t *testing.T) {
 	r, c := setupTest("jackal.im")
