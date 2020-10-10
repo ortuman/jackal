@@ -21,7 +21,6 @@ func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 		return nil, err
 	}
 	o.SetAffiliation("owner")
-	o.SetRole("moderator")
 	err = s.repOccupant.UpsertOccupant(ctx, o)
 	if err != nil {
 		return nil, err

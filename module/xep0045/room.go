@@ -63,10 +63,10 @@ this form.
 	ConfigWhoIs = "muc#roomconfig_whois"
 )
 
-func (s *Muc) newRoom(ctx context.Context, userJID, occJID *jid.JID) error {
-	roomJID := occJID.ToBareJID()
+func (s *Muc) newRoom(ctx context.Context, ownerFullJID, ownerOccJID *jid.JID) error {
+	roomJID := ownerOccJID.ToBareJID()
 
-	owner, err := s.createOwner(ctx, userJID, occJID)
+	owner, err := s.createOwner(ctx, ownerFullJID, ownerOccJID)
 	if err != nil {
 		return err
 	}
