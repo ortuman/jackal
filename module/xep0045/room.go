@@ -93,8 +93,7 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 		Locked:         true,
 	}
 
-	r.AddOccupant(owner)
-	err := s.repRoom.UpsertRoom(ctx, r)
+	err := s.AddOccupantToRoom(ctx, r, owner)
 	if err != nil {
 		return nil, err
 	}
