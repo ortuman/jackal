@@ -107,7 +107,7 @@ func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID 
 		return true
 	}
 
-	if occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember() {
+	if occupant != nil && (occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember()) {
 		return true
 	}
 
@@ -386,7 +386,7 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 				log.Error(err)
 				ok = false
 			}
-			room.Config.Open = n
+			room.Config.Open = !n
 		case ConfigModerated:
 			n, err := strconv.ParseBool(field.Values[0])
 			if err != nil {

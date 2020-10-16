@@ -124,7 +124,7 @@ func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *x
 		if room == nil {
 			return nil, xmpp.ErrInternalServerError
 		}
-		if room.Config.Public {
+		if room.Config.Public && !room.Locked {
 			item := xep0030.Item{
 				Jid:  room.RoomJID.String(),
 				Name: room.Name,
