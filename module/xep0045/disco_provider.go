@@ -35,6 +35,8 @@ const (
 	mucUnsecured     = "muc_unsecured"
 	mucPersistent    = "muc_persistent"
 	mucTemporary     = "muc_temporary"
+
+	mucUserItem = "x-roomuser-item"
 )
 
 type discoInfoProvider struct {
@@ -55,13 +57,23 @@ func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
 	disco.RegisterProvider(cfg.MucHost, provider)
 }
 
-func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, node string) []xep0030.Identity {
+func (p *discoInfoProvider) Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
-	if node != "" {
+	if toJID != nil && toJID.Node() != "" {
 		room := p.getRoom(ctx, toJID)
-		if room != nil {
-			identities = append(identities, xep0030.Identity{Type: "text", Category: "conference",
-				Name: room.Name})
+		if node == "" {
+			if room != nil {
+				identities = append(identities, xep0030.Identity{Type: "text",
+					Category: "conference", Name: room.Name})
+			}
+		} else if node == mucUserItem {
+			if room != nil {
+				occJID, found := room.UserToOccupant[*fromJID.ToBareJID()]
+				if found {
+					identities = append(identities, xep0030.Identity{Type: "text",
+						Category: "conference", Name: occJID.Resource()})
+				}
+			}
 		}
 	} else {
 		identities = append(identities, xep0030.Identity{Type: "text", Category: "conference",
@@ -70,8 +82,8 @@ func (p *discoInfoProvider) Identities(ctx context.Context, toJID, _ *jid.JID, n
 	return identities
 }
 
-func (p *discoInfoProvider) Features(ctx context.Context, toJID, _ *jid.JID, node string) ([]xep0030.Feature, *xmpp.StanzaError) {
-	if node != "" {
+func (p *discoInfoProvider) Features(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
+	if toJID != nil && toJID.Node() != "" {
 		return p.roomFeatures(ctx, toJID)
 	} else {
 		return []string{mucNamespace}, nil
@@ -82,8 +94,8 @@ func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*x
 	return nil, nil
 }
 
-func (p *discoInfoProvider) Items(ctx context.Context, toJID, _ *jid.JID, node string) ([]xep0030.Item, *xmpp.StanzaError) {
-	if node != "" {
+func (p *discoInfoProvider) Items(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Item, *xmpp.StanzaError) {
+	if toJID != nil && toJID.Node() != "" {
 		return p.roomOccupants(ctx, toJID)
 	} else {
 		return p.publicRooms(ctx)
