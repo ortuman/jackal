@@ -15,6 +15,61 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
+	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
+	if !found || occJID.String() != presence.ToJID().String() {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
+		return
+	}
+	o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+
+	err := s.repOccupant.DeleteOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	delete(room.UserToOccupant, *presence.FromJID().ToBareJID())
+	s.repRoom.UpsertRoom(ctx, room)
+
+	err = s.sendOccExitedRoom(ctx, o, room, presence)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+	}
+}
+
+func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupant, room *mucmodel.Room,
+	presence *xmpp.Presence) error {
+	resultPresence := xmpp.NewElementName("presence").SetType("unavailable")
+	occExiting.SetRole("")
+
+	for _, occJID := range room.UserToOccupant {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		xEl := newOccupantAffiliationRoleElement(occExiting,
+			room.Config.OccupantCanDiscoverRealJID(o))
+		if occJID.String() == occExiting.OccupantJID.String() {
+			xEl.AppendElement(newStatusElement("110"))
+		}
+		resultPresence.AppendElement(xEl)
+		for resource, _ := range o.Resources {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, err := xmpp.NewPresenceFromElement(resultPresence, occExiting.OccupantJID, to)
+			if err != nil {
+				return err
+			}
+			err = s.router.Route(ctx, p)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func isChangingStatus(presence *xmpp.Presence) bool {
 	status := presence.Elements().Child("show")
 	show := presence.Elements().Child("show")
@@ -32,6 +87,7 @@ func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *x
 	}
 
 	o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+	// all the way to here
 	if o.IsVisitor() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return

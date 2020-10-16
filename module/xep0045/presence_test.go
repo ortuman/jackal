@@ -18,6 +18,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestXEP0045_ExitRoom(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+	ownerStm := stream.NewMockC2S(uuid.New(), ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	exUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	exOccJID, _ := jid.New("room", "conference.jackal.im", "temp", true)
+	tempOcc := &mucmodel.Occupant{
+		OccupantJID: exOccJID,
+		BareJID:     exUserJID.ToBareJID(),
+		Resources:   map[string]bool{"temp": true},
+	}
+	muc.repOccupant.UpsertOccupant(nil, tempOcc)
+	muc.AddOccupantToRoom(nil, room, tempOcc)
+
+	// presence for exiting the room
+	p := xmpp.NewElementName("presence").SetType("unavailable")
+	status := xmpp.NewElementName("status").SetText("bye!")
+	p.AppendElement(status)
+	presence, _ := xmpp.NewPresenceFromElement(p, exUserJID, exOccJID)
+
+	muc.exitRoom(nil, room, presence)
+
+	ack := ownerStm.ReceiveElement()
+	require.NotNil(t, ack)
+	require.Equal(t, ack.Type(), "unavailable")
+
+	exists, err := muc.repOccupant.OccupantExists(nil, exOccJID)
+	require.Nil(t, err)
+	require.False(t, exists)
+
+	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
+	_, found := room.UserToOccupant[*exUserJID.ToBareJID()]
+	require.False(t, found)
+}
+
 func TestXEP0045_ChangeStatus(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())

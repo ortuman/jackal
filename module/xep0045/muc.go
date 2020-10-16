@@ -110,6 +110,8 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 		s.enterRoom(ctx, room, presence)
 	case isChangingStatus(presence):
 		s.changeStatus(ctx, room, presence)
+	case presence.IsUnavailable():
+		s.exitRoom(ctx, room, presence)
 	default:
 		s.changeNickname(ctx, room, presence)
 	}
