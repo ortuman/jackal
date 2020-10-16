@@ -7,6 +7,7 @@ package xep0045
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
@@ -209,7 +210,7 @@ func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
 		return false
 	}
 	x := presence.Elements().ChildNamespace("x", mucNamespace)
-	if x == nil || x.Text() != "" {
+	if x == nil || len(strings.TrimSpace(x.Text())) != 0 {
 		return false
 	}
 	return true
