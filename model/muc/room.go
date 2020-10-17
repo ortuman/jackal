@@ -163,15 +163,11 @@ func (r *Room) AddOccupant(o *Occupant) {
 func (r *Room) SetDefaultRole(o *Occupant) {
 	if o.IsOwner() || o.IsAdmin() {
 		o.SetRole(moderator)
-		return
-	}
-
-	if r.Config.Moderated && o.GetAffiliation() == "" {
+	} else if r.Config.Moderated && o.GetAffiliation() == "" {
 		o.SetRole(visitor)
-		return
+	} else {
+		o.SetRole(participant)
 	}
-
-	o.SetRole(participant)
 }
 
 func (r *Room) Full() bool {

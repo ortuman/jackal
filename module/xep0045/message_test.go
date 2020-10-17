@@ -97,11 +97,8 @@ func TestXEP0045_MessageEveryone(t *testing.T) {
 
 	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
-	regularOcc := &mucmodel.Occupant{
-		OccupantJID: regularOccJID,
-		BareJID:     regularUserJID.ToBareJID(),
-		Resources:   map[string]bool{regularUserJID.Resource(): true},
-	}
+	regularOcc, err := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
+	regularOcc.AddResource("balcony")
 	muc.repOccupant.UpsertOccupant(nil, regularOcc)
 	muc.AddOccupantToRoom(nil, room, regularOcc)
 
@@ -147,11 +144,8 @@ func TestXEP0045_SendPM(t *testing.T) {
 
 	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
-	regularOcc := &mucmodel.Occupant{
-		OccupantJID: regularOccJID,
-		BareJID:     regularUserJID.ToBareJID(),
-		Resources:   map[string]bool{regularUserJID.Resource(): true},
-	}
+	regularOcc, _ := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
+	regularOcc.AddResource(regularUserJID.Resource())
 	muc.repOccupant.UpsertOccupant(nil, regularOcc)
 	muc.AddOccupantToRoom(nil, room, regularOcc)
 
@@ -171,4 +165,24 @@ func TestXEP0045_SendPM(t *testing.T) {
 	require.Equal(t, regMsg.Type(), "chat")
 	msgTxt := regMsg.Elements().Child("body").Text()
 	require.Equal(t, msgTxt, "Hello ortuman!")
+}
+
+func TestXEP0045_MessageOccupant(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	_, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	senderJID, _ := jid.New("sender", "jackal.im", "phone", false)
+	body := xmpp.NewElementName("body").SetText("hello")
+
+	muc.messageOccupant(nil, owner.OccupantJID, senderJID, body, uuid.New(), true)
+
+	msg := ownerStm.ReceiveElement()
+	require.Equal(t, "hello", msg.Elements().Child("body").Text())
 }

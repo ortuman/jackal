@@ -32,12 +32,12 @@ const (
 )
 
 type Occupant struct {
-	OccupantJID     *jid.JID
-	BareJID         *jid.JID
-	affiliation     string
-	role            string
+	OccupantJID *jid.JID
+	BareJID     *jid.JID
+	affiliation string
+	role        string
 	// a set of different resources that the user uses to access this occupant
-	Resources map[string]bool
+	resources map[string]bool
 }
 
 // FromBytes deserializes an Occupant entity from it's gob binary representation.
@@ -63,13 +63,13 @@ func (o *Occupant) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&numResources); err != nil {
 		return err
 	}
-	o.Resources = make(map[string]bool)
+	o.resources = make(map[string]bool)
 	for i := 0; i < numResources; i++ {
 		var res string
 		if err := dec.Decode(&res); err != nil {
 			return err
 		}
-		o.Resources[res] = true
+		o.resources[res] = true
 	}
 	return nil
 }
@@ -89,10 +89,10 @@ func (o *Occupant) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&o.role); err != nil {
 		return err
 	}
-	if err := enc.Encode(len(o.Resources)); err != nil {
+	if err := enc.Encode(len(o.resources)); err != nil {
 		return err
 	}
-	for res, _ := range o.Resources {
+	for res, _ := range o.resources {
 		if err := enc.Encode(&res); err != nil {
 			return err
 		}
@@ -117,6 +117,21 @@ func (o *Occupant) SetAffiliation(aff string) error {
 		return fmt.Errorf("occupant: this type of affiliation is not supported - %s", aff)
 	}
 	return nil
+}
+
+func NewOccupant(occJID, userJID *jid.JID) (*Occupant, error) {
+	if !occJID.IsFullWithUser() {
+		return nil, fmt.Errorf("Occupant JID %s is not valid", occJID.String())
+	}
+	if !userJID.IsBare() {
+		return nil, fmt.Errorf("User JID %s is not a bare JID", userJID.String())
+	}
+	o := &Occupant{
+		OccupantJID: occJID,
+		BareJID: userJID,
+	}
+	o.resources = make(map[string]bool)
+	return o, nil
 }
 
 func (o *Occupant) GetAffiliation() string {
@@ -171,4 +186,25 @@ func (o *Occupant) IsMember() bool {
 
 func (o *Occupant) IsOutcast() bool {
 	return o.affiliation == outcast
+}
+
+func (o *Occupant) GetAllResources() []string {
+	resources := make([]string, 0, len(o.resources))
+	for r := range o.resources {
+		resources = append(resources, r)
+	}
+	return resources
+}
+
+func (o *Occupant) HasResource(s string) bool {
+	_, found := o.resources[s]
+	return found
+}
+
+func (o *Occupant) AddResource(s string) {
+	o.resources[s] = true
+}
+
+func (o *Occupant) DeleteResource(s string) {
+	delete(o.resources, s)
 }

@@ -22,9 +22,9 @@ func TestModelOccupant(t *testing.T){
 		BareJID: jFull.ToBareJID(),
 		affiliation: "owner",
 		role: "moderator",
-		Resources: make(map[string]bool),
+		resources: make(map[string]bool),
 	}
-	o1.Resources[jFull.Resource()] = true
+	o1.resources[jFull.Resource()] = true
 
 	buf := new(bytes.Buffer)
 	require.Nil(t, o1.ToBytes(buf))

@@ -25,7 +25,7 @@ func TestXEP0045_CreateInstantRoom(t *testing.T) {
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "", true)
+	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
@@ -66,7 +66,7 @@ func TestXEP0045_SendRoomConfiguration(t *testing.T) {
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "", true)
+	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))

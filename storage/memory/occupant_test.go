@@ -17,21 +17,17 @@ import (
 
 func TestMemoryStorage_InsertOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	o := mucmodel.Occupant{
-		OccupantJID: j,
-		BareJID:     j,
-		Resources:   make(map[string]bool),
-	}
+	o, _ := mucmodel.NewOccupant(j, j.ToBareJID())
+	o.AddResource("yard")
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	o.Resources["yard"] = true
 	s := NewOccupant()
 	EnableMockedError()
-	err := s.UpsertOccupant(context.Background(), &o)
+	err := s.UpsertOccupant(context.Background(), o)
 	require.Equal(t, ErrMocked, err)
 	DisableMockedError()
 
-	err = s.UpsertOccupant(context.Background(), &o)
+	err = s.UpsertOccupant(context.Background(), o)
 	require.Nil(t, err)
 }
 
@@ -47,15 +43,11 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 	require.Nil(t, err)
 	require.False(t, ok)
 
-	o := mucmodel.Occupant{
-		OccupantJID: j,
-		BareJID:     j,
-		Resources:   make(map[string]bool),
-	}
+	o, _ := mucmodel.NewOccupant(j, j.ToBareJID())
+	o.AddResource("yard")
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	o.Resources["yard"] = true
-	s.saveEntity(occKey(j), &o)
+	s.saveEntity(occKey(j), o)
 	ok, err = s.OccupantExists(context.Background(), j)
 	require.Nil(t, err)
 	require.True(t, ok)
@@ -63,14 +55,10 @@ func TestMemoryStorage_OccupantExists(t *testing.T) {
 
 func TestMemoryStorage_FetchOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	o := &mucmodel.Occupant{
-		OccupantJID: j,
-		BareJID:     j,
-		Resources:   make(map[string]bool),
-	}
+	o, _ := mucmodel.NewOccupant(j, j.ToBareJID())
+	o.AddResource("yard")
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	o.Resources["yard"] = true
 	s := NewOccupant()
 	_ = s.UpsertOccupant(context.Background(), o)
 
@@ -90,16 +78,12 @@ func TestMemoryStorage_FetchOccupant(t *testing.T) {
 
 func TestMemoryStorage_DeleteOccupant(t *testing.T) {
 	j, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	o := mucmodel.Occupant{
-		OccupantJID: j,
-		BareJID:     j,
-		Resources:   make(map[string]bool),
-	}
+	o, _ := mucmodel.NewOccupant(j, j.ToBareJID())
+	o.AddResource("yard")
 	o.SetAffiliation("owner")
 	o.SetRole("moderator")
-	o.Resources["yard"] = true
 	s := NewOccupant()
-	_ = s.UpsertOccupant(context.Background(), &o)
+	_ = s.UpsertOccupant(context.Background(), o)
 
 	EnableMockedError()
 	require.Equal(t, ErrMocked, s.DeleteOccupant(context.Background(), j))

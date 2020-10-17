@@ -45,7 +45,7 @@ func TestXEP0045_ProcessIQInstantRoom(t *testing.T) {
 	defer func() { _ = muc.Shutdown() }()
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "", true)
+	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
 	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
@@ -126,11 +126,8 @@ func TestXEP0045_ProcessMessageMsgEveryone(t *testing.T) {
 
 	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
-	regularOcc := &mucmodel.Occupant{
-		OccupantJID: regularOccJID,
-		BareJID:     regularUserJID.ToBareJID(),
-		Resources:   map[string]bool{regularUserJID.Resource(): true},
-	}
+	regularOcc, _ := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
+	regularOcc.AddResource(regularUserJID.Resource())
 	muc.repOccupant.UpsertOccupant(nil, regularOcc)
 	muc.AddOccupantToRoom(nil, room, regularOcc)
 

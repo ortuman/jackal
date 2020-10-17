@@ -56,7 +56,7 @@ func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupa
 			xEl.AppendElement(newStatusElement("110"))
 		}
 		resultPresence.AppendElement(xEl)
-		for resource, _ := range o.Resources {
+		for _, resource := range o.GetAllResources() {
 			to := addResourceToBareJID(o.BareJID, resource)
 			p, err := xmpp.NewPresenceFromElement(resultPresence, occExiting.OccupantJID, to)
 			if err != nil {
@@ -115,7 +115,7 @@ func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmo
 			return err
 		}
 		xEl := newOccupantAffiliationRoleElement(sender, room.Config.OccupantCanDiscoverRealJID(o))
-		for resource, _ := range o.Resources {
+		for _, resource := range o.GetAllResources() {
 			to := addResourceToBareJID(o.BareJID, resource)
 			presence.SetFromJID(sender.OccupantJID)
 			presence.SetToJID(to)
@@ -174,7 +174,7 @@ func (s *Muc) sendNickChangeAck(ctx context.Context, room *mucmodel.Room,
 			return err
 		}
 		selfNotifying := (occJID.String() == newOcc.OccupantJID.String())
-		for resource, _ := range o.Resources {
+		for _, resource := range o.GetAllResources() {
 			to := addResourceToBareJID(o.BareJID, resource)
 
 			// send unavailable stanza
@@ -384,7 +384,7 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 			return err
 		}
 		// notify the new occupant of the existing occupant
-		for resource, _ := range newOccupant.Resources {
+		for _, resource := range newOccupant.GetAllResources() {
 			to := addResourceToBareJID(newOccupant.BareJID, resource)
 			p := getOccupantStatusStanza(o, to, false,
 				room.Config.OccupantCanDiscoverRealJID(o))
@@ -392,7 +392,7 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		}
 
 		// notify the existing occupant of the new occupant
-		for resource, _ := range o.Resources {
+		for _, resource := range o.GetAllResources() {
 			to := addResourceToBareJID(o.BareJID, resource)
 			p := getOccupantStatusStanza(newOccupant, to, false,
 				room.Config.OccupantCanDiscoverRealJID(newOccupant))
@@ -401,7 +401,7 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 	}
 
 	// final notification to the new occupant with status codes (self-presence)
-	for resource, _ := range newOccupant.Resources {
+	for _, resource := range newOccupant.GetAllResources() {
 		to := addResourceToBareJID(newOccupant.BareJID, resource)
 		p := getOccupantSelfPresenceStanza(newOccupant, to, room.Config.NonAnonymous,
 			presence.ID())

@@ -31,11 +31,8 @@ func TestXEP0045_ExitRoom(t *testing.T) {
 
 	exUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	exOccJID, _ := jid.New("room", "conference.jackal.im", "temp", true)
-	tempOcc := &mucmodel.Occupant{
-		OccupantJID: exOccJID,
-		BareJID:     exUserJID.ToBareJID(),
-		Resources:   map[string]bool{"temp": true},
-	}
+	tempOcc, _ := mucmodel.NewOccupant(exOccJID, exUserJID.ToBareJID())
+	tempOcc.AddResource("temp")
 	muc.repOccupant.UpsertOccupant(nil, tempOcc)
 	muc.AddOccupantToRoom(nil, room, tempOcc)
 
@@ -73,11 +70,8 @@ func TestXEP0045_ChangeStatus(t *testing.T) {
 
 	stUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	stOccJID, _ := jid.New("room", "conference.jackal.im", "temp", true)
-	tempOcc := &mucmodel.Occupant{
-		OccupantJID: stOccJID,
-		BareJID:     stUserJID.ToBareJID(),
-		Resources:   map[string]bool{"temp": true},
-	}
+	tempOcc, _ := mucmodel.NewOccupant(stOccJID, stUserJID.ToBareJID())
+	tempOcc.AddResource("temp")
 	tempOcc.SetAffiliation("admin")
 	muc.repOccupant.UpsertOccupant(nil, tempOcc)
 	muc.AddOccupantToRoom(nil, room, tempOcc)
@@ -166,11 +160,8 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 	// existing room
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
-	owner := &mucmodel.Occupant{
-		OccupantJID: ownerOccJID,
-		BareJID:     ownerUserJID.ToBareJID(),
-		Resources:   map[string]bool{"phone": true},
-	}
+	owner, _ := mucmodel.NewOccupant(ownerOccJID, ownerUserJID.ToBareJID())
+	owner.AddResource("phone")
 	owner.SetAffiliation("owner")
 	muc.repOccupant.UpsertOccupant(nil, owner)
 	ownerStm := stream.NewMockC2S(uuid.New(), ownerUserJID)
@@ -318,11 +309,8 @@ func getTestRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)
 	ownerOccJID, _ := jid.New("room", "conference.jackal.im", "owner", true)
-	owner := &mucmodel.Occupant{
-		OccupantJID: ownerOccJID,
-		BareJID:     ownerUserJID.ToBareJID(),
-		Resources:   map[string]bool{ownerUserJID.Resource(): true},
-	}
+	owner, _ := mucmodel.NewOccupant(ownerOccJID, ownerUserJID.ToBareJID())
+	owner.AddResource(ownerUserJID.Resource())
 	owner.SetAffiliation("owner")
 
 	muc.repOccupant.UpsertOccupant(nil, owner)

@@ -107,7 +107,12 @@ func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Mes
 
 	// send the PM
 	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
-	s.messageOccupant(ctx, message.ToJID(), &sendersOccupantJID, message)
+	msgBody := message.Elements().Child("body")
+	if msgBody == nil {
+		_ = s.router.Route(ctx, message.BadRequestError())
+		return
+	}
+	s.messageOccupant(ctx, message.ToJID(), &sendersOccupantJID, msgBody, message.ID(), true)
 }
 
 func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID, occJID *jid.JID, message *xmpp.Message) bool {
@@ -152,8 +157,13 @@ func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message 
 	}
 
 	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	msgBody := message.Elements().Child("body")
+	if msgBody == nil {
+		_ = s.router.Route(ctx, message.BadRequestError())
+		return
+	}
 	for _, occJID := range room.UserToOccupant {
-		s.messageOccupant(ctx, &occJID, &sendersOccupantJID, message)
+		s.messageOccupant(ctx, &occJID, &sendersOccupantJID, msgBody, message.ID(), false)
 	}
 	return
 }
@@ -182,17 +192,18 @@ func (s *Muc) userHasVoice(ctx context.Context, room *mucmodel.Room, userJID *ji
 }
 
 func (s *Muc) messageOccupant(ctx context.Context, occJID, senderJID *jid.JID,
-	message *xmpp.Message) {
+	body xmpp.XElement, id string, private bool) {
 	occupant, err := s.repOccupant.FetchOccupant(ctx, occJID)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	message.SetFromJID(senderJID)
-	for resource, _ := range occupant.Resources {
+	msgEl := getMessageElement(body, id, private)
+
+	for _, resource := range occupant.GetAllResources() {
 		to := addResourceToBareJID(occupant.BareJID, resource)
-		message.SetToJID(to)
+		message, _ := xmpp.NewMessageFromElement(msgEl, senderJID, to)
 		_ = s.router.Route(ctx, message)
 	}
 	return

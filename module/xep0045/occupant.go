@@ -39,16 +39,13 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 		return nil, fmt.Errorf("xep0045_occupant: User cannot use another user's occupant nick")
 	}
 
-	// if the occupant does not exist, create it, otherwise add the new resource to the map
 	if o == nil {
-		o = &mucmodel.Occupant{
-			OccupantJID: occJID,
-			BareJID:     userJID.ToBareJID(),
-			Resources:   map[string]bool{userJID.Resource(): true},
+		o, err = mucmodel.NewOccupant(occJID, userJID.ToBareJID())
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		o.Resources[userJID.Resource()] = true
 	}
+	o.AddResource(userJID.Resource())
 
 	err = s.repOccupant.UpsertOccupant(ctx, o)
 	if err != nil {

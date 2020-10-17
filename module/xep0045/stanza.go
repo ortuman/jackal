@@ -14,6 +14,25 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getMessageElement(body xmpp.XElement, id string, private bool) *xmpp.Element {
+	msgEl := xmpp.NewElementName("message").AppendElement(body)
+
+	if id != "" {
+		msgEl.SetID(id)
+	} else {
+		msgEl.SetID(uuid.New().String())
+	}
+
+	if private {
+		msgEl.SetType("chat")
+		msgEl.AppendElement(xmpp.NewElementNamespace("x", mucNamespaceUser))
+	} else {
+		msgEl.SetType("groupchat")
+	}
+
+	return msgEl
+}
+
 func getDeclineStanza(room *mucmodel.Room, message *xmpp.Message) xmpp.Stanza {
 	toStr := message.Elements().Child("x").Elements().Child("decline").Attributes().Get("to")
 	to, _ := jid.NewWithString(toStr, true)
