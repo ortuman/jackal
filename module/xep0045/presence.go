@@ -159,7 +159,7 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 	s.repRoom.UpsertRoom(ctx, room)
 
 	// send the unavailable and presence stanzas to the room members
-	err = s.sendNickChangeAck(ctx, room, &occJID, occ.OccupantJID, presence)
+	err = s.sendNickChangeAck(ctx, room, occ, &occJID, presence)
 	if err != nil {
 		log.Error(err)
 		_ = s.router.Route(ctx, presence.InternalServerError())
@@ -167,23 +167,23 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 }
 
 func (s *Muc) sendNickChangeAck(ctx context.Context, room *mucmodel.Room,
-	oldJID, newJID *jid.JID, presence *xmpp.Presence) error {
+	newOcc *mucmodel.Occupant, oldJID *jid.JID, presence *xmpp.Presence) error {
 	for _, occJID := range room.UserToOccupant {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			return err
 		}
-		selfNotifying := (occJID.String() == newJID.String())
+		selfNotifying := (occJID.String() == newOcc.OccupantJID.String())
 		for resource, _ := range o.Resources {
 			to := addResourceToBareJID(o.BareJID, resource)
 
 			// send unavailable stanza
-			p := getOccupantUnavailableStanza(o, oldJID, to, selfNotifying,
+			p := getOccupantUnavailableStanza(newOcc, oldJID, to, selfNotifying,
 				room.Config.OccupantCanDiscoverRealJID(o))
 			_ = s.router.Route(ctx, p)
 
 			// send new status stanza
-			p = getOccupantStatusStanza(o, to, selfNotifying,
+			p = getOccupantStatusStanza(newOcc, to, selfNotifying,
 				room.Config.OccupantCanDiscoverRealJID(o))
 			_ = s.router.Route(ctx, p)
 		}
@@ -386,7 +386,8 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		// notify the new occupant of the existing occupant
 		for resource, _ := range newOccupant.Resources {
 			to := addResourceToBareJID(newOccupant.BareJID, resource)
-			p := getOccupantStatusStanza(o, to, false, room.Config.OccupantCanDiscoverRealJID(o))
+			p := getOccupantStatusStanza(o, to, false,
+				room.Config.OccupantCanDiscoverRealJID(o))
 			_ = s.router.Route(ctx, p)
 		}
 

@@ -58,7 +58,12 @@ func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
 	selfNotifying, includeUserJID bool) xmpp.Stanza {
 	// get the x element
 	x := newOccupantAffiliationRoleElement(o, includeUserJID)
-	x.SetAttribute("nick", o.OccupantJID.Resource())
+
+	// modifying the item element to include the nick
+	itemEl := xmpp.NewElementFromElement(x.Elements().Child("item"))
+	itemEl.SetAttribute("nick", o.OccupantJID.Resource())
+	x.RemoveElements("item").AppendElement(itemEl)
+
 	x.AppendElement(newStatusElement("303"))
 	if selfNotifying {
 		x.AppendElement(newStatusElement("110"))
@@ -86,8 +91,8 @@ func getPasswordFromPresence(presence *xmpp.Presence) string {
 	return pwd.Text()
 }
 
-func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID, selfNotifying,
-	includeUserJID bool) xmpp.Stanza {
+func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID,
+	selfNotifying, includeUserJID bool) xmpp.Stanza {
 	x := newOccupantAffiliationRoleElement(o, includeUserJID)
 	if selfNotifying {
 		x.AppendElement(newStatusElement("110"))
