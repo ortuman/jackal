@@ -68,7 +68,7 @@ func (p *discoInfoProvider) Identities(ctx context.Context, toJID, fromJID *jid.
 			}
 		} else if node == mucUserItem {
 			if room != nil {
-				occJID, found := room.UserToOccupant[*fromJID.ToBareJID()]
+				occJID, found := room.GetOccupantJID(fromJID.ToBareJID())
 				if found {
 					identities = append(identities, xep0030.Identity{Type: "text",
 						Category: "conference", Name: occJID.Resource()})
@@ -109,7 +109,7 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 		return nil, xmpp.ErrItemNotFound
 	}
 	if room.Config.GetCanGetMemberList() == mucmodel.All {
-		for _, occJID := range room.UserToOccupant {
+		for _, occJID := range room.GetAllOccupantJIDs() {
 			items = append(items, xep0030.Item{Jid: occJID.String()})
 		}
 	}

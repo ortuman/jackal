@@ -26,41 +26,24 @@ this form.
 
 	roomConfigInstructions = "Complete this form to modify the configuration of your room"
 
-	ConfigName = "muc#roomconfig_roomname"
-
-	ConfigDesc = "muc#roomconfig_roomdesc"
-
-	ConfigAllowPM = "muc#roomconfig_allowpm"
-
+	ConfigName         = "muc#roomconfig_roomname"
+	ConfigDesc         = "muc#roomconfig_roomdesc"
+	ConfigAllowPM      = "muc#roomconfig_allowpm"
 	ConfigAllowInvites = "muc#roomconfig_allowinvites"
-
-	ConfigChangeSubj = "muc#roomconfig_changesubject"
-
-	ConfigMemberList = "muc#roomconfig_getmemberlist"
-
-	ConfigLanguage = "muc#roomconfig_lang"
-
-	ConfigMaxUsers = "muc#roomconfig_maxusers"
-
-	ConfigMembersOnly = "muc#roomconfig_membersonly"
-
-	ConfigModerated = "muc#roomconfig_moderatedroom"
-
+	ConfigChangeSubj   = "muc#roomconfig_changesubject"
+	ConfigMemberList   = "muc#roomconfig_getmemberlist"
+	ConfigLanguage     = "muc#roomconfig_lang"
+	ConfigMaxUsers     = "muc#roomconfig_maxusers"
+	ConfigMembersOnly  = "muc#roomconfig_membersonly"
+	ConfigModerated    = "muc#roomconfig_moderatedroom"
 	ConfigPwdProtected = "muc#roomconfig_passwordprotectedroom"
-
-	ConfigPersistent = "muc#roomconfig_persistentroom"
-
-	ConfigPublic = "muc#roomconfig_publicroom"
-
-	ConfigAdmins = "muc#roomconfig_roomadmins"
-
-	ConfigOwners = "muc#roomconfig_roomowners"
-
-	ConfigPwd = "muc#roomconfig_roomsecret"
-
-	ConfigPubSub = "muc#roomconfig_pubsub"
-
-	ConfigWhoIs = "muc#roomconfig_whois"
+	ConfigPersistent   = "muc#roomconfig_persistentroom"
+	ConfigPublic       = "muc#roomconfig_publicroom"
+	ConfigAdmins       = "muc#roomconfig_roomadmins"
+	ConfigOwners       = "muc#roomconfig_roomowners"
+	ConfigPwd          = "muc#roomconfig_roomsecret"
+	ConfigPubSub       = "muc#roomconfig_pubsub"
+	ConfigWhoIs        = "muc#roomconfig_whois"
 )
 
 func (s *Muc) newRoom(ctx context.Context, ownerFullJID, ownerOccJID *jid.JID) error {
@@ -85,12 +68,10 @@ func (s *Muc) newRoom(ctx context.Context, ownerFullJID, ownerOccJID *jid.JID) e
 
 func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.Occupant) (*mucmodel.Room, error) {
 	r := &mucmodel.Room{
-		Config:         s.GetDefaultRoomConfig(),
-		Name:           roomJID.Node(),
-		RoomJID:        roomJID,
-		UserToOccupant: make(map[jid.JID]jid.JID),
-		InvitedUsers:   make(map[jid.JID]bool),
-		Locked:         true,
+		Config:  s.GetDefaultRoomConfig(),
+		Name:    roomJID.Node(),
+		RoomJID: roomJID,
+		Locked:  true,
 	}
 
 	err := s.AddOccupantToRoom(ctx, r, owner)
@@ -101,8 +82,7 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 }
 
 func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
-	_, invited := room.InvitedUsers[*userJID]
-	if invited {
+	if room.UserIsInvited(userJID) {
 		return true
 	}
 
@@ -115,14 +95,14 @@ func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID 
 
 func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) []string {
 	admins := make([]string, 0)
-	for _, occJID := range r.UserToOccupant {
+	for _, occJID := range r.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			log.Error(err)
 			return nil
 		}
 		if o.IsAdmin() {
-			admins = append(admins, occJID.String())
+			admins = append(admins, o.BareJID.String())
 		}
 	}
 	return admins
@@ -130,23 +110,22 @@ func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) []string {
 
 func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) []string {
 	owners := make([]string, 0)
-	for bareJID, occJID := range r.UserToOccupant {
+	for _, occJID := range r.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			log.Error(err)
 			return nil
 		}
 		if o.IsOwner() {
-			owners = append(owners, bareJID.String())
+			owners = append(owners, o.BareJID.String())
 		}
 	}
 	return owners
 }
 
 func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
-	// check if the occupant is in the room
-	occJID, found := room.UserToOccupant[*adminJID]
-	if !found {
+	occJID, ok := room.GetOccupantJID(adminJID)
+	if !ok {
 		return fmt.Errorf("muc: user has to enter the room before it can be made admin")
 	}
 
@@ -169,9 +148,8 @@ func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *j
 }
 
 func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *jid.JID) error {
-	// check if the occupant is in the room
-	occJID, found := room.UserToOccupant[*ownerJID]
-	if !found {
+	occJID, ok := room.GetOccupantJID(ownerJID)
+	if !ok {
 		return fmt.Errorf("muc: user has to enter the room before it can be made owner")
 	}
 

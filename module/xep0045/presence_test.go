@@ -53,8 +53,7 @@ func TestXEP0045_ExitRoom(t *testing.T) {
 	require.False(t, exists)
 
 	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
-	_, found := room.UserToOccupant[*exUserJID.ToBareJID()]
-	require.False(t, found)
+	require.False(t, room.UserIsInRoom(exUserJID.ToBareJID()))
 }
 
 func TestXEP0045_ChangeStatus(t *testing.T) {
@@ -109,8 +108,8 @@ func TestXEP0045_ChangeNickname(t *testing.T) {
 	require.Nil(t, occNew)
 
 	// make sure the current nickname exists
-	jidBefore, found := room.UserToOccupant[*owner.BareJID]
-	require.True(t, found)
+	jidBefore, _ := room.GetOccupantJID(owner.BareJID)
+	require.NotNil(t, jidBefore)
 	require.Equal(t, jidBefore.String(), owner.OccupantJID.String())
 	occBefore, err := muc.repOccupant.FetchOccupant(nil, &jidBefore)
 	require.Nil(t, err)
@@ -143,8 +142,8 @@ func TestXEP0045_ChangeNickname(t *testing.T) {
 	require.Nil(t, occBefore)
 
 	// new nick is added
-	jidAfter, found := room.UserToOccupant[*owner.BareJID]
-	require.True(t, found)
+	jidAfter, _ := room.GetOccupantJID(owner.BareJID)
+	require.NotNil(t, jidAfter)
 	require.Equal(t, jidAfter.String(), newOccJID.String())
 	occAfter, err := muc.repOccupant.FetchOccupant(nil, newOccJID)
 	require.Nil(t, err)
@@ -173,8 +172,6 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 		Config:         muc.GetDefaultRoomConfig(),
 		RoomJID:        roomJID,
 		Locked:         false,
-		UserToOccupant: make(map[jid.JID]jid.JID),
-		InvitedUsers:   make(map[jid.JID]bool),
 	}
 	room.Config.NonAnonymous = true
 	room.Config.PwdProtected = true
@@ -185,7 +182,7 @@ func TestXEP0045_JoinExistingRoom(t *testing.T) {
 
 	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-	room.InvitedUsers[*from.ToBareJID()] = true
+	room.InviteUser(from.ToBareJID())
 	muc.repRoom.UpsertRoom(nil, room)
 
 	stm := stream.NewMockC2S(uuid.New(), from)
@@ -303,8 +300,6 @@ func getTestRoomAndOwner(muc *Muc) (*mucmodel.Room, *mucmodel.Occupant) {
 	room := &mucmodel.Room{
 		Config:         roomConfig,
 		RoomJID:        roomJID,
-		UserToOccupant: make(map[jid.JID]jid.JID),
-		InvitedUsers:   make(map[jid.JID]bool),
 	}
 
 	ownerUserJID, _ := jid.New("milos", "jackal.im", "phone", true)

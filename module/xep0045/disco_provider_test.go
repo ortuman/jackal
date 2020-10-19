@@ -98,7 +98,6 @@ func setupDiscoTest() *discoInfoProvider {
 		Name:           "Public room",
 		Config:         publicRc,
 		RoomJID:        pJID,
-		UserToOccupant: make(map[jid.JID]jid.JID),
 	}
 	publicRoom.Config.SetWhoCanGetMemberList("all")
 	oJID, _ := jid.New("publicroom", "conference.jackal.im", "nick", true)

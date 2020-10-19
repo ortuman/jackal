@@ -141,10 +141,8 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 	// occupant to be promoted into an admin
 	milosJID, _ := jid.New("milos", "jackal.im", "office", true)
 	occJID, _ := jid.New("room", "conference.jackal.im", "milos", true)
-	o := &mucmodel.Occupant{
-		OccupantJID: occJID,
-		BareJID:     milosJID,
-	}
+	o, _ := mucmodel.NewOccupant(occJID, milosJID.ToBareJID())
+	o.AddResource("office")
 	muc.repOccupant.UpsertOccupant(context.Background(), o)
 	room.AddOccupant(o)
 	muc.repRoom.UpsertRoom(context.Background(), room)

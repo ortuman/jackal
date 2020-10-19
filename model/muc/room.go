@@ -8,8 +8,10 @@ package mucmodel
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 
 	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/ortuman/jackal/log"
 )
 
 type Room struct {
@@ -21,9 +23,9 @@ type Room struct {
 	Language          string
 	Locked            bool
 	//mapping user bare jid to the occupant JID
-	UserToOccupant map[jid.JID]jid.JID
+	userToOccupant map[jid.JID]jid.JID
 	// a set of invited users' bare JIDs who haven't accepted the invitation yet
-	InvitedUsers    map[jid.JID]bool
+	invitedUsers    map[jid.JID]bool
 	occupantsOnline int
 }
 
@@ -56,7 +58,7 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&numberOfOccupants); err != nil {
 		return err
 	}
-	r.UserToOccupant = make(map[jid.JID]jid.JID)
+	r.userToOccupant = make(map[jid.JID]jid.JID)
 	for i := 0; i < numberOfOccupants; i++ {
 		userJID, err := jid.NewFromBytes(buf)
 		if err != nil {
@@ -66,7 +68,7 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 		if err != nil {
 			return err
 		}
-		r.UserToOccupant[*userJID] = *occJID
+		r.userToOccupant[*userJID] = *occJID
 	}
 	if err := dec.Decode(&r.Locked); err != nil {
 		return err
@@ -75,13 +77,13 @@ func (r *Room) FromBytes(buf *bytes.Buffer) error {
 	if err := dec.Decode(&invitedUsersCount); err != nil {
 		return err
 	}
-	r.InvitedUsers = make(map[jid.JID]bool)
+	r.invitedUsers = make(map[jid.JID]bool)
 	for i := 0; i < invitedUsersCount; i++ {
 		userJID, err := jid.NewFromBytes(buf)
 		if err != nil {
 			return err
 		}
-		r.InvitedUsers[*userJID] = true
+		r.invitedUsers[*userJID] = true
 	}
 	if err := dec.Decode(&r.occupantsOnline); err != nil {
 		return err
@@ -110,10 +112,10 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := r.Config.ToBytes(buf); err != nil {
 		return err
 	}
-	if err := enc.Encode(len(r.UserToOccupant)); err != nil {
+	if err := enc.Encode(len(r.userToOccupant)); err != nil {
 		return err
 	}
-	for userJID, occJID := range r.UserToOccupant {
+	for userJID, occJID := range r.userToOccupant {
 		if err := userJID.ToBytes(buf); err != nil {
 			return err
 		}
@@ -124,10 +126,10 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 	if err := enc.Encode(&r.Locked); err != nil {
 		return err
 	}
-	if err := enc.Encode(len(r.InvitedUsers)); err != nil {
+	if err := enc.Encode(len(r.invitedUsers)); err != nil {
 		return err
 	}
-	for userJID, _ := range r.InvitedUsers {
+	for userJID, _ := range r.invitedUsers {
 		if err := userJID.ToBytes(buf); err != nil {
 			return err
 		}
@@ -140,24 +142,27 @@ func (r *Room) ToBytes(buf *bytes.Buffer) error {
 
 func (r *Room) AddOccupant(o *Occupant) {
 	// if this user was invited, remove from the list of invited users
-	_, invited := r.InvitedUsers[*o.BareJID.ToBareJID()]
-	if invited {
-		delete(r.InvitedUsers, *o.BareJID.ToBareJID())
-		// if it's a member-only room, add the affiliation "member"
-		if !r.Config.Open {
-			o.SetAffiliation("member")
-		}
+	if r.UserIsInvited(o.BareJID.ToBareJID()) {
+		o.SetAffiliation("member")
+		r.DeleteInvite(o.BareJID.ToBareJID())
 	}
 
-	// if this is a new occupant, add it to the map
-	_, found := r.UserToOccupant[*o.BareJID.ToBareJID()]
-	if !found {
-		r.UserToOccupant[*o.BareJID.ToBareJID()] = *o.OccupantJID
+	err := r.mapUserToOccupantJID(o.BareJID, o.OccupantJID)
+	if err != nil {
+		log.Error(err)
+		return
 	}
 
-	r.SetDefaultRole(o)
+	if o.HasNoRole() {
+		r.SetDefaultRole(o)
+	}
 
 	r.occupantsOnline++
+}
+
+func (r *Room) RemoveOccupant(o *Occupant) {
+	delete(r.userToOccupant, *o.BareJID)
+	r.occupantsOnline--
 }
 
 func (r *Room) SetDefaultRole(o *Occupant) {
@@ -168,6 +173,70 @@ func (r *Room) SetDefaultRole(o *Occupant) {
 	} else {
 		o.SetRole(participant)
 	}
+}
+
+func (r *Room) mapUserToOccupantJID(userJID, occJID *jid.JID) error {
+	if !occJID.IsFullWithUser() {
+		return fmt.Errorf("Occupant JID %s is not valid", occJID.String())
+	}
+	if !userJID.IsBare() {
+		return fmt.Errorf("User JID %s is not a bare JID", userJID.String())
+	}
+
+	if r.userToOccupant == nil {
+		r.userToOccupant = make(map[jid.JID]jid.JID)
+	}
+
+	_, found := r.userToOccupant[*userJID]
+	if !found {
+		r.userToOccupant[*userJID] = *occJID
+	}
+
+	return nil
+}
+
+func (r *Room) GetOccupantJID(userJID *jid.JID) (jid.JID, bool) {
+	occJID, found := r.userToOccupant[*userJID]
+	return occJID, found
+}
+
+func (r *Room) GetAllOccupantJIDs() []jid.JID {
+	res := make([]jid.JID, 0, len(r.userToOccupant))
+	for _, occJID := range r.userToOccupant {
+		res = append(res, occJID)
+	}
+	return res
+}
+
+func (r *Room) UserIsInRoom(userJID *jid.JID) bool {
+	_, found := r.userToOccupant[*userJID]
+	return found
+}
+
+func (r *Room) InviteUser(userJID *jid.JID) error {
+	if r.invitedUsers == nil {
+		r.invitedUsers = make(map[jid.JID]bool)
+	}
+
+	if !userJID.IsBare() {
+		return fmt.Errorf("User JID %s is not a bare JID", userJID)
+	}
+
+	r.invitedUsers[*userJID] = true
+	return nil
+}
+
+func (r *Room) UserIsInvited(userJID *jid.JID) bool {
+	if r.invitedUsers == nil {
+		return false
+	}
+
+	_, invited := r.invitedUsers[*userJID]
+	return invited
+}
+
+func (r *Room) DeleteInvite(userJID *jid.JID) {
+	delete(r.invitedUsers, *userJID)
 }
 
 func (r *Room) Full() bool {

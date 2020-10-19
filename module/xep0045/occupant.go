@@ -62,7 +62,7 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		return nil, false
 	}
 
-	occJID, ok := room.UserToOccupant[*fromJID.ToBareJID()]
+	occJID, ok := room.GetOccupantJID(fromJID.ToBareJID())
 	if !ok {
 		_ = s.router.Route(ctx, iq.ForbiddenError())
 		return nil, false

@@ -17,20 +17,32 @@ import (
 )
 
 func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
-	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
-	if !found || occJID.String() != presence.ToJID().String() {
+	occJID, ok := room.GetOccupantJID(presence.FromJID().ToBareJID())
+	if !ok {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
 	}
-	o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
 
-	err := s.repOccupant.DeleteOccupant(ctx, &occJID)
-	if err != nil {
-		log.Error(err)
+	if occJID.String() != presence.ToJID().String() {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
 	}
 
-	delete(room.UserToOccupant, *presence.FromJID().ToBareJID())
+	o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+		return
+	}
+
+	err = s.repOccupant.DeleteOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, presence.InternalServerError())
+		return
+	}
+
+	room.RemoveOccupant(o)
 	s.repRoom.UpsertRoom(ctx, room)
 
 	err = s.sendOccExitedRoom(ctx, o, room, presence)
@@ -45,7 +57,7 @@ func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupa
 	resultPresence := xmpp.NewElementName("presence").SetType("unavailable")
 	occExiting.SetRole("")
 
-	for _, occJID := range room.UserToOccupant {
+	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			return err
@@ -81,14 +93,18 @@ func isChangingStatus(presence *xmpp.Presence) bool {
 }
 
 func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
-	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
-	if !found || occJID.String() != presence.ToJID().String() {
+	occJID, ok := room.GetOccupantJID(presence.FromJID().ToBareJID())
+	if !ok {
+		_ = s.router.Route(ctx, presence.ForbiddenError())
+		return
+	}
+
+	if occJID.String() != presence.ToJID().String() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
 	}
 
 	o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-	// all the way to here
 	if o.IsVisitor() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
@@ -98,15 +114,15 @@ func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *x
 	if err != nil {
 		log.Error(err)
 		_ = s.router.Route(ctx, presence.InternalServerError())
+		return
 	}
-
 }
 
 func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmodel.Occupant,
 	presence *xmpp.Presence) error {
 	presence.SetFromJID(sender.OccupantJID)
 
-	for _, occJID := range room.UserToOccupant {
+	for _, occJID := range room.GetAllOccupantJIDs() {
 		if occJID.String() == sender.OccupantJID.String() {
 			continue
 		}
@@ -136,8 +152,8 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 		return
 	}
 
-	occJID, found := room.UserToOccupant[*presence.FromJID().ToBareJID()]
-	if !found {
+	occJID, ok := room.GetOccupantJID(presence.FromJID().ToBareJID())
+	if !ok {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
 	}
@@ -149,13 +165,12 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 		return
 	}
 
-	// change the occupant's JID
+	room.RemoveOccupant(occ)
 	s.repOccupant.DeleteOccupant(ctx, &occJID)
-	occ.OccupantJID = presence.ToJID()
-	s.repOccupant.UpsertOccupant(ctx, occ)
 
-	// update the room
-	room.UserToOccupant[*presence.FromJID().ToBareJID()] = *occ.OccupantJID
+	occ.OccupantJID = presence.ToJID()
+	room.AddOccupant(occ)
+	s.repOccupant.UpsertOccupant(ctx, occ)
 	s.repRoom.UpsertRoom(ctx, room)
 
 	// send the unavailable and presence stanzas to the room members
@@ -163,12 +178,13 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 	if err != nil {
 		log.Error(err)
 		_ = s.router.Route(ctx, presence.InternalServerError())
+		return
 	}
 }
 
 func (s *Muc) sendNickChangeAck(ctx context.Context, room *mucmodel.Room,
 	newOcc *mucmodel.Occupant, oldJID *jid.JID, presence *xmpp.Presence) error {
-	for _, occJID := range room.UserToOccupant {
+	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			return err
@@ -332,13 +348,13 @@ func (s *Muc) occupantCanEnterRoom(ctx context.Context, room *mucmodel.Room, pre
 func checkNicknameConflict(room *mucmodel.Room, newOccupant *mucmodel.Occupant,
 	userJID, occupantJID *jid.JID, presence *xmpp.Presence) xmpp.Stanza {
 	// check if the user, who is already in the room, is entering with a different nickname
-	oJID, registered := room.UserToOccupant[*userJID.ToBareJID()]
-	if registered && oJID.String() != occupantJID.String() {
+	oJID, ok := room.GetOccupantJID(userJID.ToBareJID())
+	if ok && oJID.String() != occupantJID.String() {
 		return presence.NotAcceptableError()
 	}
 
 	// check if another user is trying to use an already occupied nickname
-	if !registered && newOccupant != nil {
+	if newOccupant != nil && newOccupant.BareJID.String() != userJID.ToBareJID().String() {
 		return presence.ConflictError()
 	}
 
@@ -374,14 +390,14 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		return err
 	}
 
-	for usrJID, occJID := range room.UserToOccupant {
-		// skip the user entering the room
-		if usrJID.String() == newOccupant.BareJID.String() {
-			continue
-		}
+	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
 			return err
+		}
+		// skip the user entering the room
+		if o.BareJID.String() == newOccupant.BareJID.String() {
+			continue
 		}
 		// notify the new occupant of the existing occupant
 		for _, resource := range newOccupant.GetAllResources() {

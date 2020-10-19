@@ -32,8 +32,9 @@ func TestXEP0045_CreateRoom(t *testing.T) {
 	room, err := muc.createRoom(nil, roomJID, o)
 	require.Nil(t, err)
 	require.NotNil(t, room)
-	require.NotNil(t, room.UserToOccupant[*fullJID.ToBareJID()])
-	assert.EqualValues(t, room.UserToOccupant[*fullJID.ToBareJID()], *occJID)
+	require.True(t, room.UserIsInRoom(fullJID.ToBareJID()))
+	jidInRoom, _ := room.GetOccupantJID(fullJID.ToBareJID())
+	assert.EqualValues(t, jidInRoom, *occJID)
 
 	roomMem, err := c.Room().FetchRoom(nil, roomJID)
 	require.Nil(t, err)
@@ -54,7 +55,8 @@ func TestXEP0045_NewRoom(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, roomMem)
 	assert.EqualValues(t, to.ToBareJID(), roomMem.RoomJID)
-	assert.EqualValues(t, *to, roomMem.UserToOccupant[*from.ToBareJID()])
+	toRoom, _ := roomMem.GetOccupantJID(from.ToBareJID())
+	assert.EqualValues(t, *to, toRoom)
 	require.Equal(t, muc.allRooms[0].String(), to.ToBareJID().String())
 
 	oMem, err := c.Occupant().FetchOccupant(nil, to)
@@ -90,27 +92,21 @@ func TestXEP0045_RoomAdminsAndOwners(t *testing.T) {
 	rc := mucmodel.RoomConfig{
 		Open: true,
 	}
-	j1, _ := jid.NewWithString("ortuman@jackal.im", true)
-	o1 := &mucmodel.Occupant{
-		BareJID:     j1,
-		OccupantJID: j1,
-	}
+	jOcc1, _ := jid.NewWithString("room@conference.jackal.im/admin", true)
+	j1, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
+	o1, _ := mucmodel.NewOccupant(jOcc1, j1.ToBareJID())
 	o1.SetAffiliation("")
 	muc.repOccupant.UpsertOccupant(context.Background(), o1)
 
-	j2, _ := jid.NewWithString("milos@jackal.im", true)
-	o2 := &mucmodel.Occupant{
-		BareJID:     j2,
-		OccupantJID: j2,
-	}
+	jOcc2, _ := jid.NewWithString("room@conference.jackal.im/owner", true)
+	j2, _ := jid.NewWithString("milos@jackal.im/office", true)
+	o2, _ := mucmodel.NewOccupant(jOcc2, j2.ToBareJID())
 	o2.SetAffiliation("")
 	muc.repOccupant.UpsertOccupant(context.Background(), o2)
 
-	occMap := make(map[jid.JID]jid.JID)
 	room := &mucmodel.Room{
 		RoomJID:        rJID,
 		Config:         &rc,
-		UserToOccupant: occMap,
 	}
 
 	err := muc.AddOccupantToRoom(context.Background(), room, o1)
@@ -118,6 +114,7 @@ func TestXEP0045_RoomAdminsAndOwners(t *testing.T) {
 	err = muc.AddOccupantToRoom(context.Background(), room, o2)
 	require.Nil(t, err)
 
+	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
 	admins := muc.GetRoomAdmins(context.Background(), room)
 	owners := muc.GetRoomOwners(context.Background(), room)
 	require.NotNil(t, admins)
@@ -125,15 +122,22 @@ func TestXEP0045_RoomAdminsAndOwners(t *testing.T) {
 	require.NotNil(t, owners)
 	require.Equal(t, len(owners), 0)
 
-	muc.SetRoomAdmin(context.Background(), room, o1.OccupantJID)
+	err = muc.SetRoomAdmin(context.Background(), room, o1.BareJID)
+	require.Nil(t, err)
+
+	o1, _ = muc.repOccupant.FetchOccupant(nil, o1.OccupantJID)
+	require.Equal(t, o1.GetAffiliation(), "admin")
+
+	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
 	admins = muc.GetRoomAdmins(context.Background(), room)
 	require.NotNil(t, admins)
 	require.Equal(t, len(admins), 1)
-	require.Equal(t, admins[0], j1.String())
+	require.Equal(t, admins[0], o1.BareJID.String())
 
-	muc.SetRoomOwner(context.Background(), room, o2.OccupantJID)
+	err = muc.SetRoomOwner(context.Background(), room, o2.BareJID)
+	require.Nil(t, err)
 	owners = muc.GetRoomOwners(context.Background(), room)
 	require.NotNil(t, owners)
 	require.Equal(t, len(owners), 1)
-	require.Equal(t, owners[0], j2.String())
+	require.Equal(t, owners[0], o2.BareJID.String())
 }

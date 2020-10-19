@@ -27,14 +27,12 @@ func isDeclineInvitation(message *xmpp.Message) bool {
 }
 
 func (s *Muc) declineInvitation(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
-	_, invited := room.InvitedUsers[*message.FromJID().ToBareJID()]
-	if !invited {
+	if !room.UserIsInvited(message.FromJID().ToBareJID()) {
 		_ = s.router.Route(ctx, message.ForbiddenError())
 		return
 	}
 
-	// delete the user from the list of invited
-	delete(room.InvitedUsers, *message.FromJID().ToBareJID())
+	room.DeleteInvite(message.FromJID().ToBareJID())
 	s.repRoom.UpsertRoom(ctx, room)
 
 	s.forwardDeclineToUser(ctx, room, message)
@@ -58,12 +56,16 @@ func isInvite(message *xmpp.Message) bool {
 }
 
 func (s *Muc) inviteUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
-
 	if !s.userHasVoice(ctx, room, message.FromJID(), message) {
 		return
 	}
 
-	occJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	occJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
+	if !ok {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+		return
+	}
+
 	occ, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
 	if !room.Config.AllowInvites || (!room.Config.Open && !occ.IsAdmin() && !occ.IsOwner()) {
 		_ = s.router.Route(ctx, message.ForbiddenError())
@@ -72,7 +74,11 @@ func (s *Muc) inviteUser(ctx context.Context, room *mucmodel.Room, message *xmpp
 
 	// add to the list of invited users
 	invJID := getInvitedUserJID(message)
-	room.InvitedUsers[*invJID] = true
+	err := room.InviteUser(invJID)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, message.InternalServerError())
+	}
 	s.repRoom.UpsertRoom(ctx, room)
 
 	s.forwardInviteToUser(ctx, room, message)
@@ -85,12 +91,6 @@ func (s *Muc) forwardInviteToUser(ctx context.Context, room *mucmodel.Room, mess
 	msg := getInvitationStanza(room, inviteFrom, inviteTo, message)
 
 	_ = s.router.Route(ctx, msg)
-}
-
-func getInvitedUserJID(message *xmpp.Message) *jid.JID {
-	invJIDStr := message.Elements().Child("x").Elements().Child("invite").Attributes().Get("to")
-	invJID, _ := jid.NewWithString(invJIDStr, true)
-	return invJID
 }
 
 func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
@@ -106,29 +106,34 @@ func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Mes
 	}
 
 	// send the PM
-	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	senderJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
+	if !ok {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+	}
+
 	msgBody := message.Elements().Child("body")
 	if msgBody == nil {
 		_ = s.router.Route(ctx, message.BadRequestError())
 		return
 	}
-	s.messageOccupant(ctx, message.ToJID(), &sendersOccupantJID, msgBody, message.ID(), true)
+
+	s.messageOccupant(ctx, message.ToJID(), &senderJID, msgBody, message.ID(), true)
 }
 
 func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID, occJID *jid.JID, message *xmpp.Message) bool {
-	// check if user is in the room
-	usrOccJID, found := room.UserToOccupant[*usrJID.ToBareJID()]
-	if !found {
+	// check if user can send private messages in this room
+	usrOccJID, ok := room.GetOccupantJID(usrJID.ToBareJID())
+	if !ok {
 		_ = s.router.Route(ctx, message.NotAcceptableError())
 		return false
 	}
 
-	// check if user can send private messages in this room
 	usrOcc, err := s.repOccupant.FetchOccupant(ctx, &usrOccJID)
 	if err != nil || usrOcc == nil {
 		_ = s.router.Route(ctx, message.InternalServerError())
 		return false
 	}
+
 	if !room.Config.OccupantCanSendPM(usrOcc) {
 		_ = s.router.Route(ctx, message.NotAcceptableError())
 		return false
@@ -138,6 +143,12 @@ func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID
 	occ, err := s.repOccupant.FetchOccupant(ctx, occJID)
 	if err != nil || occ == nil {
 		_ = s.router.Route(ctx, message.ItemNotFoundError())
+		return false
+	}
+
+	// make sure the target occupant is in the same room
+	if occJID.ToBareJID().String() != room.RoomJID.String() {
+		_ = s.router.Route(ctx, message.NotAcceptableError())
 		return false
 	}
 
@@ -156,13 +167,18 @@ func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message 
 		return
 	}
 
-	sendersOccupantJID, _ := room.UserToOccupant[*message.FromJID().ToBareJID()]
+	sendersOccupantJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
+	if !ok {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+	}
+
 	msgBody := message.Elements().Child("body")
 	if msgBody == nil {
 		_ = s.router.Route(ctx, message.BadRequestError())
 		return
 	}
-	for _, occJID := range room.UserToOccupant {
+
+	for _, occJID := range room.GetAllOccupantJIDs() {
 		s.messageOccupant(ctx, &occJID, &sendersOccupantJID, msgBody, message.ID(), false)
 	}
 	return
@@ -171,11 +187,12 @@ func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message 
 func (s *Muc) userHasVoice(ctx context.Context, room *mucmodel.Room, userJID *jid.JID,
 	message *xmpp.Message) bool {
 	// user has to be occupant of the room
-	occJID, found := room.UserToOccupant[*userJID.ToBareJID()]
-	if !found {
+	occJID, ok := room.GetOccupantJID(userJID.ToBareJID())
+	if !ok {
 		_ = s.router.Route(ctx, message.NotAcceptableError())
 		return false
 	}
+
 	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 	if err != nil {
 		log.Error(err)

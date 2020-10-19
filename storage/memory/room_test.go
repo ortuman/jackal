@@ -97,10 +97,13 @@ func GetTestRoom() *mucmodel.Room {
 		RoomJID:        j,
 		Desc:           "Room for Testing",
 		Config:         &rc,
-		UserToOccupant: make(map[jid.JID]jid.JID),
 		Locked:         false,
-		InvitedUsers:   make(map[jid.JID]bool),
 	}
+
+	oJID, _ := jid.NewWithString("testroom@conference.jackal.im/owner", true)
+	owner, _ := mucmodel.NewOccupant(oJID, oJID.ToBareJID())
+	r.AddOccupant(owner)
+	r.InviteUser(oJID.ToBareJID())
 
 	return r
 }

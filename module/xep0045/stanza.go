@@ -14,6 +14,13 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getInvitedUserJID(message *xmpp.Message) *jid.JID {
+	invJIDStr := message.Elements().Child("x").Elements().Child("invite").Attributes().Get("to")
+	invJID, _ := jid.NewWithString(invJIDStr, true)
+	return invJID
+}
+
+
 func getMessageElement(body xmpp.XElement, id string, private bool) *xmpp.Element {
 	msgEl := xmpp.NewElementName("message").AppendElement(body)
 

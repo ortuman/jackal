@@ -21,7 +21,7 @@ func TestModelRoom(t *testing.T) {
 	}
 	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
 	o := &Occupant{
-		BareJID:     jFull,
+		BareJID:     jFull.ToBareJID(),
 		OccupantJID: jFull,
 	}
 	userMap := make(map[jid.JID]jid.JID)
@@ -37,8 +37,8 @@ func TestModelRoom(t *testing.T) {
 		Desc:           "Test Description",
 		Subject:        "Test Subject",
 		Language:       "eng",
-		UserToOccupant: userMap,
-		InvitedUsers:   invitedMap,
+		userToOccupant: userMap,
+		invitedUsers:   invitedMap,
 		Locked:         true,
 	}
 
@@ -51,10 +51,10 @@ func TestModelRoom(t *testing.T) {
 
 	newJID, _ := jid.NewWithString("milos@jackal.im/laptop", true)
 	o2 := &Occupant{
-		BareJID:     newJID,
+		BareJID:     newJID.ToBareJID(),
 		OccupantJID: newJID,
 	}
-	require.Equal(t, len(r2.UserToOccupant), 1)
+	require.Equal(t, len(r2.userToOccupant), 1)
 	r2.AddOccupant(o2)
-	require.Equal(t, len(r2.UserToOccupant), 2)
+	require.Equal(t, len(r2.userToOccupant), 2)
 }

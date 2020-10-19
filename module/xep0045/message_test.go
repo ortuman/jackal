@@ -24,7 +24,7 @@ func TestXEP0045_DeclineInvite(t *testing.T) {
 	room, owner := getTestRoomAndOwner(muc)
 	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
 	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	room.InvitedUsers[*regularUserJID.ToBareJID()] = true
+	room.InviteUser(regularUserJID.ToBareJID())
 	muc.repRoom.UpsertRoom(nil, room)
 
 	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
@@ -46,8 +46,7 @@ func TestXEP0045_DeclineInvite(t *testing.T) {
 	decline := ownerStm.ReceiveElement()
 	require.Equal(t, decline.From(), room.RoomJID.String())
 	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
-	_, found := room.InvitedUsers[*regularUserJID.ToBareJID()]
-	require.False(t, found)
+	require.False(t, room.UserIsInvited(regularUserJID.ToBareJID()))
 }
 
 func TestXEP0045_SendInvite(t *testing.T) {
@@ -64,8 +63,7 @@ func TestXEP0045_SendInvite(t *testing.T) {
 	r.Bind(context.Background(), regStm)
 
 	// make sure user is not already invited
-	_, found := room.InvitedUsers[*regularUserJID.ToBareJID()]
-	require.False(t, found)
+	require.False(t, room.UserIsInvited(regularUserJID.ToBareJID()))
 
 	// owner sends the invitation
 	reason := xmpp.NewElementName("reason").SetText("Join me!")
@@ -83,8 +81,7 @@ func TestXEP0045_SendInvite(t *testing.T) {
 	require.Equal(t, inviteStanza.From(), room.RoomJID.String())
 
 	updatedRoom, _ := muc.repRoom.FetchRoom(nil, room.RoomJID)
-	_, found = updatedRoom.InvitedUsers[*regularUserJID.ToBareJID()]
-	require.True(t, found)
+	require.True(t, updatedRoom.UserIsInvited(regularUserJID.ToBareJID()))
 }
 
 func TestXEP0045_MessageEveryone(t *testing.T) {
