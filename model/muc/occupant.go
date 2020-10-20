@@ -15,20 +15,15 @@ import (
 
 const (
 	// Affiliations
-	member = "member"
-
-	admin = "admin"
-
-	owner = "owner"
-
+	member  = "member"
+	admin   = "admin"
+	owner   = "owner"
 	outcast = "outcast"
 
 	// Roles
-	moderator = "moderator"
-
+	moderator   = "moderator"
 	participant = "participant"
-
-	visitor = "visitor"
+	visitor     = "visitor"
 )
 
 type Occupant struct {
@@ -109,16 +104,6 @@ func NewOccupantFromBytes(buf *bytes.Buffer) (*Occupant, error) {
 	return o, nil
 }
 
-func (o *Occupant) SetAffiliation(aff string) error {
-	switch aff {
-	case owner, admin, member, outcast, None:
-		o.affiliation = aff
-	default:
-		return fmt.Errorf("occupant: this type of affiliation is not supported - %s", aff)
-	}
-	return nil
-}
-
 func NewOccupant(occJID, userJID *jid.JID) (*Occupant, error) {
 	if !occJID.IsFullWithUser() {
 		return nil, fmt.Errorf("Occupant JID %s is not valid", occJID.String())
@@ -128,10 +113,20 @@ func NewOccupant(occJID, userJID *jid.JID) (*Occupant, error) {
 	}
 	o := &Occupant{
 		OccupantJID: occJID,
-		BareJID: userJID,
+		BareJID:     userJID,
 	}
 	o.resources = make(map[string]bool)
 	return o, nil
+}
+
+func (o *Occupant) SetAffiliation(aff string) error {
+	switch aff {
+	case owner, admin, member, outcast, None:
+		o.affiliation = aff
+	default:
+		return fmt.Errorf("occupant: this type of affiliation is not supported - %s", aff)
+	}
+	return nil
 }
 
 func (o *Occupant) GetAffiliation() string {

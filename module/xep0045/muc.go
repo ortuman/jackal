@@ -24,11 +24,10 @@ type Muc struct {
 	disco       *xep0030.DiscoInfo
 	repRoom     repository.Room
 	repOccupant repository.Occupant
-	// room JIDs of all rooms on the service
-	allRooms []jid.JID
-	router   router.Router
-	runQueue *runqueue.RunQueue
-	mu       sync.RWMutex
+	allRooms    []jid.JID
+	router      router.Router
+	runQueue    *runqueue.RunQueue
+	mu          sync.RWMutex
 }
 
 func New(cfg *Config, disco *xep0030.DiscoInfo, router router.Router, repRoom repository.Room,

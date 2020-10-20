@@ -36,8 +36,9 @@ func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {
 }
 
 func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
+	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
 		return
 	}
 
@@ -66,8 +67,9 @@ func isIQForRoomConfigRequest(iq *xmpp.IQ) bool {
 }
 
 func (s *Muc) sendRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
+	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
 		return
 	}
 
@@ -95,19 +97,20 @@ func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
 }
 
 func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	_, ok := s.getOwnerFromIQ(ctx, room, iq)
-	if !ok {
+	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
 		return
 	}
 
-	form, err := xep0004.NewFormFromElement(iq.Elements().Child("query").Elements().Child("x"))
+	formEl := iq.Elements().Child("query").Elements().Child("x")
+	form, err := xep0004.NewFormFromElement(formEl)
 	if err != nil {
-		log.Error(err)
 		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
 	}
 
-	ok = s.updateRoomWithForm(ctx, room, form)
+	ok := s.updateRoomWithForm(ctx, room, form)
 	if !ok {
 		_ = s.router.Route(ctx, iq.NotAcceptableError())
 		return

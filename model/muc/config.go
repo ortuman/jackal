@@ -12,15 +12,11 @@ import (
 )
 
 const (
-	All = "all"
-
+	All          = "all"
 	Participants = "participants"
-
-	Moderators = "moderators"
-
-	Visitors = "visitors"
-
-	None = ""
+	Moderators   = "moderators"
+	Visitors     = "visitors"
+	None         = ""
 )
 
 type RoomConfig struct {

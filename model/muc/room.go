@@ -160,15 +160,17 @@ func (r *Room) AddOccupant(o *Occupant) {
 	r.occupantsOnline++
 }
 
-func (r *Room) RemoveOccupant(o *Occupant) {
-	delete(r.userToOccupant, *o.BareJID)
+func (r *Room) OccupantLeft(o *Occupant) {
+	if o.HasNoAffiliation() {
+		delete(r.userToOccupant, *o.BareJID)
+	}
 	r.occupantsOnline--
 }
 
 func (r *Room) SetDefaultRole(o *Occupant) {
 	if o.IsOwner() || o.IsAdmin() {
 		o.SetRole(moderator)
-	} else if r.Config.Moderated && o.GetAffiliation() == "" {
+	} else if r.Config.Moderated && o.HasNoAffiliation() {
 		o.SetRole(visitor)
 	} else {
 		o.SetRole(participant)
@@ -214,12 +216,12 @@ func (r *Room) UserIsInRoom(userJID *jid.JID) bool {
 }
 
 func (r *Room) InviteUser(userJID *jid.JID) error {
-	if r.invitedUsers == nil {
-		r.invitedUsers = make(map[jid.JID]bool)
-	}
-
 	if !userJID.IsBare() {
 		return fmt.Errorf("User JID %s is not a bare JID", userJID)
+	}
+
+	if r.invitedUsers == nil {
+		r.invitedUsers = make(map[jid.JID]bool)
 	}
 
 	r.invitedUsers[*userJID] = true
@@ -239,6 +241,10 @@ func (r *Room) DeleteInvite(userJID *jid.JID) {
 	delete(r.invitedUsers, *userJID)
 }
 
-func (r *Room) Full() bool {
+func (r *Room) IsFull() bool {
 	return r.occupantsOnline >= r.Config.MaxOccCnt
+}
+
+func (r *Room) IsEmpty() bool {
+	return r.occupantsOnline == 0
 }

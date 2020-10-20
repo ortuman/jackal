@@ -68,8 +68,8 @@ func (p *discoInfoProvider) Identities(ctx context.Context, toJID, fromJID *jid.
 			}
 		} else if node == mucUserItem {
 			if room != nil {
-				occJID, found := room.GetOccupantJID(fromJID.ToBareJID())
-				if found {
+				occJID, ok := room.GetOccupantJID(fromJID.ToBareJID())
+				if ok {
 					identities = append(identities, xep0030.Identity{Type: "text",
 						Category: "conference", Name: occJID.Resource()})
 				}

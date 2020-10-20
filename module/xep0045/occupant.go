@@ -11,8 +11,8 @@ import (
 
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
-	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
 func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
@@ -45,6 +45,11 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 			return nil, err
 		}
 	}
+
+	if !userJID.IsFull() {
+		return nil, fmt.Errorf("xep0045_occupant: User jid has to specify the resource")
+
+	}
 	o.AddResource(userJID.Resource())
 
 	err = s.repOccupant.UpsertOccupant(ctx, o)
@@ -55,30 +60,56 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	return o, nil
 }
 
-func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, bool) {
+func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
 	fromJID, err := jid.NewWithString(iq.From(), true)
 	if err != nil {
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return nil, false
+		return nil, iq.BadRequestError()
 	}
 
 	occJID, ok := room.GetOccupantJID(fromJID.ToBareJID())
 	if !ok {
-		_ = s.router.Route(ctx, iq.ForbiddenError())
-		return nil, false
+		return nil, iq.ForbiddenError()
 	}
 
 	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 	if err != nil {
 		log.Error(err)
-		_ = s.router.Route(ctx, iq.InternalServerError())
-		return nil, false
+		return nil, iq.InternalServerError()
 	}
 
 	if !occ.IsOwner() {
-		_ = s.router.Route(ctx, iq.ForbiddenError())
-		return nil, false
+		return nil, iq.ForbiddenError()
 	}
 
-	return occ, true
+	return occ, nil
+}
+
+func (s *Muc) getOccupantFromMessage(ctx context.Context, room *mucmodel.Room,
+	message *xmpp.Message) (*mucmodel.Occupant, xmpp.Stanza) {
+	occJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
+	if !ok {
+		return nil, message.ForbiddenError()
+	}
+
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		return nil, message.InternalServerError()
+	}
+	return occ, nil
+}
+
+func (s *Muc) getOccupantFromPresence(ctx context.Context, room *mucmodel.Room,
+	presence *xmpp.Presence) (*mucmodel.Occupant, xmpp.Stanza) {
+	occJID, ok := room.GetOccupantJID(presence.FromJID().ToBareJID())
+	if !ok {
+		return nil, presence.ForbiddenError()
+	}
+
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		return nil, presence.InternalServerError()
+	}
+	return occ, nil
 }
