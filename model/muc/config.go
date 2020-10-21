@@ -231,3 +231,10 @@ func (r *RoomConfig) OccupantCanDiscoverRealJID(o *Occupant) bool {
 	}
 	return o.IsModerator()
 }
+
+func (r *RoomConfig) OccupantCanChangeSubject(o *Occupant) bool {
+	if r.AllowSubjChange {
+		return true
+	}
+	return o.IsModerator()
+}

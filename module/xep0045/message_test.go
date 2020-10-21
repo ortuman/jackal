@@ -16,6 +16,35 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
+
+func TestXEP0045_ChangeSubject(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	subjectEl := xmpp.NewElementName("subject").SetText("new subject")
+	msgEl := xmpp.NewElementName("message").SetType("groupchat").AppendElement(subjectEl)
+	msg, _ := xmpp.NewMessageFromElement(msgEl, ownerFullJID, room.RoomJID)
+
+	muc.changeSubject(nil, room, msg)
+
+	ack := ownerStm.ReceiveElement()
+	require.Equal(t, ack.Type(), "groupchat")
+	newSubject := ack.Elements().Child("subject")
+	require.NotNil(t, newSubject)
+	require.Equal(t, newSubject.Text(), "new subject")
+
+	updatedRoom, _ := muc.repRoom.FetchRoom(nil, room.RoomJID)
+	require.Equal(t, updatedRoom.Subject, "new subject")
+}
+
 func TestXEP0045_DeclineInvite(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())

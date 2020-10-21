@@ -76,6 +76,22 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 		return
 	}
 
+	query := iq.Elements().Child("query")
+	if query == nil {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return
+	}
+	iqDomain := query.Namespace()
+
+	switch iqDomain {
+	case mucNamespaceOwner:
+		s.processIQOwner(ctx, room, iq)
+	default:
+		_ = s.router.Route(ctx, iq.BadRequestError())
+	}
+}
+
+func (s *Muc) processIQOwner(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	switch {
 	case isIQForInstantRoomCreate(iq):
 		s.createInstantRoom(ctx, room, iq)
@@ -86,7 +102,6 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
-
 }
 
 func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {
@@ -140,6 +155,8 @@ func (s *Muc) processMessage(ctx context.Context, message *xmpp.Message) {
 		s.inviteUser(ctx, room, message)
 	case isDeclineInvitation(message):
 		s.declineInvitation(ctx, room, message)
+	case message.IsGroupChat() && message.Elements().Child("subject") != nil:
+		s.changeSubject(ctx, room, message)
 	case message.IsGroupChat():
 		s.messageEveryone(ctx, room, message)
 	case message.IsChat() || message.Type() == "":

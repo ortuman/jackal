@@ -8,11 +8,46 @@ package xep0045
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	occ, errStanza := s.getOccupantFromMessage(ctx, room, message)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	if room.Config.OccupantCanChangeSubject(occ) {
+		room.Subject = message.Elements().Child("subject").Text()
+		s.repRoom.UpsertRoom(ctx, room)
+	} else {
+		_ = s.router.Route(ctx, message.ForbiddenError())
+		return
+	}
+
+	s.sendSubjectChanged(ctx, room, occ.OccupantJID, message.Elements().Child("subject").Text())
+}
+
+func (s *Muc) sendSubjectChanged(ctx context.Context, room *mucmodel.Room, from *jid.JID,
+	subject string) {
+	subjectEl := xmpp.NewElementName("subject").SetText(subject)
+	msgEl := xmpp.NewElementName("message").SetType("groupchat").AppendElement(subjectEl)
+
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		msgEl.SetID(uuid.New().String())
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			message, _ := xmpp.NewMessageFromElement(msgEl, from, to)
+			_ = s.router.Route(ctx, message)
+		}
+	}
+}
 
 func isDeclineInvitation(message *xmpp.Message) bool {
 	x := message.Elements().Child("x")
@@ -99,8 +134,7 @@ func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Mes
 	}
 
 	// check if user is allowed to send the pm
-	if errStanza := s.userCanPMOccupant(ctx, room, message.FromJID(), message.ToJID(), message);
-	errStanza != nil {
+	if errStanza := s.userCanPMOccupant(ctx, room, message.FromJID(), message.ToJID(), message); errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
 	}
