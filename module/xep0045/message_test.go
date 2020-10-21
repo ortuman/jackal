@@ -125,7 +125,6 @@ func TestXEP0045_MessageEveryone(t *testing.T) {
 	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
 	regularOcc, err := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
 	regularOcc.AddResource("balcony")
-	muc.repOccupant.UpsertOccupant(nil, regularOcc)
 	muc.AddOccupantToRoom(nil, room, regularOcc)
 
 	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)

@@ -203,3 +203,19 @@ func (o *Occupant) AddResource(s string) {
 func (o *Occupant) DeleteResource(s string) {
 	delete(o.resources, s)
 }
+
+func (o *Occupant) CanKickOccupant(k *Occupant) bool {
+	if o.IsOwner() {
+		return true
+	}
+	if o.IsAdmin() && !k.IsOwner() {
+		return true
+	}
+	if o.IsMember() && !k.IsOwner() && !k.IsAdmin() {
+		return true
+	}
+	if o.HasNoAffiliation() && k.HasNoAffiliation() {
+		return true
+	}
+	return false
+}

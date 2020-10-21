@@ -60,30 +60,6 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	return o, nil
 }
 
-func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
-	fromJID, err := jid.NewWithString(iq.From(), true)
-	if err != nil {
-		return nil, iq.BadRequestError()
-	}
-
-	occJID, ok := room.GetOccupantJID(fromJID.ToBareJID())
-	if !ok {
-		return nil, iq.ForbiddenError()
-	}
-
-	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		log.Error(err)
-		return nil, iq.InternalServerError()
-	}
-
-	if !occ.IsOwner() {
-		return nil, iq.ForbiddenError()
-	}
-
-	return occ, nil
-}
-
 func (s *Muc) getOccupantFromMessage(ctx context.Context, room *mucmodel.Room,
 	message *xmpp.Message) (*mucmodel.Occupant, xmpp.Stanza) {
 	occJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
@@ -111,5 +87,49 @@ func (s *Muc) getOccupantFromPresence(ctx context.Context, room *mucmodel.Room,
 		log.Error(err)
 		return nil, presence.InternalServerError()
 	}
+	return occ, nil
+}
+
+func (s *Muc) getOccupantFromIQ(ctx context.Context, room *mucmodel.Room,
+	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
+	occJID, ok := room.GetOccupantJID(iq.FromJID().ToBareJID())
+	if !ok {
+		return nil, iq.ForbiddenError()
+	}
+
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		log.Error(err)
+		return nil, iq.InternalServerError()
+	}
+	return occ, nil
+
+}
+
+func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
+	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
+	occ, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		return nil, errStanza
+	}
+
+	if !occ.IsOwner() {
+		return nil, iq.ForbiddenError()
+	}
+
+	return occ, nil
+}
+
+func (s *Muc) getModeratorFromIQ(ctx context.Context, room *mucmodel.Room,
+	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
+	occ, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		return nil, errStanza
+	}
+
+	if !occ.IsModerator() {
+		return nil, iq.ForbiddenError()
+	}
+
 	return occ, nil
 }

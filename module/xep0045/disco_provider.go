@@ -20,6 +20,7 @@ const (
 	mucNamespace           = "http://jabber.org/protocol/muc"
 	mucNamespaceUser       = "http://jabber.org/protocol/muc#user"
 	mucNamespaceOwner      = "http://jabber.org/protocol/muc#owner"
+	mucNamespaceAdmin      = "http://jabber.org/protocol/muc#admin"
 	mucNamespaceStableID   = "http://jabber.org/protocol/muc#stable_id"
 	mucNamespaceRoomConfig = "http://jabber.org/protocol/muc#roomconfig"
 

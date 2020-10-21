@@ -14,12 +14,29 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getKickedOccupantElement(actor, reason string, selfNotifying bool) *xmpp.Element {
+	itemEl := xmpp.NewElementName("Item").SetAttribute("affiliation", "none")
+	itemEl.SetAttribute("role", "none")
+	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
+	itemEl.AppendElement(actorEl)
+	if reason != "" {
+		reasonEl := xmpp.NewElementName("reason").SetText(reason)
+		itemEl.AppendElement(reasonEl)
+	}
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
+	xEl.AppendElement(newStatusElement("307"))
+	if selfNotifying {
+		xEl.AppendElement(newStatusElement("110"))
+	}
+	pEl := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)
+	return pEl
+}
+
 func getInvitedUserJID(message *xmpp.Message) *jid.JID {
 	invJIDStr := message.Elements().Child("x").Elements().Child("invite").Attributes().Get("to")
 	invJID, _ := jid.NewWithString(invJIDStr, true)
 	return invJID
 }
-
 
 func getMessageElement(body xmpp.XElement, id string, private bool) *xmpp.Element {
 	msgEl := xmpp.NewElementName("message").AppendElement(body)

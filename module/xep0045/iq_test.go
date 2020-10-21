@@ -19,6 +19,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestXEP0045_KickOccupant(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	kickedUsrJID, _ := jid.New("to_be_kicked", "jackal.im", "office", true)
+	kickedOccJID, _ := jid.New("room", "conference.jackal.im", "kicked", true)
+	kickedOcc, err := mucmodel.NewOccupant(kickedOccJID, kickedUsrJID.ToBareJID())
+	require.Nil(t, err)
+	kickedOcc.AddResource("office")
+	muc.AddOccupantToRoom(nil, room, kickedOcc)
+
+	kickedStm := stream.NewMockC2S("id-1", kickedUsrJID)
+	kickedStm.SetPresence(xmpp.NewPresence(kickedOcc.BareJID, kickedUsrJID, xmpp.AvailableType))
+	r.Bind(context.Background(), kickedStm)
+
+	reasonEl := xmpp.NewElementName("reason").SetText("reason for kicking")
+	itemEl := xmpp.NewElementName("item").SetAttribute("nick", kickedOccJID.Resource())
+	itemEl.SetAttribute("role", "none").AppendElement(reasonEl)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set").AppendElement(queryEl)
+	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	require.True(t, isIQForKickOccupant(iq))
+
+	muc.kickOccupant(nil, room, iq)
+
+	kickedAck := kickedStm.ReceiveElement()
+	require.Equal(t, kickedAck.Type(), "unavailable")
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
+	resKickAck := ownerStm.ReceiveElement()
+	require.Equal(t, resKickAck.Type(), "unavailable")
+
+	_, found := room.GetOccupantJID(kickedUsrJID.ToBareJID())
+	require.False(t, found)
+	kicked, _ := muc.repOccupant.FetchOccupant(nil, kickedOccJID)
+	require.Nil(t, kicked)
+}
+
 func TestXEP0045_CreateInstantRoom(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())

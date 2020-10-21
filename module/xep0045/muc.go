@@ -86,6 +86,8 @@ func (s *Muc) processIQ(ctx context.Context, iq *xmpp.IQ) {
 	switch iqDomain {
 	case mucNamespaceOwner:
 		s.processIQOwner(ctx, room, iq)
+	case mucNamespaceAdmin:
+		s.processIQAdmin(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
@@ -99,6 +101,15 @@ func (s *Muc) processIQOwner(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		s.sendRoomConfiguration(ctx, room, iq)
 	case isIQForRoomConfigSubmission(iq):
 		s.processRoomConfiguration(ctx, room, iq)
+	default:
+		_ = s.router.Route(ctx, iq.BadRequestError())
+	}
+}
+
+func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	switch {
+	case isIQForKickOccupant(iq):
+		s.kickOccupant(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
