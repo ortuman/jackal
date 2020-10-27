@@ -19,6 +19,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestXEP0045_ChangeRole(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	rcUsrJID, _ := jid.New("rc", "jackal.im", "office", true)
+	rcOccJID, _ := jid.New("room", "conference.jackal.im", "rc", true)
+	rcOcc, err := mucmodel.NewOccupant(rcOccJID, rcUsrJID.ToBareJID())
+	require.Nil(t, err)
+	rcOcc.AddResource("office")
+	rcOcc.SetRole("visitor")
+	muc.AddOccupantToRoom(nil, room, rcOcc)
+
+	rcStm := stream.NewMockC2S("id-1", rcUsrJID)
+	rcStm.SetPresence(xmpp.NewPresence(rcOcc.BareJID, rcUsrJID, xmpp.AvailableType))
+	r.Bind(context.Background(), rcStm)
+
+	reasonEl := xmpp.NewElementName("reason").SetText("reason for role change")
+	itemEl := xmpp.NewElementName("item").SetAttribute("nick", rcOccJID.Resource())
+	itemEl.SetAttribute("role", "participant").AppendElement(reasonEl)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set").AppendElement(queryEl)
+	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	require.False(t, isIQForKickOccupant(iq))
+	require.True(t, isIQForRoleChange(iq))
+
+	muc.changeRole(nil, room, iq)
+
+	rcAck := rcStm.ReceiveElement()
+	require.Equal(t, rcAck.From(), rcOccJID.String())
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
+	resCrAck := ownerStm.ReceiveElement()
+	require.Equal(t, resCrAck.From(), rcOccJID.String())
+
+	resOcc, _ := muc.repOccupant.FetchOccupant(nil, rcOccJID)
+	require.True(t, resOcc.IsParticipant())
+}
+
 func TestXEP0045_KickOccupant(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())

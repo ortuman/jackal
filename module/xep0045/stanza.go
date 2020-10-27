@@ -14,8 +14,30 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getReasonFromIQ(iq *xmpp.IQ) string {
+	reasonEl := iq.Elements().Child("query").Elements().Child("item").Elements().Child("reason")
+	reason := ""
+	if reasonEl != nil {
+		reason = reasonEl.Text()
+	}
+	return reason
+}
+
+func getOccupantRoleChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element{
+	itemEl := xmpp.NewElementName("item")
+	itemEl.SetAttribute("affiliation", o.GetAffiliation())
+	itemEl.SetAttribute("role", o.GetRole())
+	itemEl.SetAttribute("nick", o.OccupantJID.Resource())
+	if reason != "" {
+		reasonEl := xmpp.NewElementName("reason").SetText(reason)
+		itemEl.AppendElement(reasonEl)
+	}
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
+	return xEl
+}
+
 func getKickedOccupantElement(actor, reason string, selfNotifying bool) *xmpp.Element {
-	itemEl := xmpp.NewElementName("Item").SetAttribute("affiliation", "none")
+	itemEl := xmpp.NewElementName("item").SetAttribute("affiliation", "none")
 	itemEl.SetAttribute("role", "none")
 	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
 	itemEl.AppendElement(actorEl)

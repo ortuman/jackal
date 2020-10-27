@@ -110,6 +110,8 @@ func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 	switch {
 	case isIQForKickOccupant(iq):
 		s.kickOccupant(ctx, room, iq)
+	case isIQForRoleChange(iq):
+		s.changeRole(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
@@ -138,6 +140,7 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	case presence.IsUnavailable():
 		s.exitRoom(ctx, room, presence)
 	default:
+		// TODO try to define this case, and have a default be BadRequestError
 		s.changeNickname(ctx, room, presence)
 	}
 }

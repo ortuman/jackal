@@ -7,13 +7,64 @@ package xep0045
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp"
 )
+
+func isIQForRoleChange(iq *xmpp.IQ) bool {
+	if !iq.IsSet() {
+		return false
+	}
+	query := iq.Elements().Child("query")
+	item := query.Elements().Child("item")
+	if item == nil || item.Attributes().Get("nick") == "" ||
+		item.Attributes().Get("role") == "" {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) changeRole(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	occ, role := s.getOccupantAndNewRole(ctx, room, iq)
+	if occ == nil {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return
+	}
+
+	if !sender.CanChangeRole(occ, role) {
+		_ = s.router.Route(ctx, iq.NotAllowedError())
+		return
+	}
+
+	occ.SetRole(role)
+	s.repOccupant.UpsertOccupant(ctx, occ)
+
+	_ = s.router.Route(ctx, iq.ResultIQ())
+	s.notifyRoomRoleChange(ctx, room, occ, getReasonFromIQ(iq))
+}
+
+func (s *Muc) notifyRoomRoleChange(ctx context.Context, room *mucmodel.Room,
+	occ *mucmodel.Occupant, reason string) {
+	xEl := getOccupantRoleChangeElement(occ, reason)
+	presenceEl := xmpp.NewElementName("presence").AppendElement(xEl)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, occ.OccupantJID, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
 
 func isIQForKickOccupant(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
@@ -35,14 +86,13 @@ func (s *Muc) kickOccupant(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ
 		return
 	}
 
-	kickedOcc, err := s.getKickedOccupant(ctx, room, iq)
-	if err != nil {
-		log.Error(err)
-		_ = s.router.Route(ctx, iq.InternalServerError())
+	kickedOcc, newRole := s.getOccupantAndNewRole(ctx, room, iq)
+	if kickedOcc == nil || newRole != "none" {
+		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
 	}
 
-	if !mod.CanKickOccupant(kickedOcc) {
+	if !mod.CanChangeRole(kickedOcc, newRole) {
 		_ = s.router.Route(ctx, iq.NotAllowedError())
 		return
 	}
@@ -51,11 +101,7 @@ func (s *Muc) kickOccupant(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ
 	kickedOcc.SetRole("")
 	s.occupantExitsRoom(ctx, room, kickedOcc)
 
-	reasonEl := iq.Elements().Child("query").Elements().Child("item").Elements().Child("reason")
-	reason := ""
-	if reasonEl != nil {
-		reason = reasonEl.Text()
-	}
+	reason := getReasonFromIQ(iq)
 	s.notifyKickedOccupant(ctx, kickedOcc, mod.OccupantJID.Resource(), reason)
 	_ = s.router.Route(ctx, iq.ResultIQ())
 	s.notifyRoomOccupantKicked(ctx, room, kickedOcc, mod.OccupantJID.Resource(), reason)
@@ -74,7 +120,7 @@ func (s *Muc) notifyRoomOccupantKicked(ctx context.Context, room *mucmodel.Room,
 	kicked *mucmodel.Occupant, actor, reason string) {
 	el := getKickedOccupantElement(actor, reason, false)
 	for _, occJID := range room.GetAllOccupantJIDs() {
-		o , _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
 		for _, resource := range o.GetAllResources() {
 			to := addResourceToBareJID(o.BareJID, resource)
 			p, _ := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
@@ -84,18 +130,16 @@ func (s *Muc) notifyRoomOccupantKicked(ctx context.Context, room *mucmodel.Room,
 	}
 }
 
-func (s *Muc) getKickedOccupant(ctx context.Context, room *mucmodel.Room,
-	iq *xmpp.IQ) (*mucmodel.Occupant, error) {
-	kickedOccNick := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("nick")
-	kickedOccJID := addResourceToBareJID(room.RoomJID, kickedOccNick)
-	kickedOcc, err := s.repOccupant.FetchOccupant(ctx, kickedOccJID)
-	if err != nil {
-		return nil, err
+func (s *Muc) getOccupantAndNewRole(ctx context.Context, room *mucmodel.Room,
+	iq *xmpp.IQ) (*mucmodel.Occupant, string) {
+	occNick := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("nick")
+	occJID := addResourceToBareJID(room.RoomJID, occNick)
+	occ, err := s.repOccupant.FetchOccupant(ctx, occJID)
+	if err != nil || occ == nil {
+		return nil, ""
 	}
-	if kickedOcc == nil {
-		return nil, fmt.Errorf("Occupant %s does not exist", kickedOccJID.String())
-	}
-	return kickedOcc, nil
+	newRole := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("role")
+	return occ, newRole
 }
 
 func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {

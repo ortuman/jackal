@@ -24,6 +24,7 @@ const (
 	moderator   = "moderator"
 	participant = "participant"
 	visitor     = "visitor"
+	none        = "none"
 )
 
 type Occupant struct {
@@ -204,18 +205,30 @@ func (o *Occupant) DeleteResource(s string) {
 	delete(o.resources, s)
 }
 
-func (o *Occupant) CanKickOccupant(k *Occupant) bool {
-	if o.IsOwner() {
+func (o *Occupant) HasHigherAffiliation(k *Occupant) bool {
+	switch {
+	case o.IsOwner() :
 		return true
+	case o.IsAdmin() :
+		return !k.IsOwner()
+	case o.IsMember() :
+		return !k.IsOwner() && !k.IsAdmin()
+	case o.HasNoAffiliation() :
+		return k.HasNoAffiliation()
 	}
-	if o.IsAdmin() && !k.IsOwner() {
-		return true
-	}
-	if o.IsMember() && !k.IsOwner() && !k.IsAdmin() {
-		return true
-	}
-	if o.HasNoAffiliation() && k.HasNoAffiliation() {
-		return true
+	return false
+}
+
+func (o *Occupant) CanChangeRole(target *Occupant, role string) bool {
+	switch role {
+	case none:
+		return o.IsModerator() && o.HasHigherAffiliation(target)
+	case visitor:
+		return o.IsModerator() && target.IsParticipant()
+	case participant:
+		return o.IsModerator() && target.IsVisitor() || o.IsAdmin() && !target.IsOwner()
+	case moderator:
+		return o.IsAdmin() || o.IsOwner()
 	}
 	return false
 }
