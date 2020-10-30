@@ -14,11 +14,30 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
-func getRoomMemberRemovedElement(actor string) *xmpp.Element {
+func getUserBannedElement(actor, reason string) *xmpp.Element {
+	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
+	itemEl := xmpp.NewElementName("item").AppendElement(actorEl)
+	itemEl.SetAttribute("affiliation", "outcast")
+	itemEl.SetAttribute("role", "none")
+	if reason != "" {
+		reasonEl := xmpp.NewElementName("reason").SetText(reason)
+		itemEl.AppendElement(reasonEl)
+	}
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
+	xEl.AppendElement(newStatusElement("301"))
+	presence := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)
+	return presence
+}
+
+func getRoomMemberRemovedElement(actor, reason string) *xmpp.Element {
 	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
 	itemEl := xmpp.NewElementName("item").AppendElement(actorEl)
 	itemEl.SetAttribute("affiliation", "none")
 	itemEl.SetAttribute("role", "none")
+	if reason != "" {
+		reasonEl := xmpp.NewElementName("reason").SetText(reason)
+		itemEl.AppendElement(reasonEl)
+	}
 	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
 	xEl.AppendElement(newStatusElement("321"))
 	presence := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)

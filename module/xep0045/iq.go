@@ -54,15 +54,32 @@ func (s *Muc) changeAffiliation(ctx context.Context, room *mucmodel.Room, iq *xm
 	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromIQ(iq))
 
 	if !room.Config.Open && affiliation == "none" {
-		s.notifyRoomMemberRemoved(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource())
+		s.notifyRoomMemberRemoved(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource(),
+			getReasonFromIQ(iq))
 		room.OccupantLeft(occ)
 		s.repOccupant.DeleteOccupant(ctx, occ.OccupantJID)
+	} else if affiliation == "outcast" {
+		s.notifyRoomUserBanned(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource(),
+			getReasonFromIQ(iq))
 	}
 }
 
 func (s *Muc) notifyRoomMemberRemoved(ctx context.Context, room *mucmodel.Room, from *jid.JID,
-	actor string) {
-	presenceEl := getRoomMemberRemovedElement(actor)
+	actor, reason string) {
+	presenceEl := getRoomMemberRemovedElement(actor, reason)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
+
+func (s *Muc) notifyRoomUserBanned(ctx context.Context, room *mucmodel.Room, from *jid.JID,
+	actor, reason string) {
+	presenceEl := getUserBannedElement(actor, reason)
 	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
 		for _, resource := range o.GetAllResources() {
