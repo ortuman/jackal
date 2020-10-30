@@ -19,6 +19,55 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestXEP0045_ChangeAffiliation(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	acUsrJID, _ := jid.New("ac", "jackal.im", "office", true)
+	acOccJID, _ := jid.New("room", "conference.jackal.im", "ac", true)
+	acOcc, err := mucmodel.NewOccupant(acOccJID, acUsrJID.ToBareJID())
+	require.Nil(t, err)
+	acOcc.AddResource("office")
+	acOcc.SetAffiliation("member")
+	muc.AddOccupantToRoom(nil, room, acOcc)
+	require.True(t, acOcc.IsMember())
+	require.False(t, acOcc.IsAdmin())
+
+	acStm := stream.NewMockC2S("id-1", acUsrJID)
+	acStm.SetPresence(xmpp.NewPresence(acOcc.BareJID, acUsrJID, xmpp.AvailableType))
+	r.Bind(context.Background(), acStm)
+
+	reasonEl := xmpp.NewElementName("reason").SetText("reason for affiliation change")
+	itemEl := xmpp.NewElementName("item").SetAttribute("jid", acOcc.BareJID.String())
+	itemEl.SetAttribute("affiliation", "admin").AppendElement(reasonEl)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("set").AppendElement(queryEl)
+	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	require.False(t, isIQForRoleChange(iq))
+	require.True(t, isIQForAffiliationChange(iq))
+
+	muc.changeAffiliation(nil, room, iq)
+
+	acAck := acStm.ReceiveElement()
+	require.Equal(t, acAck.From(), acOccJID.String())
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
+	resArAck := ownerStm.ReceiveElement()
+	require.Equal(t, resArAck.From(), acOccJID.String())
+
+	resOcc, _ := muc.repOccupant.FetchOccupant(nil, acOccJID)
+	require.False(t, resOcc.IsMember())
+	require.True(t, resOcc.IsAdmin())
+}
+
 func TestXEP0045_ChangeRole(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
@@ -47,7 +96,7 @@ func TestXEP0045_ChangeRole(t *testing.T) {
 	itemEl := xmpp.NewElementName("item").SetAttribute("nick", rcOccJID.Resource())
 	itemEl.SetAttribute("role", "participant").AppendElement(reasonEl)
 	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
-	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set").AppendElement(queryEl)
+	iqEl := xmpp.NewElementName("iq").SetID("participant1").SetType("set").AppendElement(queryEl)
 	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
 	require.False(t, isIQForKickOccupant(iq))
 	require.True(t, isIQForRoleChange(iq))

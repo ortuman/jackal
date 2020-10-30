@@ -14,6 +14,17 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getRoomMemberRemovedElement(actor string) *xmpp.Element {
+	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
+	itemEl := xmpp.NewElementName("item").AppendElement(actorEl)
+	itemEl.SetAttribute("affiliation", "none")
+	itemEl.SetAttribute("role", "none")
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
+	xEl.AppendElement(newStatusElement("321"))
+	presence := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)
+	return presence
+}
+
 func getReasonFromIQ(iq *xmpp.IQ) string {
 	reasonEl := iq.Elements().Child("query").Elements().Child("item").Elements().Child("reason")
 	reason := ""
@@ -23,7 +34,7 @@ func getReasonFromIQ(iq *xmpp.IQ) string {
 	return reason
 }
 
-func getOccupantRoleChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element{
+func getOccupantChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element{
 	itemEl := xmpp.NewElementName("item")
 	itemEl.SetAttribute("affiliation", o.GetAffiliation())
 	itemEl.SetAttribute("role", o.GetRole())

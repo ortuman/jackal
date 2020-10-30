@@ -232,3 +232,23 @@ func (o *Occupant) CanChangeRole(target *Occupant, role string) bool {
 	}
 	return false
 }
+
+func (o *Occupant) CanChangeAffiliation(target *Occupant, affiliation string) bool {
+	if o.OccupantJID.String() == target.OccupantJID.String() {
+		return false
+	}
+	if !o.IsAdmin() && !o.IsOwner() {
+		return false
+	}
+	switch affiliation {
+	case none:
+		return o.HasHigherAffiliation(target)
+	case member:
+		return o.HasHigherAffiliation(target)
+	case admin:
+		return o.IsOwner()
+	case owner:
+		return o.IsOwner()
+	}
+	return false
+}

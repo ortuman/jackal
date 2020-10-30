@@ -12,7 +12,66 @@ import (
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+func isIQForAffiliationChange(iq *xmpp.IQ) bool {
+	if !iq.IsSet() {
+		return false
+	}
+	query := iq.Elements().Child("query")
+	item := query.Elements().Child("item")
+	if item == nil || item.Attributes().Get("jid") == "" ||
+		item.Attributes().Get("affiliation") == "" {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) changeAffiliation(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	occ, affiliation := s.getOccupantAndNewAffiliation(ctx, room, iq)
+	if occ == nil {
+		_ = s.router.Route(ctx, iq.BadRequestError())
+		return
+	}
+
+	if !sender.CanChangeAffiliation(occ, affiliation) {
+		_ = s.router.Route(ctx, iq.NotAllowedError())
+		return
+	}
+
+	occ.SetAffiliation(affiliation)
+	room.SetDefaultRole(occ)
+	s.repOccupant.UpsertOccupant(ctx, occ)
+
+	_ = s.router.Route(ctx, iq.ResultIQ())
+	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromIQ(iq))
+
+	if !room.Config.Open && affiliation == "none" {
+		s.notifyRoomMemberRemoved(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource())
+		room.OccupantLeft(occ)
+		s.repOccupant.DeleteOccupant(ctx, occ.OccupantJID)
+	}
+}
+
+func (s *Muc) notifyRoomMemberRemoved(ctx context.Context, room *mucmodel.Room, from *jid.JID,
+	actor string) {
+	presenceEl := getRoomMemberRemovedElement(actor)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
 
 func isIQForRoleChange(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
@@ -49,12 +108,12 @@ func (s *Muc) changeRole(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) 
 	s.repOccupant.UpsertOccupant(ctx, occ)
 
 	_ = s.router.Route(ctx, iq.ResultIQ())
-	s.notifyRoomRoleChange(ctx, room, occ, getReasonFromIQ(iq))
+	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromIQ(iq))
 }
 
-func (s *Muc) notifyRoomRoleChange(ctx context.Context, room *mucmodel.Room,
+func (s *Muc) notifyRoomOccupantChange(ctx context.Context, room *mucmodel.Room,
 	occ *mucmodel.Occupant, reason string) {
-	xEl := getOccupantRoleChangeElement(occ, reason)
+	xEl := getOccupantChangeElement(occ, reason)
 	presenceEl := xmpp.NewElementName("presence").AppendElement(xEl)
 	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
@@ -140,6 +199,25 @@ func (s *Muc) getOccupantAndNewRole(ctx context.Context, room *mucmodel.Room,
 	}
 	newRole := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("role")
 	return occ, newRole
+}
+
+func (s *Muc) getOccupantAndNewAffiliation(ctx context.Context, room *mucmodel.Room,
+	iq *xmpp.IQ) (*mucmodel.Occupant, string) {
+	userBareJIDStr := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("jid")
+	userBareJID, err := jid.NewWithString(userBareJIDStr, true)
+	if err != nil {
+		return nil, ""
+	}
+	occJID, ok := room.GetOccupantJID(userBareJID)
+	if !ok {
+		return nil, ""
+	}
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil || occ == nil {
+		return nil, ""
+	}
+	newAff := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("affiliation")
+	return occ, newAff
 }
 
 func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {

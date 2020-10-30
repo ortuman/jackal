@@ -112,6 +112,9 @@ func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		s.kickOccupant(ctx, room, iq)
 	case isIQForRoleChange(iq):
 		s.changeRole(ctx, room, iq)
+	//TODO add banning query before this one
+	case isIQForAffiliationChange(iq):
+		s.changeAffiliation(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}
