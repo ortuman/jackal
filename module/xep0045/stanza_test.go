@@ -16,14 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestXEP0045_NewItem(t *testing.T) {
-	item := newItemElement("owner", "moderator")
-	require.Equal(t, item.Name(), "item")
-	require.Equal(t, item.Attributes().Get("affiliation"), "owner")
-	require.Equal(t, item.Attributes().Get("role"), "moderator")
-
-}
-
 func TestXEP0045_NewStatus(t *testing.T) {
 	status := newStatusElement("200")
 	require.Equal(t, status.Name(), "status")
@@ -40,8 +32,6 @@ func TestXEP0045_GetAckStanza(t *testing.T) {
 
 	xel := message.Elements().Child("x")
 	require.Equal(t, xel.Namespace(), mucNamespaceUser)
-	require.Equal(t, xel.Elements().Child("item").String(),
-		newItemElement("owner", "moderator").String())
 }
 
 func TestXEP0045_GetFormStanza(t *testing.T) {

@@ -15,6 +15,57 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func (s *Muc) getOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	resOccupants, errStanza := s.getRequestedOccupants(ctx, room, sender, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	listEl := getOccupantsInfoElement(resOccupants, iq.ID(),
+		room.Config.OccupantCanDiscoverRealJID(sender))
+	iqRes, _ := xmpp.NewIQFromElement(listEl, room.RoomJID, iq.FromJID())
+	_ = s.router.Route(ctx, iqRes)
+}
+
+func (s *Muc) getRequestedOccupants(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, iq *xmpp.IQ) ([]*mucmodel.Occupant, xmpp.Stanza) {
+	switch filter := getFilterFromIQ(iq); filter {
+	case "moderator", "participant", "visitor":
+		resOccupants, err := s.getOccupantsByRole(ctx, room, sender, filter)
+		if err != nil {
+			return nil, iq.NotAllowedError()
+		}
+		return resOccupants, nil
+	case "owner", "admin", "member", "outcast":
+		resOccupants, err := s.getOccupantsByAffiliation(ctx, room, sender, filter)
+		if err != nil {
+			return nil, iq.NotAllowedError()
+		}
+		return resOccupants, nil
+	}
+
+	return nil, iq.BadRequestError()
+}
+
+func getFilterFromIQ(iq *xmpp.IQ) string {
+	item := iq.Elements().Child("query").Elements().Child("item")
+	if item == nil {
+		return ""
+	}
+	aff := item.Attributes().Get("affiliation")
+	if aff != "" {
+		return aff
+	}
+	return item.Attributes().Get("role")
+}
+
 func isIQForAffiliationChange(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
 		return false

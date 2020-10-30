@@ -14,6 +14,17 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getOccupantsInfoElement(occupants []*mucmodel.Occupant, id string,
+	includeUserJID bool) *xmpp.Element {
+	query := xmpp.NewElementNamespace("query", mucNamespaceAdmin)
+	for _, o := range occupants {
+		query.AppendElement(newOccupantItem(o, includeUserJID, true))
+	}
+	iq := xmpp.NewElementName("iq").AppendElement(query)
+	iq.SetID("id").SetType("result")
+	return iq
+}
+
 func getUserBannedElement(actor, reason string) *xmpp.Element {
 	actorEl := xmpp.NewElementName("actor").SetAttribute("nick", actor)
 	itemEl := xmpp.NewElementName("item").AppendElement(actorEl)
@@ -53,7 +64,7 @@ func getReasonFromIQ(iq *xmpp.IQ) string {
 	return reason
 }
 
-func getOccupantChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element{
+func getOccupantChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element {
 	itemEl := xmpp.NewElementName("item")
 	itemEl.SetAttribute("affiliation", o.GetAffiliation())
 	itemEl.SetAttribute("role", o.GetRole())
@@ -152,13 +163,8 @@ func getInvitationStanza(room *mucmodel.Room, inviteFrom, inviteTo *jid.JID, mes
 func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
 	selfNotifying, includeUserJID bool) xmpp.Stanza {
 	// get the x element
-	x := newOccupantAffiliationRoleElement(o, includeUserJID)
-
-	// modifying the item element to include the nick
-	itemEl := xmpp.NewElementFromElement(x.Elements().Child("item"))
-	itemEl.SetAttribute("nick", o.OccupantJID.Resource())
-	x.RemoveElements("item").AppendElement(itemEl)
-
+	x := xmpp.NewElementNamespace("x", mucNamespaceUser)
+	x.AppendElement(newOccupantItem(o, includeUserJID, true))
 	x.AppendElement(newStatusElement("303"))
 	if selfNotifying {
 		x.AppendElement(newStatusElement("110"))
@@ -188,7 +194,7 @@ func getPasswordFromPresence(presence *xmpp.Presence) string {
 
 func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID,
 	selfNotifying, includeUserJID bool) xmpp.Stanza {
-	x := newOccupantAffiliationRoleElement(o, includeUserJID)
+	x := newOccupantAffiliationRoleElement(o, includeUserJID, false)
 	if selfNotifying {
 		x.AppendElement(newStatusElement("110"))
 	}
@@ -203,7 +209,7 @@ func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID,
 }
 
 func getOccupantSelfPresenceStanza(o *mucmodel.Occupant, to *jid.JID, nonAnonymous bool, id string) xmpp.Stanza {
-	x := newOccupantAffiliationRoleElement(o, false).AppendElement(newStatusElement("110"))
+	x := newOccupantAffiliationRoleElement(o, false, false).AppendElement(newStatusElement("110"))
 	if nonAnonymous {
 		x.AppendElement(newStatusElement("100"))
 	}
@@ -229,8 +235,10 @@ func getRoomSubjectStanza(subject string, from, to *jid.JID) xmpp.Stanza {
 }
 
 func getAckStanza(from, to *jid.JID) xmpp.Stanza {
+	item := xmpp.NewElementName("item")
+	item.SetAttribute("affiliation", "owner").SetAttribute("role", "moderator")
 	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
-	e.AppendElement(newItemElement("owner", "moderator"))
+	e.AppendElement(item)
 	e.AppendElement(newStatusElement("110"))
 	e.AppendElement(newStatusElement("210"))
 
@@ -256,30 +264,37 @@ func getFormStanza(iq *xmpp.IQ, form *xep0004.DataForm) xmpp.Stanza {
 	return stanza
 }
 
-func newItemElement(affiliation, role string) *xmpp.Element {
-	i := xmpp.NewElementName("item")
-	if affiliation == "" {
-		affiliation = "none"
-	}
-	if role == "" {
-		role = "none"
-	}
-	i.SetAttribute("affiliation", affiliation)
-	i.SetAttribute("role", role)
-	return i
-}
-
 func newStatusElement(code string) *xmpp.Element {
 	s := xmpp.NewElementName("status")
 	s.SetAttribute("code", code)
 	return s
 }
 
-func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID bool) *xmpp.Element {
-	item := newItemElement(o.GetAffiliation(), o.GetRole())
-	if includeUserJID {
-		item.SetAttribute("jid", o.BareJID.String())
+func newOccupantItem(o *mucmodel.Occupant, includeUserJID, includeNick bool) *xmpp.Element {
+	i := xmpp.NewElementName("item")
+	a := o.GetAffiliation()
+	r := o.GetRole()
+	if a == "" {
+		a = "none"
 	}
+	if r == "" {
+		r = "none"
+	}
+	i.SetAttribute("affiliation", a)
+	i.SetAttribute("role", r)
+	if includeUserJID {
+		i.SetAttribute("jid", o.BareJID.String())
+	}
+	if includeNick {
+		i.SetAttribute("nick", o.OccupantJID.Resource())
+	}
+	return i
+}
+
+// TODO probably delete this function, not required
+func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID,
+	includeNick bool) *xmpp.Element {
+	item := newOccupantItem(o, includeUserJID, includeNick)
 	e := xmpp.NewElementNamespace("x", mucNamespaceUser)
 	e.AppendElement(item)
 	return e

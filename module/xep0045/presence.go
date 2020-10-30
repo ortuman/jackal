@@ -66,7 +66,7 @@ func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupa
 			return err
 		}
 		xEl := newOccupantAffiliationRoleElement(occExiting,
-			room.Config.OccupantCanDiscoverRealJID(o))
+			room.Config.OccupantCanDiscoverRealJID(o), false)
 		if occJID.String() == occExiting.OccupantJID.String() {
 			xEl.AppendElement(newStatusElement("110"))
 		}
@@ -134,7 +134,9 @@ func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmo
 		if err != nil {
 			return err
 		}
-		xEl := newOccupantAffiliationRoleElement(sender, room.Config.OccupantCanDiscoverRealJID(o))
+		// TODO maybe rename this long name (occupantcandiscoverrealjid) to something smaller
+		xEl := newOccupantAffiliationRoleElement(sender,
+			room.Config.OccupantCanDiscoverRealJID(o), false)
 		presence.AppendElement(xEl)
 		for _, resource := range o.GetAllResources() {
 			presence.SetID(uuid.New().String())

@@ -19,6 +19,36 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestXEP0045_GetOccupantList(t *testing.T) {
+	r, c := setupTest("jackal.im")
+	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
+	defer func() { _ = muc.Shutdown() }()
+
+	room, owner := getTestRoomAndOwner(muc)
+	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+
+	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
+	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
+	r.Bind(context.Background(), ownerStm)
+
+	itemEl := xmpp.NewElementName("item").SetAttribute("role", "moderator")
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("get").AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+
+	muc.getOccupantList(nil, room, iq)
+
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
+	query := resAck.Elements().Child("query")
+	require.NotNil(t, query)
+	require.Equal(t, query.Namespace(), mucNamespaceAdmin)
+	item := query.Elements().Child("item")
+	require.NotNil(t, item)
+	require.Equal(t, item.Attributes().Get("nick"), owner.OccupantJID.Resource())
+
+}
+
 func TestXEP0045_ChangeAffiliation(t *testing.T) {
 	r, c := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())

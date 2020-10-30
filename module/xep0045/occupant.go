@@ -133,3 +133,44 @@ func (s *Muc) getModeratorFromIQ(ctx context.Context, room *mucmodel.Room,
 
 	return occ, nil
 }
+
+func (s *Muc) getOccupantsByRole(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, role string) ([]*mucmodel.Occupant, error) {
+	if !sender.IsModerator() {
+		return nil, fmt.Errorf("xep0045: only moderators can retrive the list of %ss", role)
+	}
+	res := make([]*mucmodel.Occupant, 0)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if o.GetRole() == role {
+			res = append(res, o)
+		}
+	}
+	return res, nil
+}
+
+func (s *Muc) getOccupantsByAffiliation(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, aff string) ([]*mucmodel.Occupant, error) {
+	switch aff {
+	case "outcast", "member":
+		if !sender.IsAdmin() && !sender.IsOwner() {
+			return nil, fmt.Errorf("xep0045: only admins and owners can retrive the list of %ss",
+				aff)
+		}
+	case "owner", "admin":
+		if !sender.IsOwner() {
+			return nil, fmt.Errorf("xep0045: only owners can retrive the list of %ss", aff)
+		}
+	default:
+		return nil, fmt.Errorf("xep0045: unknown affiliation")
+	}
+
+	res := make([]*mucmodel.Occupant, 0)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if o.GetAffiliation() == aff {
+			res = append(res, o)
+		}
+	}
+	return res, nil
+}

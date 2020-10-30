@@ -108,6 +108,8 @@ func (s *Muc) processIQOwner(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 
 func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	switch {
+	case iq.IsGet():
+		s.getOccupantList(ctx, room, iq)
 	case isIQForKickOccupant(iq):
 		s.kickOccupant(ctx, room, iq)
 	case isIQForRoleChange(iq):
