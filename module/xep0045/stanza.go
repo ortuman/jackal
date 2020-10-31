@@ -55,8 +55,8 @@ func getRoomMemberRemovedElement(actor, reason string) *xmpp.Element {
 	return presence
 }
 
-func getReasonFromIQ(iq *xmpp.IQ) string {
-	reasonEl := iq.Elements().Child("query").Elements().Child("item").Elements().Child("reason")
+func getReasonFromItem(item xmpp.XElement) string {
+	reasonEl := item.Elements().Child("reason")
 	reason := ""
 	if reasonEl != nil {
 		reason = reasonEl.Text()

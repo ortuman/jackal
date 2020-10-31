@@ -110,12 +110,8 @@ func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 	switch {
 	case iq.IsGet():
 		s.getOccupantList(ctx, room, iq)
-	case isIQForKickOccupant(iq):
-		s.kickOccupant(ctx, room, iq)
-	case isIQForRoleChange(iq):
-		s.changeRole(ctx, room, iq)
-	case isIQForAffiliationChange(iq):
-		s.changeAffiliation(ctx, room, iq)
+	case iq.IsSet():
+		s.modifyOccupantList(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}

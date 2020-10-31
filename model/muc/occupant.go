@@ -220,6 +220,10 @@ func (o *Occupant) HasHigherAffiliation(k *Occupant) bool {
 }
 
 func (o *Occupant) CanChangeRole(target *Occupant, role string) bool {
+	if o.IsOwner() {
+		return true
+	}
+
 	switch role {
 	case none:
 		return o.IsModerator() && o.HasHigherAffiliation(target)
@@ -228,7 +232,7 @@ func (o *Occupant) CanChangeRole(target *Occupant, role string) bool {
 	case participant:
 		return o.IsModerator() && target.IsVisitor() || o.IsAdmin() && !target.IsOwner()
 	case moderator:
-		return o.IsAdmin() || o.IsOwner()
+		return o.IsAdmin()
 	}
 	return false
 }

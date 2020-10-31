@@ -81,17 +81,15 @@ func TestXEP0045_ChangeAffiliation(t *testing.T) {
 	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
 	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("set").AppendElement(queryEl)
 	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
-	require.False(t, isIQForRoleChange(iq))
-	require.True(t, isIQForAffiliationChange(iq))
 
-	muc.changeAffiliation(nil, room, iq)
+	muc.modifyOccupantList(nil, room, iq)
 
 	acAck := acStm.ReceiveElement()
 	require.Equal(t, acAck.From(), acOccJID.String())
-	resAck := ownerStm.ReceiveElement()
-	require.Equal(t, resAck.Type(), "result")
 	resArAck := ownerStm.ReceiveElement()
 	require.Equal(t, resArAck.From(), acOccJID.String())
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
 
 	resOcc, _ := muc.repOccupant.FetchOccupant(nil, acOccJID)
 	require.False(t, resOcc.IsMember())
@@ -128,17 +126,15 @@ func TestXEP0045_ChangeRole(t *testing.T) {
 	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
 	iqEl := xmpp.NewElementName("iq").SetID("participant1").SetType("set").AppendElement(queryEl)
 	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
-	require.False(t, isIQForKickOccupant(iq))
-	require.True(t, isIQForRoleChange(iq))
 
-	muc.changeRole(nil, room, iq)
+	muc.modifyOccupantList(nil, room, iq)
 
 	rcAck := rcStm.ReceiveElement()
 	require.Equal(t, rcAck.From(), rcOccJID.String())
-	resAck := ownerStm.ReceiveElement()
-	require.Equal(t, resAck.Type(), "result")
 	resCrAck := ownerStm.ReceiveElement()
 	require.Equal(t, resCrAck.From(), rcOccJID.String())
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
 
 	resOcc, _ := muc.repOccupant.FetchOccupant(nil, rcOccJID)
 	require.True(t, resOcc.IsParticipant())
@@ -173,16 +169,15 @@ func TestXEP0045_KickOccupant(t *testing.T) {
 	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
 	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set").AppendElement(queryEl)
 	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
-	require.True(t, isIQForKickOccupant(iq))
 
-	muc.kickOccupant(nil, room, iq)
+	muc.modifyOccupantList(nil, room, iq)
 
 	kickedAck := kickedStm.ReceiveElement()
 	require.Equal(t, kickedAck.Type(), "unavailable")
-	resAck := ownerStm.ReceiveElement()
-	require.Equal(t, resAck.Type(), "result")
 	resKickAck := ownerStm.ReceiveElement()
 	require.Equal(t, resKickAck.Type(), "unavailable")
+	resAck := ownerStm.ReceiveElement()
+	require.Equal(t, resAck.Type(), "result")
 
 	_, found := room.GetOccupantJID(kickedUsrJID.ToBareJID())
 	require.False(t, found)

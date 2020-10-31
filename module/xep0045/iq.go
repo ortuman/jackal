@@ -7,6 +7,7 @@ package xep0045
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
@@ -14,6 +15,196 @@ import (
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	query := iq.Elements().Child("query")
+	items := query.Elements().Children("item")
+	for _, item := range items {
+		err := s.modifyOccupantPrivilege(ctx, room, sender, item)
+		if err != nil {
+			_ = s.router.Route(ctx, iq.BadRequestError())
+			return
+		}
+	}
+
+	_ = s.router.Route(ctx, iq.ResultIQ())
+}
+
+func (s *Muc) modifyOccupantPrivilege(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, item xmpp.XElement) error {
+	role := item.Attributes().Get("role")
+	affiliation := item.Attributes().Get("affiliation")
+	if role != "" {
+		err := s.modifyOccupantRole(ctx, room, sender, item)
+		return err
+	} else if affiliation != "" {
+		err := s.modifyOccupantAffiliation(ctx, room, sender, item)
+		return err
+	} else {
+		return fmt.Errorf("Role and affiliation not specified")
+	}
+}
+
+func (s *Muc) modifyOccupantRole(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, item xmpp.XElement) error {
+	occ, newRole := s.getOccupantAndNewRole(ctx, room, item)
+	if occ == nil {
+		return fmt.Errorf("Occupant not in the room")
+	}
+
+	if !sender.CanChangeRole(occ, newRole) {
+		return fmt.Errorf("Sender not allowed to change the role")
+	}
+
+	if newRole == "none" {
+		s.kickOccupant(ctx, room, occ, sender.OccupantJID.Resource(), getReasonFromItem(item))
+	} else {
+		occ.SetRole(newRole)
+		s.repOccupant.UpsertOccupant(ctx, occ)
+		s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromItem(item))
+	}
+
+	return nil
+}
+
+func (s *Muc) getOccupantAndNewRole(ctx context.Context, room *mucmodel.Room,
+	item xmpp.XElement) (*mucmodel.Occupant, string) {
+	occNick := item.Attributes().Get("nick")
+	occJID := addResourceToBareJID(room.RoomJID, occNick)
+	occ, err := s.repOccupant.FetchOccupant(ctx, occJID)
+	if err != nil || occ == nil {
+		return nil, ""
+	}
+	newRole := item.Attributes().Get("role")
+	return occ, newRole
+}
+
+func (s *Muc) kickOccupant(ctx context.Context, room *mucmodel.Room, kickedOcc *mucmodel.Occupant,
+	actor, reason string) {
+	kickedOcc.SetAffiliation("")
+	kickedOcc.SetRole("")
+	s.occupantExitsRoom(ctx, room, kickedOcc)
+
+	s.notifyKickedOccupant(ctx, kickedOcc, actor, reason)
+	s.notifyRoomOccupantKicked(ctx, room, kickedOcc, actor, reason)
+}
+
+func (s *Muc) notifyKickedOccupant(ctx context.Context, o *mucmodel.Occupant, actor, reason string) {
+	el := getKickedOccupantElement(actor, reason, true)
+	for _, resource := range o.GetAllResources() {
+		to := addResourceToBareJID(o.BareJID, resource)
+		p, _ := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
+		_ = s.router.Route(ctx, p)
+	}
+}
+
+func (s *Muc) notifyRoomOccupantKicked(ctx context.Context, room *mucmodel.Room,
+	kicked *mucmodel.Occupant, actor, reason string) {
+	el := getKickedOccupantElement(actor, reason, false)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
+
+func (s *Muc) notifyRoomOccupantChange(ctx context.Context, room *mucmodel.Room,
+	occ *mucmodel.Occupant, reason string) {
+	xEl := getOccupantChangeElement(occ, reason)
+	presenceEl := xmpp.NewElementName("presence").AppendElement(xEl)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, occ.OccupantJID, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
+
+func (s *Muc) modifyOccupantAffiliation(ctx context.Context, room *mucmodel.Room,
+	sender *mucmodel.Occupant, item xmpp.XElement) error {
+	occ, newAffiliation := s.getOccupantAndNewAffiliation(ctx, room, item)
+	if occ == nil {
+		return fmt.Errorf("Occupant not in the room")
+	}
+
+	if !sender.CanChangeAffiliation(occ, newAffiliation) {
+		return fmt.Errorf("Sender not allowed to change the affiliation")
+	}
+
+	occ.SetAffiliation(newAffiliation)
+	room.SetDefaultRole(occ)
+	s.repOccupant.UpsertOccupant(ctx, occ)
+
+	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromItem(item))
+
+	senderNick := sender.OccupantJID.Resource()
+	reason := getReasonFromItem(item)
+	if !room.Config.Open && newAffiliation == "none" {
+		s.notifyRoomMemberRemoved(ctx, room, occ.OccupantJID, senderNick, reason)
+		room.OccupantLeft(occ)
+		s.repOccupant.DeleteOccupant(ctx, occ.OccupantJID)
+	} else if newAffiliation == "outcast" {
+		s.notifyRoomUserBanned(ctx, room, occ.OccupantJID, senderNick, reason)
+	}
+
+	return nil
+}
+
+func (s *Muc) getOccupantAndNewAffiliation(ctx context.Context, room *mucmodel.Room,
+	item xmpp.XElement) (*mucmodel.Occupant, string) {
+	userBareJIDStr := item.Attributes().Get("jid")
+	userBareJID, err := jid.NewWithString(userBareJIDStr, true)
+	if err != nil {
+		return nil, ""
+	}
+	occJID, ok := room.GetOccupantJID(userBareJID)
+	if !ok {
+		return nil, ""
+	}
+	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil || occ == nil {
+		return nil, ""
+	}
+	newAff := item.Attributes().Get("affiliation")
+	return occ, newAff
+}
+
+func (s *Muc) notifyRoomMemberRemoved(ctx context.Context, room *mucmodel.Room, from *jid.JID,
+	actor, reason string) {
+	presenceEl := getRoomMemberRemovedElement(actor, reason)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
+
+func (s *Muc) notifyRoomUserBanned(ctx context.Context, room *mucmodel.Room, from *jid.JID,
+	actor, reason string) {
+	presenceEl := getUserBannedElement(actor, reason)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		for _, resource := range o.GetAllResources() {
+			to := addResourceToBareJID(o.BareJID, resource)
+			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
+			_ = s.router.Route(ctx, p)
+		}
+	}
+}
 
 func (s *Muc) getOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
@@ -64,228 +255,6 @@ func getFilterFromIQ(iq *xmpp.IQ) string {
 		return aff
 	}
 	return item.Attributes().Get("role")
-}
-
-func isIQForAffiliationChange(iq *xmpp.IQ) bool {
-	if !iq.IsSet() {
-		return false
-	}
-	query := iq.Elements().Child("query")
-	item := query.Elements().Child("item")
-	if item == nil || item.Attributes().Get("jid") == "" ||
-		item.Attributes().Get("affiliation") == "" {
-		return false
-	}
-	return true
-}
-
-func (s *Muc) changeAffiliation(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return
-	}
-
-	occ, affiliation := s.getOccupantAndNewAffiliation(ctx, room, iq)
-	if occ == nil {
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return
-	}
-
-	if !sender.CanChangeAffiliation(occ, affiliation) {
-		_ = s.router.Route(ctx, iq.NotAllowedError())
-		return
-	}
-
-	occ.SetAffiliation(affiliation)
-	room.SetDefaultRole(occ)
-	s.repOccupant.UpsertOccupant(ctx, occ)
-
-	_ = s.router.Route(ctx, iq.ResultIQ())
-	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromIQ(iq))
-
-	if !room.Config.Open && affiliation == "none" {
-		s.notifyRoomMemberRemoved(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource(),
-			getReasonFromIQ(iq))
-		room.OccupantLeft(occ)
-		s.repOccupant.DeleteOccupant(ctx, occ.OccupantJID)
-	} else if affiliation == "outcast" {
-		s.notifyRoomUserBanned(ctx, room, occ.OccupantJID, sender.OccupantJID.Resource(),
-			getReasonFromIQ(iq))
-	}
-}
-
-func (s *Muc) notifyRoomMemberRemoved(ctx context.Context, room *mucmodel.Room, from *jid.JID,
-	actor, reason string) {
-	presenceEl := getRoomMemberRemovedElement(actor, reason)
-	for _, occJID := range room.GetAllOccupantJIDs() {
-		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
-			_ = s.router.Route(ctx, p)
-		}
-	}
-}
-
-func (s *Muc) notifyRoomUserBanned(ctx context.Context, room *mucmodel.Room, from *jid.JID,
-	actor, reason string) {
-	presenceEl := getUserBannedElement(actor, reason)
-	for _, occJID := range room.GetAllOccupantJIDs() {
-		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, _ := xmpp.NewPresenceFromElement(presenceEl, from, to)
-			_ = s.router.Route(ctx, p)
-		}
-	}
-}
-
-func isIQForRoleChange(iq *xmpp.IQ) bool {
-	if !iq.IsSet() {
-		return false
-	}
-	query := iq.Elements().Child("query")
-	item := query.Elements().Child("item")
-	if item == nil || item.Attributes().Get("nick") == "" ||
-		item.Attributes().Get("role") == "" {
-		return false
-	}
-	return true
-}
-
-func (s *Muc) changeRole(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return
-	}
-
-	occ, role := s.getOccupantAndNewRole(ctx, room, iq)
-	if occ == nil {
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return
-	}
-
-	if !sender.CanChangeRole(occ, role) {
-		_ = s.router.Route(ctx, iq.NotAllowedError())
-		return
-	}
-
-	occ.SetRole(role)
-	s.repOccupant.UpsertOccupant(ctx, occ)
-
-	_ = s.router.Route(ctx, iq.ResultIQ())
-	s.notifyRoomOccupantChange(ctx, room, occ, getReasonFromIQ(iq))
-}
-
-func (s *Muc) notifyRoomOccupantChange(ctx context.Context, room *mucmodel.Room,
-	occ *mucmodel.Occupant, reason string) {
-	xEl := getOccupantChangeElement(occ, reason)
-	presenceEl := xmpp.NewElementName("presence").AppendElement(xEl)
-	for _, occJID := range room.GetAllOccupantJIDs() {
-		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, _ := xmpp.NewPresenceFromElement(presenceEl, occ.OccupantJID, to)
-			_ = s.router.Route(ctx, p)
-		}
-	}
-}
-
-func isIQForKickOccupant(iq *xmpp.IQ) bool {
-	if !iq.IsSet() {
-		return false
-	}
-	query := iq.Elements().Child("query")
-	item := query.Elements().Child("item")
-	if item == nil || item.Attributes().Get("nick") == "" ||
-		item.Attributes().Get("role") != "none" {
-		return false
-	}
-	return true
-}
-
-func (s *Muc) kickOccupant(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	mod, errStanza := s.getModeratorFromIQ(ctx, room, iq)
-	if errStanza != nil {
-		_ = s.router.Route(ctx, errStanza)
-		return
-	}
-
-	kickedOcc, newRole := s.getOccupantAndNewRole(ctx, room, iq)
-	if kickedOcc == nil || newRole != "none" {
-		_ = s.router.Route(ctx, iq.BadRequestError())
-		return
-	}
-
-	if !mod.CanChangeRole(kickedOcc, newRole) {
-		_ = s.router.Route(ctx, iq.NotAllowedError())
-		return
-	}
-
-	kickedOcc.SetAffiliation("")
-	kickedOcc.SetRole("")
-	s.occupantExitsRoom(ctx, room, kickedOcc)
-
-	reason := getReasonFromIQ(iq)
-	s.notifyKickedOccupant(ctx, kickedOcc, mod.OccupantJID.Resource(), reason)
-	_ = s.router.Route(ctx, iq.ResultIQ())
-	s.notifyRoomOccupantKicked(ctx, room, kickedOcc, mod.OccupantJID.Resource(), reason)
-}
-
-func (s *Muc) notifyKickedOccupant(ctx context.Context, o *mucmodel.Occupant, actor, reason string) {
-	el := getKickedOccupantElement(actor, reason, true)
-	for _, resource := range o.GetAllResources() {
-		to := addResourceToBareJID(o.BareJID, resource)
-		p, _ := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
-		_ = s.router.Route(ctx, p)
-	}
-}
-
-func (s *Muc) notifyRoomOccupantKicked(ctx context.Context, room *mucmodel.Room,
-	kicked *mucmodel.Occupant, actor, reason string) {
-	el := getKickedOccupantElement(actor, reason, false)
-	for _, occJID := range room.GetAllOccupantJIDs() {
-		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, _ := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
-			_ = s.router.Route(ctx, p)
-		}
-
-	}
-}
-
-func (s *Muc) getOccupantAndNewRole(ctx context.Context, room *mucmodel.Room,
-	iq *xmpp.IQ) (*mucmodel.Occupant, string) {
-	occNick := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("nick")
-	occJID := addResourceToBareJID(room.RoomJID, occNick)
-	occ, err := s.repOccupant.FetchOccupant(ctx, occJID)
-	if err != nil || occ == nil {
-		return nil, ""
-	}
-	newRole := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("role")
-	return occ, newRole
-}
-
-func (s *Muc) getOccupantAndNewAffiliation(ctx context.Context, room *mucmodel.Room,
-	iq *xmpp.IQ) (*mucmodel.Occupant, string) {
-	userBareJIDStr := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("jid")
-	userBareJID, err := jid.NewWithString(userBareJIDStr, true)
-	if err != nil {
-		return nil, ""
-	}
-	occJID, ok := room.GetOccupantJID(userBareJID)
-	if !ok {
-		return nil, ""
-	}
-	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil || occ == nil {
-		return nil, ""
-	}
-	newAff := iq.Elements().Child("query").Elements().Child("item").Attributes().Get("affiliation")
-	return occ, newAff
 }
 
 func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {
