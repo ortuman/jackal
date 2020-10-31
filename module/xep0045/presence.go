@@ -17,7 +17,7 @@ import (
 )
 
 func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
-	o, errStanza := s.getOccupantFromPresence(ctx, room, presence)
+	o, errStanza := s.getOccupantFromStanza(ctx, room, presence)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
@@ -96,7 +96,7 @@ func isChangingStatus(presence *xmpp.Presence) bool {
 }
 
 func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
-	o, errStanza := s.getOccupantFromPresence(ctx, room, presence)
+	o, errStanza := s.getOccupantFromStanza(ctx, room, presence)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
@@ -158,7 +158,7 @@ func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence 
 		return
 	}
 
-	occ, errStanza := s.getOccupantFromPresence(ctx, room, presence)
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, presence)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return

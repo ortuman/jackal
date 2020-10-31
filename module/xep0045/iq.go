@@ -17,7 +17,7 @@ import (
 )
 
 func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	sender, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
@@ -207,7 +207,7 @@ func (s *Muc) notifyRoomUserBanned(ctx context.Context, room *mucmodel.Room, fro
 }
 
 func (s *Muc) getOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
-	sender, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	sender, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return

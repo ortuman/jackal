@@ -60,55 +60,24 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	return o, nil
 }
 
-func (s *Muc) getOccupantFromMessage(ctx context.Context, room *mucmodel.Room,
-	message *xmpp.Message) (*mucmodel.Occupant, xmpp.Stanza) {
-	occJID, ok := room.GetOccupantJID(message.FromJID().ToBareJID())
+func (s *Muc) getOccupantFromStanza(ctx context.Context, room *mucmodel.Room,
+	stanza xmpp.Stanza) (*mucmodel.Occupant, xmpp.Stanza) {
+	occJID, ok := room.GetOccupantJID(stanza.FromJID().ToBareJID())
 	if !ok {
-		return nil, message.ForbiddenError()
+		return nil, xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrForbidden, nil)
 	}
 
 	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 	if err != nil {
 		log.Error(err)
-		return nil, message.InternalServerError()
+		return nil, xmpp.NewErrorStanzaFromStanza(stanza, xmpp.ErrInternalServerError, nil)
 	}
 	return occ, nil
-}
-
-func (s *Muc) getOccupantFromPresence(ctx context.Context, room *mucmodel.Room,
-	presence *xmpp.Presence) (*mucmodel.Occupant, xmpp.Stanza) {
-	occJID, ok := room.GetOccupantJID(presence.FromJID().ToBareJID())
-	if !ok {
-		return nil, presence.ForbiddenError()
-	}
-
-	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		log.Error(err)
-		return nil, presence.InternalServerError()
-	}
-	return occ, nil
-}
-
-func (s *Muc) getOccupantFromIQ(ctx context.Context, room *mucmodel.Room,
-	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
-	occJID, ok := room.GetOccupantJID(iq.FromJID().ToBareJID())
-	if !ok {
-		return nil, iq.ForbiddenError()
-	}
-
-	occ, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		log.Error(err)
-		return nil, iq.InternalServerError()
-	}
-	return occ, nil
-
 }
 
 func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
 	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
-	occ, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
 		return nil, errStanza
 	}
@@ -122,7 +91,7 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
 
 func (s *Muc) getModeratorFromIQ(ctx context.Context, room *mucmodel.Room,
 	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
-	occ, errStanza := s.getOccupantFromIQ(ctx, room, iq)
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
 		return nil, errStanza
 	}

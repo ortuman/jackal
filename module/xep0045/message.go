@@ -16,7 +16,7 @@ import (
 )
 
 func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
-	occ, errStanza := s.getOccupantFromMessage(ctx, room, message)
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
@@ -95,7 +95,7 @@ func (s *Muc) inviteUser(ctx context.Context, room *mucmodel.Room, message *xmpp
 		return
 	}
 
-	occ, errStanza := s.getOccupantFromMessage(ctx, room, message)
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
 		return
