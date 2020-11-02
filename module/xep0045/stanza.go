@@ -74,7 +74,7 @@ func getOccupantChangeElement(o *mucmodel.Occupant, reason string) *xmpp.Element
 		itemEl.AppendElement(reasonEl)
 	}
 	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(itemEl)
-	return xEl
+	return xmpp.NewElementName("presence").AppendElement(xEl)
 }
 
 func getKickedOccupantElement(actor, reason string, selfNotifying bool) *xmpp.Element {
@@ -160,8 +160,8 @@ func getInvitationStanza(room *mucmodel.Room, inviteFrom, inviteTo *jid.JID, mes
 	return msg
 }
 
-func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
-	selfNotifying, includeUserJID bool) xmpp.Stanza {
+func getOccupantUnavailableElement(o *mucmodel.Occupant, selfNotifying,
+	includeUserJID bool) *xmpp.Element {
 	// get the x element
 	x := xmpp.NewElementNamespace("x", mucNamespaceUser)
 	x.AppendElement(newOccupantItem(o, includeUserJID, true))
@@ -172,12 +172,7 @@ func getOccupantUnavailableStanza(o *mucmodel.Occupant, from, to *jid.JID,
 
 	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
 	el.SetType("unavailable")
-	p, err := xmpp.NewPresenceFromElement(el, from, to)
-	if err != nil {
-		log.Error(err)
-		return nil
-	}
-	return p
+	return el
 }
 
 func getPasswordFromPresence(presence *xmpp.Presence) string {
@@ -192,46 +187,30 @@ func getPasswordFromPresence(presence *xmpp.Presence) string {
 	return pwd.Text()
 }
 
-func getOccupantStatusStanza(o *mucmodel.Occupant, to *jid.JID,
-	selfNotifying, includeUserJID bool) xmpp.Stanza {
+func getOccupantStatusElement(o *mucmodel.Occupant, selfNotifying,
+	includeUserJID bool) *xmpp.Element {
 	x := newOccupantAffiliationRoleElement(o, includeUserJID, false)
 	if selfNotifying {
 		x.AppendElement(newStatusElement("110"))
 	}
 	el := xmpp.NewElementName("presence").AppendElement(x).SetID(uuid.New().String())
-
-	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
-	if err != nil {
-		log.Error(err)
-		return nil
-	}
-	return p
+	return el
 }
 
-func getOccupantSelfPresenceStanza(o *mucmodel.Occupant, to *jid.JID, nonAnonymous bool, id string) xmpp.Stanza {
-	x := newOccupantAffiliationRoleElement(o, false, false).AppendElement(newStatusElement("110"))
+func getOccupantSelfPresenceElement(o *mucmodel.Occupant, nonAnonymous bool,
+	id string) *xmpp.Element {
+	x := newOccupantAffiliationRoleElement(o, false, false)
+	x.AppendElement(newStatusElement("110"))
 	if nonAnonymous {
 		x.AppendElement(newStatusElement("100"))
 	}
-	el := xmpp.NewElementName("presence").AppendElement(x).SetID(id)
-	p, err := xmpp.NewPresenceFromElement(el, o.OccupantJID, to)
-	if err != nil {
-		log.Error(err)
-		return nil
-	}
-	return p
+	return xmpp.NewElementName("presence").AppendElement(x).SetID(id)
 }
 
-func getRoomSubjectStanza(subject string, from, to *jid.JID) xmpp.Stanza {
+func getRoomSubjectElement(subject string) *xmpp.Element {
 	s := xmpp.NewElementName("subject").SetText(subject)
 	m := xmpp.NewElementName("message").SetType("groupchat").SetID(uuid.New().String())
-	m.AppendElement(s)
-	message, err := xmpp.NewMessageFromElement(m, from, to)
-	if err != nil {
-		log.Error(err)
-		return nil
-	}
-	return message
+	return m.AppendElement(s)
 }
 
 func getAckStanza(from, to *jid.JID) xmpp.Stanza {

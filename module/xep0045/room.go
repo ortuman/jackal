@@ -7,12 +7,12 @@ package xep0045
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
@@ -39,21 +39,18 @@ this form.
 	ConfigPwdProtected = "muc#roomconfig_passwordprotectedroom"
 	ConfigPersistent   = "muc#roomconfig_persistentroom"
 	ConfigPublic       = "muc#roomconfig_publicroom"
-	ConfigAdmins       = "muc#roomconfig_roomadmins"
-	ConfigOwners       = "muc#roomconfig_roomowners"
 	ConfigPwd          = "muc#roomconfig_roomsecret"
 	ConfigPubSub       = "muc#roomconfig_pubsub"
 	ConfigWhoIs        = "muc#roomconfig_whois"
 )
 
 func (s *Muc) newRoom(ctx context.Context, ownerFullJID, ownerOccJID *jid.JID) error {
-	roomJID := ownerOccJID.ToBareJID()
-
 	owner, err := s.createOwner(ctx, ownerFullJID, ownerOccJID)
 	if err != nil {
 		return err
 	}
 
+	roomJID := ownerOccJID.ToBareJID()
 	_, err = s.createRoom(ctx, roomJID, owner)
 	if err != nil {
 		return err
@@ -79,96 +76,6 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 		return nil, err
 	}
 	return r, nil
-}
-
-func userIsRoomMember(room *mucmodel.Room, occupant *mucmodel.Occupant, userJID *jid.JID) bool {
-	if room.UserIsInvited(userJID) {
-		return true
-	}
-
-	if occupant != nil && (occupant.IsOwner() || occupant.IsAdmin() || occupant.IsMember()) {
-		return true
-	}
-
-	return false
-}
-
-func (s *Muc) GetRoomAdmins(ctx context.Context, r *mucmodel.Room) []string {
-	admins := make([]string, 0)
-	for _, occJID := range r.GetAllOccupantJIDs() {
-		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		if o.IsAdmin() {
-			admins = append(admins, o.BareJID.String())
-		}
-	}
-	return admins
-}
-
-func (s *Muc) GetRoomOwners(ctx context.Context, r *mucmodel.Room) []string {
-	owners := make([]string, 0)
-	for _, occJID := range r.GetAllOccupantJIDs() {
-		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-		if err != nil {
-			log.Error(err)
-			return nil
-		}
-		if o.IsOwner() {
-			owners = append(owners, o.BareJID.String())
-		}
-	}
-	return owners
-}
-
-func (s *Muc) SetRoomAdmin(ctx context.Context, room *mucmodel.Room, adminJID *jid.JID) error {
-	occJID, ok := room.GetOccupantJID(adminJID)
-	if !ok {
-		return fmt.Errorf("muc: user has to enter the room before it can be made admin")
-	}
-
-	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		return err
-	}
-
-	err = occupant.SetAffiliation("admin")
-	if err != nil {
-		return err
-	}
-
-	err = s.repOccupant.UpsertOccupant(ctx, occupant)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Muc) SetRoomOwner(ctx context.Context, room *mucmodel.Room, ownerJID *jid.JID) error {
-	occJID, ok := room.GetOccupantJID(ownerJID)
-	if !ok {
-		return fmt.Errorf("muc: user has to enter the room before it can be made owner")
-	}
-
-	occupant, err := s.repOccupant.FetchOccupant(ctx, &occJID)
-	if err != nil {
-		return err
-	}
-
-	err = occupant.SetAffiliation("owner")
-	if err != nil {
-		return err
-	}
-
-	err = s.repOccupant.UpsertOccupant(ctx, occupant)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
@@ -306,18 +213,6 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 			xep0004.Option{Label: "-1", Value: "-1"},
 		},
 	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigAdmins,
-		Type:   xep0004.JidMulti,
-		Label:  "Full List of Room Admins",
-		Values: s.GetRoomAdmins(ctx, room),
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Var:    ConfigOwners,
-		Type:   xep0004.JidMulti,
-		Label:  "Full List of Room Owners",
-		Values: s.GetRoomOwners(ctx, room),
-	})
 	return form
 }
 
@@ -420,44 +315,11 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 				ok = false
 			}
 			room.Config.MaxOccCnt = n
-		case ConfigAdmins:
-			for _, j := range field.Values {
-				if j == "" {
-					continue
-				}
-				bareJID, err := jid.NewWithString(j, false)
-				if err != nil {
-					log.Error(err)
-					ok = false
-				}
-				err = s.SetRoomAdmin(ctx, room, bareJID)
-				if err != nil {
-					log.Error(err)
-					ok = false
-				}
-			}
-		case ConfigOwners:
-			for _, j := range field.Values {
-				if j == "" {
-					continue
-				}
-				bareJID, err := jid.NewWithString(j, false)
-				if err != nil {
-					log.Error(err)
-					ok = false
-				}
-				err = s.SetRoomOwner(ctx, room, bareJID)
-				if err != nil {
-					log.Error(err)
-					ok = false
-				}
-			}
 		}
 	}
 
 	// the password has to be specified if it is required to enter the room
 	if room.Config.PwdProtected && room.Config.Password == "" {
-		log.Infof("Password required but not supplied by the room owner")
 		ok = false
 	}
 
@@ -474,4 +336,34 @@ func boolToStr(value bool) string {
 		return "1"
 	}
 	return "0"
+}
+
+func (s *Muc) sendPresenceToRoom(ctx context.Context, r *mucmodel.Room, from *jid.JID,
+	presenceEl *xmpp.Element) error {
+	for _, occJID := range r.GetAllOccupantJIDs() {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		err = s.sendPresenceToOccupant(ctx, o, from, presenceEl)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Muc) sendMessageToRoom(ctx context.Context, r *mucmodel.Room, from *jid.JID,
+	messageEl *xmpp.Element) error {
+	for _, occJID := range r.GetAllOccupantJIDs() {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		err = s.sendMessageToOccupant(ctx, o, from, messageEl)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

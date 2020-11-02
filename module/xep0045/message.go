@@ -22,31 +22,18 @@ func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *x
 		return
 	}
 
+	newSubject := message.Elements().Child("subject").Text()
 	if room.Config.OccupantCanChangeSubject(occ) {
-		room.Subject = message.Elements().Child("subject").Text()
+		room.Subject = newSubject
 		s.repRoom.UpsertRoom(ctx, room)
 	} else {
 		_ = s.router.Route(ctx, message.ForbiddenError())
 		return
 	}
-
-	s.sendSubjectChanged(ctx, room, occ.OccupantJID, message.Elements().Child("subject").Text())
-}
-
-func (s *Muc) sendSubjectChanged(ctx context.Context, room *mucmodel.Room, from *jid.JID,
-	subject string) {
-	subjectEl := xmpp.NewElementName("subject").SetText(subject)
-	msgEl := xmpp.NewElementName("message").SetType("groupchat").AppendElement(subjectEl)
-
-	for _, occJID := range room.GetAllOccupantJIDs() {
-		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
-		msgEl.SetID(uuid.New().String())
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			message, _ := xmpp.NewMessageFromElement(msgEl, from, to)
-			_ = s.router.Route(ctx, message)
-		}
-	}
+	subjectEl := xmpp.NewElementName("subject").SetText(newSubject)
+	msgEl := xmpp.NewElementName("message").SetType("groupchat").SetID(uuid.New().String())
+	msgEl.AppendElement(subjectEl)
+	s.sendMessageToRoom(ctx, room, occ.OccupantJID, msgEl)
 }
 
 func isDeclineInvitation(message *xmpp.Message) bool {
@@ -69,10 +56,7 @@ func (s *Muc) declineInvitation(ctx context.Context, room *mucmodel.Room, messag
 
 	room.DeleteInvite(message.FromJID().ToBareJID())
 	s.repRoom.UpsertRoom(ctx, room)
-	s.forwardDeclineToUser(ctx, room, message)
-}
 
-func (s *Muc) forwardDeclineToUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	msg := getDeclineStanza(room, message)
 	_ = s.router.Route(ctx, msg)
 }
@@ -245,10 +229,5 @@ func (s *Muc) messageOccupant(ctx context.Context, occJID, senderJID *jid.JID,
 	}
 
 	msgEl := getMessageElement(body, id, private)
-
-	for _, resource := range occupant.GetAllResources() {
-		to := addResourceToBareJID(occupant.BareJID, resource)
-		message, _ := xmpp.NewMessageFromElement(msgEl, senderJID, to)
-		_ = s.router.Route(ctx, message)
-	}
+	_ = s.sendMessageToOccupant(ctx, occupant, senderJID, msgEl)
 }

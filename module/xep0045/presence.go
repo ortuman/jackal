@@ -9,7 +9,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/xmpp"
@@ -71,17 +70,7 @@ func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupa
 			xEl.AppendElement(newStatusElement("110"))
 		}
 		resultPresence.AppendElement(xEl)
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, err := xmpp.NewPresenceFromElement(resultPresence, occExiting.OccupantJID, to)
-			if err != nil {
-				return err
-			}
-			err = s.router.Route(ctx, p)
-			if err != nil {
-				return err
-			}
-		}
+		err = s.sendPresenceToOccupant(ctx, o, occExiting.OccupantJID, resultPresence)
 	}
 	return nil
 }
@@ -134,18 +123,12 @@ func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmo
 		if err != nil {
 			return err
 		}
-		// TODO maybe rename this long name (occupantcandiscoverrealjid) to something smaller
 		xEl := newOccupantAffiliationRoleElement(sender,
 			room.Config.OccupantCanDiscoverRealJID(o), false)
 		presence.AppendElement(xEl)
-		for _, resource := range o.GetAllResources() {
-			presence.SetID(uuid.New().String())
-			to := addResourceToBareJID(o.BareJID, resource)
-			p, err := xmpp.NewPresenceFromElement(presence, sender.OccupantJID, to)
-			if err != nil {
-				return err
-			}
-			_ = s.router.Route(ctx, p)
+		err = s.sendPresenceToOccupant(ctx, o, sender.OccupantJID, presence)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -191,18 +174,18 @@ func (s *Muc) sendNickChangeAck(ctx context.Context, room *mucmodel.Room,
 			return err
 		}
 		selfNotifying := (occJID.String() == newOcc.OccupantJID.String())
-		for _, resource := range o.GetAllResources() {
-			to := addResourceToBareJID(o.BareJID, resource)
+		getRealJID := room.Config.OccupantCanDiscoverRealJID(o)
 
-			// send unavailable stanza
-			p := getOccupantUnavailableStanza(newOcc, oldJID, to, selfNotifying,
-				room.Config.OccupantCanDiscoverRealJID(o))
-			_ = s.router.Route(ctx, p)
+		unavailableEl := getOccupantUnavailableElement(newOcc, selfNotifying, getRealJID)
+		err = s.sendPresenceToOccupant(ctx, o, oldJID, unavailableEl)
+		if err != nil {
+			return err
+		}
 
-			// send new status stanza
-			p = getOccupantStatusStanza(newOcc, to, selfNotifying,
-				room.Config.OccupantCanDiscoverRealJID(o))
-			_ = s.router.Route(ctx, p)
+		statusEl := getOccupantStatusElement(newOcc, selfNotifying, getRealJID)
+		err = s.sendPresenceToOccupant(ctx, o, newOcc.OccupantJID, statusEl)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -252,17 +235,10 @@ func (s *Muc) newRoomRequest(ctx context.Context, room *mucmodel.Room, presence 
 	if err != nil {
 		return err
 	}
-	err = s.sendRoomCreateAck(ctx, presence.ToJID(), presence.FromJID())
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-func (s *Muc) sendRoomCreateAck(ctx context.Context, from, to *jid.JID) error {
-	el := getAckStanza(from, to)
-	err := s.router.Route(ctx, el)
-	return err
+	el := getAckStanza(presence.ToJID(), presence.FromJID())
+	_ = s.router.Route(ctx, el)
+	return nil
 }
 
 func (s *Muc) joinExistingRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) error {
@@ -374,10 +350,13 @@ func checkOccupantMembership(room *mucmodel.Room, occupant *mucmodel.Occupant, u
 	presence *xmpp.Presence) xmpp.Stanza {
 	// if members-only room, check that the occupant is a member
 	if !room.Config.Open {
-		isMember := userIsRoomMember(room, occupant, userJID.ToBareJID())
-		if !isMember {
-			return presence.RegistrationRequiredError()
+		if room.UserIsInvited(userJID.ToBareJID()) {
+			return nil
 		}
+		if occupant != nil && !occupant.HasNoAffiliation() {
+			return nil
+		}
+		return presence.RegistrationRequiredError()
 	}
 	return nil
 }
@@ -402,7 +381,13 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 		s.sendPresenceAboutNewOccupant(ctx, room, newOccupant, o)
 	}
 
-	s.sendEnterRoomSuccess(ctx, room, newOccupant, presence.ID())
+	// final notification to the new occupant with status codes (self-presence)
+	spEl := getOccupantSelfPresenceElement(newOccupant, room.Config.NonAnonymous, presence.ID())
+	s.sendPresenceToOccupant(ctx, newOccupant, newOccupant.OccupantJID, spEl)
+
+	// send the room subject
+	subjEl := getRoomSubjectElement(room.Subject)
+	s.sendMessageToOccupant(ctx, newOccupant, room.RoomJID, subjEl)
 
 	return nil
 }
@@ -410,32 +395,10 @@ func (s *Muc) sendEnterRoomAck(ctx context.Context, room *mucmodel.Room, presenc
 func (s *Muc) sendPresenceAboutNewOccupant(ctx context.Context, room *mucmodel.Room,
 	newOccupant, o *mucmodel.Occupant) {
 	// notify the new occupant of the existing occupant
-	for _, resource := range newOccupant.GetAllResources() {
-		to := addResourceToBareJID(newOccupant.BareJID, resource)
-		p := getOccupantStatusStanza(o, to, false,
-			room.Config.OccupantCanDiscoverRealJID(newOccupant))
-		_ = s.router.Route(ctx, p)
-	}
+	oStatusEl := getOccupantStatusElement(o, false, room.Config.OccupantCanDiscoverRealJID(newOccupant))
+	s.sendPresenceToOccupant(ctx, newOccupant, o.OccupantJID, oStatusEl)
 
 	// notify the existing occupant of the new occupant
-	for _, resource := range o.GetAllResources() {
-		to := addResourceToBareJID(o.BareJID, resource)
-		p := getOccupantStatusStanza(newOccupant, to, false,
-			room.Config.OccupantCanDiscoverRealJID(o))
-		_ = s.router.Route(ctx, p)
-	}
-}
-
-func (s *Muc) sendEnterRoomSuccess(ctx context.Context, room *mucmodel.Room,
-	newOccupant *mucmodel.Occupant, id string) {
-	// final notification to the new occupant with status codes (self-presence)
-	for _, resource := range newOccupant.GetAllResources() {
-		to := addResourceToBareJID(newOccupant.BareJID, resource)
-		p := getOccupantSelfPresenceStanza(newOccupant, to, room.Config.NonAnonymous, id)
-		_ = s.router.Route(ctx, p)
-
-		// send the room subject
-		subj := getRoomSubjectStanza(room.Subject, room.RoomJID, to)
-		_ = s.router.Route(ctx, subj)
-	}
+	newStatusEl := getOccupantStatusElement(newOccupant, false, room.Config.OccupantCanDiscoverRealJID(o))
+	s.sendPresenceToOccupant(ctx, o, newOccupant.OccupantJID, newStatusEl)
 }

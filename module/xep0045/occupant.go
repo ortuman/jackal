@@ -31,23 +31,20 @@ func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
 	// check if the occupant already exists
 	o, err := s.repOccupant.FetchOccupant(ctx, occJID)
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
-	}
-
-	if o != nil && userJID.ToBareJID().String() != o.BareJID.String() {
-		return nil, fmt.Errorf("xep0045_occupant: User cannot use another user's occupant nick")
-	}
-
-	if o == nil {
+	case o == nil:
 		o, err = mucmodel.NewOccupant(occJID, userJID.ToBareJID())
 		if err != nil {
 			return nil, err
 		}
+	case userJID.ToBareJID().String() != o.BareJID.String():
+		return nil, fmt.Errorf("xep0045: Can't use another user's occupant nick")
 	}
 
 	if !userJID.IsFull() {
-		return nil, fmt.Errorf("xep0045_occupant: User jid has to specify the resource")
+		return nil, fmt.Errorf("xep0045: User jid has to specify the resource")
 
 	}
 	o.AddResource(userJID.Resource())
@@ -89,24 +86,10 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
 	return occ, nil
 }
 
-func (s *Muc) getModeratorFromIQ(ctx context.Context, room *mucmodel.Room,
-	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
-	occ, errStanza := s.getOccupantFromStanza(ctx, room, iq)
-	if errStanza != nil {
-		return nil, errStanza
-	}
-
-	if !occ.IsModerator() {
-		return nil, iq.ForbiddenError()
-	}
-
-	return occ, nil
-}
-
 func (s *Muc) getOccupantsByRole(ctx context.Context, room *mucmodel.Room,
 	sender *mucmodel.Occupant, role string) ([]*mucmodel.Occupant, error) {
 	if !sender.IsModerator() {
-		return nil, fmt.Errorf("xep0045: only moderators can retrive the list of %ss", role)
+		return nil, fmt.Errorf("xep0045: only mods can retrive the list of %ss", role)
 	}
 	res := make([]*mucmodel.Occupant, 0)
 	for _, occJID := range room.GetAllOccupantJIDs() {
@@ -123,12 +106,11 @@ func (s *Muc) getOccupantsByAffiliation(ctx context.Context, room *mucmodel.Room
 	switch aff {
 	case "outcast", "member":
 		if !sender.IsAdmin() && !sender.IsOwner() {
-			return nil, fmt.Errorf("xep0045: only admins and owners can retrive the list of %ss",
-				aff)
+			return nil, fmt.Errorf("xep0045: only admins and owners can get %ss", aff)
 		}
 	case "owner", "admin":
 		if !sender.IsOwner() {
-			return nil, fmt.Errorf("xep0045: only owners can retrive the list of %ss", aff)
+			return nil, fmt.Errorf("xep0045: only owners can retrive the %ss", aff)
 		}
 	default:
 		return nil, fmt.Errorf("xep0045: unknown affiliation")
@@ -142,4 +124,36 @@ func (s *Muc) getOccupantsByAffiliation(ctx context.Context, room *mucmodel.Room
 		}
 	}
 	return res, nil
+}
+
+func (s *Muc) sendPresenceToOccupant(ctx context.Context, o *mucmodel.Occupant,
+	from *jid.JID, presenceEl *xmpp.Element) error {
+	for _, resource := range o.GetAllResources() {
+		to := addResourceToBareJID(o.BareJID, resource)
+		p, err := xmpp.NewPresenceFromElement(presenceEl, from, to)
+		if err != nil {
+			return err
+		}
+		err = s.router.Route(ctx, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Muc) sendMessageToOccupant(ctx context.Context, o *mucmodel.Occupant,
+	from *jid.JID, messageEl *xmpp.Element) error {
+	for _, resource := range o.GetAllResources() {
+		to := addResourceToBareJID(o.BareJID, resource)
+		message, err := xmpp.NewMessageFromElement(messageEl, from, to)
+		if err != nil {
+			return err
+		}
+		err = s.router.Route(ctx, message)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

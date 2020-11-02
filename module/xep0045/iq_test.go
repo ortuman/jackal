@@ -274,8 +274,8 @@ func TestXEP0045_SendRoomConfiguration(t *testing.T) {
 	form, err := xep0004.NewFormFromElement(formElement)
 	require.Nil(t, err)
 	require.Equal(t, form.Type, xep0004.Form)
-	// the total number of fields should be 20
-	require.Equal(t, len(form.Fields), 19)
+	// the total number of fields should be 17
+	require.Equal(t, len(form.Fields), 17)
 }
 
 func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
@@ -312,7 +312,6 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 	muc.repOccupant.UpsertOccupant(context.Background(), o)
 	room.AddOccupant(o)
 	muc.repRoom.UpsertRoom(context.Background(), room)
-	require.False(t, o.IsAdmin())
 
 	// get the room configuration form and change the fields
 	configForm := muc.getRoomConfigForm(context.Background(), room)
@@ -322,8 +321,6 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 		switch field.Var {
 		case ConfigName:
 			configForm.Fields[i].Values = []string{"Configured Room"}
-		case ConfigAdmins:
-			configForm.Fields[i].Values = []string{milosJID.ToBareJID().String()}
 		case ConfigMaxUsers:
 			configForm.Fields[i].Values = []string{"23"}
 		case ConfigWhoIs:
@@ -363,5 +360,4 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 	updatedOcc, err := c.Occupant().FetchOccupant(context.Background(), occJID)
 	require.Nil(t, err)
 	require.NotNil(t, updatedOcc)
-	require.True(t, updatedOcc.IsAdmin())
 }

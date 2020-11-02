@@ -48,7 +48,7 @@ func TestXEP0045_GetFormStanza(t *testing.T) {
 	room := &mucmodel.Room{Config: &mucmodel.RoomConfig{}}
 	form := muc.getRoomConfigForm(context.Background(), room)
 	require.NotNil(t, form)
-	require.Len(t, form.Fields, 19)
+	require.Len(t, form.Fields, 17)
 
 	formStanza := getFormStanza(iq, form)
 	require.NotNil(t, formStanza)
