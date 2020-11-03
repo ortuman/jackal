@@ -9,7 +9,6 @@ import (
 	"context"
 	"testing"
 
-	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
@@ -18,134 +17,94 @@ import (
 )
 
 func TestXEP0045_ChangeSubject(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
+	mock := setupTestRoomAndOwner()
 
 	subjectEl := xmpp.NewElementName("subject").SetText("new subject")
-	msgEl := xmpp.NewElementName("message").SetType("groupchat").AppendElement(subjectEl)
-	msg, _ := xmpp.NewMessageFromElement(msgEl, ownerFullJID, room.RoomJID)
+	msgEl := xmpp.NewElementName("message").SetType("groupchat")
+	msgEl.AppendElement(subjectEl)
+	msg, _ := xmpp.NewMessageFromElement(msgEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.changeSubject(nil, room, msg)
+	mock.muc.changeSubject(nil, mock.room, msg)
 
-	ack := ownerStm.ReceiveElement()
+	ack := mock.ownerStm.ReceiveElement()
 	require.Equal(t, ack.Type(), "groupchat")
 	newSubject := ack.Elements().Child("subject")
 	require.NotNil(t, newSubject)
 	require.Equal(t, newSubject.Text(), "new subject")
 
-	updatedRoom, _ := muc.repRoom.FetchRoom(nil, room.RoomJID)
+	updatedRoom, _ := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
 	require.Equal(t, updatedRoom.Subject, "new subject")
 }
 
 func TestXEP0045_DeclineInvite(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	room.InviteUser(regularUserJID.ToBareJID())
-	muc.repRoom.UpsertRoom(nil, room)
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
+	mock := setupTestRoomAndOwner()
+	invitedUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	mock.room.InviteUser(invitedUserJID.ToBareJID())
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
 	// user declines the invitation
 	reason := xmpp.NewElementName("reason").SetText("Sorry, not for me!")
-	invite := xmpp.NewElementName("decline").SetAttribute("to", owner.BareJID.String())
-	invite.AppendElement(reason)
+	invite := xmpp.NewElementName("decline")
+	invite.SetAttribute("to", mock.owner.BareJID.String()).AppendElement(reason)
 	x := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(invite)
 	m := xmpp.NewElementName("message").SetID("id-decline").AppendElement(x)
-	msg, err := xmpp.NewMessageFromElement(m, regularUserJID, room.RoomJID)
-	require.Nil(t, err)
+	msg, _ := xmpp.NewMessageFromElement(m, invitedUserJID, mock.room.RoomJID)
 
 	require.True(t, isDeclineInvitation(msg))
-	muc.declineInvitation(nil, room, msg)
+	mock.muc.declineInvitation(nil, mock.room, msg)
 
-	decline := ownerStm.ReceiveElement()
-	require.Equal(t, decline.From(), room.RoomJID.String())
-	room, _ = muc.repRoom.FetchRoom(nil, room.RoomJID)
-	require.False(t, room.UserIsInvited(regularUserJID.ToBareJID()))
+	decline := mock.ownerStm.ReceiveElement()
+	require.Equal(t, decline.From(), mock.room.RoomJID.String())
+	room, _ := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
+	require.False(t, room.UserIsInvited(invitedUserJID.ToBareJID()))
 }
 
 func TestXEP0045_SendInvite(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
+	mock := setupTestRoomAndOwner()
+	mock.room.Config.AllowInvites = true
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
+	invitedUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
+	invStm := stream.NewMockC2S("id-2", invitedUserJID)
+	invStm.SetPresence(xmpp.NewPresence(invitedUserJID.ToBareJID(), invitedUserJID,
+		xmpp.AvailableType))
+	mock.muc.router.Bind(context.Background(), invStm)
 
-	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	regStm := stream.NewMockC2S("id-2", regularUserJID)
-	regStm.SetPresence(xmpp.NewPresence(regularUserJID.ToBareJID(), regularUserJID, xmpp.AvailableType))
-	r.Bind(context.Background(), regStm)
-
-	// make sure user is not already invited
-	require.False(t, room.UserIsInvited(regularUserJID.ToBareJID()))
+	// user is not already invited
+	require.False(t, mock.room.UserIsInvited(invitedUserJID.ToBareJID()))
 
 	// owner sends the invitation
 	reason := xmpp.NewElementName("reason").SetText("Join me!")
-	invite := xmpp.NewElementName("invite").SetAttribute("to", regularUserJID.ToBareJID().String())
+	invite := xmpp.NewElementName("invite")
+	invite.SetAttribute("to", invitedUserJID.ToBareJID().String())
 	invite.AppendElement(reason)
 	x := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(invite)
 	m := xmpp.NewElementName("message").SetID("id-invite").AppendElement(x)
-	msg, err := xmpp.NewMessageFromElement(m, ownerFullJID, room.RoomJID)
+	msg, err := xmpp.NewMessageFromElement(m, mock.ownerFullJID, mock.room.RoomJID)
 	require.Nil(t, err)
 
 	require.True(t, isInvite(msg))
-	muc.inviteUser(context.Background(), room, msg)
+	mock.muc.inviteUser(context.Background(), mock.room, msg)
 
-	inviteStanza := regStm.ReceiveElement()
-	require.Equal(t, inviteStanza.From(), room.RoomJID.String())
+	inviteStanza := invStm.ReceiveElement()
+	require.Equal(t, inviteStanza.From(), mock.room.RoomJID.String())
 
-	updatedRoom, _ := muc.repRoom.FetchRoom(nil, room.RoomJID)
-	require.True(t, updatedRoom.UserIsInvited(regularUserJID.ToBareJID()))
+	updatedRoom, _ := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
+	require.True(t, updatedRoom.UserIsInvited(invitedUserJID.ToBareJID()))
 }
 
 func TestXEP0045_MessageEveryone(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
-	regularOcc, err := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
-	regularOcc.AddResource("balcony")
-	muc.AddOccupantToRoom(nil, room, regularOcc)
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	regStm := stream.NewMockC2S("id-2", regularUserJID)
-
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	regStm.SetPresence(xmpp.NewPresence(regularOcc.BareJID, regularUserJID, xmpp.AvailableType))
-
-	r.Bind(context.Background(), ownerStm)
-	r.Bind(context.Background(), regStm)
+	mock := setupTestRoomAndOwnerAndOcc()
 
 	// owner sends the group message
 	body := xmpp.NewElementName("body").SetText("Hello world!")
 	msgEl := xmpp.NewMessageType(uuid.New(), "groupchat").AppendElement(body)
-	msg, err := xmpp.NewMessageFromElement(msgEl, ownerFullJID, room.RoomJID)
-	require.Nil(t, err)
+	msg, _ := xmpp.NewMessageFromElement(msgEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.messageEveryone(context.Background(), room, msg)
+	mock.muc.messageEveryone(context.Background(), mock.room, msg)
 
-	regMsg := regStm.ReceiveElement()
-	ownerMsg := ownerStm.ReceiveElement()
+	regMsg := mock.occStm.ReceiveElement()
+	ownerMsg := mock.ownerStm.ReceiveElement()
 
 	require.Equal(t, regMsg.Type(), "groupchat")
 	msgTxt := regMsg.Elements().Child("body").Text()
@@ -157,57 +116,19 @@ func TestXEP0045_MessageEveryone(t *testing.T) {
 }
 
 func TestXEP0045_SendPM(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	room.Config.SetWhoCanSendPM("all")
-	muc.repRoom.UpsertRoom(nil, room)
-
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	regularUserJID, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	regularOccJID, _ := jid.New("room", "conference.jackal.im", "ort", true)
-	regularOcc, _ := mucmodel.NewOccupant(regularOccJID, regularUserJID.ToBareJID())
-	regularOcc.AddResource(regularUserJID.Resource())
-	muc.repOccupant.UpsertOccupant(nil, regularOcc)
-	muc.AddOccupantToRoom(nil, room, regularOcc)
-
-	regStm := stream.NewMockC2S("id-2", regularUserJID)
-	regStm.SetPresence(xmpp.NewPresence(regularOcc.BareJID, regularUserJID, xmpp.AvailableType))
-	r.Bind(context.Background(), regStm)
+	mock := setupTestRoomAndOwnerAndOcc()
+	mock.room.Config.SetWhoCanSendPM("all")
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
 	// owner sends the private message
 	body := xmpp.NewElementName("body").SetText("Hello ortuman!")
 	msgEl := xmpp.NewMessageType(uuid.New(), "chat").AppendElement(body)
-	msg, err := xmpp.NewMessageFromElement(msgEl, ownerFullJID, regularOccJID)
-	require.Nil(t, err)
+	m, _ := xmpp.NewMessageFromElement(msgEl, mock.ownerFullJID, mock.occ.OccupantJID)
 
-	muc.sendPM(context.Background(), room, msg)
+	mock.muc.sendPM(context.Background(), mock.room, m)
 
-	regMsg := regStm.ReceiveElement()
+	regMsg := mock.occStm.ReceiveElement()
 	require.Equal(t, regMsg.Type(), "chat")
 	msgTxt := regMsg.Elements().Child("body").Text()
 	require.Equal(t, msgTxt, "Hello ortuman!")
-}
-
-func TestXEP0045_MessageOccupant(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	_, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
-
-	senderJID, _ := jid.New("sender", "jackal.im", "phone", false)
-	body := xmpp.NewElementName("body").SetText("hello")
-
-	muc.messageOccupant(nil, owner.OccupantJID, senderJID, body, uuid.New(), true)
-
-	msg := ownerStm.ReceiveElement()
-	require.Equal(t, "hello", msg.Elements().Child("body").Text())
 }

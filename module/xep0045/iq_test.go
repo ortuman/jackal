@@ -9,258 +9,162 @@ import (
 	"context"
 	"testing"
 
-	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
-	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0045_GetOccupantList(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
+	mock := setupTestRoomAndOwner()
 
 	itemEl := xmpp.NewElementName("item").SetAttribute("role", "moderator")
-	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
-	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("get").AppendElement(queryEl)
-	iq, _ := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin)
+	queryEl.AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("get")
+	iqEl.AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.getOccupantList(nil, room, iq)
+	mock.muc.getOccupantList(nil, mock.room, iq)
 
-	resAck := ownerStm.ReceiveElement()
+	resAck := mock.ownerStm.ReceiveElement()
 	require.Equal(t, resAck.Type(), "result")
 	query := resAck.Elements().Child("query")
 	require.NotNil(t, query)
 	require.Equal(t, query.Namespace(), mucNamespaceAdmin)
 	item := query.Elements().Child("item")
 	require.NotNil(t, item)
-	require.Equal(t, item.Attributes().Get("nick"), owner.OccupantJID.Resource())
-
+	require.Equal(t, item.Attributes().Get("nick"), mock.owner.OccupantJID.Resource())
 }
 
 func TestXEP0045_ChangeAffiliation(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
-
-	acUsrJID, _ := jid.New("ac", "jackal.im", "office", true)
-	acOccJID, _ := jid.New("room", "conference.jackal.im", "ac", true)
-	acOcc, err := mucmodel.NewOccupant(acOccJID, acUsrJID.ToBareJID())
-	require.Nil(t, err)
-	acOcc.AddResource("office")
-	acOcc.SetAffiliation("member")
-	muc.AddOccupantToRoom(nil, room, acOcc)
-	require.True(t, acOcc.IsMember())
-	require.False(t, acOcc.IsAdmin())
-
-	acStm := stream.NewMockC2S("id-1", acUsrJID)
-	acStm.SetPresence(xmpp.NewPresence(acOcc.BareJID, acUsrJID, xmpp.AvailableType))
-	r.Bind(context.Background(), acStm)
+	mock := setupTestRoomAndOwnerAndOcc()
+	require.False(t, mock.occ.IsAdmin())
 
 	reasonEl := xmpp.NewElementName("reason").SetText("reason for affiliation change")
-	itemEl := xmpp.NewElementName("item").SetAttribute("jid", acOcc.BareJID.String())
+	itemEl := xmpp.NewElementName("item").SetAttribute("jid",
+		mock.occ.BareJID.String())
 	itemEl.SetAttribute("affiliation", "admin").AppendElement(reasonEl)
-	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
-	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("set").AppendElement(queryEl)
-	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin)
+	queryEl.AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("admin1").SetType("set")
+	iqEl.AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.modifyOccupantList(nil, room, iq)
+	mock.muc.modifyOccupantList(nil, mock.room, iq)
 
-	acAck := acStm.ReceiveElement()
-	require.Equal(t, acAck.From(), acOccJID.String())
-	resArAck := ownerStm.ReceiveElement()
-	require.Equal(t, resArAck.From(), acOccJID.String())
-	resAck := ownerStm.ReceiveElement()
+	acAck := mock.occStm.ReceiveElement()
+	require.Equal(t, acAck.From(), mock.occ.OccupantJID.String())
+	resArAck := mock.ownerStm.ReceiveElement()
+	require.Equal(t, resArAck.From(), mock.occ.OccupantJID.String())
+	resAck := mock.ownerStm.ReceiveElement()
 	require.Equal(t, resAck.Type(), "result")
 
-	resOcc, _ := muc.repOccupant.FetchOccupant(nil, acOccJID)
-	require.False(t, resOcc.IsMember())
+	resOcc, _ := mock.muc.repOccupant.FetchOccupant(nil, mock.occ.OccupantJID)
 	require.True(t, resOcc.IsAdmin())
 }
 
 func TestXEP0045_ChangeRole(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
-
-	rcUsrJID, _ := jid.New("rc", "jackal.im", "office", true)
-	rcOccJID, _ := jid.New("room", "conference.jackal.im", "rc", true)
-	rcOcc, err := mucmodel.NewOccupant(rcOccJID, rcUsrJID.ToBareJID())
-	require.Nil(t, err)
-	rcOcc.AddResource("office")
-	rcOcc.SetRole("visitor")
-	muc.AddOccupantToRoom(nil, room, rcOcc)
-
-	rcStm := stream.NewMockC2S("id-1", rcUsrJID)
-	rcStm.SetPresence(xmpp.NewPresence(rcOcc.BareJID, rcUsrJID, xmpp.AvailableType))
-	r.Bind(context.Background(), rcStm)
+	mock := setupTestRoomAndOwnerAndOcc()
+	require.False(t, mock.occ.IsModerator())
 
 	reasonEl := xmpp.NewElementName("reason").SetText("reason for role change")
-	itemEl := xmpp.NewElementName("item").SetAttribute("nick", rcOccJID.Resource())
-	itemEl.SetAttribute("role", "participant").AppendElement(reasonEl)
-	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
-	iqEl := xmpp.NewElementName("iq").SetID("participant1").SetType("set").AppendElement(queryEl)
-	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	itemEl := xmpp.NewElementName("item").SetAttribute("nick",
+		mock.occ.OccupantJID.Resource())
+	itemEl.SetAttribute("role", "moderator").AppendElement(reasonEl)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin)
+	queryEl.AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("mod1").SetType("set")
+	iqEl.AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.modifyOccupantList(nil, room, iq)
+	mock.muc.modifyOccupantList(nil, mock.room, iq)
 
-	rcAck := rcStm.ReceiveElement()
-	require.Equal(t, rcAck.From(), rcOccJID.String())
-	resCrAck := ownerStm.ReceiveElement()
-	require.Equal(t, resCrAck.From(), rcOccJID.String())
-	resAck := ownerStm.ReceiveElement()
+	rcAck := mock.occStm.ReceiveElement()
+	require.Equal(t, rcAck.From(), mock.occ.OccupantJID.String())
+	resCrAck := mock.ownerStm.ReceiveElement()
+	require.Equal(t, resCrAck.From(), mock.occ.OccupantJID.String())
+	resAck := mock.ownerStm.ReceiveElement()
 	require.Equal(t, resAck.Type(), "result")
 
-	resOcc, _ := muc.repOccupant.FetchOccupant(nil, rcOccJID)
-	require.True(t, resOcc.IsParticipant())
+	resOcc, _ := mock.muc.repOccupant.FetchOccupant(nil, mock.occ.OccupantJID)
+	require.True(t, resOcc.IsModerator())
 }
 
 func TestXEP0045_KickOccupant(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	room, owner := getTestRoomAndOwner(muc)
-	ownerFullJID := addResourceToBareJID(owner.BareJID, "phone")
-
-	ownerStm := stream.NewMockC2S("id-1", ownerFullJID)
-	ownerStm.SetPresence(xmpp.NewPresence(owner.BareJID, ownerFullJID, xmpp.AvailableType))
-	r.Bind(context.Background(), ownerStm)
-
-	kickedUsrJID, _ := jid.New("to_be_kicked", "jackal.im", "office", true)
-	kickedOccJID, _ := jid.New("room", "conference.jackal.im", "kicked", true)
-	kickedOcc, err := mucmodel.NewOccupant(kickedOccJID, kickedUsrJID.ToBareJID())
-	require.Nil(t, err)
-	kickedOcc.AddResource("office")
-	muc.AddOccupantToRoom(nil, room, kickedOcc)
-
-	kickedStm := stream.NewMockC2S("id-1", kickedUsrJID)
-	kickedStm.SetPresence(xmpp.NewPresence(kickedOcc.BareJID, kickedUsrJID, xmpp.AvailableType))
-	r.Bind(context.Background(), kickedStm)
+	mock := setupTestRoomAndOwnerAndOcc()
 
 	reasonEl := xmpp.NewElementName("reason").SetText("reason for kicking")
-	itemEl := xmpp.NewElementName("item").SetAttribute("nick", kickedOccJID.Resource())
+	itemEl := xmpp.NewElementName("item").SetAttribute("nick",
+		mock.occ.OccupantJID.Resource())
 	itemEl.SetAttribute("role", "none").AppendElement(reasonEl)
-	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin).AppendElement(itemEl)
-	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set").AppendElement(queryEl)
-	iq, err := xmpp.NewIQFromElement(iqEl, ownerFullJID, room.RoomJID)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceAdmin)
+	queryEl.AppendElement(itemEl)
+	iqEl := xmpp.NewElementName("iq").SetID("kick1").SetType("set")
+	iqEl.AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, mock.ownerFullJID, mock.room.RoomJID)
 
-	muc.modifyOccupantList(nil, room, iq)
+	mock.muc.modifyOccupantList(nil, mock.room, iq)
 
-	kickedAck := kickedStm.ReceiveElement()
+	kickedAck := mock.occStm.ReceiveElement()
 	require.Equal(t, kickedAck.Type(), "unavailable")
-	resKickAck := ownerStm.ReceiveElement()
+	resKickAck := mock.ownerStm.ReceiveElement()
 	require.Equal(t, resKickAck.Type(), "unavailable")
-	resAck := ownerStm.ReceiveElement()
+	resAck := mock.ownerStm.ReceiveElement()
 	require.Equal(t, resAck.Type(), "result")
 
-	_, found := room.GetOccupantJID(kickedUsrJID.ToBareJID())
+	_, found := mock.room.GetOccupantJID(mock.occ.BareJID)
 	require.False(t, found)
-	kicked, _ := muc.repOccupant.FetchOccupant(nil, kickedOccJID)
+	kicked, _ := mock.muc.repOccupant.FetchOccupant(nil, mock.occ.OccupantJID)
 	require.Nil(t, kicked)
 }
 
 func TestXEP0045_CreateInstantRoom(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-
-	stm := stream.NewMockC2S(uuid.New(), from)
-	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
-	r.Bind(context.Background(), stm)
-
-	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to)
-	require.Nil(t, err)
-	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
-	require.Nil(t, err)
-	require.True(t, room.Locked)
+	mock := setupTestRoomAndOwner()
+	mock.room.Locked = true
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
 	// instant room create iq
-	x := xmpp.NewElementNamespace("x", xep0004.FormNamespace).SetAttribute("type", "submit")
+	x := xmpp.NewElementNamespace("x", xep0004.FormNamespace)
+	x.SetAttribute("type", "submit")
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(x)
-	iq := xmpp.NewElementName("iq").SetID("create1").SetType("set").AppendElement(query)
-	request, err := xmpp.NewIQFromElement(iq, from, to)
-	require.Nil(t, err)
+	iq := xmpp.NewElementName("iq").SetID("create1").SetType("set")
+	iq.AppendElement(query)
+	request, _ := xmpp.NewIQFromElement(iq, mock.ownerFullJID, mock.room.RoomJID)
 
-	// sending an instant room request into the stream
+	// sending an instant room request
 	require.True(t, isIQForInstantRoomCreate(request))
-	muc.createInstantRoom(context.Background(), room, request)
-	//muc.ProcessIQ(context.Background(), request)
+	mock.muc.createInstantRoom(context.Background(), mock.room, request)
 
 	// receive the instant room creation confirmation
-	ack := stm.ReceiveElement()
-	require.NotNil(t, ack)
+	ack := mock.ownerStm.ReceiveElement()
 	require.Equal(t, ack, request.ResultIQ())
 
 	// the room should be unlocked now
-	updatedRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	updatedRoom, _ := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
 	require.False(t, updatedRoom.Locked)
 }
 
 func TestXEP0045_SendRoomConfiguration(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-
-	stm := stream.NewMockC2S(uuid.New(), from)
-	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
-	r.Bind(context.Background(), stm)
-
-	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to)
-	require.Nil(t, err)
-	room, err := c.Room().FetchRoom(nil, to.ToBareJID())
-	require.Nil(t, err)
-	require.True(t, room.Locked)
+	mock := setupTestRoomAndOwner()
+	mock.room.Locked = true
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
 	// request configuration form
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
-	iq := xmpp.NewElementName("iq").SetID("create1").SetType("get").AppendElement(query)
-	request, err := xmpp.NewIQFromElement(iq, from, to)
-	require.Nil(t, err)
+	iq := xmpp.NewElementName("iq").SetID("create1").SetType("get")
+	iq.AppendElement(query)
+	request, _ := xmpp.NewIQFromElement(iq, mock.ownerFullJID, mock.room.RoomJID)
 
-	// sending an instant room request into the stream
-	require.True(t, muc.MatchesIQ(request))
+	// sending an instant room request
+	require.True(t, mock.muc.MatchesIQ(request))
 	require.True(t, isIQForRoomConfigRequest(request))
-	muc.sendRoomConfiguration(context.Background(), room, request)
+	mock.muc.sendRoomConfiguration(context.Background(), mock.room, request)
 
 	// receive the room configuration form
-	ack := stm.ReceiveElement()
-	require.NotNil(t, ack)
-	require.Equal(t, ack.From(), to.String())
-	require.Equal(t, ack.To(), from.String())
+	ack := mock.ownerStm.ReceiveElement()
+	require.Equal(t, ack.From(), mock.room.RoomJID.String())
+	require.Equal(t, ack.To(), mock.ownerFullJID.String())
 	require.Equal(t, ack.Name(), "iq")
 	require.Equal(t, ack.Type(), "result")
 	require.Equal(t, ack.ID(), "create1")
@@ -274,47 +178,23 @@ func TestXEP0045_SendRoomConfiguration(t *testing.T) {
 	form, err := xep0004.NewFormFromElement(formElement)
 	require.Nil(t, err)
 	require.Equal(t, form.Type, xep0004.Form)
-	// the total number of fields should be 17
 	require.Equal(t, len(form.Fields), 17)
 }
 
 func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, c.Room(), c.Occupant())
-	defer func() { _ = muc.Shutdown() }()
-
-	from, _ := jid.New("ortuman", "jackal.im", "balcony", true)
-	to, _ := jid.New("room", "conference.jackal.im", "nick", true)
-
-	stm := stream.NewMockC2S(uuid.New(), from)
-	stm.SetPresence(xmpp.NewPresence(from.ToBareJID(), from, xmpp.AvailableType))
-	r.Bind(context.Background(), stm)
-
-	// creating a locked room
-	err := muc.newRoom(context.Background(), from, to)
-	require.Nil(t, err)
-	room, err := muc.repRoom.FetchRoom(nil, to.ToBareJID())
-	require.Nil(t, err)
+	mock := setupTestRoomAndOwner()
+	mock.room.Locked = true
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
 	// these fields changed in the configuration
-	require.True(t, room.Locked)
-	require.NotEqual(t, room.Name, "Configured Room")
-	require.NotEqual(t, room.Name, "Configured Room")
-	require.NotEqual(t, room.Config.MaxOccCnt, 23)
-	require.False(t, room.Config.Public)
-	require.False(t, room.Config.NonAnonymous)
-
-	// occupant to be promoted into an admin
-	milosJID, _ := jid.New("milos", "jackal.im", "office", true)
-	occJID, _ := jid.New("room", "conference.jackal.im", "milos", true)
-	o, _ := mucmodel.NewOccupant(occJID, milosJID.ToBareJID())
-	o.AddResource("office")
-	muc.repOccupant.UpsertOccupant(context.Background(), o)
-	room.AddOccupant(o)
-	muc.repRoom.UpsertRoom(context.Background(), room)
+	require.True(t, mock.room.Locked)
+	require.NotEqual(t, mock.room.Name, "Configured Room")
+	require.NotEqual(t, mock.room.Config.MaxOccCnt, 23)
+	require.False(t, mock.room.Config.Public)
+	require.False(t, mock.room.Config.NonAnonymous)
 
 	// get the room configuration form and change the fields
-	configForm := muc.getRoomConfigForm(context.Background(), room)
+	configForm := mock.muc.getRoomConfigForm(context.Background(), mock.room)
 	require.NotNil(t, configForm)
 	configForm.Type = xep0004.Submit
 	for i, field := range configForm.Fields {
@@ -334,30 +214,23 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
 	query.AppendElement(configForm.Element())
 	e := xmpp.NewElementName("iq").SetID("create").SetType("set").AppendElement(query)
-	stanza, err := xmpp.NewIQFromElement(e, from, to.ToBareJID())
+	stanza, err := xmpp.NewIQFromElement(e, mock.ownerFullJID, mock.room.RoomJID)
 	require.Nil(t, err)
 
 	// sending the configuration form
-	require.True(t, muc.MatchesIQ(stanza))
 	require.True(t, isIQForRoomConfigSubmission(stanza))
-	muc.processRoomConfiguration(context.Background(), room, stanza)
+	mock.muc.processRoomConfiguration(context.Background(), mock.room, stanza)
 
 	// receive the response
-	ack := stm.ReceiveElement()
-	require.NotNil(t, ack)
+	ack := mock.ownerStm.ReceiveElement()
 	assert.EqualValues(t, ack, stanza.ResultIQ())
 
 	// confirm the fields have changed
-	confRoom, err := c.Room().FetchRoom(nil, to.ToBareJID())
+	confRoom, err := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
 	require.Nil(t, err)
 	require.False(t, confRoom.Locked)
 	require.Equal(t, confRoom.Name, "Configured Room")
 	require.Equal(t, confRoom.Config.MaxOccCnt, 23)
 	require.False(t, confRoom.Config.Public)
 	require.True(t, confRoom.Config.NonAnonymous)
-
-	// occupant got promoted to admin
-	updatedOcc, err := c.Occupant().FetchOccupant(context.Background(), occJID)
-	require.Nil(t, err)
-	require.NotNil(t, updatedOcc)
 }

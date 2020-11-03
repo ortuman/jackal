@@ -242,6 +242,9 @@ func (r *Room) DeleteInvite(userJID *jid.JID) {
 }
 
 func (r *Room) IsFull() bool {
+	if r.Config.MaxOccCnt == -1 {
+		return false
+	}
 	return r.occupantsOnline >= r.Config.MaxOccCnt
 }
 

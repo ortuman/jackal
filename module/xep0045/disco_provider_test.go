@@ -80,9 +80,8 @@ func TestXEP0045_DiscoItems(t *testing.T) {
 }
 
 func setupDiscoTest() *discoInfoProvider {
-	r, c := setupTest("jackal.im")
-	muc := New(&Config{MucHost: "conference.jackal.im", Name: "Chat Service"}, nil, r, c.Room(),
-		c.Occupant())
+	mock := setupMockMucService()
+	mock.muc.cfg.Name = "Chat Service"
 
 	hiddenRc := &mucmodel.RoomConfig{Public: false}
 	hJID, _ := jid.New("secretroom", "conference.jackal.im", "", true)
@@ -105,10 +104,10 @@ func setupDiscoTest() *discoInfoProvider {
 	o := &mucmodel.Occupant{OccupantJID: oJID, BareJID: usrJID.ToBareJID()}
 	publicRoom.AddOccupant(o)
 
-	muc.repRoom.UpsertRoom(context.Background(), &publicRoom)
-	muc.repRoom.UpsertRoom(context.Background(), &hiddenRoom)
-	muc.allRooms = append(muc.allRooms, *hiddenRoom.RoomJID)
-	muc.allRooms = append(muc.allRooms, *publicRoom.RoomJID)
+	mock.muc.repRoom.UpsertRoom(context.Background(), &publicRoom)
+	mock.muc.repRoom.UpsertRoom(context.Background(), &hiddenRoom)
+	mock.muc.allRooms = append(mock.muc.allRooms, *hiddenRoom.RoomJID)
+	mock.muc.allRooms = append(mock.muc.allRooms, *publicRoom.RoomJID)
 
-	return &discoInfoProvider{service: muc}
+	return &discoInfoProvider{service: mock.muc}
 }
