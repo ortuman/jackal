@@ -9,12 +9,62 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/stream"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 )
+
+func TestXEP0045_VoiceRequestAndApproval(t *testing.T) {
+	mock := setupTestRoomAndOwnerAndOcc()
+	mock.occ.SetRole("visitor")
+	mock.muc.repOccupant.UpsertOccupant(nil, mock.occ)
+	mock.room.Config.Moderated = true
+	mock.muc.repRoom.UpsertRoom(nil, mock.room)
+
+	requestForm := &xep0004.DataForm{
+		Type: xep0004.Submit,
+	}
+	requestForm.Fields = append(requestForm.Fields, xep0004.Field{
+		Type: xep0004.ListSingle,
+		Var: "muc#role",
+		Label: "Requested role",
+		Values: []string{"participant"},
+	})
+	msgEl := xmpp.NewElementName("message").AppendElement(requestForm.Element())
+	msg, _ := xmpp.NewMessageFromElement(msgEl, mock.occFullJID, mock.room.RoomJID)
+
+	mock.muc.voiceRequest(nil, mock.room, msg)
+
+	approvalMessage := mock.ownerStm.ReceiveElement()
+	require.Equal(t, approvalMessage.From(), mock.room.RoomJID.String())
+	formEl := approvalMessage.Elements().Child("x")
+	require.NotNil(t, formEl)
+	approvalForm, err := xep0004.NewFormFromElement(formEl)
+	require.Nil(t, err)
+	require.Equal(t, approvalForm.Type, xep0004.Form)
+	approvalForm.Type = xep0004.Submit
+	for i, field := range approvalForm.Fields {
+		if field.Var == "muc#request_allow" {
+			approvalForm.Fields[i].Values = []string{"true"}
+		}
+	}
+	apMsgEl := xmpp.NewElementName("message").AppendElement(approvalForm.Element())
+	apMsg, _ := xmpp.NewMessageFromElement(apMsgEl, mock.ownerFullJID, mock.room.RoomJID)
+
+	mock.muc.voiceRequest(nil, mock.room, apMsg)
+
+	ackOcc := mock.occStm.ReceiveElement()
+	require.Equal(t, ackOcc.From(), mock.occ.OccupantJID.String())
+	itemEl := ackOcc.Elements().Child("x").Elements().Child("item")
+	require.NotNil(t, itemEl)
+	require.Equal(t, itemEl.Attributes().Get("role"), "participant")
+
+	occ, _ := mock.muc.repOccupant.FetchOccupant(nil, mock.occ.OccupantJID)
+	require.True(t, occ.IsParticipant())
+}
 
 func TestXEP0045_ChangeSubject(t *testing.T) {
 	mock := setupTestRoomAndOwner()

@@ -7,13 +7,153 @@ package xep0045
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+func isVoiceRequest(message *xmpp.Message) bool {
+	x := message.Elements().Child("x")
+	if x == nil || x.Namespace() != "jabber:x:data" || x.Type() != "submit" {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) voiceRequest(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
+	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	if !room.Config.Moderated {
+		_ = s.router.Route(ctx, message.NotAllowedError())
+		return
+	}
+
+	switch {
+	case occ.IsVisitor():
+		errStanza = s.askForVoice(ctx, room, occ, message)
+		if errStanza != nil {
+			_ = s.router.Route(ctx, errStanza)
+		}
+	case occ.IsModerator():
+		errStanza = s.approveVoiceRequest(ctx, room, message)
+		if errStanza != nil {
+			_ = s.router.Route(ctx, errStanza)
+		}
+	}
+}
+
+func (s *Muc) askForVoice(ctx context.Context, room *mucmodel.Room, visitor *mucmodel.Occupant,
+	message *xmpp.Message) xmpp.Stanza {
+	formEl := message.Elements().Child("x")
+	form, err := xep0004.NewFormFromElement(formEl)
+	if err != nil {
+		return message.BadRequestError()
+	}
+
+	if form.Fields.ValueForFieldOfType("muc#role", xep0004.ListSingle) != "participant" {
+		return message.NotAllowedError()
+	}
+
+	approvalForm := s.getVoiceRequestForm(ctx, visitor)
+	msg := xmpp.NewElementName("message").SetID(uuid.New().String())
+	msg.AppendElement(approvalForm.Element())
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, _ := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if o.IsModerator() {
+			s.sendMessageToOccupant(ctx, o, room.RoomJID, msg)
+		}
+	}
+
+	return nil
+}
+
+func (s *Muc) approveVoiceRequest(ctx context.Context, room *mucmodel.Room,
+	message *xmpp.Message) xmpp.Stanza {
+	formEl := message.Elements().Child("x")
+	form, err := xep0004.NewFormFromElement(formEl)
+	if err != nil {
+		return message.BadRequestError()
+	}
+
+	occ, err := s.processVoiceApprovalForm(ctx, room, form)
+	if err != nil {
+		return message.BadRequestError()
+	}
+	if occ != nil {
+		presenceEl := getOccupantChangeElement(occ, "")
+		s.sendPresenceToRoom(ctx, room, occ.OccupantJID, presenceEl)
+	}
+
+	return nil
+}
+
+func (s *Muc) processVoiceApprovalForm(ctx context.Context, room *mucmodel.Room,
+	form *xep0004.DataForm) (*mucmodel.Occupant, error) {
+	requestAllow := false
+	var role, userJIDStr, nick string
+	for _, field := range form.Fields {
+		if len(field.Values) == 0 {
+			continue
+		}
+		switch field.Var {
+		case "muc#role":
+			role = field.Values[0]
+		case "muc#jid":
+			userJIDStr = field.Values[0]
+		case "muc#roomnick":
+			nick = field.Values[0]
+		case "muc#request_allow":
+			requestAllow, _ = strconv.ParseBool(field.Values[0])
+		}
+	}
+
+	if requestAllow {
+		occ, err := s.approveVoice(ctx, room, userJIDStr, role, nick)
+		if err != nil {
+			return nil, err
+		}
+		return occ, nil
+	}
+
+	return nil, nil
+}
+
+func (s *Muc) approveVoice(ctx context.Context, room *mucmodel.Room, userJIDStr, role,
+	nick string) (*mucmodel.Occupant, error) {
+	userJID, err := jid.NewWithString(userJIDStr, false)
+	if err != nil {
+		return nil, err
+	}
+	occJID, ok := room.GetOccupantJID(userJID.ToBareJID())
+	if !ok {
+		return nil, fmt.Errorf("User not in the room")
+	}
+	o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+	if err != nil {
+		return nil, err
+	}
+	if role != "participant" || nick != o.OccupantJID.Resource() {
+		return nil, fmt.Errorf("Form not filled out correctly")
+	}
+
+	o.SetRole("participant")
+	err = s.repOccupant.UpsertOccupant(ctx, o)
+	if err != nil {
+		return nil, err
+	}
+
+	return o, nil
+}
 
 func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)

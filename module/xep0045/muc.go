@@ -171,6 +171,8 @@ func (s *Muc) processMessage(ctx context.Context, message *xmpp.Message) {
 		s.inviteUser(ctx, room, message)
 	case isDeclineInvitation(message):
 		s.declineInvitation(ctx, room, message)
+	case isVoiceRequest(message):
+		s.voiceRequest(ctx, room, message)
 	case message.IsGroupChat() && message.Elements().Child("subject") != nil:
 		s.changeSubject(ctx, room, message)
 	case message.IsGroupChat():

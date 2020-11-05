@@ -116,8 +116,9 @@ func (s *Muc) modifyOccupantRole(ctx context.Context, room *mucmodel.Room,
 		return fmt.Errorf("Sender not allowed to change the role")
 	}
 
+	reason := getReasonFromItem(item)
 	if newRole == "none" {
-		err := s.kickOccupant(ctx, room, occ, sender.OccupantJID.Resource(), getReasonFromItem(item))
+		err := s.kickOccupant(ctx, room, occ, sender.OccupantJID.Resource(), reason)
 		if err != nil {
 			return err
 		}
@@ -125,7 +126,7 @@ func (s *Muc) modifyOccupantRole(ctx context.Context, room *mucmodel.Room,
 		occ.SetRole(newRole)
 		s.repOccupant.UpsertOccupant(ctx, occ)
 
-		occEl := getOccupantChangeElement(occ, getReasonFromItem(item))
+		occEl := getOccupantChangeElement(occ, reason)
 		err := s.sendPresenceToRoom(ctx, room, occ.OccupantJID, occEl)
 		if err != nil {
 			return err
