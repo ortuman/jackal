@@ -16,6 +16,58 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func isIQForRoomDestroy(iq *xmpp.IQ) bool {
+	if !iq.IsSet() {
+		return false
+	}
+	query := iq.Elements().Child("query")
+	destroy := query.Elements().Child("destroy")
+	if destroy == nil {
+		return false
+	}
+	return true
+}
+
+func (s *Muc) destroyRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
+	owner, errStanza := s.getOccupantFromStanza(ctx, room, iq)
+	if errStanza != nil {
+		_ = s.router.Route(ctx, errStanza)
+		return
+	}
+
+	err := s.notifyRoomDestroyed(ctx, owner, room, iq)
+	if err != nil {
+		log.Error(err)
+		_ = s.router.Route(ctx, iq.InternalServerError())
+		return
+	}
+
+	s.deleteRoom(ctx, room)
+	_ = s.router.Route(ctx, iq.ResultIQ())
+}
+
+func (s *Muc) notifyRoomDestroyed(ctx context.Context, owner *mucmodel.Occupant,
+	room *mucmodel.Room, iq *xmpp.IQ) error {
+	owner.SetAffiliation("")
+	owner.SetRole("")
+	itemEl := newOccupantItem(owner, false, false)
+	destroyEl := iq.Elements().Child("query").Elements().Child("destroy")
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser)
+	xEl.AppendElement(itemEl).AppendElement(destroyEl)
+	presenceEl := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)
+	for _, occJID := range room.GetAllOccupantJIDs() {
+		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
+		if err != nil {
+			return err
+		}
+		err = s.sendPresenceToOccupant(ctx, o, o.OccupantJID, presenceEl)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	sender, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
@@ -119,7 +171,7 @@ func (s *Muc) kickOccupant(ctx context.Context, room *mucmodel.Room, kickedOcc *
 func (s *Muc) modifyOccupantAffiliation(ctx context.Context, room *mucmodel.Room,
 	sender *mucmodel.Occupant, item xmpp.XElement) error {
 	occ, newAffiliation := s.getOccupantAndNewAffiliation(ctx, room, item)
-	if occ == nil{
+	if occ == nil {
 		return fmt.Errorf("Occupant not in the room")
 	}
 
@@ -313,17 +365,38 @@ func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room,
 	}
 
 	formEl := iq.Elements().Child("query").Elements().Child("x")
-	form, err := xep0004.NewFormFromElement(formEl)
-	if err != nil {
+	switch formEl.Type() {
+	case "submit":
+		errStanza := s.configureRoom(ctx, room, formEl, iq)
+		if errStanza != nil {
+			_ = s.router.Route(ctx, errStanza)
+			return
+		}
+	case "cancel":
+		if room.Locked {
+			s.deleteRoom(ctx, room)
+		}
+	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 		return
 	}
 
-	ok := s.updateRoomWithForm(ctx, room, form)
-	if !ok {
-		_ = s.router.Route(ctx, iq.NotAcceptableError())
-		return
+	_ = s.router.Route(ctx, iq.ResultIQ())
+}
+
+func (s *Muc) configureRoom(ctx context.Context, room *mucmodel.Room, formEl xmpp.XElement,
+	iq *xmpp.IQ) xmpp.Stanza {
+	form, err := xep0004.NewFormFromElement(formEl)
+	if err != nil {
+		return iq.BadRequestError()
 	}
 
-	_ = s.router.Route(ctx, iq.ResultIQ())
+	updatedAnonimity, ok := s.updateRoomWithForm(ctx, room, form)
+	if !ok {
+		return iq.NotAcceptableError()
+	}
+
+	updatedRoomEl := getRoomUpdatedElement(room.Config.NonAnonymous, updatedAnonimity)
+	s.sendMessageToRoom(ctx, room, room.RoomJID, updatedRoomEl)
+	return nil
 }

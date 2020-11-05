@@ -48,10 +48,7 @@ func (s *Muc) occupantExitsRoom(ctx context.Context, room *mucmodel.Room, o *muc
 	s.repRoom.UpsertRoom(ctx, room)
 
 	if !room.Config.Persistent && room.IsEmpty() {
-		for _, occJID := range room.GetAllOccupantJIDs() {
-			s.repOccupant.DeleteOccupant(ctx, &occJID)
-		}
-		s.repRoom.DeleteRoom(ctx, room.RoomJID)
+		s.deleteRoom(ctx, room)
 	}
 }
 

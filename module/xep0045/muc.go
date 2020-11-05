@@ -101,6 +101,8 @@ func (s *Muc) processIQOwner(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 		s.sendRoomConfiguration(ctx, room, iq)
 	case isIQForRoomConfigSubmission(iq):
 		s.processRoomConfiguration(ctx, room, iq)
+	case isIQForRoomDestroy(iq):
+		s.destroyRoom(ctx, room, iq)
 	default:
 		_ = s.router.Route(ctx, iq.BadRequestError())
 	}

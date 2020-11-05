@@ -15,6 +15,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestXEP0045_DestroyRoom(t *testing.T) {
+	mock := setupTestRoomAndOwnerAndOcc()
+
+	reasonEl := xmpp.NewElementName("reason").SetText("Reason for destroying")
+	destroyEl := xmpp.NewElementName("destroy").AppendElement(reasonEl)
+	queryEl := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(destroyEl)
+	iqEl := xmpp.NewElementName("iq").SetType("set").SetID("destroy1").AppendElement(queryEl)
+	iq, _ := xmpp.NewIQFromElement(iqEl, mock.ownerFullJID, mock.room.RoomJID)
+
+	mock.muc.destroyRoom(nil, mock.room, iq)
+
+	ackOcc := mock.occStm.ReceiveElement()
+	require.Equal(t, ackOcc.From(), mock.occ.OccupantJID.String())
+	require.Equal(t, ackOcc.Type(), "unavailable")
+	reason := ackOcc.Elements().Child("x").Elements().Child("destroy").Elements().Child("reason")
+	require.Equal(t, reason.Text(), "Reason for destroying")
+
+	ownerAck := mock.ownerStm.ReceiveElement()
+	require.Equal(t, ownerAck.From(), mock.owner.OccupantJID.String())
+	require.Equal(t, ownerAck.Type(), "unavailable")
+	ownerAck = mock.ownerStm.ReceiveElement()
+	require.Equal(t, ownerAck.Type(), "result")
+
+	room, err := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
+	require.Nil(t, err)
+	require.Nil(t, room)
+	owner, err := mock.muc.repOccupant.FetchOccupant(nil, mock.owner.OccupantJID)
+	require.Nil(t, err)
+	require.Nil(t, owner)
+	occ, err := mock.muc.repOccupant.FetchOccupant(nil, mock.occ.OccupantJID)
+	require.Nil(t, err)
+	require.Nil(t, occ)
+}
+
 func TestXEP0045_GetOccupantList(t *testing.T) {
 	mock := setupTestRoomAndOwner()
 
@@ -223,7 +257,7 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 
 	// receive the response
 	ack := mock.ownerStm.ReceiveElement()
-	assert.EqualValues(t, ack, stanza.ResultIQ())
+	assert.EqualValues(t, ack.Type(), "groupchat")
 
 	// confirm the fields have changed
 	confRoom, err := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)

@@ -191,7 +191,7 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 		Var:    ConfigMemberList,
 		Type:   xep0004.ListSingle,
 		Label:  "Who Can Retrieve Member List",
-		Values: []string{room.Config.GetCanGetMemberList()},
+		Values: []string{room.Config.WhoCanGetMemberList()},
 		Options: []xep0004.Option{
 			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
 			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
@@ -225,7 +225,7 @@ func getRoomConfigInstructions(room *mucmodel.Room) (instr string) {
 	return
 }
 
-func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form *xep0004.DataForm) (ok bool) {
+func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form *xep0004.DataForm) (updatedAnonimity, ok bool) {
 	ok = true
 	for _, field := range form.Fields {
 		if len(field.Values) == 0 {
@@ -307,6 +307,9 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 				log.Error(err)
 				ok = false
 			}
+			if (room.Config.NonAnonymous != n){
+				updatedAnonimity = true
+			}
 			room.Config.NonAnonymous = n
 		case ConfigMaxUsers:
 			n, err := strconv.Atoi(field.Values[0])
@@ -328,7 +331,7 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 		s.repRoom.UpsertRoom(ctx, room)
 	}
 
-	return ok
+	return
 }
 
 func boolToStr(value bool) string {
@@ -366,4 +369,11 @@ func (s *Muc) sendMessageToRoom(ctx context.Context, r *mucmodel.Room, from *jid
 		}
 	}
 	return nil
+}
+
+func (s *Muc) deleteRoom(ctx context.Context, r *mucmodel.Room) {
+	for _, occJID := range r.GetAllOccupantJIDs() {
+		s.repOccupant.DeleteOccupant(ctx, &occJID)
+	}
+	s.repRoom.DeleteRoom(ctx, r.RoomJID)
 }

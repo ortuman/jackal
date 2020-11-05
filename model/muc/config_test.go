@@ -83,7 +83,7 @@ func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 	require.NotNil(t, err)
 	err = cfg.SetWhoCanGetMemberList(None)
 	require.Nil(t, err)
-	require.Equal(t, None, cfg.GetCanGetMemberList())
+	require.Equal(t, None, cfg.WhoCanGetMemberList())
 }
 
 func TestOccupantPermissionsRoomConfig(t *testing.T) {

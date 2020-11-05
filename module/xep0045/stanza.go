@@ -14,6 +14,19 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+func getRoomUpdatedElement(nonAnonymous, updatedAnonimity bool) *xmpp.Element {
+	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser).AppendElement(newStatusElement("104"))
+	if updatedAnonimity {
+		if nonAnonymous {
+			xEl.AppendElement(newStatusElement("172"))
+		} else {
+			xEl.AppendElement(newStatusElement("173"))
+		}
+	}
+	msgEl := xmpp.NewElementName("message").SetID(uuid.New().String()).SetType("groupchat")
+	return msgEl.AppendElement(xEl)
+}
+
 func getOccupantsInfoElement(occupants []*mucmodel.Occupant, id string,
 	includeUserJID bool) *xmpp.Element {
 	query := xmpp.NewElementNamespace("query", mucNamespaceAdmin)

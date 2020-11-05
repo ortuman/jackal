@@ -208,7 +208,7 @@ func (r *RoomConfig) SetWhoCanGetMemberList(s string) error {
 	return nil
 }
 
-func (r *RoomConfig) GetCanGetMemberList() string {
+func (r *RoomConfig) WhoCanGetMemberList() string {
 	return r.canGetMemberList
 }
 

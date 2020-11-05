@@ -8,7 +8,6 @@ package xep0045
 import (
 	"context"
 
-	"github.com/ortuman/jackal/log"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/module/xep0030"
@@ -31,7 +30,7 @@ const (
 	mucModerated     = "muc_moderated"
 	mucUnmoderated   = "muc_unmoderated"
 	mucNonAnonymous  = "muc_nonanonymous"
-	mucSemiAnonymous = "muc_nonanonymous"
+	mucSemiAnonymous = "muc_semianonymous"
 	mucPwdProtected  = "muc_passwordprotected"
 	mucUnsecured     = "muc_unsecured"
 	mucPersistent    = "muc_persistent"
@@ -109,7 +108,7 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 	if room == nil {
 		return nil, xmpp.ErrItemNotFound
 	}
-	if room.Config.GetCanGetMemberList() == mucmodel.All {
+	if room.Config.WhoCanGetMemberList() == mucmodel.All {
 		for _, occJID := range room.GetAllOccupantJIDs() {
 			items = append(items, xep0030.Item{Jid: occJID.String()})
 		}
@@ -151,7 +150,6 @@ func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) 
 func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
 	r, err := p.service.repRoom.FetchRoom(ctx, roomJID)
 	if err != nil {
-		log.Error(err)
 		return nil
 	}
 	return r
