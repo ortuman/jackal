@@ -33,6 +33,7 @@ type pgSQLContainer struct {
 	pubSub    *pgSQLPubSub
 	offline   *pgSQLOffline
 	room      *pgSQLRoom
+	occupant  *pgSQLOccupant
 
 	h          *sql.DB
 	cancelPing context.CancelFunc
@@ -84,9 +85,7 @@ func (c *pgSQLContainer) BlockList() repository.BlockList { return c.blockList }
 func (c *pgSQLContainer) PubSub() repository.PubSub       { return c.pubSub }
 func (c *pgSQLContainer) Offline() repository.Offline     { return c.offline }
 func (c *pgSQLContainer) Room() repository.Room           { return c.room }
-
-// TODO implement occupant in pgsql
-func (c *pgSQLContainer) Occupant() repository.Occupant { return nil }
+func (c *pgSQLContainer) Occupant() repository.Occupant   { return c.occupant }
 
 func (c *pgSQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

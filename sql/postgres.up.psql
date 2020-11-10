@@ -265,3 +265,24 @@ CREATE INDEX IF NOT EXISTS i_pubsub_items_item_id ON pubsub_items(item_id);
 CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_items_node_id_item_id ON pubsub_items(node_id, item_id);
 
 SELECT enable_updated_at('pubsub_items');
+
+-- xep0045_occupants
+
+CREATE TABLE IF NOT EXISTS occupants (
+  occupant_jid       VARCHAR(1023) PRIMARY KEY,
+  bare_jid           VARCHAR(1023) NOT NULL,
+  affiliation        VARCHAR(32),
+  role               VARCHAR(32)
+);
+
+-- xep0045_occupants_resources
+
+CREATE TABLE IF NOT EXISTS resources (
+  occupant_jid VARCHAR(512) NOT NULL,
+  resource     VARCHAR(256) NOT NULL,
+
+  PRIMARY KEY (occupant_jid, resource),
+
+);
+
+CREATE INDEX IF NOT EXISTS i_occupant_jid ON resources(occupant_jid);
