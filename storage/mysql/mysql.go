@@ -26,6 +26,7 @@ type mySQLContainer struct {
 	pubSub    *mySQLPubSub
 	offline   *mySQLOffline
 	room      *mySQLRoom
+	occupant  *mySQLOccupant
 
 	h      *sql.DB
 	doneCh chan chan bool
@@ -61,6 +62,7 @@ func New(cfg *Config) (repository.Container, error) {
 	c.blockList = newBlockList(c.h)
 	c.pubSub = newPubSub(c.h)
 	c.offline = newOffline(c.h)
+	c.occupant = newOccupant(c.h)
 	c.room = newRoom(c.h)
 
 	return c, nil
@@ -75,9 +77,7 @@ func (c *mySQLContainer) BlockList() repository.BlockList { return c.blockList }
 func (c *mySQLContainer) PubSub() repository.PubSub       { return c.pubSub }
 func (c *mySQLContainer) Offline() repository.Offline     { return c.offline }
 func (c *mySQLContainer) Room() repository.Room           { return c.room }
-
-// TODO implement Occupant for Mysql
-func (c *mySQLContainer) Occupant() repository.Occupant { return nil }
+func (c *mySQLContainer) Occupant() repository.Occupant   { return c.occupant }
 
 func (c *mySQLContainer) Close(ctx context.Context) error {
 	ch := make(chan bool)

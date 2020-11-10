@@ -224,3 +224,24 @@ CREATE TABLE IF NOT EXISTS pubsub_items (
     UNIQUE INDEX i_pubsub_items_node_id_item_id (node_id, item_id(36))
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_occupants
+
+CREATE TABLE IF NOT EXISTS occupants (
+    occupant_jid VARCHAR(512) PRIMARY KEY,
+    bare_jid     VARCHAR(512) NOT NULL,
+    affiliation  VARCHAR(32),
+    role         VARCHAR(32)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_occupants_resources
+
+CREATE TABLE IF NOT EXISTS resources (
+    occupant_jid VARCHAR(512) NOT NULL,
+    resource     VARCHAR(256) NOT NULL,
+
+    PRIMARY KEY (occupant_jid, resource),
+
+    INDEX i_occupant_jid(occupant_jid)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
