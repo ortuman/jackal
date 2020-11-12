@@ -286,3 +286,60 @@ CREATE TABLE IF NOT EXISTS resources (
 );
 
 CREATE INDEX IF NOT EXISTS i_occupant_jid ON resources(occupant_jid);
+
+-- xep0045_rooms
+
+CREATE TABLE IF NOT EXISTS rooms (
+    room_jid         VARCHAR(1023) PRIMARY KEY,
+    name             TEXT,
+    description      TEXT,
+    subject          TEXT,
+    language         TEXT,
+    locked           BOOL NOT NULL,
+    occupants_online INT NOT NULL
+);
+
+-- xep0045_rooms_configurations
+
+CREATE TABLE IF NOT EXISTS rooms_config (
+    room_jid            VARCHAR(1023) PRIMARY KEY,
+    public              BOOL NOT NULL,
+    persistent          BOOL NOT NULL,
+    pwd_protected       BOOL NOT NULL,
+    password            TEXT NOT NULL,
+    open                BOOL NOT NULL,
+    moderated           BOOL NOT NULL,
+    allow_invites       BOOL NOT NULL,
+    max_occupants       INT NOT NULL,
+    allow_subj_change   BOOL NOT NULL,
+    non_anonymous       BOOL NOT NULL,
+    can_send_pm         VARCHAR(32) NOT NULL,
+    can_get_member_list VARCHAR(32) NOT NULL
+);
+
+-- xep0045_rooms_mapping_user_to_occupant_jids
+
+CREATE TABLE IF NOT EXISTS rooms_users (
+    room_jid     VARCHAR(512) NOT NULL,
+    user_jid     VARCHAR(512) NOT NULL,
+    occupant_jid VARCHAR(512) NOT NULL,
+
+    PRIMARY KEY(room_jid, user_jid)
+
+);
+
+CREATE INDEX IF NOT EXISTS i_room_jid_users ON rooms_users(room_jid);
+
+-- xep0045_rooms_invited_users
+
+CREATE TABLE IF NOT EXISTS rooms_invites (
+    room_jid VARCHAR(512) NOT NULL,
+    user_jid VARCHAR(512) NOT NULL,
+
+    PRIMARY KEY(room_jid, user_jid)
+
+    INDEX i_room_jid_invites(room_jid)
+
+);
+
+CREATE INDEX IF NOT EXISTS i_room_jid_invites ON rooms_invites(room_jid);

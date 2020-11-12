@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS rooms (
 
 -- xep0045_rooms_configurations
 
-CREATE TABLE rooms_config (
+CREATE TABLE IF NOT EXISTS rooms_config (
     room_jid            VARCHAR(512) PRIMARY KEY,
     public              BOOL NOT NULL,
     persistent          BOOL NOT NULL,
@@ -278,7 +278,7 @@ CREATE TABLE rooms_config (
 
 -- xep0045_rooms_mapping_user_to_occupant_jids
 
-CREATE TABLE rooms_users (
+CREATE TABLE IF NOT EXISTS rooms_users (
     room_jid     VARCHAR(512) NOT NULL,
     user_jid     VARCHAR(512) NOT NULL,
     occupant_jid VARCHAR(512) NOT NULL,
@@ -291,7 +291,7 @@ CREATE TABLE rooms_users (
 
 -- xep0045_rooms_invited_users
 
-CREATE TABLE rooms_invites (
+CREATE TABLE IF NOT EXISTS rooms_invites (
     room_jid VARCHAR(512) NOT NULL,
     user_jid VARCHAR(512) NOT NULL,
 

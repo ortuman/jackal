@@ -55,7 +55,7 @@ func (r *mySQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 			Values(values...).
 			Suffix("ON DUPLICATE KEY UPDATE public = ?, persistent = ?, pwd_protected = ?, "+
 				"password = ?, open = ?, moderated = ?, allow_invites = ?, max_occupants = ?, "+
-				"allow_subj_change = ?, non_anonymous = ?, can_send_pm = ?, can_get_member_list",
+				"allow_subj_change = ?, non_anonymous = ?, can_send_pm = ?, can_get_member_list = ?",
 				rc.Public, rc.Persistent, rc.PwdProtected, rc.Password, rc.Open, rc.Moderated,
 				rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange, rc.NonAnonymous, rc.GetSendPM(),
 				rc.WhoCanGetMemberList())

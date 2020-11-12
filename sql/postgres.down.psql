@@ -3,6 +3,12 @@
  * See the LICENSE file for more information.
  */
 
+DROP TABLE IF EXISTS rooms_invites;
+DROP TABLE IF EXISTS rooms_users;
+DROP TABLE IF EXISTS rooms_config;
+DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS resources;
+DROP TABLE IF EXISTS occupants;
 DROP TABLE IF EXISTS pubsub_items;
 DROP TABLE IF EXISTS pubsub_subscriptions;
 DROP TABLE IF EXISTS pubsub_affiliations;
