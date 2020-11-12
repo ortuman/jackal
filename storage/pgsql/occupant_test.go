@@ -98,7 +98,8 @@ func TestPgSQLStorageFetchOccupant(t *testing.T) {
 			AddRow(j.String(), j.ToBareJID().String(), "owner", "moderator"))
 	mock.ExpectQuery("SELECT (.+) FROM resources (.+)").
 		WithArgs(j.String()).
-		WillReturnRows(sqlmock.NewRows(resColumns))
+		WillReturnRows(sqlmock.NewRows(resColumns).
+			AddRow(j.String(), "phone"))
 	mock.ExpectCommit()
 	occ, err := s.FetchOccupant(context.Background(), j)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -108,7 +109,8 @@ func TestPgSQLStorageFetchOccupant(t *testing.T) {
 	require.Equal(t, occ.BareJID.String(), j.ToBareJID().String())
 	require.Equal(t, occ.GetAffiliation(), "owner")
 	require.Equal(t, occ.GetRole(), "moderator")
-	require.Len(t, occ.GetAllResources(), 0)
+	require.Len(t, occ.GetAllResources(), 1)
+	require.Equal(t, occ.GetAllResources()[0], "phone")
 
 	s, mock = newOccupantMock()
 	mock.ExpectBegin()

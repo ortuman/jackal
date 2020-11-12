@@ -128,13 +128,13 @@ func (o *pgSQLOccupant) FetchOccupant(ctx context.Context, occJID *jid.JID) (*mu
 	}
 
 	// fetch resources
-	resources, err := sq.Select("resource").
+	resources, err := sq.Select("occupant_jid", "resource").
 		From("resources").
 		Where(sq.Eq{"occupant_jid": occJID.String()}).
 		RunWith(tx).QueryContext(ctx)
 	for resources.Next() {
-		var res string
-		if err := resources.Scan(&res); err != nil {
+		var dummy, res string
+		if err := resources.Scan(&dummy, &res); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
