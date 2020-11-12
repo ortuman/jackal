@@ -49,13 +49,11 @@ func (o *mySQLOccupant) UpsertOccupant(ctx context.Context, occ *mucmodel.Occupa
 				Columns(columns...).
 				Values(values...).
 				Suffix("ON DUPLICATE KEY UPDATE resource = ?", res)
-
 			_, err = q.RunWith(tx).ExecContext(ctx)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
 	})
 }
@@ -129,13 +127,13 @@ func (o *mySQLOccupant) FetchOccupant(ctx context.Context, occJID *jid.JID) (*mu
 	}
 
 	// fetch resources
-	resources, err := sq.Select("resource").
+	resources, err := sq.Select("occupant_jid", "resource").
 		From("resources").
 		Where(sq.Eq{"occupant_jid": occJID.String()}).
 		RunWith(tx).QueryContext(ctx)
 	for resources.Next() {
-		var res string
-		if err := resources.Scan(&res); err != nil {
+		var dummy, res string
+		if err := resources.Scan(&dummy, &res); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}

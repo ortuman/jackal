@@ -245,3 +245,58 @@ CREATE TABLE IF NOT EXISTS resources (
     INDEX i_occupant_jid(occupant_jid)
 
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_rooms
+
+CREATE TABLE IF NOT EXISTS rooms (
+    room_jid         VARCHAR(512) PRIMARY KEY,
+    name             TEXT,
+    description      TEXT,
+    subject          TEXT,
+    language         TEXT,
+    locked           BOOL NOT NULL,
+    occupants_online INT NOT NULL
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_rooms_configurations
+
+CREATE TABLE rooms_config (
+    room_jid            VARCHAR(512) PRIMARY KEY,
+    public              BOOL NOT NULL,
+    persistent          BOOL NOT NULL,
+    pwd_protected       BOOL NOT NULL,
+    password            TEXT NOT NULL,
+    open                BOOL NOT NULL,
+    moderated           BOOL NOT NULL,
+    allow_invites       BOOL NOT NULL,
+    max_occupants       INT NOT NULL,
+    allow_subj_change   BOOL NOT NULL,
+    non_anonymous       BOOL NOT NULL,
+    can_send_pm         VARCHAR(32) NOT NULL,
+    can_get_member_list VARCHAR(32) NOT NULL
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_rooms_mapping_user_to_occupant_jids
+
+CREATE TABLE rooms_users (
+    room_jid     VARCHAR(512) NOT NULL,
+    user_jid     VARCHAR(512) NOT NULL,
+    occupant_jid VARCHAR(512) NOT NULL,
+
+    PRIMARY KEY(room_jid, user_jid)
+
+    INDEX i_room_jid_users(room_jid)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- xep0045_rooms_invited_users
+
+CREATE TABLE rooms_invites (
+    room_jid VARCHAR(512) NOT NULL,
+    user_jid VARCHAR(512) NOT NULL,
+
+    PRIMARY KEY(room_jid, user_jid)
+
+    INDEX i_room_jid_invites(room_jid)
+
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

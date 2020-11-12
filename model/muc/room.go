@@ -147,7 +147,7 @@ func (r *Room) AddOccupant(o *Occupant) {
 		r.DeleteInvite(o.BareJID.ToBareJID())
 	}
 
-	err := r.mapUserToOccupantJID(o.BareJID, o.OccupantJID)
+	err := r.MapUserToOccupantJID(o.BareJID, o.OccupantJID)
 	if err != nil {
 		log.Error(err)
 		return
@@ -177,7 +177,7 @@ func (r *Room) SetDefaultRole(o *Occupant) {
 	}
 }
 
-func (r *Room) mapUserToOccupantJID(userJID, occJID *jid.JID) error {
+func (r *Room) MapUserToOccupantJID(userJID, occJID *jid.JID) error {
 	if !occJID.IsFullWithUser() {
 		return fmt.Errorf("Occupant JID %s is not valid", occJID.String())
 	}
@@ -206,6 +206,14 @@ func (r *Room) GetAllOccupantJIDs() []jid.JID {
 	res := make([]jid.JID, 0, len(r.userToOccupant))
 	for _, occJID := range r.userToOccupant {
 		res = append(res, occJID)
+	}
+	return res
+}
+
+func (r *Room) GetAllUserJIDs() []jid.JID {
+	res := make([]jid.JID, 0, len(r.userToOccupant))
+	for usrJID, _ := range r.userToOccupant {
+		res = append(res, usrJID)
 	}
 	return res
 }
@@ -250,4 +258,20 @@ func (r *Room) IsFull() bool {
 
 func (r *Room) IsEmpty() bool {
 	return r.occupantsOnline == 0
+}
+
+func (r *Room) GetOccupantsOnlineCount() int {
+	return r.occupantsOnline
+}
+
+func (r *Room) SetOccupantsOnlineCount(i int) {
+	r.occupantsOnline = i
+}
+
+func (r *Room) GetAllInvitedUsers() []string {
+	res := make([]string, 0, len(r.invitedUsers))
+	for jid := range r.invitedUsers {
+		res = append(res, jid.String())
+	}
+	return res
 }
