@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 

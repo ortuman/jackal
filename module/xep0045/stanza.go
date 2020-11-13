@@ -1,9 +1,12 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
 package xep0045
+
+// this elements.go file provides the helper funtions to manipulate the xmpp elements as specified
+// in the xep-0045 specification
 
 import (
 	"github.com/google/uuid"
@@ -68,6 +71,7 @@ func getRoomMemberRemovedElement(actor, reason string) *xmpp.Element {
 	return presence
 }
 
+// getReasonFromItem returns text from the reason element if specified, otherwise empty string
 func getReasonFromItem(item xmpp.XElement) string {
 	reasonEl := item.Elements().Child("reason")
 	reason := ""
@@ -108,6 +112,7 @@ func getKickedOccupantElement(actor, reason string, selfNotifying bool) *xmpp.El
 	return pEl
 }
 
+// getInvitedUserJID returns jid as specified in the "to" attribute of the invite element
 func getInvitedUserJID(message *xmpp.Message) *jid.JID {
 	invJIDStr := message.Elements().Child("x").Elements().Child("invite").Attributes().Get("to")
 	invJID, _ := jid.NewWithString(invJIDStr, true)
@@ -283,7 +288,6 @@ func newOccupantItem(o *mucmodel.Occupant, includeUserJID, includeNick bool) *xm
 	return i
 }
 
-// TODO probably delete this function, not required
 func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID,
 	includeNick bool) *xmpp.Element {
 	item := newOccupantItem(o, includeUserJID, includeNick)
@@ -292,6 +296,7 @@ func newOccupantAffiliationRoleElement(o *mucmodel.Occupant, includeUserJID,
 	return e
 }
 
+// addResourceToBareJID joins bareJID and resource into a full jid
 func addResourceToBareJID(bareJID *jid.JID, resource string) *jid.JID {
 	res, _ := jid.NewWithString(bareJID.String()+"/"+resource, true)
 	return res

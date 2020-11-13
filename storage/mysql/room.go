@@ -49,7 +49,7 @@ func (r *mySQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 			"can_send_pm", "can_get_member_list"}
 		values = []interface{}{room.RoomJID.String(), rc.Public, rc.Persistent, rc.PwdProtected,
 			rc.Password, rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange,
-			rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList()}
+			rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList()}
 		q = sq.Insert("rooms_config").
 			Columns(columns...).
 			Values(values...).
@@ -57,7 +57,7 @@ func (r *mySQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 				"password = ?, open = ?, moderated = ?, allow_invites = ?, max_occupants = ?, "+
 				"allow_subj_change = ?, non_anonymous = ?, can_send_pm = ?, can_get_member_list = ?",
 				rc.Public, rc.Persistent, rc.PwdProtected, rc.Password, rc.Open, rc.Moderated,
-				rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange, rc.NonAnonymous, rc.GetSendPM(),
+				rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange, rc.NonAnonymous, rc.WhoCanSendPM(),
 				rc.WhoCanGetMemberList())
 		_, err = q.RunWith(tx).ExecContext(ctx)
 		if err != nil {
@@ -97,32 +97,14 @@ func (r *mySQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 }
 
 func (r *mySQLRoom) FetchRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.Room, error) {
-	room := &mucmodel.Room{}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// fetch room data
-	q := sq.Select("room_jid", "name", "description", "subject", "language", "locked",
-		"occupants_online").
-		From("rooms").
-		Where(sq.Eq{"room_jid": roomJID.String()})
-	var onlineCnt int
-	var roomJIDStr string
-	err = q.RunWith(tx).
-		QueryRowContext(ctx).
-		Scan(&roomJIDStr, &room.Name, &room.Desc, &room.Subject, &room.Language, &room.Locked,
-			&onlineCnt)
+	room, err := fetchRoomData(ctx, tx, roomJID)
 	switch err {
 	case nil:
-		rJID, err := jid.NewWithString(roomJIDStr, false)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		room.RoomJID = rJID
-		room.SetOccupantsOnlineCount(onlineCnt)
 	case sql.ErrNoRows:
 		_ = tx.Commit()
 		return nil, nil
@@ -131,15 +113,74 @@ func (r *mySQLRoom) FetchRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.
 		return nil, err
 	}
 
-	// fetchRoomConfig
+	err = fetchRoomConfig(ctx, tx, room, roomJID)
+	switch err {
+	case nil:
+	case sql.ErrNoRows:
+		_ = tx.Commit()
+		return nil, nil
+	default:
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	err = fetchRoomUsers(ctx, tx, room, roomJID)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	err = fetchRoomInvites(ctx, tx, room, roomJID)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return room, nil
+}
+
+func fetchRoomData(ctx context.Context, tx *sql.Tx, roomJID *jid.JID) (*mucmodel.Room,
+	error) {
+	room := &mucmodel.Room{}
+	// fetch room data
+	q := sq.Select("room_jid", "name", "description", "subject", "language", "locked",
+		"occupants_online").
+		From("rooms").
+		Where(sq.Eq{"room_jid": roomJID.String()})
+	var onlineCnt int
+	var roomJIDStr string
+	err := q.RunWith(tx).
+		QueryRowContext(ctx).
+		Scan(&roomJIDStr, &room.Name, &room.Desc, &room.Subject, &room.Language, &room.Locked,
+			&onlineCnt)
+	switch err {
+	case nil:
+		rJID, err := jid.NewWithString(roomJIDStr, false)
+		if err != nil {
+			return nil, err
+		}
+		room.RoomJID = rJID
+		room.SetOccupantsOnlineCount(onlineCnt)
+	default:
+		return nil, err
+	}
+	return room, nil
+}
+
+func fetchRoomConfig(ctx context.Context, tx *sql.Tx, room *mucmodel.Room,
+	roomJID *jid.JID) error {
 	rc := &mucmodel.RoomConfig{}
-	q = sq.Select("room_jid", "public", "persistent", "pwd_protected", "password", "open",
+	q := sq.Select("room_jid", "public", "persistent", "pwd_protected", "password", "open",
 		"moderated", "allow_invites", "max_occupants", "allow_subj_change", "non_anonymous",
 		"can_send_pm", "can_get_member_list").
 		From("rooms_config").
 		Where(sq.Eq{"room_jid": roomJID.String()})
 	var dummy, sendPM, membList string
-	err = q.RunWith(tx).
+	err := q.RunWith(tx).
 		QueryRowContext(ctx).
 		Scan(&dummy, &rc.Public, &rc.Persistent, &rc.PwdProtected, &rc.Password, &rc.Open,
 			&rc.Moderated, &rc.AllowInvites, &rc.MaxOccCnt, &rc.AllowSubjChange, &rc.NonAnonymous,
@@ -148,79 +189,73 @@ func (r *mySQLRoom) FetchRoom(ctx context.Context, roomJID *jid.JID) (*mucmodel.
 	case nil:
 		err = rc.SetWhoCanSendPM(sendPM)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		err = rc.SetWhoCanGetMemberList(membList)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
-	case sql.ErrNoRows:
-		_ = tx.Commit()
-		return nil, nil
 	default:
-		_ = tx.Rollback()
-		return nil, err
+		return err
 	}
 	room.Config = rc
+	return nil
+}
 
-	// fetch users in the room
+func fetchRoomUsers(ctx context.Context, tx *sql.Tx, room *mucmodel.Room,
+	roomJID *jid.JID) error {
 	res, err := sq.Select("room_jid", "user_jid", "occupant_jid").
 		From("rooms_users").
 		Where(sq.Eq{"room_jid": roomJID.String()}).
 		RunWith(tx).QueryContext(ctx)
+	if err != nil {
+		return err
+	}
 	for res.Next() {
-		var uJIDStr, oJIDStr string
+		var dummy, uJIDStr, oJIDStr string
 		if err := res.Scan(&dummy, &uJIDStr, &oJIDStr); err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		uJID, err := jid.NewWithString(uJIDStr, false)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		oJID, err := jid.NewWithString(oJIDStr, false)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		err = room.MapUserToOccupantJID(uJID, oJID)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 	}
+	return nil
+}
 
-	// fetch invited users
+func fetchRoomInvites(ctx context.Context, tx *sql.Tx, room *mucmodel.Room,
+	roomJID *jid.JID) error {
 	resInv, err := sq.Select("room_jid", "user_jid").
 		From("rooms_invites").
 		Where(sq.Eq{"room_jid": roomJID.String()}).
 		RunWith(tx).QueryContext(ctx)
+	if err != nil {
+		return err
+	}
 	for resInv.Next() {
-		var uJIDStr string
+		var dummy, uJIDStr string
 		if err := resInv.Scan(&dummy, &uJIDStr); err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		uJID, err := jid.NewWithString(uJIDStr, false)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 		err = room.InviteUser(uJID)
 		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-	return room, nil
+	return nil
 }
 
 func (r *mySQLRoom) DeleteRoom(ctx context.Context, roomJID *jid.JID) error {

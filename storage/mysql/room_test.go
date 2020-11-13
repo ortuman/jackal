@@ -33,9 +33,9 @@ func TestMySQLStorageInsertRoom(t *testing.T) {
 	mock.ExpectExec("INSERT INTO rooms_config (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(room.RoomJID.String(), rc.Public, rc.Persistent, rc.PwdProtected,
 			rc.Password, rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange,
-			rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList(), rc.Public, rc.Persistent,
+			rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList(), rc.Public, rc.Persistent,
 			rc.PwdProtected, rc.Password, rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt,
-			rc.AllowSubjChange, rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList()).
+			rc.AllowSubjChange, rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO rooms_invites (.+) ON DUPLICATE KEY UPDATE (.+)").
 		WithArgs(room.RoomJID.String(), invitedUser, invitedUser).
@@ -97,7 +97,7 @@ func TestMySQLStorageFetchRoom(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows(rcColumns).
 			AddRow(room.RoomJID.String(), rc.Public, rc.Persistent, rc.PwdProtected, rc.Password,
 				rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange,
-				rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList()))
+				rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList()))
 	mock.ExpectQuery("SELECT (.+) FROM rooms_users (.+)").
 		WithArgs(room.RoomJID.String()).
 		WillReturnRows(sqlmock.NewRows(usersColumns).

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// implemented muc namespaces
 	mucNamespace           = "http://jabber.org/protocol/muc"
 	mucNamespaceUser       = "http://jabber.org/protocol/muc#user"
 	mucNamespaceOwner      = "http://jabber.org/protocol/muc#owner"
@@ -23,6 +24,7 @@ const (
 	mucNamespaceStableID   = "http://jabber.org/protocol/muc#stable_id"
 	mucNamespaceRoomConfig = "http://jabber.org/protocol/muc#roomconfig"
 
+	// implemented muc room types
 	mucHidden        = "muc_hidden"
 	mucPublic        = "muc_public"
 	mucMembersOnly   = "muc_membersonly"
@@ -39,11 +41,14 @@ const (
 	mucUserItem = "x-roomuser-item"
 )
 
-type discoInfoProvider struct {
+// discoMucProvider represents a service discovery instance for the muc service
+type discoMucProvider struct {
 	service *Muc
 }
 
+// setupDiscoService adds muc discovery items to the xep0030, and registers discoMucProvider
 func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
+	// registering disco item for discovering a muc service
 	item := xep0030.Item{
 		Jid:  cfg.MucHost,
 		Name: cfg.Name,
@@ -51,13 +56,14 @@ func setupDiscoService(cfg *Config, disco *xep0030.DiscoInfo, mucService *Muc) {
 	disco.RegisterServerItem(item)
 	disco.RegisterServerFeature(mucNamespace)
 
-	provider := &discoInfoProvider{
+	// registering the discoInfoProvider
+	provider := &discoMucProvider{
 		service: mucService,
 	}
 	disco.RegisterProvider(cfg.MucHost, provider)
 }
 
-func (p *discoInfoProvider) Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []xep0030.Identity {
+func (p *discoMucProvider) Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []xep0030.Identity {
 	var identities []xep0030.Identity
 	if toJID != nil && toJID.Node() != "" {
 		room := p.getRoom(ctx, toJID)
@@ -82,7 +88,7 @@ func (p *discoInfoProvider) Identities(ctx context.Context, toJID, fromJID *jid.
 	return identities
 }
 
-func (p *discoInfoProvider) Features(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
+func (p *discoMucProvider) Features(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Feature, *xmpp.StanzaError) {
 	if toJID != nil && toJID.Node() != "" {
 		return p.roomFeatures(ctx, toJID)
 	} else {
@@ -90,11 +96,11 @@ func (p *discoInfoProvider) Features(ctx context.Context, toJID, _ *jid.JID, _ s
 	}
 }
 
-func (p *discoInfoProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
+func (p *discoMucProvider) Form(_ context.Context, _, _ *jid.JID, _ string) (*xep0004.DataForm, *xmpp.StanzaError) {
 	return nil, nil
 }
 
-func (p *discoInfoProvider) Items(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoMucProvider) Items(ctx context.Context, toJID, _ *jid.JID, _ string) ([]xep0030.Item, *xmpp.StanzaError) {
 	if toJID != nil && toJID.Node() != "" {
 		return p.roomOccupants(ctx, toJID)
 	} else {
@@ -102,7 +108,7 @@ func (p *discoInfoProvider) Items(ctx context.Context, toJID, _ *jid.JID, _ stri
 	}
 }
 
-func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoMucProvider) roomOccupants(ctx context.Context, roomJID *jid.JID) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 	room := p.getRoom(ctx, roomJID)
 	if room == nil {
@@ -116,7 +122,7 @@ func (p *discoInfoProvider) roomOccupants(ctx context.Context, roomJID *jid.JID)
 	return items, nil
 }
 
-func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
+func (p *discoMucProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *xmpp.StanzaError) {
 	var items []xep0030.Item
 	p.service.mu.Lock()
 	for _, r := range p.service.allRooms {
@@ -136,7 +142,7 @@ func (p *discoInfoProvider) publicRooms(ctx context.Context) ([]xep0030.Item, *x
 	return items, nil
 }
 
-func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) ([]xep0030.Feature, *xmpp.StanzaError) {
+func (p *discoMucProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) ([]xep0030.Feature, *xmpp.StanzaError) {
 	room := p.getRoom(ctx, roomJID)
 	if room == nil {
 		return nil, xmpp.ErrItemNotFound
@@ -147,7 +153,7 @@ func (p *discoInfoProvider) roomFeatures(ctx context.Context, roomJID *jid.JID) 
 	return features, nil
 }
 
-func (p *discoInfoProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
+func (p *discoMucProvider) getRoom(ctx context.Context, roomJID *jid.JID) *mucmodel.Room {
 	r, err := p.service.repRoom.FetchRoom(ctx, roomJID)
 	if err != nil {
 		return nil

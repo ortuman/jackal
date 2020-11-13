@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -18,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// isVoiceRequest returns true if the message stanza is asking for a voice
 func isVoiceRequest(message *xmpp.Message) bool {
 	x := message.Elements().Child("x")
 	if x == nil || x.Namespace() != "jabber:x:data" || x.Type() != "submit" {
@@ -26,6 +27,7 @@ func isVoiceRequest(message *xmpp.Message) bool {
 	return true
 }
 
+// voiceRequest handles the request for voice sent in the message stanza
 func (s *Muc) voiceRequest(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)
 	if errStanza != nil {
@@ -33,11 +35,13 @@ func (s *Muc) voiceRequest(ctx context.Context, room *mucmodel.Room, message *xm
 		return
 	}
 
+	// asking for voice makes sense only in a moderated room
 	if !room.Config.Moderated {
 		_ = s.router.Route(ctx, message.NotAllowedError())
 		return
 	}
 
+	// visitor is asking for a voice, moderator is approving it
 	switch {
 	case occ.IsVisitor():
 		errStanza = s.askForVoice(ctx, room, occ, message)
@@ -52,6 +56,7 @@ func (s *Muc) voiceRequest(ctx context.Context, room *mucmodel.Room, message *xm
 	}
 }
 
+// askForVoice sends the voice request form to the visitor who requested it
 func (s *Muc) askForVoice(ctx context.Context, room *mucmodel.Room, visitor *mucmodel.Occupant,
 	message *xmpp.Message) xmpp.Stanza {
 	formEl := message.Elements().Child("x")
@@ -77,6 +82,7 @@ func (s *Muc) askForVoice(ctx context.Context, room *mucmodel.Room, visitor *muc
 	return nil
 }
 
+// approveVoiceRequest processes the moderator's form submission of the voice request
 func (s *Muc) approveVoiceRequest(ctx context.Context, room *mucmodel.Room,
 	message *xmpp.Message) xmpp.Stanza {
 	formEl := message.Elements().Child("x")
@@ -155,6 +161,7 @@ func (s *Muc) approveVoice(ctx context.Context, room *mucmodel.Room, userJIDStr,
 	return o, nil
 }
 
+// changeSubject handles the message stanza that is changing the room subject
 func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	occ, errStanza := s.getOccupantFromStanza(ctx, room, message)
 	if errStanza != nil {
@@ -170,12 +177,15 @@ func (s *Muc) changeSubject(ctx context.Context, room *mucmodel.Room, message *x
 		_ = s.router.Route(ctx, message.ForbiddenError())
 		return
 	}
+
 	subjectEl := xmpp.NewElementName("subject").SetText(newSubject)
 	msgEl := xmpp.NewElementName("message").SetType("groupchat").SetID(uuid.New().String())
 	msgEl.AppendElement(subjectEl)
+
 	s.sendMessageToRoom(ctx, room, occ.OccupantJID, msgEl)
 }
 
+// isDeclineInvitation returns true if the message stanza is declining invitation to a room
 func isDeclineInvitation(message *xmpp.Message) bool {
 	x := message.Elements().Child("x")
 	if x == nil || x.Namespace() != mucNamespaceUser {
@@ -188,6 +198,7 @@ func isDeclineInvitation(message *xmpp.Message) bool {
 	return true
 }
 
+// declineInvitation handles the message stanza declining invite to a room
 func (s *Muc) declineInvitation(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	if !room.UserIsInvited(message.FromJID().ToBareJID()) {
 		_ = s.router.Route(ctx, message.ForbiddenError())
@@ -201,6 +212,7 @@ func (s *Muc) declineInvitation(ctx context.Context, room *mucmodel.Room, messag
 	_ = s.router.Route(ctx, msg)
 }
 
+// isInvite returns true if message is a room invite mediated by a room
 func isInvite(message *xmpp.Message) bool {
 	x := message.Elements().Child("x")
 	if x == nil || x.Namespace() != mucNamespaceUser {
@@ -213,6 +225,7 @@ func isInvite(message *xmpp.Message) bool {
 	return true
 }
 
+// inviteUser handles the message stanza inviting a user to the room
 func (s *Muc) inviteUser(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	if errStanza := s.userHasVoice(ctx, room, message.FromJID(), message); errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
@@ -250,6 +263,7 @@ func (s *Muc) forwardInviteToUser(ctx context.Context, room *mucmodel.Room, mess
 	_ = s.router.Route(ctx, msg)
 }
 
+// sendPm handles the message stanza which is of the type "chat"
 func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	// private message should be addressed to a particular occupant, not the whole room
 	if !message.ToJID().IsFull() {
@@ -279,6 +293,7 @@ func (s *Muc) sendPM(ctx context.Context, room *mucmodel.Room, message *xmpp.Mes
 	s.messageOccupant(ctx, message.ToJID(), &senderJID, msgBody, message.ID(), true)
 }
 
+// userCanPMOccupant returns true if user has permission to send the pm, error stanza otherwise
 func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID, occJID *jid.JID, message *xmpp.Message) xmpp.Stanza {
 	// check if user can send private messages in this room
 	usrOccJID, ok := room.GetOccupantJID(usrJID.ToBareJID())
@@ -309,6 +324,7 @@ func (s *Muc) userCanPMOccupant(ctx context.Context, room *mucmodel.Room, usrJID
 	return nil
 }
 
+// messageEveryone handles the message stanza of the type "groupchat"
 func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message *xmpp.Message) {
 	// the groupmessage should be addressed to the whole room, not a particular occupant
 	if message.ToJID().IsFull() {
@@ -339,6 +355,7 @@ func (s *Muc) messageEveryone(ctx context.Context, room *mucmodel.Room, message 
 	}
 }
 
+// userHasVoice returns null if user is allowed to speak in the room, error stanza otherwise
 func (s *Muc) userHasVoice(ctx context.Context, room *mucmodel.Room, userJID *jid.JID,
 	message *xmpp.Message) xmpp.Stanza {
 	// user has to be occupant of the room

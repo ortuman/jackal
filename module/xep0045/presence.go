@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -15,6 +15,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// exitRoom handles the presence stanza of the type unavailable
 func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
 	o, errStanza := s.getOccupantFromStanza(ctx, room, presence)
 	if errStanza != nil {
@@ -22,6 +23,7 @@ func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.
 		return
 	}
 
+	// check if the user is trying to make himself unavailable, or someone else
 	if o.OccupantJID.String() != presence.ToJID().String() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
@@ -37,6 +39,7 @@ func (s *Muc) exitRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.
 }
 
 func (s *Muc) occupantExitsRoom(ctx context.Context, room *mucmodel.Room, o *mucmodel.Occupant) {
+	// if the user has no affiliation then its occupant JID is not reserved
 	if o.HasNoAffiliation() {
 		s.repOccupant.DeleteOccupant(ctx, o.OccupantJID)
 	} else {
@@ -72,6 +75,7 @@ func (s *Muc) sendOccExitedRoom(ctx context.Context, occExiting *mucmodel.Occupa
 	return nil
 }
 
+// isChangingStatus returns true if the presence is updating the occupant's status
 func isChangingStatus(presence *xmpp.Presence) bool {
 	status := presence.Elements().Child("status")
 	show := presence.Elements().Child("show")
@@ -88,6 +92,7 @@ func (s *Muc) changeStatus(ctx context.Context, room *mucmodel.Room, presence *x
 		return
 	}
 
+	// user can only change his own status
 	if o.OccupantJID.String() != presence.ToJID().String() {
 		_ = s.router.Route(ctx, presence.ForbiddenError())
 		return
@@ -132,6 +137,7 @@ func (s *Muc) sendStatus(ctx context.Context, room *mucmodel.Room, sender *mucmo
 	return nil
 }
 
+// changeNickname processes presence that is changing the sender's nickname in the room
 func (s *Muc) changeNickname(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
 	if errStanza := s.newNickIsAvailable(ctx, presence); errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
@@ -200,6 +206,7 @@ func (s *Muc) newNickIsAvailable(ctx context.Context, presence *xmpp.Presence) x
 	return nil
 }
 
+// isPresenceToEnterRoom returns true if presence is for entering a room (or creating a new one)
 func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
 	if presence.Type() != "" {
 		return false
@@ -211,6 +218,7 @@ func isPresenceToEnterRoom(presence *xmpp.Presence) bool {
 	return true
 }
 
+// enterRoom puts the sender into an existing room or makes him an owner of a new room
 func (s *Muc) enterRoom(ctx context.Context, room *mucmodel.Room, presence *xmpp.Presence) {
 	if room == nil {
 		err := s.newRoomRequest(ctx, room, presence)

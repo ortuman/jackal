@@ -76,68 +76,27 @@ func (o *mySQLOccupant) DeleteOccupant(ctx context.Context, occJID *jid.JID) err
 
 func (o *mySQLOccupant) FetchOccupant(ctx context.Context, occJID *jid.JID) (*mucmodel.Occupant,
 	error) {
-	var occ *mucmodel.Occupant
 	tx, err := o.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// fetch occupant data (except for resources)
-	q := sq.Select("occupant_jid", "bare_jid", "affiliation", "role").
-		From("occupants").
-		Where(sq.Eq{"occupant_jid": occJID.String()})
-
-	var occJIDStr, bareJIDStr, affiliation, role string
-	err = q.RunWith(tx).
-		QueryRowContext(ctx).
-		Scan(&occJIDStr, &bareJIDStr, &affiliation, &role)
+	occ, err := fetchOccupantData(ctx, tx, occJID)
 	switch err {
 	case nil:
-		occJIDdb, err := jid.NewWithString(occJIDStr, false)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		bareJID, err := jid.NewWithString(bareJIDStr, false)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		occ, err = mucmodel.NewOccupant(occJIDdb, bareJID)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		err = occ.SetAffiliation(affiliation)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		err = occ.SetRole(role)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
 	case sql.ErrNoRows:
 		_ = tx.Commit()
 		return nil, nil
 	default:
 		_ = tx.Rollback()
 		return nil, err
+
 	}
 
-	// fetch resources
-	resources, err := sq.Select("occupant_jid", "resource").
-		From("resources").
-		Where(sq.Eq{"occupant_jid": occJID.String()}).
-		RunWith(tx).QueryContext(ctx)
-	for resources.Next() {
-		var dummy, res string
-		if err := resources.Scan(&dummy, &res); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		occ.AddResource(res)
+	err = fetchOccupantResources(ctx, tx, occ, occJID)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
 
 	err = tx.Commit()
@@ -145,6 +104,64 @@ func (o *mySQLOccupant) FetchOccupant(ctx context.Context, occJID *jid.JID) (*mu
 		return nil, err
 	}
 	return occ, nil
+}
+
+func fetchOccupantData(ctx context.Context, tx *sql.Tx, occJID *jid.JID) (*mucmodel.Occupant,
+	error) {
+	var occ *mucmodel.Occupant
+	q := sq.Select("occupant_jid", "bare_jid", "affiliation", "role").
+		From("occupants").
+		Where(sq.Eq{"occupant_jid": occJID.String()})
+
+	var occJIDStr, bareJIDStr, affiliation, role string
+	err := q.RunWith(tx).
+		QueryRowContext(ctx).
+		Scan(&occJIDStr, &bareJIDStr, &affiliation, &role)
+	switch err {
+	case nil:
+		occJIDdb, err := jid.NewWithString(occJIDStr, false)
+		if err != nil {
+			return nil, err
+		}
+		bareJID, err := jid.NewWithString(bareJIDStr, false)
+		if err != nil {
+			return nil, err
+		}
+		occ, err = mucmodel.NewOccupant(occJIDdb, bareJID)
+		if err != nil {
+			return nil, err
+		}
+		err = occ.SetAffiliation(affiliation)
+		if err != nil {
+			return nil, err
+		}
+		err = occ.SetRole(role)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, err
+	}
+	return occ, nil
+}
+
+func fetchOccupantResources(ctx context.Context, tx *sql.Tx, occ *mucmodel.Occupant,
+	occJID *jid.JID) error {
+	resources, err := sq.Select("occupant_jid", "resource").
+		From("resources").
+		Where(sq.Eq{"occupant_jid": occJID.String()}).
+		RunWith(tx).QueryContext(ctx)
+	if err != nil {
+		return err
+	}
+	for resources.Next() {
+		var dummy, res string
+		if err = resources.Scan(&dummy, &res); err != nil {
+			return err
+		}
+		occ.AddResource(res)
+	}
+	return nil
 }
 
 func (o *mySQLOccupant) OccupantExists(ctx context.Context, occJID *jid.JID) (bool, error) {

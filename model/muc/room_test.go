@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -14,47 +14,66 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestModelRoom(t *testing.T) {
-	rJID, _ := jid.NewWithString("room@conference.jackal.im", true)
-	rc := RoomConfig{
-		Open: true,
-	}
-	jFull, _ := jid.NewWithString("ortuman@jackal.im/laptop", true)
-	o := &Occupant{
-		BareJID:     jFull.ToBareJID(),
-		OccupantJID: jFull,
-	}
-	userMap := make(map[jid.JID]jid.JID)
-	userMap[*o.BareJID.ToBareJID()] = *jFull
-
-	invitedMap := make(map[jid.JID]bool)
-	invitedMap[*o.BareJID.ToBareJID()] = true
-
-	r1 := Room{
-		Config:         &rc,
-		Name:           "Test Room",
-		RoomJID:        rJID,
-		Desc:           "Test Description",
-		Subject:        "Test Subject",
-		Language:       "eng",
-		userToOccupant: userMap,
-		invitedUsers:   invitedMap,
-		Locked:         true,
-	}
-
+func TestRoom_Bytes(t *testing.T) {
+	r1 := getTestRoom()
+	r1.userToOccupant = make(map[jid.JID]jid.JID)
+	r1.invitedUsers = make(map[jid.JID]bool)
 	buf := new(bytes.Buffer)
 	require.Nil(t, r1.ToBytes(buf))
 
-	r2 := Room{}
+	r2 := &Room{}
 	require.Nil(t, r2.FromBytes(buf))
 	assert.EqualValues(t, r1, r2)
+}
 
-	newJID, _ := jid.NewWithString("milos@jackal.im/laptop", true)
-	o2 := &Occupant{
-		BareJID:     newJID.ToBareJID(),
-		OccupantJID: newJID,
+func TestRoom_Occupants(t *testing.T) {
+	room := getTestRoom()
+	userJID, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
+	occJID, _ := jid.NewWithString("testroom@conference.jackal.im/nick", true)
+	o := &Occupant{
+		OccupantJID: occJID,
+		BareJID:     userJID.ToBareJID(),
+		affiliation: "member",
 	}
-	require.Equal(t, len(r2.userToOccupant), 1)
-	r2.AddOccupant(o2)
-	require.Equal(t, len(r2.userToOccupant), 2)
+
+	room.AddOccupant(o)
+	require.True(t, o.IsParticipant())
+	require.True(t, room.UserIsInRoom(userJID.ToBareJID()))
+	require.Equal(t, room.occupantsOnline, 1)
+	resJID, inRoom := room.GetOccupantJID(userJID.ToBareJID())
+	require.Equal(t, resJID.String(), occJID.String())
+	require.True(t, inRoom)
+	room.OccupantLeft(o)
+	require.True(t, room.UserIsInRoom(userJID.ToBareJID()))
+	require.Equal(t, room.occupantsOnline, 0)
+}
+
+func TestRoom_Invites(t *testing.T) {
+	room := getTestRoom()
+	userJID, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
+
+	require.False(t, room.UserIsInvited(userJID.ToBareJID()))
+	err := room.InviteUser(userJID.ToBareJID())
+	require.Nil(t, err)
+	require.True(t, room.UserIsInvited(userJID.ToBareJID()))
+	room.DeleteInvite(userJID.ToBareJID())
+	require.False(t, room.UserIsInvited(userJID.ToBareJID()))
+}
+
+func getTestRoom() *Room {
+	rc := RoomConfig{
+		Public:       true,
+		Persistent:   true,
+		PwdProtected: false,
+		Open:         true,
+		Moderated:    true,
+	}
+	j, _ := jid.NewWithString("testroom@conference.jackal.im", true)
+	return &Room{
+		Name:    "testRoom",
+		RoomJID: j,
+		Desc:    "Room for Testing",
+		Config:  &rc,
+		Locked:  false,
+	}
 }

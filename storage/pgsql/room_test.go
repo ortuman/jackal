@@ -32,7 +32,7 @@ func TestPgSQLStorageInsertRoom(t *testing.T) {
 	mock.ExpectExec("INSERT INTO rooms_config (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(room.RoomJID.String(), rc.Public, rc.Persistent, rc.PwdProtected,
 			rc.Password, rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange,
-			rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList()).
+			rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO rooms_invites (.+) ON CONFLICT (.+) DO UPDATE SET (.+)").
 		WithArgs(room.RoomJID.String(), invitedUser).
@@ -93,7 +93,7 @@ func TestPgSQLStorageFetchRoom(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows(rcColumns).
 			AddRow(room.RoomJID.String(), rc.Public, rc.Persistent, rc.PwdProtected, rc.Password,
 				rc.Open, rc.Moderated, rc.AllowInvites, rc.MaxOccCnt, rc.AllowSubjChange,
-				rc.NonAnonymous, rc.GetSendPM(), rc.WhoCanGetMemberList()))
+				rc.NonAnonymous, rc.WhoCanSendPM(), rc.WhoCanGetMemberList()))
 	mock.ExpectQuery("SELECT (.+) FROM rooms_users (.+)").
 		WithArgs(room.RoomJID.String()).
 		WillReturnRows(sqlmock.NewRows(usersColumns).

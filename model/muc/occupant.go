@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -27,6 +27,7 @@ const (
 	none        = "none"
 )
 
+// Occupant represents a single user in a MUC room (XEP-0045)
 type Occupant struct {
 	OccupantJID *jid.JID
 	BareJID     *jid.JID
@@ -105,6 +106,7 @@ func NewOccupantFromBytes(buf *bytes.Buffer) (*Occupant, error) {
 	return o, nil
 }
 
+// NewOccupant creates and return a new Occupant element given its occupant and user JIDs
 func NewOccupant(occJID, userJID *jid.JID) (*Occupant, error) {
 	if !occJID.IsFullWithUser() {
 		return nil, fmt.Errorf("Occupant JID %s is not valid", occJID.String())
@@ -184,6 +186,7 @@ func (o *Occupant) IsOutcast() bool {
 	return o.affiliation == outcast
 }
 
+// GetAllResources returns the list of resources that user accessed this occupant with
 func (o *Occupant) GetAllResources() []string {
 	resources := make([]string, 0, len(o.resources))
 	for r := range o.resources {
@@ -207,40 +210,39 @@ func (o *Occupant) DeleteResource(s string) {
 
 func (o *Occupant) HasHigherAffiliation(k *Occupant) bool {
 	switch {
-	case o.IsOwner() :
+	case o.IsOwner():
 		return true
-	case o.IsAdmin() :
+	case o.IsAdmin():
 		return !k.IsOwner()
-	case o.IsMember() :
+	case o.IsMember():
 		return !k.IsOwner() && !k.IsAdmin()
-	case o.HasNoAffiliation() :
+	case o.HasNoAffiliation():
 		return k.HasNoAffiliation()
 	}
 	return false
 }
 
 func (o *Occupant) CanChangeRole(target *Occupant, role string) bool {
-	if o.IsOwner() {
-		return true
-	}
-
 	switch role {
 	case none:
-		return o.IsModerator() && o.HasHigherAffiliation(target)
+		return o.IsModerator() && o.HasHigherAffiliation(target) || o.IsOwner()
 	case visitor:
-		return o.IsModerator() && target.IsParticipant()
+		return o.IsModerator() && target.IsParticipant() || o.IsOwner()
 	case participant:
-		return o.IsModerator() && target.IsVisitor() || o.IsAdmin() && !target.IsOwner()
+		return o.IsModerator() && target.IsVisitor() || o.IsAdmin() && !target.IsOwner() ||
+			o.IsOwner()
 	case moderator:
-		return o.IsAdmin()
+		return o.IsAdmin() || o.IsOwner()
 	}
 	return false
 }
 
 func (o *Occupant) CanChangeAffiliation(target *Occupant, affiliation string) bool {
+	// not allowed to change your own affiliation
 	if o.OccupantJID.String() == target.OccupantJID.String() {
 		return false
 	}
+	// only admins and owners can change affiliations
 	if !o.IsAdmin() && !o.IsOwner() {
 		return false
 	}

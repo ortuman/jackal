@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// configuration instructions for a locked room
 	initialRoomConfigInstructions = `
 Your room has been created!
 To accept the default configuration, click OK. To
@@ -24,8 +25,10 @@ select a different configuration, please complete
 this form.
 `
 
+	// configuration instructions for an unlocked room
 	roomConfigInstructions = "Complete this form to modify the configuration of your room"
 
+	// fields that can be configured in a room configuration form
 	ConfigName         = "muc#roomconfig_roomname"
 	ConfigDesc         = "muc#roomconfig_roomdesc"
 	ConfigAllowPM      = "muc#roomconfig_allowpm"
@@ -40,10 +43,10 @@ this form.
 	ConfigPersistent   = "muc#roomconfig_persistentroom"
 	ConfigPublic       = "muc#roomconfig_publicroom"
 	ConfigPwd          = "muc#roomconfig_roomsecret"
-	ConfigPubSub       = "muc#roomconfig_pubsub"
 	ConfigWhoIs        = "muc#roomconfig_whois"
 )
 
+// newRoom saves a new room into storage with given owner information
 func (s *Muc) newRoom(ctx context.Context, ownerFullJID, ownerOccJID *jid.JID) error {
 	owner, err := s.createOwner(ctx, ownerFullJID, ownerOccJID)
 	if err != nil {
@@ -78,6 +81,7 @@ func (s *Muc) createRoom(ctx context.Context, roomJID *jid.JID, owner *mucmodel.
 	return r, nil
 }
 
+// AddOccupantToRoom updates the room in storage with a given occupant
 func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupant *mucmodel.Occupant) error {
 	room.AddOccupant(occupant)
 
@@ -89,6 +93,7 @@ func (s *Muc) AddOccupantToRoom(ctx context.Context, room *mucmodel.Room, occupa
 	return s.repRoom.UpsertRoom(ctx, room)
 }
 
+// getRoomConfigForm returns the configuration form for the room
 func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep0004.DataForm {
 	form := &xep0004.DataForm{
 		Type:         xep0004.Form,
@@ -180,7 +185,7 @@ func (s *Muc) getRoomConfigForm(ctx context.Context, room *mucmodel.Room) *xep00
 		Var:    ConfigAllowPM,
 		Type:   xep0004.ListSingle,
 		Label:  "Roles that May Send Private Messages",
-		Values: []string{room.Config.GetSendPM()},
+		Values: []string{room.Config.WhoCanSendPM()},
 		Options: []xep0004.Option{
 			xep0004.Option{Label: "Anyone", Value: mucmodel.All},
 			xep0004.Option{Label: "Moderators Only", Value: mucmodel.Moderators},
@@ -225,6 +230,7 @@ func getRoomConfigInstructions(room *mucmodel.Room) (instr string) {
 	return
 }
 
+// updateRoomWithForm updates the room information with the information submitted in the form
 func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form *xep0004.DataForm) (updatedAnonimity, ok bool) {
 	ok = true
 	for _, field := range form.Fields {
@@ -326,6 +332,7 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 		ok = false
 	}
 
+	// if the configForm was valid, update the room
 	if ok {
 		room.Locked = false
 		s.repRoom.UpsertRoom(ctx, room)
@@ -341,6 +348,7 @@ func boolToStr(value bool) string {
 	return "0"
 }
 
+// sendPresenceToRoom sends the presence element to every occupant in the room
 func (s *Muc) sendPresenceToRoom(ctx context.Context, r *mucmodel.Room, from *jid.JID,
 	presenceEl *xmpp.Element) error {
 	for _, occJID := range r.GetAllOccupantJIDs() {
@@ -356,6 +364,7 @@ func (s *Muc) sendPresenceToRoom(ctx context.Context, r *mucmodel.Room, from *ji
 	return nil
 }
 
+// sendPresenceToRoom sends the message element to every occupant in the room
 func (s *Muc) sendMessageToRoom(ctx context.Context, r *mucmodel.Room, from *jid.JID,
 	messageEl *xmpp.Element) error {
 	for _, occJID := range r.GetAllOccupantJIDs() {
@@ -371,6 +380,7 @@ func (s *Muc) sendMessageToRoom(ctx context.Context, r *mucmodel.Room, from *jid
 	return nil
 }
 
+// deleteRoom deletes all occupants in the room, and then the room itself
 func (s *Muc) deleteRoom(ctx context.Context, r *mucmodel.Room) {
 	for _, occJID := range r.GetAllOccupantJIDs() {
 		s.repOccupant.DeleteOccupant(ctx, &occJID)

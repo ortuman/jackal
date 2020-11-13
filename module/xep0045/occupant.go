@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -17,22 +17,11 @@ import (
 )
 
 const (
+	// instructions in the voice request form
 	voiceRequestInstructions = "To approve this voice request select the checkbox and click OK."
 )
 
-func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
-	o, err := s.newOccupant(ctx, userJID, occJID)
-	if err != nil {
-		return nil, err
-	}
-	o.SetAffiliation("owner")
-	err = s.repOccupant.UpsertOccupant(ctx, o)
-	if err != nil {
-		return nil, err
-	}
-	return o, nil
-}
-
+// newOccupant takes the full user JID and occupant JID and creates a room occupant
 func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
 	// check if the occupant already exists
 	o, err := s.repOccupant.FetchOccupant(ctx, occJID)
@@ -40,11 +29,13 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	case err != nil:
 		return nil, err
 	case o == nil:
+		// if the occupant with this occJID does not exist, create it
 		o, err = mucmodel.NewOccupant(occJID, userJID.ToBareJID())
 		if err != nil {
 			return nil, err
 		}
 	case userJID.ToBareJID().String() != o.BareJID.String():
+		// user with the given userJID is trying to use occJID of another user
 		return nil, fmt.Errorf("xep0045: Can't use another user's occupant nick")
 	}
 
@@ -62,6 +53,21 @@ func (s *Muc) newOccupant(ctx context.Context, userJID, occJID *jid.JID) (*mucmo
 	return o, nil
 }
 
+// createOwner returns a room occupant with the owner affiliation
+func (s *Muc) createOwner(ctx context.Context, userJID, occJID *jid.JID) (*mucmodel.Occupant, error) {
+	o, err := s.newOccupant(ctx, userJID, occJID)
+	if err != nil {
+		return nil, err
+	}
+	o.SetAffiliation("owner")
+	err = s.repOccupant.UpsertOccupant(ctx, o)
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
+// getOccupantFromStanza takes xmpp stanza and returns the room occupant associated with the sender
 func (s *Muc) getOccupantFromStanza(ctx context.Context, room *mucmodel.Room,
 	stanza xmpp.Stanza) (*mucmodel.Occupant, xmpp.Stanza) {
 	occJID, ok := room.GetOccupantJID(stanza.FromJID().ToBareJID())
@@ -77,6 +83,7 @@ func (s *Muc) getOccupantFromStanza(ctx context.Context, room *mucmodel.Room,
 	return occ, nil
 }
 
+// getOwnerFromIQ takes iq stanza and returns occupant instance if the sender is an owner
 func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
 	iq *xmpp.IQ) (*mucmodel.Occupant, xmpp.Stanza) {
 	occ, errStanza := s.getOccupantFromStanza(ctx, room, iq)
@@ -91,6 +98,7 @@ func (s *Muc) getOwnerFromIQ(ctx context.Context, room *mucmodel.Room,
 	return occ, nil
 }
 
+// getOccupantsByRole returns a slice of the occupants with the given role in the room
 func (s *Muc) getOccupantsByRole(ctx context.Context, room *mucmodel.Room,
 	sender *mucmodel.Occupant, role string) ([]*mucmodel.Occupant, error) {
 	if !sender.IsModerator() {
@@ -106,6 +114,7 @@ func (s *Muc) getOccupantsByRole(ctx context.Context, room *mucmodel.Room,
 	return res, nil
 }
 
+// getOccupantsByRole returns a slice of the occupants with the given affiliation in the room
 func (s *Muc) getOccupantsByAffiliation(ctx context.Context, room *mucmodel.Room,
 	sender *mucmodel.Occupant, aff string) ([]*mucmodel.Occupant, error) {
 	switch aff {
@@ -131,6 +140,7 @@ func (s *Muc) getOccupantsByAffiliation(ctx context.Context, room *mucmodel.Room
 	return res, nil
 }
 
+// sendPresenceToOccupant sends the given presence element to every resource the occupant uses
 func (s *Muc) sendPresenceToOccupant(ctx context.Context, o *mucmodel.Occupant,
 	from *jid.JID, presenceEl *xmpp.Element) error {
 	for _, resource := range o.GetAllResources() {
@@ -147,6 +157,7 @@ func (s *Muc) sendPresenceToOccupant(ctx context.Context, o *mucmodel.Occupant,
 	return nil
 }
 
+// sendPresenceToOccupant sends the given message element to every resource the occupant uses
 func (s *Muc) sendMessageToOccupant(ctx context.Context, o *mucmodel.Occupant,
 	from *jid.JID, messageEl *xmpp.Element) error {
 	for _, resource := range o.GetAllResources() {

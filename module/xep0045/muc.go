@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -19,6 +19,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// Muc represents the multi user chat service as defined in xep-0045
 type Muc struct {
 	cfg         *Config
 	disco       *xep0030.DiscoInfo
@@ -45,6 +46,7 @@ func New(cfg *Config, disco *xep0030.DiscoInfo, router router.Router, repRoom re
 		router:      router,
 		runQueue:    runqueue.New("muc"),
 	}
+	// add the muc service hostname to the hosts
 	router.Hosts().AddMucHostname(cfg.MucHost)
 	if disco != nil {
 		setupDiscoService(cfg, disco, s)
@@ -52,11 +54,12 @@ func New(cfg *Config, disco *xep0030.DiscoInfo, router router.Router, repRoom re
 	return s
 }
 
-// accepting all IQs aimed at the conference service
+// MatchesIQ is accepting all IQs aimed at the conference service
 func (s *Muc) MatchesIQ(iq *xmpp.IQ) bool {
 	return s.router.Hosts().IsConferenceHost(iq.ToJID().Domain())
 }
 
+// ProcessIQ queues the iq stanzas directed to the conference service
 func (s *Muc) ProcessIQ(ctx context.Context, iq *xmpp.IQ) {
 	s.runQueue.Run(func() {
 		s.processIQ(ctx, iq)
@@ -119,6 +122,7 @@ func (s *Muc) processIQAdmin(ctx context.Context, room *mucmodel.Room, iq *xmpp.
 	}
 }
 
+// ProcessPresence queues the presence stanzas directed to the conference service
 func (s *Muc) ProcessPresence(ctx context.Context, presence *xmpp.Presence) {
 	s.runQueue.Run(func() {
 		s.processPresence(ctx, presence)
@@ -142,11 +146,11 @@ func (s *Muc) processPresence(ctx context.Context, presence *xmpp.Presence) {
 	case presence.IsUnavailable():
 		s.exitRoom(ctx, room, presence)
 	default:
-		// TODO try to define this case, and have a default be BadRequestError
 		s.changeNickname(ctx, room, presence)
 	}
 }
 
+// ProcessMessage queues the message stanzas directed to the conference service
 func (s *Muc) ProcessMessage(ctx context.Context, message *xmpp.Message) {
 	s.runQueue.Run(func() {
 		s.processMessage(ctx, message)
@@ -188,6 +192,7 @@ func (s *Muc) GetMucHostname() string {
 	return s.cfg.MucHost
 }
 
+// GetDefaultRoomConfig returns the room configuration as specified in the server's yaml
 func (s *Muc) GetDefaultRoomConfig() *mucmodel.RoomConfig {
 	conf := s.cfg.RoomDefaults
 	return &conf

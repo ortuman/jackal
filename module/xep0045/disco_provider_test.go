@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -79,7 +79,7 @@ func TestXEP0045_DiscoItems(t *testing.T) {
 	require.Equal(t, i[0].Jid, "publicroom@conference.jackal.im/nick")
 }
 
-func setupDiscoTest() *discoInfoProvider {
+func setupDiscoTest() *discoMucProvider {
 	mock := setupMockMucService()
 	mock.muc.cfg.Name = "Chat Service"
 
@@ -109,5 +109,5 @@ func setupDiscoTest() *discoInfoProvider {
 	mock.muc.allRooms = append(mock.muc.allRooms, *hiddenRoom.RoomJID)
 	mock.muc.allRooms = append(mock.muc.allRooms, *publicRoom.RoomJID)
 
-	return &discoInfoProvider{service: mock.muc}
+	return &discoMucProvider{service: mock.muc}
 }

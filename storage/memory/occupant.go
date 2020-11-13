@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -22,7 +22,7 @@ func NewOccupant() *Occupant {
 	return &Occupant{memoryStorage: newStorage()}
 }
 
-// UpsertOccupant inserts a new occupant entity into storage, or updates it in case it's been previously inserted.
+// UpsertOccupant inserts a new occupant entity into storage, or updates the existing occupant.
 func (m *Occupant) UpsertOccupant(_ context.Context, occ *mucmodel.Occupant) error {
 	return m.saveEntity(occKey(occ.OccupantJID), occ)
 }

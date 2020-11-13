@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -29,7 +29,7 @@ send_pm: "moderators"
 can_get_member_list: ""
 `
 
-func TestModelRoomConfig(t *testing.T) {
+func TestRoomConfig_Bytes(t *testing.T) {
 	rc1 := RoomConfig{
 		Public:           true,
 		Persistent:       true,
@@ -54,7 +54,7 @@ func TestModelRoomConfig(t *testing.T) {
 	assert.EqualValues(t, rc1, rc2)
 }
 
-func TestUnmarshalYamlRoomConfig(t *testing.T) {
+func TestRoomConfig_UnmarshalYaml(t *testing.T) {
 	badCfg := `public: "public"`
 	cfg := &RoomConfig{}
 	err := yaml.Unmarshal([]byte(badCfg), &cfg)
@@ -68,16 +68,16 @@ func TestUnmarshalYamlRoomConfig(t *testing.T) {
 	require.False(t, cfg.PwdProtected)
 	require.False(t, cfg.Open)
 	require.True(t, cfg.NonAnonymous)
-	require.Equal(t, cfg.GetSendPM(), Moderators)
+	require.Equal(t, cfg.WhoCanSendPM(), Moderators)
 }
 
-func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
+func TestRoomConfig_PrivateFields(t *testing.T) {
 	cfg := &RoomConfig{}
 	err := cfg.SetWhoCanSendPM("fail")
 	require.NotNil(t, err)
 	err = cfg.SetWhoCanSendPM(Moderators)
 	require.Nil(t, err)
-	require.Equal(t, Moderators, cfg.GetSendPM())
+	require.Equal(t, Moderators, cfg.WhoCanSendPM())
 
 	err = cfg.SetWhoCanGetMemberList("fail")
 	require.NotNil(t, err)
@@ -86,14 +86,18 @@ func TestSettingPrivateFieldsRoomConfig(t *testing.T) {
 	require.Equal(t, None, cfg.WhoCanGetMemberList())
 }
 
-func TestOccupantPermissionsRoomConfig(t *testing.T) {
+func TestRoomConfig_OccupantPermissions(t *testing.T) {
 	cfg := &RoomConfig{
 		canSendPM:        "",
 		canGetMemberList: "moderators",
+		NonAnonymous:     false,
+		AllowSubjChange:  true,
 	}
 	o := &Occupant{
 		role: moderator,
 	}
 	require.False(t, cfg.OccupantCanSendPM(o))
 	require.True(t, cfg.OccupantCanGetMemberList(o))
+	require.True(t, cfg.OccupantCanDiscoverRealJID(o))
+	require.True(t, cfg.OccupantCanChangeSubject(o))
 }

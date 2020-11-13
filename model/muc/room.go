@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -10,18 +10,19 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/ortuman/jackal/xmpp/jid"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// Room represents a Multi-User Chat Room entity (XEP-0045)
 type Room struct {
-	Config            *RoomConfig
-	RoomJID           *jid.JID
-	Name              string
-	Desc              string
-	Subject           string
-	Language          string
-	Locked            bool
+	Config   *RoomConfig
+	RoomJID  *jid.JID
+	Name     string
+	Desc     string
+	Subject  string
+	Language string
+	Locked   bool
 	//mapping user bare jid to the occupant JID
 	userToOccupant map[jid.JID]jid.JID
 	// a set of invited users' bare JIDs who haven't accepted the invitation yet
@@ -161,6 +162,7 @@ func (r *Room) AddOccupant(o *Occupant) {
 }
 
 func (r *Room) OccupantLeft(o *Occupant) {
+	// occupants with no affiliation are deleted once they leave the room
 	if o.HasNoAffiliation() {
 		delete(r.userToOccupant, *o.BareJID)
 	}
@@ -177,6 +179,7 @@ func (r *Room) SetDefaultRole(o *Occupant) {
 	}
 }
 
+// MapUserToOccupantJID adds the mapping between bare user JID and occupant JID
 func (r *Room) MapUserToOccupantJID(userJID, occJID *jid.JID) error {
 	if !occJID.IsFullWithUser() {
 		return fmt.Errorf("Occupant JID %s is not valid", occJID.String())
@@ -185,10 +188,12 @@ func (r *Room) MapUserToOccupantJID(userJID, occJID *jid.JID) error {
 		return fmt.Errorf("User JID %s is not a bare JID", userJID.String())
 	}
 
+	// if this is the first occupant in the room, create the map
 	if r.userToOccupant == nil {
 		r.userToOccupant = make(map[jid.JID]jid.JID)
 	}
 
+	// only one occupant JID per user is allowed
 	_, found := r.userToOccupant[*userJID]
 	if !found {
 		r.userToOccupant[*userJID] = *occJID
@@ -197,11 +202,18 @@ func (r *Room) MapUserToOccupantJID(userJID, occJID *jid.JID) error {
 	return nil
 }
 
+func (r *Room) UserIsInRoom(userJID *jid.JID) bool {
+	_, found := r.userToOccupant[*userJID]
+	return found
+}
+
+// GetOccupantJID returns the occupant JID of the user with provided user JID
 func (r *Room) GetOccupantJID(userJID *jid.JID) (jid.JID, bool) {
 	occJID, found := r.userToOccupant[*userJID]
 	return occJID, found
 }
 
+// GetAllOccupantJIDs returns slice of occupant JIDs of everyone in the room
 func (r *Room) GetAllOccupantJIDs() []jid.JID {
 	res := make([]jid.JID, 0, len(r.userToOccupant))
 	for _, occJID := range r.userToOccupant {
@@ -210,6 +222,7 @@ func (r *Room) GetAllOccupantJIDs() []jid.JID {
 	return res
 }
 
+// GetAllOccupantJIDs returns slice of user JIDs of everyone in the room
 func (r *Room) GetAllUserJIDs() []jid.JID {
 	res := make([]jid.JID, 0, len(r.userToOccupant))
 	for usrJID, _ := range r.userToOccupant {
@@ -218,11 +231,7 @@ func (r *Room) GetAllUserJIDs() []jid.JID {
 	return res
 }
 
-func (r *Room) UserIsInRoom(userJID *jid.JID) bool {
-	_, found := r.userToOccupant[*userJID]
-	return found
-}
-
+// InviteUser adds the user JID into the set of invited users
 func (r *Room) InviteUser(userJID *jid.JID) error {
 	if !userJID.IsBare() {
 		return fmt.Errorf("User JID %s is not a bare JID", userJID)
@@ -237,6 +246,7 @@ func (r *Room) InviteUser(userJID *jid.JID) error {
 }
 
 func (r *Room) UserIsInvited(userJID *jid.JID) bool {
+	// if no one is invited, return false
 	if r.invitedUsers == nil {
 		return false
 	}
@@ -250,6 +260,7 @@ func (r *Room) DeleteInvite(userJID *jid.JID) {
 }
 
 func (r *Room) IsFull() bool {
+	// MaxOccCnt = -1 used for the rooms with unlimited capacity
 	if r.Config.MaxOccCnt == -1 {
 		return false
 	}
@@ -268,6 +279,7 @@ func (r *Room) SetOccupantsOnlineCount(i int) {
 	r.occupantsOnline = i
 }
 
+// GetAllInvitedUsers returns slice of user JIDs of everyone invited into the room
 func (r *Room) GetAllInvitedUsers() []string {
 	res := make([]string, 0, len(r.invitedUsers))
 	for jid := range r.invitedUsers {

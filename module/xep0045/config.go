@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -14,6 +14,7 @@ const (
 	defaultServiceName = "Chatroom Server"
 )
 
+// Config represents XEP-0045 Multi-User Chat configuration
 type Config struct {
 	MucHost      string
 	Name         string

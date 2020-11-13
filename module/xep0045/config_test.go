@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -28,6 +28,7 @@ host: conference.localhost
 name: "Test Server"
 `
 
+// mockMucService is a mock structure for testing xep-0045
 type mockMucService struct {
 	muc          *Muc
 	room         *mucmodel.Room
@@ -54,6 +55,7 @@ func TestXEP0045_MucConfig(t *testing.T) {
 	require.NotNil(t, cfg.RoomDefaults)
 }
 
+// setupTest returns router and container instance used to setup the mock muc service
 func setupTest(domain string) (router.Router, repository.Container) {
 	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
 	rep, _ := memorystorage.New()
@@ -65,12 +67,14 @@ func setupTest(domain string) (router.Router, repository.Container) {
 	return r, rep
 }
 
+// setupMockMucService returns a Muc Service instance, without any rooms
 func setupMockMucService() *mockMucService {
 	r, rep := setupTest("jackal.im")
 	muc := New(&Config{MucHost: "conference.jackal.im"}, nil, r, rep.Room(), rep.Occupant())
 	return &mockMucService{muc: muc}
 }
 
+// setupTestRoom returns a Muc Service instance, with a room
 func setupTestRoom() *mockMucService {
 	mock := setupMockMucService()
 	roomConfig := &mucmodel.RoomConfig{
@@ -87,6 +91,7 @@ func setupTestRoom() *mockMucService {
 	return mock
 }
 
+// setupTestRoomAndOwner returns a Muc Service instance, with a room and the room owner
 func setupTestRoomAndOwner() *mockMucService {
 	mock := setupTestRoom()
 
@@ -108,6 +113,7 @@ func setupTestRoomAndOwner() *mockMucService {
 	return mock
 }
 
+// setupTestRoomAndOwnerAndOcc returns a Muc Service instance, with a room, owner and an occupant
 func setupTestRoomAndOwnerAndOcc() *mockMucService {
 	mock := setupTestRoomAndOwner()
 

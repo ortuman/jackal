@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -22,7 +22,7 @@ func NewRoom() *Room {
 	return &Room{memoryStorage: newStorage()}
 }
 
-// UpsertRoom inserts a new room entity into storage, or updates it in case it's been previously inserted.
+// UpsertRoom inserts a new room entity into storage, or updates the existing room.
 func (m *Room) UpsertRoom(_ context.Context, room *mucmodel.Room) error {
 	return m.saveEntity(roomKey(room.RoomJID), room)
 }

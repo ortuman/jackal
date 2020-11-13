@@ -158,7 +158,6 @@ func TestXEP0045_CreateInstantRoom(t *testing.T) {
 	mock.room.Locked = true
 	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
-	// instant room create iq
 	x := xmpp.NewElementNamespace("x", xep0004.FormNamespace)
 	x.SetAttribute("type", "submit")
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner).AppendElement(x)
@@ -166,15 +165,12 @@ func TestXEP0045_CreateInstantRoom(t *testing.T) {
 	iq.AppendElement(query)
 	request, _ := xmpp.NewIQFromElement(iq, mock.ownerFullJID, mock.room.RoomJID)
 
-	// sending an instant room request
 	require.True(t, isIQForInstantRoomCreate(request))
 	mock.muc.createInstantRoom(context.Background(), mock.room, request)
 
-	// receive the instant room creation confirmation
 	ack := mock.ownerStm.ReceiveElement()
 	require.Equal(t, ack, request.ResultIQ())
 
-	// the room should be unlocked now
 	updatedRoom, _ := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
 	require.False(t, updatedRoom.Locked)
 }
@@ -184,18 +180,15 @@ func TestXEP0045_SendRoomConfiguration(t *testing.T) {
 	mock.room.Locked = true
 	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
-	// request configuration form
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
 	iq := xmpp.NewElementName("iq").SetID("create1").SetType("get")
 	iq.AppendElement(query)
 	request, _ := xmpp.NewIQFromElement(iq, mock.ownerFullJID, mock.room.RoomJID)
 
-	// sending an instant room request
 	require.True(t, mock.muc.MatchesIQ(request))
 	require.True(t, isIQForRoomConfigRequest(request))
 	mock.muc.sendRoomConfiguration(context.Background(), mock.room, request)
 
-	// receive the room configuration form
 	ack := mock.ownerStm.ReceiveElement()
 	require.Equal(t, ack.From(), mock.room.RoomJID.String())
 	require.Equal(t, ack.To(), mock.ownerFullJID.String())
@@ -220,14 +213,12 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 	mock.room.Locked = true
 	mock.muc.repRoom.UpsertRoom(nil, mock.room)
 
-	// these fields changed in the configuration
 	require.True(t, mock.room.Locked)
 	require.NotEqual(t, mock.room.Name, "Configured Room")
 	require.NotEqual(t, mock.room.Config.MaxOccCnt, 23)
 	require.False(t, mock.room.Config.Public)
 	require.False(t, mock.room.Config.NonAnonymous)
 
-	// get the room configuration form and change the fields
 	configForm := mock.muc.getRoomConfigForm(context.Background(), mock.room)
 	require.NotNil(t, configForm)
 	configForm.Type = xep0004.Submit
@@ -244,22 +235,18 @@ func TestXEP0045_ProcessRoomConfiguration(t *testing.T) {
 		}
 	}
 
-	// generate the form submission IQ stanza
 	query := xmpp.NewElementNamespace("query", mucNamespaceOwner)
 	query.AppendElement(configForm.Element())
 	e := xmpp.NewElementName("iq").SetID("create").SetType("set").AppendElement(query)
 	stanza, err := xmpp.NewIQFromElement(e, mock.ownerFullJID, mock.room.RoomJID)
 	require.Nil(t, err)
 
-	// sending the configuration form
 	require.True(t, isIQForRoomConfigSubmission(stanza))
 	mock.muc.processRoomConfiguration(context.Background(), mock.room, stanza)
 
-	// receive the response
 	ack := mock.ownerStm.ReceiveElement()
 	assert.EqualValues(t, ack.Type(), "groupchat")
 
-	// confirm the fields have changed
 	confRoom, err := mock.muc.repRoom.FetchRoom(nil, mock.room.RoomJID)
 	require.Nil(t, err)
 	require.False(t, confRoom.Locked)

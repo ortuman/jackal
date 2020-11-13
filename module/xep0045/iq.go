@@ -16,6 +16,7 @@ import (
 	"github.com/ortuman/jackal/xmpp/jid"
 )
 
+// isIQForRoomDestroy returns true if iq stanza is for destroying a room
 func isIQForRoomDestroy(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
 		return false
@@ -28,6 +29,7 @@ func isIQForRoomDestroy(iq *xmpp.IQ) bool {
 	return true
 }
 
+// destroyRoom proceses the iq aimed at destroying an existing muc room
 func (s *Muc) destroyRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	owner, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
@@ -35,6 +37,7 @@ func (s *Muc) destroyRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ)
 		return
 	}
 
+	// notify occupants in the room that the room is destroyed
 	err := s.notifyRoomDestroyed(ctx, owner, room, iq)
 	if err != nil {
 		log.Error(err)
@@ -48,13 +51,17 @@ func (s *Muc) destroyRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ)
 
 func (s *Muc) notifyRoomDestroyed(ctx context.Context, owner *mucmodel.Occupant,
 	room *mucmodel.Room, iq *xmpp.IQ) error {
+	// the actor destroying the room is sent to all of the occupants in the item element
 	owner.SetAffiliation("")
 	owner.SetRole("")
+
+	// create the stanza to notify the room
 	itemEl := newOccupantItem(owner, false, false)
 	destroyEl := iq.Elements().Child("query").Elements().Child("destroy")
 	xEl := xmpp.NewElementNamespace("x", mucNamespaceUser)
 	xEl.AppendElement(itemEl).AppendElement(destroyEl)
 	presenceEl := xmpp.NewElementName("presence").SetType("unavailable").AppendElement(xEl)
+
 	for _, occJID := range room.GetAllOccupantJIDs() {
 		o, err := s.repOccupant.FetchOccupant(ctx, &occJID)
 		if err != nil {
@@ -68,6 +75,7 @@ func (s *Muc) notifyRoomDestroyed(ctx context.Context, owner *mucmodel.Occupant,
 	return nil
 }
 
+// modifyOccupantList handles the iq stanzas sent to the muc admin namespace of type set
 func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	sender, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
@@ -77,6 +85,7 @@ func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *x
 
 	query := iq.Elements().Child("query")
 	items := query.Elements().Children("item")
+	// one item per occupant whose privilege is being changed
 	for _, item := range items {
 		err := s.modifyOccupantPrivilege(ctx, room, sender, item)
 		if err != nil {
@@ -88,6 +97,7 @@ func (s *Muc) modifyOccupantList(ctx context.Context, room *mucmodel.Room, iq *x
 	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
+// modifyOccupantPrivilege changes occupants role/affiliation as specified in the item element
 func (s *Muc) modifyOccupantPrivilege(ctx context.Context, room *mucmodel.Room,
 	sender *mucmodel.Occupant, item xmpp.XElement) error {
 	role := item.Attributes().Get("role")
@@ -240,6 +250,7 @@ func (s *Muc) handleUserRemoval(ctx context.Context, room *mucmodel.Room, sender
 	return nil
 }
 
+// getOccupantList handles the iq stanzas sent to the muc admin namespace of type get
 func (s *Muc) getOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	sender, errStanza := s.getOccupantFromStanza(ctx, room, iq)
 	if errStanza != nil {
@@ -247,6 +258,7 @@ func (s *Muc) getOccupantList(ctx context.Context, room *mucmodel.Room, iq *xmpp
 		return
 	}
 
+	// resOccupants is the list of occupants that matches the role/affiliation from iq
 	resOccupants, errStanza := s.getRequestedOccupants(ctx, room, sender, iq)
 	if errStanza != nil {
 		_ = s.router.Route(ctx, errStanza)
@@ -291,6 +303,7 @@ func getFilterFromIQ(iq *xmpp.IQ) string {
 	return item.Attributes().Get("role")
 }
 
+// isIQForInstantRoomCreate returns true if iq stanza is for creating an instant room
 func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
 		return false
@@ -306,6 +319,7 @@ func isIQForInstantRoomCreate(iq *xmpp.IQ) bool {
 	return true
 }
 
+// createInstantRoom unlocks the existing room specified in iq stanza
 func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
 	if errStanza != nil {
@@ -323,6 +337,7 @@ func (s *Muc) createInstantRoom(ctx context.Context, room *mucmodel.Room, iq *xm
 	_ = s.router.Route(ctx, iq.ResultIQ())
 }
 
+// isIQForRoomConfigRequest returns true if iq stanza is for retrieving a room configuration form
 func isIQForRoomConfigRequest(iq *xmpp.IQ) bool {
 	if !iq.IsGet() {
 		return false
@@ -334,6 +349,7 @@ func isIQForRoomConfigRequest(iq *xmpp.IQ) bool {
 	return true
 }
 
+// sendRoomConfiguration returns the room configuration form to the roow owner who requested it
 func (s *Muc) sendRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
 	if errStanza != nil {
@@ -346,6 +362,7 @@ func (s *Muc) sendRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq
 	_ = s.router.Route(ctx, stanza)
 }
 
+// isIQForRoomConfigSubmission returns true if iq stanza is for submitting a room configuration
 func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
 	if !iq.IsSet() {
 		return false
@@ -358,6 +375,7 @@ func isIQForRoomConfigSubmission(iq *xmpp.IQ) bool {
 	return true
 }
 
+// processRoomConfiguration handles the iq modifying the existing's room config
 func (s *Muc) processRoomConfiguration(ctx context.Context, room *mucmodel.Room, iq *xmpp.IQ) {
 	_, errStanza := s.getOwnerFromIQ(ctx, room, iq)
 	if errStanza != nil {

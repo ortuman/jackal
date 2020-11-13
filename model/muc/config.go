@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
+ * Copyright (c) 2019 Miguel Ángel Ortuño.
  * See the LICENSE file for more information.
  */
 
@@ -11,14 +11,14 @@ import (
 	"fmt"
 )
 
+// canSendPM and canGetMemberList values
 const (
-	All          = "all"
-	Participants = "participants"
-	Moderators   = "moderators"
-	Visitors     = "visitors"
-	None         = ""
+	All        = "all"
+	Moderators = "moderators"
+	None       = ""
 )
 
+// RoomConfig represents different room types
 type RoomConfig struct {
 	Public           bool
 	Persistent       bool
@@ -145,7 +145,7 @@ func NewConfigFromBytes(buf *bytes.Buffer) (*RoomConfig, error) {
 	return c, nil
 }
 
-// Getting RoomConfig defaults for the whole service
+// UnmarshalYAML satisfies Unmarshaler interface, sets the default room type for the MUC service
 func (r *RoomConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p := roomConfigProxy{}
 	if err := unmarshal(&p); err != nil {
@@ -181,7 +181,7 @@ func (r *RoomConfig) SetWhoCanSendPM(s string) error {
 	return nil
 }
 
-func (r *RoomConfig) GetSendPM() string {
+func (r *RoomConfig) WhoCanSendPM() string {
 	return r.canSendPM
 }
 
