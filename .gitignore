@@ -41,9 +41,3 @@ vendor/
 
 # Binary 
 jackal
-
-# Configuration file
-config.yml
-
-# TODO temporary just until I understand why it changes so frequently and why so many libraries added to go.mod atm
-go.sum
