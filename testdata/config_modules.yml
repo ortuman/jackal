@@ -45,5 +45,5 @@ mod_muc:
     non_anonymous: true
     occupant_count: -1 # -1 means don't set the limit
     # options for the next ones are "all", "moderators" and ""
-    real_jid_discovery: "all"
+    can_get_member_list: "all"
     send_pm: "all"

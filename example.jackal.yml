@@ -69,7 +69,22 @@ modules:
     send_interval: 60
 
   mod_muc:
-    service: conference.localhost
+    host: conference.jackal.im
+    name: "Chatroom Server"
+    room_defaults:
+      public: true
+      persistent: true
+      password_protected: false
+      open: true
+      moderated: false
+      allow_invites: false
+      allow_subject_change: true
+      enable_logging: true
+      non_anonymous: true
+      occupant_count: -1 # -1 means don't set the limit
+      # options for the next ones are "all", "moderators" and ""
+      can_get_member_list: "all"
+      send_pm: "all"
 
 c2s:
   - id: default
