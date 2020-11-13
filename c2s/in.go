@@ -646,7 +646,7 @@ func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
 }
 
 func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence) {
-	// is the presence stanza directed to the conference service?
+	// is the presence stanza directed to the conference service
 	if s.router.Hosts().IsConferenceHost(presence.ToJID().Domain()) {
 		s.mods.Muc.ProcessPresence(ctx, presence)
 		return
