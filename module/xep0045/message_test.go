@@ -28,9 +28,9 @@ func TestXEP0045_VoiceRequestAndApproval(t *testing.T) {
 		Type: xep0004.Submit,
 	}
 	requestForm.Fields = append(requestForm.Fields, xep0004.Field{
-		Type: xep0004.ListSingle,
-		Var: "muc#role",
-		Label: "Requested role",
+		Type:   xep0004.ListSingle,
+		Var:    "muc#role",
+		Label:  "Requested role",
 		Values: []string{"participant"},
 	})
 	msgEl := xmpp.NewElementName("message").AppendElement(requestForm.Element())

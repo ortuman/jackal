@@ -12,8 +12,8 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPgSQLStorageInsertRoom(t *testing.T) {

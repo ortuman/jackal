@@ -6,8 +6,8 @@
 package xep0045
 
 import (
-	"testing"
 	"context"
+	"testing"
 
 	mucmodel "github.com/ortuman/jackal/model/muc"
 	"github.com/ortuman/jackal/module/xep0004"

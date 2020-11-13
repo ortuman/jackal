@@ -313,7 +313,7 @@ func (s *Muc) updateRoomWithForm(ctx context.Context, room *mucmodel.Room, form 
 				log.Error(err)
 				ok = false
 			}
-			if (room.Config.NonAnonymous != n){
+			if room.Config.NonAnonymous != n {
 				updatedAnonimity = true
 			}
 			room.Config.NonAnonymous = n

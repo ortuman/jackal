@@ -51,8 +51,8 @@ func (r *pgSQLRoom) UpsertRoom(ctx context.Context, room *mucmodel.Room) error {
 		q = sq.Insert("rooms_config").
 			Columns(columns...).
 			Values(values...).
-			Suffix("ON CONFLICT (room_jid) DO UPDATE SET public = $2, persistent = $3, pwd_protected = $4, "+
-				"password = $5, open = $6, moderated = $7, allow_invites = $8, max_occupants = $9, "+
+			Suffix("ON CONFLICT (room_jid) DO UPDATE SET public = $2, persistent = $3, pwd_protected = $4, " +
+				"password = $5, open = $6, moderated = $7, allow_invites = $8, max_occupants = $9, " +
 				"allow_subj_change = $10, non_anonymous = $11, can_send_pm = $12, can_get_member_list = $13")
 		_, err = q.RunWith(tx).ExecContext(ctx)
 		if err != nil {

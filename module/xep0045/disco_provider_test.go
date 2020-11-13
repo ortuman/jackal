@@ -94,9 +94,9 @@ func setupDiscoTest() *discoMucProvider {
 	publicRc := &mucmodel.RoomConfig{Public: true}
 	pJID, _ := jid.New("publicroom", "conference.jackal.im", "", true)
 	publicRoom := mucmodel.Room{
-		Name:           "Public room",
-		Config:         publicRc,
-		RoomJID:        pJID,
+		Name:    "Public room",
+		Config:  publicRc,
+		RoomJID: pJID,
 	}
 	publicRoom.Config.SetWhoCanGetMemberList("all")
 	oJID, _ := jid.New("publicroom", "conference.jackal.im", "nick", true)

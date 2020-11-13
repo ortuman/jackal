@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestXEP0045_CreateOwner(t *testing.T) {

@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module/xep0004"
 	mucmodel "github.com/ortuman/jackal/model/muc"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/xmpp"
 	"github.com/ortuman/jackal/xmpp/jid"
 )
@@ -174,10 +174,10 @@ func (s *Muc) sendMessageToOccupant(ctx context.Context, o *mucmodel.Occupant,
 	return nil
 }
 
-func (s *Muc) getVoiceRequestForm(ctx context.Context, o *mucmodel.Occupant) *xep0004.DataForm{
+func (s *Muc) getVoiceRequestForm(ctx context.Context, o *mucmodel.Occupant) *xep0004.DataForm {
 	form := &xep0004.DataForm{
-		Type: xep0004.Form,
-		Title: "Voice request",
+		Type:         xep0004.Form,
+		Title:        "Voice request",
 		Instructions: voiceRequestInstructions,
 	}
 	form.Fields = append(form.Fields, xep0004.Field{
@@ -188,25 +188,25 @@ func (s *Muc) getVoiceRequestForm(ctx context.Context, o *mucmodel.Occupant) *xe
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    "muc#role",
 		Type:   xep0004.ListSingle,
-		Label: "Requested role",
+		Label:  "Requested role",
 		Values: []string{"participant"},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    "muc#jid",
 		Type:   xep0004.JidSingle,
-		Label: "User ID",
+		Label:  "User ID",
 		Values: []string{o.BareJID.String()},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    "muc#roomnick",
 		Type:   xep0004.TextSingle,
-		Label: "Room nickname",
+		Label:  "Room nickname",
 		Values: []string{o.OccupantJID.Resource()},
 	})
 	form.Fields = append(form.Fields, xep0004.Field{
 		Var:    "muc#request_allow",
 		Type:   xep0004.Boolean,
-		Label: "Grant voice to this person?",
+		Label:  "Grant voice to this person?",
 		Values: []string{"false"},
 	})
 	return form
