@@ -1,104 +1,84 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package module
 
 import (
 	"context"
-	"crypto/tls"
-	"io/ioutil"
 	"testing"
-	"time"
 
-	"github.com/ortuman/jackal/router/host"
-
-	"github.com/google/uuid"
-	c2srouter "github.com/ortuman/jackal/c2s/router"
-	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/storage"
-	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
 )
 
-type fakeModule struct {
-	shutdownCh chan bool
-}
+func TestModules_StartStop(t *testing.T) {
+	// given
+	iqHndMock := &iqHandlerMock{}
+	iqHndMock.StartFunc = func(ctx context.Context) error { return nil }
+	iqHndMock.StopFunc = func(ctx context.Context) error { return nil }
 
-func (m *fakeModule) Shutdown() error {
-	if m.shutdownCh != nil {
-		close(m.shutdownCh)
+	mods := &Modules{
+		iqHandlers: []IQHandler{iqHndMock},
 	}
-	return nil
-}
 
-func TestModules_New(t *testing.T) {
-	mods := setupModules(t)
-	defer func() { _ = mods.Shutdown(context.Background()) }()
+	// when
+	_ = mods.Start(context.Background())
+	_ = mods.Stop(context.Background())
 
-	require.Equal(t, 10, len(mods.all))
+	// then
+	require.Len(t, iqHndMock.StartCalls(), 1)
+	require.Len(t, iqHndMock.StopCalls(), 1)
 }
 
 func TestModules_ProcessIQ(t *testing.T) {
-	mods := setupModules(t)
-	defer func() { _ = mods.Shutdown(context.Background()) }()
-
-	j0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
-	j1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-
-	stm := stream.NewMockC2S(uuid.New().String(), j0)
-	stm.SetPresence(xmpp.NewPresence(j0.ToBareJID(), j0, xmpp.AvailableType))
-
-	mods.router.Bind(context.Background(), stm)
-
-	iqID := uuid.New().String()
-	iq := xmpp.NewIQType(iqID, xmpp.GetType)
-	iq.SetFromJID(j0)
-	iq.SetToJID(j1)
-	mods.ProcessIQ(context.Background(), iq)
-
-	elem := stm.ReceiveElement()
-	require.NotNil(t, elem)
-	require.Equal(t, iqID, elem.ID())
-	require.Equal(t, xmpp.IQName, elem.Name())
-	require.Equal(t, xmpp.ErrorType, elem.Type())
-}
-
-func TestModules_Shutdown(t *testing.T) {
-	mods := setupModules(t)
-
-	var mod fakeModule
-	mod.shutdownCh = make(chan bool)
-
-	mods.all = append(mods.all, &mod)
-	_ = mods.Shutdown(context.Background())
-
-	select {
-	case <-mod.shutdownCh:
-		break
-	case <-time.After(time.Millisecond * 250):
-		require.Fail(t, "modules shutdown timeout")
+	// given
+	iqHndMock := &iqHandlerMock{}
+	iqHndMock.MatchesNamespaceFunc = func(namespace string) bool {
+		return namespace == "urn:xmpp:ping"
 	}
-}
+	iqHndMock.StartFunc = func(ctx context.Context) error { return nil }
+	iqHndMock.StopFunc = func(ctx context.Context) error { return nil }
+	iqHndMock.ProcessIQFunc = func(ctx context.Context, iq *stravaganza.IQ) error {
+		return nil
+	}
 
-func setupModules(t *testing.T) *Modules {
-	var config Config
-	b, err := ioutil.ReadFile("../testdata/config_modules.yml")
-	require.Nil(t, err)
-	err = yaml.Unmarshal(b, &config)
-	require.Nil(t, err)
+	hMock := &hostsMock{}
+	hMock.IsLocalHostFunc = func(domain string) bool { return domain == "jackal.im" }
 
-	hosts, _ := host.New([]host.Config{{Name: "jackal.im", Certificate: tls.Certificate{}}})
+	mods := &Modules{
+		iqHandlers: []IQHandler{iqHndMock},
+		hosts:      hMock,
+	}
 
-	rep, _ := storage.New(&storage.Config{Type: storage.Memory})
-	r, _ := router.New(
-		hosts,
-		c2srouter.New(rep.User(), rep.BlockList()),
-		nil,
-	)
-	return New(&config, r, rep, "alloc-1234")
+	// when
+	_ = mods.Start(context.Background())
+
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, "iq0001").
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/res0001").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithChild(
+			stravaganza.NewBuilder("ping").
+				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
+				Build(),
+		).
+		BuildIQ(false)
+
+	_ = mods.ProcessIQ(context.Background(), iq)
+
+	// then
+	require.Len(t, iqHndMock.MatchesNamespaceCalls(), 1)
+	require.Len(t, iqHndMock.ProcessIQCalls(), 1)
 }

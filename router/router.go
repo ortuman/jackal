@@ -1,66 +1,102 @@
-/*
- * Copyright (c) 2020 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package router
 
 import (
 	"context"
 
-	"github.com/ortuman/jackal/router/host"
-	"github.com/ortuman/jackal/stream"
-	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/ortuman/jackal/host"
+	"github.com/ortuman/jackal/model"
+	"github.com/ortuman/jackal/router/stream"
 )
 
+// Router defines global router interface.
 type Router interface {
-
-	// Hosts returns router hosts container.
-	Hosts() *host.Hosts
 
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza xmpp.Stanza) error
+	Route(ctx context.Context, stanza stravaganza.Stanza) error
 
 	// MustRoute forces stanza routing by ignoring user's blocking list.
-	MustRoute(ctx context.Context, stanza xmpp.Stanza) error
+	MustRoute(ctx context.Context, stanza stravaganza.Stanza) error
 
-	// Bind sets a c2s stream as bound.
-	Bind(ctx context.Context, stm stream.C2S)
+	// C2SRouter returns the underlying C2S router.
+	C2S() C2SRouter
 
-	// Unbind unbinds a previously bound c2s stream.
-	Unbind(ctx context.Context, j *jid.JID)
+	// S2SRouter returns the underlying S2S router.
+	S2S() S2SRouter
 
-	// LocalStream returns the stream associated to a given username and resource.
-	LocalStream(username, resource string) stream.C2S
+	// Start starts global router subsystem.
+	Start(ctx context.Context) error
 
-	// LocalStreams returns all streams associated to a given username.
-	LocalStreams(username string) []stream.C2S
+	// Stop stops global router subsystem.
+	Stop(ctx context.Context) error
 }
 
+// RoutingOptions represents C2S routing options mask.
+type RoutingOptions int8
+
+const (
+	// CheckUserExistence tells whether to check if the recipient user exists.
+	CheckUserExistence = RoutingOptions(1 << 0)
+
+	// ValidateSenderJID tells whether to check if sender is blocked.
+	ValidateSenderJID = RoutingOptions(1 << 1)
+)
+
+// C2SRouter defines C2S router interface.
 type C2SRouter interface {
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error
+	Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) error
 
-	// Bind sets a c2s stream as bound.
-	Bind(stm stream.C2S)
+	// Disconnect performs disconnection over an available resource.
+	Disconnect(ctx context.Context, res *model.Resource, streamerr *streamerror.Error) error
 
-	// Unbind unbinds a previously bound c2s stream.
-	Unbind(username, resource string)
+	// Register registers a new stream.
+	Register(stm stream.C2S) error
 
-	// Stream returns the stream associated to a given username and resource.
-	Stream(username, resource string) stream.C2S
+	// Bind sets a previously registered stream as bounded.
+	Bind(id stream.C2SID) error
 
-	// Streams returns all streams associated to a given username.
-	Streams(username string) []stream.C2S
+	// Unregister unregisters a stream.
+	Unregister(stm stream.C2S) error
+
+	// LocalStream returns local instance stream.
+	LocalStream(username, resource string) stream.C2S
+
+	// Start starts C2S router subsystem.
+	Start(ctx context.Context) error
+
+	// Stop stops C2S router subsystem.
+	Stop(ctx context.Context) error
 }
 
+// S2SRouter defines S2S router interface.
 type S2SRouter interface {
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza xmpp.Stanza, localDomain string) error
+	Route(ctx context.Context, stanza stravaganza.Stanza, senderDomain string) error
+
+	// Start starts S2S router subsystem.
+	Start(ctx context.Context) error
+
+	// Stop stops S2S router subsystem.
+	Stop(ctx context.Context) error
 }
 
 type router struct {
@@ -69,50 +105,58 @@ type router struct {
 	s2s   S2SRouter
 }
 
-func New(hosts *host.Hosts, c2sRouter C2SRouter, s2sRouter S2SRouter) (Router, error) {
-	r := &router{
+// New creates a new router instance given a set of hosts, C2S and S2s routers.
+func New(hosts *host.Hosts, c2sRouter C2SRouter, s2sRouter S2SRouter) Router {
+	return &router{
 		hosts: hosts,
 		c2s:   c2sRouter,
 		s2s:   s2sRouter,
 	}
-	return r, nil
 }
 
-func (r *router) Hosts() *host.Hosts {
-	return r.hosts
+func (r *router) MustRoute(ctx context.Context, stanza stravaganza.Stanza) error {
+	return r.route(ctx, stanza, CheckUserExistence)
 }
 
-func (r *router) MustRoute(ctx context.Context, stanza xmpp.Stanza) error {
-	return r.route(ctx, stanza, false)
+func (r *router) Route(ctx context.Context, stanza stravaganza.Stanza) error {
+	return r.route(ctx, stanza, CheckUserExistence|ValidateSenderJID)
 }
 
-func (r *router) Route(ctx context.Context, stanza xmpp.Stanza) error {
-	return r.route(ctx, stanza, true)
+func (r *router) C2S() C2SRouter {
+	return r.c2s
 }
 
-func (r *router) Bind(ctx context.Context, stm stream.C2S) {
-	r.c2s.Bind(stm)
+func (r *router) S2S() S2SRouter {
+	return r.s2s
 }
 
-func (r *router) Unbind(ctx context.Context, j *jid.JID) {
-	r.c2s.Unbind(j.Node(), j.Resource())
-}
-
-func (r *router) LocalStreams(username string) []stream.C2S {
-	return r.c2s.Streams(username)
-}
-
-func (r *router) LocalStream(username, resource string) stream.C2S {
-	return r.c2s.Stream(username, resource)
-}
-
-func (r *router) route(ctx context.Context, stanza xmpp.Stanza, validateStanza bool) error {
-	toJID := stanza.ToJID()
-	if !r.hosts.IsLocalHost(toJID.Domain()) {
-		if r.s2s == nil {
-			return ErrFailedRemoteConnect
-		}
-		return r.s2s.Route(ctx, stanza, r.hosts.DefaultHostName())
+func (r *router) Start(ctx context.Context) error {
+	if err := r.c2s.Start(ctx); err != nil {
+		return err
 	}
-	return r.c2s.Route(ctx, stanza, validateStanza)
+	if r.s2s == nil {
+		return nil
+	}
+	return r.s2s.Start(ctx)
+}
+
+func (r *router) Stop(ctx context.Context) error {
+	if err := r.c2s.Stop(ctx); err != nil {
+		return err
+	}
+	if r.s2s == nil {
+		return nil
+	}
+	return r.s2s.Stop(ctx)
+}
+
+func (r *router) route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) error {
+	toJID := stanza.ToJID()
+	if r.hosts.IsLocalHost(toJID.Domain()) {
+		return r.c2s.Route(ctx, stanza, routingOpts)
+	}
+	if r.s2s == nil {
+		return ErrRemoteServerNotFound
+	}
+	return r.s2s.Route(ctx, stanza, r.hosts.DefaultHostName())
 }

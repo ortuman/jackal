@@ -1,60 +1,92 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package xep0004
 
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xmpp"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDataForm_FromElement(t *testing.T) {
-	elem := xmpp.NewElementName("x1")
-	_, err := NewFormFromElement(elem)
-	require.NotNil(t, err)
+func TestDataForm_FromElementError(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("x1")
 
-	elem.SetName("x")
-	_, err = NewFormFromElement(elem)
+	// then
+	_, err := NewFormFromElement(eb.Build())
 	require.NotNil(t, err)
+}
 
-	elem.SetNamespace(FormNamespace)
-	_, err = NewFormFromElement(elem)
+func TestDataForm_FromElementMissingNamespace(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("x")
+
+	// then
+	_, err := NewFormFromElement(eb.Build())
 	require.NotNil(t, err)
+}
 
-	elem.SetAttribute("type", Form)
-	_, err = NewFormFromElement(elem)
+func TestDataForm_FromElementSuccess(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("x")
+	eb.WithAttribute(stravaganza.Namespace, FormNamespace)
+	eb.WithAttribute("type", Form)
+
+	// when
+	f, err := NewFormFromElement(eb.Build())
+
+	// then
 	require.Nil(t, err)
+	require.NotNil(t, f)
+}
 
-	titleElem := xmpp.NewElementName("title")
-	titleElem.SetText("A title")
-	instElem := xmpp.NewElementName("instructions")
-	instElem.SetText("A set of instructions")
-	elem.AppendElement(titleElem)
-	elem.AppendElement(instElem)
-	form, _ := NewFormFromElement(elem)
+func TestDataForm_FromElementForm(t *testing.T) {
+	eb := stravaganza.NewBuilder("x")
+	eb.WithAttribute(stravaganza.Namespace, FormNamespace)
+	eb.WithAttribute("type", Form)
+
+	titleB := stravaganza.NewBuilder("title")
+	titleB.WithText("A title")
+	instB := stravaganza.NewBuilder("instructions")
+	instB.WithText("A set of instructions")
+	eb.WithChild(titleB.Build())
+	eb.WithChild(instB.Build())
+
+	form, _ := NewFormFromElement(eb.Build())
+
 	require.NotNil(t, form)
 	require.Equal(t, "A title", form.Title)
 	require.Equal(t, "A set of instructions", form.Instructions)
 
-	fieldElem := xmpp.NewElementName("field")
-	fieldElem.SetAttribute("var", "vn")
-	fieldElem.SetAttribute("type", Boolean)
+	fieldB := stravaganza.NewBuilder("field")
+	fieldB.WithAttribute("var", "vn")
+	fieldB.WithAttribute("type", Boolean)
 
-	reportedElem := xmpp.NewElementName("reported")
-	reportedElem.AppendElement(fieldElem)
-	elem.AppendElement(reportedElem)
+	reportedB := stravaganza.NewBuilder("reported")
+	reportedB.WithChild(fieldB.Build())
+	eb.WithChild(reportedB.Build())
 
-	itemElem := xmpp.NewElementName("item")
-	itemElem.AppendElement(fieldElem)
-	elem.AppendElement(itemElem)
+	itemB := stravaganza.NewBuilder("item")
+	itemB.WithChild(fieldB.Build())
+	eb.WithChild(itemB.Build())
 
-	elem.AppendElement(fieldElem)
+	eb.WithChild(fieldB.Build())
 
-	form, _ = NewFormFromElement(elem)
+	form, _ = NewFormFromElement(eb.Build())
+
 	require.NotNil(t, form)
 	require.Equal(t, 1, len(form.Reported))
 	require.Equal(t, 1, len(form.Items))
@@ -66,14 +98,14 @@ func TestDataForm_Element(t *testing.T) {
 	form.Type = Form
 	elem := form.Element()
 	require.Equal(t, "x", elem.Name())
-	require.Equal(t, FormNamespace, elem.Namespace())
+	require.Equal(t, FormNamespace, elem.Attribute(stravaganza.Namespace))
 
 	form.Title = "A title"
 	form.Instructions = "A set of instructions"
 	elem = form.Element()
 
-	titleElem := elem.Elements().Child("title")
-	instElem := elem.Elements().Child("instructions")
+	titleElem := elem.Child("title")
+	instElem := elem.Child("instructions")
 	require.NotNil(t, titleElem)
 	require.NotNil(t, instElem)
 	require.Equal(t, "A title", titleElem.Text())
@@ -83,6 +115,6 @@ func TestDataForm_Element(t *testing.T) {
 	form.Items = []Fields{{{Var: "var2"}}}
 
 	elem = form.Element()
-	require.NotNil(t, elem.Elements().Child("reported"))
-	require.Equal(t, 1, len(elem.Elements().Children("item")))
+	require.NotNil(t, elem.Child("reported"))
+	require.Equal(t, 1, len(elem.Children("item")))
 }

@@ -1,0 +1,73 @@
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto3";
+
+package admin.v1;
+
+option go_package = "./;pb";
+
+service Users {
+  // CreateUser creates a new user given a username and password.
+  //
+  // Return status codes (https://github.com/grpc/grpc/blob/master/doc/statuscodes.md):
+  // - ALREADY_EXISTS(6):  When a users already exists.
+  // - INTERNAL(13): When an internal problem happens.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  // ChangeUserPassword updates the password of an existing user.
+  //
+  // Return status codes (https://github.com/grpc/grpc/blob/master/doc/statuscodes.md):
+  // - NOT_FOUND(5):  When user does not exist.
+  // - INTERNAL(13): When an internal problem happens.
+  rpc ChangeUserPassword(ChangeUserPasswordRequest) returns (ChangeUserPasswordResponse);
+
+  // DeleteUser removes a previously registered user.
+  //
+  // Return status codes (https://github.com/grpc/grpc/blob/master/doc/statuscodes.md):
+  // - NOT_FOUND(5):  When user does not exist.
+  // - INTERNAL(13): When an internal problem happens.
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+// CreateUserRequest is the parameter message for CreateUser rpc.
+message CreateUserRequest {
+  // username defines new created user name.
+  string username = 1;
+  // password is the user desired password.
+  string password = 2;
+}
+
+// CreateUserResponse is the response returned by CreateUser rpc.
+message CreateUserResponse {}
+
+// ChangeUserPasswordRequest is the parameter message for ChangeUserPassword rpc.
+message ChangeUserPasswordRequest {
+  // username is the name of the user to whom we want to change the password.
+  string username = 1;
+  // new_password is the new desired password.
+  string new_password = 2;
+}
+
+// ChangePasswordResponse is the response returned by ChangeUserPassword rpc.
+message ChangeUserPasswordResponse {}
+
+// DeleteUserRequest is the parameter message for DeleteUser rpc.
+message DeleteUserRequest {
+  // username defines the username we want to delete.
+  string username = 1;
+}
+
+// DeleteUserResponse is the response returned by DeleteUser rpc.
+message DeleteUserResponse {}

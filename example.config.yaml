@@ -1,0 +1,132 @@
+###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+###                jackal configuration file                 ###
+###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+
+peppers:
+  keys:
+    v1: m7FFfnHf2g3KsPRPvVjjEiu6uss8tAHg
+  use: v1
+
+#logger:
+#  level: "debug"
+#  output_path: "jackal.log"
+
+# Prometheus metrics and pprof
+#http_port: 6060
+
+#admin:
+#  port: 15280
+
+#hosts:
+#  - domain: jackal.im
+#    tls:
+#      cert_file: ""
+#      privkey_file: ""
+
+storage:
+  type: pgsql
+  pgsql:
+    host: 127.0.0.1:5432
+    user: jackal
+    password: password
+    database: jackal
+    max_open_conns: 16
+
+cluster:
+  etcd:
+    endpoints:
+      - http://127.0.0.1:2379
+  port: 14369
+
+shapers:
+  - name: super
+    max_sessions: 20
+    rate:
+      limit: 131072
+      burst: 65536
+    matching:
+      jid:
+        # in: [ortuman@localhost]
+        regex: ^(ortuman|noelia).+
+
+  - name: normal
+    max_sessions: 10
+    rate:
+      limit: 65536
+      burst: 32768
+
+listeners:
+  - type: c2s
+    port: 5222
+    req_timeout: 60s
+    transport: socket
+    sasl:
+      mechanisms:
+        - scram_sha_1
+        - scram_sha_256
+        - scram_sha_512
+        - scram_sha3_512
+
+      # Authentication gateway
+      # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
+      external:
+        address: 127.0.0.1:4567
+        is_secure: false
+
+  - type: s2s
+    port: 5269
+    req_timeout: 60s
+    max_stanza_size: 131072
+
+  - type: component
+    port: 5275
+    secret: hqcUrfHtgE73FktcXwfrP
+
+s2s_out:
+  dialback_secret: s3cr3tf0rd14lb4ck
+  dial_timeout: 5s
+  req_timeout: 60s
+  max_stanza_size: 131072
+
+modules:
+#  enabled:
+#    - roster
+#    - offline
+#    - disco
+#    - vcard
+#    - version
+#    - ping
+#
+#  version:
+#    show_os: true
+#
+#  offline:
+#    queue_size: 300
+#
+#  ping:
+#    ack_timeout: 5s
+#    interval: 10s
+#    send_pings: false
+#    timeout_action: kill
+#
+#  external:
+#    # IQ handler gateway
+#    # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/iqhandler/v1/iqhandler.proto)
+#    iq_handlers:
+#      - namespace:
+#          in: [ https://jackal.im ]
+#          # reg_ex: ^org.jackal.+
+#        address: 127.0.0.1:4568
+#        is_secure: false
+#
+#    # Event handler gateway
+#    # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/eventhandler/v1/eventhandler.proto)
+#    event_handlers:
+#      topics: # notify c2s connect/disconnect events
+#        - c2s.stream.registered
+#        - c2s.stream.unregistered
+#      address: 127.0.0.1:4569
+#      is_secure: false
+
+components:
+

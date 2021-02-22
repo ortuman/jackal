@@ -1,15 +1,18 @@
 /*
- * Copyright (c) 2018 robzon.
- * See the LICENSE file for more information.
- *
- * Notes:
- *
- * As per https://tools.ietf.org/html/rfc6122#page-4
- *
- * - Username MUST NOT be zero bytes in length and MUST NOT be more than 1023 bytes in length
- * - JIDs total length cannot be more than 3071 bytes
- *
- */
+ Copyright 2020 The jackal Authors
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
 
 -- Functions to manage updated_at timestamps
 
@@ -35,58 +38,50 @@ $$ LANGUAGE plpgsql;
 -- users
 
 CREATE TABLE IF NOT EXISTS users (
-    username            VARCHAR(1023) PRIMARY KEY,
-    password            TEXT NOT NULL,
-    last_presence       TEXT NOT NULL,
-    last_presence_at    TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    username         VARCHAR(1023) PRIMARY KEY,
+    h_sha_1          TEXT NOT NULL,
+    h_sha_256        TEXT NOT NULL,
+    h_sha_512        TEXT NOT NULL,
+    h_sha3_512       TEXT NOT NULL,
+    salt             TEXT NOT NULL,
+    iteration_count  INT NOT NULL,
+    pepper_id        VARCHAR(1023) NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 SELECT enable_updated_at('users');
 
--- presences
+-- offline_messages
 
-CREATE TABLE IF NOT EXISTS presences (
-    username      VARCHAR(1023) NOT NULL,
-    domain        VARCHAR(1023) NOT NULL,
-    resource      VARCHAR(1023) NOT NULL,
-    presence      TEXT NOT NULL,
-    node          VARCHAR(1023) NOT NULL,
-    ver           VARCHAR(1023) NOT NULL,
-    allocation_id VARCHAR(1023) NOT NULL,
-    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-
-    PRIMARY KEY (username, domain, resource)
+CREATE TABLE IF NOT EXISTS offline_messages (
+    id         SERIAL PRIMARY KEY,
+    username   VARCHAR(1023) NOT NULL,
+    message    BYTEA NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-SELECT enable_updated_at('presences');
+CREATE INDEX IF NOT EXISTS i_offline_messages_username ON offline_messages(username);
 
-CREATE INDEX IF NOT EXISTS i_presences_username_domain ON presences(username, domain);
-CREATE INDEX IF NOT EXISTS i_presences_domain_resource ON presences(domain, resource);
-CREATE INDEX IF NOT EXISTS i_presences_allocation_id ON presences(allocation_id);
+-- blocklist_items
 
--- capabilities
-
-CREATE TABLE IF NOT EXISTS capabilities (
-    node       VARCHAR(1023) NOT NULL,
-    ver        VARCHAR(1023) NOT NULL,
-    features   TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS blocklist_items (
+    username   VARCHAR(1023) NOT NULL,
+    jid        TEXT NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
-    PRIMARY KEY (node, ver)
+    PRIMARY KEY(username, jid)
 );
 
-SELECT enable_updated_at('capabilities');
+SELECT enable_updated_at('blocklist_items');
 
 -- roster_notifications
 
 CREATE TABLE IF NOT EXISTS roster_notifications (
     contact     VARCHAR(1023) NOT NULL,
     jid         TEXT NOT NULL,
-    elements    TEXT NOT NULL,
+    presence    BYTEA NOT NULL,
     updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
@@ -102,166 +97,36 @@ CREATE TABLE IF NOT EXISTS roster_items (
     jid             TEXT NOT NULL,
     name            TEXT NOT NULL,
     subscription    TEXT NOT NULL,
-    groups          TEXT NOT NULL,
-    ask BOOL        NOT NULL,
-    ver             INT NOT NULL DEFAULT 0,
+    groups          TEXT ARRAY,
+    ask             BOOL NOT NULL,
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
+
     PRIMARY KEY (username, jid)
 );
 
 SELECT enable_updated_at('roster_items');
 
--- roster_groups
-
-CREATE TABLE IF NOT EXISTS roster_groups (
-    username     VARCHAR(1023) NOT NULL,
-    jid          TEXT NOT NULL,
-    "group"      TEXT NOT NULL,
-    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-
-    PRIMARY KEY (username, jid)
-);
-
-SELECT enable_updated_at('roster_groups');
-
 -- roster_versions
 
 CREATE TABLE IF NOT EXISTS roster_versions (
-    username            VARCHAR(1023) NOT NULL,
-    ver                 INT NOT NULL DEFAULT 0,
-    last_deletion_ver   INT NOT NULL DEFAULT 0,
-    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
+    username   VARCHAR(1023) NOT NULL,
+    ver        INT NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
     PRIMARY KEY (username)
 );
 
 SELECT enable_updated_at('roster_versions');
 
--- blocklist_items
-
-CREATE TABLE IF NOT EXISTS blocklist_items (
-    username        VARCHAR(1023) NOT NULL,
-    jid             TEXT NOT NULL,
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    PRIMARY KEY(username, jid)
-);
-
--- private_storage
-
-CREATE TABLE IF NOT EXISTS private_storage (
-    username        VARCHAR(1023) NOT NULL,
-    namespace       VARCHAR(512) NOT NULL,
-    data            TEXT NOT NULL,
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    PRIMARY KEY (username, namespace)
-);
-
-SELECT enable_updated_at('private_storage');
-
 -- vcards
 
 CREATE TABLE IF NOT EXISTS vcards (
     username        VARCHAR(1023) PRIMARY KEY,
-    vcard           TEXT NOT NULL,
+    vcard           BYTEA NOT NULL,
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 SELECT enable_updated_at('vcards');
-
--- offline_messages
-
-CREATE TABLE IF NOT EXISTS offline_messages (
-    username        VARCHAR(1023) NOT NULL,
-    data            TEXT NOT NULL,
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS i_offline_messages_username ON offline_messages(username);
-
--- pubsub_nodes
-
-CREATE TABLE IF NOT EXISTS pubsub_nodes (
-    id              BIGSERIAL,
-    host            TEXT NOT NULL,
-    name            TEXT NOT NULL,
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-
-    PRIMARY KEY (id)
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_nodes_host_name ON pubsub_nodes(host, name);
-
-SELECT enable_updated_at('pubsub_nodes');
-
--- pubsub_node_options
-
-CREATE TABLE IF NOT EXISTS pubsub_node_options (
-    node_id         BIGINT NOT NULL,
-    name            TEXT NOT NULL,
-    value           TEXT NOT NULL,
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS i_pubsub_node_options_node_id ON pubsub_node_options(node_id);
-
-SELECT enable_updated_at('pubsub_node_options');
-
--- pubsub_affiliations
-
-CREATE TABLE IF NOT EXISTS pubsub_affiliations (
-    node_id          BIGINT NOT NULL,
-    jid              TEXT NOT NULL,
-    affiliation      TEXT NOT NULL,
-    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS i_pubsub_affiliations_jid ON pubsub_affiliations(jid);
-
-CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_affiliations_node_id_jid ON pubsub_affiliations(node_id, jid);
-
-SELECT enable_updated_at('pubsub_affiliations');
-
--- pubsub_subscriptions
-
-CREATE TABLE IF NOT EXISTS pubsub_subscriptions (
-    node_id          BIGINT NOT NULL,
-    subid            TEXT NOT NULL,
-    jid              TEXT NOT NULL,
-    subscription     TEXT NOT NULL,
-    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS i_pubsub_subscriptions_jid ON pubsub_subscriptions(jid);
-
-CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_subscriptions_node_id_jid ON pubsub_subscriptions(node_id, jid);
-
-SELECT enable_updated_at('pubsub_subscriptions');
-
--- pubsub_items
-
-CREATE TABLE IF NOT EXISTS pubsub_items (
-    node_id          BIGINT NOT NULL,
-    item_id          TEXT NOT NULL,
-    payload          TEXT NOT NULL,
-    publisher        TEXT NOT NULL,
-    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS i_pubsub_items_item_id ON pubsub_items(item_id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_items_node_id_item_id ON pubsub_items(node_id, item_id);
-
-SELECT enable_updated_at('pubsub_items');

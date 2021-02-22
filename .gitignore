@@ -36,8 +36,11 @@ server.crt
 .idea/
 .vscode/
 
-# Dependency 
+# Dependency
 vendor/
 
-# Binary 
-jackal
+# Generated files
+build
+
+# Mock files
+*.mock_test.go

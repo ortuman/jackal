@@ -1,373 +1,410 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package session
 
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	stdxml "encoding/xml"
+	"encoding/xml"
 	"errors"
-	"io"
 	"testing"
-	"time"
 
-	streamerror "github.com/ortuman/jackal/errors"
-	"github.com/ortuman/jackal/router/host"
+	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
+	"github.com/ortuman/jackal/util/ratelimiter"
 	"github.com/stretchr/testify/require"
 )
 
-type fakeTransport struct {
-	typ   transport.Type
-	rdBuf *bytes.Buffer
-	wrBuf *bytes.Buffer
+func TestSession_OpenStream(t *testing.T) {
+	// given
+	trMock := &transportMock{}
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+	trMock.FlushFunc = func() error { return nil }
+
+	buf := bytes.NewBuffer(nil)
+	trMock.WriteStringFunc = func(s string) (int, error) {
+		return buf.WriteString(s)
+	}
+
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:   C2SSession,
+		id:    "ss-1",
+		opts:  Options{MaxStanzaSize: 4096},
+		tr:    trMock,
+		hosts: &hostsMock{},
+		pr:    &xmppParserMock{},
+		jd:    *ssJID,
+	}
+
+	// when
+	err := ss.OpenStream(context.Background(), testFeaturesElement())
+
+	// then
+	require.Nil(t, err)
+
+	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/></stream:features>`
+	require.Equal(t, expectedOutput, buf.String())
 }
 
-func newFakeTransport(typ transport.Type) *fakeTransport {
-	return &fakeTransport{typ: typ, rdBuf: new(bytes.Buffer), wrBuf: new(bytes.Buffer)}
+func TestSession_OpenComponent(t *testing.T) {
+	// given
+	trMock := &transportMock{}
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+	trMock.FlushFunc = func() error { return nil }
+
+	buf := bytes.NewBuffer(nil)
+	trMock.WriteStringFunc = func(s string) (int, error) {
+		return buf.WriteString(s)
+	}
+
+	ssJID, _ := jid.NewWithString("upload.jackal.im", true)
+	ss := Session{
+		typ:      ComponentSession,
+		id:       "comp-1",
+		streamID: "stm-1",
+		opts:     Options{MaxStanzaSize: 4096},
+		tr:       trMock,
+		hosts:    &hostsMock{},
+		pr:       &xmppParserMock{},
+		jd:       *ssJID,
+	}
+
+	// when
+	err := ss.OpenComponent(context.Background())
+
+	// then
+	require.Nil(t, err)
+
+	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:component:accept" xmlns:stream="http://etherx.jabber.org/streams" from="upload.jackal.im" id="stm-1">`
+	require.Equal(t, expectedOutput, buf.String())
 }
 
-func (t *fakeTransport) Read(p []byte) (n int, err error)                             { return t.rdBuf.Read(p) }
-func (t *fakeTransport) Write(p []byte) (n int, err error)                            { return t.wrBuf.Write(p) }
-func (t *fakeTransport) Close() error                                                 { return nil }
-func (t *fakeTransport) Type() transport.Type                                         { return t.typ }
-func (t *fakeTransport) Flush() error                                                 { return nil }
-func (t *fakeTransport) SetWriteDeadline(_ time.Time) error                           { return nil }
-func (t *fakeTransport) WriteString(s string) (n int, err error)                      { return t.wrBuf.WriteString(s) }
-func (t *fakeTransport) StartTLS(_ *tls.Config, _ bool)                               {}
-func (t *fakeTransport) EnableCompression(compress.Level)                             {}
-func (t *fakeTransport) ChannelBindingBytes(transport.ChannelBindingMechanism) []byte { return nil }
-func (t *fakeTransport) PeerCertificates() []*x509.Certificate                        { return nil }
+func TestSession_OpenServer(t *testing.T) {
+	// given
+	trMock := &transportMock{}
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+	trMock.FlushFunc = func() error { return nil }
 
-func TestSession_Open(t *testing.T) {
-	hosts := setupTest("jackal.im")
+	buf := bytes.NewBuffer(nil)
+	trMock.WriteStringFunc = func(s string) (int, error) {
+		return buf.WriteString(s)
+	}
 
-	j, _ := jid.NewWithString("jackal.im", true)
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:   S2SSession,
+		id:    "ss-1",
+		opts:  Options{MaxStanzaSize: 4096},
+		tr:    trMock,
+		hosts: &hostsMock{},
+		pr:    &xmppParserMock{},
+		jd:    *ssJID,
+	}
 
-	// test client socket session start
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
+	// when
+	err := ss.OpenStream(context.Background(), testFeaturesElement())
 
-	require.NotNil(t, sess.Close(context.Background()))
-	_, err1 := sess.Receive()
-	require.NotNil(t, err1)
-
-	_ = sess.Open(context.Background(), nil)
-	pr := xmpp.NewParser(tr.wrBuf, xmpp.SocketStream, 0)
-	_, _ = pr.ParseElement() // read xml header
-	elem, err := pr.ParseElement()
+	// then
 	require.Nil(t, err)
-	require.Equal(t, "stream:stream", elem.Name())
-	require.Equal(t, "jabber:client", elem.Namespace())
-	require.Equal(t, "http://etherx.jabber.org/streams", elem.Attributes().Get("xmlns:stream"))
 
-	// test server socket session start
-	tr.wrBuf.Reset()
-	sess = New(uuid.New(), &Config{JID: j, IsServer: true}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	pr = xmpp.NewParser(tr.wrBuf, xmpp.SocketStream, 0)
-	_, _ = pr.ParseElement() // read xml header
-	elem, err = pr.ParseElement()
-	require.Nil(t, err)
-	require.Equal(t, "jabber:server", elem.Namespace())
-
-	// test unsupported transport type
-	tr = newFakeTransport(transport.Type(9999))
-	sess = New(uuid.New(), &Config{JID: j}, tr, hosts)
-	require.Nil(t, sess.Open(context.Background(), nil))
-
-	// open twice
-	require.NotNil(t, sess.Open(context.Background(), nil))
+	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/></stream:features>`
+	require.Equal(t, expectedOutput, buf.String())
 }
 
 func TestSession_Close(t *testing.T) {
-	hosts := setupTest("jackal.im")
+	// given
+	trMock := &transportMock{}
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+	trMock.FlushFunc = func() error { return nil }
 
-	j, _ := jid.NewWithString("jackal.im", true)
+	buf := bytes.NewBuffer(nil)
+	trMock.WriteStringFunc = func(s string) (int, error) {
+		return buf.WriteString(s)
+	}
 
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-	_ = sess.Open(context.Background(), nil)
-	tr.wrBuf.Reset()
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:    C2SSession,
+		id:     "ss-1",
+		opts:   Options{MaxStanzaSize: 4096},
+		tr:     trMock,
+		hosts:  &hostsMock{},
+		pr:     &xmppParserMock{},
+		jd:     *ssJID,
+		opened: true,
+	}
 
-	_ = sess.Close(context.Background())
-	require.Equal(t, "</stream:stream>", tr.wrBuf.String())
+	// when
+	err := ss.Close(context.Background())
+
+	// then
+	require.Nil(t, err)
+
+	expectedOutput := `</stream:stream>`
+	require.Equal(t, expectedOutput, buf.String())
 }
 
 func TestSession_Send(t *testing.T) {
-	hosts := setupTest("jackal.im")
+	// given
+	trMock := &transportMock{}
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+	trMock.FlushFunc = func() error { return nil }
 
-	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-	elem := xmpp.NewElementNamespace("open", "urn:ietf:params:xml:ns:xmpp-framing")
+	buf := bytes.NewBuffer(nil)
+	trMock.WriteStringFunc = func(s string) (int, error) {
+		return buf.WriteString(s)
+	}
 
-	_ = sess.Open(context.Background(), nil)
-	tr.wrBuf.Reset()
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:    C2SSession,
+		id:     "ss-1",
+		opts:   Options{MaxStanzaSize: 4096},
+		tr:     trMock,
+		hosts:  &hostsMock{},
+		pr:     &xmppParserMock{},
+		jd:     *ssJID,
+		opened: true,
+	}
 
-	_ = sess.Send(context.Background(), elem)
-	require.Equal(t, elem.String(), tr.wrBuf.String())
-}
+	// when
+	err := ss.Send(context.Background(), stravaganza.NewBuilder("foo-stanza").Build())
 
-func TestSession_Receive(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	_, err := sess.Receive()
-	require.Equal(t, &Error{}, err)
-
-	tr = newFakeTransport(transport.Socket)
-	sess = New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	open := xmpp.NewElementNamespace("stream:stream", "")
-	_ = open.ToXML(tr.rdBuf, false)
-
-	_, err = sess.Receive()
-	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, err)
-
-	tr = newFakeTransport(transport.Socket)
-	sess = New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	open.SetNamespace(jabberClientNamespace)
-	open.SetAttribute("xmlns:stream", streamNamespace)
-	open.SetVersion("1.0")
-	_ = open.ToXML(tr.rdBuf, false)
-
-	iq := xmpp.NewIQType(uuid.New(), xmpp.ResultType)
-	_ = iq.ToXML(tr.rdBuf, true)
-
-	_, err = sess.Receive()   // read open stream element...
-	st, err := sess.Receive() // read IQ...
-	require.Nil(t, err)
-	require.Equal(t, "iq", st.Name())
-
-	tr = newFakeTransport(transport.Socket)
-	sess = New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	_ = open.ToXML(tr.rdBuf, false)
-
-	// bad stanza
-	_ = xmpp.NewElementName("iq").ToXML(tr.rdBuf, true)
-	_, err = sess.Receive() // read open stream element...
-	_, err = sess.Receive()
-	require.NotNil(t, err)
-	require.Equal(t, xmpp.ErrBadRequest, err.UnderlyingErr)
-}
-
-func TestSession_IsValidNamespace(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	iqClient := xmpp.NewElementNamespace("iq", "jabber:client")
-	iqServer := xmpp.NewElementNamespace("iq", "jabber:server")
-
-	j, _ := jid.NewWithString("jackal.im", true)
-
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	require.Nil(t, sess.validateNamespace(iqClient))
-	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqServer))
-
-	tr = newFakeTransport(transport.Socket)
-	sess = New(uuid.New(), &Config{JID: j, IsServer: true}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}, sess.validateNamespace(iqClient))
-	require.Nil(t, sess.validateNamespace(iqServer))
-}
-
-func TestSession_IsValidFrom(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	j1, _ := jid.NewWithString("jackal.im", true)                  // server domain
-	j2, _ := jid.NewWithString("ortuman@jackal.im/resource", true) // full jid with user
-
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j2}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	sess.SetJID(j1)
-	require.False(t, sess.isValidFrom("romeo@jackal.im"))
-
-	sess.SetJID(j2)
-	require.True(t, sess.isValidFrom("ortuman@jackal.im/resource"))
-}
-
-func TestSession_ValidateStream(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	j, _ := jid.NewWithString("jackal.im", true) // server domain
-
-	elem1 := xmpp.NewElementNamespace("stream:stream", "")
-	elem2 := xmpp.NewElementNamespace("stream:stream", "jabber:client")
-	elem4 := xmpp.NewElementNamespace("open", "")
-
-	// try socket
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-	err := sess.validateStreamElement(elem1)
-
-	_ = sess.Open(context.Background(), nil)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrInvalidNamespace, err.UnderlyingErr)
-
-	err = sess.validateStreamElement(elem2)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrInvalidNamespace, err.UnderlyingErr)
-
-	err = sess.validateStreamElement(elem4)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrUnsupportedStanzaType, err.UnderlyingErr)
-
-	elem2.SetAttribute("xmlns:stream", "http://etherx.jabber.org/streams")
-	err = sess.validateStreamElement(elem2)
-	require.NotNil(t, err)
-
-	elem2.SetVersion("1.0")
-	elem2.SetTo("example.org")
-
-	err = sess.validateStreamElement(elem2)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrHostUnknown, err.UnderlyingErr)
-
-	elem2.SetTo("jackal.im")
-	require.Nil(t, sess.validateStreamElement(elem2))
-}
-
-func TestSession_ExtractAddresses(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	j1, _ := jid.NewWithString("jackal.im", true)
-	j2, _ := jid.NewWithString("ortuman@jackal.im/res", true)
-
-	iq := xmpp.NewElementNamespace("iq", "jabber:client")
-	iq.SetFrom("ortuman@jackal.im/res")
-	iq.SetTo("romeo@example.org")
-
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j1}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-	from, to, err := sess.extractAddresses(iq)
-	require.Nil(t, err)
-	require.Equal(t, "jackal.im", from.String())
-	require.Equal(t, "romeo@example.org", to.String())
-
-	sess.SetJID(j2)
-
-	iq.SetFrom("romeo@example.org")
-	iq.SetTo("")
-	_, _, err = sess.extractAddresses(iq)
-	require.Equal(t, streamerror.ErrInvalidFrom, err.UnderlyingErr)
-
-	iq.SetFrom("ortuman@jackal.im/res")
-	iq.SetTo("")
-	from, to, err = sess.extractAddresses(iq)
-	require.Nil(t, err)
-	require.Equal(t, "ortuman@jackal.im/res", from.String())
-	require.Equal(t, "ortuman@jackal.im", to.String())
-
-	iq.SetTo("ortuman@" + string([]byte{255, 255, 255}) + "/res")
-	_, _, err = sess.extractAddresses(iq)
-	require.NotNil(t, err)
-	require.Equal(t, iq, err.Element)
-	require.Equal(t, xmpp.ErrJidMalformed, err.UnderlyingErr)
-}
-
-func TestSession_BuildStanza(t *testing.T) {
-	hosts := setupTest("jackal.im")
-
-	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
-
-	_ = sess.Open(context.Background(), nil)
-
-	elem := xmpp.NewElementNamespace("n", "ns")
-	_, err := sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrInvalidNamespace, err.UnderlyingErr)
-
-	elem.SetNamespace("")
-	_, err = sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, streamerror.ErrUnsupportedStanzaType, err.UnderlyingErr)
-
-	elem.SetName("iq")
-	elem.SetTo("ortuman@" + string([]byte{255, 255, 255}) + "/res")
-	_, err = sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, xmpp.ErrJidMalformed, err.UnderlyingErr)
-
-	elem.SetTo("ortuman@jackal.im/res")
-	_, err = sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, xmpp.ErrBadRequest, err.UnderlyingErr)
-
-	elem.SetID(uuid.New())
-	elem.SetType("result")
-	_, err = sess.buildStanza(elem)
+	// then
 	require.Nil(t, err)
 
-	elem.SetName("presence")
-	_, err = sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, xmpp.ErrBadRequest, err.UnderlyingErr)
-
-	elem.SetType("unavailable")
-	_, err = sess.buildStanza(elem)
-	require.Nil(t, err)
-
-	elem.SetName("message")
-	_, err = sess.buildStanza(elem)
-	require.NotNil(t, err)
-	require.Equal(t, xmpp.ErrBadRequest, err.UnderlyingErr)
-
-	elem.SetType("normal")
-	_, err = sess.buildStanza(elem)
-	require.Nil(t, err)
+	expectedOutput := `<foo-stanza/>`
+	require.Equal(t, expectedOutput, buf.String())
 }
 
-func TestSession_MapError(t *testing.T) {
-	hosts := setupTest("jackal.im")
+func TestSession_ReceiveStreamSuccess(t *testing.T) {
+	// given
+	hMock := &hostsMock{}
+	trMock := &transportMock{}
+	prMock := &xmppParserMock{}
 
-	j, _ := jid.NewWithString("ortuman@jackal.im/res", true)
-	tr := newFakeTransport(transport.Socket)
-	sess := New(uuid.New(), &Config{JID: j}, tr, hosts)
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:     C2SSession,
+		id:      "ss-1",
+		opts:    Options{MaxStanzaSize: 4096},
+		tr:      trMock,
+		hosts:   hMock,
+		pr:      prMock,
+		jd:      *ssJID,
+		opened:  true,
+		started: false,
+	}
+	hMock.IsLocalHostFunc = func(domain string) bool { return domain == "jackal.im" }
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
 
-	_ = sess.Open(context.Background(), nil)
+	prMock.ParseFunc = func() (stravaganza.Element, error) {
+		return stravaganza.NewBuilder("stream:stream").
+			WithAttribute(stravaganza.Namespace, jabberClientNamespace).
+			WithAttribute("xmlns:stream", streamNamespace).
+			WithAttribute(stravaganza.To, "jackal.im").
+			WithAttribute(stravaganza.Version, "1.0").
+			Build(), nil
+	}
 
-	require.Equal(t, &Error{}, sess.mapErrorToSessionError(nil))
-	require.Equal(t, &Error{}, sess.mapErrorToSessionError(io.EOF))
-	require.Equal(t, &Error{}, sess.mapErrorToSessionError(io.ErrUnexpectedEOF))
-	require.Equal(t, &Error{}, sess.mapErrorToSessionError(xmpp.ErrStreamClosedByPeer))
+	// when
+	elem, err := ss.Receive()
 
-	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrPolicyViolation}, sess.mapErrorToSessionError(xmpp.ErrTooLargeStanza))
-	require.Equal(t, &Error{UnderlyingErr: streamerror.ErrInvalidXML}, sess.mapErrorToSessionError(&stdxml.SyntaxError{}))
+	// then
+	require.Nil(t, err)
+	require.NotNil(t, elem)
 
-	er := errors.New("err")
-	require.Equal(t, &Error{UnderlyingErr: er}, sess.mapErrorToSessionError(er))
+	require.Equal(t, "stream:stream", elem.Name())
 }
 
-func setupTest(domain string) *host.Hosts {
-	hosts, _ := host.New([]host.Config{{Name: domain, Certificate: tls.Certificate{}}})
-	return hosts
+func TestSession_ReceiveBadStream(t *testing.T) {
+	// given
+	hMock := &hostsMock{}
+	trMock := &transportMock{}
+	prMock := &xmppParserMock{}
+
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:     C2SSession,
+		id:      "ss-1",
+		opts:    Options{MaxStanzaSize: 4096},
+		tr:      trMock,
+		hosts:   hMock,
+		pr:      prMock,
+		jd:      *ssJID,
+		opened:  true,
+		started: false,
+	}
+	hMock.IsLocalHostFunc = func(domain string) bool { return domain == "jackal.im" }
+	trMock.TypeFunc = func() transport.Type { return transport.Socket }
+
+	prMock.ParseFunc = func() (stravaganza.Element, error) {
+		return stravaganza.NewBuilder("stream:stream").
+			WithAttribute(stravaganza.Namespace, jabberClientNamespace).
+			WithAttribute("xmlns:stream", streamNamespace).
+			WithAttribute(stravaganza.To, "jackal.im").
+			WithAttribute(stravaganza.Version, "2.0"). // invalid version
+			Build(), nil
+	}
+
+	// when
+	_, err := ss.Receive()
+
+	// then
+	require.NotNil(t, err)
+
+	se, ok := err.(*streamerror.Error)
+	require.True(t, ok)
+	require.Equal(t, streamerror.UnsupportedVersion, se.Reason)
+}
+
+func TestSession_ReceiveSuccess(t *testing.T) {
+	// given
+	prMock := &xmppParserMock{}
+
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:     C2SSession,
+		id:      "ss-1",
+		opts:    Options{MaxStanzaSize: 4096},
+		tr:      &transportMock{},
+		hosts:   &hostsMock{},
+		pr:      prMock,
+		jd:      *ssJID,
+		opened:  true,
+		started: true,
+	}
+
+	// when
+	prMock.ParseFunc = func() (stravaganza.Element, error) {
+		b := stravaganza.NewMessageBuilder()
+		b.WithAttribute("from", "noelia@jackal.im/yard")
+		b.WithAttribute("to", "ortuman@jackal.im/balcony")
+		b.WithChild(
+			stravaganza.NewBuilder("body").
+				WithText("I'll give thee a wind.").
+				Build(),
+		)
+		msg, _ := b.BuildMessage(false)
+		return msg, nil
+	}
+	elem, err := ss.Receive()
+
+	// then
+	require.Nil(t, err)
+	require.NotNil(t, elem)
+
+	require.Equal(t, "message", elem.Name())
+}
+
+func TestSession_ReceiveStreamError(t *testing.T) {
+	// given
+	prMock := &xmppParserMock{}
+
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:     C2SSession,
+		id:      "ss-1",
+		opts:    Options{MaxStanzaSize: 4096},
+		tr:      &transportMock{},
+		hosts:   &hostsMock{},
+		pr:      prMock,
+		jd:      *ssJID,
+		opened:  true,
+		started: true,
+	}
+
+	// when
+	errFoo := errors.New("foo error")
+	prMock.ParseFunc = func() (stravaganza.Element, error) { return nil, errFoo } // unmapped error
+	_, err0 := ss.Receive()
+
+	prMock.ParseFunc = func() (stravaganza.Element, error) { return nil, ratelimiter.ErrReadLimitExcedeed }
+	_, err1 := ss.Receive()
+
+	prMock.ParseFunc = func() (stravaganza.Element, error) { return nil, xmppparser.ErrTooLargeStanza }
+	_, err2 := ss.Receive()
+
+	prMock.ParseFunc = func() (stravaganza.Element, error) { return nil, &xml.SyntaxError{} }
+	_, err3 := ss.Receive()
+
+	// then
+	require.NotNil(t, err0)
+	require.NotNil(t, err1)
+	require.NotNil(t, err2)
+	require.NotNil(t, err3)
+
+	require.Equal(t, errFoo, err0)
+
+	se1, ok1 := err1.(*streamerror.Error)
+	se2, ok2 := err2.(*streamerror.Error)
+	se3, ok3 := err3.(*streamerror.Error)
+	require.True(t, ok1)
+	require.True(t, ok2)
+	require.True(t, ok3)
+
+	require.Equal(t, streamerror.PolicyViolation, se1.Reason)
+	require.Equal(t, streamerror.PolicyViolation, se2.Reason)
+	require.Equal(t, streamerror.InvalidXML, se3.Reason)
+}
+
+func TestSession_ReceiveUnsupportedStanza(t *testing.T) {
+	// given
+	prMock := &xmppParserMock{}
+
+	ssJID, _ := jid.NewWithString("jackal.im", true)
+	ss := Session{
+		typ:     C2SSession,
+		id:      "ss-1",
+		opts:    Options{MaxStanzaSize: 4096},
+		tr:      &transportMock{},
+		hosts:   &hostsMock{},
+		pr:      prMock,
+		jd:      *ssJID,
+		opened:  true,
+		started: true,
+	}
+
+	// when
+	prMock.ParseFunc = func() (stravaganza.Element, error) {
+		return stravaganza.NewBuilder("iq").Build(), nil
+	}
+	_, err := ss.Receive()
+
+	// then
+	require.NotNil(t, err)
+
+	se, ok := err.(*stanzaerror.Error)
+
+	require.True(t, ok)
+	require.Equal(t, stanzaerror.BadRequest, se.Reason)
+}
+
+func testFeaturesElement() stravaganza.Element {
+	return stravaganza.NewBuilder("stream:features").
+		WithAttribute("xmlns:stream", "http://etherx.jabber.org/streams").
+		WithAttribute("version", "1.0").
+		WithChild(
+			stravaganza.NewBuilder("starttls").
+				WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-tls").
+				Build(),
+		).
+		Build()
 }

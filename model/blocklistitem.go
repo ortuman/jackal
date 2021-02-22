@@ -1,35 +1,21 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
-import (
-	"bytes"
-	"encoding/gob"
-)
-
-// BlockListItem represents block list item storage entity.
+// BlockListItem represents block list item entity.
 type BlockListItem struct {
 	Username string
 	JID      string
-}
-
-// FromBytes deserializes a BlockListItem entity from its binary representation.
-func (bli *BlockListItem) FromBytes(buf *bytes.Buffer) error {
-	dec := gob.NewDecoder(buf)
-	if err := dec.Decode(&bli.Username); err != nil {
-		return err
-	}
-	return dec.Decode(&bli.JID)
-}
-
-// ToBytes converts a BlockListItem entity to its binary representation.
-func (bli *BlockListItem) ToBytes(buf *bytes.Buffer) error {
-	enc := gob.NewEncoder(buf)
-	if err := enc.Encode(&bli.Username); err != nil {
-		return err
-	}
-	return enc.Encode(&bli.JID)
 }

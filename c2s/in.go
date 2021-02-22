@@ -1,819 +1,970 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package c2s
 
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/auth"
+	"github.com/ortuman/jackal/c2s/resourcemanager"
+	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/component"
-	streamerror "github.com/ortuman/jackal/errors"
+	"github.com/ortuman/jackal/event"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/module/eventhandler/offline"
+	"github.com/ortuman/jackal/module/iqhandler/roster"
+	xmppparser "github.com/ortuman/jackal/parser"
+	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
-	"github.com/ortuman/jackal/session"
-	"github.com/ortuman/jackal/storage/repository"
-	"github.com/ortuman/jackal/stream"
+	"github.com/ortuman/jackal/router/stream"
+	xmppsession "github.com/ortuman/jackal/session"
+	"github.com/ortuman/jackal/shaper"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/transport/compress"
-	"github.com/ortuman/jackal/util/runqueue"
-	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
 )
+
+type inC2SState uint32
 
 const (
-	connecting uint32 = iota
-	connected
-	authenticating
-	authenticated
-	bound
-	disconnected
+	inConnecting inC2SState = iota
+	inConnected
+	inAuthenticating
+	inAuthenticated
+	inBounded
+	inDisconnected
 )
 
-type inStream struct {
-	cfg            *streamConfig
-	router         router.Router
-	userRep        repository.User
-	blockListRep   repository.BlockList
-	mods           *module.Modules
-	comps          *component.Components
-	sess           *session.Session
+type inC2S struct {
+	id             stream.C2SID
+	opts           Options
 	tr             transport.Transport
-	mu             sync.RWMutex
-	id             string
-	connectTm      *time.Timer
-	readTimeoutTm  *time.Timer
-	state          uint32
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
-	runQueue       *runqueue.RunQueue
-	jid            *jid.JID
-	secured        bool
-	compressed     bool
-	authenticated  bool
-	sessStarted    bool
-	presence       *xmpp.Presence
-	ctx            context.Context
-	ctxCancelFn    context.CancelFunc
+	hosts          hosts
+	router         router.Router
+	comps          components
+	mods           modules
+	resMng         resourceManager
+	blockListRep   repository.BlockList
+	session        session
+	shapers        shaper.Shapers
+	sn             *sonar.Sonar
+	rq             *runqueue.RunQueue
+
+	mu    sync.RWMutex
+	state uint32
+	flgs  inC2SFlags
+	sCtx  map[string]string
+	jd    *jid.JID
+	pr    *stravaganza.Presence
 }
 
-func newStream(id string, config *streamConfig, tr transport.Transport, mods *module.Modules, comps *component.Components, router router.Router, userRep repository.User, blockListRep repository.BlockList) stream.C2S {
-	ctx, ctxCancelFn := context.WithCancel(context.Background())
-	s := &inStream{
-		cfg:          config,
-		tr:           tr,
-		router:       router,
-		userRep:      userRep,
-		blockListRep: blockListRep,
-		mods:         mods,
-		comps:        comps,
-		id:           id,
-		runQueue:     runqueue.New(id),
-		ctx:          ctx,
-		ctxCancelFn:  ctxCancelFn,
+func newInC2S(
+	tr transport.Transport,
+	authenticators []auth.Authenticator,
+	hosts *host.Hosts,
+	router router.Router,
+	comps *component.Components,
+	mods *module.Modules,
+	resMng *resourcemanager.Manager,
+	blockListRep repository.BlockList,
+	shapers shaper.Shapers,
+	sonar *sonar.Sonar,
+	opts Options,
+) (*inC2S, error) {
+	// set default rate limiter
+	rLim := shapers.DefaultC2S().RateLimiter()
+	if err := tr.SetReadRateLimiter(rLim); err != nil {
+		return nil, err
 	}
-
-	// initialize stream context
-	secured := !(tr.Type() == transport.Socket)
-	s.setSecured(secured)
-	s.setJID(&jid.JID{})
-
-	// initialize authenticators
-	s.initializeAuthenticators()
-
-	// start c2s session
-	s.restartSession()
-
-	if config.connectTimeout > 0 {
-		s.connectTm = time.AfterFunc(config.connectTimeout, s.connectTimeout)
+	// create session
+	id := nextStreamID()
+	session := xmppsession.New(
+		xmppsession.C2SSession,
+		id.String(),
+		tr,
+		hosts,
+		xmppsession.Options{
+			MaxStanzaSize: opts.MaxStanzaSize,
+		},
+	)
+	// init stream
+	stm := &inC2S{
+		id:             id,
+		opts:           opts,
+		sCtx:           make(map[string]string),
+		tr:             tr,
+		session:        session,
+		authenticators: authenticators,
+		hosts:          hosts,
+		router:         router,
+		comps:          comps,
+		mods:           mods,
+		resMng:         resMng,
+		blockListRep:   blockListRep,
+		shapers:        shapers,
+		rq:             runqueue.New(id.String(), log.Errorf),
+		state:          uint32(inConnecting),
+		sn:             sonar,
 	}
-	go s.doRead() // start reading...
-
-	return s
+	return stm, nil
 }
 
-// ID returns stream identifier.
-func (s *inStream) ID() string {
+func (s *inC2S) ID() stream.C2SID {
 	return s.id
 }
 
-func (s *inStream) Context() context.Context {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.ctx
-}
-
-func (s *inStream) Value(key interface{}) interface{} {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.ctx.Value(key)
-}
-
-func (s *inStream) SetValue(key, value interface{}) {
+func (s *inC2S) SetValue(ctx context.Context, k, val string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.ctx = context.WithValue(s.ctx, key, value)
-}
-
-// Username returns current stream username.
-func (s *inStream) Username() string {
-	return s.JID().Node()
-}
-
-// Domain returns current stream domain.
-func (s *inStream) Domain() string {
-	return s.JID().Domain()
-}
-
-// Resource returns current stream resource.
-func (s *inStream) Resource() string {
-	return s.JID().Resource()
-}
-
-// JID returns current user JID.
-func (s *inStream) JID() *jid.JID {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.jid
-}
-
-// IsAuthenticated returns whether or not the XMPP stream has successfully authenticated.
-func (s *inStream) IsAuthenticated() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.authenticated
-}
-
-// IsSecured returns whether or not the XMPP stream has been secured using SSL/TLS.
-func (s *inStream) IsSecured() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.secured
-}
-
-// Presence returns last sent presence element.
-func (s *inStream) Presence() *xmpp.Presence {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.presence
-}
-
-// SendElement writes an XMPP element to the stream.
-func (s *inStream) SendElement(ctx context.Context, elem xmpp.XElement) {
-	if s.getState() == disconnected {
-		return
+	v, ok := s.sCtx[k]
+	if ok && v == val {
+		s.mu.Unlock()
+		return nil
 	}
-	s.runQueue.Run(func() { s.writeElement(ctx, elem) })
+	s.sCtx[k] = val
+	s.mu.Unlock()
+	return s.resMng.PutResource(ctx, s.getResource())
 }
 
-// Disconnect disconnects remote peer by closing the underlying TCP socket connection.
-func (s *inStream) Disconnect(ctx context.Context, err error) {
-	if s.getState() == disconnected {
-		return
+func (s *inC2S) Value(k string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.sCtx[k]
+}
+
+func (s *inC2S) JID() *jid.JID {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.jd
+}
+
+func (s *inC2S) Username() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if jd := s.JID(); jd != nil {
+		return jd.Node()
 	}
-	waitCh := make(chan struct{})
-	s.runQueue.Run(func() {
-		s.disconnect(ctx, err)
-		close(waitCh)
+	return ""
+}
+
+func (s *inC2S) Domain() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if jd := s.JID(); jd != nil {
+		return jd.Domain()
+	}
+	return ""
+}
+
+func (s *inC2S) Resource() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if jd := s.JID(); jd != nil {
+		return jd.Resource()
+	}
+	return ""
+}
+
+func (s *inC2S) Presence() *stravaganza.Presence {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pr
+}
+
+func (s *inC2S) SendElement(elem stravaganza.Element) <-chan error {
+	errCh := make(chan error, 1)
+	s.rq.Run(func() {
+		ctx, cancel := s.requestContext()
+		defer cancel()
+		errCh <- s.sendElement(ctx, elem)
 	})
-	<-waitCh
+	return errCh
 }
 
-func (s *inStream) initializeAuthenticators() {
-	tr := s.tr
-	hasChannelBinding := len(tr.ChannelBindingBytes(transport.TLSUnique)) > 0
-	var authenticators []auth.Authenticator
-	for _, a := range s.cfg.sasl {
-		switch a {
-		case "plain":
-			authenticators = append(authenticators, auth.NewPlain(s, s.userRep))
+func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
+	errCh := make(chan error, 1)
+	s.rq.Run(func() {
+		ctx, cancel := s.requestContext()
+		defer cancel()
+		errCh <- s.disconnect(ctx, streamErr)
+	})
+	return errCh
+}
 
-		case "scram_sha_1":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, false, s.userRep))
-			if hasChannelBinding {
-				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA1, true, s.userRep))
-			}
+func (s *inC2S) start() error {
+	// register C2S stream
+	if err := s.router.C2S().Register(s); err != nil {
+		return err
+	}
+	// post registered C2S event
+	ctx, cancel := s.requestContext()
+	err := s.postStreamEvent(ctx, event.C2SStreamRegistered, &event.C2SStreamEventInfo{
+		ID: s.ID().String(),
+	})
+	cancel()
 
-		case "scram_sha_256":
-			authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, false, s.userRep))
-			if hasChannelBinding {
-				authenticators = append(authenticators, auth.NewScram(s, tr, auth.ScramSHA256, true, s.userRep))
-			}
+	if err != nil {
+		return err
+	}
+	reportConnectionRegistered()
+
+	s.readLoop()
+	return nil
+}
+
+func (s *inC2S) readLoop() {
+	s.restartSession()
+
+	tm := time.AfterFunc(s.opts.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	elem, sErr := s.session.Receive()
+	tm.Stop()
+
+	for {
+		if s.getState() == inDisconnected {
+			return
 		}
+		if sErr == xmppparser.ErrNoElement {
+			goto doRead // continue reading
+		}
+		s.handleSessionResult(elem, sErr)
+
+	doRead:
+		tm := time.AfterFunc(s.opts.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		elem, sErr = s.session.Receive()
+		tm.Stop()
 	}
-	s.authenticators = authenticators
 }
 
-func (s *inStream) connectTimeout() {
-	s.runQueue.Run(func() {
-		ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
-		s.disconnect(ctx, streamerror.ErrConnectionTimeout)
+func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
+	doneCh := make(chan struct{})
+	s.rq.Run(func() {
+		defer close(doneCh)
+
+		ctx, cancel := s.requestContext()
+		defer cancel()
+
+		var err error
+		if sErr != nil {
+			err = s.handleSessionError(ctx, sErr)
+		}
+		if elem != nil {
+			err = s.handleElement(ctx, elem)
+		}
+		if err != nil {
+			log.Errorf("Failed to process C2S session result: %v", err)
+			_ = s.close(ctx)
+			return
+		}
+	})
+	<-doneCh
+}
+
+func (s *inC2S) connTimeout() {
+	s.rq.Run(func() {
+		ctx, cancel := s.requestContext()
+		defer cancel()
+		_ = s.disconnect(ctx, streamerror.E(streamerror.ConnectionTimeout))
 	})
 }
 
-func (s *inStream) handleElement(ctx context.Context, elem xmpp.XElement) {
+func (s *inC2S) handleElement(ctx context.Context, elem stravaganza.Element) error {
+	var err error
+	t0 := time.Now()
 	switch s.getState() {
-	case connecting:
-		s.handleConnecting(ctx, elem)
-	case connected:
-		s.handleConnected(ctx, elem)
-	case authenticated:
-		s.handleAuthenticated(ctx, elem)
-	case authenticating:
-		s.handleAuthenticating(ctx, elem)
-	case bound:
-		s.handleBound(ctx, elem)
+	case inConnecting:
+		err = s.handleConnecting(ctx, elem)
+	case inConnected:
+		err = s.handleConnected(ctx, elem)
+	case inAuthenticating:
+		err = s.handleAuthenticating(ctx, elem)
+	case inAuthenticated:
+		err = s.handleAuthenticated(ctx, elem)
+	case inBounded:
+		err = s.handleBounded(ctx, elem)
 	}
+	reportIncomingRequest(
+		elem.Name(),
+		elem.Attribute(stravaganza.Type),
+		time.Since(t0).Seconds(),
+	)
+	return err
 }
 
-func (s *inStream) handleConnecting(ctx context.Context, elem xmpp.XElement) {
-	// cancel connection timeout timer
-	if s.connectTm != nil {
-		s.connectTm.Stop()
-		s.connectTm = nil
-	}
+func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) error {
 	// assign stream domain if not set yet
 	if len(s.Domain()) == 0 {
-		j, _ := jid.New("", elem.To(), "", true)
+		j, _ := jid.NewWithString(elem.Attribute(stravaganza.To), true)
 		s.setJID(j)
 	}
 
 	// open stream session
-	s.sess.SetJID(s.JID())
+	s.session.SetFromJID(s.JID())
 
-	features := xmpp.NewElementName("stream:features")
-	features.SetAttribute("xmlns:stream", streamNamespace)
-	features.SetAttribute("version", "1.0")
+	sb := stravaganza.NewBuilder("stream:features").
+		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
+		WithAttribute(stravaganza.Version, "1.0")
 
-	if !s.IsAuthenticated() {
-		features.AppendElements(s.unauthenticatedFeatures())
-		s.setState(connected)
+	if !s.flgs.isAuthenticated() {
+		sb.WithChildren(s.unauthenticatedFeatures()...)
+		s.setState(inConnected)
 	} else {
-		features.AppendElements(s.authenticatedFeatures())
-		s.setState(authenticated)
+		sb.WithChildren(s.authenticatedFeatures()...)
+		s.setState(inAuthenticated)
 	}
-	_ = s.sess.Open(ctx, features)
+	_ = s.session.OpenStream(ctx, sb.Build())
+	return nil
 }
 
-func (s *inStream) unauthenticatedFeatures() []xmpp.XElement {
-	var features []xmpp.XElement
-
-	isSocketTr := s.tr.Type() == transport.Socket
-
-	if isSocketTr && !s.IsSecured() {
-		startTLS := xmpp.NewElementName("starttls")
-		startTLS.SetNamespace("urn:ietf:params:xml:ns:xmpp-tls")
-		startTLS.AppendElement(xmpp.NewElementName("required"))
-		features = append(features, startTLS)
-	}
-
-	// attach SASL mechanisms
-	shouldOfferSASL := !isSocketTr || (isSocketTr && s.IsSecured())
-
-	if shouldOfferSASL && len(s.authenticators) > 0 {
-		mechanisms := xmpp.NewElementName("mechanisms")
-		mechanisms.SetNamespace(saslNamespace)
-		for _, ath := range s.authenticators {
-			mechanism := xmpp.NewElementName("mechanism")
-			mechanism.SetText(ath.Mechanism())
-			mechanisms.AppendElement(mechanism)
-		}
-		features = append(features, mechanisms)
-	}
-
-	// allow In-band registration over encrypted stream only
-	allowRegistration := s.IsSecured()
-
-	if reg := s.mods.Register; reg != nil && allowRegistration {
-		registerFeature := xmpp.NewElementNamespace("register", "http://jabber.org/features/iq-register")
-		features = append(features, registerFeature)
-	}
-	return features
-}
-
-func (s *inStream) authenticatedFeatures() []xmpp.XElement {
-	var features []xmpp.XElement
-
-	isSocketTr := s.tr.Type() == transport.Socket
-
-	// attach compression feature
-	compressionAvailable := isSocketTr && s.cfg.compression.Level != compress.NoCompression
-
-	if !s.isCompressed() && compressionAvailable {
-		compression := xmpp.NewElementNamespace("compression", "http://jabber.org/features/compress")
-		method := xmpp.NewElementName("method")
-		method.SetText("zlib")
-		compression.AppendElement(method)
-		features = append(features, compression)
-	}
-	bind := xmpp.NewElementNamespace("bind", "urn:ietf:params:xml:ns:xmpp-bind")
-	bind.AppendElement(xmpp.NewElementName("required"))
-	features = append(features, bind)
-
-	// [rfc6121] offer session feature for backward compatibility
-	sessElem := xmpp.NewElementNamespace("session", "urn:ietf:params:xml:ns:xmpp-session")
-	features = append(features, sessElem)
-
-	if s.mods.Roster != nil {
-		ver := xmpp.NewElementNamespace("ver", "urn:xmpp:features:rosterver")
-		features = append(features, ver)
-	}
-	return features
-}
-
-func (s *inStream) handleConnected(ctx context.Context, elem xmpp.XElement) {
+func (s *inC2S) handleConnected(ctx context.Context, elem stravaganza.Element) error {
 	switch elem.Name() {
 	case "starttls":
-		s.proceedStartTLS(ctx, elem)
+		return s.proceedStartTLS(ctx, elem)
 
 	case "auth":
-		s.startAuthentication(ctx, elem)
+		return s.startAuthentication(ctx, elem)
 
 	case "iq":
-		iq := elem.(*xmpp.IQ)
-		if reg := s.mods.Register; reg != nil && reg.MatchesIQ(iq) {
-			if s.IsSecured() {
-				reg.ProcessIQWithStream(ctx, iq, s)
-			} else {
-				// channel isn't safe enough to enable a password change
-				s.writeElement(ctx, iq.NotAuthorizedError())
-			}
-			return
-
-		} else if iq.Elements().ChildNamespace("query", "jabber:iq:auth") != nil {
-			// don't allow non-SASL authentication
-			s.writeElement(ctx, iq.ServiceUnavailableError())
-			return
+		if elem.ChildNamespace("query", "jabber:iq:auth") != nil {
+			// do not allow non-SASL authentication
+			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, elem).Element())
 		}
 		fallthrough
 
 	case "message", "presence":
-		s.disconnectWithStreamError(ctx, streamerror.ErrNotAuthorized)
+		return s.disconnect(ctx, streamerror.E(streamerror.NotAuthorized))
 
 	default:
-		s.disconnectWithStreamError(ctx, streamerror.ErrUnsupportedStanzaType)
+		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 }
 
-func (s *inStream) handleAuthenticating(ctx context.Context, elem xmpp.XElement) {
-	if elem.Namespace() != saslNamespace {
-		s.disconnectWithStreamError(ctx, streamerror.ErrInvalidNamespace)
-		return
+func (s *inC2S) handleAuthenticating(ctx context.Context, elem stravaganza.Element) error {
+	if elem.Attribute(stravaganza.Namespace) != saslNamespace {
+		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
-	ath := s.activeAuth
-	_ = s.continueAuthentication(ctx, elem, ath)
-	if ath.Authenticated() {
-		s.finishAuthentication(ctx, ath.Username())
+	if err := s.continueAuthentication(ctx, elem); err != nil {
+		if saslErr, ok := err.(*auth.SASLError); ok {
+			return s.failAuthentication(ctx, saslErr)
+		}
+		return err
 	}
+	if s.activeAuth.Authenticated() {
+		return s.finishAuthentication()
+	}
+	return nil
 }
 
-func (s *inStream) handleAuthenticated(ctx context.Context, elem xmpp.XElement) {
+func (s *inC2S) handleAuthenticated(ctx context.Context, elem stravaganza.Element) error {
 	switch elem.Name() {
 	case "compress":
-		if elem.Namespace() != compressProtocolNamespace {
-			s.disconnectWithStreamError(ctx, streamerror.ErrUnsupportedStanzaType)
-			return
-		}
-		s.compress(ctx, elem)
-
+		return s.compress(ctx, elem)
 	case "iq":
-		iq := elem.(*xmpp.IQ)
-		if len(s.JID().Resource()) == 0 { // Expecting bind
-			s.bindResource(ctx, iq)
-		}
+		return s.bindResource(ctx, elem.(*stravaganza.IQ))
+	default:
+		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
+	}
+}
+
+func (s *inC2S) handleBounded(ctx context.Context, elem stravaganza.Element) error {
+	switch stanza := elem.(type) {
+	case stravaganza.Stanza:
+		return s.processStanza(ctx, stanza)
 
 	default:
-		s.disconnectWithStreamError(ctx, streamerror.ErrUnsupportedStanzaType)
+		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 }
 
-func (s *inStream) handleBound(ctx context.Context, elem xmpp.XElement) {
-	// reset ping timer deadline
-	if p := s.mods.Ping; p != nil {
-		p.SchedulePing(s)
+func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) error {
+	// post stanza received event
+	err := s.postStreamEvent(ctx, event.C2SStreamStanzaReceived, &event.C2SStreamEventInfo{
+		ID:     s.ID().String(),
+		JID:    s.JID(),
+		Stanza: stanza,
+	})
+	if err != nil {
+		return err
 	}
-	stanza, ok := elem.(xmpp.Stanza)
-	if !ok {
-		s.disconnectWithStreamError(ctx, streamerror.ErrUnsupportedStanzaType)
-		return
+	toJID := stanza.ToJID()
+	if s.comps.IsComponentHost(toJID.Domain()) {
+		return s.comps.ProcessStanza(ctx, stanza)
 	}
-	// handle session IQ
-	if iq, ok := stanza.(*xmpp.IQ); ok && iq.IsSet() {
-		if iq.Elements().ChildNamespace("session", sessionNamespace) != nil {
-			if !s.isSessionStarted() {
-				s.setSessionStarted(true)
-				s.writeElement(ctx, iq.ResultIQ())
-			} else {
-				s.writeElement(ctx, iq.NotAllowedError())
-			}
-			return
+	// check if recipient JID is blocked
+	if s.isBlockedJID(ctx, toJID) {
+		se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
+		se.ApplicationElement = stravaganza.NewBuilder("blocked").
+			WithAttribute(stravaganza.Namespace, blockingErrorNamespace).
+			Build()
+		return s.sendElement(ctx, se.Element())
+	}
+	// handle stanza
+	switch stanza := stanza.(type) {
+	case *stravaganza.IQ:
+		return s.processIQ(ctx, stanza)
+	case *stravaganza.Presence:
+		return s.processPresence(ctx, stanza)
+	case *stravaganza.Message:
+		return s.processMessage(ctx, stanza)
+	default:
+		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
+	}
+}
+
+func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
+	// post iq received event
+	err := s.postStreamEvent(ctx, event.C2SStreamIQReceived, &event.C2SStreamEventInfo{
+		ID:     s.ID().String(),
+		JID:    s.JID(),
+		Stanza: iq,
+	})
+	if err != nil {
+		return err
+	}
+	if iq.IsSet() && iq.ChildNamespace("session", sessionNamespace) != nil {
+		if !s.flgs.isSessionStarted() {
+			s.flgs.setSessionStarted()
+			return s.sendElement(ctx, iq.ResultBuilder().Build())
+		}
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
+	}
+	if s.mods.IsModuleIQ(iq) {
+		return s.mods.ProcessIQ(ctx, iq)
+	}
+	err = s.router.Route(ctx, iq)
+	switch err {
+	case router.ErrResourceNotFound:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
+	case router.ErrRemoteServerNotFound:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerNotFound, iq).Element())
+	case router.ErrRemoteServerTimeout:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
+	case router.ErrBlockedSender:
+		// sender is a blocked JID
+		if iq.IsGet() || iq.IsSet() {
+			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
 		}
 	}
-	if comp := s.comps.Get(stanza.ToJID().Domain()); comp != nil { // component stanza?
-		switch stanza := stanza.(type) {
-		case *xmpp.IQ:
-			if di := s.mods.DiscoInfo; di != nil && di.MatchesIQ(stanza) {
-				di.ProcessIQ(ctx, stanza)
-				return
-			}
-			break
+	return nil
+}
+
+func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
+	// post presence received event
+	err := s.postStreamEvent(ctx, event.C2SStreamPresenceReceived, &event.C2SStreamEventInfo{
+		ID:     s.ID().String(),
+		JID:    s.JID(),
+		Stanza: presence,
+	})
+	if err != nil {
+		return err
+	}
+
+	if presence.ToJID().IsFullWithUser() {
+		_ = s.router.Route(ctx, presence)
+		return nil
+	}
+	// update presence
+	matchesUserJID := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
+	if matchesUserJID && (presence.IsAvailable() || presence.IsUnavailable()) {
+		s.setPresence(presence)
+	}
+	// update cluster resource
+	return s.resMng.PutResource(ctx, s.getResource())
+}
+
+func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
+	// post message received event
+	err := s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
+		ID:     s.ID().String(),
+		JID:    s.JID(),
+		Stanza: message,
+	})
+	if err != nil {
+		return err
+	}
+
+	msg := message
+
+sndMessage:
+	err = s.router.Route(ctx, msg)
+	switch err {
+	case router.ErrResourceNotFound:
+		// treat the stanza as if it were addressed to <node@domain>
+		msg, _ = stravaganza.NewBuilderFromElement(msg).
+			WithAttribute(stravaganza.From, message.FromJID().String()).
+			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
+			BuildMessage(false)
+		goto sndMessage
+
+	case router.ErrNotExistingAccount, router.ErrBlockedSender:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
+
+	case router.ErrRemoteServerNotFound:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerNotFound, message).Element())
+
+	case router.ErrRemoteServerTimeout:
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
+
+	case router.ErrUserNotAvailable:
+		if !s.mods.IsEnabled(offline.ModuleName) {
+			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
-		comp.ProcessStanza(ctx, stanza, s)
-		return
-	}
-	s.processStanza(ctx, stanza)
-}
-
-func (s *inStream) proceedStartTLS(ctx context.Context, elem xmpp.XElement) {
-	if s.IsSecured() {
-		s.disconnectWithStreamError(ctx, streamerror.ErrNotAuthorized)
-		return
-	}
-	if len(elem.Namespace()) > 0 && elem.Namespace() != tlsNamespace {
-		s.disconnectWithStreamError(ctx, streamerror.ErrInvalidNamespace)
-		return
-	}
-	s.setSecured(true)
-	s.writeElement(ctx, xmpp.NewElementNamespace("proceed", tlsNamespace))
-
-	s.tr.StartTLS(&tls.Config{Certificates: s.router.Hosts().Certificates()}, false)
-
-	log.Infof("secured stream... id: %s", s.id)
-	s.restartSession()
-}
-
-func (s *inStream) compress(ctx context.Context, elem xmpp.XElement) {
-	if s.isCompressed() {
-		s.disconnectWithStreamError(ctx, streamerror.ErrUnsupportedStanzaType)
-		return
-	}
-	method := elem.Elements().Child("method")
-	if method == nil || len(method.Text()) == 0 {
-		failure := xmpp.NewElementNamespace("failure", compressProtocolNamespace)
-		failure.AppendElement(xmpp.NewElementName("setup-failed"))
-		s.writeElement(ctx, failure)
-		return
-	}
-	if method.Text() != "zlib" {
-		failure := xmpp.NewElementNamespace("failure", compressProtocolNamespace)
-		failure.AppendElement(xmpp.NewElementName("unsupported-method"))
-		s.writeElement(ctx, failure)
-		return
-	}
-	s.writeElement(ctx, xmpp.NewElementNamespace("compressed", compressProtocolNamespace))
-
-	s.tr.EnableCompression(s.cfg.compression.Level)
-	s.setCompressed(true)
-
-	log.Infof("compressed stream... id: %s", s.id)
-
-	s.restartSession()
-}
-
-func (s *inStream) startAuthentication(ctx context.Context, elem xmpp.XElement) {
-	if elem.Namespace() != saslNamespace {
-		s.disconnectWithStreamError(ctx, streamerror.ErrInvalidNamespace)
-		return
-	}
-	mechanism := elem.Attributes().Get("mechanism")
-	for _, authenticator := range s.authenticators {
-		if authenticator.Mechanism() == mechanism {
-			if err := s.continueAuthentication(ctx, elem, authenticator); err != nil {
-				return
-			}
-			if authenticator.Authenticated() {
-				s.finishAuthentication(ctx, authenticator.Username())
-			} else {
-				s.activeAuth = authenticator
-				s.setState(authenticating)
-			}
-			return
-		}
-	}
-	// ...mechanism not found...
-	failure := xmpp.NewElementNamespace("failure", saslNamespace)
-	failure.AppendElement(xmpp.NewElementName("invalid-mechanism"))
-	s.writeElement(ctx, failure)
-}
-
-func (s *inStream) continueAuthentication(ctx context.Context, elem xmpp.XElement, authr auth.Authenticator) error {
-	err := authr.ProcessElement(ctx, elem)
-	if saslErr, ok := err.(*auth.SASLError); ok {
-		s.failAuthentication(ctx, saslErr.Element())
-	} else if err != nil {
-		log.Error(err)
-		s.failAuthentication(ctx, auth.ErrSASLTemporaryAuthFailure.(*auth.SASLError).Element())
+		return s.postStreamEvent(ctx, event.C2SStreamMessageUnrouted, &event.C2SStreamEventInfo{
+			ID:     s.ID().String(),
+			JID:    s.JID(),
+			Stanza: message,
+		})
 	}
 	return err
 }
 
-func (s *inStream) finishAuthentication(_ context.Context, username string) {
-	if s.activeAuth != nil {
-		s.activeAuth.Reset()
-		s.activeAuth = nil
+func (s *inC2S) handleSessionError(ctx context.Context, err error) error {
+	switch err {
+	case nil, io.EOF, io.ErrUnexpectedEOF:
+		return s.close(ctx)
+
+	case xmppparser.ErrStreamClosedByPeer:
+		_ = s.session.Close(ctx)
+		return s.close(ctx)
+
+	default:
+		switch err := err.(type) {
+		case *streamerror.Error:
+			return s.disconnect(ctx, err)
+
+		case *stanzaerror.Error:
+			return s.sendElement(ctx, err.Element())
+
+		default:
+			return err
+		}
 	}
-	j, _ := jid.New(username, s.Domain(), "", true)
-	s.setJID(j)
-	s.setAuthenticated(true)
+}
+
+func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
+	var features []stravaganza.Element
+
+	// attach start-tls feature
+	isSocketTr := s.tr.Type() == transport.Socket
+	if isSocketTr && !s.flgs.isSecured() {
+		features = append(features, stravaganza.NewBuilder("starttls").
+			WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-tls").
+			WithChild(stravaganza.NewBuilder("required").Build()).
+			Build(),
+		)
+	}
+	// attach SASL mechanisms
+	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flgs.isSecured())
+
+	if shouldOfferSASL && len(s.authenticators) > 0 {
+		sb := stravaganza.NewBuilder("mechanisms")
+		sb.WithAttribute(stravaganza.Namespace, saslNamespace)
+		for _, authenticator := range s.authenticators {
+			sb.WithChild(
+				stravaganza.NewBuilder("mechanism").
+					WithText(authenticator.Mechanism()).
+					Build(),
+			)
+		}
+		features = append(features, sb.Build())
+	}
+	return features
+}
+
+func (s *inC2S) authenticatedFeatures() []stravaganza.Element {
+	var features []stravaganza.Element
+
+	isSocketTr := s.tr.Type() == transport.Socket
+
+	// compression feature
+	compressionAvailable := isSocketTr && s.opts.CompressionLevel != compress.NoCompression
+
+	if !s.flgs.isCompressed() && compressionAvailable {
+		compressionElem := stravaganza.NewBuilder("compression").
+			WithAttribute(stravaganza.Namespace, "http://jabber.org/features/compress").
+			WithChild(
+				stravaganza.NewBuilder("method").
+					WithText("zlib").
+					Build(),
+			).
+			Build()
+		features = append(features, compressionElem)
+	}
+	// bind feature
+	bindElem := stravaganza.NewBuilder("bind").
+		WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-bind").
+		WithChild(stravaganza.NewBuilder("required").Build()).
+		Build()
+	features = append(features, bindElem)
+
+	// [rfc6121] offer session feature for backward compatibility
+	sessElem := stravaganza.NewBuilder("session").
+		WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-session").
+		Build()
+	features = append(features, sessElem)
+
+	// roster versioning
+	if s.mods.IsEnabled(roster.ModuleName) {
+		rosVerElem := stravaganza.NewBuilder("ver").
+			WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
+			Build()
+		features = append(features, rosVerElem)
+	}
+	return features
+}
+
+func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {
+	if s.flgs.isSecured() {
+		return s.disconnect(ctx, streamerror.E(streamerror.NotAuthorized))
+	}
+	ns := elem.Attribute(stravaganza.Namespace)
+	if len(ns) > 0 && ns != tlsNamespace {
+		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
+	}
+	s.flgs.setSecured()
+
+	if err := s.sendElement(ctx,
+		stravaganza.NewBuilder("proceed").
+			WithAttribute(stravaganza.Namespace, tlsNamespace).
+			Build(),
+	); err != nil {
+		return err
+	}
+	s.tr.StartTLS(&tls.Config{
+		Certificates: s.hosts.Certificates(),
+	}, false)
+
+	log.Infow("Secured C2S stream", "id", s.id)
 
 	s.restartSession()
+	return nil
 }
 
-func (s *inStream) failAuthentication(ctx context.Context, elem xmpp.XElement) {
-	failure := xmpp.NewElementNamespace("failure", saslNamespace)
-	failure.AppendElement(elem)
-	s.writeElement(ctx, failure)
-
-	if s.activeAuth != nil {
-		s.activeAuth.Reset()
-		s.activeAuth = nil
+func (s *inC2S) startAuthentication(ctx context.Context, elem stravaganza.Element) error {
+	if elem.Attribute(stravaganza.Namespace) != saslNamespace {
+		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
-	s.setState(connected)
+	mechanism := elem.Attribute("mechanism")
+	for _, authenticator := range s.authenticators {
+		if authenticator.Mechanism() != mechanism {
+			continue
+		}
+		s.activeAuth = authenticator
+		if err := s.continueAuthentication(ctx, elem); err != nil {
+			if saslErr, ok := err.(*auth.SASLError); ok {
+				return s.failAuthentication(ctx, saslErr)
+			}
+			return err
+		}
+		if s.activeAuth.Authenticated() {
+			return s.finishAuthentication()
+		}
+		s.setState(inAuthenticating)
+		return nil
+	}
+	// ...mechanism not found...
+	failureElem := stravaganza.NewBuilder("failure").
+		WithAttribute(stravaganza.Namespace, saslNamespace).
+		WithChild(stravaganza.NewBuilder("invalid-mechanism").Build()).
+		Build()
+	return s.sendElement(ctx, failureElem)
 }
 
-func (s *inStream) bindResource(ctx context.Context, iq *xmpp.IQ) {
-	bind := iq.Elements().ChildNamespace("bind", bindNamespace)
-	if bind == nil {
-		s.writeElement(ctx, iq.NotAllowedError())
-		return
+func (s *inC2S) continueAuthentication(ctx context.Context, elem stravaganza.Element) error {
+	elem, saslErr := s.activeAuth.ProcessElement(ctx, elem)
+	if saslErr != nil {
+		return saslErr
 	}
-	var resource string
-	if resourceElem := bind.Elements().Child("resource"); resourceElem != nil {
-		resource = resourceElem.Text()
-	} else {
-		resource = uuid.New().String()
+	return s.sendElement(ctx, elem)
+}
+
+func (s *inC2S) finishAuthentication() error {
+	username := s.activeAuth.Username()
+
+	j, _ := jid.New(username, s.Domain(), "", true)
+	s.setJID(j)
+	s.flgs.setAuthenticated()
+
+	// update rate limiter
+	if err := s.updateRateLimiter(); err != nil {
+		return err
 	}
-	// try binding...
-	var stm stream.C2S
-	streams := s.router.LocalStreams(s.JID().Node())
-	for _, s := range streams {
-		if s.Resource() == resource {
-			stm = s
-		}
+	log.Infow("Authenticated C2S stream", "id", s.id, "username", username)
+
+	s.activeAuth.Reset()
+	s.activeAuth = nil
+	s.restartSession()
+	return nil
+}
+
+func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError) error {
+	if saslErr.Err != nil {
+		log.Warnf("Authentication error: %v", saslErr.Err)
 	}
-	if stm != nil {
-		switch s.cfg.resourceConflict {
-		case Override:
-			// override the resource with a server-generated resourcepart...
-			resource = uuid.New().String()
-		case Replace:
-			// terminate the session of the currently connected client...
-			stm.Disconnect(ctx, streamerror.ErrResourceConstraint)
-		default:
-			// disallow resource binding attempt...
-			s.writeElement(ctx, iq.ConflictError())
-			return
-		}
+	failureElem := stravaganza.NewBuilder("failure").
+		WithAttribute(stravaganza.Namespace, saslNamespace).
+		WithChild(saslErr.Element()).
+		Build()
+	if err := s.sendElement(ctx, failureElem); err != nil {
+		return err
 	}
-	userJID, err := jid.New(s.Username(), s.Domain(), resource, false)
+	s.activeAuth.Reset()
+	s.activeAuth = nil
+	s.setState(inConnected)
+	return nil
+}
+
+func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
+	if elem.Attribute(stravaganza.Namespace) != compressNamespace || s.flgs.isCompressed() {
+		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
+	}
+	method := elem.Child("method")
+	if method == nil || len(method.Text()) == 0 {
+		failureElem := stravaganza.NewBuilder("failure").
+			WithAttribute(stravaganza.Namespace, compressNamespace).
+			WithChild(stravaganza.NewBuilder("setup-failed").Build()).
+			Build()
+		return s.sendElement(ctx, failureElem)
+	}
+	if method.Text() != "zlib" {
+		failure := stravaganza.NewBuilder("failure").
+			WithAttribute(stravaganza.Namespace, compressNamespace).
+			WithChild(stravaganza.NewBuilder("unsupported-method").Build()).
+			Build()
+		return s.sendElement(ctx, failure)
+	}
+	if err := s.sendElement(ctx, stravaganza.NewBuilder("compressed").
+		WithAttribute(stravaganza.Namespace, compressNamespace).
+		Build(),
+	); err != nil {
+		return err
+	}
+	// compress transport
+	s.tr.EnableCompression(s.opts.CompressionLevel)
+	s.flgs.setCompressed()
+
+	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
+
+	s.restartSession()
+	return nil
+}
+
+func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error {
+	bind := bindIQ.ChildNamespace("bind", bindNamespace)
+	if bindIQ.Attribute(stravaganza.Type) != stravaganza.SetType || bind == nil {
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, bindIQ).Element())
+	}
+	// fetch active resources
+	rss, err := s.resMng.GetResources(ctx, s.Username())
 	if err != nil {
-		s.writeElement(ctx, iq.BadRequestError())
-		return
+		return err
+	}
+	// check is max session count has been reached
+	maxSessions := s.shapers.MatchingJID(s.JID()).MaxSessions
+	if len(rss) == maxSessions {
+		se := streamerror.E(streamerror.PolicyViolation)
+		se.ApplicationElement = stravaganza.NewBuilder("reached-max-session-count").
+			WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
+			Build()
+		return s.disconnect(ctx, se)
+	}
+
+	var res string
+	if resElem := bind.Child("resource"); resElem != nil {
+		res = resElem.Text()
+
+		// check if another stream with same resource value did already connect
+		for _, rs := range rss {
+			if rs.JID.Resource() != res {
+				continue
+			}
+			switch s.opts.ResourceConflict {
+			// replace by a server generated resourcepart
+			case Override:
+				res = uuid.New().String()
+				goto setJID
+
+			// disconnect previously connected resource
+			case TerminateOld:
+				se := streamerror.E(streamerror.PolicyViolation)
+				se.ApplicationElement = stravaganza.NewBuilder("resource-conflict").
+					WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
+					Build()
+				if err := s.router.C2S().Disconnect(ctx, &rs, se); err != nil {
+					return err
+				}
+				goto setJID
+
+			// disallow resource binding
+			case Disallow:
+				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, bindIQ).Element())
+			}
+		}
+	} else {
+		res = uuid.New().String() // server generated
+	}
+
+setJID:
+	// set stream jid and presence
+	userJID, err := jid.New(s.Username(), s.Domain(), res, false)
+	if err != nil {
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.BadRequest, bindIQ).Element())
 	}
 	s.setJID(userJID)
-	s.sess.SetJID(userJID)
+	s.session.SetFromJID(userJID)
 
-	s.mu.Lock()
-	s.presence = xmpp.NewPresence(userJID, userJID, xmpp.UnavailableType)
-	s.mu.Unlock()
+	pr, _ := stravaganza.NewPresenceBuilder().
+		WithAttribute(stravaganza.From, userJID.String()).
+		WithAttribute(stravaganza.To, userJID.String()).
+		WithAttribute(stravaganza.Type, stravaganza.UnavailableType).
+		BuildPresence(false)
+	s.setPresence(pr)
 
-	s.router.Bind(ctx, s)
-
-	//...notify successful binding
-	result := xmpp.NewIQType(iq.ID(), xmpp.ResultType)
-	result.SetNamespace(iq.Namespace())
-
-	boundElem := xmpp.NewElementNamespace("bind", bindNamespace)
-	j := xmpp.NewElementName("jid")
-	j.SetText(s.Username() + "@" + s.Domain() + "/" + s.Resource())
-	boundElem.AppendElement(j)
-	result.AppendElement(boundElem)
-
-	s.setState(bound)
-	s.writeElement(ctx, result)
-
-	// start pinging...
-	if p := s.mods.Ping; p != nil {
-		p.SchedulePing(s)
+	// update rate limiter
+	if err := s.updateRateLimiter(); err != nil {
+		return err
 	}
+	// bind and register cluster resource
+	if err := s.router.C2S().Bind(s.ID()); err != nil {
+		return err
+	}
+	if err = s.resMng.PutResource(ctx, s.getResource()); err != nil {
+		return err
+	}
+	s.setState(inBounded)
+
+	// post bounded C2S event
+	err = s.postStreamEvent(ctx, event.C2SStreamBounded, &event.C2SStreamEventInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	if err != nil {
+		return err
+	}
+
+	// notify successful binding
+	resIQ := bindIQ.ResultBuilder().
+		WithChild(
+			stravaganza.NewBuilder("bind").
+				WithAttribute(stravaganza.Namespace, bindNamespace).
+				WithChild(
+					stravaganza.NewBuilder("jid").
+						WithText(s.JID().String()).
+						Build(),
+				).
+				Build(),
+		).
+		Build()
+
+	log.Infow("Bounded C2S stream", "id", s.id,
+		"username", s.Username(),
+		"resource", s.Resource())
+	return s.sendElement(ctx, resIQ)
 }
 
-func (s *inStream) processStanza(ctx context.Context, elem xmpp.Stanza) {
-	toJID := elem.ToJID()
-	if s.isBlockedJID(ctx, toJID) { // blocked JID?
-		blocked := xmpp.NewElementNamespace("blocked", blockedErrorNamespace)
-		resp := xmpp.NewErrorStanzaFromStanza(elem, xmpp.ErrNotAcceptable, []xmpp.XElement{blocked})
-		s.writeElement(ctx, resp)
-		return
+func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
+	if s.getState() == inConnecting {
+		_ = s.session.OpenStream(ctx, nil)
 	}
-	switch stanza := elem.(type) {
-	case *xmpp.Presence:
-		s.processPresence(ctx, stanza)
-	case *xmpp.IQ:
-		s.processIQ(ctx, stanza)
-	case *xmpp.Message:
-		s.processMessage(ctx, stanza)
-	}
-}
-
-func (s *inStream) processIQ(ctx context.Context, iq *xmpp.IQ) {
-	toJID := iq.ToJID()
-
-	replyOnBehalf := !toJID.IsFullWithUser() && s.router.Hosts().IsLocalHost(toJID.Domain())
-	if !replyOnBehalf {
-		switch s.router.Route(ctx, iq) {
-		case router.ErrResourceNotFound:
-			s.writeElement(ctx, iq.ServiceUnavailableError())
-		case router.ErrFailedRemoteConnect:
-			s.writeElement(ctx, iq.RemoteServerNotFoundError())
-		case router.ErrBlockedJID:
-			// destination user is a blocked JID
-			if iq.IsGet() || iq.IsSet() {
-				s.writeElement(ctx, iq.ServiceUnavailableError())
-			}
-		}
-		return
-	}
-	s.mods.ProcessIQ(ctx, iq)
-}
-
-func (s *inStream) processPresence(ctx context.Context, presence *xmpp.Presence) {
-	if presence.ToJID().IsFullWithUser() {
-		_ = s.router.Route(ctx, presence)
-		return
-	}
-	replyOnBehalf := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
-
-	// update presence
-	if replyOnBehalf && (presence.IsAvailable() || presence.IsUnavailable()) {
-		s.setPresence(presence)
-	}
-	// process presence
-	if r := s.mods.Roster; r != nil {
-		r.ProcessPresence(ctx, presence)
-	}
-
-	// deliver offline messages
-	if replyOnBehalf && presence.IsAvailable() && presence.Priority() >= 0 {
-		if off := s.mods.Offline; off != nil {
-			off.DeliverOfflineMessages(ctx, s)
+	if streamErr != nil {
+		if err := s.sendElement(ctx, streamErr.Element()); err != nil {
+			return err
 		}
 	}
+	_ = s.session.Close(ctx)
+
+	return s.close(ctx)
 }
 
-func (s *inStream) processMessage(ctx context.Context, message *xmpp.Message) {
-	msg := message
-
-sendMessage:
-	err := s.router.Route(ctx, msg)
-	switch err {
-	case nil:
-		break
-	case router.ErrResourceNotFound:
-		// treat the stanza as if it were addressed to <node@domain>
-		msg, _ = xmpp.NewMessageFromElement(msg, msg.FromJID(), msg.ToJID().ToBareJID())
-		goto sendMessage
-	case router.ErrNotAuthenticated:
-		if off := s.mods.Offline; off != nil {
-			off.ArchiveMessage(ctx, message)
-			return
-		}
-		fallthrough
-	case router.ErrNotExistingAccount, router.ErrBlockedJID:
-		s.writeElement(ctx, message.ServiceUnavailableError())
-	case router.ErrFailedRemoteConnect:
-		s.writeElement(ctx, message.RemoteServerNotFoundError())
-	default:
-		log.Error(err)
+func (s *inC2S) close(ctx context.Context) error {
+	// delete cluster resource
+	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
+		return err
 	}
+	// unregister C2S stream
+	if err := s.router.C2S().Unregister(s); err != nil {
+		return err
+	}
+	s.setState(inDisconnected)
+
+	// post unregistered C2S event
+	err := s.postStreamEvent(ctx, event.C2SStreamUnregistered, &event.C2SStreamEventInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	if err != nil {
+		return err
+	}
+	reportConnectionUnregistered()
+
+	// close underlying transport
+	return s.tr.Close()
 }
 
-// Runs on it's own goroutine
-func (s *inStream) doRead() {
-	s.scheduleReadTimeout()
-	elem, sErr := s.sess.Receive()
-	s.cancelReadTimeout()
-
-	ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
-	if sErr == nil {
-		s.runQueue.Run(func() { s.readElement(ctx, elem) })
-	} else {
-		s.runQueue.Run(func() {
-			if s.getState() == disconnected {
-				return
-			}
-			s.handleSessionError(ctx, sErr)
-		})
-	}
+func (s *inC2S) restartSession() {
+	_ = s.session.Reset(s.tr)
+	s.setState(inConnecting)
 }
 
-func (s *inStream) handleSessionError(ctx context.Context, sErr *session.Error) {
-	switch err := sErr.UnderlyingErr.(type) {
-	case nil:
-		s.disconnect(ctx, nil)
-	case *streamerror.Error:
-		s.disconnectWithStreamError(ctx, err)
-	case *xmpp.StanzaError:
-		s.writeStanzaErrorResponse(ctx, sErr.Element, err)
-	default:
-		log.Error(err)
-		s.disconnectWithStreamError(ctx, streamerror.ErrUndefinedCondition)
-	}
+func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	var err error
+	err = s.session.Send(ctx, elem)
+	reportOutgoingRequest(
+		elem.Name(),
+		elem.Attribute(stravaganza.Type),
+	)
+	return err
 }
 
-func (s *inStream) writeStanzaErrorResponse(ctx context.Context, elem xmpp.XElement, stanzaErr *xmpp.StanzaError) {
-	resp := xmpp.NewElementFromElement(elem)
-	resp.SetType(xmpp.ErrorType)
-	resp.SetFrom(resp.To())
-	resp.SetTo(s.JID().String())
-	resp.AppendElement(stanzaErr.Element())
-	s.writeElement(ctx, resp)
+func (s *inC2S) getResource() *model.Resource {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rs := &model.Resource{
+		InstanceID: instance.ID(),
+		JID:        s.jd,
+		Presence:   s.pr,
+		Context:    s.sCtx,
+	}
+	return rs
 }
 
-func (s *inStream) writeElement(ctx context.Context, elem xmpp.XElement) {
-	if err := s.sess.Send(ctx, elem); err != nil {
-		log.Error(err)
-	}
+func (s *inC2S) updateRateLimiter() error {
+	j := s.JID()
+	rLim := s.shapers.MatchingJID(j).RateLimiter()
+	return s.tr.SetReadRateLimiter(rLim)
 }
 
-func (s *inStream) readElement(ctx context.Context, elem xmpp.XElement) {
-	if elem != nil {
-		s.handleElement(ctx, elem)
-	}
-	if s.getState() != disconnected {
-		go s.doRead() // keep reading...
-	}
-}
-
-func (s *inStream) disconnect(ctx context.Context, err error) {
-	if s.getState() == disconnected {
-		return
-	}
-	switch err {
-	case nil:
-		s.disconnectClosingSession(ctx, false, true)
-	default:
-		if stmErr, ok := err.(*streamerror.Error); ok {
-			s.disconnectWithStreamError(ctx, stmErr)
-		} else {
-			log.Error(err)
-			s.disconnectClosingSession(ctx, false, true)
-		}
-	}
-}
-
-func (s *inStream) disconnectWithStreamError(ctx context.Context, err *streamerror.Error) {
-	if s.getState() == connecting {
-		_ = s.sess.Open(ctx, nil)
-	}
-	s.writeElement(ctx, err.Element())
-
-	unregister := err != streamerror.ErrSystemShutdown
-	s.disconnectClosingSession(ctx, true, unregister)
-}
-
-func (s *inStream) disconnectClosingSession(ctx context.Context, closeSession, unbind bool) {
-	// stop pinging...
-	if p := s.mods.Ping; p != nil {
-		p.CancelPing(s)
-	}
-	// send 'unavailable' presence when disconnecting
-	if presence := s.Presence(); presence != nil && presence.IsAvailable() {
-		if r := s.mods.Roster; r != nil {
-			r.ProcessPresence(ctx, xmpp.NewPresence(s.JID(), s.JID().ToBareJID(), xmpp.UnavailableType))
-		}
-	}
-	if closeSession {
-		_ = s.sess.Close(ctx)
-	}
-	// unregister stream
-	if unbind {
-		s.router.Unbind(ctx, s.JID())
-	}
-	s.ctxCancelFn()
-
-	// notify disconnection
-	if s.cfg.onDisconnect != nil {
-		s.cfg.onDisconnect(s)
-	}
-	s.setState(disconnected)
-	_ = s.tr.Close()
-
-	s.runQueue.Stop(nil) // stop processing messages
-}
-
-func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
+func (s *inC2S) isBlockedJID(ctx context.Context, j *jid.JID) bool {
 	blockList, err := s.blockListRep.FetchBlockListItems(ctx, s.Username())
 	if err != nil {
-		log.Error(err)
+		log.Warnf("Failed to fetch %s block list: %v", s.Username(), err)
 		return false
 	}
 	if len(blockList) == 0 {
@@ -832,85 +983,40 @@ func (s *inStream) isBlockedJID(ctx context.Context, j *jid.JID) bool {
 	return false
 }
 
-func (s *inStream) restartSession() {
-	s.sess = session.New(s.id, &session.Config{
-		JID:           s.JID(),
-		MaxStanzaSize: s.cfg.maxStanzaSize,
-	}, s.tr, s.router.Hosts())
-	s.setState(connecting)
-}
-
-func (s *inStream) setPresence(presence *xmpp.Presence) {
-	s.mu.Lock()
-	s.presence = presence
-	s.mu.Unlock()
-}
-
-func (s *inStream) setJID(j *jid.JID) {
+func (s *inC2S) setJID(jd *jid.JID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.jid = j
+	s.jd = jd
 }
 
-func (s *inStream) setSecured(secured bool) {
+func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.secured = secured
+	s.pr = pr
 }
 
-func (s *inStream) setAuthenticated(authenticated bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.authenticated = authenticated
+func (s *inC2S) setState(state inC2SState) {
+	atomic.StoreUint32(&s.state, uint32(state))
 }
 
-func (s *inStream) isCompressed() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.compressed
+func (s *inC2S) getState() inC2SState {
+	return inC2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inStream) setCompressed(compressed bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.compressed = compressed
+func (s *inC2S) postStreamEvent(ctx context.Context, eventName string, inf *event.C2SStreamEventInfo) error {
+	return s.sn.Post(ctx, sonar.NewEventBuilder(eventName).
+		WithInfo(inf).
+		WithSender(s).
+		Build(),
+	)
 }
 
-func (s *inStream) isSessionStarted() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.sessStarted
+func (s *inC2S) requestContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), s.opts.RequestTimeout)
 }
 
-func (s *inStream) setSessionStarted(sessStarted bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sessStarted = sessStarted
-}
+var currentID uint64
 
-func (s *inStream) scheduleReadTimeout() {
-	s.mu.Lock()
-	s.readTimeoutTm = time.AfterFunc(s.cfg.keepAlive, s.readTimeout)
-	s.mu.Unlock()
-}
-
-func (s *inStream) cancelReadTimeout() {
-	s.mu.Lock()
-	s.readTimeoutTm.Stop()
-	s.mu.Unlock()
-}
-
-func (s *inStream) readTimeout() {
-	s.runQueue.Run(func() {
-		ctx, _ := context.WithTimeout(context.Background(), s.cfg.timeout)
-		s.disconnect(ctx, streamerror.ErrConnectionTimeout)
-	})
-}
-
-func (s *inStream) setState(state uint32) {
-	atomic.StoreUint32(&s.state, state)
-}
-
-func (s *inStream) getState() uint32 {
-	return atomic.LoadUint32(&s.state)
+func nextStreamID() stream.C2SID {
+	return stream.C2SID(atomic.AddUint64(&currentID, 1))
 }

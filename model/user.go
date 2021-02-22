@@ -1,71 +1,29 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
-import (
-	"bytes"
-	"encoding/gob"
-	"time"
-
-	"github.com/ortuman/jackal/xmpp"
-)
-
-// User represents a user storage entity.
+// User represents a user entity.
 type User struct {
-	Username       string
-	Password       string
-	LastPresence   *xmpp.Presence
-	LastPresenceAt time.Time
-}
-
-// FromBytes deserializes a User entity from it's gob binary representation.
-func (u *User) FromBytes(buf *bytes.Buffer) error {
-	dec := gob.NewDecoder(buf)
-	if err := dec.Decode(&u.Username); err != nil {
-		return err
+	Username string
+	Scram    struct {
+		SHA1           string
+		SHA256         string
+		SHA512         string
+		SHA3512        string
+		Salt           string
+		IterationCount int
+		PepperID       string
 	}
-	if err := dec.Decode(&u.Password); err != nil {
-		return err
-	}
-	var hasPresence bool
-	if err := dec.Decode(&hasPresence); err != nil {
-		return err
-	}
-	if hasPresence {
-		p, err := xmpp.NewPresenceFromBytes(buf)
-		if err != nil {
-			return err
-		}
-		u.LastPresence = p
-		if err := dec.Decode(&u.LastPresenceAt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// ToBytes converts a User entity to it's gob binary representation.
-func (u *User) ToBytes(buf *bytes.Buffer) error {
-	enc := gob.NewEncoder(buf)
-	if err := enc.Encode(&u.Username); err != nil {
-		return err
-	}
-	if err := enc.Encode(&u.Password); err != nil {
-		return err
-	}
-	hasPresence := u.LastPresence != nil
-	if err := enc.Encode(&hasPresence); err != nil {
-		return err
-	}
-	if hasPresence {
-		if err := u.LastPresence.ToBytes(buf); err != nil {
-			return err
-		}
-		u.LastPresenceAt = time.Now()
-		return enc.Encode(&u.LastPresenceAt)
-	}
-	return nil
 }

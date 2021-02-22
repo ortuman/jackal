@@ -8,9 +8,15 @@ An XMPP server written in Go.
 [![Maintainability](https://api.codeclimate.com/v1/badges/e3bcd6e00a2f4493e175/maintainability)](https://codeclimate.com/github/ortuman/jackal/maintainability)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/8e1575d0e64141a8bd4f8656e44052e6)](https://www.codacy.com/app/ortuman/jackal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ortuman/jackal&amp;utm_campaign=Badge_Grade)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ortuman/jackal)](https://goreportcard.com/report/github.com/ortuman/jackal)
-[![License](https://img.shields.io/badge/license-GPL-blue.svg)](https://github.com/ortuman/jackal/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/ortuman/jackal.svg?style=flat-square)](https://github.com/ortuman/jackal/blob/master/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/ortuman/jackal.svg)](https://hub.docker.com/r/ortuman/jackal/)
 [![Join the chat at https://gitter.im/jackal-im/jackal](https://badges.gitter.im/jackal-im/jackal.svg)](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+<div align="center">
+    <a href="#">
+        <img src="./logos/gopher.png">
+    </a>
+</div>
 
 ## About
 
@@ -23,59 +29,38 @@ jackal supports the following features:
 - Customizable
 - Enforced SSL/TLS
 - Stream compression (zlib)
-- Database connectivity for storing offline messages and user settings ([BadgerDB](https://github.com/dgraph-io/badger), MySQL 5.7+, MariaDB 10.2+, PostgreSQL 9.5+)
+- Database connectivity for storing offline messages and user settings (PostgreSQL 9.5+)
+- Clustering capabilities (ectd 3.4+)
+- Expose [prometheus](https://prometheus.io/) metrics
 - Cross-platform (OS X, Linux)
 
 ## Installing
 
 ### Getting Started
 
-To start using jackal, install Go 1.13+ and run the following commands:
+To start using jackal, install Go 1.16+ and run the following commands:
 
 ```bash
 $ go get -d github.com/ortuman/jackal
 $ cd $GOPATH/src/github.com/ortuman/jackal
-$ make install
+$ make install installctl
 ```
 
-This will retrieve the code and install the `jackal` server application into your `$GOPATH/bin` path.
+This will fetch the code and install `jackal` and `jackalctl` binaries into your `$GOPATH/bin` path.
 
-By default the application will try to read server configuration from `/etc/jackal/jackal.yml` file, but alternatively you can specify a custom configuration path from command line.
+By default the application will try to locate service configuration at `config.yaml`, but alternatively you can specify a custom configuration path either through command line.
 
 ```sh
-$ jackal --config=$GOPATH/src/github.com/ortuman/jackal/example.jackal.yml
+$ jackal --config=/your-custom-path/your-config.yaml
 ```
 
-### MySQL database creation
-
-Grant right to a dedicated 'jackal' user (replace `password` with your desired password).
+or environment variable:
 
 ```sh
-echo "CREATE USER IF NOT EXISTS 'jackal'@'localhost' IDENTIFIED BY 'password';" | mysql -h localhost -u root -p
-echo "GRANT ALL ON jackal.* TO 'jackal'@'localhost';" | mysql -h localhost -u root -p
+$ env JACKAL_CONFIG_FILE=/your-custom-path/your-config.yaml jackal
 ```
 
-Create 'jackal' database (using previously created password).
-
-```sh
-echo "CREATE DATABASE jackal;" | mysql -h localhost -u jackal -p
-```
-
-Download lastest version of the [MySQL schema](sql/mysql.up.sql) from jackal Github repository.
-
-```sh
-wget https://raw.githubusercontent.com/ortuman/jackal/master/sql/mysql.up.sql
-```
-
-Load database schema into the database.
-
-```sh
-mysql -h localhost -D jackal -u jackal -p < mysql.up.sql
-```
-
-Your database is now ready to connect with jackal.
-
-### Using PostgreSQL
+### PostgreSQL database creation
 
 Create a user and a database for that user:
 
@@ -85,7 +70,13 @@ CREATE DATABASE jackal;
 GRANT ALL PRIVILEGES ON DATABASE jackal TO jackal;
 ```
 
-Run the postgres script file to create database schema. In jackal's root directory run:
+Download lastest version of the [PostgreSQL schema](sql/postgres.up.psql) from jackal Github repository.
+
+```sh
+wget https://raw.githubusercontent.com/ortuman/jackal/master/sql/postgres.up.psql
+```
+
+Run the postgres script file to create database schema:
 
 ```sh
 psql --user jackal --password -f sql/postgres.up.psql
@@ -105,54 +96,87 @@ storage:
 
 That's it!
 
-## Push notifications
+Your database is now ready to connect with jackal.
 
-Support for [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html) is not yet available in `jackal`.
+### Creating jackal user
 
-However there's a chance to forward offline messages to some external service by configuring offline module as follows:
+After completing database setup you will have to register a new user to be able to login. To do so, you can use
+jackal command-line tool to create a new user proving name and password.
 
-```yaml
-  mod_offline:
-    queue_size: 2500
-    gateway:
-      type: http
-      auth: a-secret-token-here
-      pass: http://127.0.0.1:6666
+```sh
+jackalctl user add <user>:<password>
 ```
 
-Each time a message is sent to an offline user a `POST` http request to the `pass` URL is made, using the specified `Authorization` header and including the message stanza into the request body.
+## Clustering
+
+The purpose of clustering is to be able to use several servers for fault-tolerance and scalability.
+
+Since `jackal` is a distributed system, it needs a distributed data store like [etcd](https://etcd.io/) to share its state across the entire cluster.
+
+To properly run `jackal` in clustering mode make sure to add a `cluster` section configuration in each of your service nodes.
+
+Here's an example of how this section should look like:
+
+```yaml
+cluster:
+  etcd:
+    endpoints:
+      - http://<etcd-host1>:<etcd-port1>
+      - http://<etcd-host2>:<etcd-port2>
+  port: your-cluster-node-port # default is 14369
+```
+
+Note the defined `port` value will be used to perform cluster node communication, so make sure is reachable within your internal network.
+
+## Server extensibility
+
+The purpose of the extensibility framework is to provide an interface between jackal server and third-party external modules, thus offering the possibility of extending the functionality of the service for particular use cases.
+Extensibility API is almost exclusively based on gRPC and its definition can be at jackal [proto definitions repository](https://github.com/jackal-xmpp/jackal-proto).
+
+Here's a list of all extendable server components: 
+
+* [Components](https://xmpp.org/extensions/xep-0114.html)
+* [IQ handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/iqhandler/v1/iqhandler.proto#L26-L32)
+* [Event handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/eventhandler/v1/eventhandler.proto#L26-L32)
+* [Authenticators](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto#L24-L27)
 
 ## Run jackal in Docker
 
-Set up `jackal` in the cloud in under 5 minutes with zero knowledge of Golang or Linux shell using our [jackal Docker image](https://hub.docker.com/r/ortuman/jackal/).
+The Docker deployment framework supports easy installation and configuration of jackal server.
 
-```bash
-$ docker pull ortuman/jackal
-$ docker run --name jackal -p 5222:5222 ortuman/jackal
+You need to have Docker installed on your system before you can use a jackal Docker image. See [Install Docker](https://docs.docker.com/engine/install/) for instructions.
+
+Download the jackal Docker image from the official Docker Hub library with this command:
+
+```sh
+docker pull ortuman/jackal:latest
+```
+
+Start a new jackal Docker container with custom configuration.
+
+```sh
+docker run --name=jackal \
+   --mount type=bind,src=/path-on-host-machine/my-custom-config.yaml,dst=/jackal/config.yaml \
+   -d ortuman/jackal:latest
 ```
 
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
 - [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
-- [RFC 7395: XMPP Subprotocol for WebSocket](https://tools.ietf.org/html/rfc7395)
 - [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html) *2.9*
-- [XEP-0012: Last Activity](https://xmpp.org/extensions/xep-0012.html) *2.0*
+- [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html) *1.6*  
 - [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html) *2.5rc3*
-- [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html) *1.2*
 - [XEP-0054: vcard-temp](https://xmpp.org/extensions/xep-0054.html) *1.2*
-- [XEP-0077: In-Band Registration](https://xmpp.org/extensions/xep-0077.html) *2.4*
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html) *1.1*
 - [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html) *2.0*
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html) *1.0.1*
-- [XEP-0163: Personal Eventing Protocol](https://xmpp.org/extensions/xep-0163.html) *1.2.1*
-- [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html) *1.3*
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
 - [XEP-0237: Roster Versioning](https://xmpp.org/extensions/xep-0237.html) *1.3*
 
 ## Join and Contribute
 
-The [jackal developer community](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=readme.md) is vital to improving jackal future releases.  
+The [jackal developer community](https://gitter.im/jackal-im/jackal?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=readme.md) is vital to improving jackal future releases.
 
 Contributions of all kinds are welcome: reporting issues, updating documentation, fixing bugs, improving unit tests, sharing ideas, and any other tips that may help the jackal community.
 
@@ -162,7 +186,7 @@ Help us keep jackal open and inclusive. Please read and follow our [Code of Cond
 
 ## Licensing
 
-jackal is licensed under the GNU General Public License, Version 3.0. See
+jackal is licensed under the Apache 2 License. See
 [LICENSE](https://github.com/ortuman/jackal/blob/master/LICENSE) for the full
 license text.
 

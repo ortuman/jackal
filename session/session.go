@@ -1,332 +1,420 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package session
 
 import (
 	"context"
-	stdxml "encoding/xml"
+	"encoding/xml"
+	"errors"
 	"io"
 	"net"
+	"os"
 	"strings"
-	"sync"
-	"sync/atomic"
 
-	streamerror "github.com/ortuman/jackal/errors"
+	"github.com/google/uuid"
+	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/router/host"
+	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/transport"
-	"github.com/ortuman/jackal/xmpp"
-	"github.com/ortuman/jackal/xmpp/jid"
-	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
+	"github.com/ortuman/jackal/util/ratelimiter"
 )
+
+const envLogStanzas = "JACKAL_LOG_STANZAS"
+
+var logStanzas bool
+
+func init() {
+	logStanzas = os.Getenv(envLogStanzas) == "on"
+}
 
 const (
-	jabberClientNamespace = "jabber:client"
-	jabberServerNamespace = "jabber:server"
-	framedStreamNamespace = "urn:ietf:params:xml:ns:xmpp-framing"
-	streamNamespace       = "http://etherx.jabber.org/streams"
-	dialbackNamespace     = "jabber:server:dialback"
+	jabberClientNamespace    = "jabber:client"
+	jabberServerNamespace    = "jabber:server"
+	jabberComponentNamespace = "jabber:component:accept"
+	streamNamespace          = "http://etherx.jabber.org/streams"
+	dialbackNamespace        = "jabber:server:dialback"
 )
 
-type namespaceSettable interface {
-	SetNamespace(string)
-}
+var (
+	errAlreadyOpened        = errors.New("session: already opened")
+	errAlreadyClosed        = errors.New("session: already closed")
+	errInvalidSessionType   = errors.New("session: invalid session type")
+	errUnsupportedTransport = errors.New("session: unsupported transport type")
+)
 
-// Error represents a session error.
-type Error struct {
-	// Element returns the original incoming element that generated
-	// the session error.
-	Element xmpp.XElement
+// Type represents session type.
+type Type uint8
 
-	// UnderlyingErr is the underlying session error.
-	UnderlyingErr error
-}
+const (
+	// C2SSession represents a C2S session type.
+	C2SSession Type = iota
 
-// A Config structure is used to configure an XMPP session.
-type Config struct {
-	// JID defines an initial session JID.
-	JID *jid.JID
+	// S2SSession represents a S2S session type
+	S2SSession
 
-	// MaxStanzaSize defines the maximum stanza size that
-	// can be read from the session transport.
+	// ComponentSession represents a component session type.
+	ComponentSession
+)
+
+// Options structure is used to establish XMPP session options.
+type Options struct {
+
+	// MaxStanzaSize defines the maximum stanza size that can be read from the session transport.
 	MaxStanzaSize int
 
-	// Remote domain represents the remote receiving entity domain name.
-	RemoteDomain string
-
-	// IsServer defines whether or not this session is established
-	// by the server.
-	IsServer bool
-
-	// IsInitiating defines whether or not this is an initiating
-	// entity session.
-	IsInitiating bool
+	// IsOut defines whether or not this is an initiating entity session.
+	IsOut bool
 }
 
-// Session represents an XMPP session between the two peers.
+// Session represents an XMPP session between two peers.
 type Session struct {
-	id           string
-	hosts        *host.Hosts
-	tr           transport.Transport
-	pr           *xmpp.Parser
-	remoteDomain string
-	isServer     bool
-	isInitiating bool
-	opened       uint32
-	started      uint32
+	id    string
+	typ   Type
+	opts  Options
+	hosts hosts
+	tr    transport.Transport
+	pr    xmppParser
 
-	mu       sync.RWMutex
 	streamID string
-	sJID     *jid.JID
+	jd       jid.JID
+	opened   bool
+	started  bool
 }
 
 // New creates a new session instance.
-func New(id string, config *Config, tr transport.Transport, hosts *host.Hosts) *Session {
-	var parsingMode xmpp.ParsingMode
-	switch tr.Type() {
-	case transport.Socket:
-		parsingMode = xmpp.SocketStream
+func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts, opts Options) *Session {
+	ss := &Session{
+		typ:   typ,
+		id:    identifier,
+		opts:  opts,
+		hosts: hosts,
+		tr:    tr,
+		pr:    getParser(tr, opts.MaxStanzaSize),
 	}
-	s := &Session{
-		id:           id,
-		hosts:        hosts,
-		tr:           tr,
-		pr:           xmpp.NewParser(tr, parsingMode, config.MaxStanzaSize),
-		remoteDomain: config.RemoteDomain,
-		isServer:     config.IsServer,
-		isInitiating: config.IsInitiating,
-		sJID:         config.JID,
+	if !ss.opts.IsOut {
+		ss.streamID = uuid.New().String()
 	}
-	if !s.isInitiating {
-		s.streamID = uuid.New()
-	}
-	return s
+	return ss
 }
 
 // StreamID returns session stream identifier.
-func (s *Session) StreamID() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.streamID
+func (ss *Session) StreamID() string {
+	return ss.streamID
 }
 
-// SetJID updates current session JID.
-func (s *Session) SetJID(sessionJID *jid.JID) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sJID = sessionJID
+// SetFromJID updates current session from JID.
+func (ss *Session) SetFromJID(jd *jid.JID) {
+	ss.jd = *jd
 }
 
-// SetRemoteDomain sets current session remote domain.
-func (s *Session) SetRemoteDomain(remoteDomain string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.remoteDomain = remoteDomain
-}
-
-// Open initializes a sending the proper XMPP payload.
-func (s *Session) Open(ctx context.Context, featuresElem xmpp.XElement) error {
-	if !atomic.CompareAndSwapUint32(&s.opened, 0, 1) {
-		return errors.New("session already opened")
+// OpenStream initializes a session session sending the proper XMPP payload.
+func (ss *Session) OpenStream(ctx context.Context, featuresElem stravaganza.Element) error {
+	if ss.typ != C2SSession && ss.typ != S2SSession {
+		return errInvalidSessionType
 	}
-	var ops *xmpp.Element
-	var includeClosing bool
+	if ss.opened {
+		return errAlreadyOpened
+	}
+	var b *stravaganza.Builder
 
 	buf := &strings.Builder{}
-	switch s.tr.Type() {
+	switch ss.tr.Type() {
 	case transport.Socket:
-		ops = xmpp.NewElementName("stream:stream")
-		ops.SetAttribute("xmlns", s.namespace())
-		ops.SetAttribute("xmlns:stream", streamNamespace)
-		if s.isServer {
-			ops.SetAttribute("xmlns:db", dialbackNamespace)
+		b = stravaganza.NewBuilder("stream:stream")
+		b.WithAttribute(stravaganza.Namespace, ss.namespace())
+		b.WithAttribute(stravaganza.StreamNamespace, streamNamespace)
+		if ss.typ == S2SSession {
+			b.WithAttribute("xmlns:db", dialbackNamespace)
 		}
 		buf.WriteString(`<?xml version="1.0"?>`)
 
 	default:
-		return nil
-	}
-	if !s.isInitiating {
-		s.mu.RLock()
-		ops.SetAttribute("id", s.streamID)
-		s.mu.RUnlock()
-	}
-	ops.SetAttribute("from", s.jid().Domain())
-	if s.isInitiating {
-		s.mu.RLock()
-		ops.SetAttribute("to", s.remoteDomain)
-		s.mu.RUnlock()
-	}
-	ops.SetAttribute("version", "1.0")
-	if err := ops.ToXML(buf, includeClosing); err != nil {
-		return err
+		return errUnsupportedTransport
 	}
 
+	if ss.opts.IsOut {
+		b.WithAttribute(stravaganza.From, ss.hosts.DefaultHostName())
+		b.WithAttribute(stravaganza.To, ss.jd.Domain())
+	} else {
+		b.WithAttribute(stravaganza.ID, ss.streamID)
+	}
+	b.WithAttribute(stravaganza.Version, "1.0")
+
+	elem := b.Build()
+	if err := elem.ToXML(buf, false); err != nil {
+		return err
+	}
 	if featuresElem != nil {
 		if err := featuresElem.ToXML(buf, true); err != nil {
 			return err
 		}
 	}
-	openStr := buf.String()
-	log.Debugf("SEND(%s): %s", s.id, openStr)
-
-	s.setWriteDeadline(ctx)
-
-	_, err := io.Copy(s.tr, strings.NewReader(openStr))
-	if err != nil {
+	if err := ss.sendString(ctx, buf.String()); err != nil {
 		return err
 	}
-	return s.tr.Flush()
+	ss.opened = true
+	return nil
+}
+
+// OpenComponent initializes a component session sending the proper XMPP payload.
+func (ss *Session) OpenComponent(ctx context.Context) error {
+	if ss.typ != ComponentSession {
+		return errInvalidSessionType
+	}
+	if ss.opened {
+		return errAlreadyOpened
+	}
+	buf := &strings.Builder{}
+
+	elem := stravaganza.NewBuilder("stream:stream").
+		WithAttribute(stravaganza.Namespace, ss.namespace()).
+		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
+		WithAttribute(stravaganza.From, ss.jd.Domain()).
+		WithAttribute(stravaganza.ID, ss.streamID).
+		Build()
+
+	buf.WriteString(`<?xml version="1.0"?>`)
+	if err := elem.ToXML(buf, false); err != nil {
+		return err
+	}
+	if err := ss.sendString(ctx, buf.String()); err != nil {
+		return err
+	}
+	ss.opened = true
+	return nil
 }
 
 // Close closes session sending the proper XMPP payload.
-// Is responsibility of the caller to close underlying transport.
-func (s *Session) Close(ctx context.Context) error {
-	if atomic.LoadUint32(&s.opened) == 0 {
-		return errors.New("session already closed")
+func (ss *Session) Close(ctx context.Context) error {
+	if !ss.opened {
+		return errAlreadyClosed
 	}
-	s.setWriteDeadline(ctx)
+	ss.setWriteDeadline(ctx)
 
-	var err error
-	switch s.tr.Type() {
+	var outStr string
+
+	switch ss.tr.Type() {
 	case transport.Socket:
-		_, err = io.WriteString(s.tr, "</stream:stream>")
+		outStr = "</stream:stream>"
 	}
-	if err != nil {
+	if err := ss.sendString(ctx, outStr); err != nil {
 		return err
 	}
-	return s.tr.Flush()
+	ss.opened = false
+	ss.started = false
+	return nil
 }
 
 // Send writes an XML element to the underlying session transport.
-func (s *Session) Send(ctx context.Context, elem xmpp.XElement) error {
-	// clear namespace if sending a stanza
-	if e, ok := elem.(namespaceSettable); elem.IsStanza() && ok {
-		e.SetNamespace("")
+func (ss *Session) Send(ctx context.Context, elem stravaganza.Element) error {
+	if logStanzas {
+		log.Debugf("SEND(%s): %v", ss.id, elem)
 	}
-	log.Debugf("SEND(%s): %v", s.id, elem)
-
-	s.setWriteDeadline(ctx)
-
-	if err := elem.ToXML(s.tr, true); err != nil {
+	ss.setWriteDeadline(ctx)
+	if err := elem.ToXML(ss.tr, true); err != nil {
 		return err
 	}
-	return s.tr.Flush()
+	return ss.tr.Flush()
 }
 
 // Receive returns next incoming session element.
-func (s *Session) Receive() (xmpp.XElement, *Error) {
-	elem, err := s.pr.ParseElement()
+func (ss *Session) Receive() (stravaganza.Element, error) {
+	elem, err := ss.pr.Parse()
 	if err != nil {
-		return nil, s.mapErrorToSessionError(err)
-	} else if elem != nil {
-		log.Debugf("RECV(%s): %v", s.id, elem)
-
-		if atomic.LoadUint32(&s.started) == 0 {
-			if err := s.validateStreamElement(elem); err != nil {
-				return nil, err
-			}
-			if s.isInitiating {
-				s.mu.Lock()
-				s.streamID = elem.ID()
-				s.mu.Unlock()
-			}
-			atomic.StoreUint32(&s.started, 1)
-
-		} else if elem.IsStanza() {
-			stanza, err := s.buildStanza(elem)
-			if err != nil {
-				return nil, err
-			}
-			return stanza, nil
-		}
+		return nil, mapErrorToSessionError(err)
 	}
-	return elem, nil
+	if elem == nil {
+		return nil, nil
+	}
+	if logStanzas {
+		log.Debugf("RECV(%s): %v", ss.id, elem)
+	}
+	if !ss.started {
+		if err := ss.validateStreamElement(elem); err != nil {
+			return nil, err
+		}
+		if ss.opts.IsOut {
+			ss.streamID = elem.Attribute(stravaganza.ID)
+		}
+		ss.started = true
+		return elem, nil
+	}
+	if !stravaganza.IsStanza(elem) {
+		return elem, nil
+	}
+	return ss.buildStanza(elem)
 }
 
-func (s *Session) setWriteDeadline(ctx context.Context) {
+// Reset resets session internal state.
+func (ss *Session) Reset(tr transport.Transport) error {
+	if !ss.opts.IsOut {
+		ss.streamID = uuid.New().String()
+	}
+	ss.tr = tr
+	ss.pr = getParser(tr, ss.opts.MaxStanzaSize)
+	ss.opened = false
+	ss.started = false
+	return nil
+}
+
+func (ss *Session) sendString(ctx context.Context, str string) error {
+	if logStanzas {
+		log.Debugf("SEND(%s): %s", ss.id, str)
+	}
+	ss.setWriteDeadline(ctx)
+	_, err := io.Copy(ss.tr, strings.NewReader(str))
+	if err != nil {
+		return err
+	}
+	return ss.tr.Flush()
+}
+
+func (ss *Session) validateStreamElement(elem stravaganza.Element) error {
+	switch ss.tr.Type() {
+	case transport.Socket:
+		if elem.Name() != "stream:stream" {
+			return streamerror.E(streamerror.UnsupportedStanzaType)
+		}
+		ns := elem.Attribute(stravaganza.Namespace)
+		streamNs := elem.Attribute(stravaganza.StreamNamespace)
+		if ns != ss.namespace() || streamNs != streamNamespace {
+			return streamerror.E(streamerror.InvalidNamespace)
+		}
+	}
+	if ss.typ == ComponentSession {
+		return nil
+	}
+	to := elem.Attribute(stravaganza.To)
+	if len(to) > 0 && !ss.hosts.IsLocalHost(to) {
+		return streamerror.E(streamerror.HostUnknown)
+	}
+	if elem.Attribute(stravaganza.Version) != "1.0" {
+		return streamerror.E(streamerror.UnsupportedVersion)
+	}
+	return nil
+}
+
+func (ss *Session) buildStanza(elem stravaganza.Element) (stravaganza.Stanza, error) {
+	if err := ss.validateNamespace(elem); err != nil {
+		return nil, err
+	}
+	fromJID, toJID, err := ss.extractAddresses(elem)
+	if err != nil {
+		return nil, err
+	}
+	sb := stravaganza.NewBuilderFromElement(elem).
+		WithAttribute(stravaganza.From, fromJID.String()).
+		WithAttribute(stravaganza.To, toJID.String()).
+		WithoutAttribute(stravaganza.Namespace)
+
+	switch elem.Name() {
+	case "iq":
+		iq, err := sb.BuildIQ(false)
+		if err != nil {
+			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
+		}
+		return iq, nil
+
+	case "presence":
+		presence, err := sb.BuildPresence(false)
+		if err != nil {
+			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
+		}
+		return presence, nil
+
+	case "message":
+		message, err := sb.BuildMessage(false)
+		if err != nil {
+			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
+		}
+		return message, nil
+	}
+	return nil, streamerror.E(streamerror.UnsupportedStanzaType)
+}
+
+func (ss *Session) validateNamespace(elem stravaganza.Element) error {
+	ns := elem.Attribute(stravaganza.Namespace)
+	if len(ns) == 0 || ns == ss.namespace() {
+		return nil
+	}
+	return streamerror.E(streamerror.InvalidNamespace)
+}
+
+func (ss *Session) setWriteDeadline(ctx context.Context) {
 	d, ok := ctx.Deadline()
 	if !ok {
 		return
 	}
-	_ = s.tr.SetWriteDeadline(d)
+	_ = ss.tr.SetWriteDeadline(d)
 }
 
-func (s *Session) buildStanza(elem xmpp.XElement) (xmpp.Stanza, *Error) {
-	if err := s.validateNamespace(elem); err != nil {
-		return nil, err
+func (ss *Session) namespace() string {
+	switch ss.typ {
+	case C2SSession:
+		return jabberClientNamespace
+	case S2SSession:
+		return jabberServerNamespace
+	case ComponentSession:
+		return jabberComponentNamespace
 	}
-	fromJID, toJID, err := s.extractAddresses(elem)
-	if err != nil {
-		return nil, err
-	}
-	switch elem.Name() {
-	case xmpp.IQName:
-		iq, err := xmpp.NewIQFromElement(elem, fromJID, toJID)
-		if err != nil {
-			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
-		}
-		return iq, nil
-
-	case xmpp.PresenceName:
-		presence, err := xmpp.NewPresenceFromElement(elem, fromJID, toJID)
-		if err != nil {
-			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
-		}
-		return presence, nil
-
-	case xmpp.MessageName:
-		message, err := xmpp.NewMessageFromElement(elem, fromJID, toJID)
-		if err != nil {
-			log.Error(err)
-			return nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrBadRequest}
-		}
-		return message, nil
-	}
-	return nil, &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
+	return ""
 }
 
-func (s *Session) extractAddresses(elem xmpp.XElement) (*jid.JID, *jid.JID, *Error) {
-	var fromJID, toJID *jid.JID
-	var err error
-
-	from := elem.From()
-	if !s.isServer {
+func (ss *Session) extractAddresses(elem stravaganza.Element) (fromJID *jid.JID, toJID *jid.JID, err error) {
+	from := elem.Attribute(stravaganza.From)
+	switch ss.typ {
+	case C2SSession:
 		// do not validate 'from' address until full user JID has been set
-		if s.jid().IsFullWithUser() {
-			if len(from) > 0 && !s.isValidFrom(from) {
-				return nil, nil, &Error{UnderlyingErr: streamerror.ErrInvalidFrom}
+		if ss.jd.IsFullWithUser() {
+			if len(from) > 0 && !ss.isValidFrom(from) {
+				return nil, nil, streamerror.E(streamerror.InvalidFrom)
 			}
 		}
-		fromJID = s.jid()
-	} else {
+		fromJID = &ss.jd
+
+	default:
 		j, err := jid.NewWithString(from, false)
-		if err != nil || j.Domain() != s.remoteDomain {
-			return nil, nil, &Error{UnderlyingErr: streamerror.ErrInvalidFrom}
+		if err != nil || j.Domain() != ss.jd.Domain() {
+			return nil, nil, streamerror.E(streamerror.InvalidFrom)
 		}
 		fromJID = j
 	}
 
 	// validate 'to' address
-	to := elem.To()
+	to := elem.Attribute(stravaganza.To)
 	if len(to) > 0 {
-		toJID, err = jid.NewWithString(elem.To(), false)
+		toJID, err = jid.NewWithString(to, false)
 		if err != nil {
-			return nil, nil, &Error{Element: elem, UnderlyingErr: xmpp.ErrJidMalformed}
+			return nil, nil, stanzaerror.E(stanzaerror.JIDMalformed, elem)
 		}
 	} else {
-		toJID = s.jid().ToBareJID() // account's bare JID as default 'to'
+		switch ss.typ {
+		case C2SSession:
+			toJID = ss.jd.ToBareJID() // account's bare JID as default 'to'
+		default:
+			toJID, _ = jid.NewWithString(ss.hosts.DefaultHostName(), true)
+		}
 	}
-	return fromJID, toJID, nil
+	return
 }
 
-func (s *Session) isValidFrom(from string) bool {
+func (ss *Session) isValidFrom(from string) bool {
 	validFrom := false
 	j, err := jid.NewWithString(from, false)
 	if err == nil && j != nil {
@@ -334,79 +422,58 @@ func (s *Session) isValidFrom(from string) bool {
 		domain := j.Domain()
 		resource := j.Resource()
 
-		validFrom = node == s.jid().Node() && domain == s.jid().Domain()
+		validFrom = node == ss.jd.Node() && domain == ss.jd.Domain()
 		if len(resource) > 0 {
-			validFrom = validFrom && resource == s.jid().Resource()
+			validFrom = validFrom && resource == ss.jd.Resource()
 		}
 	}
 	return validFrom
 }
 
-func (s *Session) validateStreamElement(elem xmpp.XElement) *Error {
-	switch s.tr.Type() {
+func getParser(tr transport.Transport, maxStanzaSize int) *xmppparser.Parser {
+	var pm xmppparser.ParsingMode
+	switch tr.Type() {
 	case transport.Socket:
-		if elem.Name() != "stream:stream" {
-			return &Error{UnderlyingErr: streamerror.ErrUnsupportedStanzaType}
-		}
-		if elem.Namespace() != s.namespace() || elem.Attributes().Get("xmlns:stream") != streamNamespace {
-			return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
-		}
+		pm = xmppparser.SocketStream
 	}
-	to := elem.To()
-	if len(to) > 0 && !s.hosts.IsLocalHost(to) {
-		return &Error{UnderlyingErr: streamerror.ErrHostUnknown}
-	}
-	if elem.Version() != "1.0" {
-		return &Error{UnderlyingErr: streamerror.ErrUnsupportedVersion}
-	}
-	return nil
+	return xmppparser.New(tr, pm, maxStanzaSize)
 }
 
-func (s *Session) validateNamespace(elem xmpp.XElement) *Error {
-	ns := elem.Namespace()
-	if len(ns) == 0 || ns == s.namespace() {
-		return nil
-	}
-	return &Error{UnderlyingErr: streamerror.ErrInvalidNamespace}
-}
-
-func (s *Session) namespace() string {
-	if s.isServer {
-		return jabberServerNamespace
-	}
-	return jabberClientNamespace
-}
-
-func (s *Session) jid() *jid.JID {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.sJID
-}
-
-func (s *Session) mapErrorToSessionError(err error) *Error {
+func mapErrorToSessionError(err error) error {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		break
+	case ratelimiter.ErrReadLimitExcedeed:
+		se := streamerror.E(streamerror.PolicyViolation)
+		se.Err = err
+		se.ApplicationElement = stravaganza.NewBuilder("rate-limit-exceeded").
+			WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
+			Build()
+		return se
 
-	case xmpp.ErrStreamClosedByPeer:
-		_ = s.Close(context.Background())
-
-	case xmpp.ErrTooLargeStanza:
-		return &Error{UnderlyingErr: streamerror.ErrPolicyViolation}
+	case xmppparser.ErrTooLargeStanza:
+		se := streamerror.E(streamerror.PolicyViolation)
+		se.Err = err
+		se.ApplicationElement = stravaganza.NewBuilder("stanza-too-big").
+			WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
+			Build()
+		return se
 
 	default:
-		switch e := err.(type) {
-		case net.Error:
-			if e.Timeout() {
-				return &Error{UnderlyingErr: streamerror.ErrConnectionTimeout}
-			}
-			return &Error{UnderlyingErr: err}
+		switch err := err.(type) {
+		case *xml.SyntaxError:
+			se := streamerror.E(streamerror.InvalidXML)
+			se.Err = err
+			return se
 
-		case *stdxml.SyntaxError:
-			return &Error{UnderlyingErr: streamerror.ErrInvalidXML}
+		case net.Error:
+			if !err.Timeout() {
+				return err
+			}
+			se := streamerror.E(streamerror.ConnectionTimeout)
+			se.Err = err
+			return se
+
 		default:
-			return &Error{UnderlyingErr: err}
+			return err // unmapped error
 		}
 	}
-	return &Error{}
 }

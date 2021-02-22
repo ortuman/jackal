@@ -1,59 +1,107 @@
-/*
- * Copyright (c) 2018 Miguel Ángel Ortuño.
- * See the LICENSE file for more information.
- */
+// Copyright 2020 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package xep0004
 
 import (
 	"testing"
 
-	"github.com/ortuman/jackal/xmpp"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
 )
 
-func TestField_FromElement(t *testing.T) {
-	elem := xmpp.NewElementName("")
-	_, err := NewFieldFromElement(elem)
-	require.NotNil(t, err)
+func TestField_FromElementError(t *testing.T) {
+	// given
+	_, err := NewFieldFromElement(stravaganza.NewBuilder("").Build())
 
-	elem.SetName("field")
-	elem.SetAttribute("var", "name")
-	elem.SetAttribute("type", "integer")
-	_, err = NewFieldFromElement(elem)
+	// then
 	require.NotNil(t, err)
+}
 
-	elem.SetAttribute("type", TextSingle)
-	_, err = NewFieldFromElement(elem)
-	require.Nil(t, err)
+func TestField_FromElementInvalidField(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("field")
+	eb.WithAttribute("var", "name")
+	eb.WithAttribute("type", "integer")
+
+	// when
+	f, err := NewFieldFromElement(eb.Build())
+
+	// then
+	require.NotNil(t, err)
+	require.Nil(t, f)
+}
+
+func TestField_FromElementDescription(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("field")
+	eb.WithAttribute("var", "name")
+	eb.WithAttribute("type", TextSingle)
 
 	desc := "A description"
-	descElem := xmpp.NewElementName("desc")
-	descElem.SetText(desc)
-	elem.AppendElement(descElem)
-	elem.AppendElement(xmpp.NewElementName("required"))
-	f, err := NewFieldFromElement(elem)
+	descB := stravaganza.NewBuilder("desc")
+	descB.WithText(desc)
+	eb.WithChild(descB.Build())
+	eb.WithChild(stravaganza.NewBuilder("required").Build())
+
+	// when
+	f, err := NewFieldFromElement(eb.Build())
+
+	// then
 	require.Nil(t, err)
 	require.Equal(t, desc, f.Description)
 	require.True(t, f.Required)
+}
+
+func TestField_FromElementValue(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("field")
+	eb.WithAttribute("var", "name")
+	eb.WithAttribute("type", TextSingle)
 
 	value := "A value"
-	valueElem := xmpp.NewElementName("value")
-	valueElem.SetText(value)
-	elem.AppendElement(valueElem)
-	f, err = NewFieldFromElement(elem)
+	valueB := stravaganza.NewBuilder("value")
+	valueB.WithText(value)
+	eb.WithChild(valueB.Build())
+
+	// when
+	f, err := NewFieldFromElement(eb.Build())
+
+	// then
 	require.Nil(t, err)
 	require.Equal(t, 1, len(f.Values))
 	require.Equal(t, value, f.Values[0])
-	elem.RemoveElements("value")
+}
+
+func TestField_FromElementOptValue(t *testing.T) {
+	// given
+	eb := stravaganza.NewBuilder("field")
+	eb.WithAttribute("var", "name")
+	eb.WithAttribute("type", TextSingle)
 
 	optValue := "An option value"
-	valueElem.SetText(optValue)
-	optElem := xmpp.NewElementName("option")
-	optElem.SetAttribute("label", "news")
-	optElem.AppendElement(valueElem)
-	elem.AppendElement(optElem)
-	f, err = NewFieldFromElement(elem)
+	valueB := stravaganza.NewBuilder("value")
+	valueB.WithText(optValue)
+	optElem := stravaganza.NewBuilder("option")
+	optElem.WithAttribute("label", "news")
+	optElem.WithChild(valueB.Build())
+	eb.WithChild(optElem.Build())
+
+	// when
+	f, err := NewFieldFromElement(eb.Build())
+
+	// then
 	require.Nil(t, err)
 	require.Equal(t, 1, len(f.Options))
 	require.Equal(t, "news", f.Options[0].Label)
@@ -71,19 +119,19 @@ func TestField_Element(t *testing.T) {
 	elem := f.Element()
 
 	require.Equal(t, "field", elem.Name())
-	require.Equal(t, "a_var", elem.Attributes().Get("var"))
-	require.Equal(t, "a_type", elem.Attributes().Get("type"))
-	require.Equal(t, "a_label", elem.Attributes().Get("label"))
+	require.Equal(t, "a_var", elem.Attribute("var"))
+	require.Equal(t, "a_type", elem.Attribute("type"))
+	require.Equal(t, "a_label", elem.Attribute("label"))
 
-	valElem := elem.Elements().Child("value")
+	valElem := elem.Child("value")
 	require.NotNil(t, valElem)
 	require.Equal(t, "A value", valElem.Text())
 
-	optElems := elem.Elements().Children("option")
-	require.Equal(t, 1, len(optElems))
-	optElem := optElems[0]
-	require.Equal(t, "opt_label", optElem.Attributes().Get("label"))
+	optElements := elem.Children("option")
+	require.Equal(t, 1, len(optElements))
+	optElem := optElements[0]
+	require.Equal(t, "opt_label", optElem.Attribute("label"))
 
-	valElem = optElem.Elements().Child("value")
+	valElem = optElem.Child("value")
 	require.Equal(t, "An option value", valElem.Text())
 }
