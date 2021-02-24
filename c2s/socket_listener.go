@@ -133,10 +133,13 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infof("Received C2S incoming connection at %s", l.addr)
+
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infow(fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
+	log.Infow(
+		fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
 		"direct_tls", l.opts.UseTLS,
 	)
 	return nil

@@ -112,10 +112,13 @@ func (l *SocketListener) Start(_ context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infof("Received S2S incoming connection at %s", l.addr)
+
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infow(fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
+	log.Infow(
+		fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
 		"direct_tls", l.opts.UseTLS,
 	)
 	return nil
