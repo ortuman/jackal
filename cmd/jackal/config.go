@@ -82,6 +82,7 @@ type listenerConfig struct {
 	BindAddr  string `fig:"bind_addr"`
 	Port      int    `fig:"port" default:"5222"`
 	Transport string `fig:"transport" default:"socket"`
+	DirectTLS bool   `fig:"direct_tls"`
 	SASL      struct {
 		Mechanisms []string `fig:"mechanisms" default:"[scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]"`
 		External   struct {

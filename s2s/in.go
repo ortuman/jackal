@@ -123,6 +123,9 @@ func newInS2S(
 		rq:          runqueue.New(id.String(), log.Errorf),
 		state:       uint32(inConnecting),
 	}
+	if opts.UseTLS {
+		stm.flags.setSecured() // stream already secured
+	}
 	return stm, nil
 }
 

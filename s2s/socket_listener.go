@@ -16,6 +16,8 @@ package s2s
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -31,7 +33,10 @@ import (
 	"github.com/ortuman/jackal/transport"
 )
 
-var netListen = net.Listen
+var (
+	listen    = net.Listen
+	listenTLS = tls.Listen
+)
 
 // SocketListener represents a S2S socket listener type.
 type SocketListener struct {
@@ -87,7 +92,14 @@ func NewSocketListener(
 
 // Start starts listening on the TCP network address bindAddr to handle incoming S2S connections.
 func (l *SocketListener) Start(_ context.Context) error {
-	ln, err := netListen("tcp", l.addr)
+	var err error
+	var ln net.Listener
+
+	if l.opts.UseTLS {
+		ln, err = listenTLS("tcp", l.addr, l.opts.TLSConfig)
+	} else {
+		ln, err = listen("tcp", l.addr)
+	}
 	if err != nil {
 		return err
 	}
@@ -103,12 +115,14 @@ func (l *SocketListener) Start(_ context.Context) error {
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting S2S socket connections at %s", l.addr)
+	log.Infow(fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
+		"direct_tls", l.opts.UseTLS,
+	)
 	return nil
 }
 
 // Stop stops handling incoming S2S connections and closes underlying TCP listener.
-func (l *SocketListener) Stop(ctx context.Context) error {
+func (l *SocketListener) Stop(_ context.Context) error {
 	atomic.StoreUint32(&l.active, 0)
 	if err := l.ln.Close(); err != nil {
 		return err

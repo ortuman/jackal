@@ -16,6 +16,8 @@ package c2s
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -41,7 +43,10 @@ const (
 	scramSHA3512Mechanism = "scram_sha3_512"
 )
 
-var netListen = net.Listen
+var (
+	listen    = net.Listen
+	listenTLS = tls.Listen
+)
 
 // SocketListener represents a C2S socket listener type.
 type SocketListener struct {
@@ -108,7 +113,14 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			return err
 		}
 	}
-	ln, err := netListen("tcp", l.addr)
+	var err error
+	var ln net.Listener
+
+	if l.opts.UseTLS {
+		ln, err = listenTLS("tcp", l.addr, l.opts.TLSConfig)
+	} else {
+		ln, err = listen("tcp", l.addr)
+	}
 	if err != nil {
 		return err
 	}
@@ -124,7 +136,9 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting C2S socket connections at %s", l.addr)
+	log.Infow(fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
+		"direct_tls", l.opts.UseTLS,
+	)
 	return nil
 }
 

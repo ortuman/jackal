@@ -61,11 +61,7 @@ listeners:
     req_timeout: 60s
     transport: socket
     sasl:
-      mechanisms:
-        - scram_sha_1
-        - scram_sha_256
-        - scram_sha_512
-        - scram_sha3_512
+      mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
 
       # Authentication gateway
       # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
@@ -73,8 +69,22 @@ listeners:
         address: 127.0.0.1:4567
         is_secure: false
 
+  - type: c2s
+    port: 5223
+    direct_tls: true
+    req_timeout: 60s
+    transport: socket
+    sasl:
+      mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
+
   - type: s2s
     port: 5269
+    req_timeout: 60s
+    max_stanza_size: 131072
+
+  - type: s2s
+    port: 5270
+    direct_tls: true
     req_timeout: 60s
     max_stanza_size: 131072
 

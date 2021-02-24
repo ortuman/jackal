@@ -15,6 +15,8 @@
 package main
 
 import (
+	"crypto/tls"
+
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component/xep0114"
@@ -66,6 +68,10 @@ func initListeners(a *serverApp, configs []listenerConfig) error {
 					MaxStanzaSize:    cfg.MaxStanzaSize,
 					CompressionLevel: cmpLevelMap[cfg.CompressionLevel],
 					ResourceConflict: resConflictMap[cfg.ResourceConflict],
+					UseTLS:           cfg.DirectTLS,
+					TLSConfig: &tls.Config{
+						Certificates: a.hosts.Certificates(),
+					},
 				},
 			)
 			a.registerStartStopper(ln)
@@ -88,6 +94,10 @@ func initListeners(a *serverApp, configs []listenerConfig) error {
 					KeepAlive:      cfg.KeepAliveTimeout,
 					RequestTimeout: cfg.RequestTimeout,
 					MaxStanzaSize:  cfg.MaxStanzaSize,
+					UseTLS:         cfg.DirectTLS,
+					TLSConfig: &tls.Config{
+						Certificates: a.hosts.Certificates(),
+					},
 				},
 			)
 			a.registerStartStopper(ln)

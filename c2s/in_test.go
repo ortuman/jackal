@@ -771,7 +771,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					ResourceConflict: Disallow,
 				},
 				state:          uint32(tt.state),
-				flgs:           inC2SFlags{flg: tt.flags},
+				flags:          inC2SFlags{flg: tt.flags},
 				rq:             runqueue.New(tt.name, nil),
 				jd:             userJID,
 				tr:             trMock,

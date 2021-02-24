@@ -14,7 +14,10 @@
 
 package s2s
 
-import "time"
+import (
+	"crypto/tls"
+	"time"
+)
 
 // Options defines S2S connection options.
 type Options struct {
@@ -33,4 +36,10 @@ type Options struct {
 
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
 	MaxStanzaSize int
+
+	// UseTLS, if true, tls.Listen will be used as network listener.
+	UseTLS bool
+
+	// TLSConfig contains configuration to be used when TLS listener is enabled.
+	TLSConfig *tls.Config
 }
