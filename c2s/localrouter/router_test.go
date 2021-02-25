@@ -18,10 +18,9 @@ import (
 	"sync"
 	"testing"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"
 )
