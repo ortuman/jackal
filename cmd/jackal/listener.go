@@ -97,6 +97,7 @@ func initListeners(a *serverApp, configs []listenerConfig) error {
 					UseTLS:         cfg.DirectTLS,
 					TLSConfig: &tls.Config{
 						Certificates: a.hosts.Certificates(),
+						ClientAuth:   tls.RequireAndVerifyClientCert,
 					},
 				},
 			)
