@@ -187,7 +187,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">=</auth>`,
+			expectedOutput: `<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">amFja2FsLmlt</auth>`,
 			expectedState:  outAuthenticating,
 		},
 		{
@@ -229,7 +229,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<db:result>d88ae3abe280439daebe8594ef2b26eb38929ee944c6d6ef0db639f24ebd4388</db:result>`,
+			expectedOutput: `<db:result from="jackal.im" to="jabber.org">21bd4eb62f7d70d22b545f38a40a023ad6fa385905f36d889612fcb4cdb4966c</db:result>`,
 			expectedState:  outVerifyingDialbackKey,
 		},
 		{
@@ -294,6 +294,8 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 			trMock.CloseFunc = func() error { return nil }
 
 			stm := &outS2S{
+				sender: "jackal.im",
+				target: "jabber.org",
 				opts: Options{
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,

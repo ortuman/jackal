@@ -79,9 +79,33 @@ func TestDialer_Success(t *testing.T) {
 		return conn, nil
 	}
 	// when
-	out, _, err := d.DialContext(context.Background(), "jabber.org")
+	out, isTLS, err := d.DialContext(context.Background(), "jabber.org")
 
 	// then
-	require.NotNil(t, out)
 	require.Nil(t, err)
+	require.NotNil(t, out)
+	require.False(t, isTLS)
+}
+
+func TestDialer_TLSSuccess(t *testing.T) {
+	// given
+	d := newDialer(time.Minute, &tls.Config{})
+
+	conn := &netConnMock{}
+	d.srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
+		if service != s2sTLSService {
+			return "", nil, nil
+		}
+		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
+	}
+	d.dialTLSCtx = func(_ context.Context, _, _ string) (net.Conn, error) {
+		return conn, nil
+	}
+	// when
+	out, isTLS, err := d.DialContext(context.Background(), "jabber.org")
+
+	// then
+	require.Nil(t, err)
+	require.NotNil(t, out)
+	require.True(t, isTLS)
 }

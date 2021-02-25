@@ -18,6 +18,8 @@ import (
 	"sync"
 	"testing"
 
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/router/stream"
@@ -49,7 +51,7 @@ func TestRouter_RegisterBind(t *testing.T) {
 	require.NotNil(t, r.bndRes["ortuman"])
 }
 
-func TestRouter_Uregister(t *testing.T) {
+func TestRouter_Unregister(t *testing.T) {
 	// given
 	mockStm := &streamC2SMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
@@ -113,6 +115,36 @@ func TestRouter_Route(t *testing.T) {
 
 	require.Nil(t, err)
 	require.Equal(t, stanza.String(), sentElement.String())
+}
+
+func TestRouter_Disconnect(t *testing.T) {
+	// given
+	mockStm := &streamC2SMock{}
+	mockStm.IDFunc = func() stream.C2SID { return 1234 }
+	mockStm.UsernameFunc = func() string { return "ortuman" }
+	mockStm.ResourceFunc = func() string { return "yard" }
+
+	mockStm.DisconnectFunc = func(streamErr *streamerror.Error) <-chan error {
+		errCh := make(chan error, 1)
+		errCh <- nil
+		return errCh
+	}
+
+	r := &Router{
+		hosts:  &hostsMock{},
+		sonar:  sonar.New(),
+		stms:   make(map[stream.C2SID]stream.C2S),
+		bndRes: make(map[string]*resources),
+	}
+
+	_ = r.Register(mockStm)
+	_, _ = r.Bind(1234)
+
+	// when
+	err := r.Disconnect("ortuman", "yard", streamerror.E(streamerror.SystemShutdown))
+
+	require.Nil(t, err)
+	require.Len(t, mockStm.DisconnectCalls(), 1)
 }
 
 func testMessageStanza() *stravaganza.Message {
