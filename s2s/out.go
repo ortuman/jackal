@@ -202,6 +202,8 @@ func (s *outS2S) dial(ctx context.Context) error {
 		}
 		return err
 	}
+	log.Infow("Dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
+
 	s.tr = transport.NewSocketTransport(conn)
 
 	// set default rate limiter
