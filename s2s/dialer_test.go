@@ -16,6 +16,7 @@ package s2s
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"testing"
@@ -26,7 +27,7 @@ import (
 
 func TestDialer_ResolverError(t *testing.T) {
 	// given
-	d := newDialer(time.Minute)
+	d := newDialer(time.Minute, &tls.Config{})
 
 	mockedErr := errors.New("dialer mocked error")
 	d.srvResolve = func(_, _, _ string) (cname string, addrs []*net.SRV, err error) {
@@ -34,7 +35,7 @@ func TestDialer_ResolverError(t *testing.T) {
 	}
 
 	// when
-	out, err := d.DialContext(context.Background(), "jabber.org")
+	out, _, err := d.DialContext(context.Background(), "jabber.org")
 
 	// then
 	require.NotNil(t, out)
@@ -43,17 +44,20 @@ func TestDialer_ResolverError(t *testing.T) {
 
 func TestDialer_DialError(t *testing.T) {
 	// given
-	d := newDialer(time.Minute)
+	d := newDialer(time.Minute, &tls.Config{})
 
 	errFoo := errors.New("foo error")
 	d.srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
+		if service != s2sService {
+			return "", nil, nil
+		}
 		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
 	}
-	d.dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+	d.dialCtx = func(_ context.Context, _, _ string) (net.Conn, error) {
 		return nil, errFoo
 	}
 	// when
-	out, err := d.DialContext(context.Background(), "jabber.org")
+	out, _, err := d.DialContext(context.Background(), "jabber.org")
 
 	// then
 	require.Nil(t, out)
@@ -62,14 +66,20 @@ func TestDialer_DialError(t *testing.T) {
 
 func TestDialer_Success(t *testing.T) {
 	// given
-	d := newDialer(time.Minute)
+	d := newDialer(time.Minute, &tls.Config{})
 
 	conn := &netConnMock{}
-	d.dialContext = func(_ context.Context, _, _ string) (net.Conn, error) {
+	d.srvResolve = func(service, proto, name string) (cname string, addrs []*net.SRV, err error) {
+		if service != s2sService {
+			return "", nil, nil
+		}
+		return "", []*net.SRV{{Target: "xmpp.jabber.org", Port: 5269}}, nil
+	}
+	d.dialCtx = func(_ context.Context, _, _ string) (net.Conn, error) {
 		return conn, nil
 	}
 	// when
-	out, err := d.DialContext(context.Background(), "jabber.org")
+	out, _, err := d.DialContext(context.Background(), "jabber.org")
 
 	// then
 	require.NotNil(t, out)

@@ -132,7 +132,7 @@ func newOutS2S(
 		kv:      kv,
 		shapers: shapers,
 		sn:      sn,
-		dialer:  newDialer(opts.DialTimeout),
+		dialer:  newDialer(opts.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
 	return stm
@@ -155,7 +155,7 @@ func newDialbackS2S(
 		tlsCfg:   tlsCfg,
 		opts:     opts,
 		dbParams: dbParams,
-		dialer:   newDialer(opts.DialTimeout),
+		dialer:   newDialer(opts.DialTimeout, tlsCfg),
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
 	}
@@ -192,7 +192,7 @@ func (s *outS2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 }
 
 func (s *outS2S) dial(ctx context.Context) error {
-	conn, err := s.dialer.DialContext(ctx, s.target)
+	conn, usesTLS, err := s.dialer.DialContext(ctx, s.target)
 	if err != nil {
 		switch err := err.(type) {
 		case net.Error:
@@ -223,6 +223,9 @@ func (s *outS2S) dial(ctx context.Context) error {
 	jd, _ := jid.New("", s.target, "", true)
 	s.session.SetFromJID(jd)
 
+	if usesTLS {
+		s.flags.setSecured() // already secured
+	}
 	return nil
 }
 
