@@ -17,6 +17,7 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net"
@@ -373,7 +374,7 @@ func (s *outS2S) handleConnected(ctx context.Context, elem stravaganza.Element) 
 			return s.sendElement(ctx, stravaganza.NewBuilder("auth").
 				WithAttribute(stravaganza.Namespace, saslNamespace).
 				WithAttribute("mechanism", "EXTERNAL").
-				WithText("=").
+				WithText(base64.StdEncoding.EncodeToString([]byte(s.sender))).
 				Build(),
 			)
 
@@ -441,13 +442,6 @@ func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Elem
 
 		s.restartSession()
 		return s.session.OpenStream(ctx, nil)
-
-	case "challenge":
-		return s.session.Send(ctx, stravaganza.NewBuilder("response").
-			WithAttribute(stravaganza.Namespace, saslNamespace).
-			WithText("=").
-			Build(),
-		)
 
 	case "failure":
 		return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
