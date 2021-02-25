@@ -442,6 +442,13 @@ func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Elem
 		s.restartSession()
 		return s.session.OpenStream(ctx, nil)
 
+	case "challenge":
+		return s.session.Send(ctx, stravaganza.NewBuilder("response").
+			WithAttribute(stravaganza.Namespace, saslNamespace).
+			WithText("=").
+			Build(),
+		)
+
 	case "failure":
 		return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
 
