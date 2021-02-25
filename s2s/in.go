@@ -146,11 +146,8 @@ func (s *inS2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 func (s *inS2S) start() error {
 	s.inHub.register(s)
 
-	log.Infow("Registered S2S incoming stream",
-		"id", s.id,
-		"sender", s.sender,
-		"target", s.target,
-	)
+	log.Infow("Registered S2S incoming stream", "id", s.id)
+
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
 	err := s.postStreamEvent(ctx, event.S2SInStreamRegistered, &event.S2SStreamEventInfo{
