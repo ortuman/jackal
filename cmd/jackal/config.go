@@ -95,7 +95,7 @@ type listenerConfig struct {
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"32768"`
 	Secret           string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"5m"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
 }
 
