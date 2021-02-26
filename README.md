@@ -172,7 +172,7 @@ docker run --name=jackal \
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
 - [XEP-0237: Roster Versioning](https://xmpp.org/extensions/xep-0237.html) *1.3*
-- [XEP-0368: SRV records for XMPP over TLS](https://xmpp.org/extensions/xep-0368.html) *1.3*
+- [XEP-0368: SRV records for XMPP over TLS](https://xmpp.org/extensions/xep-0368.html) *1.1.0*
 
 ## Join and Contribute
 
