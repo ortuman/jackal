@@ -16,6 +16,7 @@ package xep0092
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackal-xmpp/stravaganza"
@@ -84,6 +85,6 @@ func TestVersion_GetVersion(t *testing.T) {
 	require.NotNil(t, os)
 
 	require.Equal(t, "jackal", name.Text())
-	require.Equal(t, version.Version.String(), ver.Text())
+	require.Equal(t, strings.TrimPrefix(version.Version.String(), "v"), ver.Text())
 	require.Equal(t, "Darwin 12.2.0", os.Text())
 }

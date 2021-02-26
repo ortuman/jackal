@@ -121,7 +121,7 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 	)
 	qb.WithChild(
 		stravaganza.NewBuilder("version").
-			WithText(version.Version.String()).
+			WithText(strings.TrimPrefix(version.Version.String(), "v")).
 			Build(),
 	)
 	if v.opts.ShowOS {
