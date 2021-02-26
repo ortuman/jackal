@@ -71,6 +71,7 @@ func initListeners(a *serverApp, configs []listenerConfig) error {
 					UseTLS:           cfg.DirectTLS,
 					TLSConfig: &tls.Config{
 						Certificates: a.hosts.Certificates(),
+						MinVersion:   tls.VersionTLS12,
 					},
 				},
 			)
@@ -98,6 +99,7 @@ func initListeners(a *serverApp, configs []listenerConfig) error {
 					TLSConfig: &tls.Config{
 						Certificates: a.hosts.Certificates(),
 						ClientAuth:   tls.RequireAndVerifyClientCert,
+						MinVersion:   tls.VersionTLS12,
 					},
 				},
 			)
