@@ -134,7 +134,7 @@ type s2sOutConfig struct {
 	DialbackSecret   string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
 	KeepAlive        time.Duration `fig:"keep_alive" default:"30s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"5m"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"131072"`
 }
