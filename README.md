@@ -130,7 +130,7 @@ Note the defined `port` value will be used to perform cluster node communication
 ## Server extensibility
 
 The purpose of the extensibility framework is to provide an interface between jackal server and third-party external modules, thus offering the possibility of extending the functionality of the service for particular use cases.
-Extensibility API is almost exclusively based on gRPC and its definition can be at jackal [proto definitions repository](https://github.com/jackal-xmpp/jackal-proto).
+Extensibility API is almost exclusively based on [gRPC](https://grpc.io/) and its definition can be at jackal [proto definitions repository](https://github.com/jackal-xmpp/jackal-proto).
 
 Here's a list of all extendable server components: 
 
