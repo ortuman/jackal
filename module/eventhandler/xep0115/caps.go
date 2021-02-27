@@ -142,8 +142,8 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 
 	discoIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, reqID).
-		WithAttribute(stravaganza.From, toJID.Domain()).
-		WithAttribute(stravaganza.To, fromJID.Domain()).
+		WithAttribute(stravaganza.From, toJID.String()).
+		WithAttribute(stravaganza.To, fromJID.String()).
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
 		WithChild(
 			stravaganza.NewBuilder("query").
