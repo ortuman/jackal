@@ -83,8 +83,8 @@ func (m *Capabilities) AccountFeatures() []string { return []string{capabilities
 
 // Start starts entity capabilities module.
 func (m *Capabilities) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnrouted, m.onC2SPresenceRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SStreamMessageUnrouted, m.onS2SPresenceRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv))
 
 	log.Infow("Started capabilities module", "xep", XEPNumber)
 	return nil
