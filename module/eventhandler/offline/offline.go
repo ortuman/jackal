@@ -37,7 +37,7 @@ const (
 	hintsNamespace = "urn:xmpp:hints"
 )
 
-// ModuleName represents roster module name.
+// ModuleName represents offline module name.
 const ModuleName = "offline"
 
 // Options contains offline module configuration options.
@@ -46,7 +46,7 @@ type Options struct {
 	QueueSize int
 }
 
-// Offline represets offline module type.
+// Offline represents offline module type.
 type Offline struct {
 	opts   Options
 	router router.Router

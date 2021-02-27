@@ -39,6 +39,7 @@ type Transaction interface {
 
 type baseRepository interface {
 	User
+	Capabilities
 	Offline
 	BlockList
 	Roster

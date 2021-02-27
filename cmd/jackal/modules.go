@@ -18,6 +18,7 @@ import (
 	"github.com/ortuman/jackal/module"
 	eventhandlerexternal "github.com/ortuman/jackal/module/eventhandler/external"
 	"github.com/ortuman/jackal/module/eventhandler/offline"
+	"github.com/ortuman/jackal/module/eventhandler/xep0115"
 	iqhandlerexternal "github.com/ortuman/jackal/module/iqhandler/external"
 	"github.com/ortuman/jackal/module/iqhandler/roster"
 	"github.com/ortuman/jackal/module/iqhandler/xep0030"
@@ -55,6 +56,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	if stringsutil.StringSliceContains(xep0054.ModuleName, cfg.Enabled) {
 		vCard := xep0054.New(a.rep, a.router, a.sonar)
 		iqHandlers = append(iqHandlers, vCard)
+	}
+	// capabilities
+	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
+		caps := xep0115.New(a.router, a.rep, a.sonar)
+		eventHandlers = append(eventHandlers, caps)
 	}
 	// ping
 	if stringsutil.StringSliceContains(xep0199.ModuleName, cfg.Enabled) {

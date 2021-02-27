@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,30 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pgsqlrepository
+package capsmodel
 
 import (
-	"database/sql"
+	"testing"
 
-	"github.com/ortuman/jackal/repository"
+	"github.com/stretchr/testify/require"
 )
 
-type repTx struct {
-	repository.User
-	repository.Capabilities
-	repository.Offline
-	repository.BlockList
-	repository.Roster
-	repository.VCard
-}
-
-func newRepTx(tx *sql.Tx) *repTx {
-	return &repTx{
-		User:         &pgSQLUserRep{conn: tx},
-		Capabilities: &pgSQLCapabilitiesRep{conn: tx},
-		Offline:      &pgSQLOfflineRep{conn: tx},
-		BlockList:    &pgSQLBlockListRep{conn: tx},
-		Roster:       &pgSQLRosterRep{conn: tx},
-		VCard:        &pgSQLVCardRep{conn: tx},
+func TestCapabilities_HasFeature(t *testing.T) {
+	// given
+	cp := &Capabilities{
+		Node:     "n1",
+		Ver:      "v1",
+		Features: []string{"f100"},
 	}
+	// when
+	ok1 := cp.HasFeature("f10")
+	ok2 := cp.HasFeature("f100")
+
+	// then
+	require.False(t, ok1)
+	require.True(t, ok2)
 }
