@@ -20,20 +20,20 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-
-	"github.com/jackal-xmpp/stravaganza/jid"
-
-	"github.com/jackal-xmpp/stravaganza"
-
-	"github.com/ortuman/jackal/event"
-
 	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 )
 
-const capabilitiesFeature = "http://jabber.org/protocol/caps"
+const (
+	capabilitiesFeature = "http://jabber.org/protocol/caps"
+
+	discoInfoNamespace = "http://jabber.org/protocol/disco#info"
+)
 
 type nodeVer struct {
 	node string
@@ -147,7 +147,7 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
 		WithChild(
 			stravaganza.NewBuilder("query").
-				WithAttribute(stravaganza.Namespace, "http://jabber.org/protocol/disco#info").
+				WithAttribute(stravaganza.Namespace, discoInfoNamespace).
 				WithAttribute("node", fmt.Sprintf("%s#%s", node, ver)).
 				Build(),
 		).
