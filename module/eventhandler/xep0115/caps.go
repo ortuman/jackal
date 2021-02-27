@@ -16,6 +16,16 @@ package xep0115
 
 import (
 	"context"
+	"fmt"
+	"sync"
+
+	"github.com/google/uuid"
+
+	"github.com/jackal-xmpp/stravaganza/jid"
+
+	"github.com/jackal-xmpp/stravaganza"
+
+	"github.com/ortuman/jackal/event"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/log"
@@ -24,6 +34,11 @@ import (
 )
 
 const capabilitiesFeature = "http://jabber.org/protocol/caps"
+
+type nodeVer struct {
+	node string
+	ver  string
+}
 
 const (
 	// ModuleName represents entity capabilities module name.
@@ -35,6 +50,8 @@ const (
 
 // Capabilities represents entity capabilities module type.
 type Capabilities struct {
+	mu     sync.RWMutex
+	reqs   map[string]nodeVer
 	router router.Router
 	rep    repository.Capabilities
 	sn     *sonar.Sonar
@@ -48,6 +65,7 @@ func New(
 	sn *sonar.Sonar,
 ) *Capabilities {
 	return &Capabilities{
+		reqs:   make(map[string]nodeVer),
 		router: router,
 		rep:    rep,
 		sn:     sn,
@@ -65,6 +83,9 @@ func (m *Capabilities) AccountFeatures() []string { return []string{capabilities
 
 // Start starts entity capabilities module.
 func (m *Capabilities) Start(_ context.Context) error {
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnrouted, m.onC2SPresenceRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.S2SStreamMessageUnrouted, m.onS2SPresenceRecv))
+
 	log.Infow("Started capabilities module", "xep", XEPNumber)
 	return nil
 }
@@ -76,4 +97,60 @@ func (m *Capabilities) Stop(_ context.Context) error {
 	}
 	log.Infow("Stopped capabilities module", "xep", XEPNumber)
 	return nil
+}
+
+func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+	pr := inf.Stanza.(*stravaganza.Presence)
+	return m.processPresence(ctx, pr)
+}
+
+func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.S2SStreamEventInfo)
+	pr := inf.Stanza.(*stravaganza.Presence)
+	return m.processPresence(ctx, pr)
+}
+
+func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Presence) error {
+	if pr.ToJID().IsFull() {
+		return nil
+	}
+	caps := pr.ChildNamespace("c", capabilitiesFeature)
+	if caps == nil {
+		return nil
+	}
+	node := caps.Attribute("node")
+	ver := caps.Attribute("ver")
+
+	// fetch registered capabilities
+	exist, err := m.rep.CapabilitiesExist(ctx, node, ver)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return nil
+	}
+	return m.requestDiscoInfo(ctx, pr.FromJID(), pr.ToJID(), node, ver)
+}
+
+func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid.JID, node, ver string) error {
+	reqID := uuid.New().String()
+
+	m.mu.Lock()
+	m.reqs[reqID] = nodeVer{node: node, ver: ver}
+	m.mu.Unlock()
+
+	discoIQ, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, reqID).
+		WithAttribute(stravaganza.From, toJID.Domain()).
+		WithAttribute(stravaganza.To, fromJID.Domain()).
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, "http://jabber.org/protocol/disco#info").
+				WithAttribute("node", fmt.Sprintf("%s#%s", node, ver)).
+				Build(),
+		).
+		BuildIQ(false)
+	return m.router.Route(ctx, discoIQ)
 }

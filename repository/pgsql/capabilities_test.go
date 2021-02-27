@@ -44,6 +44,25 @@ func TestPgSQLCapabilitiesRep_UpsertCapabilities(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
+func TestPgSQLCapabilitiesRep_CapabilitiesExist(t *testing.T) {
+	// given
+	s, mock := newCapabilitiesMock()
+	mock.ExpectQuery(`SELECT COUNT(*) FROM capabilities WHERE \(node = \$1 AND ver = \$2\)`).
+		WithArgs("n0", "v0").
+		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).
+			AddRow(1),
+		)
+
+	// when
+	ok, err := s.CapabilitiesExist(context.Background(), "n0", "v0")
+
+	// then
+	require.Nil(t, err)
+	require.True(t, ok)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+}
+
 func TestPgSQLCapabilitiesRep_FetchCapabilities(t *testing.T) {
 	// given
 	s, mock := newCapabilitiesMock()

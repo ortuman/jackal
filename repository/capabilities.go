@@ -25,6 +25,9 @@ type Capabilities interface {
 	// UpsertCapabilities upserts capabilities associated to a node+ver pair.
 	UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error
 
+	// CapabilitiesExist tells whether node+ver capabilities have been already registered.
+	CapabilitiesExist(ctx context.Context, node, ver string) (bool, error)
+
 	// FetchCapabilities fetches capabilities associated to a given node+ver pair.
 	FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error)
 }

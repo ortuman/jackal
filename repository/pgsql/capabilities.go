@@ -40,6 +40,22 @@ func (r *pgSQLCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *cap
 	return err
 }
 
+func (r *pgSQLCapabilitiesRep) CapabilitiesExist(ctx context.Context, node, ver string) (bool, error) {
+	var count int
+	row := sq.Select("COUNT(*)").
+		From(capsTableName).
+		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
+		RunWith(r.conn).QueryRowContext(ctx)
+
+	err := row.Scan(&count)
+	switch err {
+	case nil:
+		return count > 0, nil
+	default:
+		return false, err
+	}
+}
+
 func (r *pgSQLCapabilitiesRep) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
 	row := sq.Select("node", "ver", "features").
 		From(capsTableName).

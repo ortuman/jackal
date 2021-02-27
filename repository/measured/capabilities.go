@@ -33,6 +33,13 @@ func (m *measuredCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *
 	return
 }
 
+func (m *measuredCapabilitiesRep) CapabilitiesExist(ctx context.Context, node, ver string) (ok bool, err error) {
+	t0 := time.Now()
+	ok, err = m.rep.CapabilitiesExist(ctx, node, ver)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	return
+}
+
 func (m *measuredCapabilitiesRep) FetchCapabilities(ctx context.Context, node, ver string) (caps *capsmodel.Capabilities, err error) {
 	t0 := time.Now()
 	caps, err = m.rep.FetchCapabilities(ctx, node, ver)

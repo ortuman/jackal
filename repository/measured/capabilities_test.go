@@ -37,6 +37,21 @@ func TestMeasuredCapabilitiesRep_UpsertCapabilities(t *testing.T) {
 	require.Len(t, repMock.UpsertCapabilitiesCalls(), 1)
 }
 
+func TestMeasuredCapabilitiesRep_CapabilitiesExist(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+	repMock.CapabilitiesExistFunc = func(ctx context.Context, node string, ver string) (bool, error) {
+		return true, nil
+	}
+	m := New(repMock)
+
+	// when
+	_, _ = m.CapabilitiesExist(context.Background(), "n0", "v0")
+
+	// then
+	require.Len(t, repMock.CapabilitiesExistCalls(), 1)
+}
+
 func TestMeasuredCapabilitiesRep_FetchCapabilities(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
