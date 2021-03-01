@@ -47,7 +47,7 @@ func TestPgSQLCapabilitiesRep_UpsertCapabilities(t *testing.T) {
 func TestPgSQLCapabilitiesRep_CapabilitiesExist(t *testing.T) {
 	// given
 	s, mock := newCapabilitiesMock()
-	mock.ExpectQuery(`SELECT COUNT(*) FROM capabilities WHERE \(node = \$1 AND ver = \$2\)`).
+	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM capabilities WHERE \(node = \$1 AND ver = \$2\)`).
 		WithArgs("n0", "v0").
 		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).
 			AddRow(1),

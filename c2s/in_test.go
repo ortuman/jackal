@@ -193,7 +193,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><required/></bind><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/><ver xmlns="urn:xmpp:features:rosterver"/></stream:features>`,
+			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><required/></bind><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></stream:features>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -709,7 +709,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			compsMock.IsComponentHostFunc = func(cHost string) bool { return false }
 
 			// modules mock
-			modsMock.IsEnabledFunc = func(modName string) bool { return true }
+			modsMock.StreamFeaturesFunc = func() []stravaganza.Element { return nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
 
 			// authenticator mock
