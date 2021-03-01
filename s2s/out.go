@@ -205,7 +205,12 @@ func (s *outS2S) dial(ctx context.Context) error {
 	}
 	log.Infow("Dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
 
-	s.tr = transport.NewSocketTransport(conn)
+	tcpConn := conn.(*net.TCPConn)
+	_ = tcpConn.SetKeepAlive(true)
+	_ = tcpConn.SetKeepAlivePeriod(time.Second * 15)
+	_ = tcpConn.SetNoDelay(true)
+
+	s.tr = transport.NewSocketTransport(tcpConn)
 
 	// set default rate limiter
 	rLim := s.shapers.DefaultS2S().RateLimiter()
