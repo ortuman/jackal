@@ -159,3 +159,19 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 	}
 	return false
 }
+
+// StreamFeatures returns stream features of all registered modules.
+func (m *Modules) StreamFeatures() []stravaganza.Element {
+	var sfs []stravaganza.Element
+	for _, iqHnd := range m.iqHandlers {
+		if sf := iqHnd.StreamFeature(); sf != nil {
+			sfs = append(sfs, sf)
+		}
+	}
+	for _, evHnd := range m.eventHandlers {
+		if sf := evHnd.StreamFeature(); sf != nil {
+			sfs = append(sfs, sf)
+		}
+	}
+	return sfs
+}

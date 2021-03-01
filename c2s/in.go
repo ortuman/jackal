@@ -39,7 +39,6 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/eventhandler/offline"
-	"github.com/ortuman/jackal/module/iqhandler/roster"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -632,14 +631,8 @@ func (s *inC2S) authenticatedFeatures() []stravaganza.Element {
 		Build()
 	features = append(features, sessElem)
 
-	// roster versioning
-	if s.mods.IsEnabled(roster.ModuleName) {
-		rosVerElem := stravaganza.NewBuilder("ver").
-			WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
-			Build()
-		features = append(features, rosVerElem)
-	}
-	return features
+	// include module stream features
+	return append(features, s.mods.StreamFeatures()...)
 }
 
 func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {

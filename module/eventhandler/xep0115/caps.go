@@ -75,6 +75,9 @@ func New(
 // Name returns entity capabilities module name.
 func (m *Capabilities) Name() string { return ModuleName }
 
+// StreamFeature returns entity capabilities module stream feature.
+func (m *Capabilities) StreamFeature() stravaganza.Element { return nil }
+
 // ServerFeatures returns entity capabilities module server disco features.
 func (m *Capabilities) ServerFeatures() []string { return []string{capabilitiesFeature} }
 

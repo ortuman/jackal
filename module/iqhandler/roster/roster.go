@@ -77,6 +77,13 @@ func New(
 // Name returns roster module name.
 func (r *Roster) Name() string { return ModuleName }
 
+// StreamFeature returns roster stream feature.
+func (r *Roster) StreamFeature() stravaganza.Element {
+	return stravaganza.NewBuilder("ver").
+		WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
+		Build()
+}
+
 // ServerFeatures returns roster server disco features.
 func (r *Roster) ServerFeatures() []string { return nil }
 

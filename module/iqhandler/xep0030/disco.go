@@ -98,6 +98,11 @@ func new(
 // Name returns disco module name.
 func (d *Disco) Name() string { return ModuleName }
 
+// StreamFeature returns disco stream feature.
+func (d *Disco) StreamFeature() stravaganza.Element {
+	return nil
+}
+
 // ServerFeatures returns server disco features.
 func (d *Disco) ServerFeatures() []string {
 	return []string{discoInfoNamespace, discoItemsNamespace}

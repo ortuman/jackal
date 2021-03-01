@@ -57,6 +57,9 @@ func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *VCar
 // Name returns vCard module name.
 func (v *VCard) Name() string { return ModuleName }
 
+// StreamFeature returns vCard module stream feature.
+func (v *VCard) StreamFeature() stravaganza.Element { return nil }
+
 // ServerFeatures returns vCard server disco features.
 func (v *VCard) ServerFeatures() []string {
 	return []string{vCardNamespace}

@@ -79,6 +79,9 @@ func New(
 // Name returns offline module name.
 func (m *Offline) Name() string { return ModuleName }
 
+// StreamFeature returns offline module stream feature.
+func (m *Offline) StreamFeature() stravaganza.Element { return nil }
+
 // ServerFeatures returns offline module server disco features.
 func (m *Offline) ServerFeatures() []string { return []string{offlineFeature} }
 

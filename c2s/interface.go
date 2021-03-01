@@ -105,6 +105,8 @@ type components interface {
 
 //go:generate moq -out modules.mock_test.go . modules
 type modules interface {
+	StreamFeatures() []stravaganza.Element
+
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 
