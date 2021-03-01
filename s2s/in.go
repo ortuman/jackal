@@ -708,6 +708,16 @@ func (s *inS2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 }
 
 func (s *inS2S) setState(state inS2SState) {
+	if state == inConnected {
+		go func() {
+			tc := time.NewTicker(time.Second * 15)
+			defer tc.Stop()
+
+			for range tc.C {
+				_, _ = s.tr.Write([]byte{32})
+			}
+		}()
+	}
 	atomic.StoreUint32(&s.state, uint32(state))
 }
 

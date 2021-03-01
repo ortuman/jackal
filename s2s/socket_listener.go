@@ -21,7 +21,6 @@ import (
 	"net"
 	"strconv"
 	"sync/atomic"
-	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -136,12 +135,7 @@ func (l *SocketListener) Stop(_ context.Context) error {
 }
 
 func (l *SocketListener) handleConn(conn net.Conn) {
-	tcpConn := conn.(*net.TCPConn)
-	_ = tcpConn.SetKeepAlive(true)
-	_ = tcpConn.SetKeepAlivePeriod(time.Second * 15)
-	_ = tcpConn.SetNoDelay(true)
-
-	tr := transport.NewSocketTransport(tcpConn)
+	tr := transport.NewSocketTransport(conn)
 	stm, err := newInS2S(
 		tr,
 		l.hosts,
