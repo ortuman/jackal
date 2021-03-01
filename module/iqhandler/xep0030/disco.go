@@ -26,6 +26,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
@@ -38,7 +39,7 @@ const (
 
 var errSubscriptionRequired = errors.New("xep0030: subscription required")
 
-type infoProvider interface {
+type InfoProvider interface {
 	// Identities returns all identities associated to the provider.
 	Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []discomodel.Identity
 
@@ -47,6 +48,9 @@ type infoProvider interface {
 
 	// Features returns all features associated to the provider.
 	Features(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]discomodel.Feature, error)
+
+	// Form returns the data form associated to the provider.
+	Form(ctx context.Context, toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, error)
 }
 
 const (
@@ -60,8 +64,8 @@ const (
 // Disco represents a disco info (XEP-0030) module type.
 type Disco struct {
 	router  router.Router
-	srvProv infoProvider
-	accProv infoProvider
+	srvProv InfoProvider
+	accProv InfoProvider
 }
 
 // New returns a new initialized disco module instance.
@@ -138,7 +142,7 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
-	var prov infoProvider
+	var prov InfoProvider
 	switch {
 	case iq.ToJID().IsServer():
 		prov = d.srvProv
@@ -160,7 +164,7 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 }
 
-func (d *Disco) sendDiscoInfo(ctx context.Context, prov infoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	features, err := prov.Features(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:
@@ -196,7 +200,7 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov infoProvider, toJID, fro
 	return nil
 }
 
-func (d *Disco) sendDiscoItems(ctx context.Context, prov infoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	items, err := prov.Items(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:

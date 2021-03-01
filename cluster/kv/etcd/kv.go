@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	leaseTTLInSeconds       int64 = 5
+	leaseTTLInSeconds       int64 = 10
 	refreshLeaseTTLInterval       = time.Second * 1
 )
 
