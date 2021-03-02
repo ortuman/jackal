@@ -19,6 +19,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/lib/pq"
 	capsmodel "github.com/ortuman/jackal/model/caps"
 )
@@ -32,10 +33,19 @@ type pgSQLCapabilitiesRep struct {
 }
 
 func (r *pgSQLCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
-	_, err := sq.Insert(capsTableName).
-		Columns("node", "ver", "features").
-		Values(caps.Node, caps.Ver, pq.Array(caps.Features)).
-		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $3").
+	var b []byte
+	var err error
+
+	if caps.Form != nil {
+		b, err = caps.Form.MarshalBinary()
+		if err != nil {
+			return err
+		}
+	}
+	_, err = sq.Insert(capsTableName).
+		Columns("node", "ver", "features", "form").
+		Values(caps.Node, caps.Ver, pq.Array(caps.Features), b).
+		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $3, form = $4").
 		RunWith(r.conn).ExecContext(ctx)
 	return err
 }
@@ -57,15 +67,23 @@ func (r *pgSQLCapabilitiesRep) CapabilitiesExist(ctx context.Context, node, ver 
 }
 
 func (r *pgSQLCapabilitiesRep) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
-	row := sq.Select("node", "ver", "features").
+	row := sq.Select("node", "ver", "features", "form").
 		From(capsTableName).
 		Where(sq.And{sq.Eq{"node": node}, sq.Eq{"ver": ver}}).
 		RunWith(r.conn).QueryRowContext(ctx)
 
+	var b []byte
 	var caps capsmodel.Capabilities
-	err := row.Scan(&caps.Node, &caps.Ver, pq.Array(&caps.Features))
+	err := row.Scan(&caps.Node, &caps.Ver, pq.Array(&caps.Features), &b)
 	switch err {
 	case nil:
+		if len(b) > 0 {
+			sb, err := stravaganza.NewBuilderFromBinary(b)
+			if err != nil {
+				return nil, err
+			}
+			caps.Form = sb.Build()
+		}
 		return &caps, nil
 	case sql.ErrNoRows:
 		return nil, nil
