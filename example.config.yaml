@@ -115,9 +115,9 @@ modules:
 #    queue_size: 300
 #
 #  ping:
-#    ack_timeout: 5s
-#    interval: 10s
-#    send_pings: false
+#    ack_timeout: 90s
+#    interval: 3m
+#    send_pings: true
 #    timeout_action: kill
 #
 #  external:
