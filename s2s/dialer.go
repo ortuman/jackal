@@ -27,6 +27,8 @@ import (
 const (
 	s2sService    = "xmpp-server"
 	s2sTLSService = "xmpps-server"
+
+	outKeepAlive = time.Second * 15
 )
 
 type dialer interface {
@@ -43,7 +45,10 @@ type outDialer struct {
 }
 
 func newDialer(timeout time.Duration, tlsCfg *tls.Config) *outDialer {
-	d := net.Dialer{Timeout: timeout}
+	d := net.Dialer{
+		Timeout:   timeout,
+		KeepAlive: outKeepAlive,
+	}
 	dTLS := tls.Dialer{
 		NetDialer: &d,
 		Config:    tlsCfg,

@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	listenKeepAlive = time.Second * 30
+	listenKeepAlive = time.Second * 15
 )
 
 // Options defines component connection options.

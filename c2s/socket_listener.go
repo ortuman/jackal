@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	listenKeepAlive = time.Second * 30
+	listenKeepAlive = time.Second * 15
 
 	scramSHA1Mechanism    = "scram_sha_1"
 	scramSHA256Mechanism  = "scram_sha_256"

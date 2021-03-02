@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	listenKeepAlive = time.Second * 30
+	listenKeepAlive = time.Second * 15
 )
 
 // SocketListener represents a S2S socket listener type.
