@@ -21,6 +21,7 @@ import (
 	"net"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/auth"
@@ -37,15 +38,12 @@ import (
 )
 
 const (
+	listenKeepAlive = time.Second * 30
+
 	scramSHA1Mechanism    = "scram_sha_1"
 	scramSHA256Mechanism  = "scram_sha_256"
 	scramSHA512Mechanism  = "scram_sha_512"
 	scramSHA3512Mechanism = "scram_sha3_512"
-)
-
-var (
-	listen    = net.Listen
-	listenTLS = tls.Listen
 )
 
 // SocketListener represents a C2S socket listener type.
@@ -116,13 +114,15 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	var err error
 	var ln net.Listener
 
-	if l.opts.UseTLS {
-		ln, err = listenTLS("tcp", l.addr, l.opts.TLSConfig)
-	} else {
-		ln, err = listen("tcp", l.addr)
+	lc := net.ListenConfig{
+		KeepAlive: listenKeepAlive,
 	}
+	ln, err = lc.Listen(ctx, "tcp", l.addr)
 	if err != nil {
 		return err
+	}
+	if l.opts.UseTLS {
+		ln = tls.NewListener(ln, l.opts.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1

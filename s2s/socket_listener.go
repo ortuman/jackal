@@ -21,6 +21,7 @@ import (
 	"net"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -33,9 +34,8 @@ import (
 	"github.com/ortuman/jackal/transport"
 )
 
-var (
-	listen    = net.Listen
-	listenTLS = tls.Listen
+const (
+	listenKeepAlive = time.Second * 30
 )
 
 // SocketListener represents a S2S socket listener type.
@@ -91,17 +91,19 @@ func NewSocketListener(
 }
 
 // Start starts listening on the TCP network address bindAddr to handle incoming S2S connections.
-func (l *SocketListener) Start(_ context.Context) error {
+func (l *SocketListener) Start(ctx context.Context) error {
 	var err error
 	var ln net.Listener
 
-	if l.opts.UseTLS {
-		ln, err = listenTLS("tcp", l.addr, l.opts.TLSConfig)
-	} else {
-		ln, err = listen("tcp", l.addr)
+	lc := net.ListenConfig{
+		KeepAlive: listenKeepAlive,
 	}
+	ln, err = lc.Listen(ctx, "tcp", l.addr)
 	if err != nil {
 		return err
+	}
+	if l.opts.UseTLS {
+		ln = tls.NewListener(ln, l.opts.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1
