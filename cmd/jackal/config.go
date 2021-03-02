@@ -95,7 +95,7 @@ type listenerConfig struct {
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"32768"`
 	Secret           string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"5m"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
 }
 
@@ -134,7 +134,7 @@ type s2sOutConfig struct {
 	DialbackSecret   string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
 	KeepAlive        time.Duration `fig:"keep_alive" default:"30s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"5m"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"131072"`
 }
