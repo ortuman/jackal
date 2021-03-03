@@ -89,6 +89,9 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 	p.mu.Unlock()
 
 	if err := outStm.dial(ctx); err != nil {
+		p.mu.Lock()
+		delete(p.outStreams, domainPair)
+		p.mu.Unlock()
 		return nil, err
 	}
 	go func() {
