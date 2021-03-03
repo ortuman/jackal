@@ -86,6 +86,7 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 	}
 	outStm = p.newOutFn(sender, target)
 	if err := outStm.dial(ctx); err != nil {
+		p.mu.Unlock()
 		return nil, err
 	}
 	go func() {
