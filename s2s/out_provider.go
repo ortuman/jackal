@@ -79,14 +79,14 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		return outStm, nil
 	}
 	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	outStm = p.outStreams[domainPair] // 2nd check
 	if outStm != nil {
-		p.mu.Unlock()
 		return outStm, nil
 	}
 	outStm = p.newOutFn(sender, target)
 	if err := outStm.dial(ctx); err != nil {
-		p.mu.Unlock()
 		return nil, err
 	}
 	go func() {
@@ -96,7 +96,6 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		}
 	}()
 	p.outStreams[domainPair] = outStm
-	p.mu.Unlock()
 	return outStm, nil
 }
 
