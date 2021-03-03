@@ -116,11 +116,16 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error) {
 	outStm := p.newDbFn(sender, target, params)
 	if err := outStm.dial(ctx); err != nil {
+		log.Warnw(fmt.Sprintf("Failed to dial S2S dialback stream: %v", err),
+			"sender", sender, "target", target,
+		)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
-			log.Warnf("Failed to start S2S dialback stream: %v", err)
+			log.Warnw(fmt.Sprintf("Failed to start S2S dialback stream: %v", err),
+				"sender", sender, "target", target,
+			)
 			return
 		}
 	}()
