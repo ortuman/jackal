@@ -17,6 +17,7 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"time"
 
@@ -92,7 +93,9 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		p.mu.Lock()
 		delete(p.outStreams, domainPair)
 		p.mu.Unlock()
-		log.Warnf("Failed to dial outgoing S2S stream: %v", err)
+		log.Warnw(fmt.Sprintf("Failed to dial outgoing S2S stream: %v", err),
+			"sender", sender, "target", target,
+		)
 		return nil, err
 	}
 	go func() {
@@ -100,7 +103,9 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 			p.mu.Lock()
 			delete(p.outStreams, domainPair)
 			p.mu.Unlock()
-			log.Warnf("Failed to start outgoing S2S stream: %v", err)
+			log.Warnw(fmt.Sprintf("Failed to start outgoing S2S stream: %v", err),
+				"sender", sender, "target", target,
+			)
 			return
 		}
 	}()
