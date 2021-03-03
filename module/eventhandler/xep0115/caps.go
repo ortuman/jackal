@@ -160,7 +160,7 @@ func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Pres
 	if exist {
 		return nil
 	}
-	m.requestDiscoInfo(ctx, pr.FromJID(), pr.ToJID(), ci)
+	// m.requestDiscoInfo(ctx, pr.FromJID(), pr.ToJID(), ci)
 	return nil
 }
 
@@ -173,10 +173,10 @@ func (m *Capabilities) processIQ(ctx context.Context, iq *stravaganza.IQ) error 
 	}
 	nv, ok := m.reqs[reqID]
 	if !ok {
-		m.mu.Unlock()
 		return nil
 	}
 	m.mu.Unlock()
+
 	if err := m.processDiscoInfo(ctx, iq, nv); err != nil {
 		log.Warnw(fmt.Sprintf("Failed to verify disco info: %v", err), "xep", XEPNumber)
 	}

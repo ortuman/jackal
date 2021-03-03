@@ -70,6 +70,7 @@ func NewOutProvider(
 // GetOut returns associated outgoing S2S stream given a sender-target pair domain.
 func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream.S2SOut, error) {
 	domainPair := getDomainPair(sender, target)
+
 	p.mu.RLock()
 	outStm := p.outStreams[domainPair]
 	p.mu.RUnlock()
@@ -95,7 +96,6 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 	}()
 	p.outStreams[domainPair] = outStm
 	p.mu.Unlock()
-
 	return outStm, nil
 }
 
@@ -111,7 +111,6 @@ func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, pa
 			return
 		}
 	}()
-
 	return outStm, nil
 }
 
