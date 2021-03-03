@@ -92,10 +92,14 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		p.mu.Lock()
 		delete(p.outStreams, domainPair)
 		p.mu.Unlock()
+		log.Warnf("Failed to dial outgoing S2S stream: %v", err)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
+			p.mu.Lock()
+			delete(p.outStreams, domainPair)
+			p.mu.Unlock()
 			log.Warnf("Failed to start outgoing S2S stream: %v", err)
 			return
 		}
