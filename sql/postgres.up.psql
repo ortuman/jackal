@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS capabilities (
     node       VARCHAR(1023) NOT NULL,
     ver        VARCHAR(1023) NOT NULL,
     features   TEXT ARRAY,
-    form       BYTEA,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 

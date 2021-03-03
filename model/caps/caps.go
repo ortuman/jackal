@@ -14,14 +14,11 @@
 
 package capsmodel
 
-import "github.com/jackal-xmpp/stravaganza"
-
 // Capabilities represents presence capabilities info.
 type Capabilities struct {
 	Node     string
 	Ver      string
 	Features []string
-	Form     stravaganza.Element
 }
 
 // HasFeature returns whether or not a Capabilities instance contains f feature.

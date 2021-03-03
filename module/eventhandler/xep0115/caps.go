@@ -18,6 +18,13 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
+
+	discomodel "github.com/ortuman/jackal/model/disco"
+
+	"github.com/ortuman/jackal/module/xep0004"
+
+	capsmodel "github.com/ortuman/jackal/model/caps"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
@@ -33,9 +40,11 @@ const (
 	capabilitiesFeature = "http://jabber.org/protocol/caps"
 
 	discoInfoNamespace = "http://jabber.org/protocol/disco#info"
+	formsNamespace     = "jabber:x:data"
 )
 
-type nodeVer struct {
+type capsInfo struct {
+	hash string
 	node string
 	ver  string
 }
@@ -51,7 +60,8 @@ const (
 // Capabilities represents entity capabilities module type.
 type Capabilities struct {
 	mu     sync.RWMutex
-	reqs   map[string]nodeVer
+	reqs   map[string]capsInfo
+	clrTms map[string]*time.Timer
 	router router.Router
 	rep    repository.Capabilities
 	sn     *sonar.Sonar
@@ -65,7 +75,8 @@ func New(
 	sn *sonar.Sonar,
 ) *Capabilities {
 	return &Capabilities{
-		reqs:   make(map[string]nodeVer),
+		reqs:   make(map[string]capsInfo),
+		clrTms: make(map[string]*time.Timer),
 		router: router,
 		rep:    rep,
 		sn:     sn,
@@ -88,6 +99,8 @@ func (m *Capabilities) AccountFeatures() []string { return []string{capabilities
 func (m *Capabilities) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamIQReceived, m.onC2SIQRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamIQReceived, m.onS2SIQRecv))
 
 	log.Infow("Started capabilities module", "xep", XEPNumber)
 	return nil
@@ -114,6 +127,18 @@ func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, ev sonar.Event) er
 	return m.processPresence(ctx, pr)
 }
 
+func (m *Capabilities) onC2SIQRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+	iq := inf.Stanza.(*stravaganza.IQ)
+	return m.processIQ(ctx, iq)
+}
+
+func (m *Capabilities) onS2SIQRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.S2SStreamEventInfo)
+	iq := inf.Stanza.(*stravaganza.IQ)
+	return m.processIQ(ctx, iq)
+}
+
 func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Presence) error {
 	if pr.ToJID().IsFull() {
 		return nil
@@ -122,25 +147,50 @@ func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Pres
 	if caps == nil {
 		return nil
 	}
-	node := caps.Attribute("node")
-	ver := caps.Attribute("ver")
-
+	ci := capsInfo{
+		hash: caps.Attribute("hash"),
+		node: caps.Attribute("node"),
+		ver:  caps.Attribute("ver"),
+	}
 	// fetch registered capabilities
-	exist, err := m.rep.CapabilitiesExist(ctx, node, ver)
+	exist, err := m.rep.CapabilitiesExist(ctx, ci.node, ci.ver)
 	if err != nil {
 		return err
 	}
 	if exist {
 		return nil
 	}
-	return m.requestDiscoInfo(ctx, pr.FromJID(), pr.ToJID(), node, ver)
+	m.requestDiscoInfo(ctx, pr.FromJID(), pr.ToJID(), ci)
+	return nil
 }
 
-func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid.JID, node, ver string) error {
+func (m *Capabilities) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
+	reqID := iq.Attribute(stravaganza.ID)
+
+	m.mu.Lock()
+	if tm := m.clrTms[reqID]; tm != nil {
+		tm.Stop()
+	}
+	nv, ok := m.reqs[reqID]
+	if !ok {
+		m.mu.Unlock()
+		return nil
+	}
+	m.mu.Unlock()
+	if err := m.processDiscoInfo(ctx, iq, nv); err != nil {
+		log.Warnw(fmt.Sprintf("Failed to verify disco info: %v", err), "xep", XEPNumber)
+	}
+	return nil
+}
+
+func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid.JID, ci capsInfo) {
 	reqID := uuid.New().String()
 
 	m.mu.Lock()
-	m.reqs[reqID] = nodeVer{node: node, ver: ver}
+	m.reqs[reqID] = ci
+	m.clrTms[reqID] = time.AfterFunc(time.Minute, func() {
+		m.clearPendingReq(reqID) // discard pending request
+	})
 	m.mu.Unlock()
 
 	discoIQ, _ := stravaganza.NewIQBuilder().
@@ -151,9 +201,59 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 		WithChild(
 			stravaganza.NewBuilder("query").
 				WithAttribute(stravaganza.Namespace, discoInfoNamespace).
-				WithAttribute("node", fmt.Sprintf("%s#%s", node, ver)).
+				WithAttribute("node", fmt.Sprintf("%s#%s", ci.node, ci.ver)).
 				Build(),
 		).
 		BuildIQ(false)
-	return m.router.Route(ctx, discoIQ)
+
+	_ = m.router.Route(ctx, discoIQ)
+}
+
+func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ, ci capsInfo) error {
+	dq := iq.ChildNamespace("query", discoInfoNamespace)
+	if dq == nil {
+		return nil
+	}
+	var err error
+
+	var idns []discomodel.Identity
+	var fs []discomodel.Feature
+	var form *xep0004.DataForm
+
+	// get identities
+	for _, idnEl := range dq.Children("identity") {
+		idns = append(idns, discomodel.Identity{
+			Category: idnEl.Attribute("category"),
+			Name:     idnEl.Attribute("name"),
+			Type:     idnEl.Attribute("type"),
+			Lang:     idnEl.Attribute(stravaganza.Language),
+		})
+	}
+	// get features
+	for _, featureEl := range dq.Children("feature") {
+		fs = append(fs, featureEl.Attribute("var"))
+	}
+	// get form
+	if formEl := dq.ChildNamespace("x", formsNamespace); formEl != nil {
+		form, err = xep0004.NewFormFromElement(formEl)
+		if err != nil {
+			return nil
+		}
+	}
+	ver := computeVerification(idns, fs, form)
+	if ver != ci.ver {
+		return fmt.Errorf("xep0115: verification string mismatch: got %s, expected %s", ver, ci.ver)
+	}
+	return m.rep.UpsertCapabilities(ctx, &capsmodel.Capabilities{
+		Node:     ci.node,
+		Ver:      ci.ver,
+		Features: fs,
+	})
+}
+
+func (m *Capabilities) clearPendingReq(reqID string) {
+	m.mu.Lock()
+	delete(m.reqs, reqID)
+	delete(m.clrTms, reqID)
+	m.mu.Unlock()
 }

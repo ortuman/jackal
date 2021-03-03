@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package discomodel
+package xep0115
 
-// Feature represents a disco info feature entity.
-type Feature = string
+import (
+	discomodel "github.com/ortuman/jackal/model/disco"
+	"github.com/ortuman/jackal/module/xep0004"
+)
 
-// Identity represents a disco info identity entity.
-type Identity struct {
-	Category string
-	Name     string
-	Type     string
-	Lang     string
-}
-
-// Item represents a disco info item entity.
-type Item struct {
-	Jid  string
-	Name string
-	Node string
+func computeVerification(idns []discomodel.Identity, fs []discomodel.Feature, form *xep0004.DataForm) string {
+	return ""
 }

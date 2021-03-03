@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/jackal-xmpp/stravaganza"
 	"github.com/lib/pq"
 	capsmodel "github.com/ortuman/jackal/model/caps"
 	"github.com/stretchr/testify/require"
@@ -27,39 +26,14 @@ import (
 
 func TestPgSQLCapabilitiesRep_UpsertCapabilities(t *testing.T) {
 	// given
-	form := stravaganza.NewBuilder("x").Build()
-
-	fb, _ := form.MarshalBinary()
-
-	cp := &capsmodel.Capabilities{
-		Node:     "n0",
-		Ver:      "v0",
-		Features: []string{"f100"},
-		Form:     form,
-	}
-	s, mock := newCapabilitiesMock()
-	mock.ExpectExec(`INSERT INTO capabilities \(node,ver,features,form\) VALUES \(\$1,\$2,\$3\,\$4\) ON CONFLICT \(node, ver\) DO UPDATE SET features = \$3, form = \$4`).
-		WithArgs(cp.Node, cp.Ver, pq.Array(cp.Features), fb).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	// when
-	err := s.UpsertCapabilities(context.Background(), cp)
-
-	// then
-	require.Nil(t, err)
-	require.Nil(t, mock.ExpectationsWereMet())
-}
-
-func TestPgSQLCapabilitiesRep_UpsertCapabilitiesNilForm(t *testing.T) {
-	// given
 	cp := &capsmodel.Capabilities{
 		Node:     "n0",
 		Ver:      "v0",
 		Features: []string{"f100"},
 	}
 	s, mock := newCapabilitiesMock()
-	mock.ExpectExec(`INSERT INTO capabilities \(node,ver,features,form\) VALUES \(\$1,\$2,\$3\,\$4\) ON CONFLICT \(node, ver\) DO UPDATE SET features = \$3, form = \$4`).
-		WithArgs(cp.Node, cp.Ver, pq.Array(cp.Features), []byte(nil)).
+	mock.ExpectExec(`INSERT INTO capabilities \(node,ver,features\) VALUES \(\$1,\$2,\$3\) ON CONFLICT \(node, ver\) DO UPDATE SET features = \$3`).
+		WithArgs(cp.Node, cp.Ver, pq.Array(cp.Features)).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// when
@@ -91,14 +65,11 @@ func TestPgSQLCapabilitiesRep_CapabilitiesExist(t *testing.T) {
 
 func TestPgSQLCapabilitiesRep_FetchCapabilities(t *testing.T) {
 	// given
-	form := stravaganza.NewBuilder("x").Build()
-	fb, _ := form.MarshalBinary()
-
 	s, mock := newCapabilitiesMock()
-	mock.ExpectQuery(`SELECT node, ver, features, form FROM capabilities WHERE \(node = \$1 AND ver = \$2\)`).
+	mock.ExpectQuery(`SELECT node, ver, features FROM capabilities WHERE \(node = \$1 AND ver = \$2\)`).
 		WithArgs("n0", "v0").
-		WillReturnRows(sqlmock.NewRows([]string{"node", "ver", "features", "form"}).
-			AddRow("n0", "v0", pq.Array([]string{"f100"}), fb),
+		WillReturnRows(sqlmock.NewRows([]string{"node", "ver", "features"}).
+			AddRow("n0", "v0", pq.Array([]string{"f100"})),
 		)
 
 	// when
@@ -107,7 +78,6 @@ func TestPgSQLCapabilitiesRep_FetchCapabilities(t *testing.T) {
 	// then
 	require.Nil(t, err)
 	require.Len(t, caps.Features, 1)
-	require.NotNil(t, caps.Form)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }

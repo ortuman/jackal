@@ -194,6 +194,9 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 		if len(identity.Name) > 0 {
 			identityB.WithAttribute("name", identity.Name)
 		}
+		if len(identity.Lang) > 0 {
+			identityB.WithAttribute(stravaganza.Language, identity.Lang)
+		}
 		sb.WithChild(identityB.Build())
 	}
 	for _, feature := range features {
