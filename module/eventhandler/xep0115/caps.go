@@ -283,11 +283,16 @@ func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ,
 	if ver != ci.ver {
 		return fmt.Errorf("xep0115: verification string mismatch: got %s, expected %s", ver, ci.ver)
 	}
-	return m.rep.UpsertCapabilities(ctx, &capsmodel.Capabilities{
+	err := m.rep.UpsertCapabilities(ctx, &capsmodel.Capabilities{
 		Node:     ci.node,
 		Ver:      ci.ver,
 		Features: features,
 	})
+	if err != nil {
+		return err
+	}
+	log.Infow("Entity capabilities globally cached", "node", ci.node, "ver", ci.ver, "xep", XEPNumber)
+	return nil
 }
 
 func (m *Capabilities) clearPendingReq(reqID string) {
@@ -409,8 +414,6 @@ func computeVer(
 			}
 		}
 	}
-	fmt.Println(sb.String())
-
 	h := hFn()
 	_, _ = h.Write([]byte(sb.String()))
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
