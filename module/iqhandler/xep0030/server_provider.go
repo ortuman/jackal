@@ -65,6 +65,6 @@ func (p *serverProvider) Features(_ context.Context, _, _ *jid.JID, _ string) ([
 	return features, nil
 }
 
-func (p *serverProvider) Form(ctx context.Context, toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, error) {
+func (p *serverProvider) Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error) {
 	return nil, nil
 }

@@ -49,8 +49,8 @@ type InfoProvider interface {
 	// Features returns all features associated to the provider.
 	Features(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]discomodel.Feature, error)
 
-	// Form returns the data form associated to the provider.
-	Form(ctx context.Context, toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, error)
+	// Forms returns data forms associated to the provider.
+	Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error)
 }
 
 const (
@@ -203,6 +203,13 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 		featureB := stravaganza.NewBuilder("feature")
 		featureB.WithAttribute("var", feature)
 		sb.WithChild(featureB.Build())
+	}
+	forms, err := prov.Forms(ctx, toJID, fromJID, node)
+	if err != nil {
+		return err
+	}
+	for _, form := range forms {
+		sb.WithChild(form.Element())
 	}
 	_ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
 	return nil

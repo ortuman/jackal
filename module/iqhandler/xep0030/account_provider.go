@@ -81,7 +81,7 @@ func (p *accountProvider) Features(ctx context.Context, toJID, fromJID *jid.JID,
 	return features, nil
 }
 
-func (p *accountProvider) Form(ctx context.Context, toJID, fromJID *jid.JID, node string) (*xep0004.DataForm, error) {
+func (p *accountProvider) Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error) {
 	return nil, nil
 }
 

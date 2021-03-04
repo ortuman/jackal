@@ -16,15 +16,17 @@ package xep0115
 
 import (
 	"context"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
+	"errors"
 	"fmt"
+	"hash"
+	"sort"
+	"strings"
 	"sync"
 	"time"
-
-	discomodel "github.com/ortuman/jackal/model/disco"
-
-	"github.com/ortuman/jackal/module/xep0004"
-
-	capsmodel "github.com/ortuman/jackal/model/caps"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
@@ -32,6 +34,9 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
+	capsmodel "github.com/ortuman/jackal/model/caps"
+	discomodel "github.com/ortuman/jackal/model/disco"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 )
@@ -42,6 +47,23 @@ const (
 	discoInfoNamespace = "http://jabber.org/protocol/disco#info"
 	formsNamespace     = "jabber:x:data"
 )
+
+var (
+	errIdentityRepeated      = errors.New("xep0115: more than one service discovery identity with the same category/type/lang/name")
+	errFeatureRepeated       = errors.New("xep0115: more than one service discovery feature with the same XML character data")
+	errFormTypeNotHidden     = errors.New("xep0115: FORM_TYPE field is not of type \"hidden\"")
+	errFormTypeFieldNotFound = errors.New("xep0115: FORM_TYPE field not found")
+	errFormTypeFieldBadValue = errors.New("xep0115: FORM_TYPE field contains more than one <value/> element")
+	errFormTypeRepeated      = errors.New("xep0115: more than one extended service discovery information form with the same FORM_TYPE")
+)
+
+var hashFn = map[string]func() hash.Hash{
+	"sha-1":   sha1.New,
+	"sha-224": sha256.New224,
+	"sha-256": sha256.New,
+	"sha-384": sha512.New384,
+	"sha-512": sha512.New,
+}
 
 type capsInfo struct {
 	hash string
@@ -147,8 +169,13 @@ func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Pres
 	if caps == nil {
 		return nil
 	}
+	h := caps.Attribute("hash")
+	if hashFn[h] == nil {
+		log.Warnw(fmt.Sprintf("Unrecognized hashing algorithm: %s", h), "xep", XEPNumber)
+		return nil
+	}
 	ci := capsInfo{
-		hash: caps.Attribute("hash"),
+		hash: h,
 		node: caps.Attribute("node"),
 		ver:  caps.Attribute("ver"),
 	}
@@ -212,18 +239,16 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 
 func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ, ci capsInfo) error {
 	dq := iq.ChildNamespace("query", discoInfoNamespace)
-	if dq == nil {
+	if dq == nil || !iq.IsResult() {
 		return nil
 	}
-	var err error
-
-	var idns []discomodel.Identity
-	var fs []discomodel.Feature
-	var form *xep0004.DataForm
+	var identities []discomodel.Identity
+	var features []discomodel.Feature
+	var forms []xep0004.DataForm
 
 	// get identities
 	for _, idnEl := range dq.Children("identity") {
-		idns = append(idns, discomodel.Identity{
+		identities = append(identities, discomodel.Identity{
 			Category: idnEl.Attribute("category"),
 			Name:     idnEl.Attribute("name"),
 			Type:     idnEl.Attribute("type"),
@@ -232,23 +257,36 @@ func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ,
 	}
 	// get features
 	for _, featureEl := range dq.Children("feature") {
-		fs = append(fs, featureEl.Attribute("var"))
+		features = append(features, featureEl.Attribute("var"))
 	}
-	// get form
-	if formEl := dq.ChildNamespace("x", formsNamespace); formEl != nil {
-		form, err = xep0004.NewFormFromElement(formEl)
+	// get forms
+	for _, formEl := range dq.ChildrenNamespace("x", formsNamespace) {
+		form, err := xep0004.NewFormFromElement(formEl)
 		if err != nil {
-			return nil
+			return err
 		}
+		forms = append(forms, *form)
 	}
-	ver := computeVerification(idns, fs, form)
+	// validate discovery information response
+	// (https://xmpp.org/extensions/xep-0115.html#ver-proc)
+	if err := validateIdentities(identities); err != nil {
+		return err
+	}
+	if err := validateFeatures(features); err != nil {
+		return err
+	}
+	if err := validateForms(forms); err != nil {
+		return err
+	}
+	// compute verification and store capabilities entity if matches previous received hash
+	ver := computeVer(identities, features, forms, hashFn[ci.hash])
 	if ver != ci.ver {
 		return fmt.Errorf("xep0115: verification string mismatch: got %s, expected %s", ver, ci.ver)
 	}
 	return m.rep.UpsertCapabilities(ctx, &capsmodel.Capabilities{
 		Node:     ci.node,
 		Ver:      ci.ver,
-		Features: fs,
+		Features: features,
 	})
 }
 
@@ -257,4 +295,143 @@ func (m *Capabilities) clearPendingReq(reqID string) {
 	delete(m.reqs, reqID)
 	delete(m.clrTms, reqID)
 	m.mu.Unlock()
+}
+
+func validateIdentities(identities []discomodel.Identity) error {
+	ids := make(map[string]int, len(identities))
+	for _, identity := range identities {
+		s := fmt.Sprintf("%s/%s/%s/%s", identity.Category, identity.Type, identity.Lang, identity.Name)
+		ids[s] = ids[s] + 1
+	}
+	for _, cnt := range ids {
+		if cnt > 1 {
+			return errIdentityRepeated
+		}
+	}
+	return nil
+}
+
+func validateFeatures(features []discomodel.Feature) error {
+	fs := make(map[string]int, len(features))
+	for _, f := range features {
+		fs[f] = fs[f] + 1
+	}
+	for _, cnt := range fs {
+		if cnt > 1 {
+			return errFeatureRepeated
+		}
+	}
+	return nil
+}
+
+func validateForms(forms []xep0004.DataForm) error {
+	fts := make(map[string]int, len(forms)) // keep track of FORM_TYPE values
+	for _, form := range forms {
+		for _, f := range form.Fields {
+			if f.Var == xep0004.FormType {
+				if f.Type != xep0004.Hidden {
+					return errFormTypeNotHidden
+				}
+				if len(f.Values) != 1 {
+					return errFormTypeFieldBadValue
+				}
+				v := f.Values[0]
+				fts[v] = fts[v] + 1
+			}
+		}
+	}
+	if len(fts) != len(forms) {
+		return errFormTypeFieldNotFound
+	}
+	for _, cnt := range fts {
+		if cnt > 1 {
+			return errFormTypeRepeated
+		}
+	}
+	return nil
+}
+
+func computeVer(
+	identities []discomodel.Identity,
+	features []discomodel.Feature,
+	forms []xep0004.DataForm,
+	hFn func() hash.Hash,
+) string {
+	var sb strings.Builder
+
+	// sort the service discovery identities
+	sort.Slice(identities, func(i, j int) bool {
+		if identities[i].Category != identities[j].Category {
+			return identities[i].Category < identities[j].Category
+		}
+		if identities[i].Type != identities[j].Type {
+			return identities[i].Type < identities[j].Type
+		}
+		return identities[i].Lang < identities[j].Lang
+	})
+	for _, identity := range identities {
+		sb.WriteString(fmt.Sprintf("%s/%s/%s/%s<", identity.Category, identity.Type, identity.Lang, identity.Name))
+	}
+	// sort disco info features
+	sort.Slice(features, func(i, j int) bool {
+		return features[i] < features[j]
+	})
+	for _, f := range features {
+		sb.WriteString(fmt.Sprintf("%s<", f))
+	}
+	// sort extended info forms
+	sort.Slice(forms, func(i, j int) bool {
+		return getFormTypeValue(&forms[i]) < getFormTypeValue(&forms[j])
+	})
+	for _, form := range forms {
+		sb.WriteString(getFormTypeValue(&form))
+		sb.WriteString("<")
+
+		// get rid of FORM_TYPE field and sort resulting fields
+		fields := filterFormTypeField(form.Fields)
+		sort.Slice(fields, func(i, j int) bool {
+			return fields[i].Var < fields[j].Var
+		})
+		for _, field := range fields {
+			sb.WriteString(field.Var)
+			sb.WriteString("<")
+
+			// sort values
+			var values []string
+			for _, val := range field.Values {
+				values = append(values, val)
+			}
+			sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
+
+			for _, val := range values {
+				sb.WriteString(val)
+				sb.WriteString("<")
+			}
+		}
+	}
+	fmt.Println(sb.String())
+
+	h := hFn()
+	_, _ = h.Write([]byte(sb.String()))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+func getFormTypeValue(form *xep0004.DataForm) string {
+	for _, f := range form.Fields {
+		if f.Var == xep0004.FormType {
+			return f.Values[0]
+		}
+	}
+	return ""
+}
+
+func filterFormTypeField(fields []xep0004.Field) []xep0004.Field {
+	var f []xep0004.Field
+	for _, field := range fields {
+		if field.Var == xep0004.FormType {
+			continue
+		}
+		f = append(f, field)
+	}
+	return f
 }

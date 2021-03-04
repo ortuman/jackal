@@ -13,3 +13,83 @@
 // limitations under the License.
 
 package xep0115
+
+import (
+	"crypto/sha1"
+	"testing"
+
+	"github.com/ortuman/jackal/module/xep0004"
+
+	discomodel "github.com/ortuman/jackal/model/disco"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCapabilities_ComputeSimpleVerificationString(t *testing.T) {
+	// given
+	identities := []discomodel.Identity{
+		{Category: "client", Type: "pc", Name: "Exodus 0.9.1"},
+	}
+	features := []discomodel.Feature{
+		"http://jabber.org/protocol/disco#info",
+		"http://jabber.org/protocol/disco#items",
+		"http://jabber.org/protocol/muc",
+		"http://jabber.org/protocol/caps",
+	}
+	// when
+	ver := computeVer(identities, features, nil, sha1.New)
+
+	// then
+	require.Equal(t, "QgayPKawpkPSDYmwT/WM94uAlu0=", ver)
+}
+
+func TestCapabilities_ComputeComplexVerificationString(t *testing.T) {
+	// given
+	identities := []discomodel.Identity{
+		{Category: "client", Type: "pc", Name: "Ψ 0.11", Lang: "el"},
+		{Category: "client", Type: "pc", Name: "Psi 0.11", Lang: "en"},
+	}
+	features := []discomodel.Feature{
+		"http://jabber.org/protocol/disco#info",
+		"http://jabber.org/protocol/disco#items",
+		"http://jabber.org/protocol/muc",
+		"http://jabber.org/protocol/caps",
+	}
+	forms := []xep0004.DataForm{
+		{
+			Type: xep0004.Result,
+			Fields: xep0004.Fields{
+				{
+					Var:    xep0004.FormType,
+					Type:   xep0004.Hidden,
+					Values: []string{"urn:xmpp:dataforms:softwareinfo"},
+				},
+				{
+					Var:    "ip_version",
+					Type:   xep0004.TextMulti,
+					Values: []string{"ipv4", "ipv6"},
+				},
+				{
+					Var:    "os",
+					Values: []string{"Mac"},
+				},
+				{
+					Var:    "os_version",
+					Values: []string{"10.5.1"},
+				},
+				{
+					Var:    "software",
+					Values: []string{"Psi"},
+				},
+				{
+					Var:    "software_version",
+					Values: []string{"0.11"},
+				},
+			},
+		},
+	}
+	// when
+	ver := computeVer(identities, features, forms, sha1.New)
+
+	// then
+	require.Equal(t, "q07IKJEyjvHSyhy//CH0CxmKi8w=", ver)
+}
