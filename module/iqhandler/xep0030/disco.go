@@ -17,6 +17,7 @@ package xep0030
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -39,6 +40,7 @@ const (
 
 var errSubscriptionRequired = errors.New("xep0030: subscription required")
 
+// InfoProvider represents a general entity disco info provider interface.
 type InfoProvider interface {
 	// Identities returns all identities associated to the provider.
 	Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []discomodel.Identity
@@ -63,7 +65,12 @@ const (
 
 // Disco represents a disco info (XEP-0030) module type.
 type Disco struct {
-	router  router.Router
+	router     router.Router
+	components components
+	rosRep     repository.Roster
+	resMng     resourceManager
+
+	mu      sync.RWMutex
 	srvProv InfoProvider
 	accProv InfoProvider
 }
@@ -71,37 +78,23 @@ type Disco struct {
 // New returns a new initialized disco module instance.
 func New(
 	router router.Router,
-	mods []module.Module,
 	components *component.Components,
 	rosRep repository.Roster,
 	resMng *resourcemanager.Manager,
 ) *Disco {
-	return new(router, mods, components, rosRep, resMng)
-}
-
-func new(
-	router router.Router,
-	mods []module.Module,
-	components components,
-	rosRep repository.Roster,
-	resMng resourceManager,
-) *Disco {
-	disc := &Disco{
-		router: router,
+	return &Disco{
+		router:     router,
+		components: components,
+		rosRep:     rosRep,
+		resMng:     resMng,
 	}
-	discoMods := append(mods, disc)
-	disc.srvProv = newServerProvider(discoMods, components)
-	disc.accProv = newAccountProvider(discoMods, rosRep, resMng)
-	return disc
 }
 
 // Name returns disco module name.
 func (d *Disco) Name() string { return ModuleName }
 
 // StreamFeature returns disco stream feature.
-func (d *Disco) StreamFeature() stravaganza.Element {
-	return nil
-}
+func (d *Disco) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns server disco features.
 func (d *Disco) ServerFeatures() []string {
@@ -141,6 +134,29 @@ func (d *Disco) Stop(_ context.Context) error {
 	return nil
 }
 
+// SetModules set disco modules to be announced on info request.
+func (d *Disco) SetModules(mods []module.Module) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.srvProv = newServerProvider(mods, d.components)
+	d.accProv = newAccountProvider(mods, d.rosRep, d.resMng)
+}
+
+// ServerProvider returns current disco info server provider.
+func (d *Disco) ServerProvider() InfoProvider {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.srvProv
+}
+
+// AccountProvider returns current disco info account provider.
+func (d *Disco) AccountProvider() InfoProvider {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.accProv
+}
+
 func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.Child("query")
 	if q == nil {
@@ -148,11 +164,18 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 		return nil
 	}
 	var prov InfoProvider
+
+	d.mu.RLock()
 	switch {
 	case iq.ToJID().IsServer():
 		prov = d.srvProv
 	default:
 		prov = d.accProv
+	}
+	d.mu.RUnlock()
+
+	if prov == nil {
+		return nil // modules not set
 	}
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()

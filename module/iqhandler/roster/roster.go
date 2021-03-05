@@ -78,7 +78,7 @@ func New(
 func (r *Roster) Name() string { return ModuleName }
 
 // StreamFeature returns roster stream feature.
-func (r *Roster) StreamFeature() stravaganza.Element {
+func (r *Roster) StreamFeature(_ context.Context, _ string) stravaganza.Element {
 	return stravaganza.NewBuilder("ver").
 		WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
 		Build()

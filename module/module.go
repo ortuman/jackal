@@ -30,7 +30,7 @@ type Module interface {
 	Name() string
 
 	// StreamFeature returns module stream feature element.
-	StreamFeature() stravaganza.Element
+	StreamFeature(ctx context.Context, domain string) stravaganza.Element
 
 	// ServerFeatures returns module server features.
 	ServerFeatures() []string
@@ -161,15 +161,15 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 }
 
 // StreamFeatures returns stream features of all registered modules.
-func (m *Modules) StreamFeatures() []stravaganza.Element {
+func (m *Modules) StreamFeatures(ctx context.Context, domain string) []stravaganza.Element {
 	var sfs []stravaganza.Element
 	for _, iqHnd := range m.iqHandlers {
-		if sf := iqHnd.StreamFeature(); sf != nil {
+		if sf := iqHnd.StreamFeature(ctx, domain); sf != nil {
 			sfs = append(sfs, sf)
 		}
 	}
 	for _, evHnd := range m.eventHandlers {
-		if sf := evHnd.StreamFeature(); sf != nil {
+		if sf := evHnd.StreamFeature(ctx, domain); sf != nil {
 			sfs = append(sfs, sf)
 		}
 	}

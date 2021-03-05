@@ -33,6 +33,13 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	var iqHandlers []module.IQHandler
 	var eventHandlers []module.EventHandler
 
+	// disco
+	var disc *xep0030.Disco
+	if stringsutil.StringSliceContains(xep0030.ModuleName, cfg.Enabled) {
+		disc = xep0030.New(a.router, a.comps, a.rep, a.resMng)
+		iqHandlers = append(iqHandlers, disc)
+	}
+
 	// roster
 	if stringsutil.StringSliceContains(roster.ModuleName, cfg.Enabled) {
 		ros := roster.New(a.router, a.rep, a.resMng, a.hosts, a.sonar)
@@ -59,7 +66,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// capabilities
 	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
-		caps := xep0115.New(a.router, a.rep, a.sonar)
+		caps := xep0115.New(disc, a.router, a.rep, a.sonar)
 		eventHandlers = append(eventHandlers, caps)
 	}
 	// ping
@@ -72,7 +79,6 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 		})
 		iqHandlers = append(iqHandlers, ping)
 	}
-
 	// external IQ handlers
 	extIQHandlers, err := initExtIQHandlers(a, cfg.External.IQHandlers)
 	if err != nil {
@@ -87,19 +93,17 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	eventHandlers = append(eventHandlers, extEventHandlers...)
 
-	// disco
-	if stringsutil.StringSliceContains("disco", cfg.Enabled) {
+	// set disco info modules
+	if disc != nil {
 		var mods []module.Module
-		for _, m := range iqHandlers {
-			mods = append(mods, m)
+		for _, iqHnd := range iqHandlers {
+			mods = append(mods, iqHnd)
 		}
-		for _, m := range eventHandlers {
-			mods = append(mods, m)
+		for _, evHnd := range eventHandlers {
+			mods = append(mods, evHnd)
 		}
-		disc := xep0030.New(a.router, mods, a.comps, a.rep, a.resMng)
-		iqHandlers = append(iqHandlers, disc)
+		disc.SetModules(mods)
 	}
-
 	a.mods = module.NewModules(iqHandlers, eventHandlers, a.hosts, a.router)
 	a.registerStartStopper(a.mods)
 	return nil

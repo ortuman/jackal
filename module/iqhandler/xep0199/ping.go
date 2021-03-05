@@ -89,7 +89,7 @@ func New(router router.Router, sn *sonar.Sonar, opts Options) *Ping {
 func (p *Ping) Name() string { return ModuleName }
 
 // StreamFeature returns ping module stream feature.
-func (p *Ping) StreamFeature() stravaganza.Element { return nil }
+func (p *Ping) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns ping server disco features.
 func (p *Ping) ServerFeatures() []string {

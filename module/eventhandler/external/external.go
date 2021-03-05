@@ -59,7 +59,7 @@ func New(address string, isSecure bool, topics []string, sonar *sonar.Sonar) *Ha
 func (h *Handler) Name() string { return "ext-eventhandler" }
 
 // StreamFeature returns module stream feature.
-func (h *Handler) StreamFeature() stravaganza.Element { return nil }
+func (h *Handler) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns module server features.
 func (h *Handler) ServerFeatures() []string {

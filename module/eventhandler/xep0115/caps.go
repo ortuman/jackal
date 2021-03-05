@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/module/iqhandler/xep0030"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -81,27 +83,31 @@ const (
 
 // Capabilities represents entity capabilities module type.
 type Capabilities struct {
-	mu     sync.RWMutex
-	reqs   map[string]capsInfo
-	clrTms map[string]*time.Timer
+	disco  *xep0030.Disco
 	router router.Router
 	rep    repository.Capabilities
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
+
+	mu     sync.RWMutex
+	reqs   map[string]capsInfo
+	clrTms map[string]*time.Timer
 }
 
 // New creates and initializes a new Capabilities instance.
 func New(
+	disco *xep0030.Disco,
 	router router.Router,
 	rep repository.Capabilities,
 	sn *sonar.Sonar,
 ) *Capabilities {
 	return &Capabilities{
-		reqs:   make(map[string]capsInfo),
-		clrTms: make(map[string]*time.Timer),
+		disco:  disco,
 		router: router,
 		rep:    rep,
 		sn:     sn,
+		reqs:   make(map[string]capsInfo),
+		clrTms: make(map[string]*time.Timer),
 	}
 }
 
@@ -109,7 +115,25 @@ func New(
 func (m *Capabilities) Name() string { return ModuleName }
 
 // StreamFeature returns entity capabilities module stream feature.
-func (m *Capabilities) StreamFeature() stravaganza.Element { return nil }
+func (m *Capabilities) StreamFeature(ctx context.Context, domain string) stravaganza.Element {
+	if m.disco == nil {
+		return nil
+	}
+	jd, _ := jid.NewWithString(domain, true)
+
+	srvProv := m.disco.ServerProvider()
+	identities := srvProv.Identities(ctx, jd, jd, "")
+	features, _ := srvProv.Features(ctx, jd, jd, "")
+	forms, _ := srvProv.Forms(ctx, jd, jd, "")
+
+	ver := computeVer(identities, features, forms, sha1.New)
+	return stravaganza.NewBuilder("c").
+		WithAttribute(stravaganza.Namespace, capabilitiesFeature).
+		WithAttribute("hash", "sha-1").
+		WithAttribute("node", fmt.Sprintf("http://%s", domain)).
+		WithAttribute("ver", ver).
+		Build()
+}
 
 // ServerFeatures returns entity capabilities module server disco features.
 func (m *Capabilities) ServerFeatures() []string { return []string{capabilitiesFeature} }
