@@ -28,8 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/module/iqhandler/xep0030"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -38,6 +36,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	capsmodel "github.com/ortuman/jackal/model/caps"
 	discomodel "github.com/ortuman/jackal/model/disco"
+	"github.com/ortuman/jackal/module/iqhandler/xep0030"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -126,10 +125,10 @@ func (m *Capabilities) StreamFeature(ctx context.Context, domain string) stravag
 	features, _ := srvProv.Features(ctx, jd, jd, "")
 	forms, _ := srvProv.Forms(ctx, jd, jd, "")
 
-	ver := computeVer(identities, features, forms, sha1.New)
+	ver := computeVer(identities, features, forms, sha256.New)
 	return stravaganza.NewBuilder("c").
 		WithAttribute(stravaganza.Namespace, capabilitiesFeature).
-		WithAttribute("hash", "sha-1").
+		WithAttribute("hash", "sha-256").
 		WithAttribute("node", fmt.Sprintf("http://%s", domain)).
 		WithAttribute("ver", ver).
 		Build()
