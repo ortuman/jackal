@@ -709,7 +709,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			compsMock.IsComponentHostFunc = func(cHost string) bool { return false }
 
 			// modules mock
-			modsMock.StreamFeaturesFunc = func() []stravaganza.Element { return nil }
+			modsMock.StreamFeaturesFunc = func(_ context.Context, _ string) []stravaganza.Element { return nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
 
 			// authenticator mock
