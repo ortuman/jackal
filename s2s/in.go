@@ -304,7 +304,6 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 				return s.processStanza(ctx, stanza)
 
 			default:
-				log.Infof("CASE-2")
 				return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 			}
 		}
@@ -336,7 +335,6 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	case *stravaganza.Message:
 		return s.processMessage(ctx, stanza)
 	default:
-		log.Infof("CASE-1")
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 }
