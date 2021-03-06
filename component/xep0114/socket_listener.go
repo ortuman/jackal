@@ -16,6 +16,7 @@ package xep0114
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -118,6 +119,10 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infow(
+				fmt.Sprintf("Received component incoming connection at %s", l.addr),
+				"ip", conn.RemoteAddr().String(),
+			)
 			go l.connHandlerFn(conn)
 		}
 	}()
