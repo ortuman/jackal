@@ -17,7 +17,6 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -195,17 +194,16 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
-		var err error
-		if sErr != nil {
-			err = s.handleSessionError(ctx, sErr)
-		}
-		if elem != nil {
-			err = s.handleElement(ctx, elem)
-		}
-		if err != nil {
-			log.Errorf("Failed to process incoming S2S session result: %v", err)
-			_ = s.close(ctx)
-			return
+		switch {
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
+		case sErr == nil && elem != nil:
+			err := s.handleElement(ctx, elem)
+			if err != nil {
+				log.Warnw("Failed to process incoming S2S session element", "error", err, "id", s.id)
+				_ = s.close(ctx)
+				return
+			}
 		}
 	})
 	<-doneCh
@@ -630,26 +628,14 @@ func (s *inS2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 	return nil
 }
 
-func (s *inS2S) handleSessionError(ctx context.Context, err error) error {
+func (s *inS2S) handleSessionError(ctx context.Context, err error) {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		return s.close(ctx)
-
 	case xmppparser.ErrStreamClosedByPeer:
 		_ = s.session.Close(ctx)
-		return s.close(ctx)
+		fallthrough
 
 	default:
-		switch err := err.(type) {
-		case *streamerror.Error:
-			return s.disconnect(ctx, err)
-
-		case *stanzaerror.Error:
-			return s.sendElement(ctx, err.Element())
-
-		default:
-			return err
-		}
+		_ = s.close(ctx)
 	}
 }
 

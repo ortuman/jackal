@@ -27,7 +27,6 @@ import (
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/router/stream"
@@ -437,14 +436,6 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 }
 
 func TestOutS2S_HandleSessionError(t *testing.T) {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").WithText("Hi there!").Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-
 	var tests = []struct {
 		name           string
 		state          outS2SState
@@ -452,20 +443,6 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 		expectedOutput string
 		expectClosed   bool
 	}{
-		{
-			name:           "StreamError",
-			state:          outConnecting,
-			sErr:           streamerror.E(streamerror.UnsupportedVersion),
-			expectedOutput: `<stream:stream><stream:error><unsupported-version xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectClosed:   true,
-		},
-		{
-			name:           "StanzaError",
-			state:          outConnecting,
-			sErr:           stanzaerror.E(stanzaerror.JIDMalformed, msg),
-			expectedOutput: `<message from="ortuman@jackal.im/balcony" to="noelia@jackal.im/yard" type="error"><body>Hi there!</body><error code="400" type="modify"><jid-malformed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectClosed:   false,
-		},
 		{
 			name:           "ClosedByPeerError",
 			state:          outConnected,
