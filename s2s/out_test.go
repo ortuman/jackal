@@ -434,17 +434,6 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 
 			// then
 			require.Equal(t, tt.expectedOutput, outBuf.String())
-
-			if tt.expectedValidDialback {
-				select {
-				case dbRes := <-stm.dbResCh:
-					time.Sleep(outDisconnectTimeout + time.Second) // wait for disconnection
-					require.True(t, dbRes.Valid)
-
-				default:
-					require.Fail(t, "Failed to validate dialback result")
-				}
-			}
 			require.Equal(t, tt.expectedState, stm.getState())
 		})
 	}
