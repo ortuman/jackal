@@ -104,9 +104,6 @@ type S2SOut interface {
 
 	// Disconnect performs disconnection over the stream.
 	Disconnect(streamErr *streamerror.Error) <-chan error
-
-	// Done returns a channel that's closed when stream transport and all associated resources have been released.
-	Done() <-chan struct{}
 }
 
 // DialbackResult represents S2S dialback result.

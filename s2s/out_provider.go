@@ -161,9 +161,8 @@ func (p *OutProvider) Stop(ctx context.Context) error {
 		wg.Add(1)
 		go func(stm s2sOut) {
 			defer wg.Done()
-			_ = stm.Disconnect(streamerror.E(streamerror.SystemShutdown))
 			select {
-			case <-stm.Done():
+			case <-stm.Disconnect(streamerror.E(streamerror.SystemShutdown)):
 				break
 			case <-ctx.Done():
 				break

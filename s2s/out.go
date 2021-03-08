@@ -86,28 +86,23 @@ type DialbackParams struct {
 	Key string
 }
 
-var outDisconnectTimeout = time.Second * 5
-
 type outS2S struct {
-	typ          outType
-	sender       string
-	target       string
-	opts         Options
-	tr           transport.Transport
-	kv           kv.KV
-	session      session
-	dbParams     DialbackParams
-	dialer       dialer
-	hosts        *host.Hosts
-	tlsCfg       *tls.Config
-	onClose      func(s *outS2S)
-	dbResCh      chan stream.DialbackResult
-	shapers      shaper.Shapers
-	sn           *sonar.Sonar
-	rq           *runqueue.RunQueue
-	discTm       *time.Timer
-	doneCh       chan struct{}
-	sendDisabled bool
+	typ      outType
+	sender   string
+	target   string
+	opts     Options
+	tr       transport.Transport
+	kv       kv.KV
+	session  session
+	dbParams DialbackParams
+	dialer   dialer
+	hosts    *host.Hosts
+	tlsCfg   *tls.Config
+	onClose  func(s *outS2S)
+	dbResCh  chan stream.DialbackResult
+	shapers  shaper.Shapers
+	sn       *sonar.Sonar
+	rq       *runqueue.RunQueue
 
 	state        uint32
 	flags        flags
@@ -136,7 +131,6 @@ func newOutS2S(
 		kv:      kv,
 		shapers: shapers,
 		sn:      sn,
-		doneCh:  make(chan struct{}),
 		dialer:  newDialer(opts.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
@@ -194,10 +188,6 @@ func (s *outS2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 		errCh <- s.disconnect(ctx, streamErr)
 	})
 	return errCh
-}
-
-func (s *outS2S) Done() <-chan struct{} {
-	return s.doneCh
 }
 
 func (s *outS2S) dial(ctx context.Context) error {
@@ -531,22 +521,8 @@ func (s *outS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) e
 			return err
 		}
 	}
-	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
-
-	if s.typ == dialbackType {
-		return s.close(ctx)
-	}
-	s.discTm = time.AfterFunc(outDisconnectTimeout, func() {
-		s.rq.Run(func() {
-			ctx, cancel := s.requestContext()
-			defer cancel()
-			_ = s.close(ctx)
-		})
-	})
-	s.sendDisabled = true // avoid sending anymore stanzas while closing
-
-	return nil
+	return s.close(ctx)
 }
 
 func (s *outS2S) sendOrEnqueueElement(ctx context.Context, elem stravaganza.Element) error {
@@ -560,9 +536,6 @@ func (s *outS2S) sendOrEnqueueElement(ctx context.Context, elem stravaganza.Elem
 }
 
 func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
-	if s.sendDisabled {
-		return nil
-	}
 	err := s.session.Send(ctx, elem)
 
 	switch stanza := elem.(type) {
@@ -587,25 +560,13 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 
 func (s *outS2S) close(ctx context.Context) error {
 	// unregister S2S out stream
-	if s.getState() == outDisconnected {
-		return nil // already disconnected
-	}
-	defer close(s.doneCh)
-
 	s.setState(outDisconnected)
 
-	if s.discTm != nil {
-		s.discTm.Stop()
-	}
-	if s.dbResCh != nil {
-		close(s.dbResCh)
-	}
 	if s.onClose != nil {
 		s.onClose(s)
 	}
-	// close underlying transport
-	if err := s.tr.Close(); err != nil {
-		return err
+	if s.dbResCh != nil {
+		close(s.dbResCh)
 	}
 	if s.typ == defaultType {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
@@ -619,7 +580,8 @@ func (s *outS2S) close(ctx context.Context) error {
 	}
 	reportOutgoingConnectionUnregistered(s.typ)
 
-	return nil
+	// close underlying transport
+	return s.tr.Close()
 }
 
 func (s *outS2S) setState(state outS2SState) {

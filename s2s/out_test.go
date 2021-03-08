@@ -35,10 +35,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func init() {
-	outDisconnectTimeout = time.Second
-}
-
 func TestOutS2S_SendElement(t *testing.T) {
 	// given
 	sessMock := &sessionMock{}
@@ -102,7 +98,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
 
-	time.Sleep(outDisconnectTimeout + time.Second) // wait for disconnect
+	time.Sleep(time.Millisecond * 250) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -317,15 +313,6 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 			stm.handleSessionResult(tt.sessionResFn())
 
 			// then
-			if tt.expectedState == outDisconnected {
-				// wait for disconnection
-				select {
-				case <-stm.Done():
-					break
-				case <-time.After(outDisconnectTimeout + time.Second):
-					break
-				}
-			}
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())
 
@@ -435,6 +422,15 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 			// then
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())
+			if tt.expectedValidDialback {
+				time.Sleep(time.Second)
+				select {
+				case dbRes := <-stm.dbResCh:
+					require.True(t, dbRes.Valid)
+				default:
+					require.Fail(t, "Failed to validate dialback result")
+				}
+			}
 		})
 	}
 }
