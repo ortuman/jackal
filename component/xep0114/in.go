@@ -55,18 +55,23 @@ const (
 	disconnected
 )
 
+var disconnectTimeout = time.Second * 5
+
 type inComponent struct {
-	id         inComponentID
-	opts       Options
-	tr         transport.Transport
-	shapers    shaper.Shapers
-	session    session
-	comps      components
-	router     router.Router
-	extCompMng externalComponentManager
-	inHub      *inHub
-	sn         *sonar.Sonar
-	rq         *runqueue.RunQueue
+	id           inComponentID
+	opts         Options
+	tr           transport.Transport
+	shapers      shaper.Shapers
+	session      session
+	comps        components
+	router       router.Router
+	extCompMng   externalComponentManager
+	inHub        *inHub
+	sn           *sonar.Sonar
+	rq           *runqueue.RunQueue
+	discTm       *time.Timer
+	doneCh       chan struct{}
+	sendDisabled bool
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -117,6 +122,7 @@ func newInComponent(
 		ctx:        ctx,
 		cancelFn:   cancelFn,
 		rq:         runqueue.New(id.String(), log.Errorf),
+		doneCh:     make(chan struct{}),
 		shapers:    shapers,
 		sn:         sn,
 	}, nil
@@ -159,6 +165,10 @@ func (s *inComponent) shutdown() <-chan error {
 		errCh <- s.disconnect(ctx, streamerror.E(streamerror.SystemShutdown))
 	})
 	return errCh
+}
+
+func (s *inComponent) done() <-chan struct{} {
+	return s.doneCh
 }
 
 func (s *inComponent) readLoop() {
@@ -314,12 +324,28 @@ func (s *inComponent) disconnect(ctx context.Context, streamErr *streamerror.Err
 			return err
 		}
 	}
+	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
+	s.discTm = time.AfterFunc(disconnectTimeout, func() {
+		s.rq.Run(func() {
+			ctx, cancel := s.requestContext()
+			defer cancel()
+			_ = s.close(ctx)
+		})
+	})
+	s.sendDisabled = true // avoid sending anymore stanzas while closing
 
-	return s.close(ctx)
+	return nil
 }
 
 func (s *inComponent) close(ctx context.Context) error {
+	if s.getState() == disconnected {
+		return nil // already disconnected
+	}
+	defer close(s.doneCh)
+
+	s.setState(disconnected)
+
 	var cHost string
 	if s.getState() == authenticated {
 		// unregister component
@@ -331,7 +357,10 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	s.setState(disconnected)
+	// close underlying transport
+	if err := s.tr.Close(); err != nil {
+		return err
+	}
 	err := s.postStreamEvent(ctx, event.ExternalComponentUnregistered, &event.ExternalComponentEventInfo{
 		ID:   s.id.String(),
 		Host: cHost,
@@ -340,9 +369,7 @@ func (s *inComponent) close(ctx context.Context) error {
 		return err
 	}
 	reportConnectionUnregistered()
-
-	// close underlying transport
-	return s.tr.Close()
+	return nil
 }
 
 func (s *inComponent) restartSession() {
@@ -351,6 +378,9 @@ func (s *inComponent) restartSession() {
 }
 
 func (s *inComponent) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	if s.sendDisabled {
+		return nil
+	}
 	err := s.session.Send(ctx, elem)
 	reportOutgoingRequest(
 		elem.Name(),

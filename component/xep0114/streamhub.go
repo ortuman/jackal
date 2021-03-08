@@ -68,8 +68,9 @@ func (sh *inHub) stop(ctx context.Context) {
 		wg.Add(1)
 		go func(stm *inComponent) {
 			defer wg.Done()
+			_ = stm.shutdown()
 			select {
-			case <-stm.shutdown():
+			case <-stm.done():
 				break
 			case <-ctx.Done():
 				break

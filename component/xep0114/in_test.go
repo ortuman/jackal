@@ -23,9 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
-
 	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/component"
@@ -34,6 +33,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
+
+func init() {
+	disconnectTimeout = time.Second
+}
 
 func TestInComponent_SendStanza(t *testing.T) {
 	// given
@@ -104,7 +107,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 	// when
 	s.shutdown()
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(disconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -261,6 +264,15 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			stm.handleSessionResult(tt.sessionResFn())
 
 			// then
+			if tt.expectedState == disconnected {
+				// wait for disconnection
+				select {
+				case <-stm.done():
+					break
+				case <-time.After(disconnectTimeout + time.Second):
+					break
+				}
+			}
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())
 			require.Equal(t, tt.expectRouted, routed)

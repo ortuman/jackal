@@ -40,6 +40,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+func init() {
+	disconnectTimeout = time.Second
+}
+
 func TestInC2S_SendElement(t *testing.T) {
 	// given
 	sessMock := &sessionMock{}
@@ -116,7 +120,7 @@ func TestInC2S_Disconnect(t *testing.T) {
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(disconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -788,6 +792,15 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
 
+			if tt.expectedState == inDisconnected {
+				// wait for disconnection
+				select {
+				case <-stm.Done():
+					break
+				case <-time.After(disconnectTimeout + time.Second):
+					break
+				}
+			}
 			// then
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())

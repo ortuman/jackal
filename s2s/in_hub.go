@@ -68,8 +68,9 @@ func (h *InHub) Stop(ctx context.Context) error {
 		wg.Add(1)
 		go func(stm stream.S2SIn) {
 			defer wg.Done()
+			_ = stm.Disconnect(streamerror.E(streamerror.SystemShutdown))
 			select {
-			case <-stm.Disconnect(streamerror.E(streamerror.SystemShutdown)):
+			case <-stm.Done():
 				break
 			case <-ctx.Done():
 				errCh <- ctx.Err()

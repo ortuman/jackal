@@ -38,6 +38,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+func init() {
+	inDisconnectTimeout = time.Second
+}
+
 func TestInS2S_Disconnect(t *testing.T) {
 	// given
 	trMock := &transportMock{}
@@ -68,7 +72,7 @@ func TestInS2S_Disconnect(t *testing.T) {
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(inDisconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -434,7 +438,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// S2S dialback
 			dbStreamMock := &s2sDialbackMock{}
-			dbStreamMock.DoneFunc = func() <-chan stream.DialbackResult {
+			dbStreamMock.DialbackResultFunc = func() <-chan stream.DialbackResult {
 				ch := make(chan stream.DialbackResult, 1)
 				ch <- stream.DialbackResult{
 					Valid: true,
@@ -477,6 +481,16 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 
 			// then
+			if tt.expectedState == inDisconnected {
+				// wait for disconnection
+				select {
+				case <-stm.Done():
+					break
+				case <-time.After(inDisconnectTimeout + time.Second):
+					break
+				}
+			}
+
 			mtx.Lock()
 			defer mtx.Unlock()
 

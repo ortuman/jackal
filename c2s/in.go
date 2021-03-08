@@ -59,6 +59,8 @@ const (
 	inDisconnected
 )
 
+var disconnectTimeout = time.Second * 5
+
 type inC2S struct {
 	id             stream.C2SID
 	opts           Options
@@ -75,6 +77,9 @@ type inC2S struct {
 	shapers        shaper.Shapers
 	sn             *sonar.Sonar
 	rq             *runqueue.RunQueue
+	discTm         *time.Timer
+	doneCh         chan struct{}
+	sendDisabled   bool
 
 	mu    sync.RWMutex
 	state uint32
@@ -129,6 +134,7 @@ func newInC2S(
 		blockListRep:   blockListRep,
 		shapers:        shapers,
 		rq:             runqueue.New(id.String(), log.Errorf),
+		doneCh:         make(chan struct{}),
 		state:          uint32(inConnecting),
 		sn:             sonar,
 	}
@@ -217,6 +223,10 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 		errCh <- s.disconnect(ctx, streamErr)
 	})
 	return errCh
+}
+
+func (s *inC2S) Done() <-chan struct{} {
+	return s.doneCh
 }
 
 func (s *inC2S) start() error {
@@ -880,22 +890,43 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 			return err
 		}
 	}
+	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
+	s.discTm = time.AfterFunc(disconnectTimeout, func() {
+		s.rq.Run(func() {
+			ctx, cancel := s.requestContext()
+			defer cancel()
+			_ = s.close(ctx)
+		})
+	})
+	s.sendDisabled = true // avoid sending anymore stanzas while closing
 
-	return s.close(ctx)
+	return nil
 }
 
 func (s *inC2S) close(ctx context.Context) error {
-	// delete cluster resource
-	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
+	if s.getState() == inDisconnected {
+		return nil // already disconnected
+	}
+	defer close(s.doneCh)
+
+	s.setState(inDisconnected)
+
+	if s.discTm != nil {
+		s.discTm.Stop()
+	}
+	// close underlying transport
+	if err := s.tr.Close(); err != nil {
 		return err
 	}
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
-	s.setState(inDisconnected)
-
+	// delete cluster resource
+	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
+		return err
+	}
 	// post unregistered C2S event
 	err := s.postStreamEvent(ctx, event.C2SStreamUnregistered, &event.C2SStreamEventInfo{
 		ID:  s.ID().String(),
@@ -905,9 +936,7 @@ func (s *inC2S) close(ctx context.Context) error {
 		return err
 	}
 	reportConnectionUnregistered()
-
-	// close underlying transport
-	return s.tr.Close()
+	return nil
 }
 
 func (s *inC2S) restartSession() {
@@ -916,6 +945,9 @@ func (s *inC2S) restartSession() {
 }
 
 func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	if s.sendDisabled {
+		return nil
+	}
 	var err error
 	err = s.session.Send(ctx, elem)
 	reportOutgoingRequest(
