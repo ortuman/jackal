@@ -149,11 +149,11 @@ func (p *OutProvider) Stop(ctx context.Context) error {
 	var stms []s2sOut
 
 	// grab all connections
-	p.mu.Lock()
+	p.mu.RLock()
 	for _, stm := range p.outStreams {
 		stms = append(stms, stm)
 	}
-	p.mu.Unlock()
+	p.mu.RUnlock()
 
 	// perform stream disconnection
 	var wg sync.WaitGroup

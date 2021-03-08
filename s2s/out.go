@@ -533,6 +533,10 @@ func (s *outS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) e
 	}
 	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
+
+	if s.typ == dialbackType {
+		return s.close(ctx)
+	}
 	s.discTm = time.AfterFunc(outDisconnectTimeout, func() {
 		s.rq.Run(func() {
 			ctx, cancel := s.requestContext()
