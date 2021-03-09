@@ -15,14 +15,146 @@
 package xep0115
 
 import (
+	"context"
 	"crypto/sha1"
 	"testing"
+	"time"
 
-	"github.com/ortuman/jackal/module/xep0004"
+	capsmodel "github.com/ortuman/jackal/model/caps"
 
+	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/event"
 	discomodel "github.com/ortuman/jackal/model/disco"
+	"github.com/ortuman/jackal/module/xep0004"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCapabilities_RequestDiscoInfo(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+	repMock.CapabilitiesExistFunc = func(ctx context.Context, node string, ver string) (bool, error) {
+		return false, nil
+	}
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+		respStanzas = append(respStanzas, stanza)
+		return nil
+	}
+
+	sn := sonar.New()
+	c := &Capabilities{
+		rep:    repMock,
+		router: routerMock,
+		sn:     sn,
+		reqs:   make(map[string]capsInfo),
+		clrTms: make(map[string]*time.Timer),
+	}
+	// when
+	_ = c.Start(context.Background())
+	defer func() { _ = c.Stop(context.Background()) }()
+
+	jd0, _ := jid.NewWithString("noelia@jackal.im/yard", true)
+	jd1, _ := jid.NewWithString("ortuman@jackal.im", true)
+
+	cElem := stravaganza.NewBuilder("c").
+		WithAttribute(stravaganza.Namespace, capabilitiesFeature).
+		WithAttribute("hash", "sha-1").
+		WithAttribute("node", "http://dino.im").
+		WithAttribute("ver", "q07IKJEyjvHSyhy//CH0CxmKi8w=").
+		Build()
+
+	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
+	_ = sn.Post(context.Background(),
+		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
+			WithInfo(&event.C2SStreamEventInfo{
+				Stanza: pr,
+			}).
+			Build(),
+	)
+
+	// then
+	require.Len(t, respStanzas, 1)
+
+	elem := respStanzas[0]
+	require.Equal(t, "iq", elem.Name())
+	require.Equal(t, stravaganza.GetType, elem.Attribute(stravaganza.Type))
+
+	q := elem.ChildNamespace("query", discoInfoNamespace)
+	require.Equal(t, "http://dino.im#q07IKJEyjvHSyhy//CH0CxmKi8w=", q.Attribute("node"))
+}
+
+func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+
+	var recvCaps *capsmodel.Capabilities
+	repMock.UpsertCapabilitiesFunc = func(ctx context.Context, caps *capsmodel.Capabilities) error {
+		recvCaps = caps
+		return nil
+	}
+	routerMock := &routerMock{}
+
+	sn := sonar.New()
+	c := &Capabilities{
+		rep:    repMock,
+		router: routerMock,
+		sn:     sn,
+		reqs:   make(map[string]capsInfo),
+		clrTms: make(map[string]*time.Timer),
+	}
+	c.reqs["id1234"] = capsInfo{
+		node: "http://dino.im",
+		ver:  "14j4+I88rSOWIY4WwJiIYgYqXrI=",
+		hash: "sha-1",
+	}
+
+	discoIQ, _ := stravaganza.NewBuilder("iq").
+		WithAttribute(stravaganza.ID, "id1234").
+		WithAttribute(stravaganza.Type, stravaganza.ResultType).
+		WithAttribute(stravaganza.From, "noelia@jackal.im/yard").
+		WithAttribute(stravaganza.To, "jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, discoInfoNamespace).
+				WithChild(
+					stravaganza.NewBuilder("feature").
+						WithAttribute("var", "http://jabber.org/protocol/disco#info").
+						Build(),
+				).
+				WithChild(
+					stravaganza.NewBuilder("feature").
+						WithAttribute("var", "http://jabber.org/protocol/disco#items").
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
+	// when
+	_ = c.Start(context.Background())
+	defer func() { _ = c.Stop(context.Background()) }()
+
+	_ = sn.Post(context.Background(),
+		sonar.NewEventBuilder(event.C2SStreamIQReceived).
+			WithInfo(&event.C2SStreamEventInfo{
+				Stanza: discoIQ,
+			}).
+			Build(),
+	)
+
+	// then
+	require.NotNil(t, recvCaps)
+
+	require.Equal(t, "http://dino.im", recvCaps.Node)
+	require.Equal(t, "14j4+I88rSOWIY4WwJiIYgYqXrI=", recvCaps.Ver)
+
+	require.Len(t, recvCaps.Features, 2)
+}
 
 func TestCapabilities_ComputeSimpleVerificationString(t *testing.T) {
 	// given

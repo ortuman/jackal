@@ -226,6 +226,8 @@ func (m *Capabilities) processIQ(ctx context.Context, iq *stravaganza.IQ) error 
 		m.mu.Unlock()
 		return nil
 	}
+	delete(m.reqs, reqID)
+	delete(m.clrTms, reqID)
 	m.mu.Unlock()
 
 	if err := m.processDiscoInfo(ctx, iq, nv); err != nil {
