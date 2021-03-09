@@ -292,8 +292,6 @@ func (s *outS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		defer cancel()
 
 		switch {
-		case sErr != nil:
-			s.handleSessionError(ctx, sErr)
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
@@ -301,6 +299,9 @@ func (s *outS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 				_ = s.close(ctx)
 				return
 			}
+
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
 		}
 	})
 	<-doneCh

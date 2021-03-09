@@ -481,16 +481,17 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 
 			// then
-			if tt.expectedState == inDisconnected {
-				// wait for disconnection
-				select {
-				case <-stm.Done():
-					break
-				case <-time.After(inDisconnectTimeout + time.Second):
-					break
+			/*
+				if tt.expectedState == inDisconnected {
+					// wait for disconnection
+					select {
+					case <-stm.Done():
+						break
+					case <-time.After(inDisconnectTimeout + time.Second):
+						break
+					}
 				}
-			}
-
+			*/
 			mtx.Lock()
 			defer mtx.Unlock()
 

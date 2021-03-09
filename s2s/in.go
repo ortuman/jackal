@@ -205,8 +205,6 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		defer cancel()
 
 		switch {
-		case sErr != nil:
-			s.handleSessionError(ctx, sErr)
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
@@ -214,6 +212,9 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 				_ = s.close(ctx)
 				return
 			}
+
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
 		}
 	})
 	<-doneCh
@@ -668,16 +669,19 @@ func (s *inS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 	}
 	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
-	s.discTm = time.AfterFunc(inDisconnectTimeout, func() {
-		s.rq.Run(func() {
-			ctx, cancel := s.requestContext()
-			defer cancel()
-			_ = s.close(ctx)
-		})
-	})
-	s.sendDisabled = true // avoid sending anymore stanzas while closing
 
-	return nil
+	if s.getState() != inConnecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+		s.discTm = time.AfterFunc(inDisconnectTimeout, func() {
+			s.rq.Run(func() {
+				ctx, cancel := s.requestContext()
+				defer cancel()
+				_ = s.close(ctx)
+			})
+		})
+		s.sendDisabled = true // avoid sending anymore stanzas while closing
+		return nil
+	}
+	return s.close(ctx)
 }
 
 func (s *inS2S) close(ctx context.Context) error {

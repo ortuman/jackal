@@ -792,15 +792,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
 
-			if tt.expectedState == inDisconnected {
-				// wait for disconnection
-				select {
-				case <-stm.Done():
-					break
-				case <-time.After(disconnectTimeout + time.Second):
-					break
-				}
-			}
 			// then
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())

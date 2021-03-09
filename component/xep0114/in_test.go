@@ -263,16 +263,6 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
 
-			// then
-			if tt.expectedState == disconnected {
-				// wait for disconnection
-				select {
-				case <-stm.done():
-					break
-				case <-time.After(disconnectTimeout + time.Second):
-					break
-				}
-			}
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())
 			require.Equal(t, tt.expectRouted, routed)
