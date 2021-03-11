@@ -53,3 +53,18 @@ func TestMeasuredPrivateRep_UpsertPrivate(t *testing.T) {
 	// then
 	require.Len(t, repMock.UpsertPrivateCalls(), 1)
 }
+
+func TestMeasuredPrivateRep_DeletePrivates(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+	repMock.DeletePrivatesFunc = func(ctx context.Context, username string) error {
+		return nil
+	}
+	m := New(repMock)
+
+	// when
+	_ = m.DeletePrivates(context.Background(), "ortuman")
+
+	// then
+	require.Len(t, repMock.DeletePrivatesCalls(), 1)
+}

@@ -39,3 +39,10 @@ func (m *measuredPrivateRep) UpsertPrivate(ctx context.Context, private stravaga
 	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
 	return
 }
+
+func (m *measuredPrivateRep) DeletePrivates(ctx context.Context, username string) (err error) {
+	t0 := time.Now()
+	err = m.rep.DeletePrivates(ctx, username)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	return
+}

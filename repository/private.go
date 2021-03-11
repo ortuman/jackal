@@ -27,4 +27,7 @@ type Private interface {
 
 	// UpsertPrivate upserts a new private element into repository.
 	UpsertPrivate(ctx context.Context, private stravaganza.Element, namespace, username string) error
+
+	// DeletePrivates deletes all user stored private data.
+	DeletePrivates(ctx context.Context, username string) error
 }
