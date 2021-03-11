@@ -95,7 +95,7 @@ SELECT enable_updated_at('blocklist_items');
 CREATE TABLE IF NOT EXISTS private_storage (
     username        VARCHAR(1023) NOT NULL,
     namespace       VARCHAR(512) NOT NULL,
-    data            TEXT NOT NULL,
+    data            BYTEA NOT NULL,
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 

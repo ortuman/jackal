@@ -42,6 +42,7 @@ type baseRepository interface {
 	Capabilities
 	Offline
 	BlockList
+	Private
 	Roster
 	VCard
 }

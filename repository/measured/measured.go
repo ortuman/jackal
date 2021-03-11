@@ -35,6 +35,7 @@ type Measured struct {
 	measuredCapabilitiesRep
 	measuredOfflineRep
 	measuredBlockListRep
+	measuredPrivateRep
 	measuredRosterRep
 	measuredVCardRep
 	rep repository.Repository
@@ -47,6 +48,7 @@ func New(rep repository.Repository) repository.Repository {
 		measuredCapabilitiesRep: measuredCapabilitiesRep{rep: rep},
 		measuredOfflineRep:      measuredOfflineRep{rep: rep},
 		measuredBlockListRep:    measuredBlockListRep{rep: rep},
+		measuredPrivateRep:      measuredPrivateRep{rep: rep},
 		measuredRosterRep:       measuredRosterRep{rep: rep},
 		measuredVCardRep:        measuredVCardRep{rep: rep},
 		rep:                     rep,
