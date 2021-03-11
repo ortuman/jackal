@@ -164,6 +164,7 @@ docker run --name=jackal \
 - [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
 - [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html) *2.9*
 - [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html) *2.5rc3*
+- [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html) *1.2*
 - [XEP-0054: vcard-temp](https://xmpp.org/extensions/xep-0054.html) *1.2*
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html) *1.1*
 - [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html) *1.6*  

@@ -25,6 +25,7 @@ type repTx struct {
 	repository.Capabilities
 	repository.Offline
 	repository.BlockList
+	repository.Private
 	repository.Roster
 	repository.VCard
 }
@@ -35,6 +36,7 @@ func newRepTx(tx *sql.Tx) *repTx {
 		Capabilities: &pgSQLCapabilitiesRep{conn: tx},
 		Offline:      &pgSQLOfflineRep{conn: tx},
 		BlockList:    &pgSQLBlockListRep{conn: tx},
+		Private:      &pgSQLPrivateRep{conn: tx},
 		Roster:       &pgSQLRosterRep{conn: tx},
 		VCard:        &pgSQLVCardRep{conn: tx},
 	}
