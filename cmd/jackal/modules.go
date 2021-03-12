@@ -22,6 +22,7 @@ import (
 	iqhandlerexternal "github.com/ortuman/jackal/module/iqhandler/external"
 	"github.com/ortuman/jackal/module/iqhandler/roster"
 	"github.com/ortuman/jackal/module/iqhandler/xep0030"
+	"github.com/ortuman/jackal/module/iqhandler/xep0049"
 	"github.com/ortuman/jackal/module/iqhandler/xep0054"
 	"github.com/ortuman/jackal/module/iqhandler/xep0092"
 	"github.com/ortuman/jackal/module/iqhandler/xep0199"
@@ -58,6 +59,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 			ShowOS: cfg.Version.ShowOS,
 		})
 		iqHandlers = append(iqHandlers, ver)
+	}
+	// private
+	if stringsutil.StringSliceContains(xep0049.ModuleName, cfg.Enabled) {
+		private := xep0049.New(a.rep, a.router, a.sonar)
+		iqHandlers = append(iqHandlers, private)
 	}
 	// vCard
 	if stringsutil.StringSliceContains(xep0054.ModuleName, cfg.Enabled) {
