@@ -103,6 +103,7 @@ modules:
 #    - roster
 #    - offline
 #    - disco
+#    - private
 #    - vcard
 #    - version
 #    - caps

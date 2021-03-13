@@ -135,12 +135,15 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	}
 	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
-	sb := stravaganza.NewBuilder(prv.Name()).
+	qb := stravaganza.NewBuilder("query").
+		WithAttribute(stravaganza.Namespace, privateNamespace)
+	pb := stravaganza.NewBuilder(prv.Name()).
 		WithAttribute(stravaganza.Namespace, ns)
 	if prvElem != nil {
-		sb.WithChildren(prvElem.AllChildren()...)
+		pb.WithChildren(prvElem.AllChildren()...)
 	}
-	resIQ := xmpputil.MakeResultIQ(iq, sb.Build())
+	qb.WithChild(pb.Build())
+	resIQ := xmpputil.MakeResultIQ(iq, qb.Build())
 
 	_ = p.router.Route(ctx, resIQ)
 	return nil
