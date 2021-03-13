@@ -40,14 +40,14 @@ const (
 
 // Private represents a private (XEP-0049) module type.
 type Private struct {
-	rep    repository.Repository
+	rep    repository.Private
 	router router.Router
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 }
 
 // New returns a new initialized Private instance.
-func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *Private {
+func New(rep repository.Private, router router.Router, sn *sonar.Sonar) *Private {
 	return &Private{
 		rep:    rep,
 		router: router,
