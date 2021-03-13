@@ -582,7 +582,8 @@ func (s *outS2S) close(ctx context.Context) error {
 	reportOutgoingConnectionUnregistered(s.typ)
 
 	// close underlying transport
-	return s.tr.Close()
+	_ = s.tr.Close()
+	return nil
 }
 
 func (s *outS2S) setState(state outS2SState) {

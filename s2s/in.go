@@ -698,10 +698,6 @@ func (s *inS2S) close(ctx context.Context) error {
 	// unregister S2S stream
 	s.inHub.unregister(s)
 
-	// close underlying transport
-	if err := s.tr.Close(); err != nil {
-		return err
-	}
 	log.Infow("Unregistered S2S incoming stream",
 		"id", s.id,
 		"sender", s.sender,
@@ -715,6 +711,9 @@ func (s *inS2S) close(ctx context.Context) error {
 		return err
 	}
 	reportIncomingConnectionUnregistered()
+
+	// close underlying transport
+	_ = s.tr.Close()
 	return nil
 }
 

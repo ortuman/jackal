@@ -360,10 +360,6 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	// close underlying transport
-	if err := s.tr.Close(); err != nil {
-		return err
-	}
 	err := s.postStreamEvent(ctx, event.ExternalComponentUnregistered, &event.ExternalComponentEventInfo{
 		ID:   s.id.String(),
 		Host: cHost,
@@ -372,6 +368,9 @@ func (s *inComponent) close(ctx context.Context) error {
 		return err
 	}
 	reportConnectionUnregistered()
+
+	// close underlying transport
+	_ = s.tr.Close()
 	return nil
 }
 
