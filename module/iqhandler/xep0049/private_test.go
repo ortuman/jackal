@@ -14,22 +14,168 @@
 
 package xep0049
 
-import "testing"
+import (
+	"context"
+	"testing"
+
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/stretchr/testify/require"
+)
 
 func TestPrivate_GetPrivate(t *testing.T) {
 	// given
+	var reqNS string
+
+	repMock := &repositoryMock{}
+	repMock.FetchPrivateFunc = func(ctx context.Context, namespace, username string) (stravaganza.Element, error) {
+		reqNS = namespace
+		return stravaganza.NewBuilder("exodus").
+			WithAttribute(stravaganza.Namespace, "exodus:prefs").
+			WithChild(
+				stravaganza.NewBuilder("defaultnick").
+					WithText("Hamlet").
+					Build(),
+			).
+			Build(), nil
+	}
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+		respStanzas = append(respStanzas, stanza)
+		return nil
+	}
+
 	// when
+	p := &Private{
+		rep:    repMock,
+		router: routerMock,
+	}
+	reqIQ, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithAttribute(stravaganza.ID, "1001").
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, privateNamespace).
+				WithChild(
+					stravaganza.NewBuilder("exodus").
+						WithAttribute(stravaganza.Namespace, "exodus:prefs").
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
+	_ = p.ProcessIQ(context.Background(), reqIQ)
+
 	// then
+	require.Len(t, respStanzas, 1)
+
+	resIQ := respStanzas[0]
+	require.Equal(t, stravaganza.ResultType, resIQ.Attribute(stravaganza.Type))
+
+	q := resIQ.ChildNamespace("query", privateNamespace)
+	require.NotNil(t, q)
+	require.Equal(t, q.ChildrenCount(), 1)
+
+	require.Equal(t, reqNS, "exodus:prefs")
 }
 
 func TestPrivate_SetPrivate(t *testing.T) {
 	// given
+	repMock := &repositoryMock{}
+	repMock.UpsertPrivateFunc = func(ctx context.Context, private stravaganza.Element, namespace string, username string) error {
+		return nil
+	}
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+		respStanzas = append(respStanzas, stanza)
+		return nil
+	}
+
 	// when
+	p := &Private{
+		rep:    repMock,
+		router: routerMock,
+	}
+	reqIQ, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.Type, stravaganza.SetType).
+		WithAttribute(stravaganza.ID, "1001").
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, privateNamespace).
+				WithChild(
+					stravaganza.NewBuilder("exodus").
+						WithAttribute(stravaganza.Namespace, "exodus:prefs").
+						WithChild(
+							stravaganza.NewBuilder("defaultnick").
+								WithText("Hamlet").
+								Build(),
+						).
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
+	_ = p.ProcessIQ(context.Background(), reqIQ)
+
 	// then
+	require.Len(t, respStanzas, 1)
+
+	resIQ := respStanzas[0]
+	require.Equal(t, stravaganza.ResultType, resIQ.Attribute(stravaganza.Type))
 }
 
 func TestPrivate_ForbiddenRequest(t *testing.T) {
 	// given
+	repMock := &repositoryMock{}
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+		respStanzas = append(respStanzas, stanza)
+		return nil
+	}
+
 	// when
+	p := &Private{
+		rep:    repMock,
+		router: routerMock,
+	}
+	reqIQ, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithAttribute(stravaganza.ID, "1001").
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
+		WithAttribute(stravaganza.To, "noelia@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, privateNamespace).
+				WithChild(
+					stravaganza.NewBuilder("exodus").
+						WithAttribute(stravaganza.Namespace, "exodus:prefs").
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
+	_ = p.ProcessIQ(context.Background(), reqIQ)
+
 	// then
+	require.Len(t, respStanzas, 1)
+
+	resIQ := respStanzas[0]
+	require.Equal(t, stravaganza.ErrorType, resIQ.Attribute(stravaganza.Type))
+
+	err := resIQ.Child("error")
+	require.NotNil(t, err)
+
+	require.NotNil(t, err.Children("forbidden"))
 }
