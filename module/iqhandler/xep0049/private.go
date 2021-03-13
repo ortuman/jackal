@@ -16,6 +16,10 @@ package xep0049
 
 import (
 	"context"
+	"strings"
+
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -37,14 +41,14 @@ const (
 
 // Private represents a private (XEP-0049) module type.
 type Private struct {
-	rep    repository.Private
+	rep    repository.Repository
 	router router.Router
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 }
 
 // New returns a new initialized Private instance.
-func New(rep repository.Private, router router.Router, sn *sonar.Sonar) *Private {
+func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *Private {
 	return &Private{
 		rep:    rep,
 		router: router,
@@ -71,7 +75,21 @@ func (p *Private) MatchesNamespace(namespace string) bool {
 
 // ProcessIQ process a private iq.
 func (p *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
-	return nil
+	fromJid := iq.FromJID()
+	toJid := iq.ToJID()
+	validTo := toJid.IsServer() || toJid.Node() == fromJid.Node()
+	if !validTo {
+		return p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+	}
+	q := iq.ChildNamespace("query", privateNamespace)
+	switch {
+	case iq.IsGet() && q != nil:
+		return p.getPrivate(ctx, iq, q)
+	case iq.IsSet() && q != nil:
+		return p.setPrivate(ctx, iq, q)
+	default:
+		return p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+	}
 }
 
 // Start starts private module.
@@ -94,4 +112,63 @@ func (p *Private) Stop(_ context.Context) error {
 func (p *Private) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.UserEventInfo)
 	return p.rep.DeletePrivates(ctx, inf.Username)
+}
+
+func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
+	if q.ChildrenCount() != 1 {
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		return nil
+	}
+	prv := q.AllChildren()[0]
+	ns := prv.Attribute(stravaganza.Namespace)
+
+	isValidNS := isValidNamespace(ns)
+	if prv.ChildrenCount() > 0 || !isValidNS {
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		return nil
+	}
+	username := iq.FromJID().Node()
+
+	prvElem, err := p.rep.FetchPrivate(ctx, ns, username)
+	if err != nil {
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		return err
+	}
+	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+
+	sb := stravaganza.NewBuilder(prv.Name()).
+		WithAttribute(stravaganza.Namespace, ns)
+	if prvElem != nil {
+		sb.WithChildren(prvElem.AllChildren()...)
+	}
+	resIQ := xmpputil.MakeResultIQ(iq, sb.Build())
+
+	_ = p.router.Route(ctx, resIQ)
+	return nil
+}
+
+func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
+	if q.ChildrenCount() == 0 {
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		return nil
+	}
+	username := iq.FromJID().Node()
+	for _, prv := range q.AllChildren() {
+		ns := prv.Attribute(stravaganza.Namespace)
+		if !isValidNamespace(ns) {
+			_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+			return nil
+		}
+		if err := p.rep.UpsertPrivate(ctx, prv, ns, username); err != nil {
+			_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+			return err
+		}
+		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+	}
+	_ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	return nil
+}
+
+func isValidNamespace(ns string) bool {
+	return len(ns) > 0 && !strings.HasPrefix(ns, "jabber:") && !strings.HasPrefix(ns, "http://jabber.org/") && ns != "vcard-temp"
 }
