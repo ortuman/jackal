@@ -802,7 +802,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 			// replace by a server generated resourcepart
 			case Override:
 				res = uuid.New().String()
-				goto setJID
+				break
 
 			// disconnect previously connected resource
 			case TerminateOld:
@@ -813,18 +813,18 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 				if err := s.router.C2S().Disconnect(ctx, &rs, se); err != nil {
 					return err
 				}
-				goto setJID
+				break
 
 			// disallow resource binding
 			case Disallow:
 				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, bindIQ).Element())
 			}
+			break
 		}
 	} else {
 		res = uuid.New().String() // server generated
 	}
 
-setJID:
 	// set stream jid and presence
 	userJID, err := jid.New(s.Username(), s.Domain(), res, false)
 	if err != nil {
@@ -919,10 +919,6 @@ func (s *inC2S) close(ctx context.Context) error {
 	if s.discTm != nil {
 		s.discTm.Stop()
 	}
-	// close underlying transport
-	if err := s.tr.Close(); err != nil {
-		return err
-	}
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
@@ -940,6 +936,9 @@ func (s *inC2S) close(ctx context.Context) error {
 		return err
 	}
 	reportConnectionUnregistered()
+
+	// close underlying transport
+	_ = s.tr.Close()
 	return nil
 }
 
