@@ -4,7 +4,7 @@
 
 peppers:
   keys:
-    v1: m7FFfnHf2g3KsPRPvVjjEiu6uss8tAHg # <-- DISCLAIMER: please, use your custom key here!
+    v1: m7FFfnHf2g3KsPRPvVjjEiu6uss8tAHg # <-- WARNING: please, use your custom key here!
   use: v1
 
 #logger:
