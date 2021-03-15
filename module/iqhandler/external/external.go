@@ -56,6 +56,9 @@ func New(address string, isSecure bool, namespaceMatcher stringmatcher.Matcher, 
 // Name returns module name.
 func (h *Handler) Name() string { return "ext-iqhandler" }
 
+// StreamFeature returns module stream feature.
+func (h *Handler) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+
 // ServerFeatures returns module server features.
 func (h *Handler) ServerFeatures() []string {
 	return h.srvFeatures

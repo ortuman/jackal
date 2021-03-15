@@ -17,6 +17,7 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"time"
 
@@ -70,6 +71,7 @@ func NewOutProvider(
 // GetOut returns associated outgoing S2S stream given a sender-target pair domain.
 func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream.S2SOut, error) {
 	domainPair := getDomainPair(sender, target)
+
 	p.mu.RLock()
 	outStm := p.outStreams[domainPair]
 	p.mu.RUnlock()
@@ -84,18 +86,29 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		return outStm, nil
 	}
 	outStm = p.newOutFn(sender, target)
+	p.outStreams[domainPair] = outStm
+	p.mu.Unlock()
+
 	if err := outStm.dial(ctx); err != nil {
+		p.mu.Lock()
+		delete(p.outStreams, domainPair)
+		p.mu.Unlock()
+		log.Warnw(fmt.Sprintf("Failed to dial outgoing S2S stream: %v", err),
+			"sender", sender, "target", target,
+		)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
-			log.Warnf("Failed to start outgoing S2S stream: %v", err)
+			p.mu.Lock()
+			delete(p.outStreams, domainPair)
+			p.mu.Unlock()
+			log.Warnw(fmt.Sprintf("Failed to start outgoing S2S stream: %v", err),
+				"sender", sender, "target", target,
+			)
 			return
 		}
 	}()
-	p.outStreams[domainPair] = outStm
-	p.mu.Unlock()
-
 	return outStm, nil
 }
 
@@ -103,15 +116,19 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error) {
 	outStm := p.newDbFn(sender, target, params)
 	if err := outStm.dial(ctx); err != nil {
+		log.Warnw(fmt.Sprintf("Failed to dial S2S dialback stream: %v", err),
+			"sender", sender, "target", target,
+		)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
-			log.Warnf("Failed to start S2S dialback stream: %v", err)
+			log.Warnw(fmt.Sprintf("Failed to start S2S dialback stream: %v", err),
+				"sender", sender, "target", target,
+			)
 			return
 		}
 	}()
-
 	return outStm, nil
 }
 
@@ -132,11 +149,11 @@ func (p *OutProvider) Stop(ctx context.Context) error {
 	var stms []s2sOut
 
 	// grab all connections
-	p.mu.Lock()
+	p.mu.RLock()
 	for _, stm := range p.outStreams {
 		stms = append(stms, stm)
 	}
-	p.mu.Unlock()
+	p.mu.RUnlock()
 
 	// perform stream disconnection
 	var wg sync.WaitGroup

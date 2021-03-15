@@ -15,6 +15,7 @@
 package c2s
 
 import (
+	"crypto/tls"
 	"time"
 
 	"github.com/ortuman/jackal/transport/compress"
@@ -56,4 +57,10 @@ type Options struct {
 	// ResourceConflict defines the which rule should be applied in a resource conflict is detected.
 	// Valid values are `override`, `disallow` and `terminate_old`.
 	ResourceConflict ResourceConflict
+
+	// UseTLS, if true, tls.Listen will be used as network listener.
+	UseTLS bool
+
+	// TLSConfig contains configuration to be used when TLS listener is enabled.
+	TLSConfig *tls.Config
 }

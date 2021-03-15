@@ -17,6 +17,7 @@ package xep0030
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -26,6 +27,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
@@ -38,7 +40,8 @@ const (
 
 var errSubscriptionRequired = errors.New("xep0030: subscription required")
 
-type infoProvider interface {
+// InfoProvider represents a general entity disco info provider interface.
+type InfoProvider interface {
 	// Identities returns all identities associated to the provider.
 	Identities(ctx context.Context, toJID, fromJID *jid.JID, node string) []discomodel.Identity
 
@@ -47,6 +50,9 @@ type infoProvider interface {
 
 	// Features returns all features associated to the provider.
 	Features(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]discomodel.Feature, error)
+
+	// Forms returns data forms associated to the provider.
+	Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error)
 }
 
 const (
@@ -59,40 +65,36 @@ const (
 
 // Disco represents a disco info (XEP-0030) module type.
 type Disco struct {
-	router  router.Router
-	srvProv infoProvider
-	accProv infoProvider
+	router     router.Router
+	components components
+	rosRep     repository.Roster
+	resMng     resourceManager
+
+	mu      sync.RWMutex
+	srvProv InfoProvider
+	accProv InfoProvider
 }
 
 // New returns a new initialized disco module instance.
 func New(
 	router router.Router,
-	mods []module.Module,
 	components *component.Components,
 	rosRep repository.Roster,
 	resMng *resourcemanager.Manager,
 ) *Disco {
-	return new(router, mods, components, rosRep, resMng)
-}
-
-func new(
-	router router.Router,
-	mods []module.Module,
-	components components,
-	rosRep repository.Roster,
-	resMng resourceManager,
-) *Disco {
-	disc := &Disco{
-		router: router,
+	return &Disco{
+		router:     router,
+		components: components,
+		rosRep:     rosRep,
+		resMng:     resMng,
 	}
-	discoMods := append(mods, disc)
-	disc.srvProv = newServerProvider(discoMods, components)
-	disc.accProv = newAccountProvider(discoMods, rosRep, resMng)
-	return disc
 }
 
 // Name returns disco module name.
 func (d *Disco) Name() string { return ModuleName }
+
+// StreamFeature returns disco stream feature.
+func (d *Disco) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns server disco features.
 func (d *Disco) ServerFeatures() []string {
@@ -132,18 +134,48 @@ func (d *Disco) Stop(_ context.Context) error {
 	return nil
 }
 
+// SetModules set disco modules to be announced on info request.
+func (d *Disco) SetModules(mods []module.Module) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.srvProv = newServerProvider(mods, d.components)
+	d.accProv = newAccountProvider(mods, d.rosRep, d.resMng)
+}
+
+// ServerProvider returns current disco info server provider.
+func (d *Disco) ServerProvider() InfoProvider {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.srvProv
+}
+
+// AccountProvider returns current disco info account provider.
+func (d *Disco) AccountProvider() InfoProvider {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.accProv
+}
+
 func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.Child("query")
 	if q == nil {
 		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
-	var prov infoProvider
+	var prov InfoProvider
+
+	d.mu.RLock()
 	switch {
 	case iq.ToJID().IsServer():
 		prov = d.srvProv
 	default:
 		prov = d.accProv
+	}
+	d.mu.RUnlock()
+
+	if prov == nil {
+		return nil // modules not set
 	}
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
@@ -160,7 +192,7 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 }
 
-func (d *Disco) sendDiscoInfo(ctx context.Context, prov infoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	features, err := prov.Features(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:
@@ -185,6 +217,9 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov infoProvider, toJID, fro
 		if len(identity.Name) > 0 {
 			identityB.WithAttribute("name", identity.Name)
 		}
+		if len(identity.Lang) > 0 {
+			identityB.WithAttribute(stravaganza.Language, identity.Lang)
+		}
 		sb.WithChild(identityB.Build())
 	}
 	for _, feature := range features {
@@ -192,11 +227,18 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov infoProvider, toJID, fro
 		featureB.WithAttribute("var", feature)
 		sb.WithChild(featureB.Build())
 	}
+	forms, err := prov.Forms(ctx, toJID, fromJID, node)
+	if err != nil {
+		return err
+	}
+	for _, form := range forms {
+		sb.WithChild(form.Element())
+	}
 	_ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
 	return nil
 }
 
-func (d *Disco) sendDiscoItems(ctx context.Context, prov infoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	items, err := prov.Items(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:

@@ -42,6 +42,10 @@ func (h *httpServer) Start(_ context.Context) error {
 		promhttp.HandlerOpts{EnableOpenMetrics: true},
 	))
 	mux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	mux.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 
 	h.srv = &http.Server{Handler: mux}
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", h.port))

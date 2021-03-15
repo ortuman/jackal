@@ -14,7 +14,12 @@
 
 package event
 
+import "github.com/jackal-xmpp/stravaganza"
+
 const (
+	// VCardFetched event is posted whenever a user vCard is fetched.
+	VCardFetched = "vcard.fetched"
+
 	// VCardUpdated event is posted whenever a user vCard is updated.
 	VCardUpdated = "vcard.updated"
 )
@@ -23,4 +28,7 @@ const (
 type VCardEventInfo struct {
 	// Username is the name of the vCard user associated to this event.
 	Username string
+
+	// VCard is the vCard element associated to this event.
+	VCard stravaganza.Element
 }

@@ -89,6 +89,11 @@ type outProvider interface {
 	GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error)
 }
 
+//go:generate moq -out s2sin.mock_test.go . s2sIn
+type s2sIn interface {
+	stream.S2SIn
+}
+
 //go:generate moq -out s2sout.mock_test.go . s2sOut
 type s2sOut interface {
 	stream.S2SOut

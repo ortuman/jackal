@@ -16,6 +16,7 @@ package xep0114
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -31,7 +32,9 @@ import (
 	"github.com/ortuman/jackal/transport"
 )
 
-var netListen = net.Listen
+const (
+	listenKeepAlive = time.Second * 15
+)
 
 // Options defines component connection options.
 type Options struct {
@@ -97,10 +100,13 @@ func NewSocketListener(
 }
 
 // Start starts listening on the TCP network address bindAddr to handle incoming connections.
-func (l *SocketListener) Start(_ context.Context) error {
+func (l *SocketListener) Start(ctx context.Context) error {
 	l.stmHub.start()
 
-	ln, err := netListen("tcp", l.addr)
+	lc := net.ListenConfig{
+		KeepAlive: listenKeepAlive,
+	}
+	ln, err := lc.Listen(ctx, "tcp", l.addr)
 	if err != nil {
 		return err
 	}
@@ -113,6 +119,10 @@ func (l *SocketListener) Start(_ context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infow(
+				fmt.Sprintf("Received component incoming connection at %s", l.addr),
+				"remote_address", conn.RemoteAddr().String(),
+			)
 			go l.connHandlerFn(conn)
 		}
 	}()

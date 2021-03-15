@@ -26,6 +26,8 @@ import (
 const (
 	leaseTTLInSeconds       int64 = 5
 	refreshLeaseTTLInterval       = time.Second * 1
+
+	keepAliveOpTimeout = time.Second * 5
 )
 
 // Options contains etcd key-value store options.
@@ -145,11 +147,12 @@ func (k *KV) refreshLeaseTTL() {
 	for {
 		select {
 		case <-tc.C:
-			ctx, cancel := context.WithTimeout(context.Background(), refreshLeaseTTLInterval)
+			ctx, cancel := context.WithTimeout(context.Background(), keepAliveOpTimeout)
 			if _, err := k.cli.KeepAliveOnce(ctx, k.leaseID); err != nil && !etcdv3.IsConnCanceled(err) {
-				log.Warnf("Failed to perform lease keepalive: %v", err)
+				log.Warnf("Failed to perform KV lease keepalive: %v", err)
 			}
 			cancel()
+
 		case ch := <-k.doneCh:
 			close(ch)
 		}

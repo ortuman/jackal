@@ -23,12 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
-
 	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/component"
 	xmppparser "github.com/ortuman/jackal/parser"
@@ -36,6 +33,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
+
+func init() {
+	disconnectTimeout = time.Second
+}
 
 func TestInComponent_SendStanza(t *testing.T) {
 	// given
@@ -106,7 +107,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 	// when
 	s.shutdown()
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(disconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -262,7 +263,6 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
 
-			// then
 			require.Equal(t, tt.expectedOutput, outBuf.String())
 			require.Equal(t, tt.expectedState, stm.getState())
 			require.Equal(t, tt.expectRouted, routed)
@@ -271,14 +271,6 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 }
 
 func TestInComponent_HandleSessionError(t *testing.T) {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").WithText("Hi there!").Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-
 	var tests = []struct {
 		name           string
 		state          inComponentState
@@ -286,20 +278,6 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 		expectedOutput string
 		expectClosed   bool
 	}{
-		{
-			name:           "StreamError",
-			state:          connecting,
-			sErr:           streamerror.E(streamerror.UnsupportedVersion),
-			expectedOutput: `<stream:stream><stream:error><unsupported-version xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectClosed:   true,
-		},
-		{
-			name:           "StanzaError",
-			state:          authenticated,
-			sErr:           stanzaerror.E(stanzaerror.JIDMalformed, msg),
-			expectedOutput: `<message from="ortuman@jackal.im/balcony" to="noelia@jackal.im/yard" type="error"><body>Hi there!</body><error code="400" type="modify"><jid-malformed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectClosed:   false,
-		},
 		{
 			name:           "ClosedByPeerError",
 			state:          authenticated,

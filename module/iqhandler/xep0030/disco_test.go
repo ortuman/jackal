@@ -40,7 +40,10 @@ func TestDisco_GetServerInfo(t *testing.T) {
 		respStanzas = append(respStanzas, stanza)
 		return nil
 	}
-	d := new(routerMock, []module.Module{modMock}, nil, nil, nil)
+	d := &Disco{
+		router: routerMock,
+	}
+	d.SetModules([]module.Module{modMock, d})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -94,7 +97,11 @@ func TestDisco_GetServerItems(t *testing.T) {
 	compsMock.AllComponentsFunc = func() []component.Component {
 		return []component.Component{compMock}
 	}
-	d := new(routerMock, nil, compsMock, nil, nil)
+	d := &Disco{
+		router:     routerMock,
+		components: compsMock,
+	}
+	d.SetModules(nil)
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -149,7 +156,11 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 		}, nil
 	}
 
-	d := new(routerMock, []module.Module{modMock}, nil, repMock, nil)
+	d := &Disco{
+		router: routerMock,
+		rosRep: repMock,
+	}
+	d.SetModules([]module.Module{modMock, d})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -209,7 +220,12 @@ func TestDisco_GetAccountItems(t *testing.T) {
 			},
 		}, nil
 	}
-	d := new(routerMock, nil, nil, repMock, resMng)
+	d := &Disco{
+		router: routerMock,
+		rosRep: repMock,
+		resMng: resMng,
+	}
+	d.SetModules(nil)
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().

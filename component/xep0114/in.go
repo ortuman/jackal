@@ -19,7 +19,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,7 +26,6 @@ import (
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/component"
@@ -57,18 +55,23 @@ const (
 	disconnected
 )
 
+var disconnectTimeout = time.Second * 5
+
 type inComponent struct {
-	id         inComponentID
-	opts       Options
-	tr         transport.Transport
-	shapers    shaper.Shapers
-	session    session
-	comps      components
-	router     router.Router
-	extCompMng externalComponentManager
-	inHub      *inHub
-	sn         *sonar.Sonar
-	rq         *runqueue.RunQueue
+	id           inComponentID
+	opts         Options
+	tr           transport.Transport
+	shapers      shaper.Shapers
+	session      session
+	comps        components
+	router       router.Router
+	extCompMng   externalComponentManager
+	inHub        *inHub
+	sn           *sonar.Sonar
+	rq           *runqueue.RunQueue
+	discTm       *time.Timer
+	doneCh       chan struct{}
+	sendDisabled bool
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -119,6 +122,7 @@ func newInComponent(
 		ctx:        ctx,
 		cancelFn:   cancelFn,
 		rq:         runqueue.New(id.String(), log.Errorf),
+		doneCh:     make(chan struct{}),
 		shapers:    shapers,
 		sn:         sn,
 	}, nil
@@ -163,6 +167,10 @@ func (s *inComponent) shutdown() <-chan error {
 	return errCh
 }
 
+func (s *inComponent) done() <-chan struct{} {
+	return s.doneCh
+}
+
 func (s *inComponent) readLoop() {
 	s.restartSession()
 
@@ -202,16 +210,16 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
-		var err error
-		if sErr != nil {
-			err = s.handleSessionError(ctx, sErr)
-		}
-		if elem != nil {
-			err = s.handleElement(ctx, elem)
-		}
-		if err != nil {
-			log.Errorf("Failed to process component session result: %v", err)
-			return
+		switch {
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
+		case sErr == nil && elem != nil:
+			err := s.handleElement(ctx, elem)
+			if err != nil {
+				log.Warnw("Failed to process incoming component session element", "error", err, "id", s.id)
+				_ = s.close(ctx)
+				return
+			}
 		}
 	})
 	<-doneCh
@@ -296,26 +304,14 @@ func (s *inComponent) handleAuthenticated(ctx context.Context, elem stravaganza.
 	}
 }
 
-func (s *inComponent) handleSessionError(ctx context.Context, err error) error {
+func (s *inComponent) handleSessionError(ctx context.Context, err error) {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		return s.close(ctx)
-
 	case xmppparser.ErrStreamClosedByPeer:
 		_ = s.session.Close(ctx)
-		return s.close(ctx)
+		fallthrough
 
 	default:
-		switch err := err.(type) {
-		case *streamerror.Error:
-			return s.disconnect(ctx, err)
-
-		case *stanzaerror.Error:
-			return s.sendElement(ctx, err.Element())
-
-		default:
-			return err
-		}
+		_ = s.close(ctx)
 	}
 }
 
@@ -328,12 +324,31 @@ func (s *inComponent) disconnect(ctx context.Context, streamErr *streamerror.Err
 			return err
 		}
 	}
+	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
 
+	if s.getState() != connecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+		s.discTm = time.AfterFunc(disconnectTimeout, func() {
+			s.rq.Run(func() {
+				ctx, cancel := s.requestContext()
+				defer cancel()
+				_ = s.close(ctx)
+			})
+		})
+		s.sendDisabled = true // avoid sending anymore stanzas while closing
+		return nil
+	}
 	return s.close(ctx)
 }
 
 func (s *inComponent) close(ctx context.Context) error {
+	if s.getState() == disconnected {
+		return nil // already disconnected
+	}
+	defer close(s.doneCh)
+
+	s.setState(disconnected)
+
 	var cHost string
 	if s.getState() == authenticated {
 		// unregister component
@@ -345,7 +360,6 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	s.setState(disconnected)
 	err := s.postStreamEvent(ctx, event.ExternalComponentUnregistered, &event.ExternalComponentEventInfo{
 		ID:   s.id.String(),
 		Host: cHost,
@@ -356,7 +370,8 @@ func (s *inComponent) close(ctx context.Context) error {
 	reportConnectionUnregistered()
 
 	// close underlying transport
-	return s.tr.Close()
+	_ = s.tr.Close()
+	return nil
 }
 
 func (s *inComponent) restartSession() {
@@ -365,6 +380,9 @@ func (s *inComponent) restartSession() {
 }
 
 func (s *inComponent) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	if s.sendDisabled {
+		return nil
+	}
 	err := s.session.Send(ctx, elem)
 	reportOutgoingRequest(
 		elem.Name(),

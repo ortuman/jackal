@@ -82,6 +82,7 @@ type listenerConfig struct {
 	BindAddr  string `fig:"bind_addr"`
 	Port      int    `fig:"port" default:"5222"`
 	Transport string `fig:"transport" default:"socket"`
+	DirectTLS bool   `fig:"direct_tls"`
 	SASL      struct {
 		Mechanisms []string `fig:"mechanisms" default:"[scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]"`
 		External   struct {
@@ -94,7 +95,7 @@ type listenerConfig struct {
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"32768"`
 	Secret           string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
 }
 
@@ -139,7 +140,7 @@ type s2sOutConfig struct {
 }
 
 type modulesConfig struct {
-	Enabled []string `fig:"enabled" default:"[roster,offline,disco,vcard,version,ping]"`
+	Enabled []string `fig:"enabled" default:"[roster,offline,disco,private,vcard,version,caps,ping]"`
 
 	Offline struct {
 		QueueSize int `fig:"queue_size" default:"200"`

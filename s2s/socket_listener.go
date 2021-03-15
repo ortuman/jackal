@@ -16,9 +16,12 @@ package s2s
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -31,7 +34,9 @@ import (
 	"github.com/ortuman/jackal/transport"
 )
 
-var netListen = net.Listen
+const (
+	listenKeepAlive = time.Second * 15
+)
 
 // SocketListener represents a S2S socket listener type.
 type SocketListener struct {
@@ -86,10 +91,19 @@ func NewSocketListener(
 }
 
 // Start starts listening on the TCP network address bindAddr to handle incoming S2S connections.
-func (l *SocketListener) Start(_ context.Context) error {
-	ln, err := netListen("tcp", l.addr)
+func (l *SocketListener) Start(ctx context.Context) error {
+	var err error
+	var ln net.Listener
+
+	lc := net.ListenConfig{
+		KeepAlive: listenKeepAlive,
+	}
+	ln, err = lc.Listen(ctx, "tcp", l.addr)
 	if err != nil {
 		return err
+	}
+	if l.opts.UseTLS {
+		ln = tls.NewListener(ln, l.opts.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1
@@ -100,15 +114,23 @@ func (l *SocketListener) Start(_ context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infow(
+				fmt.Sprintf("Received S2S incoming connection at %s", l.addr),
+				"remote_address", conn.RemoteAddr().String(),
+			)
+
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting S2S socket connections at %s", l.addr)
+	log.Infow(
+		fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
+		"direct_tls", l.opts.UseTLS,
+	)
 	return nil
 }
 
 // Stop stops handling incoming S2S connections and closes underlying TCP listener.
-func (l *SocketListener) Stop(ctx context.Context) error {
+func (l *SocketListener) Stop(_ context.Context) error {
 	atomic.StoreUint32(&l.active, 0)
 	if err := l.ln.Close(); err != nil {
 		return err

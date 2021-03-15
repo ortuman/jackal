@@ -28,7 +28,6 @@ import (
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	xmppparser "github.com/ortuman/jackal/parser"
@@ -38,6 +37,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
+
+func init() {
+	inDisconnectTimeout = time.Second
+}
 
 func TestInS2S_Disconnect(t *testing.T) {
 	// given
@@ -69,7 +72,7 @@ func TestInS2S_Disconnect(t *testing.T) {
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(inDisconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -435,7 +438,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// S2S dialback
 			dbStreamMock := &s2sDialbackMock{}
-			dbStreamMock.DoneFunc = func() <-chan stream.DialbackResult {
+			dbStreamMock.DialbackResultFunc = func() <-chan stream.DialbackResult {
 				ch := make(chan stream.DialbackResult, 1)
 				ch <- stream.DialbackResult{
 					Valid: true,
@@ -478,6 +481,17 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 
 			// then
+			/*
+				if tt.expectedState == inDisconnected {
+					// wait for disconnection
+					select {
+					case <-stm.Done():
+						break
+					case <-time.After(inDisconnectTimeout + time.Second):
+						break
+					}
+				}
+			*/
 			mtx.Lock()
 			defer mtx.Unlock()
 
@@ -493,14 +507,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 }
 
 func TestInS2S_HandleSessionError(t *testing.T) {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").WithText("Hi there!").Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-
 	var tests = []struct {
 		name           string
 		state          inS2SState
@@ -508,20 +514,6 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 		expectedOutput string
 		expectClosed   bool
 	}{
-		{
-			name:           "StreamError",
-			state:          inConnecting,
-			sErr:           streamerror.E(streamerror.UnsupportedVersion),
-			expectedOutput: `<stream:stream><stream:error><unsupported-version xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectClosed:   true,
-		},
-		{
-			name:           "StanzaError",
-			state:          inConnecting,
-			sErr:           stanzaerror.E(stanzaerror.JIDMalformed, msg),
-			expectedOutput: `<message from="ortuman@jackal.im/balcony" to="noelia@jackal.im/yard" type="error"><body>Hi there!</body><error code="400" type="modify"><jid-malformed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectClosed:   false,
-		},
 		{
 			name:           "ClosedByPeerError",
 			state:          inConnected,

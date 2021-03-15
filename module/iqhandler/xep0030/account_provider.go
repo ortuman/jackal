@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/ortuman/jackal/module/xep0004"
+
 	"github.com/jackal-xmpp/stravaganza/jid"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -77,6 +79,10 @@ func (p *accountProvider) Features(ctx context.Context, toJID, fromJID *jid.JID,
 	}
 	sort.Slice(features, func(i, j int) bool { return features[i] < features[j] })
 	return features, nil
+}
+
+func (p *accountProvider) Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error) {
+	return nil, nil
 }
 
 func (p *accountProvider) checkIfSubscribedTo(ctx context.Context, toJID, fromJID *jid.JID) error {

@@ -22,18 +22,22 @@ import (
 
 type repTx struct {
 	repository.User
+	repository.Capabilities
 	repository.Offline
 	repository.BlockList
+	repository.Private
 	repository.Roster
 	repository.VCard
 }
 
 func newRepTx(tx *sql.Tx) *repTx {
 	return &repTx{
-		User:      &pgSQLUserRep{conn: tx},
-		Offline:   &pgSQLOfflineRep{conn: tx},
-		BlockList: &pgSQLBlockListRep{conn: tx},
-		Roster:    &pgSQLRosterRep{conn: tx},
-		VCard:     &pgSQLVCardRep{conn: tx},
+		User:         &pgSQLUserRep{conn: tx},
+		Capabilities: &pgSQLCapabilitiesRep{conn: tx},
+		Offline:      &pgSQLOfflineRep{conn: tx},
+		BlockList:    &pgSQLBlockListRep{conn: tx},
+		Private:      &pgSQLPrivateRep{conn: tx},
+		Roster:       &pgSQLRosterRep{conn: tx},
+		VCard:        &pgSQLVCardRep{conn: tx},
 	}
 }

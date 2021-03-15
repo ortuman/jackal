@@ -62,6 +62,9 @@ type C2S interface {
 
 	// Disconnect performs disconnection over the stream.
 	Disconnect(streamErr *streamerror.Error) <-chan error
+
+	// Done returns a channel that's closed when stream transport and all associated resources have been released.
+	Done() <-chan struct{}
 }
 
 // S2SInID type represents an S2S stream unique identifier string.
@@ -77,6 +80,9 @@ type S2SIn interface {
 
 	// Disconnect performs disconnection over the stream.
 	Disconnect(streamErr *streamerror.Error) <-chan error
+
+	// Done returns a channel that's closed when stream transport and all associated resources have been released.
+	Done() <-chan struct{}
 }
 
 // S2SOutID type represents an S2S outgoing stream unique identifier string.
@@ -115,9 +121,9 @@ type S2SDialback interface {
 	// ID returns S2S outgoing stream identifier.
 	ID() S2SOutID
 
-	// Done returns a channel that's signaled when S2S dialback result.
-	Done() <-chan DialbackResult
-
 	// Disconnect performs disconnection over the stream.
 	Disconnect(streamErr *streamerror.Error) <-chan error
+
+	// DialbackResult returns a channel that's signaled when S2S dialback result.
+	DialbackResult() <-chan DialbackResult
 }

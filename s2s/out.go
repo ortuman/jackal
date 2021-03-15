@@ -17,8 +17,8 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
-	"io"
 	"net"
 	"sync/atomic"
 	"time"
@@ -26,7 +26,6 @@ import (
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -132,7 +131,7 @@ func newOutS2S(
 		kv:      kv,
 		shapers: shapers,
 		sn:      sn,
-		dialer:  newDialer(opts.DialTimeout),
+		dialer:  newDialer(opts.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
 	return stm
@@ -155,7 +154,7 @@ func newDialbackS2S(
 		tlsCfg:   tlsCfg,
 		opts:     opts,
 		dbParams: dbParams,
-		dialer:   newDialer(opts.DialTimeout),
+		dialer:   newDialer(opts.DialTimeout, tlsCfg),
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
 	}
@@ -167,7 +166,7 @@ func (s *outS2S) ID() stream.S2SOutID {
 	return stream.S2SOutID{Sender: s.sender, Target: s.target}
 }
 
-func (s *outS2S) Done() <-chan stream.DialbackResult {
+func (s *outS2S) DialbackResult() <-chan stream.DialbackResult {
 	return s.dbResCh
 }
 
@@ -192,7 +191,7 @@ func (s *outS2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 }
 
 func (s *outS2S) dial(ctx context.Context) error {
-	conn, err := s.dialer.DialContext(ctx, s.target)
+	conn, usesTLS, err := s.dialer.DialContext(ctx, s.target)
 	if err != nil {
 		switch err := err.(type) {
 		case net.Error:
@@ -202,6 +201,8 @@ func (s *outS2S) dial(ctx context.Context) error {
 		}
 		return err
 	}
+	log.Infow("Dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
+
 	s.tr = transport.NewSocketTransport(conn)
 
 	// set default rate limiter
@@ -223,6 +224,9 @@ func (s *outS2S) dial(ctx context.Context) error {
 	jd, _ := jid.New("", s.target, "", true)
 	s.session.SetFromJID(jd)
 
+	if usesTLS {
+		s.flags.setSecured() // already secured
+	}
 	return nil
 }
 
@@ -287,17 +291,17 @@ func (s *outS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
-		var err error
-		if sErr != nil {
-			err = s.handleSessionError(ctx, sErr)
-		}
-		if elem != nil {
-			err = s.handleElement(ctx, elem)
-		}
-		if err != nil {
-			log.Errorf("Failed to process outgoing S2S session result: %v", err)
-			_ = s.close(ctx)
-			return
+		switch {
+		case sErr == nil && elem != nil:
+			err := s.handleElement(ctx, elem)
+			if err != nil {
+				log.Warnw("Failed to process outgoing S2S session element", "error", err, "id", s.ID())
+				_ = s.close(ctx)
+				return
+			}
+
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
 		}
 	})
 	<-doneCh
@@ -368,7 +372,7 @@ func (s *outS2S) handleConnected(ctx context.Context, elem stravaganza.Element) 
 			return s.sendElement(ctx, stravaganza.NewBuilder("auth").
 				WithAttribute(stravaganza.Namespace, saslNamespace).
 				WithAttribute("mechanism", "EXTERNAL").
-				WithText("=").
+				WithText(base64.StdEncoding.EncodeToString([]byte(s.sender))).
 				Build(),
 			)
 
@@ -480,26 +484,14 @@ func (s *outS2S) handleAuthorizingDialbackKey(ctx context.Context, elem stravaga
 	}
 }
 
-func (s *outS2S) handleSessionError(ctx context.Context, err error) error {
+func (s *outS2S) handleSessionError(ctx context.Context, err error) {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		return s.close(ctx)
-
 	case xmppparser.ErrStreamClosedByPeer:
 		_ = s.session.Close(ctx)
-		return s.close(ctx)
+		fallthrough
 
 	default:
-		switch err := err.(type) {
-		case *streamerror.Error:
-			return s.disconnect(ctx, err)
-
-		case *stanzaerror.Error:
-			return s.sendElement(ctx, err.Element())
-
-		default:
-			return err
-		}
+		_ = s.close(ctx)
 	}
 }
 
@@ -590,7 +582,8 @@ func (s *outS2S) close(ctx context.Context) error {
 	reportOutgoingConnectionUnregistered(s.typ)
 
 	// close underlying transport
-	return s.tr.Close()
+	_ = s.tr.Close()
+	return nil
 }
 
 func (s *outS2S) setState(state outS2SState) {

@@ -93,9 +93,15 @@ func (p *Parser) Parse() (stravaganza.Element, error) {
 	// parse input buffer stream
 	for {
 		t, err := p.dec.RawToken()
-		if t == nil && err == io.EOF {
-			p.dec = nil
-			return nil, ErrNoElement
+		if err != nil {
+			switch {
+			case errors.Is(err, io.EOF):
+				p.dec = nil
+				return nil, ErrNoElement
+
+			default:
+				return nil, err
+			}
 		}
 		if p.index != rootElementIndex && p.dec.InputOffset()-p.rootElementOffset > p.maxStanzaSize {
 			return nil, ErrTooLargeStanza

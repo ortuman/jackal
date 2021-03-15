@@ -52,6 +52,20 @@ CREATE TABLE IF NOT EXISTS users (
 
 SELECT enable_updated_at('users');
 
+-- capabilities
+
+CREATE TABLE IF NOT EXISTS capabilities (
+    node       VARCHAR(1023) NOT NULL,
+    ver        VARCHAR(1023) NOT NULL,
+    features   TEXT ARRAY,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (node, ver)
+);
+
+SELECT enable_updated_at('capabilities');
+
 -- offline_messages
 
 CREATE TABLE IF NOT EXISTS offline_messages (
@@ -75,6 +89,20 @@ CREATE TABLE IF NOT EXISTS blocklist_items (
 );
 
 SELECT enable_updated_at('blocklist_items');
+
+-- private_storage
+
+CREATE TABLE IF NOT EXISTS private_storage (
+    username        VARCHAR(1023) NOT NULL,
+    namespace       VARCHAR(512) NOT NULL,
+    data            BYTEA NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (username, namespace)
+);
+
+SELECT enable_updated_at('private_storage');
 
 -- roster_notifications
 

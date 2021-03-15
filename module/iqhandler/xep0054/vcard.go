@@ -57,6 +57,9 @@ func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *VCar
 // Name returns vCard module name.
 func (v *VCard) Name() string { return ModuleName }
 
+// StreamFeature returns vCard module stream feature.
+func (v *VCard) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+
 // ServerFeatures returns vCard server disco features.
 func (v *VCard) ServerFeatures() []string {
 	return []string{vCardNamespace}
@@ -129,12 +132,21 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	log.Infow("Fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
 
 	_ = v.router.Route(ctx, resIQ)
-	return nil
+
+	// post vCard fetched event
+	return v.sn.Post(
+		ctx,
+		sonar.NewEventBuilder(event.VCardFetched).
+			WithInfo(&event.VCardEventInfo{
+				Username: toJID.Node(),
+				VCard:    vCard,
+			}).Build(),
+	)
 }
 
 func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
-	vc := iq.ChildNamespace("vCard", vCardNamespace)
-	if vc == nil {
+	vCard := iq.ChildNamespace("vCard", vCardNamespace)
+	if vCard == nil {
 		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
@@ -146,22 +158,22 @@ func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
-	err := v.rep.UpsertVCard(ctx, vc, toJID.Node())
+	err := v.rep.UpsertVCard(ctx, vCard, toJID.Node())
 	if err != nil {
 		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
-
 	}
 	log.Infow("Saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
 
 	_ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
-	// post vCard update event
+	// post vCard updated event
 	return v.sn.Post(
 		ctx,
 		sonar.NewEventBuilder(event.VCardUpdated).
 			WithInfo(&event.VCardEventInfo{
 				Username: toJID.Node(),
+				VCard:    vCard,
 			}).Build(),
 	)
 }

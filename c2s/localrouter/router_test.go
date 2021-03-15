@@ -15,11 +15,13 @@
 package localrouter
 
 import (
+	"context"
 	"sync"
 	"testing"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +51,71 @@ func TestRouter_RegisterBind(t *testing.T) {
 	require.NotNil(t, r.bndRes["ortuman"])
 }
 
-func TestRouter_Uregister(t *testing.T) {
+func TestRouter_Stream(t *testing.T) {
+	// given
+	mockStm := &streamC2SMock{}
+	mockStm.IDFunc = func() stream.C2SID { return 1234 }
+	mockStm.UsernameFunc = func() string { return "ortuman" }
+	mockStm.ResourceFunc = func() string { return "yard" }
+
+	r := &Router{
+		hosts:  &hostsMock{},
+		sonar:  sonar.New(),
+		stms:   make(map[stream.C2SID]stream.C2S),
+		bndRes: make(map[string]*resources),
+	}
+
+	// when
+	_ = r.Register(mockStm)
+	_, _ = r.Bind(1234)
+
+	stm := r.Stream("ortuman", "yard")
+
+	// then
+	require.NotNil(t, stm)
+	require.Equal(t, mockStm, stm)
+}
+
+func TestRouter_Stop(t *testing.T) {
+	// given
+	mockStm := &streamC2SMock{}
+	mockStm.IDFunc = func() stream.C2SID { return 1234 }
+	mockStm.UsernameFunc = func() string { return "ortuman" }
+	mockStm.ResourceFunc = func() string { return "yard" }
+	mockStm.DoneFunc = func() <-chan struct{} {
+		ch := make(chan struct{})
+		close(ch)
+		return ch
+	}
+
+	var discReason streamerror.Reason
+	mockStm.DisconnectFunc = func(streamErr *streamerror.Error) <-chan error {
+		discReason = streamErr.Reason
+		return nil
+	}
+
+	r := &Router{
+		hosts:  &hostsMock{},
+		sonar:  sonar.New(),
+		stms:   make(map[stream.C2SID]stream.C2S),
+		bndRes: make(map[string]*resources),
+		doneCh: make(chan chan struct{}),
+	}
+
+	// when
+	_ = r.Start(context.Background())
+
+	_ = r.Register(mockStm)
+	_, _ = r.Bind(1234)
+
+	_ = r.Stop(context.Background())
+
+	// then
+	require.Len(t, mockStm.DisconnectCalls(), 1)
+	require.Equal(t, discReason, streamerror.SystemShutdown)
+}
+
+func TestRouter_Unregister(t *testing.T) {
 	// given
 	mockStm := &streamC2SMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
@@ -113,6 +179,36 @@ func TestRouter_Route(t *testing.T) {
 
 	require.Nil(t, err)
 	require.Equal(t, stanza.String(), sentElement.String())
+}
+
+func TestRouter_Disconnect(t *testing.T) {
+	// given
+	mockStm := &streamC2SMock{}
+	mockStm.IDFunc = func() stream.C2SID { return 1234 }
+	mockStm.UsernameFunc = func() string { return "ortuman" }
+	mockStm.ResourceFunc = func() string { return "yard" }
+
+	mockStm.DisconnectFunc = func(streamErr *streamerror.Error) <-chan error {
+		errCh := make(chan error, 1)
+		errCh <- nil
+		return errCh
+	}
+
+	r := &Router{
+		hosts:  &hostsMock{},
+		sonar:  sonar.New(),
+		stms:   make(map[stream.C2SID]stream.C2S),
+		bndRes: make(map[string]*resources),
+	}
+
+	_ = r.Register(mockStm)
+	_, _ = r.Bind(1234)
+
+	// when
+	err := r.Disconnect("ortuman", "yard", streamerror.E(streamerror.SystemShutdown))
+
+	require.Nil(t, err)
+	require.Len(t, mockStm.DisconnectCalls(), 1)
 }
 
 func testMessageStanza() *stravaganza.Message {

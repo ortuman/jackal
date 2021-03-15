@@ -180,8 +180,9 @@ func (r *Router) Stop(ctx context.Context) error {
 		wg.Add(1)
 		go func(stm stream.C2S) {
 			defer wg.Done()
+			_ = stm.Disconnect(streamerror.E(streamerror.SystemShutdown))
 			select {
-			case <-stm.Disconnect(streamerror.E(streamerror.SystemShutdown)):
+			case <-stm.Done():
 				break
 			case <-ctx.Done():
 				break

@@ -20,8 +20,9 @@ type Feature = string
 // Identity represents a disco info identity entity.
 type Identity struct {
 	Category string
-	Type     string
 	Name     string
+	Type     string
+	Lang     string
 }
 
 // Item represents a disco info item entity.

@@ -32,8 +32,10 @@ const (
 // Measured is measured Repository implementation.
 type Measured struct {
 	measuredUserRep
+	measuredCapabilitiesRep
 	measuredOfflineRep
 	measuredBlockListRep
+	measuredPrivateRep
 	measuredRosterRep
 	measuredVCardRep
 	rep repository.Repository
@@ -42,12 +44,14 @@ type Measured struct {
 // New returns a new initialized Measured repository.
 func New(rep repository.Repository) repository.Repository {
 	return &Measured{
-		measuredUserRep:      measuredUserRep{rep: rep},
-		measuredOfflineRep:   measuredOfflineRep{rep: rep},
-		measuredBlockListRep: measuredBlockListRep{rep: rep},
-		measuredRosterRep:    measuredRosterRep{rep: rep},
-		measuredVCardRep:     measuredVCardRep{rep: rep},
-		rep:                  rep,
+		measuredUserRep:         measuredUserRep{rep: rep},
+		measuredCapabilitiesRep: measuredCapabilitiesRep{rep: rep},
+		measuredOfflineRep:      measuredOfflineRep{rep: rep},
+		measuredBlockListRep:    measuredBlockListRep{rep: rep},
+		measuredPrivateRep:      measuredPrivateRep{rep: rep},
+		measuredRosterRep:       measuredRosterRep{rep: rep},
+		measuredVCardRep:        measuredVCardRep{rep: rep},
+		rep:                     rep,
 	}
 }
 

@@ -17,7 +17,6 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -52,21 +51,26 @@ const (
 	inDisconnected
 )
 
+var inDisconnectTimeout = time.Second * 5
+
 type inS2S struct {
-	id          stream.S2SInID
-	opts        Options
-	tr          transport.Transport
-	session     session
-	hosts       hosts
-	router      router.Router
-	comps       components
-	mods        modules
-	outProvider outProvider
-	inHub       *InHub
-	kv          kv.KV
-	shapers     shaper.Shapers
-	sn          *sonar.Sonar
-	rq          *runqueue.RunQueue
+	id           stream.S2SInID
+	opts         Options
+	tr           transport.Transport
+	session      session
+	hosts        hosts
+	router       router.Router
+	comps        components
+	mods         modules
+	outProvider  outProvider
+	inHub        *InHub
+	kv           kv.KV
+	shapers      shaper.Shapers
+	sn           *sonar.Sonar
+	rq           *runqueue.RunQueue
+	discTm       *time.Timer
+	doneCh       chan struct{}
+	sendDisabled bool
 
 	mu     sync.RWMutex
 	state  uint32
@@ -121,7 +125,11 @@ func newInS2S(
 		shapers:     shapers,
 		sn:          sonar,
 		rq:          runqueue.New(id.String(), log.Errorf),
+		doneCh:      make(chan struct{}),
 		state:       uint32(inConnecting),
+	}
+	if opts.UseTLS {
+		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
 }
@@ -140,14 +148,15 @@ func (s *inS2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 	return errCh
 }
 
+func (s *inS2S) Done() <-chan struct{} {
+	return s.doneCh
+}
+
 func (s *inS2S) start() error {
 	s.inHub.register(s)
 
-	log.Infow("Registered S2S incoming stream",
-		"id", s.id,
-		"sender", s.sender,
-		"target", s.target,
-	)
+	log.Infow("Registered S2S incoming stream", "id", s.id)
+
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
 	err := s.postStreamEvent(ctx, event.S2SInStreamRegistered, &event.S2SStreamEventInfo{
@@ -195,17 +204,17 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
-		var err error
-		if sErr != nil {
-			err = s.handleSessionError(ctx, sErr)
-		}
-		if elem != nil {
-			err = s.handleElement(ctx, elem)
-		}
-		if err != nil {
-			log.Errorf("Failed to process incoming S2S session result: %v", err)
-			_ = s.close(ctx)
-			return
+		switch {
+		case sErr == nil && elem != nil:
+			err := s.handleElement(ctx, elem)
+			if err != nil {
+				log.Warnw("Failed to process incoming S2S session element", "error", err, "id", s.id)
+				_ = s.close(ctx)
+				return
+			}
+
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
 		}
 	})
 	<-doneCh
@@ -513,7 +522,7 @@ func (s *inS2S) authorizeDialbackKey(ctx context.Context, elem stravaganza.Eleme
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, elem).Element())
 	}
 	go func() {
-		dbRes := <-dbOut.Done()
+		dbRes := <-dbOut.DialbackResult()
 		s.rq.Run(func() {
 			ctx, cancel := s.requestContext()
 			defer cancel()
@@ -628,26 +637,14 @@ func (s *inS2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 	return nil
 }
 
-func (s *inS2S) handleSessionError(ctx context.Context, err error) error {
+func (s *inS2S) handleSessionError(ctx context.Context, err error) {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		return s.close(ctx)
-
 	case xmppparser.ErrStreamClosedByPeer:
 		_ = s.session.Close(ctx)
-		return s.close(ctx)
+		fallthrough
 
 	default:
-		switch err := err.(type) {
-		case *streamerror.Error:
-			return s.disconnect(ctx, err)
-
-		case *stanzaerror.Error:
-			return s.sendElement(ctx, err.Element())
-
-		default:
-			return err
-		}
+		_ = s.close(ctx)
 	}
 }
 
@@ -670,14 +667,36 @@ func (s *inS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 			return err
 		}
 	}
+	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
+
+	if s.getState() != inConnecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+		s.discTm = time.AfterFunc(inDisconnectTimeout, func() {
+			s.rq.Run(func() {
+				ctx, cancel := s.requestContext()
+				defer cancel()
+				_ = s.close(ctx)
+			})
+		})
+		s.sendDisabled = true // avoid sending anymore stanzas while closing
+		return nil
+	}
 	return s.close(ctx)
 }
 
 func (s *inS2S) close(ctx context.Context) error {
+	if s.getState() == inDisconnected {
+		return nil // already disconnected
+	}
+	defer close(s.doneCh)
+
+	s.setState(inDisconnected)
+
+	if s.discTm != nil {
+		s.discTm.Stop()
+	}
 	// unregister S2S stream
 	s.inHub.unregister(s)
-	s.setState(inDisconnected)
 
 	log.Infow("Unregistered S2S incoming stream",
 		"id", s.id,
@@ -694,10 +713,14 @@ func (s *inS2S) close(ctx context.Context) error {
 	reportIncomingConnectionUnregistered()
 
 	// close underlying transport
-	return s.tr.Close()
+	_ = s.tr.Close()
+	return nil
 }
 
 func (s *inS2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	if s.sendDisabled {
+		return nil
+	}
 	var err error
 	err = s.session.Send(ctx, elem)
 	reportOutgoingRequest(

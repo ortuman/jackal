@@ -17,7 +17,6 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,7 +38,6 @@ import (
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/eventhandler/offline"
-	"github.com/ortuman/jackal/module/iqhandler/roster"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -61,6 +59,8 @@ const (
 	inDisconnected
 )
 
+var disconnectTimeout = time.Second * 5
+
 type inC2S struct {
 	id             stream.C2SID
 	opts           Options
@@ -77,10 +77,13 @@ type inC2S struct {
 	shapers        shaper.Shapers
 	sn             *sonar.Sonar
 	rq             *runqueue.RunQueue
+	discTm         *time.Timer
+	doneCh         chan struct{}
+	sendDisabled   bool
 
 	mu    sync.RWMutex
 	state uint32
-	flgs  inC2SFlags
+	flags inC2SFlags
 	sCtx  map[string]string
 	jd    *jid.JID
 	pr    *stravaganza.Presence
@@ -131,8 +134,12 @@ func newInC2S(
 		blockListRep:   blockListRep,
 		shapers:        shapers,
 		rq:             runqueue.New(id.String(), log.Errorf),
+		doneCh:         make(chan struct{}),
 		state:          uint32(inConnecting),
 		sn:             sonar,
+	}
+	if opts.UseTLS {
+		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
 }
@@ -218,6 +225,10 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 	return errCh
 }
 
+func (s *inC2S) Done() <-chan struct{} {
+	return s.doneCh
+}
+
 func (s *inC2S) start() error {
 	// register C2S stream
 	if err := s.router.C2S().Register(s); err != nil {
@@ -270,17 +281,17 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
-		var err error
-		if sErr != nil {
-			err = s.handleSessionError(ctx, sErr)
-		}
-		if elem != nil {
-			err = s.handleElement(ctx, elem)
-		}
-		if err != nil {
-			log.Errorf("Failed to process C2S session result: %v", err)
-			_ = s.close(ctx)
-			return
+		switch {
+		case sErr == nil && elem != nil:
+			err := s.handleElement(ctx, elem)
+			if err != nil {
+				log.Warnw("Failed to process incoming C2S session element", "error", err, "id", s.id)
+				_ = s.close(ctx)
+				return
+			}
+
+		case sErr != nil:
+			s.handleSessionError(ctx, sErr)
 		}
 	})
 	<-doneCh
@@ -331,11 +342,11 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
 		WithAttribute(stravaganza.Version, "1.0")
 
-	if !s.flgs.isAuthenticated() {
+	if !s.flags.isAuthenticated() {
 		sb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
-		sb.WithChildren(s.authenticatedFeatures()...)
+		sb.WithChildren(s.authenticatedFeatures(ctx)...)
 		s.setState(inAuthenticated)
 	}
 	_ = s.session.OpenStream(ctx, sb.Build())
@@ -448,8 +459,8 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return err
 	}
 	if iq.IsSet() && iq.ChildNamespace("session", sessionNamespace) != nil {
-		if !s.flgs.isSessionStarted() {
-			s.flgs.setSessionStarted()
+		if !s.flags.isSessionStarted() {
+			s.flags.setSessionStarted()
 			return s.sendElement(ctx, iq.ResultBuilder().Build())
 		}
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
@@ -544,26 +555,14 @@ sndMessage:
 	return err
 }
 
-func (s *inC2S) handleSessionError(ctx context.Context, err error) error {
+func (s *inC2S) handleSessionError(ctx context.Context, err error) {
 	switch err {
-	case nil, io.EOF, io.ErrUnexpectedEOF:
-		return s.close(ctx)
-
 	case xmppparser.ErrStreamClosedByPeer:
 		_ = s.session.Close(ctx)
-		return s.close(ctx)
+		fallthrough
 
 	default:
-		switch err := err.(type) {
-		case *streamerror.Error:
-			return s.disconnect(ctx, err)
-
-		case *stanzaerror.Error:
-			return s.sendElement(ctx, err.Element())
-
-		default:
-			return err
-		}
+		_ = s.close(ctx)
 	}
 }
 
@@ -572,7 +571,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 
 	// attach start-tls feature
 	isSocketTr := s.tr.Type() == transport.Socket
-	if isSocketTr && !s.flgs.isSecured() {
+	if isSocketTr && !s.flags.isSecured() {
 		features = append(features, stravaganza.NewBuilder("starttls").
 			WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-tls").
 			WithChild(stravaganza.NewBuilder("required").Build()).
@@ -580,7 +579,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 		)
 	}
 	// attach SASL mechanisms
-	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flgs.isSecured())
+	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flags.isSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		sb := stravaganza.NewBuilder("mechanisms")
@@ -597,7 +596,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 	return features
 }
 
-func (s *inC2S) authenticatedFeatures() []stravaganza.Element {
+func (s *inC2S) authenticatedFeatures(ctx context.Context) []stravaganza.Element {
 	var features []stravaganza.Element
 
 	isSocketTr := s.tr.Type() == transport.Socket
@@ -605,7 +604,7 @@ func (s *inC2S) authenticatedFeatures() []stravaganza.Element {
 	// compression feature
 	compressionAvailable := isSocketTr && s.opts.CompressionLevel != compress.NoCompression
 
-	if !s.flgs.isCompressed() && compressionAvailable {
+	if !s.flags.isCompressed() && compressionAvailable {
 		compressionElem := stravaganza.NewBuilder("compression").
 			WithAttribute(stravaganza.Namespace, "http://jabber.org/features/compress").
 			WithChild(
@@ -629,25 +628,20 @@ func (s *inC2S) authenticatedFeatures() []stravaganza.Element {
 		Build()
 	features = append(features, sessElem)
 
-	// roster versioning
-	if s.mods.IsEnabled(roster.ModuleName) {
-		rosVerElem := stravaganza.NewBuilder("ver").
-			WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
-			Build()
-		features = append(features, rosVerElem)
-	}
-	return features
+	// include module stream features
+	modFeatures := s.mods.StreamFeatures(ctx, s.JID().Domain())
+	return append(features, modFeatures...)
 }
 
 func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {
-	if s.flgs.isSecured() {
+	if s.flags.isSecured() {
 		return s.disconnect(ctx, streamerror.E(streamerror.NotAuthorized))
 	}
 	ns := elem.Attribute(stravaganza.Namespace)
 	if len(ns) > 0 && ns != tlsNamespace {
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
-	s.flgs.setSecured()
+	s.flags.setSecured()
 
 	if err := s.sendElement(ctx,
 		stravaganza.NewBuilder("proceed").
@@ -709,7 +703,7 @@ func (s *inC2S) finishAuthentication() error {
 
 	j, _ := jid.New(username, s.Domain(), "", true)
 	s.setJID(j)
-	s.flgs.setAuthenticated()
+	s.flags.setAuthenticated()
 
 	// update rate limiter
 	if err := s.updateRateLimiter(); err != nil {
@@ -741,7 +735,7 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 }
 
 func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
-	if elem.Attribute(stravaganza.Namespace) != compressNamespace || s.flgs.isCompressed() {
+	if elem.Attribute(stravaganza.Namespace) != compressNamespace || s.flags.isCompressed() {
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 	method := elem.Child("method")
@@ -767,7 +761,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	}
 	// compress transport
 	s.tr.EnableCompression(s.opts.CompressionLevel)
-	s.flgs.setCompressed()
+	s.flags.setCompressed()
 
 	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
 
@@ -808,7 +802,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 			// replace by a server generated resourcepart
 			case Override:
 				res = uuid.New().String()
-				goto setJID
+				break
 
 			// disconnect previously connected resource
 			case TerminateOld:
@@ -819,18 +813,18 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 				if err := s.router.C2S().Disconnect(ctx, &rs, se); err != nil {
 					return err
 				}
-				goto setJID
+				break
 
 			// disallow resource binding
 			case Disallow:
 				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, bindIQ).Element())
 			}
+			break
 		}
 	} else {
 		res = uuid.New().String() // server generated
 	}
 
-setJID:
 	// set stream jid and presence
 	userJID, err := jid.New(s.Username(), s.Domain(), res, false)
 	if err != nil {
@@ -897,22 +891,42 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 			return err
 		}
 	}
+	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
 
+	if s.getState() != inConnecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+		s.discTm = time.AfterFunc(disconnectTimeout, func() {
+			s.rq.Run(func() {
+				ctx, cancel := s.requestContext()
+				defer cancel()
+				_ = s.close(ctx)
+			})
+		})
+		s.sendDisabled = true // avoid sending anymore stanzas while closing
+		return nil
+	}
 	return s.close(ctx)
 }
 
 func (s *inC2S) close(ctx context.Context) error {
-	// delete cluster resource
-	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
-		return err
+	if s.getState() == inDisconnected {
+		return nil // already disconnected
+	}
+	defer close(s.doneCh)
+
+	s.setState(inDisconnected)
+
+	if s.discTm != nil {
+		s.discTm.Stop()
 	}
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
-	s.setState(inDisconnected)
-
+	// delete cluster resource
+	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
+		return err
+	}
 	// post unregistered C2S event
 	err := s.postStreamEvent(ctx, event.C2SStreamUnregistered, &event.C2SStreamEventInfo{
 		ID:  s.ID().String(),
@@ -924,7 +938,8 @@ func (s *inC2S) close(ctx context.Context) error {
 	reportConnectionUnregistered()
 
 	// close underlying transport
-	return s.tr.Close()
+	_ = s.tr.Close()
+	return nil
 }
 
 func (s *inC2S) restartSession() {
@@ -933,6 +948,9 @@ func (s *inC2S) restartSession() {
 }
 
 func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
+	if s.sendDisabled {
+		return nil
+	}
 	var err error
 	err = s.session.Send(ctx, elem)
 	reportOutgoingRequest(

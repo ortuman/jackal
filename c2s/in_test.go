@@ -27,7 +27,6 @@ import (
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/auth"
@@ -40,6 +39,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
+
+func init() {
+	disconnectTimeout = time.Second
+}
 
 func TestInC2S_SendElement(t *testing.T) {
 	// given
@@ -117,7 +120,7 @@ func TestInC2S_Disconnect(t *testing.T) {
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
 
-	time.Sleep(time.Millisecond * 250) // wait for disconnect
+	time.Sleep(disconnectTimeout + time.Second) // wait for disconnect
 
 	// then
 	mtx.Lock()
@@ -193,7 +196,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><required/></bind><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/><ver xmlns="urn:xmpp:features:rosterver"/></stream:features>`,
+			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><required/></bind><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></stream:features>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -709,7 +712,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			compsMock.IsComponentHostFunc = func(cHost string) bool { return false }
 
 			// modules mock
-			modsMock.IsEnabledFunc = func(modName string) bool { return true }
+			modsMock.StreamFeaturesFunc = func(_ context.Context, _ string) []stravaganza.Element { return nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
 
 			// authenticator mock
@@ -771,7 +774,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					ResourceConflict: Disallow,
 				},
 				state:          uint32(tt.state),
-				flgs:           inC2SFlags{flg: tt.flags},
+				flags:          inC2SFlags{flg: tt.flags},
 				rq:             runqueue.New(tt.name, nil),
 				jd:             userJID,
 				tr:             trMock,
@@ -799,14 +802,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 }
 
 func TestInC2S_HandleSessionError(t *testing.T) {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").WithText("Hi there!").Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-
 	var tests = []struct {
 		name           string
 		state          inC2SState
@@ -814,20 +809,6 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 		expectedOutput string
 		expectClosed   bool
 	}{
-		{
-			name:           "StreamError",
-			state:          inConnecting,
-			sErr:           streamerror.E(streamerror.UnsupportedVersion),
-			expectedOutput: `<stream:stream><stream:error><unsupported-version xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectClosed:   true,
-		},
-		{
-			name:           "StanzaError",
-			state:          inConnecting,
-			sErr:           stanzaerror.E(stanzaerror.JIDMalformed, msg),
-			expectedOutput: `<message from="ortuman@jackal.im/balcony" to="noelia@jackal.im/yard" type="error"><body>Hi there!</body><error code="400" type="modify"><jid-malformed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectClosed:   false,
-		},
 		{
 			name:           "ClosedByPeerError",
 			state:          inBounded,

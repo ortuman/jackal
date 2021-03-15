@@ -66,6 +66,9 @@ func New(router router.Router, opts Options) *Version {
 // Name returns version module name.
 func (v *Version) Name() string { return ModuleName }
 
+// StreamFeature returns version module stream feature.
+func (v *Version) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+
 // ServerFeatures returns version server disco features.
 func (v *Version) ServerFeatures() []string {
 	return []string{versionNamespace}
@@ -121,7 +124,7 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 	)
 	qb.WithChild(
 		stravaganza.NewBuilder("version").
-			WithText(version.Version.String()).
+			WithText(strings.TrimPrefix(version.Version.String(), "v")).
 			Build(),
 	)
 	if v.opts.ShowOS {

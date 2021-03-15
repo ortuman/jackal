@@ -130,7 +130,7 @@ Note the defined `port` value will be used to perform cluster node communication
 ## Server extensibility
 
 The purpose of the extensibility framework is to provide an interface between jackal server and third-party external modules, thus offering the possibility of extending the functionality of the service for particular use cases.
-Extensibility API is almost exclusively based on gRPC and its definition can be at jackal [proto definitions repository](https://github.com/jackal-xmpp/jackal-proto).
+Extensibility API is almost exclusively based on [gRPC](https://grpc.io/) and its definition can be at jackal [proto definitions repository](https://github.com/jackal-xmpp/jackal-proto).
 
 Here's a list of all extendable server components: 
 
@@ -163,15 +163,19 @@ docker run --name=jackal \
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
 - [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
 - [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html) *2.9*
-- [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html) *1.6*  
 - [XEP-0030: Service Discovery](https://xmpp.org/extensions/xep-0030.html) *2.5rc3*
+- [XEP-0049: Private XML Storage](https://xmpp.org/extensions/xep-0049.html) *1.2*
 - [XEP-0054: vcard-temp](https://xmpp.org/extensions/xep-0054.html) *1.2*
 - [XEP-0092: Software Version](https://xmpp.org/extensions/xep-0092.html) *1.1*
+- [XEP-0114: Jabber Component Protocol](https://xmpp.org/extensions/xep-0114.html) *1.6*  
+- [XEP-0115: Entity Capabilities](https://xmpp.org/extensions/xep-0115.html) *1.5.2*  
 - [XEP-0138: Stream Compression](https://xmpp.org/extensions/xep-0138.html) *2.0*
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html) *1.0.1*
+- [XEP-0190: Best Practice for Closing Idle Streams](https://xmpp.org/extensions/xep-0190.html) *1.1*
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
 - [XEP-0237: Roster Versioning](https://xmpp.org/extensions/xep-0237.html) *1.3*
+- [XEP-0368: SRV records for XMPP over TLS](https://xmpp.org/extensions/xep-0368.html) *1.1.0*
 
 ## Join and Contribute
 

@@ -18,6 +18,8 @@ import (
 	"context"
 	"sort"
 
+	"github.com/ortuman/jackal/module/xep0004"
+
 	"github.com/jackal-xmpp/stravaganza/jid"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	"github.com/ortuman/jackal/module"
@@ -61,4 +63,8 @@ func (p *serverProvider) Features(_ context.Context, _, _ *jid.JID, _ string) ([
 	}
 	sort.Slice(features, func(i, j int) bool { return features[i] < features[j] })
 	return features, nil
+}
+
+func (p *serverProvider) Forms(ctx context.Context, toJID, fromJID *jid.JID, node string) ([]xep0004.DataForm, error) {
+	return nil, nil
 }

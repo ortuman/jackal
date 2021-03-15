@@ -21,7 +21,6 @@ import (
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/module/iqhandler/roster"
 	"github.com/ortuman/jackal/router"
 )
 
@@ -29,6 +28,9 @@ import (
 type Module interface {
 	// Name returns specific module name.
 	Name() string
+
+	// StreamFeature returns module stream feature element.
+	StreamFeature(ctx context.Context, domain string) stravaganza.Element
 
 	// ServerFeatures returns module server features.
 	ServerFeatures() []string
@@ -65,7 +67,6 @@ type Modules struct {
 	eventHandlers []EventHandler
 	hosts         hosts
 	router        router.Router
-	rosRegistered bool
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -75,20 +76,11 @@ func NewModules(
 	hosts *host.Hosts,
 	router router.Router,
 ) *Modules {
-	var rosRegistered bool
-	for _, iqHnd := range iqHandlers {
-		_, ok := iqHnd.(*roster.Roster)
-		if ok {
-			rosRegistered = true
-			break
-		}
-	}
 	return &Modules{
 		iqHandlers:    iqHandlers,
 		eventHandlers: eventHandlers,
 		hosts:         hosts,
 		router:        router,
-		rosRegistered: rosRegistered,
 	}
 }
 
@@ -166,4 +158,20 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 		}
 	}
 	return false
+}
+
+// StreamFeatures returns stream features of all registered modules.
+func (m *Modules) StreamFeatures(ctx context.Context, domain string) []stravaganza.Element {
+	var sfs []stravaganza.Element
+	for _, iqHnd := range m.iqHandlers {
+		if sf := iqHnd.StreamFeature(ctx, domain); sf != nil {
+			sfs = append(sfs, sf)
+		}
+	}
+	for _, evHnd := range m.eventHandlers {
+		if sf := evHnd.StreamFeature(ctx, domain); sf != nil {
+			sfs = append(sfs, sf)
+		}
+	}
+	return sfs
 }

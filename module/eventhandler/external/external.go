@@ -20,6 +20,7 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
@@ -56,6 +57,9 @@ func New(address string, isSecure bool, topics []string, sonar *sonar.Sonar) *Ha
 
 // Name returns module name.
 func (h *Handler) Name() string { return "ext-eventhandler" }
+
+// StreamFeature returns module stream feature.
+func (h *Handler) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns module server features.
 func (h *Handler) ServerFeatures() []string {
@@ -161,10 +165,19 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *eventhandlerpb.
 			},
 		}
 
+	case *event.PrivateEventInfo:
+		ret.Payload = &eventhandlerpb.ProcessEventRequest_PrivateEvInfo{
+			PrivateEvInfo: &eventhandlerpb.PrivateEventInfo{
+				Username: inf.Username,
+				Private:  inf.Private.Proto(),
+			},
+		}
+
 	case *event.VCardEventInfo:
 		ret.Payload = &eventhandlerpb.ProcessEventRequest_VcardEvInfo{
 			VcardEvInfo: &eventhandlerpb.VCardEventInfo{
 				Username: inf.Username,
+				Vcard:    inf.VCard.Proto(),
 			},
 		}
 

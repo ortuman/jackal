@@ -239,11 +239,16 @@ func (ss *Session) Receive() (stravaganza.Element, error) {
 	if err != nil {
 		return nil, mapErrorToSessionError(err)
 	}
-	if elem == nil {
+	switch {
+	case elem != nil:
+		if logStanzas {
+			log.Debugf("RECV(%s): %v", ss.id, elem)
+		}
+		if elem.Name() == "stream:error" {
+			return nil, nil // ignore stream error incoming element
+		}
+	default:
 		return nil, nil
-	}
-	if logStanzas {
-		log.Debugf("RECV(%s): %v", ss.id, elem)
 	}
 	if !ss.started {
 		if err := ss.validateStreamElement(elem); err != nil {

@@ -16,9 +16,12 @@ package c2s
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/auth"
@@ -35,13 +38,13 @@ import (
 )
 
 const (
+	listenKeepAlive = time.Second * 15
+
 	scramSHA1Mechanism    = "scram_sha_1"
 	scramSHA256Mechanism  = "scram_sha_256"
 	scramSHA512Mechanism  = "scram_sha_512"
 	scramSHA3512Mechanism = "scram_sha3_512"
 )
-
-var netListen = net.Listen
 
 // SocketListener represents a C2S socket listener type.
 type SocketListener struct {
@@ -108,9 +111,18 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			return err
 		}
 	}
-	ln, err := netListen("tcp", l.addr)
+	var err error
+	var ln net.Listener
+
+	lc := net.ListenConfig{
+		KeepAlive: listenKeepAlive,
+	}
+	ln, err = lc.Listen(ctx, "tcp", l.addr)
 	if err != nil {
 		return err
+	}
+	if l.opts.UseTLS {
+		ln = tls.NewListener(ln, l.opts.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1
@@ -121,10 +133,18 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
+			log.Infow(
+				fmt.Sprintf("Received C2S incoming connection at %s", l.addr),
+				"remote_address", conn.RemoteAddr().String(),
+			)
+
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting C2S socket connections at %s", l.addr)
+	log.Infow(
+		fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
+		"direct_tls", l.opts.UseTLS,
+	)
 	return nil
 }
 

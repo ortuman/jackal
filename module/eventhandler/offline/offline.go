@@ -37,7 +37,7 @@ const (
 	hintsNamespace = "urn:xmpp:hints"
 )
 
-// ModuleName represents roster module name.
+// ModuleName represents offline module name.
 const ModuleName = "offline"
 
 // Options contains offline module configuration options.
@@ -46,7 +46,7 @@ type Options struct {
 	QueueSize int
 }
 
-// Offline represets offline module type.
+// Offline represents offline module type.
 type Offline struct {
 	opts   Options
 	router router.Router
@@ -78,6 +78,9 @@ func New(
 
 // Name returns offline module name.
 func (m *Offline) Name() string { return ModuleName }
+
+// StreamFeature returns offline module stream feature.
+func (m *Offline) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
 
 // ServerFeatures returns offline module server disco features.
 func (m *Offline) ServerFeatures() []string { return []string{offlineFeature} }

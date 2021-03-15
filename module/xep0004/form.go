@@ -51,7 +51,7 @@ type DataForm struct {
 // NewFormFromElement returns a new data form entity reading it from it's XMPP representation.
 func NewFormFromElement(elem stravaganza.Element) (*DataForm, error) {
 	if n := elem.Name(); n != "x" {
-		return nil, fmt.Errorf("invalid form name: %s", n)
+		return nil, fmt.Errorf("xep0004: invalid form name: %s", n)
 	}
 	if ns := elem.Attribute(stravaganza.Namespace); ns != FormNamespace {
 		return nil, fmt.Errorf("xep0004: invalid form namespace: %s", ns)
