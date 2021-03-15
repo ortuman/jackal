@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/jackal-xmpp/sonar"
-
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
 )
