@@ -17,18 +17,18 @@ package event
 import "github.com/jackal-xmpp/stravaganza"
 
 const (
-	// VCardFetched event is posted whenever a user vCard is fetched.
-	VCardFetched = "vcard.fetched"
+	// PrivateFetched event is posted whenever a user private XML is fetched.
+	PrivateFetched = "private.fetched"
 
-	// VCardUpdated event is posted whenever a user vCard is updated.
-	VCardUpdated = "vcard.updated"
+	// PrivateUpdated event is posted whenever a user private XML is updated.
+	PrivateUpdated = "private.updated"
 )
 
-// VCardEventInfo contains all information associated to a vCard event.
-type VCardEventInfo struct {
-	// Username is the name of the vCard user associated to this event.
+// PrivateEventInfo contains all information associated to a private event.
+type PrivateEventInfo struct {
+	// Username is the name of the user associated to this event.
 	Username string
 
-	// VCard is the vCard element associated to this event.
-	VCard stravaganza.Element
+	// Private is the private XML element associated to this event.
+	Private stravaganza.Element
 }

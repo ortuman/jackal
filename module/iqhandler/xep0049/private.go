@@ -146,7 +146,16 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	resIQ := xmpputil.MakeResultIQ(iq, qb.Build())
 
 	_ = p.router.Route(ctx, resIQ)
-	return nil
+
+	// post private fetched event
+	return p.sn.Post(
+		ctx,
+		sonar.NewEventBuilder(event.PrivateFetched).
+			WithInfo(&event.PrivateEventInfo{
+				Username: username,
+				Private:  prvElem,
+			}).Build(),
+	)
 }
 
 func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
@@ -166,6 +175,19 @@ func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			return err
 		}
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+
+		// post private updated event
+		err := p.sn.Post(
+			ctx,
+			sonar.NewEventBuilder(event.PrivateUpdated).
+				WithInfo(&event.PrivateEventInfo{
+					Username: username,
+					Private:  prv,
+				}).Build(),
+		)
+		if err != nil {
+			return err
+		}
 	}
 	_ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil

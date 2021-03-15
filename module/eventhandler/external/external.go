@@ -165,10 +165,19 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *eventhandlerpb.
 			},
 		}
 
+	case *event.PrivateEventInfo:
+		ret.Payload = &eventhandlerpb.ProcessEventRequest_PrivateEvInfo{
+			PrivateEvInfo: &eventhandlerpb.PrivateEventInfo{
+				Username: inf.Username,
+				Private:  inf.Private.Proto(),
+			},
+		}
+
 	case *event.VCardEventInfo:
 		ret.Payload = &eventhandlerpb.ProcessEventRequest_VcardEvInfo{
 			VcardEvInfo: &eventhandlerpb.VCardEventInfo{
 				Username: inf.Username,
+				Vcard:    inf.VCard.Proto(),
 			},
 		}
 
