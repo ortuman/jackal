@@ -18,6 +18,7 @@ require (
 	github.com/jackal-xmpp/stravaganza v0.22.0
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
+	github.com/matryer/moq v0.2.1 // indirect
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.7.1
