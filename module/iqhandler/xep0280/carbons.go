@@ -16,16 +16,21 @@ package xep0280
 
 import (
 	"context"
-
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	"github.com/ortuman/jackal/router"
-	xmpputil "github.com/ortuman/jackal/util/xmpp"
+	"strconv"
 
 	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
 
-const carbonsNamespace = "urn:xmpp:carbons:2"
+const (
+	carbonsNamespace = "urn:xmpp:carbons:2"
+
+	carbonAvailableCtxKey = "carbons:avail"
+)
 
 const (
 	// ModuleName represents carbons module name.
@@ -36,11 +41,13 @@ const (
 )
 
 type Carbons struct {
+	hosts  *host.Hosts
 	router router.Router
 }
 
-func New(router router.Router) *Carbons {
+func New(hosts *host.Hosts, router router.Router) *Carbons {
 	return &Carbons{
+		hosts:  hosts,
 		router: router,
 	}
 }
@@ -82,8 +89,34 @@ func (p *Carbons) MatchesNamespace(namespace string) bool {
 func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch {
 	case iq.IsSet():
+		return p.processIQ(ctx, iq)
 	default:
 		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 	}
 	return nil
+}
+
+func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
+	fromJID := iq.FromJID()
+	if !p.hosts.IsLocalHost(fromJID.Domain()) {
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAllowed))
+		return nil
+	}
+	switch {
+	case iq.ChildNamespace("enable", carbonsNamespace) != nil:
+		return p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), true)
+	case iq.ChildNamespace("disable", carbonsNamespace) != nil:
+		return p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), false)
+	default:
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
+	}
+}
+
+func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource string, enabled bool) error {
+	stm := p.router.C2S().LocalStream(username, resource)
+	if stm == nil {
+		return nil
+	}
+	return stm.SetValue(ctx, carbonAvailableCtxKey, strconv.FormatBool(enabled))
 }
