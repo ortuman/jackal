@@ -17,7 +17,10 @@ package xep0280
 import (
 	"context"
 
-	"github.com/jackal-xmpp/sonar"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/ortuman/jackal/router"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
+
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/log"
 )
@@ -33,11 +36,13 @@ const (
 )
 
 type Carbons struct {
-	sn *sonar.Sonar
+	router router.Router
 }
 
-func New() *Carbons {
-	return &Carbons{}
+func New(router router.Router) *Carbons {
+	return &Carbons{
+		router: router,
+	}
 }
 
 // Name returns carbons module name.
@@ -78,7 +83,7 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch {
 	case iq.IsSet():
 	default:
-
+		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 	}
 	return nil
 }
