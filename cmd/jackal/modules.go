@@ -26,6 +26,7 @@ import (
 	"github.com/ortuman/jackal/module/iqhandler/xep0054"
 	"github.com/ortuman/jackal/module/iqhandler/xep0092"
 	"github.com/ortuman/jackal/module/iqhandler/xep0199"
+	"github.com/ortuman/jackal/module/iqhandler/xep0280"
 	"github.com/ortuman/jackal/util/stringmatcher"
 	stringsutil "github.com/ortuman/jackal/util/strings"
 )
@@ -84,6 +85,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 			TimeoutAction: cfg.Ping.TimeoutAction,
 		})
 		iqHandlers = append(iqHandlers, ping)
+	}
+	// carbons
+	if stringsutil.StringSliceContains(xep0280.ModuleName, cfg.Enabled) {
+		carbons := xep0280.New()
+		iqHandlers = append(iqHandlers, carbons)
 	}
 	// external IQ handlers
 	extIQHandlers, err := initExtIQHandlers(a, cfg.External.IQHandlers)
