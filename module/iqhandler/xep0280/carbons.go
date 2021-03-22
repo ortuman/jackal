@@ -16,6 +16,7 @@ package xep0280
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/jackal-xmpp/stravaganza"
@@ -27,9 +28,10 @@ import (
 )
 
 const (
-	carbonsNamespace = "urn:xmpp:carbons:2"
+	// CarbonsEnabledCtxKey context key tells whether or not carbons copy have been enabled.
+	CarbonsEnabledCtxKey = "carbons:enabled"
 
-	carbonAvailableCtxKey = "carbons:avail"
+	carbonsNamespace = "urn:xmpp:carbons:2"
 )
 
 const (
@@ -116,7 +118,11 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource string, enabled bool) error {
 	stm := p.router.C2S().LocalStream(username, resource)
 	if stm == nil {
-		return nil
+		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, carbonAvailableCtxKey, strconv.FormatBool(enabled))
+	return stm.SetValue(ctx, CarbonsEnabledCtxKey, strconv.FormatBool(enabled))
+}
+
+func errStreamNotFound(username, resource string) error {
+	return fmt.Errorf("xep0280: local stream not found: %s/%s", username, resource)
 }

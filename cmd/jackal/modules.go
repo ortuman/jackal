@@ -88,7 +88,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// carbons
 	if stringsutil.StringSliceContains(xep0280.ModuleName, cfg.Enabled) {
-		carbons := xep0280.New()
+		carbons := xep0280.New(a.hosts, a.router)
 		iqHandlers = append(iqHandlers, carbons)
 	}
 	// external IQ handlers

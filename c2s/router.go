@@ -154,7 +154,7 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	}
 	switch stanza.(type) {
 	case *stravaganza.Message:
-		// route to prioritary resources
+		// route to highest priority resources
 		sort.Slice(resources, func(i, j int) bool {
 			return resources[i].Priority() > resources[j].Priority()
 		})
