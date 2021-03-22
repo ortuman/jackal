@@ -62,7 +62,7 @@ type Options struct {
 	TimeoutAction string
 }
 
-// Ping represets ping (XEP-0199) module type.
+// Ping represents ping (XEP-0199) module type.
 type Ping struct {
 	opts   Options
 	router router.Router

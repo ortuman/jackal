@@ -42,11 +42,13 @@ const (
 	XEPNumber = "0280"
 )
 
+// Carbons represents carbons (XEP-0280) module type.
 type Carbons struct {
 	hosts  *host.Hosts
 	router router.Router
 }
 
+// New returns a new initialized carbons instance.
 func New(hosts *host.Hosts, router router.Router) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
