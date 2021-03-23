@@ -18,6 +18,8 @@ import (
 	"context"
 	"sort"
 
+	"github.com/ortuman/jackal/event"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
@@ -137,6 +139,8 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	if len(resources) == 0 {
 		return router.ErrUserNotAvailable
 	}
+	var targets []jid.JID
+
 	toJID := stanza.ToJID()
 	if toJID.IsFullWithUser() {
 		// route to full resource
@@ -144,7 +148,11 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 			if res.JID.Resource() != toJID.Resource() {
 				continue
 			}
-			return r.routeTo(ctx, stanza, &res)
+			if err := r.routeTo(ctx, stanza, &res); err != nil {
+				return err
+			}
+			targets = append(targets, *res.JID)
+			goto postRoutedEvent
 		}
 		return router.ErrResourceNotFound
 	}
@@ -164,20 +172,30 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 			if err := r.routeTo(ctx, stanza, &res); err != nil {
 				return err
 			}
+			targets = append(targets, *res.JID)
 			routed = true
 		}
 		if !routed {
 			return router.ErrUserNotAvailable
 		}
-		return nil
+		goto postRoutedEvent
 	}
 	// broadcast to all resources
 	for _, res := range resources {
 		if err := r.routeTo(ctx, stanza, &res); err != nil {
 			return err
 		}
+		targets = append(targets, *res.JID)
 	}
-	return nil
+
+postRoutedEvent:
+	return r.sn.Post(ctx, sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
+		WithInfo(&event.C2SRouterEventInfo{
+			Targets: targets,
+			Stanza:  stanza,
+		}).
+		Build(),
+	)
 }
 
 func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *model.Resource) error {
