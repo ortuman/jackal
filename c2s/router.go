@@ -142,12 +142,10 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	if toJID.IsFullWithUser() {
 		// route to full resource
 		for _, res := range resources {
-			if res.JID.Resource() == toJID.Resource() {
-				if err := r.routeTo(ctx, stanza, &res); err != nil {
-					return err
-				}
-				return nil
+			if res.JID.Resource() != toJID.Resource() {
+				continue
 			}
+			return r.routeTo(ctx, stanza, &res)
 		}
 		return router.ErrResourceNotFound
 	}
