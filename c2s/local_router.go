@@ -29,11 +29,11 @@ import (
 
 // common errors
 var errAlreadyRegistered = func(id stream.C2SID) error {
-	return fmt.Errorf("localrouter: stream with id %s already registered", id)
+	return fmt.Errorf("c2s: stream with id %s already registered", id)
 }
 
 var errStreamNotFound = func(id stream.C2SID) error {
-	return fmt.Errorf("localrouter: stream with id %s not found", id)
+	return fmt.Errorf("c2s: stream with id %s not found", id)
 }
 
 // LocalRouter represents a cluster local router.
@@ -47,7 +47,7 @@ type LocalRouter struct {
 	doneCh chan chan struct{}
 }
 
-// New returns a new initialized local router.
+// NewLocalRouter returns a new initialized local router.
 func NewLocalRouter(hosts *host.Hosts, sonar *sonar.Sonar) *LocalRouter {
 	return &LocalRouter{
 		hosts:  hosts,
