@@ -37,8 +37,8 @@ import (
 )
 
 const (
-	rosterRequestedCtxKey      = "ros:req"
-	rosterDidGoAvailableCtxKey = "ros:avail"
+	rosterRequestedCtxKey      = "ros:requested"
+	rosterDidGoAvailableCtxKey = "ros:available"
 
 	rosterNamespace = "jabber:iq:roster"
 )
