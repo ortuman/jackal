@@ -133,6 +133,16 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *eventhandlerpb.
 			C2SStreamEvInfo: &evInf,
 		}
 
+	case *event.C2SRouterEventInfo:
+		var evInf eventhandlerpb.C2SRouterEventInfo
+		for _, target := range inf.Targets {
+			evInf.Targets = append(evInf.Targets, target.String())
+		}
+		evInf.Stanza = inf.Stanza.Proto()
+		ret.Payload = &eventhandlerpb.ProcessEventRequest_C2SRouterEvInfo{
+			C2SRouterEvInfo: &evInf,
+		}
+
 	case *event.S2SStreamEventInfo:
 		var evInf eventhandlerpb.S2SStreamEventInfo
 		evInf.Id = inf.ID
@@ -143,6 +153,14 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *eventhandlerpb.
 		}
 		ret.Payload = &eventhandlerpb.ProcessEventRequest_S2SStreamEvInfo{
 			S2SStreamEvInfo: &evInf,
+		}
+
+	case *event.S2SRouterEventInfo:
+		ret.Payload = &eventhandlerpb.ProcessEventRequest_S2SRouterEvInfo{
+			S2SRouterEvInfo: &eventhandlerpb.S2SRouterEventInfo{
+				Target: inf.Target.String(),
+				Stanza: inf.Stanza.Proto(),
+			},
 		}
 
 	case *event.ExternalComponentEventInfo:
