@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
@@ -36,11 +37,8 @@ import (
 )
 
 const (
-	// RequestedCtxKey context key tells whether user roster has been requested.
-	RequestedCtxKey = "roster:requested"
-
-	// DidGoAvailableCtxKey context key tells whether user went available at least once.
-	DidGoAvailableCtxKey = "roster:went_avail"
+	rosterRequestedCtxKey      = "ros:req"
+	rosterDidGoAvailableCtxKey = "ros:avail"
 
 	rosterNamespace = "jabber:iq:roster"
 )
@@ -64,7 +62,7 @@ type Roster struct {
 func New(
 	router router.Router,
 	rep repository.Repository,
-	resMng *resourcemanager.Manager,
+	resMng *c2s.ResourceManager,
 	hosts *host.Hosts,
 	sonar *sonar.Sonar,
 ) *Roster {
@@ -198,7 +196,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 		if err != nil {
 			return err
 		}
-		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), RequestedCtxKey, strconv.FormatBool(true))
+		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
 	}
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
@@ -224,7 +222,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
-	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), RequestedCtxKey, strconv.FormatBool(true))
+	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
 }
 
 func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
@@ -539,7 +537,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 	}
 	isAvailable := presence.IsAvailable()
 	if isAvailable {
-		didAvailStr, err := r.getStreamValue(fromJID.Node(), fromJID.Resource(), DidGoAvailableCtxKey)
+		didAvailStr, err := r.getStreamValue(fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey)
 		if err != nil {
 			return err
 		}
@@ -581,7 +579,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			}
 		}
 		// mark first avail
-		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), DidGoAvailableCtxKey, strconv.FormatBool(true)); err != nil {
+		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey, strconv.FormatBool(true)); err != nil {
 			return err
 		}
 	}
@@ -780,7 +778,7 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 	}
 	for _, rs := range rss {
 		// did request roster?
-		rosRequested, _ := strconv.ParseBool(rs.Value(RequestedCtxKey))
+		rosRequested, _ := strconv.ParseBool(rs.Value(rosterRequestedCtxKey))
 		if !rosRequested {
 			continue
 		}

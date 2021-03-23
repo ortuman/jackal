@@ -22,7 +22,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
 	"github.com/ortuman/jackal/log"
@@ -44,7 +43,7 @@ type c2sRouter struct {
 func NewRouter(
 	localRouter *LocalRouter,
 	clusterRouter *clusterrouter.Router,
-	resMng *resourcemanager.Manager,
+	resMng *ResourceManager,
 	rep repository.Repository,
 	sn *sonar.Sonar,
 ) router.C2SRouter {

@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/tls"
 
+	"github.com/ortuman/jackal/cluster/kv"
+
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
@@ -28,6 +30,16 @@ import (
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/ortuman/jackal/transport"
 )
+
+//go:generate moq -out kv.mock_test.go . kvStorage:kvMock
+type kvStorage interface {
+	kv.KV
+}
+
+//go:generate moq -out memberlist.mock_test.go . memberList
+type memberList interface {
+	GetMember(instanceID string) (m model.ClusterMember, ok bool)
+}
 
 //go:generate moq -out c2s_stream.mock_test.go . c2sStream
 type c2sStream interface {

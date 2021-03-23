@@ -107,7 +107,7 @@ func TestRoster_SendRoster(t *testing.T) {
 	items := query.Children("item")
 	require.Len(t, items, 2)
 
-	require.Equal(t, RequestedCtxKey, setK)
+	require.Equal(t, rosterRequestedCtxKey, setK)
 	require.Equal(t, strconv.FormatBool(true), setVal)
 
 	require.Len(t, stmMock.SetValueCalls(), 1)
@@ -151,7 +151,7 @@ func TestRoster_UpdateItem(t *testing.T) {
 
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
 		return []model.Resource{
-			{JID: jd0, InstanceID: "i0", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
 	}
@@ -256,7 +256,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
 		return []model.Resource{
-			{JID: jd0, InstanceID: "i0", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
 	}
@@ -367,7 +367,7 @@ func TestRoster_Subscribe(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
 		return []model.Resource{
-			{JID: jd0, InstanceID: "i0", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
 	}
@@ -465,11 +465,11 @@ func TestRoster_Subscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []model.Resource{
-				{JID: jd0, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
 			return []model.Resource{
-				{JID: jd1, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
 		return nil, nil
@@ -577,11 +577,11 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []model.Resource{
-				{JID: jd0, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
 			return []model.Resource{
-				{JID: jd1, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
 		return nil, nil
@@ -691,11 +691,11 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []model.Resource{
-				{JID: jd0, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
 			return []model.Resource{
-				{JID: jd1, InstanceID: "i1", Context: map[string]string{RequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
 		return nil, nil
@@ -791,7 +791,7 @@ func TestRoster_Probe(t *testing.T) {
 					JID:        jd0,
 					InstanceID: "i1",
 					Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0.ToBareJID(), stravaganza.AvailableType, nil),
-					Context:    map[string]string{RequestedCtxKey: strconv.FormatBool(true)},
+					Context:    map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)},
 				},
 			}, nil
 		}
@@ -900,7 +900,7 @@ func TestRoster_Available(t *testing.T) {
 					JID:        jd1,
 					InstanceID: "i1",
 					Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1.ToBareJID(), stravaganza.AvailableType, nil),
-					Context:    map[string]string{RequestedCtxKey: strconv.FormatBool(true)},
+					Context:    map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)},
 				},
 			}, nil
 		}
@@ -932,7 +932,7 @@ func TestRoster_Available(t *testing.T) {
 	mtx.RLock()
 	defer mtx.RUnlock()
 
-	require.Equal(t, DidGoAvailableCtxKey, setK)
+	require.Equal(t, rosterDidGoAvailableCtxKey, setK)
 	require.Equal(t, strconv.FormatBool(true), setVal)
 
 	require.Len(t, respStanzas, 2)

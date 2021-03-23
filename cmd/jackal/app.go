@@ -25,14 +25,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ortuman/jackal/c2s"
-
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
 	adminserver "github.com/ortuman/jackal/admin/server"
 	"github.com/ortuman/jackal/auth/pepper"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
+	"github.com/ortuman/jackal/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/cluster/connmanager"
 	"github.com/ortuman/jackal/cluster/kv"
 	"github.com/ortuman/jackal/cluster/locker"
@@ -106,7 +104,7 @@ type serverApp struct {
 	rep           repository.Repository
 	adminServer   *adminserver.Server
 	memberList    *memberlist.MemberList
-	resMng        *resourcemanager.Manager
+	resMng        *c2s.ResourceManager
 	clusterServer *clusterserver.Server
 
 	shapers        shaper.Shapers

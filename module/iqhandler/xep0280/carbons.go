@@ -28,8 +28,7 @@ import (
 )
 
 const (
-	// CarbonsEnabledCtxKey context key tells whether or not carbons copy have been enabled.
-	CarbonsEnabledCtxKey = "carbons:enabled"
+	carbonsEnabledCtxKey = "carbons:enabled"
 
 	carbonsNamespace = "urn:xmpp:carbons:2"
 )
@@ -122,7 +121,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, CarbonsEnabledCtxKey, strconv.FormatBool(enabled))
+	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
 }
 
 func errStreamNotFound(username, resource string) error {

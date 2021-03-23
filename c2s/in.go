@@ -29,7 +29,6 @@ import (
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/auth"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/event"
@@ -96,7 +95,7 @@ func newInC2S(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *resourcemanager.Manager,
+	resMng *ResourceManager,
 	blockListRep repository.BlockList,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,

@@ -19,10 +19,11 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/ortuman/jackal/c2s"
+
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	discomodel "github.com/ortuman/jackal/model/disco"
@@ -80,7 +81,7 @@ func New(
 	router router.Router,
 	components *component.Components,
 	rosRep repository.Roster,
-	resMng *resourcemanager.Manager,
+	resMng *c2s.ResourceManager,
 ) *Disco {
 	return &Disco{
 		router:     router,
