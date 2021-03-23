@@ -90,8 +90,8 @@ func (m *Offline) AccountFeatures() []string { return nil }
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnrouted, m.onMessageUnrouted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SStreamMessageUnrouted, m.onMessageUnrouted))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnsent, m.onMessageUnsent))
+	m.subs = append(m.subs, m.sn.Subscribe(event.S2SStreamMessageUnsent, m.onMessageUnsent))
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
 
@@ -108,7 +108,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Offline) onMessageUnrouted(ctx context.Context, ev sonar.Event) error {
+func (m *Offline) onMessageUnsent(ctx context.Context, ev sonar.Event) error {
 	var msg *stravaganza.Message
 
 	switch inf := ev.Info().(type) {

@@ -546,7 +546,7 @@ sndMessage:
 		if !s.mods.IsEnabled(offline.ModuleName) {
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
-		return s.postStreamEvent(ctx, event.C2SStreamMessageUnrouted, &event.C2SStreamEventInfo{
+		return s.postStreamEvent(ctx, event.C2SStreamMessageUnsent, &event.C2SStreamEventInfo{
 			ID:     s.ID().String(),
 			JID:    s.JID(),
 			Stanza: message,
