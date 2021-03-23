@@ -41,9 +41,9 @@ const (
 	// C2SStreamMessageReceived event is posted when a message stanza is received over a C2S stream.
 	C2SStreamMessageReceived = "c2s.stream.message_received"
 
-	// C2SStreamMessageUnsent event is posted when a received message stanza could not be routed
+	// C2SStreamMessageUnrouted event is posted when a received message stanza could not be routed
 	// because no destination available resource was found.
-	C2SStreamMessageUnsent = "c2s.stream.message_unsent"
+	C2SStreamMessageUnrouted = "c2s.stream.message_unrouted"
 
 	// C2SRouterStanzaRouted event is posted when a stanza is successfully routed to one ore more C2S streams.
 	C2SRouterStanzaRouted = "c2s.router.stanza_routed"

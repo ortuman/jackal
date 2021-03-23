@@ -81,7 +81,7 @@ func (p *Carbons) AccountFeatures() []string {
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
 	p.subs = append(p.subs, p.sn.Subscribe(event.C2SRouterStanzaRouted, p.onC2SStanzaRouted))
-	p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamMessageReceived, p.onC2SMessageRecv))
+	p.subs = append(p.subs, p.sn.Subscribe(event.S2SRouterStanzaRouted, p.onS2SStanzaRouted))
 
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
@@ -119,16 +119,20 @@ func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	if !ok {
 		return nil
 	}
-	if !isEligibleMessage(msg) {
-		return nil
-	}
-	return nil
+	return p.processMessage(ctx, msg)
 }
 
-func (p *Carbons) onC2SMessageRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.S2SRouterEventInfo)
 
-	msg := inf.Stanza.(*stravaganza.Message)
+	msg, ok := inf.Stanza.(*stravaganza.Message)
+	if !ok {
+		return nil
+	}
+	return p.processMessage(ctx, msg)
+}
+
+func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message) error {
 	if !isEligibleMessage(msg) {
 		return nil
 	}
