@@ -107,13 +107,21 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	switch {
 	case iq.ChildNamespace("enable", carbonsNamespace) != nil:
-		return p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), true)
+		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), true); err != nil {
+			return err
+		}
+		log.Infow("Enabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+
 	case iq.ChildNamespace("disable", carbonsNamespace) != nil:
-		return p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), false)
+		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), false); err != nil {
+			return err
+		}
+		log.Infow("Disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+
 	default:
 		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
-		return nil
 	}
+	return nil
 }
 
 func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource string, enabled bool) error {
