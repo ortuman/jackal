@@ -15,9 +15,13 @@
 package c2s
 
 import (
+	"time"
+
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+const reportTotalConnectionsInterval = time.Second * 30
 
 var (
 	c2sConnectionRegistered = prometheus.NewCounterVec(
@@ -66,6 +70,15 @@ var (
 		},
 		[]string{"instance", "name", "type"},
 	)
+	c2sIncomingTotalConnections = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "jackal",
+			Subsystem: "c2s",
+			Name:      "incoming_total_connections",
+			Help:      "Total incoming C2S connections.",
+		},
+		[]string{"instance"},
+	)
 )
 
 func init() {
@@ -74,6 +87,7 @@ func init() {
 	prometheus.MustRegister(c2sOutgoingRequests)
 	prometheus.MustRegister(c2sIncomingRequests)
 	prometheus.MustRegister(c2sIncomingRequestDurationBucket)
+	prometheus.MustRegister(c2sIncomingTotalConnections)
 }
 
 func reportOutgoingRequest(name, typ string) {
@@ -107,4 +121,11 @@ func reportConnectionUnregistered() {
 		"instance": instance.ID(),
 	}
 	c2sConnectionUnregistered.With(metricLabel).Inc()
+}
+
+func reportTotalIncomingConnections(totalConns int) {
+	metricLabel := prometheus.Labels{
+		"instance": instance.ID(),
+	}
+	c2sIncomingTotalConnections.With(metricLabel).Set(float64(totalConns))
 }

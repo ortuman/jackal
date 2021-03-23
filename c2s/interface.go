@@ -29,6 +29,11 @@ import (
 	"github.com/ortuman/jackal/transport"
 )
 
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
+}
+
 //go:generate moq -out transport.mock_test.go . c2sTransport:transportMock
 type c2sTransport interface {
 	transport.Transport

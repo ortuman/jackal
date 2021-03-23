@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/ortuman/jackal/c2s/localrouter"
+	"github.com/ortuman/jackal/c2s"
 	clusterpb "github.com/ortuman/jackal/cluster/pb"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
@@ -36,12 +36,12 @@ type Server struct {
 	port        int
 	ln          net.Listener
 	active      int32
-	localRouter *localrouter.Router
+	localRouter *c2s.LocalRouter
 	comps       *component.Components
 }
 
 // New returns a new initialized Server instance.
-func New(bindAddr string, port int, localRouter *localrouter.Router, comps *component.Components) *Server {
+func New(bindAddr string, port int, localRouter *c2s.LocalRouter, comps *component.Components) *Server {
 	return &Server{
 		bindAddr:    bindAddr,
 		port:        port,

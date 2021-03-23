@@ -25,12 +25,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/c2s"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
 	adminserver "github.com/ortuman/jackal/admin/server"
 	"github.com/ortuman/jackal/auth/pepper"
-	"github.com/ortuman/jackal/c2s/localrouter"
 	"github.com/ortuman/jackal/c2s/resourcemanager"
 	clusterconnmanager "github.com/ortuman/jackal/cluster/connmanager"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -111,7 +112,7 @@ type serverApp struct {
 	shapers        shaper.Shapers
 	hosts          *host.Hosts
 	clusterConnMng *clusterconnmanager.Manager
-	localRouter    *localrouter.Router
+	localRouter    *c2s.LocalRouter
 	clusterRouter  *clusterrouter.Router
 	s2sOutProvider *s2s.OutProvider
 	s2sInHub       *s2s.InHub

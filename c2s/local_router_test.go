@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package localrouter
+package c2s
 
 import (
 	"context"
@@ -26,14 +26,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRouter_RegisterBind(t *testing.T) {
+func TestLocalRouter_RegisterBind(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -51,14 +51,14 @@ func TestRouter_RegisterBind(t *testing.T) {
 	require.NotNil(t, r.bndRes["ortuman"])
 }
 
-func TestRouter_Stream(t *testing.T) {
+func TestLocalRouter_Stream(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -76,9 +76,9 @@ func TestRouter_Stream(t *testing.T) {
 	require.Equal(t, mockStm, stm)
 }
 
-func TestRouter_Stop(t *testing.T) {
+func TestLocalRouter_Stop(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
@@ -94,7 +94,7 @@ func TestRouter_Stop(t *testing.T) {
 		return nil
 	}
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -115,14 +115,14 @@ func TestRouter_Stop(t *testing.T) {
 	require.Equal(t, discReason, streamerror.SystemShutdown)
 }
 
-func TestRouter_Unregister(t *testing.T) {
+func TestLocalRouter_Unregister(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -142,9 +142,9 @@ func TestRouter_Unregister(t *testing.T) {
 	require.Nil(t, r.bndRes["ortuman"])
 }
 
-func TestRouter_Route(t *testing.T) {
+func TestLocalRouter_Route(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
@@ -159,7 +159,7 @@ func TestRouter_Route(t *testing.T) {
 		return nil
 	}
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -181,9 +181,9 @@ func TestRouter_Route(t *testing.T) {
 	require.Equal(t, stanza.String(), sentElement.String())
 }
 
-func TestRouter_Disconnect(t *testing.T) {
+func TestLocalRouter_Disconnect(t *testing.T) {
 	// given
-	mockStm := &streamC2SMock{}
+	mockStm := &c2sStreamMock{}
 	mockStm.IDFunc = func() stream.C2SID { return 1234 }
 	mockStm.UsernameFunc = func() string { return "ortuman" }
 	mockStm.ResourceFunc = func() string { return "yard" }
@@ -194,7 +194,7 @@ func TestRouter_Disconnect(t *testing.T) {
 		return errCh
 	}
 
-	r := &Router{
+	r := &LocalRouter{
 		hosts:  &hostsMock{},
 		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -209,17 +209,4 @@ func TestRouter_Disconnect(t *testing.T) {
 
 	require.Nil(t, err)
 	require.Len(t, mockStm.DisconnectCalls(), 1)
-}
-
-func testMessageStanza() *stravaganza.Message {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/hall")
-	b.WithAttribute("to", "ortuman@jackal.im/yard")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-	return msg
 }
