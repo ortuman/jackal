@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ortuman/jackal/event"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
@@ -33,7 +32,9 @@ import (
 const (
 	carbonsEnabledCtxKey = "carbons:enabled"
 
-	carbonsNamespace = "urn:xmpp:carbons:2"
+	carbonsNamespace          = "urn:xmpp:carbons:2"
+	deliveryReceiptsNamespace = "urn:xmpp:receipts"
+	chatStatesNamespace       = "http://jabber.org/protocol/chatstates"
 )
 
 const (
@@ -114,8 +115,11 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SRouterEventInfo)
 
-	_, ok := inf.Stanza.(*stravaganza.Message)
+	msg, ok := inf.Stanza.(*stravaganza.Message)
 	if !ok {
+		return nil
+	}
+	if !isEligibleMessage(msg) {
 		return nil
 	}
 	return nil
@@ -124,7 +128,10 @@ func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 func (p *Carbons) onC2SMessageRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 
-	_ = inf.Stanza.(*stravaganza.Message)
+	msg := inf.Stanza.(*stravaganza.Message)
+	if !isEligibleMessage(msg) {
+		return nil
+	}
 	return nil
 }
 
@@ -159,6 +166,22 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 		return errStreamNotFound(username, resource)
 	}
 	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+}
+
+func isEligibleMessage(msg *stravaganza.Message) bool {
+	if msg.Attribute(stravaganza.Type) == stravaganza.ChatType {
+		return true
+	}
+	if msg.Attribute(stravaganza.Type) == stravaganza.NormalType && msg.IsMessageWithBody() {
+		return true
+	}
+	for _, ch := range msg.AllChildren() {
+		cns := ch.Attribute(stravaganza.Namespace)
+		if cns == deliveryReceiptsNamespace || cns == chatStatesNamespace {
+			return true
+		}
+	}
+	return false
 }
 
 func errStreamNotFound(username, resource string) error {
