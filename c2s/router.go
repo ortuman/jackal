@@ -151,8 +151,7 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 			if err := r.routeTo(ctx, stanza, &res); err != nil {
 				return err
 			}
-			targets = append(targets, *res.JID)
-			goto postRoutedEvent
+			return r.postRoutedEvent(ctx, stanza, []jid.JID{*res.JID})
 		}
 		return router.ErrResourceNotFound
 	}
@@ -178,7 +177,7 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 		if !routed {
 			return router.ErrUserNotAvailable
 		}
-		goto postRoutedEvent
+		return r.postRoutedEvent(ctx, stanza, targets)
 	}
 	// broadcast to all resources
 	for _, res := range resources {
@@ -187,15 +186,7 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 		}
 		targets = append(targets, *res.JID)
 	}
-
-postRoutedEvent:
-	return r.sn.Post(ctx, sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
-		WithInfo(&event.C2SRouterEventInfo{
-			Targets: targets,
-			Stanza:  stanza,
-		}).
-		Build(),
-	)
+	return r.postRoutedEvent(ctx, stanza, targets)
 }
 
 func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *model.Resource) error {
@@ -203,6 +194,16 @@ func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRe
 		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
 	}
 	return r.cluster.Route(ctx, stanza, toRes.JID.Node(), toRes.JID.Resource(), toRes.InstanceID)
+}
+
+func (r *c2sRouter) postRoutedEvent(ctx context.Context, stanza stravaganza.Stanza, targets []jid.JID) error {
+	return r.sn.Post(ctx, sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
+		WithInfo(&event.C2SRouterEventInfo{
+			Targets: targets,
+			Stanza:  stanza,
+		}).
+		Build(),
+	)
 }
 
 func (r *c2sRouter) isBlockedJID(ctx context.Context, destJID *jid.JID, username string) bool {
