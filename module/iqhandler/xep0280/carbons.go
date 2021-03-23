@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/event"
+
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/ortuman/jackal/host"
@@ -45,13 +48,16 @@ const (
 type Carbons struct {
 	hosts  *host.Hosts
 	router router.Router
+	sn     *sonar.Sonar
+	subs   []sonar.SubID
 }
 
 // New returns a new initialized carbons instance.
-func New(hosts *host.Hosts, router router.Router) *Carbons {
+func New(hosts *host.Hosts, router router.Router, sn *sonar.Sonar) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
 		router: router,
+		sn:     sn,
 	}
 }
 
@@ -73,12 +79,18 @@ func (p *Carbons) AccountFeatures() []string {
 
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
+	p.subs = append(p.subs, p.sn.Subscribe(event.C2SRouterStanzaRouted, p.onC2SStanzaRouted))
+	p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamMessageReceived, p.onC2SMessageRecv))
+
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops carbons module.
 func (p *Carbons) Stop(_ context.Context) error {
+	for _, sub := range p.subs {
+		p.sn.Unsubscribe(sub)
+	}
 	log.Infow("Stopped carbons module", "xep", XEPNumber)
 	return nil
 }
@@ -96,6 +108,23 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	default:
 		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 	}
+	return nil
+}
+
+func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SRouterEventInfo)
+
+	_, ok := inf.Stanza.(*stravaganza.Message)
+	if !ok {
+		return nil
+	}
+	return nil
+}
+
+func (p *Carbons) onC2SMessageRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+
+	_ = inf.Stanza.(*stravaganza.Message)
 	return nil
 }
 
