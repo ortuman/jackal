@@ -61,7 +61,7 @@ type C2SStreamEventInfo struct {
 	Stanza stravaganza.Stanza
 }
 
-// C2SStreamEventInfo contains all info associated to a C2S router event.
+// C2SRouterEventInfo contains all info associated to a C2S router event.
 type C2SRouterEventInfo struct {
 	// Targets contains all JIDs to which the event stanza was routed.
 	Targets []jid.JID
