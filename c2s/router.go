@@ -18,14 +18,13 @@ import (
 	"context"
 	"sort"
 
-	"github.com/ortuman/jackal/event"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/repository"
