@@ -37,6 +37,7 @@ const (
 
 	carbonsNamespace          = "urn:xmpp:carbons:2"
 	deliveryReceiptsNamespace = "urn:xmpp:receipts"
+	forwardingNamespace       = "urn:xmpp:forward:0"
 	chatStatesNamespace       = "http://jabber.org/protocol/chatstates"
 	hintsNamespace            = "urn:xmpp:hints"
 )
@@ -261,12 +262,44 @@ func isPrivateMessage(msg *stravaganza.Message) bool {
 	return msg.ChildNamespace("private", carbonsNamespace) != nil && msg.ChildNamespace("no-copy", hintsNamespace) != nil
 }
 
-func sentMsgCC(msg *stravaganza.Message, jd *jid.JID) *stravaganza.Message {
-	return nil
+func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+	ccMsg, _ := stravaganza.NewMessageBuilder().
+		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
+		WithAttribute(stravaganza.To, dest.String()).
+		WithAttribute(stravaganza.Type, stravaganza.ChatType).
+		WithChild(
+			stravaganza.NewBuilder("sent").
+				WithAttribute(stravaganza.Namespace, carbonsNamespace).
+				WithChild(
+					stravaganza.NewBuilder("forwarded").
+						WithAttribute(stravaganza.Namespace, forwardingNamespace).
+						WithChild(msg).
+						Build(),
+				).
+				Build(),
+		).
+		BuildMessage(false)
+	return ccMsg
 }
 
-func receivedMsgCC(msg *stravaganza.Message, jd *jid.JID) *stravaganza.Message {
-	return nil
+func receivedMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+	ccMsg, _ := stravaganza.NewMessageBuilder().
+		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
+		WithAttribute(stravaganza.To, dest.String()).
+		WithAttribute(stravaganza.Type, stravaganza.ChatType).
+		WithChild(
+			stravaganza.NewBuilder("received").
+				WithAttribute(stravaganza.Namespace, carbonsNamespace).
+				WithChild(
+					stravaganza.NewBuilder("forwarded").
+						WithAttribute(stravaganza.Namespace, forwardingNamespace).
+						WithChild(msg).
+						Build(),
+				).
+				Build(),
+		).
+		BuildMessage(false)
+	return ccMsg
 }
 
 func errStreamNotFound(username, resource string) error {
