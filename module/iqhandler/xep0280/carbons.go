@@ -19,17 +19,15 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/model"
-
-	"github.com/ortuman/jackal/c2s"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
@@ -40,6 +38,7 @@ const (
 	carbonsNamespace          = "urn:xmpp:carbons:2"
 	deliveryReceiptsNamespace = "urn:xmpp:receipts"
 	chatStatesNamespace       = "http://jabber.org/protocol/chatstates"
+	hintsNamespace            = "urn:xmpp:hints"
 )
 
 const (
@@ -139,13 +138,6 @@ func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	return p.processMessage(ctx, msg, nil)
 }
 
-func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
-	if !isEligibleMessage(msg) {
-		return nil
-	}
-	return nil
-}
-
 func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJID := iq.FromJID()
 	if !p.hosts.IsLocalHost(fromJID.Domain()) {
@@ -177,6 +169,56 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 		return errStreamNotFound(username, resource)
 	}
 	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+}
+
+func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
+	if !isEligibleMessage(msg) || isPrivateMessage(msg) {
+		return nil
+	}
+	fromJID := msg.FromJID()
+	toJID := msg.ToJID()
+
+	if fromJID.IsFullWithUser() && p.hosts.IsLocalHost(fromJID.Domain()) {
+		if err := p.routeSentCC(ctx, msg, fromJID.Node()); err != nil {
+			return err
+		}
+	}
+	if !toJID.IsServer() && p.hosts.IsLocalHost(toJID.Domain()) {
+		if err := p.routeReceivedCC(ctx, msg, toJID.Node(), ignoringTargets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, username string) error {
+	rss, err := p.getFilteredResources(ctx, username, []jid.JID{*msg.FromJID()})
+	if err != nil {
+		return err
+	}
+	for _, res := range rss {
+		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
+		if !enabled {
+			continue
+		}
+		_ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
+	}
+	return nil
+}
+
+func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message, username string, ignoringTargets []jid.JID) error {
+	rss, err := p.getFilteredResources(ctx, username, ignoringTargets)
+	if err != nil {
+		return err
+	}
+	for _, res := range rss {
+		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
+		if !enabled {
+			continue
+		}
+		_ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
+	}
+	return nil
 }
 
 func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]model.Resource, error) {
@@ -213,6 +255,18 @@ func isEligibleMessage(msg *stravaganza.Message) bool {
 		}
 	}
 	return false
+}
+
+func isPrivateMessage(msg *stravaganza.Message) bool {
+	return msg.ChildNamespace("private", carbonsNamespace) != nil && msg.ChildNamespace("no-copy", hintsNamespace) != nil
+}
+
+func sentMsgCC(msg *stravaganza.Message, jd *jid.JID) *stravaganza.Message {
+	return nil
+}
+
+func receivedMsgCC(msg *stravaganza.Message, jd *jid.JID) *stravaganza.Message {
+	return nil
 }
 
 func errStreamNotFound(username, resource string) error {
