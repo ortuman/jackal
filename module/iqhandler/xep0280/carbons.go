@@ -19,6 +19,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/model"
+
+	"github.com/ortuman/jackal/c2s"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -49,15 +54,17 @@ const (
 type Carbons struct {
 	hosts  *host.Hosts
 	router router.Router
+	resMng *c2s.ResourceManager
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 }
 
 // New returns a new initialized carbons instance.
-func New(hosts *host.Hosts, router router.Router, sn *sonar.Sonar) *Carbons {
+func New(hosts *host.Hosts, router router.Router, resMng *c2s.ResourceManager, sn *sonar.Sonar) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
 		router: router,
+		resMng: resMng,
 		sn:     sn,
 	}
 }
@@ -119,7 +126,7 @@ func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	if !ok {
 		return nil
 	}
-	return p.processMessage(ctx, msg)
+	return p.processMessage(ctx, msg, inf.Targets)
 }
 
 func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
@@ -129,10 +136,10 @@ func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	if !ok {
 		return nil
 	}
-	return p.processMessage(ctx, msg)
+	return p.processMessage(ctx, msg, nil)
 }
 
-func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message) error {
+func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
 	if !isEligibleMessage(msg) {
 		return nil
 	}
@@ -170,6 +177,26 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 		return errStreamNotFound(username, resource)
 	}
 	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+}
+
+func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]model.Resource, error) {
+	rs, err := p.resMng.GetResources(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+	ignoredJIDs := make(map[string]struct{}, len(ignoringJIDs))
+	for _, j := range ignoringJIDs {
+		ignoredJIDs[j.String()] = struct{}{}
+	}
+	var ret []model.Resource
+	for _, res := range rs {
+		_, ok := ignoredJIDs[res.JID.String()]
+		if ok {
+			continue
+		}
+		ret = append(ret, res)
+	}
+	return ret, nil
 }
 
 func isEligibleMessage(msg *stravaganza.Message) bool {
