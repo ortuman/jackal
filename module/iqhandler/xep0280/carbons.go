@@ -173,7 +173,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 }
 
 func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
-	if !isEligibleMessage(msg) || isPrivateMessage(msg) {
+	if !isEligibleMessage(msg) || isPrivateMessage(msg) || isCCMessage(msg) {
 		return nil
 	}
 	fromJID := msg.FromJID()
@@ -260,6 +260,10 @@ func isEligibleMessage(msg *stravaganza.Message) bool {
 
 func isPrivateMessage(msg *stravaganza.Message) bool {
 	return msg.ChildNamespace("private", carbonsNamespace) != nil && msg.ChildNamespace("no-copy", hintsNamespace) != nil
+}
+
+func isCCMessage(msg *stravaganza.Message) bool {
+	return msg.ChildNamespace("sent", carbonsNamespace) != nil || msg.ChildNamespace("received", carbonsNamespace) != nil
 }
 
 func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
