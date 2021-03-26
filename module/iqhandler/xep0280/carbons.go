@@ -40,6 +40,7 @@ const (
 	forwardingNamespace       = "urn:xmpp:forward:0"
 	chatStatesNamespace       = "http://jabber.org/protocol/chatstates"
 	hintsNamespace            = "urn:xmpp:hints"
+	jabberClientNamespace     = "jabber:client"
 )
 
 const (
@@ -268,6 +269,7 @@ func isCCMessage(msg *stravaganza.Message) bool {
 
 func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
 	ccMsg, _ := stravaganza.NewMessageBuilder().
+		WithAttribute(stravaganza.Namespace, jabberClientNamespace).
 		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
 		WithAttribute(stravaganza.To, dest.String()).
 		WithAttribute(stravaganza.Type, stravaganza.ChatType).
@@ -288,6 +290,7 @@ func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
 
 func receivedMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
 	ccMsg, _ := stravaganza.NewMessageBuilder().
+		WithAttribute(stravaganza.Namespace, jabberClientNamespace).
 		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
 		WithAttribute(stravaganza.To, dest.String()).
 		WithAttribute(stravaganza.Type, stravaganza.ChatType).
