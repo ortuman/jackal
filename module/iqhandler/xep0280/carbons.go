@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/google/uuid"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -269,27 +267,6 @@ func isCCMessage(msg *stravaganza.Message) bool {
 }
 
 func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
-	uid := uuid.New().String()
-
-	// <archived xmlns='urn:xmpp:mam:tmp' by='juliet@capulet.lit' id='28482-98726-73623' />
-	// <stanza-id xmlns='urn:xmpp:sid:0' by='juliet@capulet.lit' id='28482-98726-73623' />
-	msg2, _ := stravaganza.NewBuilderFromElement(msg).
-		WithChild(
-			stravaganza.NewBuilder("archived").
-				WithAttribute(stravaganza.Namespace, "urn:xmpp:mam:tmp").
-				WithAttribute("by", dest.ToBareJID().String()).
-				WithAttribute("id", uid).
-				Build(),
-		).
-		WithChild(
-			stravaganza.NewBuilder("stanza-id").
-				WithAttribute(stravaganza.Namespace, "urn:xmpp:sid:0").
-				WithAttribute("by", dest.ToBareJID().String()).
-				WithAttribute("id", uid).
-				Build(),
-		).
-		BuildMessage(false)
-
 	ccMsg, _ := stravaganza.NewMessageBuilder().
 		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
 		WithAttribute(stravaganza.To, dest.String()).
@@ -300,7 +277,7 @@ func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
 				WithChild(
 					stravaganza.NewBuilder("forwarded").
 						WithAttribute(stravaganza.Namespace, forwardingNamespace).
-						WithChild(msg2).
+						WithChild(msg).
 						Build(),
 				).
 				Build(),
