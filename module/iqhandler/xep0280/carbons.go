@@ -52,9 +52,9 @@ const (
 
 // Carbons represents carbons (XEP-0280) module type.
 type Carbons struct {
-	hosts  *host.Hosts
+	hosts  hosts
 	router router.Router
-	resMng *c2s.ResourceManager
+	resMng resourceManager
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 }
@@ -160,7 +160,10 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 	default:
 		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
 	}
+
+	_ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil
 }
 
