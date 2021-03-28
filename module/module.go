@@ -45,8 +45,8 @@ type Module interface {
 	Stop(ctx context.Context) error
 }
 
-// IQHandler represents an iq handler module type.
-type IQHandler interface {
+// IQProcessor represents an iq processor module type.
+type IQProcessor interface {
 	Module
 
 	// MatchesNamespace tells whether iq child namespace corresponds to this module.
@@ -56,12 +56,28 @@ type IQHandler interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
+// MessagePreProcessor represents a message preprocessor module type.
+type MessagePreProcessor interface {
+	Module
+
+	// PreProcessMessage will be invoked as soon as a message stanza is received a over a C2S stream.
+	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+}
+
+// MessagePostProcessor represents a message postprocessor module type.
+type MessagePostProcessor interface {
+	Module
+
+	// PostProcessMessage will be invoked before a message stanza is routed a over a C2S stream.
+	PostProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+}
+
 // Modules is the global module hub.
 type Modules struct {
-	mods       []Module
-	iqHandlers []IQHandler
-	hosts      hosts
-	router     router.Router
+	mods         []Module
+	iqProcessors []IQProcessor
+	hosts        hosts
+	router       router.Router
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -76,11 +92,11 @@ func NewModules(
 		router: router,
 	}
 	for _, mod := range m.mods {
-		iqHnd, ok := mod.(IQHandler)
+		iqHnd, ok := mod.(IQProcessor)
 		if !ok {
 			continue
 		}
-		m.iqHandlers = append(m.iqHandlers, iqHnd)
+		m.iqProcessors = append(m.iqProcessors, iqHnd)
 	}
 	return m
 }
@@ -94,7 +110,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		}
 	}
 	log.Infow("Started modules",
-		"iq_handlers_count", len(m.iqHandlers),
+		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
 	return nil
@@ -108,7 +124,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		}
 	}
 	log.Infow("Stopped modules",
-		"iq_handlers_count", len(m.iqHandlers),
+		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
 	return nil
@@ -124,7 +140,7 @@ func (m *Modules) IsModuleIQ(iq *stravaganza.IQ) bool {
 // ProcessIQ routes the iq to the corresponding iq handler module.
 func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	ns := iq.AllChildren()[0].Attribute(stravaganza.Namespace)
-	for _, iqHnd := range m.iqHandlers {
+	for _, iqHnd := range m.iqProcessors {
 		if !iqHnd.MatchesNamespace(ns) {
 			continue
 		}

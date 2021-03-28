@@ -24,13 +24,13 @@ import (
 
 func TestModules_StartStop(t *testing.T) {
 	// given
-	iqHndMock := &iqHandlerMock{}
-	iqHndMock.StartFunc = func(ctx context.Context) error { return nil }
-	iqHndMock.StopFunc = func(ctx context.Context) error { return nil }
+	iqPrMock := &iqProcessorMock{}
+	iqPrMock.StartFunc = func(ctx context.Context) error { return nil }
+	iqPrMock.StopFunc = func(ctx context.Context) error { return nil }
 
 	mods := &Modules{
-		mods:       []Module{iqHndMock},
-		iqHandlers: []IQHandler{iqHndMock},
+		mods:         []Module{iqPrMock},
+		iqProcessors: []IQProcessor{iqPrMock},
 	}
 
 	// when
@@ -38,19 +38,19 @@ func TestModules_StartStop(t *testing.T) {
 	_ = mods.Stop(context.Background())
 
 	// then
-	require.Len(t, iqHndMock.StartCalls(), 1)
-	require.Len(t, iqHndMock.StopCalls(), 1)
+	require.Len(t, iqPrMock.StartCalls(), 1)
+	require.Len(t, iqPrMock.StopCalls(), 1)
 }
 
 func TestModules_ProcessIQ(t *testing.T) {
 	// given
-	iqHndMock := &iqHandlerMock{}
-	iqHndMock.MatchesNamespaceFunc = func(namespace string) bool {
+	iqPrMock := &iqProcessorMock{}
+	iqPrMock.MatchesNamespaceFunc = func(namespace string) bool {
 		return namespace == "urn:xmpp:ping"
 	}
-	iqHndMock.StartFunc = func(ctx context.Context) error { return nil }
-	iqHndMock.StopFunc = func(ctx context.Context) error { return nil }
-	iqHndMock.ProcessIQFunc = func(ctx context.Context, iq *stravaganza.IQ) error {
+	iqPrMock.StartFunc = func(ctx context.Context) error { return nil }
+	iqPrMock.StopFunc = func(ctx context.Context) error { return nil }
+	iqPrMock.ProcessIQFunc = func(ctx context.Context, iq *stravaganza.IQ) error {
 		return nil
 	}
 
@@ -58,8 +58,8 @@ func TestModules_ProcessIQ(t *testing.T) {
 	hMock.IsLocalHostFunc = func(domain string) bool { return domain == "jackal.im" }
 
 	mods := &Modules{
-		iqHandlers: []IQHandler{iqHndMock},
-		hosts:      hMock,
+		iqProcessors: []IQProcessor{iqPrMock},
+		hosts:        hMock,
 	}
 
 	// when
@@ -80,6 +80,6 @@ func TestModules_ProcessIQ(t *testing.T) {
 	_ = mods.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Len(t, iqHndMock.MatchesNamespaceCalls(), 1)
-	require.Len(t, iqHndMock.ProcessIQCalls(), 1)
+	require.Len(t, iqPrMock.MatchesNamespaceCalls(), 1)
+	require.Len(t, iqPrMock.ProcessIQCalls(), 1)
 }
