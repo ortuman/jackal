@@ -32,49 +32,48 @@ import (
 )
 
 func initModules(a *serverApp, cfg modulesConfig) error {
-	var iqHandlers []module.IQHandler
-	var eventHandlers []module.EventHandler
+	var mods []module.Module
 
 	// disco
 	var disc *xep0030.Disco
 	if stringsutil.StringSliceContains(xep0030.ModuleName, cfg.Enabled) {
 		disc = xep0030.New(a.router, a.comps, a.rep, a.resMng)
-		iqHandlers = append(iqHandlers, disc)
+		mods = append(mods, disc)
 	}
 
 	// roster
 	if stringsutil.StringSliceContains(roster.ModuleName, cfg.Enabled) {
 		ros := roster.New(a.router, a.rep, a.resMng, a.hosts, a.sonar)
-		iqHandlers = append(iqHandlers, ros)
+		mods = append(mods, ros)
 	}
 	// offline
 	if stringsutil.StringSliceContains(offline.ModuleName, cfg.Enabled) {
 		off := offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Options{
 			QueueSize: cfg.Offline.QueueSize,
 		})
-		eventHandlers = append(eventHandlers, off)
+		mods = append(mods, off)
 	}
 	// version
 	if stringsutil.StringSliceContains(xep0092.ModuleName, cfg.Enabled) {
 		ver := xep0092.New(a.router, xep0092.Options{
 			ShowOS: cfg.Version.ShowOS,
 		})
-		iqHandlers = append(iqHandlers, ver)
+		mods = append(mods, ver)
 	}
 	// private
 	if stringsutil.StringSliceContains(xep0049.ModuleName, cfg.Enabled) {
 		private := xep0049.New(a.rep, a.router, a.sonar)
-		iqHandlers = append(iqHandlers, private)
+		mods = append(mods, private)
 	}
 	// vCard
 	if stringsutil.StringSliceContains(xep0054.ModuleName, cfg.Enabled) {
 		vCard := xep0054.New(a.rep, a.router, a.sonar)
-		iqHandlers = append(iqHandlers, vCard)
+		mods = append(mods, vCard)
 	}
 	// capabilities
 	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
 		caps := xep0115.New(disc, a.router, a.rep, a.sonar)
-		eventHandlers = append(eventHandlers, caps)
+		mods = append(mods, caps)
 	}
 	// ping
 	if stringsutil.StringSliceContains(xep0199.ModuleName, cfg.Enabled) {
@@ -84,45 +83,38 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 			SendPings:     cfg.Ping.SendPings,
 			TimeoutAction: cfg.Ping.TimeoutAction,
 		})
-		iqHandlers = append(iqHandlers, ping)
+		mods = append(mods, ping)
 	}
 	// carbons
 	if stringsutil.StringSliceContains(xep0280.ModuleName, cfg.Enabled) {
 		carbons := xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
-		iqHandlers = append(iqHandlers, carbons)
+		mods = append(mods, carbons)
 	}
 	// external IQ handlers
 	extIQHandlers, err := initExtIQHandlers(a, cfg.External.IQHandlers)
 	if err != nil {
 		return err
 	}
-	iqHandlers = append(iqHandlers, extIQHandlers...)
+	mods = append(mods, extIQHandlers...)
 
 	// external event handlers
 	extEventHandlers, err := initExtEventHandlers(a, cfg.External.EventHandlers)
 	if err != nil {
 		return err
 	}
-	eventHandlers = append(eventHandlers, extEventHandlers...)
+	mods = append(mods, extEventHandlers...)
 
 	// set disco info modules
 	if disc != nil {
-		var mods []module.Module
-		for _, iqHnd := range iqHandlers {
-			mods = append(mods, iqHnd)
-		}
-		for _, evHnd := range eventHandlers {
-			mods = append(mods, evHnd)
-		}
 		disc.SetModules(mods)
 	}
-	a.mods = module.NewModules(iqHandlers, eventHandlers, a.hosts, a.router)
+	a.mods = module.NewModules(mods, a.hosts, a.router)
 	a.registerStartStopper(a.mods)
 	return nil
 }
 
-func initExtIQHandlers(a *serverApp, configs []extIQHandlerConfig) ([]module.IQHandler, error) {
-	var iqHandlers []module.IQHandler
+func initExtIQHandlers(a *serverApp, configs []extIQHandlerConfig) ([]module.Module, error) {
+	var iqHandlers []module.Module
 	for _, cfg := range configs {
 		nsMatcher := stringmatcher.Any
 		if len(cfg.Namespace.In) > 0 {
@@ -144,8 +136,8 @@ func initExtIQHandlers(a *serverApp, configs []extIQHandlerConfig) ([]module.IQH
 	return iqHandlers, nil
 }
 
-func initExtEventHandlers(a *serverApp, configs []extEventHandlerConfig) ([]module.EventHandler, error) {
-	var eventHandlers []module.EventHandler
+func initExtEventHandlers(a *serverApp, configs []extEventHandlerConfig) ([]module.Module, error) {
+	var eventHandlers []module.Module
 	for _, cfg := range configs {
 		eventHandlers = append(eventHandlers, eventhandlerexternal.New(
 			cfg.Address,

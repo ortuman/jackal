@@ -45,11 +45,6 @@ type Module interface {
 	Stop(ctx context.Context) error
 }
 
-// EventHandler represents a event handler module type.
-type EventHandler interface {
-	Module
-}
-
 // IQHandler represents an iq handler module type.
 type IQHandler interface {
 	Module
@@ -63,62 +58,58 @@ type IQHandler interface {
 
 // Modules is the global module hub.
 type Modules struct {
-	iqHandlers    []IQHandler
-	eventHandlers []EventHandler
-	hosts         hosts
-	router        router.Router
+	mods       []Module
+	iqHandlers []IQHandler
+	hosts      hosts
+	router     router.Router
 }
 
 // NewModules returns a new initialized Modules instance.
 func NewModules(
-	iqHandlers []IQHandler,
-	eventHandlers []EventHandler,
+	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
 ) *Modules {
-	return &Modules{
-		iqHandlers:    iqHandlers,
-		eventHandlers: eventHandlers,
-		hosts:         hosts,
-		router:        router,
+	m := &Modules{
+		mods:   mods,
+		hosts:  hosts,
+		router: router,
 	}
+	for _, mod := range m.mods {
+		iqHnd, ok := mod.(IQHandler)
+		if !ok {
+			continue
+		}
+		m.iqHandlers = append(m.iqHandlers, iqHnd)
+	}
+	return m
 }
 
 // Start starts modules.
 func (m *Modules) Start(ctx context.Context) error {
 	// start IQ and event handlers
-	for _, iqHnd := range m.iqHandlers {
-		if err := iqHnd.Start(ctx); err != nil {
-			return err
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if err := evHnd.Start(ctx); err != nil {
+	for _, mod := range m.mods {
+		if err := mod.Start(ctx); err != nil {
 			return err
 		}
 	}
 	log.Infow("Started modules",
 		"iq_handlers_count", len(m.iqHandlers),
-		"event_handlers_count", len(m.eventHandlers),
+		"mods_count", len(m.mods),
 	)
 	return nil
 }
 
 // Stop stops modules.
 func (m *Modules) Stop(ctx context.Context) error {
-	for _, iqHnd := range m.iqHandlers {
-		if err := iqHnd.Stop(ctx); err != nil {
-			return err
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if err := evHnd.Stop(ctx); err != nil {
+	for _, mod := range m.mods {
+		if err := mod.Stop(ctx); err != nil {
 			return err
 		}
 	}
 	log.Infow("Stopped modules",
 		"iq_handlers_count", len(m.iqHandlers),
-		"event_handlers_count", len(m.eventHandlers),
+		"mods_count", len(m.mods),
 	)
 	return nil
 }
@@ -147,13 +138,8 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // IsEnabled tells whether a specific module it's been registered.
 func (m *Modules) IsEnabled(moduleName string) bool {
-	for _, iqHnd := range m.iqHandlers {
-		if iqHnd.Name() == moduleName {
-			return true
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if evHnd.Name() == moduleName {
+	for _, mod := range m.mods {
+		if mod.Name() == moduleName {
 			return true
 		}
 	}
@@ -163,13 +149,8 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 // StreamFeatures returns stream features of all registered modules.
 func (m *Modules) StreamFeatures(ctx context.Context, domain string) []stravaganza.Element {
 	var sfs []stravaganza.Element
-	for _, iqHnd := range m.iqHandlers {
-		if sf := iqHnd.StreamFeature(ctx, domain); sf != nil {
-			sfs = append(sfs, sf)
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if sf := evHnd.StreamFeature(ctx, domain); sf != nil {
+	for _, mod := range m.mods {
+		if sf := mod.StreamFeature(ctx, domain); sf != nil {
 			sfs = append(sfs, sf)
 		}
 	}

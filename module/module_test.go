@@ -29,6 +29,7 @@ func TestModules_StartStop(t *testing.T) {
 	iqHndMock.StopFunc = func(ctx context.Context) error { return nil }
 
 	mods := &Modules{
+		mods:       []Module{iqHndMock},
 		iqHandlers: []IQHandler{iqHndMock},
 	}
 

@@ -27,7 +27,7 @@ type iqHandler interface {
 	IQHandler
 }
 
-//go:generate moq -out event_handler.mock_test.go . eventHandler
-type eventHandler interface {
-	EventHandler
+//go:generate moq -out module.mock_test.go . module
+type module interface {
+	Module
 }
