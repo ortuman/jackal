@@ -127,6 +127,9 @@ type modules interface {
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 
+	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+
 	IsEnabled(modName string) bool
 }
 

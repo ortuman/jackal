@@ -714,6 +714,12 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// modules mock
 			modsMock.StreamFeaturesFunc = func(_ context.Context, _ string) []stravaganza.Element { return nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
+			modsMock.PreProcessMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+				return msg, nil
+			}
+			modsMock.PreRouteMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+				return msg, nil
+			}
 
 			// authenticator mock
 			authMock.MechanismFunc = func() string { return "PLAIN" }

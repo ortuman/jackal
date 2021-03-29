@@ -509,17 +509,20 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 }
 
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
+	// preprocess message stanza
+	msg, err := s.mods.PreProcessMessage(ctx, message)
+	if err != nil {
+		return err
+	}
 	// post message received event
-	err := s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
+	err = s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
 		ID:     s.ID().String(),
 		JID:    s.JID(),
-		Stanza: message,
+		Stanza: msg,
 	})
 	if err != nil {
 		return err
 	}
-
-	msg := message
 
 sndMessage:
 	err = s.router.Route(ctx, msg)
@@ -950,13 +953,23 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	if s.sendDisabled {
 		return nil
 	}
-	var err error
-	err = s.session.Send(ctx, elem)
+	var sndErr error
+
+	msg, ok := elem.(*stravaganza.Message)
+	if ok {
+		newMsg, err := s.mods.PreRouteMessage(ctx, msg)
+		if err != nil {
+			return err
+		}
+		sndErr = s.session.Send(ctx, newMsg)
+	} else {
+		sndErr = s.session.Send(ctx, elem)
+	}
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return err
+	return sndErr
 }
 
 func (s *inC2S) getResource() *model.Resource {
