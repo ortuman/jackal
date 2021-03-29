@@ -27,6 +27,16 @@ type iqProcessor interface {
 	IQProcessor
 }
 
+//go:generate moq -out msg_preprocessor.mock_test.go . messagePreProcessor
+type messagePreProcessor interface {
+	MessagePreProcessor
+}
+
+//go:generate moq -out msg_prerouter.mock_test.go . messagePreRouter
+type messagePreRouter interface {
+	MessagePreRouter
+}
+
 //go:generate moq -out module.mock_test.go . module
 type module interface {
 	Module

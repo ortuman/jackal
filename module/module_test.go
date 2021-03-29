@@ -58,6 +58,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 	hMock.IsLocalHostFunc = func(domain string) bool { return domain == "jackal.im" }
 
 	mods := &Modules{
+		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
 		hosts:        hMock,
 	}
@@ -82,4 +83,60 @@ func TestModules_ProcessIQ(t *testing.T) {
 	// then
 	require.Len(t, iqPrMock.MatchesNamespaceCalls(), 1)
 	require.Len(t, iqPrMock.ProcessIQCalls(), 1)
+}
+
+func TestModules_PreProcessMessage(t *testing.T) {
+	// given
+	msgPrePrMock := &messagePreProcessorMock{}
+	msgPrePrMock.PreProcessMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+		return msg, nil
+	}
+
+	mods := &Modules{
+		mods:             []Module{msgPrePrMock},
+		msgPreProcessors: []MessagePreProcessor{msgPrePrMock},
+	}
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "noelia@jackal.im/yard")
+	b.WithAttribute("to", "ortuman@jackal.im/balcony")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage(true)
+
+	// when
+	_, _ = mods.PreProcessMessage(context.Background(), msg)
+
+	// then
+	require.Len(t, msgPrePrMock.PreProcessMessageCalls(), 1)
+}
+
+func TestModules_PreRouteMessage(t *testing.T) {
+	// given
+	msgPreRtMock := &messagePreRouterMock{}
+	msgPreRtMock.PreRouteMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+		return msg, nil
+	}
+
+	mods := &Modules{
+		mods:          []Module{msgPreRtMock},
+		msgPreRouters: []MessagePreRouter{msgPreRtMock},
+	}
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "noelia@jackal.im/yard")
+	b.WithAttribute("to", "ortuman@jackal.im/balcony")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage(true)
+
+	// when
+	_, _ = mods.PreRouteMessage(context.Background(), msg)
+
+	// then
+	require.Len(t, msgPreRtMock.PreRouteMessageCalls(), 1)
 }

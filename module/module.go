@@ -35,7 +35,7 @@ type Module interface {
 	// ServerFeatures returns module server features.
 	ServerFeatures() []string
 
-	// ServerFeatures returns module account features.
+	// AccountFeatures returns module account features.
 	AccountFeatures() []string
 
 	// Start starts module.
@@ -64,20 +64,22 @@ type MessagePreProcessor interface {
 	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
 }
 
-// MessagePostProcessor represents a message postprocessor module type.
-type MessagePostProcessor interface {
+// MessagePreRouter represents a message prerouter module type.
+type MessagePreRouter interface {
 	Module
 
-	// PostProcessMessage will be invoked before a message stanza is routed a over a C2S stream.
-	PostProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
+	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
 }
 
 // Modules is the global module hub.
 type Modules struct {
-	mods         []Module
-	iqProcessors []IQProcessor
-	hosts        hosts
-	router       router.Router
+	mods             []Module
+	iqProcessors     []IQProcessor
+	msgPreProcessors []MessagePreProcessor
+	msgPreRouters    []MessagePreRouter
+	hosts            hosts
+	router           router.Router
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -92,11 +94,18 @@ func NewModules(
 		router: router,
 	}
 	for _, mod := range m.mods {
-		iqHnd, ok := mod.(IQProcessor)
-		if !ok {
-			continue
+		iqPr, ok := mod.(IQProcessor)
+		if ok {
+			m.iqProcessors = append(m.iqProcessors, iqPr)
 		}
-		m.iqProcessors = append(m.iqProcessors, iqHnd)
+		msgPrePr, ok := mod.(MessagePreProcessor)
+		if ok {
+			m.msgPreProcessors = append(m.msgPreProcessors, msgPrePr)
+		}
+		msgPreRt, ok := mod.(MessagePreRouter)
+		if ok {
+			m.msgPreRouters = append(m.msgPreRouters, msgPreRt)
+		}
 	}
 	return m
 }
@@ -150,6 +159,32 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	resp, _ := stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Stanza(false)
 	_ = m.router.Route(ctx, resp)
 	return nil
+}
+
+// PreProcessMessage performs message preprocessing returning the resulting message stanza.
+func (m *Modules) PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+	newMsg := msg
+	for _, prePr := range m.msgPreProcessors {
+		var err error
+		newMsg, err = prePr.PreProcessMessage(ctx, newMsg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newMsg, nil
+}
+
+// PreRouteMessage performs message prerouting returning the resulting message stanza.
+func (m *Modules) PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+	newMsg := msg
+	for _, preR := range m.msgPreRouters {
+		var err error
+		newMsg, err = preR.PreRouteMessage(ctx, newMsg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newMsg, nil
 }
 
 // IsEnabled tells whether a specific module it's been registered.
