@@ -199,7 +199,9 @@ func (m *ExtModule) Start(ctx context.Context) error {
 		m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
 	}
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
-		"topics", m.opts.Topics,
+		"event_topics", m.opts.Topics,
+		"message_pre_processor", m.opts.IsMessagePreProcessor,
+		"message_pre_router", m.opts.IsMessagePreRouter,
 		"secured", m.isSecure,
 	)
 	return nil
