@@ -161,7 +161,7 @@ func (k *KV) refreshLeaseTTL() {
 				k.leaseRefreshTries++
 				if k.leaseRefreshTries == maxLeaseRefreshTries {
 					// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
-					log.Errorf("Unable to refresh KV lease keepalive...")
+					log.Errorw("Unable to refresh KV lease keepalive...")
 					shutdownProcess()
 					cancel()
 					return
