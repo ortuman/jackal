@@ -231,7 +231,8 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 		proto, err := stm.Recv()
 		switch err {
 		case nil:
-			stanza, err := stravaganza.NewBuilderFromProto(proto).BuildStanza(true)
+			stanza, err := stravaganza.NewBuilderFromProto(proto).
+				BuildStanza(false)
 			if err != nil {
 				log.Warnf("externalmodule: failed to process incoming stanza: %v", err)
 				continue
