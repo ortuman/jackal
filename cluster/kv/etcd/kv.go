@@ -17,7 +17,6 @@ package etcdkv
 import (
 	"context"
 	"os"
-	"sync/atomic"
 	"time"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
@@ -159,8 +158,9 @@ func (k *KV) refreshLeaseTTL() {
 			case err != nil && !etcdv3.IsConnCanceled(err):
 				log.Warnf("Failed to perform KV lease keepalive: %v", err)
 
-				// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
-				if atomic.AddInt32(&k.leaseRefreshTries, 1) == maxLeaseRefreshTries {
+				k.leaseRefreshTries++
+				if k.leaseRefreshTries == maxLeaseRefreshTries {
+					// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
 					log.Errorf("Unable to refresh KV lease keepalive...")
 					shutdownProcess()
 					cancel()
@@ -168,7 +168,7 @@ func (k *KV) refreshLeaseTTL() {
 				}
 
 			default:
-				atomic.StoreInt32(&k.leaseRefreshTries, 0)
+				k.leaseRefreshTries = 0
 			}
 			cancel()
 
