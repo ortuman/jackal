@@ -35,6 +35,7 @@ type Server struct {
 	bindAddr    string
 	port        int
 	ln          net.Listener
+	srv         *grpc.Server
 	active      int32
 	localRouter *c2s.LocalRouter
 	comps       *component.Components
@@ -63,14 +64,15 @@ func (s *Server) Start(_ context.Context) error {
 
 	log.Infof("Started cluster server at %s", addr)
 
+	s.srv = grpc.NewServer(
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+	)
+	clusterpb.RegisterLocalRouterServer(s.srv, newLocalRouterService(s.localRouter))
+	clusterpb.RegisterComponentRouterServer(s.srv, newComponentRouterService(s.comps))
+
 	go func() {
-		grpcServer := grpc.NewServer(
-			grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
-			grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
-		)
-		clusterpb.RegisterLocalRouterServer(grpcServer, newLocalRouterService(s.localRouter))
-		clusterpb.RegisterComponentRouterServer(grpcServer, newComponentRouterService(s.comps))
-		if err := grpcServer.Serve(s.ln); err != nil {
+		if err := s.srv.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
 				log.Errorf("Cluster server error: %s", err)
 			}
@@ -82,9 +84,8 @@ func (s *Server) Start(_ context.Context) error {
 // Stop stops cluster server.
 func (s *Server) Stop(_ context.Context) error {
 	atomic.StoreInt32(&s.active, 0)
-	if err := s.ln.Close(); err != nil {
-		return err
-	}
+	s.srv.GracefulStop()
+
 	log.Infof("Closed cluster server at %s", s.getAddress())
 	return nil
 }
