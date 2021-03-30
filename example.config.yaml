@@ -108,6 +108,7 @@ modules:
 #    - version
 #    - caps
 #    - ping
+#    - carbons
 #
 #  version:
 #    show_os: true

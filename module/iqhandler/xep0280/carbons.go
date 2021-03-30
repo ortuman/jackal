@@ -121,6 +121,16 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
+// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
+func (p *Carbons) PreRouteMessage(_ context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+	if msg.ChildNamespace("private", carbonsNamespace) == nil {
+		return msg, nil
+	}
+	return stravaganza.NewBuilderFromElement(msg).
+		WithoutChildrenNamespace("private", carbonsNamespace).
+		BuildMessage(false)
+}
+
 func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SRouterEventInfo)
 
