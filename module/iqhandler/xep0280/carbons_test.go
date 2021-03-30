@@ -19,15 +19,12 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/jid"
-
-	"github.com/ortuman/jackal/event"
-
-	"github.com/ortuman/jackal/model"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/event"
+	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"
