@@ -79,17 +79,17 @@ func New(
 func (r *Roster) Name() string { return ModuleName }
 
 // StreamFeature returns roster stream feature.
-func (r *Roster) StreamFeature(_ context.Context, _ string) stravaganza.Element {
+func (r *Roster) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return stravaganza.NewBuilder("ver").
 		WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
-		Build()
+		Build(), nil
 }
 
 // ServerFeatures returns roster server disco features.
-func (r *Roster) ServerFeatures() []string { return nil }
+func (r *Roster) ServerFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // AccountFeatures returns roster account disco features.
-func (r *Roster) AccountFeatures() []string { return nil }
+func (r *Roster) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches roster module.
 func (r *Roster) MatchesNamespace(namespace string) bool {

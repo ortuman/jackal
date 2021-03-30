@@ -122,23 +122,24 @@ modules:
 #    timeout_action: kill
 #
 #  external:
-#    # IQ handler gateway
-#    # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/iqhandler/v1/iqhandler.proto)
-#    iq_handlers:
-#      - namespace:
-#          in: [ https://jackal.im ]
-#          # reg_ex: ^org.jackal.+
-#        address: 127.0.0.1:4568
-#        is_secure: false
+#    - name: ext_mod_1
+#      address: 127.0.0.1:4569
+#      is_secure: false
+#      request_timeout: 60s
 #
-#    # Event handler gateway
-#    # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/eventhandler/v1/eventhandler.proto)
-#    event_handlers:
+#    event_handler:
 #      topics: # notify c2s connect/disconnect events
 #        - c2s.stream.registered
 #        - c2s.stream.unregistered
-#      address: 127.0.0.1:4569
-#      is_secure: false
+#
+#    iq_handler:
+#      namespace:
+#        in: [ https://jackal.im ]
+#        # reg_ex: ^org.jackal.+
+#
+#    message_handler:
+#      pre_processor: true
+#      pre_router: true
 
 components:
 

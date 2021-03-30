@@ -16,10 +16,9 @@ package main
 
 import (
 	"github.com/ortuman/jackal/module"
-	eventhandlerexternal "github.com/ortuman/jackal/module/eventhandler/external"
 	"github.com/ortuman/jackal/module/eventhandler/offline"
 	"github.com/ortuman/jackal/module/eventhandler/xep0115"
-	iqhandlerexternal "github.com/ortuman/jackal/module/iqhandler/external"
+	externalmodule "github.com/ortuman/jackal/module/external"
 	"github.com/ortuman/jackal/module/iqhandler/roster"
 	"github.com/ortuman/jackal/module/iqhandler/xep0030"
 	"github.com/ortuman/jackal/module/iqhandler/xep0049"
@@ -90,19 +89,12 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 		carbons := xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
 		mods = append(mods, carbons)
 	}
-	// external IQ handlers
-	extIQHandlers, err := initExtIQHandlers(a, cfg.External.IQHandlers)
+	// external modules
+	extModules, err := initExtModules(a, cfg.External)
 	if err != nil {
 		return err
 	}
-	mods = append(mods, extIQHandlers...)
-
-	// external event handlers
-	extEventHandlers, err := initExtEventHandlers(a, cfg.External.EventHandlers)
-	if err != nil {
-		return err
-	}
-	mods = append(mods, extEventHandlers...)
+	mods = append(mods, extModules...)
 
 	// set disco info modules
 	if disc != nil {
@@ -113,38 +105,31 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	return nil
 }
 
-func initExtIQHandlers(a *serverApp, configs []extIQHandlerConfig) ([]module.Module, error) {
-	var iqHandlers []module.Module
+func initExtModules(a *serverApp, configs []extModuleConfig) ([]module.Module, error) {
+	var extMods []module.Module
+
 	for _, cfg := range configs {
-		nsMatcher := stringmatcher.Any
-		if len(cfg.Namespace.In) > 0 {
-			nsMatcher = stringmatcher.NewStringMatcher(cfg.Namespace.In)
-		} else if len(cfg.Namespace.RegEx) > 0 {
-			var err error
-			nsMatcher, err = stringmatcher.NewRegExMatcher(cfg.Namespace.RegEx)
+		var opts externalmodule.Options
+
+		opts.RequestTimeout = cfg.RequestTimeout
+		opts.Topics = cfg.EventHandler.Topics
+		switch {
+		case len(cfg.IQHandler.Namespace.In) > 0:
+			opts.NamespaceMatcher = stringmatcher.NewStringMatcher(cfg.IQHandler.Namespace.In)
+		case len(cfg.IQHandler.Namespace.RegEx) > 0:
+			nsMatcher, err := stringmatcher.NewRegExMatcher(cfg.IQHandler.Namespace.RegEx)
 			if err != nil {
 				return nil, err
 			}
-		}
-		iqHandlers = append(iqHandlers, iqhandlerexternal.New(
-			cfg.Address,
-			cfg.IsSecure,
-			nsMatcher,
-			a.router,
-		))
-	}
-	return iqHandlers, nil
-}
+			opts.NamespaceMatcher = nsMatcher
 
-func initExtEventHandlers(a *serverApp, configs []extEventHandlerConfig) ([]module.Module, error) {
-	var eventHandlers []module.Module
-	for _, cfg := range configs {
-		eventHandlers = append(eventHandlers, eventhandlerexternal.New(
-			cfg.Address,
-			cfg.IsSecure,
-			cfg.Topics,
-			a.sonar,
-		))
+		default:
+			opts.NamespaceMatcher = stringmatcher.Any
+		}
+		opts.IsMessagePreProcessor = cfg.MessageHandler.PreProcessor
+		opts.IsMessagePreRouter = cfg.MessageHandler.PreRouter
+
+		extMods = append(extMods, externalmodule.New(cfg.Address, cfg.IsSecure, a.router, a.sonar, opts))
 	}
-	return eventHandlers, nil
+	return extMods, nil
 }

@@ -59,13 +59,15 @@ func New(rep repository.Private, router router.Router, sn *sonar.Sonar) *Private
 func (p *Private) Name() string { return ModuleName }
 
 // StreamFeature returns private module stream feature.
-func (p *Private) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (p *Private) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns private server disco features.
-func (p *Private) ServerFeatures() []string { return nil }
+func (p *Private) ServerFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // AccountFeatures returns private account disco features.
-func (p *Private) AccountFeatures() []string { return nil }
+func (p *Private) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches private module.
 func (p *Private) MatchesNamespace(namespace string) bool {

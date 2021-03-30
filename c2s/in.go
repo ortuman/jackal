@@ -345,7 +345,11 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 		sb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
-		sb.WithChildren(s.authenticatedFeatures(ctx)...)
+		authFeatures, err := s.authenticatedFeatures(ctx)
+		if err != nil {
+			return err
+		}
+		sb.WithChildren(authFeatures...)
 		s.setState(inAuthenticated)
 	}
 	_ = s.session.OpenStream(ctx, sb.Build())
@@ -598,7 +602,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 	return features
 }
 
-func (s *inC2S) authenticatedFeatures(ctx context.Context) []stravaganza.Element {
+func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Element, error) {
 	var features []stravaganza.Element
 
 	isSocketTr := s.tr.Type() == transport.Socket
@@ -631,8 +635,11 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) []stravaganza.Element
 	features = append(features, sessElem)
 
 	// include module stream features
-	modFeatures := s.mods.StreamFeatures(ctx, s.JID().Domain())
-	return append(features, modFeatures...)
+	modFeatures, err := s.mods.StreamFeatures(ctx, s.JID().Domain())
+	if err != nil {
+		return nil, err
+	}
+	return append(features, modFeatures...), nil
 }
 
 func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {

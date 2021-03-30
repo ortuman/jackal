@@ -30,8 +30,8 @@ import (
 func TestDisco_GetServerInfo(t *testing.T) {
 	// given
 	modMock := &moduleMock{}
-	modMock.ServerFeaturesFunc = func() []string {
-		return []string{"https://jackal.im#feature-1", "https://jackal.im#feature-2"}
+	modMock.ServerFeaturesFunc = func(_ context.Context) ([]string, error) {
+		return []string{"https://jackal.im#feature-1", "https://jackal.im#feature-2"}, nil
 	}
 
 	routerMock := &routerMock{}
@@ -137,8 +137,8 @@ func TestDisco_GetServerItems(t *testing.T) {
 func TestDisco_GetAccountInfo(t *testing.T) {
 	// given
 	modMock := &moduleMock{}
-	modMock.AccountFeaturesFunc = func() []string {
-		return []string{"https://jackal.im#feature-1", "https://jackal.im#feature-2"}
+	modMock.AccountFeaturesFunc = func(_ context.Context) ([]string, error) {
+		return []string{"https://jackal.im#feature-1", "https://jackal.im#feature-2"}, nil
 	}
 
 	routerMock := &routerMock{}

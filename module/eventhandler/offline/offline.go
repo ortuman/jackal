@@ -80,13 +80,17 @@ func New(
 func (m *Offline) Name() string { return ModuleName }
 
 // StreamFeature returns offline module stream feature.
-func (m *Offline) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (m *Offline) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns offline module server disco features.
-func (m *Offline) ServerFeatures() []string { return []string{offlineFeature} }
+func (m *Offline) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{offlineFeature}, nil
+}
 
 // AccountFeatures returns offline module account disco features.
-func (m *Offline) AccountFeatures() []string { return nil }
+func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {

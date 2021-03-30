@@ -73,16 +73,18 @@ func New(hosts *host.Hosts, router router.Router, resMng *c2s.ResourceManager, s
 func (p *Carbons) Name() string { return ModuleName }
 
 // StreamFeature returns carbons module stream feature.
-func (p *Carbons) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (p *Carbons) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns carbons server disco features.
-func (p *Carbons) ServerFeatures() []string {
-	return []string{carbonsNamespace}
+func (p *Carbons) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{carbonsNamespace}, nil
 }
 
 // AccountFeatures returns ping account disco features.
-func (p *Carbons) AccountFeatures() []string {
-	return []string{carbonsNamespace}
+func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{carbonsNamespace}, nil
 }
 
 // Start starts carbons module.

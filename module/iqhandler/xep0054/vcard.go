@@ -58,16 +58,18 @@ func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *VCar
 func (v *VCard) Name() string { return ModuleName }
 
 // StreamFeature returns vCard module stream feature.
-func (v *VCard) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (v *VCard) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns vCard server disco features.
-func (v *VCard) ServerFeatures() []string {
-	return []string{vCardNamespace}
+func (v *VCard) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{vCardNamespace}, nil
 }
 
 // AccountFeatures returns vCard account disco features.
-func (v *VCard) AccountFeatures() []string {
-	return []string{vCardNamespace}
+func (v *VCard) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{vCardNamespace}, nil
 }
 
 // MatchesNamespace tells whether namespace matches vCard module.

@@ -27,9 +27,13 @@ func TestVCard_Features(t *testing.T) {
 	// given
 	v := &VCard{}
 
+	// when
+	srvFeatures, _ := v.ServerFeatures(context.Background())
+	accFeatures, _ := v.AccountFeatures(context.Background())
+
 	// then
-	require.Equal(t, []string{vCardNamespace}, v.AccountFeatures())
-	require.Equal(t, []string{vCardNamespace}, v.ServerFeatures())
+	require.Equal(t, []string{vCardNamespace}, accFeatures)
+	require.Equal(t, []string{vCardNamespace}, srvFeatures)
 }
 
 func TestVCard_GetVCard(t *testing.T) {

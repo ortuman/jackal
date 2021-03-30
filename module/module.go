@@ -30,13 +30,13 @@ type Module interface {
 	Name() string
 
 	// StreamFeature returns module stream feature element.
-	StreamFeature(ctx context.Context, domain string) stravaganza.Element
+	StreamFeature(ctx context.Context, domain string) (stravaganza.Element, error)
 
 	// ServerFeatures returns module server features.
-	ServerFeatures() []string
+	ServerFeatures(ctx context.Context) ([]string, error)
 
 	// AccountFeatures returns module account features.
-	AccountFeatures() []string
+	AccountFeatures(ctx context.Context) ([]string, error)
 
 	// Start starts module.
 	Start(ctx context.Context) error
@@ -198,12 +198,16 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 }
 
 // StreamFeatures returns stream features of all registered modules.
-func (m *Modules) StreamFeatures(ctx context.Context, domain string) []stravaganza.Element {
+func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaganza.Element, error) {
 	var sfs []stravaganza.Element
 	for _, mod := range m.mods {
-		if sf := mod.StreamFeature(ctx, domain); sf != nil {
+		sf, err := mod.StreamFeature(ctx, domain)
+		if err != nil {
+			return nil, err
+		}
+		if sf != nil {
 			sfs = append(sfs, sf)
 		}
 	}
-	return sfs
+	return sfs, nil
 }
