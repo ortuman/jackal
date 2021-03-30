@@ -55,6 +55,8 @@ type Options struct {
 	IsMessagePreRouter bool
 }
 
+var dialExtConnFn = dialExtConn
+
 // ExtModule represents an external module.
 type ExtModule struct {
 	name     string
@@ -65,7 +67,7 @@ type ExtModule struct {
 	subs     []sonar.SubID
 	router   router.Router
 
-	cc *grpc.ClientConn
+	cc io.Closer
 	cl extmodulepb.ModuleClient
 }
 
@@ -180,7 +182,7 @@ func (m *ExtModule) PreRouteMessage(ctx context.Context, msg *stravaganza.Messag
 // Start starts external module.
 func (m *ExtModule) Start(ctx context.Context) error {
 	// dial external module conn
-	cl, cc, err := dialExtConn(ctx, m.address, m.isSecure)
+	cl, cc, err := dialExtConnFn(ctx, m.address, m.isSecure)
 	if err != nil {
 		return err
 	}
@@ -359,7 +361,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 	return ret
 }
 
-func dialExtConn(ctx context.Context, addr string, isSecure bool) (extmodulepb.ModuleClient, *grpc.ClientConn, error) {
+func dialExtConn(ctx context.Context, addr string, isSecure bool) (extmodulepb.ModuleClient, io.Closer, error) {
 	var opts = []grpc.DialOption{
 		grpc.WithBalancerName(roundrobin.Name),
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),

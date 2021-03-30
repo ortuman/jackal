@@ -13,3 +13,30 @@
 // limitations under the License.
 
 package externalmodule
+
+import (
+	"io"
+
+	extmodulepb "github.com/ortuman/jackal/module/external/pb"
+	"github.com/ortuman/jackal/router"
+)
+
+//go:generate moq -out grpc_client.mock_test.go . grpcClient
+type grpcClient interface {
+	extmodulepb.ModuleClient
+}
+
+//go:generate moq -out get_stanzas_client.mock_test.go . getStanzasClient
+type getStanzasClient interface {
+	extmodulepb.Module_GetStanzasClient
+}
+
+//go:generate moq -out closer.mock_test.go . closer
+type closer interface {
+	io.Closer
+}
+
+//go:generate moq -out router.mock_test.go . globalRouter:routerMock
+type globalRouter interface {
+	router.Router
+}
