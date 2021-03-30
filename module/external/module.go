@@ -206,7 +206,7 @@ func (m *ExtModule) Start(ctx context.Context) error {
 }
 
 // Stop stops external module.
-func (m *ExtModule) Stop(ctx context.Context) error {
+func (m *ExtModule) Stop(_ context.Context) error {
 	// unsubscribe from external module events
 	for _, sub := range m.subs {
 		m.sonar.Unsubscribe(sub)
@@ -233,7 +233,7 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 		case nil:
 			stanza, err := stravaganza.NewBuilderFromProto(proto).BuildStanza(true)
 			if err != nil {
-				log.Warnf("externalmodule: failed to process incoming stanza: %v")
+				log.Warnf("externalmodule: failed to process incoming stanza: %v", err)
 				continue
 			}
 			ctx, cancel := m.requestContext()
@@ -242,8 +242,9 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 
 		case io.EOF:
 			return
+
 		default:
-			log.Warnf("externalmodule: failed to receive stanza: %v")
+			log.Warnf("externalmodule: failed to receive stanza: %v", err)
 		}
 	}
 }
