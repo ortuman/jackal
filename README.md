@@ -135,8 +135,8 @@ Extensibility API is almost exclusively based on [gRPC](https://grpc.io/) and it
 Here's a list of all extendable server components: 
 
 * [Components](https://xmpp.org/extensions/xep-0114.html)
-* [IQ handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/iqhandler/v1/iqhandler.proto#L26-L32)
-* [Event handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/eventhandler/v1/eventhandler.proto#L26-L32)
+* [IQ handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/module/v1/module.proto#L39-L40)
+* [Event handlers](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/module/v1/module.proto#L36-L37)
 * [Authenticators](https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto#L24-L27)
 
 ## Run jackal in Docker
