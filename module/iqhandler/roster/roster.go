@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
@@ -36,10 +37,10 @@ import (
 )
 
 const (
-	rosterNamespace = "jabber:iq:roster"
+	rosterRequestedCtxKey      = "ros:requested"
+	rosterDidGoAvailableCtxKey = "ros:available"
 
-	rosterRequestedCtxKey      = "ros:req"
-	rosterDidGoAvailableCtxKey = "ros:avail"
+	rosterNamespace = "jabber:iq:roster"
 )
 
 const (
@@ -61,7 +62,7 @@ type Roster struct {
 func New(
 	router router.Router,
 	rep repository.Repository,
-	resMng *resourcemanager.Manager,
+	resMng *c2s.ResourceManager,
 	hosts *host.Hosts,
 	sonar *sonar.Sonar,
 ) *Roster {
@@ -78,17 +79,17 @@ func New(
 func (r *Roster) Name() string { return ModuleName }
 
 // StreamFeature returns roster stream feature.
-func (r *Roster) StreamFeature(_ context.Context, _ string) stravaganza.Element {
+func (r *Roster) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return stravaganza.NewBuilder("ver").
 		WithAttribute(stravaganza.Namespace, "urn:xmpp:features:rosterver").
-		Build()
+		Build(), nil
 }
 
 // ServerFeatures returns roster server disco features.
-func (r *Roster) ServerFeatures() []string { return nil }
+func (r *Roster) ServerFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // AccountFeatures returns roster account disco features.
-func (r *Roster) AccountFeatures() []string { return nil }
+func (r *Roster) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches roster module.
 func (r *Roster) MatchesNamespace(namespace string) bool {
@@ -195,7 +196,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 		if err != nil {
 			return err
 		}
-		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, "1")
+		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
 	}
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
@@ -221,7 +222,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
-	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, "1")
+	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
 }
 
 func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
@@ -536,11 +537,12 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 	}
 	isAvailable := presence.IsAvailable()
 	if isAvailable {
-		didAvail, err := r.getStreamValue(fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey)
+		didAvailStr, err := r.getStreamValue(fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey)
 		if err != nil {
 			return err
 		}
-		if didAvail == "1" {
+		didAvail, _ := strconv.ParseBool(didAvailStr)
+		if didAvail {
 			goto broadcastPresence
 		}
 		// send self-presence
@@ -577,7 +579,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			}
 		}
 		// mark first avail
-		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey, "1"); err != nil {
+		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey, strconv.FormatBool(true)); err != nil {
 			return err
 		}
 	}
@@ -775,7 +777,9 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 		return err
 	}
 	for _, rs := range rss {
-		if rs.Context[rosterRequestedCtxKey] != "1" { // did request roster?
+		// did request roster?
+		rosRequested, _ := strconv.ParseBool(rs.Value(rosterRequestedCtxKey))
+		if !rosRequested {
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().

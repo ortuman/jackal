@@ -16,8 +16,6 @@ package main
 
 import (
 	"github.com/ortuman/jackal/c2s"
-	"github.com/ortuman/jackal/c2s/localrouter"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
@@ -25,14 +23,14 @@ import (
 
 func initRouters(a *serverApp) {
 	// init shared resource hub
-	a.resMng = resourcemanager.New(a.kv)
+	a.resMng = c2s.NewResourceManager(a.kv)
 
 	// init C2S router
-	a.localRouter = localrouter.New(a.hosts, a.sonar)
+	a.localRouter = c2s.NewLocalRouter(a.hosts, a.sonar)
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
 	a.c2sRouter = c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.sonar)
-	a.s2sRouter = s2s.NewRouter(a.s2sOutProvider)
+	a.s2sRouter = s2s.NewRouter(a.s2sOutProvider, a.sonar)
 
 	// init global router
 	a.router = router.New(a.hosts, a.c2sRouter, a.s2sRouter)

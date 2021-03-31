@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/tls"
 
+	"github.com/ortuman/jackal/cluster/kv"
+
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
@@ -28,6 +30,21 @@ import (
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/ortuman/jackal/transport"
 )
+
+//go:generate moq -out kv.mock_test.go . kvStorage:kvMock
+type kvStorage interface {
+	kv.KV
+}
+
+//go:generate moq -out memberlist.mock_test.go . memberList
+type memberList interface {
+	GetMember(instanceID string) (m model.ClusterMember, ok bool)
+}
+
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
+}
 
 //go:generate moq -out transport.mock_test.go . c2sTransport:transportMock
 type c2sTransport interface {
@@ -105,10 +122,13 @@ type components interface {
 
 //go:generate moq -out modules.mock_test.go . modules
 type modules interface {
-	StreamFeatures(ctx context.Context, domain string) []stravaganza.Element
+	StreamFeatures(ctx context.Context, domain string) ([]stravaganza.Element, error)
 
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
+
+	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
 
 	IsEnabled(modName string) bool
 }

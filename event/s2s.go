@@ -14,7 +14,10 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
+import (
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
+)
 
 const (
 	// S2SOutStreamRegistered event is posted when an outgoing S2S connection is registered.
@@ -32,21 +35,24 @@ const (
 	// S2SInStreamUnregistered event is posted when an incoming S2S connection is unregistered.
 	S2SInStreamUnregistered = "s2s.in.stream.unregistered"
 
-	// S2SInStreamStanzaReceived event is posted whenever a stanza is received over an incoming S2S stream.
+	// S2SInStreamStanzaReceived event is posted when a stanza is received over an incoming S2S stream.
 	S2SInStreamStanzaReceived = "s2s.in.stream.stanza_received"
 
-	// S2SInStreamIQReceived event is posted whenever an iq stanza is received over an incoming S2S stream.
+	// S2SInStreamIQReceived event is posted when an iq stanza is received over an incoming S2S stream.
 	S2SInStreamIQReceived = "s2s.in.stream.iq_received"
 
-	// S2SInStreamPresenceReceived event is posted whenever a presence stanza is received over an incoming S2S stream.
+	// S2SInStreamPresenceReceived event is posted when a presence stanza is received over an incoming S2S stream.
 	S2SInStreamPresenceReceived = "s2s.in.stream.presence_received"
 
-	// S2SInStreamMessageReceived event is posted whenever a message stanza is received over an incoming S2S stream.
+	// S2SInStreamMessageReceived event is posted when a message stanza is received over an incoming S2S stream.
 	S2SInStreamMessageReceived = "s2s.in.stream.message_received"
 
-	// S2SStreamMessageUnrouted event is posted whenever a previously received message stanza could not be routed
+	// S2SStreamMessageUnsent event is posted when a received message stanza could not be routed
 	// because no destination available resource was found.
-	S2SStreamMessageUnrouted = "s2s.in.stream.message_unrouted"
+	S2SStreamMessageUnsent = "s2s.in.stream.message_unsent"
+
+	// S2SRouterStanzaRouted event is posted when a stanza is successfully routed to a S2S stream.
+	S2SRouterStanzaRouted = "s2s.router.stanza_routed"
 )
 
 // S2SStreamEventInfo contains all info associated to a S2S event.
@@ -59,6 +65,15 @@ type S2SStreamEventInfo struct {
 
 	// Target is the S2S target domain.
 	Target string
+
+	// Stanza represents the event associated stanza.
+	Stanza stravaganza.Stanza
+}
+
+// S2SRouterEventInfo contains all info associated to a S2S router event.
+type S2SRouterEventInfo struct {
+	// Target is the remote JID to which the event stanza was routed.
+	Target *jid.JID
 
 	// Stanza represents the event associated stanza.
 	Stanza stravaganza.Stanza

@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcemanager
+package c2s
 
 import (
 	"context"
 	"reflect"
-	"strconv"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/model"
 	"github.com/stretchr/testify/require"
 )
 
-func TestManager_SetResource(t *testing.T) {
+func TestResourceManager_SetResource(t *testing.T) {
 	// given
 	var r0, r1 model.Resource
 	r0 = testResource("megaman-2", 10)
 
 	kvmock := &kvMock{}
 
-	h := &Manager{kv: kvmock}
+	h := &ResourceManager{kv: kvmock}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error {
 		r, _ := decodeResource(key, []byte(value))
 		r1 = *r
@@ -52,11 +49,11 @@ func TestManager_SetResource(t *testing.T) {
 	require.True(t, reflect.DeepEqual(r0.Presence.String(), r1.Presence.String()))
 }
 
-func TestManager_GetResource(t *testing.T) {
+func TestResourceManager_GetResource(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
 
-	h := &Manager{kv: kvmock}
+	h := &ResourceManager{kv: kvmock}
 
 	var expectedKey string
 	kvmock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
@@ -84,11 +81,11 @@ func TestManager_GetResource(t *testing.T) {
 	require.Equal(t, "inst-1", res.InstanceID)
 }
 
-func TestManager_GetResources(t *testing.T) {
+func TestResourceManager_GetResources(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
 
-	h := &Manager{kv: kvmock}
+	h := &ResourceManager{kv: kvmock}
 
 	var expectedKey string
 	kvmock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
@@ -119,11 +116,11 @@ func TestManager_GetResources(t *testing.T) {
 	require.Len(t, res, 3)
 }
 
-func TestManager_DelResource(t *testing.T) {
+func TestResourceManager_DelResource(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
 
-	h := &Manager{kv: kvmock}
+	h := &ResourceManager{kv: kvmock}
 
 	var expectedKey string
 	kvmock.DelFunc = func(ctx context.Context, key string) error {
@@ -136,24 +133,4 @@ func TestManager_DelResource(t *testing.T) {
 
 	// then
 	require.Equal(t, "r://ortuman@yard", expectedKey)
-}
-
-func testResource(instanceID string, priority int8) model.Resource {
-	pr, _ := stravaganza.NewPresenceBuilder().
-		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
-		WithAttribute(stravaganza.To, "ortuman@jackal.im").
-		WithChild(
-			stravaganza.NewBuilder("priority").
-				WithText(strconv.Itoa(int(priority))).
-				Build(),
-		).
-		BuildPresence(false)
-
-	jd, _ := jid.New("ortuman", "jackal.im", "yard", true)
-	return model.Resource{
-		InstanceID: instanceID,
-		JID:        jd,
-		Presence:   pr,
-		Context:    map[string]string{"k1": "v1", "k2": "v2"},
-	}
 }

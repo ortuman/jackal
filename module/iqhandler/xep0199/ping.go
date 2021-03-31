@@ -62,7 +62,7 @@ type Options struct {
 	TimeoutAction string
 }
 
-// Ping represets ping (XEP-0199) module type.
+// Ping represents ping (XEP-0199) module type.
 type Ping struct {
 	opts   Options
 	router router.Router
@@ -89,16 +89,18 @@ func New(router router.Router, sn *sonar.Sonar, opts Options) *Ping {
 func (p *Ping) Name() string { return ModuleName }
 
 // StreamFeature returns ping module stream feature.
-func (p *Ping) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (p *Ping) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns ping server disco features.
-func (p *Ping) ServerFeatures() []string {
-	return []string{pingNamespace}
+func (p *Ping) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{pingNamespace}, nil
 }
 
 // AccountFeatures returns ping account disco features.
-func (p *Ping) AccountFeatures() []string {
-	return []string{pingNamespace}
+func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{pingNamespace}, nil
 }
 
 // Start starts ping module.

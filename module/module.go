@@ -30,13 +30,13 @@ type Module interface {
 	Name() string
 
 	// StreamFeature returns module stream feature element.
-	StreamFeature(ctx context.Context, domain string) stravaganza.Element
+	StreamFeature(ctx context.Context, domain string) (stravaganza.Element, error)
 
 	// ServerFeatures returns module server features.
-	ServerFeatures() []string
+	ServerFeatures(ctx context.Context) ([]string, error)
 
-	// ServerFeatures returns module account features.
-	AccountFeatures() []string
+	// AccountFeatures returns module account features.
+	AccountFeatures(ctx context.Context) ([]string, error)
 
 	// Start starts module.
 	Start(ctx context.Context) error
@@ -45,13 +45,8 @@ type Module interface {
 	Stop(ctx context.Context) error
 }
 
-// EventHandler represents a event handler module type.
-type EventHandler interface {
-	Module
-}
-
-// IQHandler represents an iq handler module type.
-type IQHandler interface {
+// IQProcessor represents an iq processor module type.
+type IQProcessor interface {
 	Module
 
 	// MatchesNamespace tells whether iq child namespace corresponds to this module.
@@ -61,64 +56,85 @@ type IQHandler interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
+// MessagePreProcessor represents a message preprocessor module type.
+type MessagePreProcessor interface {
+	Module
+
+	// PreProcessMessage will be invoked as soon as a message stanza is received a over a C2S stream.
+	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+}
+
+// MessagePreRouter represents a message prerouter module type.
+type MessagePreRouter interface {
+	Module
+
+	// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
+	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+}
+
 // Modules is the global module hub.
 type Modules struct {
-	iqHandlers    []IQHandler
-	eventHandlers []EventHandler
-	hosts         hosts
-	router        router.Router
+	mods             []Module
+	iqProcessors     []IQProcessor
+	msgPreProcessors []MessagePreProcessor
+	msgPreRouters    []MessagePreRouter
+	hosts            hosts
+	router           router.Router
 }
 
 // NewModules returns a new initialized Modules instance.
 func NewModules(
-	iqHandlers []IQHandler,
-	eventHandlers []EventHandler,
+	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
 ) *Modules {
-	return &Modules{
-		iqHandlers:    iqHandlers,
-		eventHandlers: eventHandlers,
-		hosts:         hosts,
-		router:        router,
+	m := &Modules{
+		mods:   mods,
+		hosts:  hosts,
+		router: router,
 	}
+	for _, mod := range m.mods {
+		iqPr, ok := mod.(IQProcessor)
+		if ok {
+			m.iqProcessors = append(m.iqProcessors, iqPr)
+		}
+		msgPrePr, ok := mod.(MessagePreProcessor)
+		if ok {
+			m.msgPreProcessors = append(m.msgPreProcessors, msgPrePr)
+		}
+		msgPreRt, ok := mod.(MessagePreRouter)
+		if ok {
+			m.msgPreRouters = append(m.msgPreRouters, msgPreRt)
+		}
+	}
+	return m
 }
 
 // Start starts modules.
 func (m *Modules) Start(ctx context.Context) error {
 	// start IQ and event handlers
-	for _, iqHnd := range m.iqHandlers {
-		if err := iqHnd.Start(ctx); err != nil {
-			return err
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if err := evHnd.Start(ctx); err != nil {
+	for _, mod := range m.mods {
+		if err := mod.Start(ctx); err != nil {
 			return err
 		}
 	}
 	log.Infow("Started modules",
-		"iq_handlers_count", len(m.iqHandlers),
-		"event_handlers_count", len(m.eventHandlers),
+		"iq_processors_count", len(m.iqProcessors),
+		"mods_count", len(m.mods),
 	)
 	return nil
 }
 
 // Stop stops modules.
 func (m *Modules) Stop(ctx context.Context) error {
-	for _, iqHnd := range m.iqHandlers {
-		if err := iqHnd.Stop(ctx); err != nil {
-			return err
-		}
-	}
-	for _, evHnd := range m.eventHandlers {
-		if err := evHnd.Stop(ctx); err != nil {
+	for _, mod := range m.mods {
+		if err := mod.Stop(ctx); err != nil {
 			return err
 		}
 	}
 	log.Infow("Stopped modules",
-		"iq_handlers_count", len(m.iqHandlers),
-		"event_handlers_count", len(m.eventHandlers),
+		"iq_processors_count", len(m.iqProcessors),
+		"mods_count", len(m.mods),
 	)
 	return nil
 }
@@ -133,7 +149,7 @@ func (m *Modules) IsModuleIQ(iq *stravaganza.IQ) bool {
 // ProcessIQ routes the iq to the corresponding iq handler module.
 func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	ns := iq.AllChildren()[0].Attribute(stravaganza.Namespace)
-	for _, iqHnd := range m.iqHandlers {
+	for _, iqHnd := range m.iqProcessors {
 		if !iqHnd.MatchesNamespace(ns) {
 			continue
 		}
@@ -145,15 +161,36 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-// IsEnabled tells whether a specific module it's been registered.
-func (m *Modules) IsEnabled(moduleName string) bool {
-	for _, iqHnd := range m.iqHandlers {
-		if iqHnd.Name() == moduleName {
-			return true
+// PreProcessMessage performs message preprocessing returning the resulting message stanza.
+func (m *Modules) PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+	newMsg := msg
+	for _, prePr := range m.msgPreProcessors {
+		var err error
+		newMsg, err = prePr.PreProcessMessage(ctx, newMsg)
+		if err != nil {
+			return nil, err
 		}
 	}
-	for _, evHnd := range m.eventHandlers {
-		if evHnd.Name() == moduleName {
+	return newMsg, nil
+}
+
+// PreRouteMessage performs message prerouting returning the resulting message stanza.
+func (m *Modules) PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+	newMsg := msg
+	for _, preR := range m.msgPreRouters {
+		var err error
+		newMsg, err = preR.PreRouteMessage(ctx, newMsg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newMsg, nil
+}
+
+// IsEnabled tells whether a specific module it's been registered.
+func (m *Modules) IsEnabled(moduleName string) bool {
+	for _, mod := range m.mods {
+		if mod.Name() == moduleName {
 			return true
 		}
 	}
@@ -161,17 +198,16 @@ func (m *Modules) IsEnabled(moduleName string) bool {
 }
 
 // StreamFeatures returns stream features of all registered modules.
-func (m *Modules) StreamFeatures(ctx context.Context, domain string) []stravaganza.Element {
+func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaganza.Element, error) {
 	var sfs []stravaganza.Element
-	for _, iqHnd := range m.iqHandlers {
-		if sf := iqHnd.StreamFeature(ctx, domain); sf != nil {
+	for _, mod := range m.mods {
+		sf, err := mod.StreamFeature(ctx, domain)
+		if err != nil {
+			return nil, err
+		}
+		if sf != nil {
 			sfs = append(sfs, sf)
 		}
 	}
-	for _, evHnd := range m.eventHandlers {
-		if sf := evHnd.StreamFeature(ctx, domain); sf != nil {
-			sfs = append(sfs, sf)
-		}
-	}
-	return sfs
+	return sfs, nil
 }

@@ -29,21 +29,24 @@ const (
 	// C2SStreamUnregistered event is posted when a C2S connection is unregistered.
 	C2SStreamUnregistered = "c2s.stream.unregistered"
 
-	// C2SStreamStanzaReceived event is posted whenever a stanza is received over a C2S stream.
+	// C2SStreamStanzaReceived event is posted when a stanza is received over a C2S stream.
 	C2SStreamStanzaReceived = "c2s.stream.stanza_received"
 
-	// C2SStreamIQReceived event is posted whenever an iq stanza is received over a C2S stream.
+	// C2SStreamIQReceived event is posted when an iq stanza is received over a C2S stream.
 	C2SStreamIQReceived = "c2s.stream.iq_received"
 
-	// C2SStreamPresenceReceived event is posted whenever a presence stanza is received over a C2S stream.
+	// C2SStreamPresenceReceived event is posted when a presence stanza is received over a C2S stream.
 	C2SStreamPresenceReceived = "c2s.stream.presence_received"
 
-	// C2SStreamMessageReceived event is posted whenever a message stanza is received over a C2S stream.
+	// C2SStreamMessageReceived event is posted when a message stanza is received over a C2S stream.
 	C2SStreamMessageReceived = "c2s.stream.message_received"
 
-	// C2SStreamMessageUnrouted event is posted whenever a previously received message stanza could not be routed
+	// C2SStreamMessageUnrouted event is posted when a received message stanza could not be routed
 	// because no destination available resource was found.
 	C2SStreamMessageUnrouted = "c2s.stream.message_unrouted"
+
+	// C2SRouterStanzaRouted event is posted when a stanza is successfully routed to one ore more C2S streams.
+	C2SRouterStanzaRouted = "c2s.router.stanza_routed"
 )
 
 // C2SStreamEventInfo contains all info associated to a C2S stream event.
@@ -53,6 +56,15 @@ type C2SStreamEventInfo struct {
 
 	// JID represents the event associated JID.
 	JID *jid.JID
+
+	// Stanza represents the event associated stanza.
+	Stanza stravaganza.Stanza
+}
+
+// C2SRouterEventInfo contains all info associated to a C2S router event.
+type C2SRouterEventInfo struct {
+	// Targets contains all JIDs to which the event stanza was routed.
+	Targets []jid.JID
 
 	// Stanza represents the event associated stanza.
 	Stanza stravaganza.Stanza

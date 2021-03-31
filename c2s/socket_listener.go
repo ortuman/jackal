@@ -26,7 +26,6 @@ import (
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/auth/pepper"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
@@ -56,7 +55,7 @@ type SocketListener struct {
 	router         router.Router
 	comps          *component.Components
 	mods           *module.Modules
-	resMng         *resourcemanager.Manager
+	resMng         *ResourceManager
 	rep            repository.Repository
 	peppers        *pepper.Keys
 	shapers        shaper.Shapers
@@ -77,7 +76,7 @@ func NewSocketListener(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *resourcemanager.Manager,
+	resMng *ResourceManager,
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,

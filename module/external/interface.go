@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package eventhandlerexternal
+package externalmodule
 
-import eventhandlerpb "github.com/ortuman/jackal/module/eventhandler/external/pb"
+import (
+	"io"
+
+	extmodulepb "github.com/ortuman/jackal/module/external/pb"
+	"github.com/ortuman/jackal/router"
+)
 
 //go:generate moq -out grpc_client.mock_test.go . grpcClient
 type grpcClient interface {
-	eventhandlerpb.EventHandlerClient
+	extmodulepb.ModuleClient
+}
+
+//go:generate moq -out get_stanzas_client.mock_test.go . getStanzasClient
+type getStanzasClient interface {
+	extmodulepb.Module_GetStanzasClient
+}
+
+//go:generate moq -out closer.mock_test.go . closer
+type closer interface {
+	io.Closer
+}
+
+//go:generate moq -out router.mock_test.go . globalRouter:routerMock
+type globalRouter interface {
+	router.Router
 }

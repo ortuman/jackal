@@ -18,23 +18,29 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/router"
 )
 
 type s2sRouter struct {
+	sn          *sonar.Sonar
 	outProvider outProvider
 }
 
 // NewRouter creates and returns an initialized S2S router.
-func NewRouter(outProvider *OutProvider) router.S2SRouter {
+func NewRouter(outProvider *OutProvider, sn *sonar.Sonar) router.S2SRouter {
 	return &s2sRouter{
+		sn:          sn,
 		outProvider: outProvider,
 	}
 }
 
 func (r *s2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, senderDomain string) error {
-	targetDomain := stanza.ToJID().Domain()
+	remoteJID := stanza.ToJID()
+	targetDomain := remoteJID.Domain()
+
 	stm, err := r.outProvider.GetOut(ctx, senderDomain, targetDomain)
 	switch {
 	case err == nil:
@@ -45,7 +51,14 @@ func (r *s2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, sender
 		return router.ErrRemoteServerNotFound
 	}
 	_ = stm.SendElement(stanza)
-	return nil
+
+	return r.sn.Post(ctx, sonar.NewEventBuilder(event.S2SRouterStanzaRouted).
+		WithInfo(&event.S2SRouterEventInfo{
+			Target: remoteJID,
+			Stanza: stanza,
+		}).
+		Build(),
+	)
 }
 
 func (r *s2sRouter) Start(_ context.Context) error {

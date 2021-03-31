@@ -28,9 +28,12 @@ func TestVersion_Features(t *testing.T) {
 	// given
 	v := &Version{}
 
+	srvFeatures, _ := v.ServerFeatures(context.Background())
+	accFeatures, _ := v.AccountFeatures(context.Background())
+
 	// then
-	require.Equal(t, []string{versionNamespace}, v.ServerFeatures())
-	require.Equal(t, []string(nil), v.AccountFeatures())
+	require.Equal(t, []string{versionNamespace}, srvFeatures)
+	require.Equal(t, []string(nil), accFeatures)
 }
 
 func TestVersion_GetVersion(t *testing.T) {

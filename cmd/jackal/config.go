@@ -96,7 +96,7 @@ type listenerConfig struct {
 	Secret           string        `fig:"secret"`
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
 	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
-	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
+	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
 }
 
 type shaperConfig struct {
@@ -114,19 +114,27 @@ type shaperConfig struct {
 	} `fig:"matching"`
 }
 
-type extIQHandlerConfig struct {
-	Namespace struct {
-		In    []string `fig:"in"`
-		RegEx string   `fig:"reg_ex"`
-	} `fig:"namespace"`
-	Address  string `fig:"address"`
-	IsSecure bool   `fig:"is_secure"`
-}
+type extModuleConfig struct {
+	Name           string        `fig:"name"`
+	Address        string        `fig:"address"`
+	IsSecure       bool          `fig:"is_secure"`
+	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 
-type extEventHandlerConfig struct {
-	Topics   []string `fig:"topics"`
-	Address  string   `fig:"address"`
-	IsSecure bool     `fig:"is_secure"`
+	EventHandler struct {
+		Topics []string `fig:"topics"`
+	} `fig:"event_handler"`
+
+	IQHandler struct {
+		Namespace struct {
+			In    []string `fig:"in"`
+			RegEx string   `fig:"reg_ex"`
+		} `fig:"namespace"`
+	} `fig:"iq_handler"`
+
+	MessageHandler struct {
+		PreProcessor bool `fig:"pre_processor"`
+		PreRouter    bool `fig:"pre_router"`
+	} `fig:"message_handler"`
 }
 
 type s2sOutConfig struct {
@@ -135,12 +143,12 @@ type s2sOutConfig struct {
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
 	KeepAlive        time.Duration `fig:"keep_alive" default:"30s"`
 	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
-	RequestTimeout   time.Duration `fig:"req_timeout" default:"10s"`
+	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
 	MaxStanzaSize    int           `fig:"max_stanza_size" default:"131072"`
 }
 
 type modulesConfig struct {
-	Enabled []string `fig:"enabled" default:"[roster,offline,disco,private,vcard,version,caps,ping]"`
+	Enabled []string `fig:"enabled" default:"[roster,offline,disco,private,vcard,version,caps,ping,carbons]"`
 
 	Offline struct {
 		QueueSize int `fig:"queue_size" default:"200"`
@@ -159,10 +167,7 @@ type modulesConfig struct {
 		TimeoutAction string        `fig:"timeout_action" default:"none"`
 	} `fig:"ping"`
 
-	External struct {
-		IQHandlers    []extIQHandlerConfig    `fig:"iq_handlers"`
-		EventHandlers []extEventHandlerConfig `fig:"event_handlers"`
-	} `fig:"external"`
+	External []extModuleConfig `fig:"external"`
 }
 
 type componentsConfig struct {

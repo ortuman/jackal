@@ -114,9 +114,9 @@ func New(
 func (m *Capabilities) Name() string { return ModuleName }
 
 // StreamFeature returns entity capabilities module stream feature.
-func (m *Capabilities) StreamFeature(ctx context.Context, domain string) stravaganza.Element {
+func (m *Capabilities) StreamFeature(ctx context.Context, domain string) (stravaganza.Element, error) {
 	if m.disco == nil {
-		return nil
+		return nil, nil
 	}
 	jd, _ := jid.NewWithString(domain, true)
 
@@ -131,14 +131,18 @@ func (m *Capabilities) StreamFeature(ctx context.Context, domain string) stravag
 		WithAttribute("hash", "sha-256").
 		WithAttribute("node", fmt.Sprintf("http://%s", domain)).
 		WithAttribute("ver", ver).
-		Build()
+		Build(), nil
 }
 
 // ServerFeatures returns entity capabilities module server disco features.
-func (m *Capabilities) ServerFeatures() []string { return []string{capabilitiesFeature} }
+func (m *Capabilities) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{capabilitiesFeature}, nil
+}
 
 // AccountFeatures returns entity capabilities module account disco features.
-func (m *Capabilities) AccountFeatures() []string { return []string{capabilitiesFeature} }
+func (m *Capabilities) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{capabilitiesFeature}, nil
+}
 
 // Start starts entity capabilities module.
 func (m *Capabilities) Start(_ context.Context) error {

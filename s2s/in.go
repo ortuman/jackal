@@ -418,7 +418,7 @@ sndMessage:
 		if !s.mods.IsEnabled(offline.ModuleName) {
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
-		return s.postStreamEvent(ctx, event.S2SStreamMessageUnrouted, &event.S2SStreamEventInfo{
+		return s.postStreamEvent(ctx, event.S2SStreamMessageUnsent, &event.S2SStreamEventInfo{
 			ID:     s.ID().String(),
 			Sender: s.sender,
 			Target: s.target,

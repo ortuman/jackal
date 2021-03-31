@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package localrouter
+package c2s
 
 import (
 	"context"
@@ -29,15 +29,15 @@ import (
 
 // common errors
 var errAlreadyRegistered = func(id stream.C2SID) error {
-	return fmt.Errorf("localrouter: stream with id %s already registered", id)
+	return fmt.Errorf("c2s: stream with id %s already registered", id)
 }
 
 var errStreamNotFound = func(id stream.C2SID) error {
-	return fmt.Errorf("localrouter: stream with id %s not found", id)
+	return fmt.Errorf("c2s: stream with id %s not found", id)
 }
 
-// Router represents a cluster local router.
-type Router struct {
+// LocalRouter represents a cluster local router.
+type LocalRouter struct {
 	hosts hosts
 	sonar *sonar.Sonar
 
@@ -47,9 +47,9 @@ type Router struct {
 	doneCh chan chan struct{}
 }
 
-// New returns a new initialized local router.
-func New(hosts *host.Hosts, sonar *sonar.Sonar) *Router {
-	return &Router{
+// NewLocalRouter returns a new initialized local router.
+func NewLocalRouter(hosts *host.Hosts, sonar *sonar.Sonar) *LocalRouter {
+	return &LocalRouter{
 		hosts:  hosts,
 		sonar:  sonar,
 		stms:   make(map[stream.C2SID]stream.C2S),
@@ -59,7 +59,7 @@ func New(hosts *host.Hosts, sonar *sonar.Sonar) *Router {
 }
 
 // Route routes a stanza to a local router resource.
-func (r *Router) Route(stanza stravaganza.Stanza, username, resource string) error {
+func (r *LocalRouter) Route(stanza stravaganza.Stanza, username, resource string) error {
 	r.mu.RLock()
 	rs := r.bndRes[username]
 	r.mu.RUnlock()
@@ -71,7 +71,7 @@ func (r *Router) Route(stanza stravaganza.Stanza, username, resource string) err
 }
 
 // Disconnect performs disconnection over a local router resource.
-func (r *Router) Disconnect(username, resource string, streamErr *streamerror.Error) error {
+func (r *LocalRouter) Disconnect(username, resource string, streamErr *streamerror.Error) error {
 	r.mu.RLock()
 	rs := r.bndRes[username]
 	r.mu.RUnlock()
@@ -83,7 +83,7 @@ func (r *Router) Disconnect(username, resource string, streamErr *streamerror.Er
 }
 
 // Register registers a local router stream.
-func (r *Router) Register(stm stream.C2S) error {
+func (r *LocalRouter) Register(stm stream.C2S) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -97,7 +97,7 @@ func (r *Router) Register(stm stream.C2S) error {
 }
 
 // Bind binds a registered local router resource.
-func (r *Router) Bind(id stream.C2SID) (stream.C2S, error) {
+func (r *LocalRouter) Bind(id stream.C2SID) (stream.C2S, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -118,7 +118,7 @@ func (r *Router) Bind(id stream.C2SID) (stream.C2S, error) {
 }
 
 // Unregister unregisters a local router resource.
-func (r *Router) Unregister(stm stream.C2S) error {
+func (r *LocalRouter) Unregister(stm stream.C2S) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -138,7 +138,7 @@ func (r *Router) Unregister(stm stream.C2S) error {
 }
 
 // Stream returns stream identified by username and resource.
-func (r *Router) Stream(username, resource string) stream.C2S {
+func (r *LocalRouter) Stream(username, resource string) stream.C2S {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -150,13 +150,13 @@ func (r *Router) Stream(username, resource string) stream.C2S {
 }
 
 // Start starts local router.
-func (r *Router) Start(_ context.Context) error {
+func (r *LocalRouter) Start(_ context.Context) error {
 	go r.reportMetrics()
 	return nil
 }
 
 // Stop stops local router.
-func (r *Router) Stop(ctx context.Context) error {
+func (r *LocalRouter) Stop(ctx context.Context) error {
 	// stop metrics reporting
 	ch := make(chan struct{})
 	r.doneCh <- ch
@@ -193,7 +193,7 @@ func (r *Router) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (r *Router) reportMetrics() {
+func (r *LocalRouter) reportMetrics() {
 	tc := time.NewTicker(reportTotalConnectionsInterval)
 	defer tc.Stop()
 

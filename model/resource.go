@@ -42,3 +42,8 @@ func (r *Resource) Priority() int8 {
 	}
 	return 0
 }
+
+// Value returns resource context value associated to cKey.
+func (r *Resource) Value(cKey string) string {
+	return r.Context[cKey]
+}

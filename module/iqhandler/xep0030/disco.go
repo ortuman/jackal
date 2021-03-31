@@ -19,10 +19,11 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/ortuman/jackal/c2s"
+
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/log"
 	discomodel "github.com/ortuman/jackal/model/disco"
@@ -80,7 +81,7 @@ func New(
 	router router.Router,
 	components *component.Components,
 	rosRep repository.Roster,
-	resMng *resourcemanager.Manager,
+	resMng *c2s.ResourceManager,
 ) *Disco {
 	return &Disco{
 		router:     router,
@@ -94,16 +95,18 @@ func New(
 func (d *Disco) Name() string { return ModuleName }
 
 // StreamFeature returns disco stream feature.
-func (d *Disco) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (d *Disco) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns server disco features.
-func (d *Disco) ServerFeatures() []string {
-	return []string{discoInfoNamespace, discoItemsNamespace}
+func (d *Disco) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{discoInfoNamespace, discoItemsNamespace}, nil
 }
 
 // AccountFeatures returns account disco features.
-func (d *Disco) AccountFeatures() []string {
-	return []string{discoInfoNamespace, discoItemsNamespace}
+func (d *Disco) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{discoInfoNamespace, discoItemsNamespace}, nil
 }
 
 // MatchesNamespace tells whether namespace matches version module.

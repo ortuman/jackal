@@ -56,10 +56,14 @@ func (p *serverProvider) Items(_ context.Context, _, _ *jid.JID, _ string) ([]di
 	return items, nil
 }
 
-func (p *serverProvider) Features(_ context.Context, _, _ *jid.JID, _ string) ([]discomodel.Feature, error) {
+func (p *serverProvider) Features(ctx context.Context, _, _ *jid.JID, _ string) ([]discomodel.Feature, error) {
 	var features []discomodel.Feature
 	for _, mod := range p.mods {
-		features = append(features, mod.ServerFeatures()...)
+		srvFeatures, err := mod.ServerFeatures(ctx)
+		if err != nil {
+			return nil, err
+		}
+		features = append(features, srvFeatures...)
 	}
 	sort.Slice(features, func(i, j int) bool { return features[i] < features[j] })
 	return features, nil

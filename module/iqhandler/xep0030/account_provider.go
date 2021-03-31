@@ -75,7 +75,11 @@ func (p *accountProvider) Features(ctx context.Context, toJID, fromJID *jid.JID,
 	}
 	var features []discomodel.Feature
 	for _, mod := range p.mods {
-		features = append(features, mod.AccountFeatures()...)
+		accFeatures, err := mod.AccountFeatures(ctx)
+		if err != nil {
+			return nil, err
+		}
+		features = append(features, accFeatures...)
 	}
 	sort.Slice(features, func(i, j int) bool { return features[i] < features[j] })
 	return features, nil

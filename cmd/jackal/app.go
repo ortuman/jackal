@@ -30,8 +30,7 @@ import (
 	"github.com/jackal-xmpp/sonar"
 	adminserver "github.com/ortuman/jackal/admin/server"
 	"github.com/ortuman/jackal/auth/pepper"
-	"github.com/ortuman/jackal/c2s/localrouter"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
+	"github.com/ortuman/jackal/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/cluster/connmanager"
 	"github.com/ortuman/jackal/cluster/kv"
 	"github.com/ortuman/jackal/cluster/locker"
@@ -105,13 +104,13 @@ type serverApp struct {
 	rep           repository.Repository
 	adminServer   *adminserver.Server
 	memberList    *memberlist.MemberList
-	resMng        *resourcemanager.Manager
+	resMng        *c2s.ResourceManager
 	clusterServer *clusterserver.Server
 
 	shapers        shaper.Shapers
 	hosts          *host.Hosts
 	clusterConnMng *clusterconnmanager.Manager
-	localRouter    *localrouter.Router
+	localRouter    *c2s.LocalRouter
 	clusterRouter  *clusterrouter.Router
 	s2sOutProvider *s2s.OutProvider
 	s2sInHub       *s2s.InHub

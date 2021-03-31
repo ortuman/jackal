@@ -67,16 +67,18 @@ func New(router router.Router, opts Options) *Version {
 func (v *Version) Name() string { return ModuleName }
 
 // StreamFeature returns version module stream feature.
-func (v *Version) StreamFeature(_ context.Context, _ string) stravaganza.Element { return nil }
+func (v *Version) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
 
 // ServerFeatures returns version server disco features.
-func (v *Version) ServerFeatures() []string {
-	return []string{versionNamespace}
+func (v *Version) ServerFeatures(_ context.Context) ([]string, error) {
+	return []string{versionNamespace}, nil
 }
 
 // AccountFeatures returns version account disco features.
-func (v *Version) AccountFeatures() []string {
-	return nil
+func (v *Version) AccountFeatures(_ context.Context) ([]string, error) {
+	return nil, nil
 }
 
 // MatchesNamespace tells whether namespace matches version module.

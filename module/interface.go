@@ -22,12 +22,22 @@ type hosts interface {
 	IsLocalHost(host string) bool
 }
 
-//go:generate moq -out iq_handler.mock_test.go . iqHandler
-type iqHandler interface {
-	IQHandler
+//go:generate moq -out iq_processor.mock_test.go . iqProcessor
+type iqProcessor interface {
+	IQProcessor
 }
 
-//go:generate moq -out event_handler.mock_test.go . eventHandler
-type eventHandler interface {
-	EventHandler
+//go:generate moq -out msg_preprocessor.mock_test.go . messagePreProcessor
+type messagePreProcessor interface {
+	MessagePreProcessor
+}
+
+//go:generate moq -out msg_prerouter.mock_test.go . messagePreRouter
+type messagePreRouter interface {
+	MessagePreRouter
+}
+
+//go:generate moq -out module.mock_test.go . module
+type module interface {
+	Module
 }

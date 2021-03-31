@@ -22,10 +22,9 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/c2s/localrouter"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/repository"
@@ -43,9 +42,9 @@ type c2sRouter struct {
 
 // NewRouter creates and returns an initialized C2S router.
 func NewRouter(
-	localRouter *localrouter.Router,
+	localRouter *LocalRouter,
 	clusterRouter *clusterrouter.Router,
-	resMng *resourcemanager.Manager,
+	resMng *ResourceManager,
 	rep repository.Repository,
 	sn *sonar.Sonar,
 ) router.C2SRouter {
@@ -139,22 +138,25 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	if len(resources) == 0 {
 		return router.ErrUserNotAvailable
 	}
+	var targets []jid.JID
+
 	toJID := stanza.ToJID()
 	if toJID.IsFullWithUser() {
 		// route to full resource
 		for _, res := range resources {
-			if res.JID.Resource() == toJID.Resource() {
-				if err := r.routeTo(ctx, stanza, &res); err != nil {
-					return err
-				}
-				return nil
+			if res.JID.Resource() != toJID.Resource() {
+				continue
 			}
+			if err := r.routeTo(ctx, stanza, &res); err != nil {
+				return err
+			}
+			return r.postRoutedEvent(ctx, stanza, []jid.JID{*res.JID})
 		}
 		return router.ErrResourceNotFound
 	}
 	switch stanza.(type) {
 	case *stravaganza.Message:
-		// route to prioritary resources
+		// route to highest priority resources
 		sort.Slice(resources, func(i, j int) bool {
 			return resources[i].Priority() > resources[j].Priority()
 		})
@@ -168,20 +170,22 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 			if err := r.routeTo(ctx, stanza, &res); err != nil {
 				return err
 			}
+			targets = append(targets, *res.JID)
 			routed = true
 		}
 		if !routed {
 			return router.ErrUserNotAvailable
 		}
-		return nil
+		return r.postRoutedEvent(ctx, stanza, targets)
 	}
 	// broadcast to all resources
 	for _, res := range resources {
 		if err := r.routeTo(ctx, stanza, &res); err != nil {
 			return err
 		}
+		targets = append(targets, *res.JID)
 	}
-	return nil
+	return r.postRoutedEvent(ctx, stanza, targets)
 }
 
 func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *model.Resource) error {
@@ -189,6 +193,16 @@ func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRe
 		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
 	}
 	return r.cluster.Route(ctx, stanza, toRes.JID.Node(), toRes.JID.Resource(), toRes.InstanceID)
+}
+
+func (r *c2sRouter) postRoutedEvent(ctx context.Context, stanza stravaganza.Stanza, targets []jid.JID) error {
+	return r.sn.Post(ctx, sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
+		WithInfo(&event.C2SRouterEventInfo{
+			Targets: targets,
+			Stanza:  stanza,
+		}).
+		Build(),
+	)
 }
 
 func (r *c2sRouter) isBlockedJID(ctx context.Context, destJID *jid.JID, username string) bool {

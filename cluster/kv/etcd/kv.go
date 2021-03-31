@@ -16,6 +16,8 @@ package etcdkv
 
 import (
 	"context"
+	"errors"
+	"os"
 	"time"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
@@ -28,6 +30,8 @@ const (
 	refreshLeaseTTLInterval       = time.Second * 1
 
 	keepAliveOpTimeout = time.Second * 5
+
+	maxLeaseRefreshTries = 5
 )
 
 // Options contains etcd key-value store options.
@@ -37,9 +41,10 @@ type Options struct {
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
-	cli     *etcdv3.Client
-	leaseID etcdv3.LeaseID
-	doneCh  chan chan struct{}
+	cli               *etcdv3.Client
+	leaseID           etcdv3.LeaseID
+	doneCh            chan chan struct{}
+	leaseRefreshTries int32
 }
 
 // New returns a new etcd key-value store instance.
@@ -148,8 +153,23 @@ func (k *KV) refreshLeaseTTL() {
 		select {
 		case <-tc.C:
 			ctx, cancel := context.WithTimeout(context.Background(), keepAliveOpTimeout)
-			if _, err := k.cli.KeepAliveOnce(ctx, k.leaseID); err != nil && !etcdv3.IsConnCanceled(err) {
+
+			_, err := k.cli.KeepAliveOnce(ctx, k.leaseID)
+			switch {
+			case err != nil && !etcdv3.IsConnCanceled(err):
 				log.Warnf("Failed to perform KV lease keepalive: %v", err)
+
+				k.leaseRefreshTries++
+				if k.leaseRefreshTries == maxLeaseRefreshTries || errors.Is(err, context.DeadlineExceeded) {
+					// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
+					log.Errorw("Unable to refresh KV lease keepalive...")
+					shutdownProcess()
+					cancel()
+					return
+				}
+
+			default:
+				k.leaseRefreshTries = 0
 			}
 			cancel()
 
@@ -185,4 +205,9 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 		Events: events,
 		Err:    wResp.Err(),
 	}
+}
+
+func shutdownProcess() {
+	p, _ := os.FindProcess(os.Getpid())
+	_ = p.Signal(os.Interrupt)
 }

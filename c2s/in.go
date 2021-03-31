@@ -29,7 +29,6 @@ import (
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/auth"
-	"github.com/ortuman/jackal/c2s/resourcemanager"
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/event"
@@ -96,7 +95,7 @@ func newInC2S(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *resourcemanager.Manager,
+	resMng *ResourceManager,
 	blockListRep repository.BlockList,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
@@ -346,7 +345,11 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 		sb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
-		sb.WithChildren(s.authenticatedFeatures(ctx)...)
+		authFeatures, err := s.authenticatedFeatures(ctx)
+		if err != nil {
+			return err
+		}
+		sb.WithChildren(authFeatures...)
 		s.setState(inAuthenticated)
 	}
 	_ = s.session.OpenStream(ctx, sb.Build())
@@ -510,17 +513,20 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 }
 
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
+	// preprocess message stanza
+	msg, err := s.mods.PreProcessMessage(ctx, message)
+	if err != nil {
+		return err
+	}
 	// post message received event
-	err := s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
+	err = s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
 		ID:     s.ID().String(),
 		JID:    s.JID(),
-		Stanza: message,
+		Stanza: msg,
 	})
 	if err != nil {
 		return err
 	}
-
-	msg := message
 
 sndMessage:
 	err = s.router.Route(ctx, msg)
@@ -596,7 +602,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 	return features
 }
 
-func (s *inC2S) authenticatedFeatures(ctx context.Context) []stravaganza.Element {
+func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Element, error) {
 	var features []stravaganza.Element
 
 	isSocketTr := s.tr.Type() == transport.Socket
@@ -629,8 +635,11 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) []stravaganza.Element
 	features = append(features, sessElem)
 
 	// include module stream features
-	modFeatures := s.mods.StreamFeatures(ctx, s.JID().Domain())
-	return append(features, modFeatures...)
+	modFeatures, err := s.mods.StreamFeatures(ctx, s.JID().Domain())
+	if err != nil {
+		return nil, err
+	}
+	return append(features, modFeatures...), nil
 }
 
 func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {
@@ -951,13 +960,23 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	if s.sendDisabled {
 		return nil
 	}
-	var err error
-	err = s.session.Send(ctx, elem)
+	var sndErr error
+
+	msg, ok := elem.(*stravaganza.Message)
+	if ok {
+		newMsg, err := s.mods.PreRouteMessage(ctx, msg)
+		if err != nil {
+			return err
+		}
+		sndErr = s.session.Send(ctx, newMsg)
+	} else {
+		sndErr = s.session.Send(ctx, elem)
+	}
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return err
+	return sndErr
 }
 
 func (s *inC2S) getResource() *model.Resource {

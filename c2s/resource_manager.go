@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcemanager
+package c2s
 
 import (
 	"context"
@@ -22,29 +22,27 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	resourcemanagerpb "github.com/ortuman/jackal/c2s/resourcemanager/pb"
+	resourcemanagerpb "github.com/ortuman/jackal/c2s/pb"
 	"github.com/ortuman/jackal/cluster/kv"
 	"github.com/ortuman/jackal/model"
 )
 
 const (
 	resourceKeyPrefix = "r://"
-
-	resourceValueFormat = "d=%s a=%d p=%d i=%s"
 )
 
-// Manager type is in charge of keeping track of all cluster resources.
-type Manager struct {
+// ResourceManager type is in charge of keeping track of all cluster resources.
+type ResourceManager struct {
 	kv kv.KV
 }
 
-// New creates a new resource manager given a KV storage instance.
-func New(kv kv.KV) *Manager {
-	return &Manager{kv: kv}
+// NewResourceManager creates a new resource manager given a KV storage instance.
+func NewResourceManager(kv kv.KV) *ResourceManager {
+	return &ResourceManager{kv: kv}
 }
 
 // PutResource registers or updates a resource into the manager.
-func (m *Manager) PutResource(ctx context.Context, res *model.Resource) error {
+func (m *ResourceManager) PutResource(ctx context.Context, res *model.Resource) error {
 	b, err := resourceVal(res)
 	if err != nil {
 		return err
@@ -57,7 +55,7 @@ func (m *Manager) PutResource(ctx context.Context, res *model.Resource) error {
 }
 
 // GetResource returns a previously registered resource.
-func (m *Manager) GetResource(ctx context.Context, username, resource string) (*model.Resource, error) {
+func (m *ResourceManager) GetResource(ctx context.Context, username, resource string) (*model.Resource, error) {
 	kvs, err := m.kv.GetPrefix(ctx, fmt.Sprintf("%s%s@%s", resourceKeyPrefix, username, resource))
 	if err != nil {
 		return nil, err
@@ -73,7 +71,7 @@ func (m *Manager) GetResource(ctx context.Context, username, resource string) (*
 }
 
 // GetResources returns all user registered resources.
-func (m *Manager) GetResources(ctx context.Context, username string) ([]model.Resource, error) {
+func (m *ResourceManager) GetResources(ctx context.Context, username string) ([]model.Resource, error) {
 	kvs, err := m.kv.GetPrefix(ctx, fmt.Sprintf("%s%s", resourceKeyPrefix, username))
 	if err != nil {
 		return nil, err
@@ -82,11 +80,11 @@ func (m *Manager) GetResources(ctx context.Context, username string) ([]model.Re
 }
 
 // DelResource removes a registered resource from the manager.
-func (m *Manager) DelResource(ctx context.Context, username, resource string) error {
+func (m *ResourceManager) DelResource(ctx context.Context, username, resource string) error {
 	return m.kv.Del(ctx, resourceKey(username, resource))
 }
 
-func (m *Manager) deserializeKVResources(kvs map[string][]byte) ([]model.Resource, error) {
+func (m *ResourceManager) deserializeKVResources(kvs map[string][]byte) ([]model.Resource, error) {
 	var rs []model.Resource
 	for k, v := range kvs {
 		res, err := decodeResource(k, v)
