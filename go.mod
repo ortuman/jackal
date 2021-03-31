@@ -1,6 +1,6 @@
 module github.com/ortuman/jackal
 
-go 1.15
+go 1.16
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -13,7 +13,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/jackal-xmpp/runqueue v0.5.0
+	github.com/jackal-xmpp/runqueue v0.5.2
 	github.com/jackal-xmpp/sonar v0.12.0
 	github.com/jackal-xmpp/stravaganza v0.22.0
 	github.com/kkyr/fig v0.2.0
