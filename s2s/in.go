@@ -382,8 +382,13 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 }
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
+	// preprocess message stanza
+	msg, err := s.mods.PreProcessMessage(ctx, message)
+	if err != nil {
+		return err
+	}
 	// post message received event
-	err := s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
+	err = s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
 		ID:     s.ID().String(),
 		Sender: s.sender,
 		Target: s.target,
@@ -392,7 +397,6 @@ func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message
 	if err != nil {
 		return err
 	}
-	msg := message
 
 sndMessage:
 	err = s.router.Route(ctx, msg)

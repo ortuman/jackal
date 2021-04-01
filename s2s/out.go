@@ -97,6 +97,7 @@ type outS2S struct {
 	dbParams DialbackParams
 	dialer   dialer
 	hosts    *host.Hosts
+	mods     modules
 	tlsCfg   *tls.Config
 	onClose  func(s *outS2S)
 	dbResCh  chan stream.DialbackResult
@@ -114,6 +115,7 @@ func newOutS2S(
 	target string,
 	tlsCfg *tls.Config,
 	hosts *host.Hosts,
+	mods modules,
 	opts Options,
 	kv kv.KV,
 	shapers shaper.Shapers,
@@ -125,6 +127,7 @@ func newOutS2S(
 		sender:  sender,
 		target:  target,
 		hosts:   hosts,
+		mods:    mods,
 		tlsCfg:  tlsCfg,
 		opts:    opts,
 		onClose: onClose,
@@ -142,6 +145,7 @@ func newDialbackS2S(
 	target string,
 	tlsCfg *tls.Config,
 	hosts *host.Hosts,
+	mods modules,
 	opts Options,
 	dbParams DialbackParams,
 	shapers shaper.Shapers,
@@ -151,6 +155,7 @@ func newDialbackS2S(
 		sender:   sender,
 		target:   target,
 		hosts:    hosts,
+		mods:     mods,
 		tlsCfg:   tlsCfg,
 		opts:     opts,
 		dbParams: dbParams,
@@ -537,7 +542,17 @@ func (s *outS2S) sendOrEnqueueElement(ctx context.Context, elem stravaganza.Elem
 }
 
 func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
-	err := s.session.Send(ctx, elem)
+	var sndErr error
+	msg, ok := elem.(*stravaganza.Message)
+	if ok {
+		newMsg, err := s.mods.PreRouteMessage(ctx, msg)
+		if err != nil {
+			return err
+		}
+		sndErr = s.session.Send(ctx, newMsg)
+	} else {
+		sndErr = s.session.Send(ctx, elem)
+	}
 
 	switch stanza := elem.(type) {
 	case stravaganza.Stanza:
@@ -556,7 +571,7 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return err
+	return sndErr
 }
 
 func (s *outS2S) close(ctx context.Context) error {
