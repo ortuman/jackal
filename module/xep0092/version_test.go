@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackal-xmpp/stravaganza/jid"
+
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/version"
 	"github.com/stretchr/testify/require"
@@ -44,9 +46,9 @@ func TestVersion_GetVersion(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	v := &Version{
 		opts:   Options{ShowOS: true},

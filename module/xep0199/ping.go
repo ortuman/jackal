@@ -134,13 +134,14 @@ func (p *Ping) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case isPingIQ(iq):
 		return p.sendPongReply(ctx, iq)
 	default:
-		return p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
 	}
 }
 
 func (p *Ping) sendPongReply(ctx context.Context, pingIQ *stravaganza.IQ) error {
 	pongIQ := xmpputil.MakeResultIQ(pingIQ, nil)
-	_ = p.router.Route(ctx, pongIQ)
+	_, _ = p.router.Route(ctx, pongIQ)
 	return nil
 }
 
@@ -193,7 +194,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 	ctx, cancel := context.WithTimeout(context.Background(), modRequestTimeout)
 	defer cancel()
 
-	_ = p.router.Route(ctx, iq)
+	_, _ = p.router.Route(ctx, iq)
 
 	// schedule ack timeout
 	p.mu.Lock()

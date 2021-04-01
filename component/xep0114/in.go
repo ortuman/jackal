@@ -296,7 +296,7 @@ func (s *inComponent) handleAuthenticated(ctx context.Context, elem stravaganza.
 		if err != nil {
 			return err
 		}
-		_ = s.router.Route(ctx, stanza)
+		_, _ = s.router.Route(ctx, stanza)
 		return nil
 
 	default:

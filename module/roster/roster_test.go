@@ -62,9 +62,9 @@ func TestRoster_SendRoster(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanza stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanza = stanza
-		return nil
+		return nil, nil
 	}
 	routerMock.C2SFunc = func() router.C2SRouter {
 		return c2sRouterMock
@@ -132,9 +132,9 @@ func TestRoster_UpdateItem(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	routerMock.C2SFunc = func() router.C2SRouter {
 		return nil
@@ -238,9 +238,9 @@ func TestRoster_RemoveItem(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	routerMock.C2SFunc = func() router.C2SRouter {
 		return nil
@@ -350,11 +350,11 @@ func TestRoster_Subscribe(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -446,11 +446,11 @@ func TestRoster_Subscribed(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -558,11 +558,11 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -672,11 +672,11 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -768,11 +768,11 @@ func TestRoster_Probe(t *testing.T) {
 
 	routerMock := &routerMock{}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -877,11 +877,11 @@ func TestRoster_Available(t *testing.T) {
 		return c2sRouterMock
 	}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mtx.Lock()
 		defer mtx.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}

@@ -19,8 +19,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
-
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
@@ -40,7 +38,6 @@ func TestS2sRouter_RouteSuccess(t *testing.T) {
 
 	// when
 	r := &s2sRouter{
-		sn:          sonar.New(),
 		outProvider: op,
 	}
 	err := r.Route(context.Background(), testMessageStanza(), "jackal.im")
@@ -59,7 +56,6 @@ func TestS2sRouter_RouteServerTimeoutError(t *testing.T) {
 
 	// when
 	r := &s2sRouter{
-		sn:          sonar.New(),
 		outProvider: op,
 	}
 	err := r.Route(context.Background(), testMessageStanza(), "jackal.im")
@@ -77,7 +73,6 @@ func TestS2sRouter_RouteServerGenericError(t *testing.T) {
 
 	// when
 	r := &s2sRouter{
-		sn:          sonar.New(),
 		outProvider: op,
 	}
 	err := r.Route(context.Background(), testMessageStanza(), "jackal.im")

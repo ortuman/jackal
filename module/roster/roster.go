@@ -176,7 +176,7 @@ func (r *Roster) processPresence(ctx context.Context, pr *stravaganza.Presence) 
 func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.ChildNamespace("query", rosterNamespace)
 	if q == nil || q.ChildrenCount() > 0 {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	usrJID := iq.FromJID()
@@ -184,12 +184,12 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// check against current roster version
 	ver, err := r.rep.FetchRosterVersion(ctx, usrJID.Node())
 	if err != nil {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	// return empty response in case version matches...
 	if ver > 0 && ver == parseVer(q.Attribute("ver")) {
-		_ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+		_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 		err = r.postRosterEvent(ctx, event.RosterRequested, &event.RosterEventInfo{
 			Username: usrJID.Node(),
 		})
@@ -201,7 +201,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
 	if err != nil {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	sb := stravaganza.NewBuilder("query").
@@ -212,7 +212,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	queryEl := sb.Build()
 
 	// route roster
-	_ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, queryEl))
+	_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, queryEl))
 
 	log.Infow("Fetched user roster", "jid", usrJID.String(), "xep", "roster")
 
@@ -228,32 +228,32 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.ChildNamespace("query", rosterNamespace)
 	if q == nil {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	items := q.Children("item")
 	if len(items) != 1 {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	ri, err := decodeRosterItem(items[0])
 	if err != nil {
-		_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return err
 	}
 	switch ri.Subscription {
 	case rostermodel.Remove:
 		if err := r.removeItem(ctx, ri, iq.FromJID().ToBareJID()); err != nil {
-			_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+			_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
 	default:
 		if err := r.updateItem(ctx, ri, iq.FromJID().Node()); err != nil {
-			_ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+			_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
 	}
-	_ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil
 }
 
@@ -301,7 +301,7 @@ func (r *Roster) processSubscribe(ctx context.Context, presence *stravaganza.Pre
 	}
 	log.Infow("Processed 'subscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 
-	_ = r.router.Route(ctx, p)
+	_, _ = r.router.Route(ctx, p)
 	return nil
 }
 
@@ -363,7 +363,7 @@ func (r *Roster) processSubscribed(ctx context.Context, presence *stravaganza.Pr
 	}
 	log.Infow("Processed 'subscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 
-	_ = r.router.Route(ctx, p)
+	_, _ = r.router.Route(ctx, p)
 	return r.routePresencesFrom(ctx, contactJID.Node(), userJID, stravaganza.AvailableType)
 }
 
@@ -411,7 +411,7 @@ func (r *Roster) processUnsubscribe(ctx context.Context, presence *stravaganza.P
 			}
 		}
 	}
-	_ = r.router.Route(ctx, p)
+	_, _ = r.router.Route(ctx, p)
 
 	if usrSub == rostermodel.To || usrSub == rostermodel.Both {
 		if err := r.routePresencesFrom(ctx, contactJID.Node(), userJID, stravaganza.UnavailableType); err != nil {
@@ -479,7 +479,7 @@ routePresence:
 			}
 		}
 	}
-	_ = r.router.Route(ctx, p)
+	_, _ = r.router.Route(ctx, p)
 
 	if cntSub == rostermodel.From || cntSub == rostermodel.Both {
 		if err := r.routePresencesFrom(ctx, contactJID.Node(), userJID, stravaganza.UnavailableType); err != nil {
@@ -495,7 +495,7 @@ func (r *Roster) processProbe(ctx context.Context, presence *stravaganza.Presenc
 	contactJID := presence.ToJID().ToBareJID()
 
 	if !r.hosts.IsLocalHost(contactJID.Domain()) {
-		_ = r.router.Route(ctx, presence)
+		_, _ = r.router.Route(ctx, presence)
 		return nil
 	}
 	ri, err := r.rep.FetchRosterItem(ctx, contactJID.Node(), userJID.String())
@@ -514,7 +514,7 @@ func (r *Roster) processProbe(ctx context.Context, presence *stravaganza.Presenc
 			continue
 		}
 		p := xmpputil.MakePresence(res.JID, userJID, stravaganza.AvailableType, res.Presence.AllChildren())
-		_ = r.router.Route(ctx, p)
+		_, _ = r.router.Route(ctx, p)
 	}
 	log.Infow("Processed 'probe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	return nil
@@ -528,7 +528,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 
 	replyOnBehalf := r.hosts.IsLocalHost(userJID.Domain()) && userJID.MatchesWithOptions(contactJID, jid.MatchesBare)
 	if !replyOnBehalf {
-		_ = r.router.Route(ctx, presence)
+		_, _ = r.router.Route(ctx, presence)
 		return nil
 	}
 	items, err := r.rep.FetchRosterItems(ctx, userJID.Node())
@@ -552,7 +552,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 		}
 		for _, res := range rss {
 			pr := xmpputil.MakePresence(fromJID, res.JID, stravaganza.AvailableType, presence.AllChildren())
-			_ = r.router.Route(ctx, pr)
+			_, _ = r.router.Route(ctx, pr)
 		}
 		// deliver pending notifications
 		rns, err := r.rep.FetchRosterNotifications(ctx, userJID.Node())
@@ -560,7 +560,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			return err
 		}
 		for _, rn := range rns {
-			_ = r.router.Route(ctx, rn.Presence)
+			_, _ = r.router.Route(ctx, rn.Presence)
 		}
 		// deliver roster presences
 		for _, item := range items {
@@ -575,7 +575,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 				}
 				// send probe presence to remote domain
 				p := xmpputil.MakePresence(fromJID, itemJID, stravaganza.ProbeType, nil)
-				_ = r.router.Route(ctx, p)
+				_, _ = r.router.Route(ctx, p)
 			}
 		}
 		// mark first avail
@@ -590,7 +590,7 @@ broadcastPresence:
 		case rostermodel.From, rostermodel.Both:
 			itemJID, _ := jid.NewWithString(item.JID, true)
 			p := xmpputil.MakePresence(presence.FromJID(), itemJID, presence.Type(), presence.AllChildren())
-			_ = r.router.Route(ctx, p)
+			_, _ = r.router.Route(ctx, p)
 		}
 	}
 	if isAvailable {
@@ -691,10 +691,10 @@ func (r *Roster) removeItem(ctx context.Context, ri *rostermodel.Item, userJID *
 		}
 	}
 	if unsubscribe != nil {
-		_ = r.router.Route(ctx, unsubscribe)
+		_, _ = r.router.Route(ctx, unsubscribe)
 	}
 	if unsubscribed != nil {
-		_ = r.router.Route(ctx, unsubscribed)
+		_, _ = r.router.Route(ctx, unsubscribed)
 	}
 
 	if usrSub == rostermodel.From || usrSub == rostermodel.Both {
@@ -796,7 +796,7 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 			).
 			BuildIQ(false)
 
-		_ = r.router.Route(ctx, pushIQ)
+		_, _ = r.router.Route(ctx, pushIQ)
 	}
 	return nil
 }
@@ -812,7 +812,7 @@ func (r *Roster) routePresencesFrom(ctx context.Context, username string, toJID 
 			children = pr.AllChildren()
 		}
 		p := xmpputil.MakePresence(res.JID, toJID, presenceType, children)
-		_ = r.router.Route(ctx, p)
+		_, _ = r.router.Route(ctx, p)
 	}
 	return nil
 }

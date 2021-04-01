@@ -131,10 +131,11 @@ type extModuleConfig struct {
 		} `fig:"namespace"`
 	} `fig:"iq_handler"`
 
-	MessageHandler struct {
-		PreProcessor bool `fig:"pre_processor"`
-		PreRouter    bool `fig:"pre_router"`
-	} `fig:"message_handler"`
+	StanzaInterceptors []struct {
+		ID       int  `fig:"id"`
+		Incoming bool `fig:"incoming"`
+		Priority int  `fig:"priority"`
+	} `fig:"stanza_interceptors"`
 }
 
 type s2sOutConfig struct {

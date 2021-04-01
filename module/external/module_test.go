@@ -16,10 +16,14 @@ package externalmodule
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackal-xmpp/stravaganza/jid"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -157,7 +161,6 @@ func TestModule_IQHandler(t *testing.T) {
 	mod := &ExtModule{
 		opts: Options{
 			NamespaceMatcher: stringmatcher.Any,
-			IsIQHandler:      true,
 		},
 		cl: cl,
 	}
@@ -181,27 +184,18 @@ func TestModule_IQHandler(t *testing.T) {
 	require.Len(t, cl.ProcessIQCalls(), 1)
 }
 
-func TestModule_MessageHandler(t *testing.T) {
+func TestModule_InterceptStanza(t *testing.T) {
 	// given
 	cl := &grpcClientMock{}
-	cl.PreProcessMessageFunc = func(ctx context.Context, in *extmodulepb.PreProcessMessageRequest, opts ...grpc.CallOption) (*extmodulepb.PreProcessMessageResponse, error) {
-		return &extmodulepb.PreProcessMessageResponse{
-			Message: in.Message,
-		}, nil
-	}
-	cl.PreRouteMessageFunc = func(ctx context.Context, in *extmodulepb.PreRouteMessageRequest, opts ...grpc.CallOption) (*extmodulepb.PreRouteMessageResponse, error) {
-		return &extmodulepb.PreRouteMessageResponse{
-			Message: in.Message,
+	cl.InterceptStanzaFunc = func(ctx context.Context, in *extmodulepb.InterceptStanzaRequest, opts ...grpc.CallOption) (*extmodulepb.InterceptStanzaResponse, error) {
+		return &extmodulepb.InterceptStanzaResponse{
+			Stanza: in.Stanza,
 		}, nil
 	}
 	dialExtConnFn = func(ctx context.Context, addr string, isSecure bool) (extmodulepb.ModuleClient, io.Closer, error) {
 		return cl, nil, nil
 	}
 	mod := &ExtModule{
-		opts: Options{
-			IsMessagePreProcessor: true,
-			IsMessagePreRouter:    true,
-		},
 		cl: cl,
 	}
 	b := stravaganza.NewMessageBuilder()
@@ -216,16 +210,15 @@ func TestModule_MessageHandler(t *testing.T) {
 	)
 	msg0, _ := b.BuildMessage(true)
 
+	fmt.Println(reflect.TypeOf(msg0).String())
+
 	// when
-	msg1, _ := mod.PreProcessMessage(context.Background(), msg0)
-	msg2, _ := mod.PreRouteMessage(context.Background(), msg1)
+	msg1, _ := mod.InterceptStanza(context.Background(), msg0, 1234)
 
 	// then
 	require.NotNil(t, msg1)
-	require.NotNil(t, msg2)
 
-	require.Len(t, cl.PreProcessMessageCalls(), 1)
-	require.Len(t, cl.PreRouteMessageCalls(), 1)
+	require.Len(t, cl.InterceptStanzaCalls(), 1)
 }
 
 func TestModule_Route(t *testing.T) {
@@ -248,11 +241,11 @@ func TestModule_Route(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	closer := &closerMock{}

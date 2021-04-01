@@ -238,9 +238,9 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			}
 
 			var routed bool
-			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 				routed = true
-				return nil
+				return nil, nil
 			}
 
 			stm := &inComponent{
@@ -334,8 +334,8 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 				return nil
 			}
 
-			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
-				return nil
+			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+				return nil, nil
 			}
 
 			stm := &inComponent{

@@ -138,9 +138,10 @@ modules:
 #          in: [ https://jackal.im ]
 #          # reg_ex: ^org.jackal.+
 #
-#      message_handler:
-#        pre_processor: true
-#        pre_router: true
+#      stanza_interceptors:
+#        - id: 1
+#          incoming: true
+#          priority: 500
 
 components:
 

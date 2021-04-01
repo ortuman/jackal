@@ -58,7 +58,7 @@ func (s *routerSuite) TestRouter_NotExistingAccount() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.CheckUserExistence)
+	_, err := s.router.Route(context.Background(), msg, router.CheckUserExistence)
 
 	// then
 	s.Require().Equal(router.ErrNotExistingAccount, err)
@@ -74,7 +74,7 @@ func (s *routerSuite) TestRouter_BlockedJID() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.ValidateSenderJID)
+	_, err := s.router.Route(context.Background(), msg, router.ValidateSenderJID)
 
 	// then
 	s.Require().Equal(router.ErrBlockedSender, err)
@@ -91,7 +91,7 @@ func (s *routerSuite) TestRouter_NotAuthenticated() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
+	_, err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
 
 	// then
 	s.Require().Equal(router.ErrUserNotAvailable, err)
@@ -112,7 +112,7 @@ func (s *routerSuite) TestRouter_ResourceNotFound() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
+	_, err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
 
 	// then
 	s.Require().Equal(router.ErrResourceNotFound, err)
@@ -138,7 +138,7 @@ func (s *routerSuite) TestRouter_LocalRoute() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
+	_, err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
 
 	// then
 	s.Require().Nil(err)
@@ -166,7 +166,7 @@ func (s *routerSuite) TestRouter_ClusterRoute() {
 
 	// when
 	msg := testMessageStanza()
-	err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
+	_, err := s.router.Route(context.Background(), msg, router.RoutingOptions(0))
 
 	// then
 	s.Require().Nil(err)

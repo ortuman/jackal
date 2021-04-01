@@ -36,9 +36,9 @@ func TestDisco_GetServerInfo(t *testing.T) {
 
 	routerMock := &routerMock{}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	d := &Disco{
 		router: routerMock,
@@ -82,9 +82,9 @@ func TestDisco_GetServerItems(t *testing.T) {
 	// given
 	routerMock := &routerMock{}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	compMock := &componentMock{}
 	compMock.NameFunc = func() string {
@@ -143,9 +143,9 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 
 	routerMock := &routerMock{}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	repMock := &rosterRepositoryMock{}
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {
@@ -198,9 +198,9 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	// given
 	routerMock := &routerMock{}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 	repMock := &rosterRepositoryMock{}
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {

@@ -95,7 +95,7 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnrouted, m.onMessageUnrouted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SStreamMessageUnsent, m.onMessageUnrouted))
+	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamMessageUnrouted, m.onMessageUnrouted))
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
 
@@ -158,7 +158,7 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	}
 	// route offline messages
 	for _, msg := range ms {
-		_ = m.router.Route(ctx, msg)
+		_, _ = m.router.Route(ctx, msg)
 	}
 	log.Infow("Delivered offline messages", "queue_size", len(ms), "username", username, "xep", "offline")
 
@@ -195,7 +195,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 		return err
 	}
 	if qSize == m.opts.QueueSize { // offline queue is full
-		_ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
 		return nil
 	}
 	// add delay info

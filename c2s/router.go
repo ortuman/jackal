@@ -24,7 +24,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
-	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/repository"
@@ -57,7 +56,7 @@ func NewRouter(
 	}
 }
 
-func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts router.RoutingOptions) error {
+func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts router.RoutingOptions) (targets []jid.JID, err error) {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
@@ -66,21 +65,21 @@ func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routin
 	if (routingOpts & router.CheckUserExistence) > 0 {
 		exists, err := r.rep.UserExists(ctx, username) // user exists?
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
-			return router.ErrNotExistingAccount
+			return nil, router.ErrNotExistingAccount
 		}
 	}
 	if (routingOpts & router.ValidateSenderJID) > 0 {
 		if r.isBlockedJID(ctx, fromJID, toJID.Node()) { // check whether sender JID is blocked
-			return router.ErrBlockedSender
+			return nil, router.ErrBlockedSender
 		}
 	}
 	// get user available resources
 	rss, err := r.resMng.GetResources(ctx, username)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return r.route(ctx, stanza, rss)
 }
@@ -134,9 +133,9 @@ func (r *c2sRouter) Stop(ctx context.Context) error {
 	return r.local.Stop(ctx)
 }
 
-func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []model.Resource) error {
+func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []model.Resource) ([]jid.JID, error) {
 	if len(resources) == 0 {
-		return router.ErrUserNotAvailable
+		return nil, router.ErrUserNotAvailable
 	}
 	var targets []jid.JID
 
@@ -148,11 +147,11 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 				continue
 			}
 			if err := r.routeTo(ctx, stanza, &res); err != nil {
-				return err
+				return nil, err
 			}
-			return r.postRoutedEvent(ctx, stanza, []jid.JID{*res.JID})
+			return []jid.JID{*res.JID}, nil
 		}
-		return router.ErrResourceNotFound
+		return nil, router.ErrResourceNotFound
 	}
 	switch stanza.(type) {
 	case *stravaganza.Message:
@@ -168,24 +167,24 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 				break
 			}
 			if err := r.routeTo(ctx, stanza, &res); err != nil {
-				return err
+				return nil, err
 			}
 			targets = append(targets, *res.JID)
 			routed = true
 		}
 		if !routed {
-			return router.ErrUserNotAvailable
+			return nil, router.ErrUserNotAvailable
 		}
-		return r.postRoutedEvent(ctx, stanza, targets)
+		return targets, nil
 	}
 	// broadcast to all resources
 	for _, res := range resources {
 		if err := r.routeTo(ctx, stanza, &res); err != nil {
-			return err
+			return nil, err
 		}
 		targets = append(targets, *res.JID)
 	}
-	return r.postRoutedEvent(ctx, stanza, targets)
+	return targets, nil
 }
 
 func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *model.Resource) error {
@@ -193,16 +192,6 @@ func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRe
 		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
 	}
 	return r.cluster.Route(ctx, stanza, toRes.JID.Node(), toRes.JID.Resource(), toRes.InstanceID)
-}
-
-func (r *c2sRouter) postRoutedEvent(ctx context.Context, stanza stravaganza.Stanza, targets []jid.JID) error {
-	return r.sn.Post(ctx, sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
-		WithInfo(&event.C2SRouterEventInfo{
-			Targets: targets,
-			Stanza:  stanza,
-		}).
-		Build(),
-	)
 }
 
 func (r *c2sRouter) isBlockedJID(ctx context.Context, destJID *jid.JID, username string) bool {

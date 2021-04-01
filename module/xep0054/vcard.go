@@ -113,13 +113,13 @@ func (v *VCard) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	vc := iq.ChildNamespace("vCard", vCardNamespace)
 	if vc == nil || vc.ChildrenCount() > 0 {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	toJID := iq.ToJID()
 	vCard, err := v.rep.FetchVCard(ctx, toJID.Node())
 	if err != nil {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	var resIQ *stravaganza.IQ
@@ -133,7 +133,7 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	log.Infow("Fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
 
-	_ = v.router.Route(ctx, resIQ)
+	_, _ = v.router.Route(ctx, resIQ)
 
 	// post vCard fetched event
 	return v.sn.Post(
@@ -149,7 +149,7 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	vCard := iq.ChildNamespace("vCard", vCardNamespace)
 	if vCard == nil {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	fromJID := iq.FromJID()
@@ -157,17 +157,17 @@ func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 
 	allowed := toJID.IsServer() || (toJID.Node() == fromJID.Node())
 	if !allowed {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
 	err := v.rep.UpsertVCard(ctx, vCard, toJID.Node())
 	if err != nil {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	log.Infow("Saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
 
-	_ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
 	// post vCard updated event
 	return v.sn.Post(
