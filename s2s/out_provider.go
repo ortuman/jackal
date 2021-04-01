@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/module"
+
 	"github.com/jackal-xmpp/sonar"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/ortuman/jackal/cluster/kv"
@@ -33,6 +35,7 @@ import (
 // OutProvider is an outgoing S2S stream provider.
 type OutProvider struct {
 	hosts   *host.Hosts
+	mods    modules
 	opts    Options
 	kv      kv.KV
 	shapers shaper.Shapers
@@ -49,6 +52,7 @@ type OutProvider struct {
 // NewOutProvider creates and initializes a new OutProvider instance.
 func NewOutProvider(
 	hosts *host.Hosts,
+	mods *module.Modules,
 	kv kv.KV,
 	shapers shaper.Shapers,
 	sn *sonar.Sonar,
@@ -56,6 +60,7 @@ func NewOutProvider(
 ) *OutProvider {
 	op := &OutProvider{
 		hosts:      hosts,
+		mods:       mods,
 		shapers:    shapers,
 		kv:         kv,
 		sn:         sn,
@@ -189,6 +194,7 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		target,
 		p.tlsConfig(target),
 		p.hosts,
+		p.mods,
 		p.opts,
 		p.kv,
 		p.shapers,
@@ -203,6 +209,7 @@ func (p *OutProvider) newDialbackS2S(sender, target string, dbParam DialbackPara
 		target,
 		p.tlsConfig(target),
 		p.hosts,
+		p.mods,
 		p.opts,
 		dbParam,
 		p.shapers,
