@@ -337,14 +337,19 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
 	}
+	// apply incoming stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
+	if err != nil {
+		return err
+	}
 	// handle stanza
-	switch stanza := stanza.(type) {
+	switch tst := tst.(type) {
 	case *stravaganza.IQ:
-		return s.processIQ(ctx, stanza)
+		return s.processIQ(ctx, tst)
 	case *stravaganza.Presence:
-		return s.processPresence(ctx, stanza)
+		return s.processPresence(ctx, tst)
 	case *stravaganza.Message:
-		return s.processMessage(ctx, stanza)
+		return s.processMessage(ctx, tst)
 	default:
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
@@ -364,31 +369,45 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
-	err = s.router.Route(ctx, iq)
+	// apply outgoing stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, iq, false)
+	if err != nil {
+		return err
+	}
+	_, err = s.router.Route(ctx, tst)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
+
 	case router.ErrRemoteServerNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerNotFound, iq).Element())
+
 	case router.ErrRemoteServerTimeout:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
+
 	case router.ErrBlockedSender:
 		// sender is a blocked JID
 		if iq.IsGet() || iq.IsSet() {
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
 		}
+
+	case nil:
+		return s.postStreamEvent(ctx, event.S2SInStreamIQRouted, &event.S2SStreamEventInfo{
+			ID:     s.ID().String(),
+			Sender: s.sender,
+			Target: s.target,
+			Stanza: iq,
+		})
+
+	default:
+		return err
 	}
 	return nil
 }
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
-	// preprocess message stanza
-	msg, err := s.mods.PreProcessMessage(ctx, message)
-	if err != nil {
-		return err
-	}
 	// post message received event
-	err = s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
+	err := s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
 		ID:     s.ID().String(),
 		Sender: s.sender,
 		Target: s.target,
@@ -397,9 +416,15 @@ func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message
 	if err != nil {
 		return err
 	}
+	msg := message
 
-sndMessage:
-	err = s.router.Route(ctx, msg)
+sendMsg:
+	// apply outgoing stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, msg, false)
+	if err != nil {
+		return err
+	}
+	_, err = s.router.Route(ctx, tst)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -407,7 +432,7 @@ sndMessage:
 			WithAttribute(stravaganza.From, message.FromJID().String()).
 			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
 			BuildMessage(false)
-		goto sndMessage
+		goto sendMsg
 
 	case router.ErrNotExistingAccount, router.ErrBlockedSender:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
@@ -422,14 +447,24 @@ sndMessage:
 		if !s.mods.IsEnabled(offline.ModuleName) {
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
-		return s.postStreamEvent(ctx, event.S2SStreamMessageUnsent, &event.S2SStreamEventInfo{
+		return s.postStreamEvent(ctx, event.S2SInStreamMessageUnrouted, &event.S2SStreamEventInfo{
 			ID:     s.ID().String(),
 			Sender: s.sender,
 			Target: s.target,
-			Stanza: message,
+			Stanza: msg,
 		})
+
+	case nil:
+		return s.postStreamEvent(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{
+			ID:     s.ID().String(),
+			Sender: s.sender,
+			Target: s.target,
+			Stanza: msg,
+		})
+
+	default:
+		return err
 	}
-	return err
 }
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
@@ -444,7 +479,23 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		return err
 	}
 	if presence.ToJID().IsFullWithUser() {
-		_ = s.router.Route(ctx, presence)
+		tst, err := s.mods.InterceptStanza(ctx, presence, false)
+		if err != nil {
+			return err
+		}
+		_, err = s.router.Route(ctx, tst)
+		switch err {
+		case nil:
+			return s.postStreamEvent(ctx, event.S2SInStreamPresenceRouted, &event.S2SStreamEventInfo{
+				ID:     s.ID().String(),
+				Sender: s.sender,
+				Target: s.target,
+				Stanza: presence,
+			})
+
+		default:
+			return err
+		}
 	}
 	return nil
 }

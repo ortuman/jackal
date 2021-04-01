@@ -16,6 +16,7 @@ package module
 
 import (
 	"context"
+	"sort"
 
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -56,28 +57,43 @@ type IQProcessor interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
-// MessagePreProcessor represents a message preprocessor module type.
-type MessagePreProcessor interface {
-	Module
+// StanzaInterceptor type allows to dynamically transform stanza content.
+// Interceptors may be invoked upon receiving a stanza or before sending it to the target.
+type StanzaInterceptor struct {
+	// ID is the interceptor identifier. Note this identifier is intended to discern which interceptor
+	// is being invoked when calling InterceptStanza method, so it doesn't need to be unique across different modules .
+	ID int
 
-	// PreProcessMessage will be invoked as soon as a message stanza is received a over a C2S stream.
-	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	// Incoming tells whether the interceptor should be invoked. Either upon receiving a stanza or before sending it to the target.
+	Incoming bool
+
+	// Priority represents interceptor priority that's used to determined which interceptors should be invoked first.
+	// The higher the number the more priority.
+	Priority int
 }
 
-// MessagePreRouter represents a message prerouter module type.
-type MessagePreRouter interface {
+// StanzaInterceptorProcessor represents an stanza interceptor module type.
+type StanzaInterceptorProcessor interface {
 	Module
 
-	// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
-	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	// Interceptors returns a containing total module interceptors.
+	Interceptors() []StanzaInterceptor
+
+	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
+	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error)
+}
+
+type stanzaInterceptor struct {
+	StanzaInterceptor
+	fn func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error)
 }
 
 // Modules is the global module hub.
 type Modules struct {
 	mods             []Module
 	iqProcessors     []IQProcessor
-	msgPreProcessors []MessagePreProcessor
-	msgPreRouters    []MessagePreRouter
+	recvInterceptors []stanzaInterceptor
+	sendInterceptors []stanzaInterceptor
 	hosts            hosts
 	router           router.Router
 }
@@ -93,20 +109,7 @@ func NewModules(
 		hosts:  hosts,
 		router: router,
 	}
-	for _, mod := range m.mods {
-		iqPr, ok := mod.(IQProcessor)
-		if ok {
-			m.iqProcessors = append(m.iqProcessors, iqPr)
-		}
-		msgPrePr, ok := mod.(MessagePreProcessor)
-		if ok {
-			m.msgPreProcessors = append(m.msgPreProcessors, msgPrePr)
-		}
-		msgPreRt, ok := mod.(MessagePreRouter)
-		if ok {
-			m.msgPreRouters = append(m.msgPreRouters, msgPreRt)
-		}
-	}
+	m.setupModules()
 	return m
 }
 
@@ -157,34 +160,29 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	// ...IQ not handled...
 	resp, _ := stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Stanza(false)
-	_ = m.router.Route(ctx, resp)
+	_, _ = m.router.Route(ctx, resp)
 	return nil
 }
 
-// PreProcessMessage performs message preprocessing returning the resulting message stanza.
-func (m *Modules) PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-	newMsg := msg
-	for _, prePr := range m.msgPreProcessors {
-		var err error
-		newMsg, err = prePr.PreProcessMessage(ctx, newMsg)
-		if err != nil {
-			return nil, err
-		}
+// InterceptStanza performs module stanza transformation.
+func (m *Modules) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
+	var interceptors []stanzaInterceptor
+	switch {
+	case incoming:
+		interceptors = m.recvInterceptors
+	default:
+		interceptors = m.sendInterceptors
 	}
-	return newMsg, nil
-}
+	var err error
 
-// PreRouteMessage performs message prerouting returning the resulting message stanza.
-func (m *Modules) PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-	newMsg := msg
-	for _, preR := range m.msgPreRouters {
-		var err error
-		newMsg, err = preR.PreRouteMessage(ctx, newMsg)
+	ts := stanza
+	for _, inter := range interceptors {
+		ts, err = inter.fn(ctx, ts, inter.ID)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return newMsg, nil
+	return ts, nil
 }
 
 // IsEnabled tells whether a specific module it's been registered.
@@ -210,4 +208,38 @@ func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaga
 		}
 	}
 	return sfs, nil
+}
+
+func (m *Modules) setupModules() {
+	for _, mod := range m.mods {
+		iqPr, ok := mod.(IQProcessor)
+		if ok {
+			m.iqProcessors = append(m.iqProcessors, iqPr)
+		}
+		stanzaInterceptorPr, ok := mod.(StanzaInterceptorProcessor)
+		if ok {
+			stanzaInterceptors := stanzaInterceptorPr.Interceptors()
+			for _, interceptor := range stanzaInterceptors {
+				switch {
+				case interceptor.Incoming:
+					m.recvInterceptors = append(m.recvInterceptors, stanzaInterceptor{
+						StanzaInterceptor: interceptor,
+						fn:                stanzaInterceptorPr.InterceptStanza,
+					})
+				default:
+					m.sendInterceptors = append(m.sendInterceptors, stanzaInterceptor{
+						StanzaInterceptor: interceptor,
+						fn:                stanzaInterceptorPr.InterceptStanza,
+					})
+				}
+			}
+		}
+	}
+	// sort interceptors by priority
+	sort.Slice(m.recvInterceptors, func(i, j int) bool {
+		return m.recvInterceptors[i].Priority > m.recvInterceptors[j].Priority
+	})
+	sort.Slice(m.sendInterceptors, func(i, j int) bool {
+		return m.sendInterceptors[i].Priority > m.sendInterceptors[j].Priority
+	})
 }

@@ -242,7 +242,7 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 				continue
 			}
 			ctx, cancel := m.requestContext()
-			_ = m.router.Route(ctx, stanza)
+			_, _ = m.router.Route(ctx, stanza)
 			cancel()
 
 		case io.EOF:
@@ -277,16 +277,6 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			C2SStreamEvInfo: &evInf,
 		}
 
-	case *event.C2SRouterEventInfo:
-		var evInf extmodulepb.C2SRouterEventInfo
-		for _, target := range inf.Targets {
-			evInf.Targets = append(evInf.Targets, target.String())
-		}
-		evInf.Stanza = inf.Stanza.Proto()
-		ret.Payload = &extmodulepb.ProcessEventRequest_C2SRouterEvInfo{
-			C2SRouterEvInfo: &evInf,
-		}
-
 	case *event.S2SStreamEventInfo:
 		var evInf extmodulepb.S2SStreamEventInfo
 		evInf.Id = inf.ID
@@ -297,14 +287,6 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_S2SStreamEvInfo{
 			S2SStreamEvInfo: &evInf,
-		}
-
-	case *event.S2SRouterEventInfo:
-		ret.Payload = &extmodulepb.ProcessEventRequest_S2SRouterEvInfo{
-			S2SRouterEvInfo: &extmodulepb.S2SRouterEventInfo{
-				Target: inf.Target.String(),
-				Stanza: inf.Stanza.Proto(),
-			},
 		}
 
 	case *event.ExternalComponentEventInfo:

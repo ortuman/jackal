@@ -30,7 +30,7 @@ func initRouters(a *serverApp) {
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
 	a.c2sRouter = c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.sonar)
-	a.s2sRouter = s2s.NewRouter(a.s2sOutProvider, a.sonar)
+	a.s2sRouter = s2s.NewRouter(a.s2sOutProvider)
 
 	// init global router
 	a.router = router.New(a.hosts, a.c2sRouter, a.s2sRouter)

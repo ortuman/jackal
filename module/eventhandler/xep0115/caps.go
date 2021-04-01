@@ -263,7 +263,7 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 		).
 		BuildIQ(false)
 
-	_ = m.router.Route(ctx, discoIQ)
+	_, _ = m.router.Route(ctx, discoIQ)
 }
 
 func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ, ci capsInfo) error {

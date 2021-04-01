@@ -85,17 +85,24 @@ func TestModules_ProcessIQ(t *testing.T) {
 	require.Len(t, iqPrMock.ProcessIQCalls(), 1)
 }
 
-func TestModules_PreProcessMessage(t *testing.T) {
+func TestModules_InterceptStanza(t *testing.T) {
 	// given
-	msgPrePrMock := &messagePreProcessorMock{}
-	msgPrePrMock.PreProcessMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-		return msg, nil
+	stanzaInterceptorPrMock := &StanzaInterceptorProcessorMock{}
+	stanzaInterceptorPrMock.InterceptorsFunc = func() []StanzaInterceptor {
+		return []StanzaInterceptor{
+			{Incoming: true, Priority: 500},
+			{Incoming: false, Priority: 500},
+		}
+	}
+	stanzaInterceptorPrMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
+		return stanza, nil
 	}
 
 	mods := &Modules{
-		mods:             []Module{msgPrePrMock},
-		msgPreProcessors: []MessagePreProcessor{msgPrePrMock},
+		mods: []Module{stanzaInterceptorPrMock},
 	}
+	mods.setupModules()
+
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
 	b.WithAttribute("to", "ortuman@jackal.im/balcony")
@@ -107,36 +114,9 @@ func TestModules_PreProcessMessage(t *testing.T) {
 	msg, _ := b.BuildMessage(true)
 
 	// when
-	_, _ = mods.PreProcessMessage(context.Background(), msg)
+	_, _ = mods.InterceptStanza(context.Background(), msg, true)
+	_, _ = mods.InterceptStanza(context.Background(), msg, false)
 
 	// then
-	require.Len(t, msgPrePrMock.PreProcessMessageCalls(), 1)
-}
-
-func TestModules_PreRouteMessage(t *testing.T) {
-	// given
-	msgPreRtMock := &messagePreRouterMock{}
-	msgPreRtMock.PreRouteMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-		return msg, nil
-	}
-
-	mods := &Modules{
-		mods:          []Module{msgPreRtMock},
-		msgPreRouters: []MessagePreRouter{msgPreRtMock},
-	}
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg, _ := b.BuildMessage(true)
-
-	// when
-	_, _ = mods.PreRouteMessage(context.Background(), msg)
-
-	// then
-	require.Len(t, msgPreRtMock.PreRouteMessageCalls(), 1)
+	require.Len(t, stanzaInterceptorPrMock.InterceptStanzaCalls(), 2)
 }

@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackal-xmpp/stravaganza/jid"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/event"
@@ -248,11 +250,11 @@ func TestModule_Route(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	closer := &closerMock{}

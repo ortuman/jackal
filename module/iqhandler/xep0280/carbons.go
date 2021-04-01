@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/module"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -89,8 +91,8 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
-	p.subs = append(p.subs, p.sn.Subscribe(event.C2SRouterStanzaRouted, p.onC2SStanzaRouted))
-	p.subs = append(p.subs, p.sn.Subscribe(event.S2SRouterStanzaRouted, p.onS2SStanzaRouted))
+	p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamMessageRouted, p.onC2SMessageRouted))
+	p.subs = append(p.subs, p.sn.Subscribe(event.S2SInStreamMessageRouted, p.onS2SMessageRouted))
 
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
@@ -116,13 +118,24 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case iq.IsSet():
 		return p.processIQ(ctx, iq)
 	default:
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 	}
 	return nil
 }
 
-// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
-func (p *Carbons) PreRouteMessage(_ context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
+// Interceptors returns carbons stanza interceptor.
+func (p *Carbons) Interceptors() []module.StanzaInterceptor {
+	return []module.StanzaInterceptor{
+		{Incoming: false},
+	}
+}
+
+// InterceptStanza will be used by carbons module to strip private element.
+func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {
+	msg, ok := stanza.(*stravaganza.Message)
+	if !ok {
+		return stanza, nil
+	}
 	if msg.ChildNamespace("private", carbonsNamespace) == nil {
 		return msg, nil
 	}
@@ -131,8 +144,8 @@ func (p *Carbons) PreRouteMessage(_ context.Context, msg *stravaganza.Message) (
 		BuildMessage(false)
 }
 
-func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SRouterEventInfo)
+func (p *Carbons) onC2SMessageRouted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
 
 	msg, ok := inf.Stanza.(*stravaganza.Message)
 	if !ok {
@@ -141,8 +154,8 @@ func (p *Carbons) onC2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 	return p.processMessage(ctx, msg, inf.Targets)
 }
 
-func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.S2SRouterEventInfo)
+func (p *Carbons) onS2SMessageRouted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.S2SStreamEventInfo)
 
 	msg, ok := inf.Stanza.(*stravaganza.Message)
 	if !ok {
@@ -154,7 +167,7 @@ func (p *Carbons) onS2SStanzaRouted(ctx context.Context, ev sonar.Event) error {
 func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJID := iq.FromJID()
 	if !p.hosts.IsLocalHost(fromJID.Domain()) {
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAllowed))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAllowed))
 		return nil
 	}
 	switch {
@@ -171,11 +184,11 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		log.Infow("Disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
 
 	default:
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 
-	_ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil
 }
 
@@ -217,7 +230,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		if !enabled {
 			continue
 		}
-		_ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
+		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
 	}
 	return nil
 }
@@ -232,7 +245,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		if !enabled {
 			continue
 		}
-		_ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
+		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
 	}
 	return nil
 }

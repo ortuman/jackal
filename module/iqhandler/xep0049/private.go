@@ -80,7 +80,8 @@ func (p *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	toJid := iq.ToJID()
 	validTo := toJid.IsServer() || toJid.Node() == fromJid.Node()
 	if !validTo {
-		return p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		return nil
 	}
 	q := iq.ChildNamespace("query", privateNamespace)
 	switch {
@@ -89,7 +90,8 @@ func (p *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case iq.IsSet() && q != nil:
 		return p.setPrivate(ctx, iq, q)
 	default:
-		return p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
 	}
 }
 
@@ -117,7 +119,7 @@ func (p *Private) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 
 func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
 	if q.ChildrenCount() != 1 {
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	prv := q.AllChildren()[0]
@@ -125,14 +127,14 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 	isValidNS := isValidNamespace(ns)
 	if prv.ChildrenCount() > 0 || !isValidNS {
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	username := iq.FromJID().Node()
 
 	prvElem, err := p.rep.FetchPrivate(ctx, ns, username)
 	if err != nil {
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
@@ -147,7 +149,7 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	qb.WithChild(pb.Build())
 	resIQ := xmpputil.MakeResultIQ(iq, qb.Build())
 
-	_ = p.router.Route(ctx, resIQ)
+	_, _ = p.router.Route(ctx, resIQ)
 
 	// post private fetched event
 	return p.sn.Post(
@@ -162,18 +164,18 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
 	if q.ChildrenCount() == 0 {
-		_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	username := iq.FromJID().Node()
 	for _, prv := range q.AllChildren() {
 		ns := prv.Attribute(stravaganza.Namespace)
 		if !isValidNamespace(ns) {
-			_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+			_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 			return nil
 		}
 		if err := p.rep.UpsertPrivate(ctx, prv, ns, username); err != nil {
-			_ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+			_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
@@ -191,7 +193,7 @@ func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			return err
 		}
 	}
-	_ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil
 }
 
