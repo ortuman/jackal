@@ -80,8 +80,7 @@ type modules interface {
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 
-	PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
-	PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error)
+	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error)
 
 	IsEnabled(modName string) bool
 }

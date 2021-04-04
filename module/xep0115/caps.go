@@ -36,8 +36,8 @@ import (
 	"github.com/ortuman/jackal/log"
 	capsmodel "github.com/ortuman/jackal/model/caps"
 	discomodel "github.com/ortuman/jackal/model/disco"
-	"github.com/ortuman/jackal/module/iqhandler/xep0030"
 	"github.com/ortuman/jackal/module/xep0004"
+	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 )
@@ -263,7 +263,7 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 		).
 		BuildIQ(false)
 
-	_ = m.router.Route(ctx, discoIQ)
+	_, _ = m.router.Route(ctx, discoIQ)
 }
 
 func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ, ci capsInfo) error {

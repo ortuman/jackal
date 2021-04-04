@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router/stream"
@@ -29,10 +30,10 @@ type Router interface {
 
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza stravaganza.Stanza) error
+	Route(ctx context.Context, stanza stravaganza.Stanza) (targets []jid.JID, err error)
 
 	// MustRoute forces stanza routing by ignoring user's blocking list.
-	MustRoute(ctx context.Context, stanza stravaganza.Stanza) error
+	MustRoute(ctx context.Context, stanza stravaganza.Stanza) (targets []jid.JID, err error)
 
 	// C2SRouter returns the underlying C2S router.
 	C2S() C2SRouter
@@ -62,10 +63,10 @@ const (
 type C2SRouter interface {
 	// Route routes a stanza applying server rules for handling XML stanzas.
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
-	Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) error
+	Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) (targets []jid.JID, err error)
 
 	// Disconnect performs disconnection over an available resource.
-	Disconnect(ctx context.Context, res *model.Resource, streamerr *streamerror.Error) error
+	Disconnect(ctx context.Context, res *model.Resource, streamErr *streamerror.Error) error
 
 	// Register registers a new stream.
 	Register(stm stream.C2S) error
@@ -114,11 +115,11 @@ func New(hosts *host.Hosts, c2sRouter C2SRouter, s2sRouter S2SRouter) Router {
 	}
 }
 
-func (r *router) MustRoute(ctx context.Context, stanza stravaganza.Stanza) error {
+func (r *router) MustRoute(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 	return r.route(ctx, stanza, CheckUserExistence)
 }
 
-func (r *router) Route(ctx context.Context, stanza stravaganza.Stanza) error {
+func (r *router) Route(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 	return r.route(ctx, stanza, CheckUserExistence|ValidateSenderJID)
 }
 
@@ -150,13 +151,16 @@ func (r *router) Stop(ctx context.Context) error {
 	return r.s2s.Stop(ctx)
 }
 
-func (r *router) route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) error {
+func (r *router) route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) ([]jid.JID, error) {
 	toJID := stanza.ToJID()
 	if r.hosts.IsLocalHost(toJID.Domain()) {
 		return r.c2s.Route(ctx, stanza, routingOpts)
 	}
 	if r.s2s == nil {
-		return ErrRemoteServerNotFound
+		return nil, ErrRemoteServerNotFound
 	}
-	return r.s2s.Route(ctx, stanza, r.hosts.DefaultHostName())
+	if err := r.s2s.Route(ctx, stanza, r.hosts.DefaultHostName()); err != nil {
+		return nil, err
+	}
+	return []jid.JID{*stanza.ToJID()}, nil
 }

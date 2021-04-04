@@ -390,12 +390,12 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// router mocks
 			var routed bool
-			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+			routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 				if tt.routeError != nil {
-					return tt.routeError
+					return nil, tt.routeError
 				}
 				routed = true
-				return nil
+				return nil, nil
 			}
 
 			// components mock
@@ -403,8 +403,8 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// modules mock
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
-			modsMock.PreProcessMessageFunc = func(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-				return msg, nil
+			modsMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
+				return stanza, nil
 			}
 
 			// session mock

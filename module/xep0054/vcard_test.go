@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackal-xmpp/stravaganza/jid"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
@@ -52,9 +54,9 @@ func TestVCard_GetVCard(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	v := &VCard{
@@ -100,9 +102,9 @@ func TestVCard_SetVCard(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	v := &VCard{

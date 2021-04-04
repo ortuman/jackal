@@ -36,9 +36,9 @@ func TestPing_Pong(t *testing.T) {
 	outBuf := bytes.NewBuffer(nil)
 
 	routerMock := &routerMock{}
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		_ = stanza.ToXML(outBuf, true)
-		return nil
+		return nil, nil
 	}
 	p := New(routerMock, sonar.New(), Options{})
 
@@ -66,11 +66,11 @@ func TestPing_SendPing(t *testing.T) {
 	var outStanza stravaganza.Stanza
 
 	routerMock := &routerMock{}
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		outStanza = stanza
-		return nil
+		return nil, nil
 	}
 	sn := sonar.New()
 	p := New(routerMock, sn, Options{
@@ -102,8 +102,8 @@ func TestPing_SendPing(t *testing.T) {
 func TestPing_Timeout(t *testing.T) {
 	// given
 	routerMock := &routerMock{}
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
-		return nil
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		return nil, nil
 	}
 	c2sStream := &streamMock{}
 	c2sStream.DisconnectFunc = func(streamErr *streamerror.Error) <-chan error {

@@ -16,7 +16,6 @@ package event
 
 import (
 	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
 const (
@@ -47,12 +46,18 @@ const (
 	// S2SInStreamMessageReceived event is posted when a message stanza is received over an incoming S2S stream.
 	S2SInStreamMessageReceived = "s2s.in.stream.message_received"
 
-	// S2SStreamMessageUnsent event is posted when a received message stanza could not be routed
-	// because no destination available resource was found.
-	S2SStreamMessageUnsent = "s2s.in.stream.message_unsent"
+	// S2SInStreamIQRouted event is posted when an iq stanza is successfully routed to one ore more S2S streams.
+	S2SInStreamIQRouted = "s2s.in.stream.iq_routed"
 
-	// S2SRouterStanzaRouted event is posted when a stanza is successfully routed to a S2S stream.
-	S2SRouterStanzaRouted = "s2s.router.stanza_routed"
+	// S2SInStreamPresenceRouted event is posted when a presence stanza is successfully routed to one ore more S2S streams.
+	S2SInStreamPresenceRouted = "s2s.in.stream.presence_routed"
+
+	// S2SInStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more S2S streams.
+	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
+
+	// S2SInStreamMessageUnrouted event is posted when a received message stanza could not be routed
+	// because no destination available resource was found.
+	S2SInStreamMessageUnrouted = "s2s.in.stream.message_unrouted"
 )
 
 // S2SStreamEventInfo contains all info associated to a S2S event.
@@ -66,15 +71,6 @@ type S2SStreamEventInfo struct {
 	// Target is the S2S target domain.
 	Target string
 
-	// Stanza represents the event associated stanza.
-	Stanza stravaganza.Stanza
-}
-
-// S2SRouterEventInfo contains all info associated to a S2S router event.
-type S2SRouterEventInfo struct {
-	// Target is the remote JID to which the event stanza was routed.
-	Target *jid.JID
-
-	// Stanza represents the event associated stanza.
+	// Stanza is the event associated stanza.
 	Stanza stravaganza.Stanza
 }

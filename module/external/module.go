@@ -26,6 +26,7 @@ import (
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/module"
 	extmodulepb "github.com/ortuman/jackal/module/external/pb"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/util/stringmatcher"
@@ -42,17 +43,11 @@ type Options struct {
 	// Topics defines all topics to which a external module wants to subscribe to.
 	Topics []string
 
-	// NamespaceMatcher is define external module namespace string matcher.
+	// NamespaceMatcher defines external module namespace matcher.
 	NamespaceMatcher stringmatcher.Matcher
 
-	// IsIQHandler marks external module to behave as an iq handler.
-	IsIQHandler bool
-
-	// IsMessagePreProcessor marks external module to behave as a message preprocessor.
-	IsMessagePreProcessor bool
-
-	// IsMessagePreRouter marks external module to behave as a message preprocessor.
-	IsMessagePreRouter bool
+	// Interceptors contains external module StanzaInterceptor set.
+	Interceptors []module.StanzaInterceptor
 }
 
 var dialExtConnFn = dialExtConn
@@ -124,7 +119,7 @@ func (m *ExtModule) AccountFeatures(ctx context.Context) ([]string, error) {
 
 // MatchesNamespace tells whether namespace matches external iq handler.
 func (m *ExtModule) MatchesNamespace(namespace string) bool {
-	if !m.opts.IsIQHandler || m.opts.NamespaceMatcher == nil {
+	if m.opts.NamespaceMatcher == nil {
 		return false
 	}
 	return m.opts.NamespaceMatcher.Matches(namespace)
@@ -132,51 +127,28 @@ func (m *ExtModule) MatchesNamespace(namespace string) bool {
 
 // ProcessIQ will be invoked whenever iq stanza should be processed by this external module.
 func (m *ExtModule) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
-	if !m.opts.IsIQHandler {
-		return nil
-	}
 	_, err := m.cl.ProcessIQ(ctx, &extmodulepb.ProcessIQRequest{
 		Iq: iq.Proto(),
 	})
 	return err
 }
 
-// PreProcessMessage will be invoked as soon as a message stanza is received a over a C2S stream.
-func (m *ExtModule) PreProcessMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-	if !m.opts.IsMessagePreProcessor {
-		return msg, nil
-	}
-	resp, err := m.cl.PreProcessMessage(ctx, &extmodulepb.PreProcessMessageRequest{
-		Message: msg.Proto(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	newMsg, err := stravaganza.NewBuilderFromProto(resp.Message).
-		BuildMessage(false)
-	if err != nil {
-		return nil, err
-	}
-	return newMsg, nil
+// Interceptors returns a set of all module interceptors.
+func (m *ExtModule) Interceptors() []module.StanzaInterceptor {
+	return m.opts.Interceptors
 }
 
-// PreRouteMessage will be invoked before a message stanza is routed a over a C2S stream.
-func (m *ExtModule) PreRouteMessage(ctx context.Context, msg *stravaganza.Message) (*stravaganza.Message, error) {
-	if !m.opts.IsMessagePreRouter {
-		return msg, nil
-	}
-	resp, err := m.cl.PreRouteMessage(ctx, &extmodulepb.PreRouteMessageRequest{
-		Message: msg.Proto(),
+// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
+func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
+	resp, err := m.cl.InterceptStanza(ctx, &extmodulepb.InterceptStanzaRequest{
+		Id:     int64(id),
+		Stanza: stanza.Proto(),
 	})
 	if err != nil {
 		return nil, err
 	}
-	newMsg, err := stravaganza.NewBuilderFromProto(resp.Message).
-		BuildMessage(false)
-	if err != nil {
-		return nil, err
-	}
-	return newMsg, nil
+	return stravaganza.NewBuilderFromProto(resp.Stanza).
+		BuildStanza(false)
 }
 
 // Start starts external module.
@@ -201,9 +173,6 @@ func (m *ExtModule) Start(ctx context.Context) error {
 		m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
 	}
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
-		"event_topics", m.opts.Topics,
-		"message_pre_processor", m.opts.IsMessagePreProcessor,
-		"message_pre_router", m.opts.IsMessagePreRouter,
 		"secured", m.isSecure,
 	)
 	return nil
@@ -242,7 +211,7 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 				continue
 			}
 			ctx, cancel := m.requestContext()
-			_ = m.router.Route(ctx, stanza)
+			_, _ = m.router.Route(ctx, stanza)
 			cancel()
 
 		case io.EOF:
@@ -270,21 +239,14 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		if inf.JID != nil {
 			evInf.Jid = inf.JID.String()
 		}
+		for _, target := range inf.Targets {
+			evInf.Targets = append(evInf.Targets, target.String())
+		}
 		if inf.Stanza != nil {
 			evInf.Stanza = inf.Stanza.Proto()
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_C2SStreamEvInfo{
 			C2SStreamEvInfo: &evInf,
-		}
-
-	case *event.C2SRouterEventInfo:
-		var evInf extmodulepb.C2SRouterEventInfo
-		for _, target := range inf.Targets {
-			evInf.Targets = append(evInf.Targets, target.String())
-		}
-		evInf.Stanza = inf.Stanza.Proto()
-		ret.Payload = &extmodulepb.ProcessEventRequest_C2SRouterEvInfo{
-			C2SRouterEvInfo: &evInf,
 		}
 
 	case *event.S2SStreamEventInfo:
@@ -297,14 +259,6 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_S2SStreamEvInfo{
 			S2SStreamEvInfo: &evInf,
-		}
-
-	case *event.S2SRouterEventInfo:
-		ret.Payload = &extmodulepb.ProcessEventRequest_S2SRouterEvInfo{
-			S2SRouterEvInfo: &extmodulepb.S2SRouterEventInfo{
-				Target: inf.Target.String(),
-				Stanza: inf.Stanza.Proto(),
-			},
 		}
 
 	case *event.ExternalComponentEventInfo:

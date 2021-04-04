@@ -36,7 +36,7 @@ import (
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/module/eventhandler/offline"
+	"github.com/ortuman/jackal/module/offline"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -438,14 +438,19 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 			Build()
 		return s.sendElement(ctx, se.Element())
 	}
+	// apply incoming stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
+	if err != nil {
+		return err
+	}
 	// handle stanza
-	switch stanza := stanza.(type) {
+	switch tst := tst.(type) {
 	case *stravaganza.IQ:
-		return s.processIQ(ctx, stanza)
+		return s.processIQ(ctx, tst)
 	case *stravaganza.Presence:
-		return s.processPresence(ctx, stanza)
+		return s.processPresence(ctx, tst)
 	case *stravaganza.Message:
-		return s.processMessage(ctx, stanza)
+		return s.processMessage(ctx, tst)
 	default:
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
@@ -471,7 +476,12 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
-	err = s.router.Route(ctx, iq)
+	// apply outgoing stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, iq, false)
+	if err != nil {
+		return err
+	}
+	targets, err := s.router.Route(ctx, tst)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
@@ -479,11 +489,23 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerNotFound, iq).Element())
 	case router.ErrRemoteServerTimeout:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
+
 	case router.ErrBlockedSender:
 		// sender is a blocked JID
 		if iq.IsGet() || iq.IsSet() {
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
 		}
+
+	case nil:
+		return s.postStreamEvent(ctx, event.C2SStreamIQRouted, &event.C2SStreamEventInfo{
+			ID:      s.ID().String(),
+			JID:     s.JID(),
+			Targets: targets,
+			Stanza:  iq,
+		})
+
+	default:
+		return err
 	}
 	return nil
 }
@@ -500,8 +522,24 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 	}
 
 	if presence.ToJID().IsFullWithUser() {
-		_ = s.router.Route(ctx, presence)
-		return nil
+		// apply outgoing stanza interceptor
+		tst, err := s.mods.InterceptStanza(ctx, presence, false)
+		if err != nil {
+			return err
+		}
+		targets, err := s.router.Route(ctx, tst)
+		switch err {
+		case nil:
+			return s.postStreamEvent(ctx, event.C2SStreamPresenceRouted, &event.C2SStreamEventInfo{
+				ID:      s.ID().String(),
+				JID:     s.JID(),
+				Targets: targets,
+				Stanza:  presence,
+			})
+
+		default:
+			return err
+		}
 	}
 	// update presence
 	matchesUserJID := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
@@ -513,23 +551,24 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 }
 
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
-	// preprocess message stanza
-	msg, err := s.mods.PreProcessMessage(ctx, message)
-	if err != nil {
-		return err
-	}
 	// post message received event
-	err = s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
+	err := s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
 		ID:     s.ID().String(),
 		JID:    s.JID(),
-		Stanza: msg,
+		Stanza: message,
 	})
 	if err != nil {
 		return err
 	}
+	msg := message
 
-sndMessage:
-	err = s.router.Route(ctx, msg)
+sendMsg:
+	// apply outgoing stanza interceptor
+	tst, err := s.mods.InterceptStanza(ctx, msg, false)
+	if err != nil {
+		return err
+	}
+	targets, err := s.router.Route(ctx, tst)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -537,7 +576,7 @@ sndMessage:
 			WithAttribute(stravaganza.From, message.FromJID().String()).
 			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
 			BuildMessage(false)
-		goto sndMessage
+		goto sendMsg
 
 	case router.ErrNotExistingAccount, router.ErrBlockedSender:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
@@ -555,10 +594,20 @@ sndMessage:
 		return s.postStreamEvent(ctx, event.C2SStreamMessageUnrouted, &event.C2SStreamEventInfo{
 			ID:     s.ID().String(),
 			JID:    s.JID(),
-			Stanza: message,
+			Stanza: msg,
 		})
+
+	case nil:
+		return s.postStreamEvent(ctx, event.C2SStreamMessageRouted, &event.C2SStreamEventInfo{
+			ID:      s.ID().String(),
+			JID:     s.JID(),
+			Targets: targets,
+			Stanza:  msg,
+		})
+
+	default:
+		return err
 	}
-	return err
 }
 
 func (s *inC2S) handleSessionError(ctx context.Context, err error) {
@@ -960,23 +1009,12 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	if s.sendDisabled {
 		return nil
 	}
-	var sndErr error
-
-	msg, ok := elem.(*stravaganza.Message)
-	if ok {
-		newMsg, err := s.mods.PreRouteMessage(ctx, msg)
-		if err != nil {
-			return err
-		}
-		sndErr = s.session.Send(ctx, newMsg)
-	} else {
-		sndErr = s.session.Send(ctx, elem)
-	}
+	err := s.session.Send(ctx, elem)
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return sndErr
+	return err
 }
 
 func (s *inC2S) getResource() *model.Resource {

@@ -92,7 +92,7 @@ func (v *Version) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case iq.IsGet():
 		return v.getVersion(ctx, iq)
 	case iq.IsSet():
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 	}
 	return nil
 }
@@ -113,7 +113,7 @@ func (v *Version) Stop(_ context.Context) error {
 func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.ChildNamespace("query", versionNamespace)
 	if q == nil || q.ChildrenCount() > 0 {
-		_ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	// send version info
@@ -136,7 +136,7 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 				Build(),
 		)
 	}
-	_ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
+	_, _ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
 
 	log.Infow("Sent software version", "username", iq.FromJID().Node(), "resource", iq.FromJID().Resource(), "xep", XEPNumber)
 	return nil

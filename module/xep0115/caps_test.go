@@ -20,12 +20,11 @@ import (
 	"testing"
 	"time"
 
-	capsmodel "github.com/ortuman/jackal/model/caps"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/event"
+	capsmodel "github.com/ortuman/jackal/model/caps"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	"github.com/ortuman/jackal/module/xep0004"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
@@ -41,9 +40,9 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	sn := sonar.New()

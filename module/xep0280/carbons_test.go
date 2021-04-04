@@ -53,9 +53,9 @@ func TestCarbons_Enable(t *testing.T) {
 		return c2sRouterMock
 	}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -119,9 +119,9 @@ func TestCarbons_Disable(t *testing.T) {
 		return c2sRouterMock
 	}
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	hMock := &hostsMock{}
@@ -167,9 +167,9 @@ func TestCarbons_SentCC(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
@@ -194,8 +194,6 @@ func TestCarbons_SentCC(t *testing.T) {
 		sn:     sn,
 	}
 
-	remoteJID, _ := jid.NewWithString("jabber.org", true)
-
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("id", "i1234")
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
@@ -212,9 +210,10 @@ func TestCarbons_SentCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.S2SRouterStanzaRouted).
-		WithInfo(&event.S2SRouterEventInfo{
-			Target: remoteJID,
+	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.S2SInStreamMessageRouted).
+		WithInfo(&event.S2SStreamEventInfo{
+			Sender: "jackal.im",
+			Target: "jabber.org",
 			Stanza: msg,
 		}).
 		Build(),
@@ -236,9 +235,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	routerMock := &routerMock{}
 
 	var respStanzas []stravaganza.Stanza
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		respStanzas = append(respStanzas, stanza)
-		return nil
+		return nil, nil
 	}
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
@@ -283,8 +282,8 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SRouterStanzaRouted).
-		WithInfo(&event.C2SRouterEventInfo{
+	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamMessageRouted).
+		WithInfo(&event.C2SStreamEventInfo{
 			Targets: []jid.JID{*jd2},
 			Stanza:  msg,
 		}).
@@ -302,7 +301,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	require.NotNil(t, routedMsg.ChildNamespace("received", carbonsNamespace))
 }
 
-func TestCarbons_PreRoute(t *testing.T) {
+func TestCarbons_InterceptStanza(t *testing.T) {
 	// given
 	c := &Carbons{
 		sn: sonar.New(),
@@ -324,9 +323,9 @@ func TestCarbons_PreRoute(t *testing.T) {
 	msg, _ := b.BuildMessage(true)
 
 	// when
-	msg, err := c.PreRouteMessage(context.Background(), msg)
+	tst, err := c.InterceptStanza(context.Background(), msg, 0)
 
 	// then
 	require.Nil(t, err)
-	require.Nil(t, msg.ChildNamespace("private", carbonsNamespace))
+	require.Nil(t, tst.ChildNamespace("private", carbonsNamespace))
 }

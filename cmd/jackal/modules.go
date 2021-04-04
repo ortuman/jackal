@@ -16,16 +16,16 @@ package main
 
 import (
 	"github.com/ortuman/jackal/module"
-	"github.com/ortuman/jackal/module/eventhandler/offline"
-	"github.com/ortuman/jackal/module/eventhandler/xep0115"
 	externalmodule "github.com/ortuman/jackal/module/external"
-	"github.com/ortuman/jackal/module/iqhandler/roster"
-	"github.com/ortuman/jackal/module/iqhandler/xep0030"
-	"github.com/ortuman/jackal/module/iqhandler/xep0049"
-	"github.com/ortuman/jackal/module/iqhandler/xep0054"
-	"github.com/ortuman/jackal/module/iqhandler/xep0092"
-	"github.com/ortuman/jackal/module/iqhandler/xep0199"
-	"github.com/ortuman/jackal/module/iqhandler/xep0280"
+	"github.com/ortuman/jackal/module/offline"
+	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0030"
+	"github.com/ortuman/jackal/module/xep0049"
+	"github.com/ortuman/jackal/module/xep0054"
+	"github.com/ortuman/jackal/module/xep0092"
+	"github.com/ortuman/jackal/module/xep0115"
+	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/module/xep0280"
 	"github.com/ortuman/jackal/util/stringmatcher"
 	stringsutil "github.com/ortuman/jackal/util/strings"
 )
@@ -126,8 +126,13 @@ func initExtModules(a *serverApp, configs []extModuleConfig) ([]module.Module, e
 		default:
 			opts.NamespaceMatcher = stringmatcher.Any
 		}
-		opts.IsMessagePreProcessor = cfg.MessageHandler.PreProcessor
-		opts.IsMessagePreRouter = cfg.MessageHandler.PreRouter
+		for _, interceptor := range cfg.StanzaInterceptors {
+			opts.Interceptors = append(opts.Interceptors, module.StanzaInterceptor{
+				ID:       interceptor.ID,
+				Incoming: interceptor.Incoming,
+				Priority: interceptor.Priority,
+			})
+		}
 
 		extMods = append(extMods, externalmodule.New(cfg.Address, cfg.IsSecure, a.router, a.sonar, opts))
 	}

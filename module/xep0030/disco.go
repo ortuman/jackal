@@ -120,7 +120,7 @@ func (d *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case iq.IsGet():
 		return d.getDiscoInfo(ctx, iq)
 	case iq.IsSet():
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (d *Disco) AccountProvider() InfoProvider {
 func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.Child("query")
 	if q == nil {
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	var prov InfoProvider
@@ -190,7 +190,7 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	case discoItemsNamespace:
 		return d.sendDiscoItems(ctx, prov, toJID, fromJID, node, iq)
 	default:
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 }
@@ -201,10 +201,10 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 	case err == nil:
 		break
 	case errors.Is(err, errSubscriptionRequired):
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
 		return err
 	default:
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	sb := stravaganza.NewBuilder("query").
@@ -237,7 +237,7 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 	for _, form := range forms {
 		sb.WithChild(form.Element())
 	}
-	_ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
+	_, _ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
 	return nil
 }
 
@@ -247,10 +247,10 @@ func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fr
 	case err == nil:
 		break
 	case errors.Is(err, errSubscriptionRequired):
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
 		return err
 	default:
-		_ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	qb := stravaganza.NewBuilder("query").
@@ -267,6 +267,6 @@ func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fr
 		}
 		qb.WithChild(itemB.Build())
 	}
-	_ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
+	_, _ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
 	return nil
 }

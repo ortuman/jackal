@@ -84,9 +84,9 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	routerMock := &routerMock{}
 
 	output := bytes.NewBuffer(nil)
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		_ = stanza.ToXML(output, true)
-		return nil
+		return nil, nil
 	}
 
 	lockMock := &lockMock{}
@@ -146,9 +146,9 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	routerMock := &routerMock{}
 
 	output := bytes.NewBuffer(nil)
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) error {
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
 		_ = stanza.ToXML(output, true)
-		return nil
+		return nil, nil
 	}
 	hostsMock := &hostsMock{}
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
