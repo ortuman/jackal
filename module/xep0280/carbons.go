@@ -130,7 +130,7 @@ func (p *Carbons) Interceptors() []module.StanzaInterceptor {
 	}
 }
 
-// InterceptStanza will be used by carbons module to strip private element.
+// InterceptStanza will be used by carbons module to strip private element before routing stanza.
 func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {
 	msg, ok := stanza.(*stravaganza.Message)
 	if !ok {

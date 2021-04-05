@@ -147,8 +147,24 @@ func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stan
 	if err != nil {
 		return nil, err
 	}
-	return stravaganza.NewBuilderFromProto(resp.Stanza).
-		BuildStanza(false)
+	if resp.Interrupt {
+		return nil, module.ErrInterceptStanzaInterrupted
+	}
+	// ensure stanza type
+	switch stanza.(type) {
+	case *stravaganza.IQ:
+		return stravaganza.NewBuilderFromProto(resp.Stanza).
+			BuildIQ(false)
+	case *stravaganza.Presence:
+		return stravaganza.NewBuilderFromProto(resp.Stanza).
+			BuildPresence(false)
+	case *stravaganza.Message:
+		return stravaganza.NewBuilderFromProto(resp.Stanza).
+			BuildMessage(false)
+	default:
+		return stravaganza.NewBuilderFromProto(resp.Stanza).
+			BuildStanza(false)
+	}
 }
 
 // Start starts external module.

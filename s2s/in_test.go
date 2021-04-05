@@ -273,28 +273,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			expectedState:  inConnected,
 		},
 		{
-			name:  "Connected/RouteIQBlockedSender",
-			state: inConnected,
-			flags: fSecured | fAuthenticated | fDialbackKeyAuthorized,
-			sessionResFn: func() (stravaganza.Element, error) {
-				iq, _ := stravaganza.NewIQBuilder().
-					WithAttribute(stravaganza.From, "ortuman@jabber.org/yard").
-					WithAttribute(stravaganza.To, "noelia@jackal.im/hall").
-					WithAttribute(stravaganza.Type, stravaganza.SetType).
-					WithAttribute(stravaganza.ID, "iq_1").
-					WithChild(
-						stravaganza.NewBuilder("ping").
-							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
-							Build(),
-					).
-					BuildIQ(false)
-				return iq, nil
-			},
-			routeError:     router.ErrBlockedSender,
-			expectedOutput: `<iq from="noelia@jackal.im/hall" to="ortuman@jabber.org/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
-			expectedState:  inConnected,
-		},
-		{
 			name:  "Bounded/RoutePresenceSuccess",
 			state: inConnected,
 			flags: fSecured | fAuthenticated | fDialbackKeyAuthorized,
@@ -330,28 +308,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			},
 			expectedState: inConnected,
 			expectRouted:  true,
-		},
-		{
-			name:  "Bounded/RouteMessageBlockedSender",
-			state: inConnected,
-			flags: fSecured | fAuthenticated | fDialbackKeyAuthorized,
-			sessionResFn: func() (stravaganza.Element, error) {
-				pr, _ := stravaganza.NewMessageBuilder().
-					WithAttribute(stravaganza.From, "ortuman@jabber.org/yard").
-					WithAttribute(stravaganza.To, "noelia@jackal.im/hall").
-					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
-					WithAttribute(stravaganza.ID, "msg_1").
-					WithChild(
-						stravaganza.NewBuilder("body").
-							WithText("I'll give thee a wind.").
-							Build(),
-					).
-					BuildMessage(false)
-				return pr, nil
-			},
-			routeError:     router.ErrBlockedSender,
-			expectedOutput: `<message from="noelia@jackal.im/hall" to="ortuman@jabber.org/yard" type="error" id="msg_1"><body>I&#39;ll give thee a wind.</body><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectedState:  inConnected,
 		},
 	}
 	for _, tt := range tests {

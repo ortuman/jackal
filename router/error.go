@@ -26,9 +26,6 @@ var (
 	// ErrUserNotAvailable will be returned by Route method in case no available resource with non negative priority was found.
 	ErrUserNotAvailable = errors.New("router: user not available")
 
-	// ErrBlockedSender will be returned by Route method if sender jid matches any of the user's blocked jid.
-	ErrBlockedSender = errors.New("router: sender jid is blocked")
-
 	// ErrRemoteServerNotFound will be returned by Route method if couldn't establish a connection to the remote server.
 	ErrRemoteServerNotFound = errors.New("router: remote server not found")
 
