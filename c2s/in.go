@@ -443,7 +443,7 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	switch err {
 	case nil:
 		break
-	case module.ErrStanzaInterceptionInterrupted:
+	case module.ErrInterceptStanzaInterrupted:
 		return nil // stanza processing interrupted
 	default:
 		return err
@@ -486,7 +486,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch err {
 	case nil:
 		break
-	case module.ErrStanzaInterceptionInterrupted:
+	case module.ErrInterceptStanzaInterrupted:
 		return nil // stanza routing interrupted
 	default:
 		return err
@@ -532,7 +532,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		switch err {
 		case nil:
 			break
-		case module.ErrStanzaInterceptionInterrupted:
+		case module.ErrInterceptStanzaInterrupted:
 			return nil // stanza routing interrupted
 		default:
 			return err
@@ -578,7 +578,7 @@ sendMsg:
 	switch err {
 	case nil:
 		break
-	case module.ErrStanzaInterceptionInterrupted:
+	case module.ErrInterceptStanzaInterrupted:
 		return nil // stanza routing interrupted
 	default:
 		return err

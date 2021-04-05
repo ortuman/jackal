@@ -73,8 +73,8 @@ type StanzaInterceptor struct {
 	Priority int
 }
 
-// ErrInterceptionInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
-var ErrStanzaInterceptionInterrupted = errors.New("module: stanza interception interrupted")
+// ErrInterceptStanzaInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
+var ErrInterceptStanzaInterrupted = errors.New("module: stanza interception interrupted")
 
 // StanzaInterceptorProcessor represents an stanza interceptor module type.
 type StanzaInterceptorProcessor interface {
@@ -84,7 +84,7 @@ type StanzaInterceptorProcessor interface {
 	Interceptors() []StanzaInterceptor
 
 	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-	// To interrupt interception ErrStanzaInterceptionInterrupted should be returned.
+	// To interrupt interception ErrInterceptStanzaInterrupted should be returned.
 	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
 }
 
