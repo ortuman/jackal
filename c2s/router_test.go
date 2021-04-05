@@ -64,22 +64,6 @@ func (s *routerSuite) TestRouter_NotExistingAccount() {
 	s.Require().Equal(router.ErrNotExistingAccount, err)
 }
 
-func (s *routerSuite) TestRouter_BlockedJID() {
-	// given
-	s.repositoryMock.FetchBlockListItemsFunc = func(_ context.Context, _ string) ([]model.BlockListItem, error) {
-		return []model.BlockListItem{
-			{Username: "ortuman", JID: "noelia@jackal.im"},
-		}, nil
-	}
-
-	// when
-	msg := testMessageStanza()
-	_, err := s.router.Route(context.Background(), msg, router.ValidateSenderJID)
-
-	// then
-	s.Require().Equal(router.ErrBlockedSender, err)
-}
-
 func (s *routerSuite) TestRouter_NotAuthenticated() {
 	// given
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {

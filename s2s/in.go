@@ -339,7 +339,12 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	}
 	// apply incoming stanza interceptor
 	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
-	if err != nil {
+	switch err {
+	case nil:
+		break
+	case module.ErrStanzaInterceptionInterrupted:
+		return nil // stanza processing interrupted
+	default:
 		return err
 	}
 	// handle stanza
@@ -371,7 +376,12 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	// apply outgoing stanza interceptor
 	tst, err := s.mods.InterceptStanza(ctx, iq, false)
-	if err != nil {
+	switch err {
+	case nil:
+		break
+	case module.ErrStanzaInterceptionInterrupted:
+		return nil // stanza routing interrupted
+	default:
 		return err
 	}
 	_, err = s.router.Route(ctx, tst)
@@ -385,12 +395,6 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case router.ErrRemoteServerTimeout:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
 
-	case router.ErrBlockedSender:
-		// sender is a blocked JID
-		if iq.IsGet() || iq.IsSet() {
-			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
-		}
-
 	case nil:
 		return s.postStreamEvent(ctx, event.S2SInStreamIQRouted, &event.S2SStreamEventInfo{
 			ID:     s.ID().String(),
@@ -402,7 +406,6 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	default:
 		return err
 	}
-	return nil
 }
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
@@ -421,7 +424,12 @@ func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message
 sendMsg:
 	// apply outgoing stanza interceptor
 	tst, err := s.mods.InterceptStanza(ctx, msg, false)
-	if err != nil {
+	switch err {
+	case nil:
+		break
+	case module.ErrStanzaInterceptionInterrupted:
+		return nil // stanza routing interrupted
+	default:
 		return err
 	}
 	_, err = s.router.Route(ctx, tst)
@@ -434,7 +442,7 @@ sendMsg:
 			BuildMessage(false)
 		goto sendMsg
 
-	case router.ErrNotExistingAccount, router.ErrBlockedSender:
+	case router.ErrNotExistingAccount:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case router.ErrRemoteServerNotFound:
@@ -480,7 +488,12 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 	}
 	if presence.ToJID().IsFullWithUser() {
 		tst, err := s.mods.InterceptStanza(ctx, presence, false)
-		if err != nil {
+		switch err {
+		case nil:
+			break
+		case module.ErrStanzaInterceptionInterrupted:
+			return nil // stanza routing interrupted
+		default:
 			return err
 		}
 		_, err = s.router.Route(ctx, tst)

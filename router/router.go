@@ -32,9 +32,6 @@ type Router interface {
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
 	Route(ctx context.Context, stanza stravaganza.Stanza) (targets []jid.JID, err error)
 
-	// MustRoute forces stanza routing by ignoring user's blocking list.
-	MustRoute(ctx context.Context, stanza stravaganza.Stanza) (targets []jid.JID, err error)
-
 	// C2SRouter returns the underlying C2S router.
 	C2S() C2SRouter
 
@@ -54,9 +51,6 @@ type RoutingOptions int8
 const (
 	// CheckUserExistence tells whether to check if the recipient user exists.
 	CheckUserExistence = RoutingOptions(1 << 0)
-
-	// ValidateSenderJID tells whether to check if sender is blocked.
-	ValidateSenderJID = RoutingOptions(1 << 1)
 )
 
 // C2SRouter defines C2S router interface.
@@ -115,12 +109,8 @@ func New(hosts *host.Hosts, c2sRouter C2SRouter, s2sRouter S2SRouter) Router {
 	}
 }
 
-func (r *router) MustRoute(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
-	return r.route(ctx, stanza, CheckUserExistence)
-}
-
 func (r *router) Route(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
-	return r.route(ctx, stanza, CheckUserExistence|ValidateSenderJID)
+	return r.route(ctx, stanza, CheckUserExistence)
 }
 
 func (r *router) C2S() C2SRouter {

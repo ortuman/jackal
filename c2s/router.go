@@ -57,9 +57,6 @@ func NewRouter(
 }
 
 func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts router.RoutingOptions) (targets []jid.JID, err error) {
-	fromJID := stanza.FromJID()
-	toJID := stanza.ToJID()
-
 	// apply validations
 	username := stanza.ToJID().Node()
 	if (routingOpts & router.CheckUserExistence) > 0 {
@@ -69,11 +66,6 @@ func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routin
 		}
 		if !exists {
 			return nil, router.ErrNotExistingAccount
-		}
-	}
-	if (routingOpts & router.ValidateSenderJID) > 0 {
-		if r.isBlockedJID(ctx, fromJID, toJID.Node()) { // check whether sender JID is blocked
-			return nil, router.ErrBlockedSender
 		}
 	}
 	// get user available resources
@@ -192,26 +184,4 @@ func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRe
 		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
 	}
 	return r.cluster.Route(ctx, stanza, toRes.JID.Node(), toRes.JID.Resource(), toRes.InstanceID)
-}
-
-func (r *c2sRouter) isBlockedJID(ctx context.Context, destJID *jid.JID, username string) bool {
-	blockList, err := r.rep.FetchBlockListItems(ctx, username)
-	if err != nil {
-		log.Errorf("Failed to fetch block list items: %v", err)
-		return false
-	}
-	if len(blockList) == 0 {
-		return false
-	}
-	blockListJIDs := make([]jid.JID, len(blockList))
-	for i, listItem := range blockList {
-		j, _ := jid.NewWithString(listItem.JID, true)
-		blockListJIDs[i] = *j
-	}
-	for _, blockedJID := range blockListJIDs {
-		if blockedJID.Matches(destJID) {
-			return true
-		}
-	}
-	return false
 }

@@ -548,28 +548,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			expectedState:  inBounded,
 		},
 		{
-			name:  "Bounded/RouteIQBlockedSender",
-			state: inBounded,
-			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
-			sessionResFn: func() (stravaganza.Element, error) {
-				iq, _ := stravaganza.NewIQBuilder().
-					WithAttribute(stravaganza.From, "ortuman@localhost/yard").
-					WithAttribute(stravaganza.To, "noelia@localhost/hall").
-					WithAttribute(stravaganza.Type, stravaganza.SetType).
-					WithAttribute(stravaganza.ID, "iq_1").
-					WithChild(
-						stravaganza.NewBuilder("ping").
-							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
-							Build(),
-					).
-					BuildIQ(false)
-				return iq, nil
-			},
-			routeError:     router.ErrBlockedSender,
-			expectedOutput: `<iq from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
-			expectedState:  inBounded,
-		},
-		{
 			name:  "Bounded/RouteIQFailedRemoteConnect",
 			state: inBounded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
@@ -643,28 +621,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			},
 			expectedState: inBounded,
 			expectRouted:  true,
-		},
-		{
-			name:  "Bounded/RouteMessageBlockedSender",
-			state: inBounded,
-			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
-			sessionResFn: func() (stravaganza.Element, error) {
-				pr, _ := stravaganza.NewMessageBuilder().
-					WithAttribute(stravaganza.From, "ortuman@localhost/yard").
-					WithAttribute(stravaganza.To, "noelia@localhost/hall").
-					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
-					WithAttribute(stravaganza.ID, "msg_1").
-					WithChild(
-						stravaganza.NewBuilder("body").
-							WithText("I'll give thee a wind.").
-							Build(),
-					).
-					BuildMessage(false)
-				return pr, nil
-			},
-			routeError:     router.ErrBlockedSender,
-			expectedOutput: `<message from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="msg_1"><body>I&#39;ll give thee a wind.</body><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`,
-			expectedState:  inBounded,
 		},
 	}
 	for _, tt := range tests {

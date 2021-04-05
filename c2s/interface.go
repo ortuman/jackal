@@ -127,7 +127,7 @@ type modules interface {
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 
-	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error)
+	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (retVal stravaganza.Stanza, err error)
 
 	IsEnabled(modName string) bool
 }

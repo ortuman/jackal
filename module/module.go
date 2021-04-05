@@ -16,7 +16,7 @@ package module
 
 import (
 	"context"
-	"reflect"
+	"errors"
 	"sort"
 
 	"github.com/jackal-xmpp/stravaganza"
@@ -73,6 +73,9 @@ type StanzaInterceptor struct {
 	Priority int
 }
 
+// ErrInterceptionInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
+var ErrStanzaInterceptionInterrupted = errors.New("module: stanza interception interrupted")
+
 // StanzaInterceptorProcessor represents an stanza interceptor module type.
 type StanzaInterceptorProcessor interface {
 	Module
@@ -81,12 +84,13 @@ type StanzaInterceptorProcessor interface {
 	Interceptors() []StanzaInterceptor
 
 	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error)
+	// To interrupt interception ErrStanzaInterceptionInterrupted should be returned.
+	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
 }
 
 type stanzaInterceptor struct {
 	StanzaInterceptor
-	fn func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error)
+	fn func(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
 }
 
 // Modules is the global module hub.
@@ -181,20 +185,6 @@ func (m *Modules) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza
 		ts, err = inter.fn(ctx, ts, inter.ID)
 		if err != nil {
 			return nil, err
-		}
-	}
-	if ts != stanza && reflect.TypeOf(ts).String() != reflect.TypeOf(stanza).String() {
-		// ensure stanza type
-		switch stanza.(type) {
-		case *stravaganza.IQ:
-			return stravaganza.NewBuilderFromElement(ts).
-				BuildIQ(false)
-		case *stravaganza.Presence:
-			return stravaganza.NewBuilderFromElement(ts).
-				BuildPresence(false)
-		case *stravaganza.Message:
-			return stravaganza.NewBuilderFromElement(ts).
-				BuildMessage(false)
 		}
 	}
 	return ts, nil
