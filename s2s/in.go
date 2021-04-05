@@ -371,6 +371,9 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
+	if iq.IsResult() || iq.IsError() {
+		return nil // silently ignore
+	}
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
@@ -402,10 +405,8 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 			Target: s.target,
 			Stanza: iq,
 		})
-
-	default:
-		return err
 	}
+	return nil
 }
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
@@ -469,10 +470,8 @@ sendMsg:
 			Target: s.target,
 			Stanza: msg,
 		})
-
-	default:
-		return err
 	}
+	return nil
 }
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
@@ -505,10 +504,8 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 				Target: s.target,
 				Stanza: presence,
 			})
-
-		default:
-			return err
 		}
+		return nil
 	}
 	return nil
 }

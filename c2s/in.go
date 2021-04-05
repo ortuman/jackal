@@ -478,6 +478,9 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		}
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
 	}
+	if iq.IsResult() || iq.IsError() {
+		return nil // silently ignore
+	}
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
@@ -509,10 +512,8 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 			Targets: targets,
 			Stanza:  iq,
 		})
-
-	default:
-		return err
 	}
+	return nil
 }
 
 func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
@@ -546,10 +547,8 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 				Targets: targets,
 				Stanza:  presence,
 			})
-
-		default:
-			return err
 		}
+		return nil
 	}
 	// update presence
 	matchesUserJID := s.JID().MatchesWithOptions(presence.ToJID(), jid.MatchesBare)
