@@ -19,7 +19,7 @@ import (
 )
 
 // Version represents application version.
-var Version = NewVersion(0, 52, 3)
+var Version = NewVersion(0, 52, 4)
 
 // APIVersion represents admin API version.
 var APIVersion = NewVersion(1, 0, 0)
