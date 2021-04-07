@@ -62,6 +62,14 @@ func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username st
 	return scanBlockListItems(rows)
 }
 
+func (r *pgSQLBlockListRep) DeleteBlockListItems(ctx context.Context, username string) error {
+	_, err := sq.Delete(blockListsTableName).
+		Where(sq.Eq{"username": username}).
+		RunWith(r.conn).
+		ExecContext(ctx)
+	return err
+}
+
 func scanBlockListItems(scanner rowsScanner) ([]blocklistmodel.Item, error) {
 	var ret []blocklistmodel.Item
 	for scanner.Next() {

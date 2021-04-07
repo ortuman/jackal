@@ -66,3 +66,18 @@ func TestMeasuredBlockListRep_DeleteBlockListItem(t *testing.T) {
 	// then
 	require.Len(t, repMock.DeleteBlockListItemCalls(), 1)
 }
+
+func TestMeasuredBlockListRep_DeleteBlockListItems(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+	repMock.DeleteBlockListItemsFunc = func(ctx context.Context, username string) error {
+		return nil
+	}
+	m := New(repMock)
+
+	// when
+	_ = m.DeleteBlockListItems(context.Background(), "usr-1")
+
+	// then
+	require.Len(t, repMock.DeleteBlockListItemsCalls(), 1)
+}
