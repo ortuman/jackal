@@ -1,9 +1,6 @@
 ---
 name: "⁉️ Need help with jackal?"
-about: Please file an issue asking your question
+about: Please ask your question
 
 ---
 
-<!--
-Ask your question here giving as much details as possible.
--->
