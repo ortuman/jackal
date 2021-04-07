@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ortuman/jackal/model"
+	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func TestPgSQLBlockList_Upsert(t *testing.T) {
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.UpsertBlockListItem(context.Background(), &model.BlockListItem{
+	err := s.UpsertBlockListItem(context.Background(), &blocklistmodel.Item{
 		Username: "ortuman",
 		JID:      "noelia@jackal.im",
 	})
@@ -57,7 +57,7 @@ func TestPgSQLBlockList_Delete(t *testing.T) {
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	err := s.DeleteBlockListItem(context.Background(), &model.BlockListItem{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.DeleteBlockListItem(context.Background(), &blocklistmodel.Item{Username: "ortuman", JID: "noelia@jackal.im"})
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }

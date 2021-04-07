@@ -19,13 +19,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/stretchr/testify/require"
 )
 
 func TestResourceManager_SetResource(t *testing.T) {
 	// given
-	var r0, r1 model.Resource
+	var r0, r1 coremodel.Resource
 	r0 = testResource("megaman-2", 10)
 
 	kvmock := &kvMock{}

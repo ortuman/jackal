@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	coremodel "github.com/ortuman/jackal/model/core"
+
 	"github.com/ortuman/jackal/module"
 
 	"github.com/jackal-xmpp/sonar"
@@ -29,7 +31,6 @@ import (
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
@@ -250,7 +251,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 	return nil
 }
 
-func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]model.Resource, error) {
+func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]coremodel.Resource, error) {
 	rs, err := p.resMng.GetResources(ctx, username)
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (p *Carbons) getFilteredResources(ctx context.Context, username string, ign
 	for _, j := range ignoringJIDs {
 		ignoredJIDs[j.String()] = struct{}{}
 	}
-	var ret []model.Resource
+	var ret []coremodel.Resource
 	for _, res := range rs {
 		_, ok := ignoredJIDs[res.JID.String()]
 		if ok {

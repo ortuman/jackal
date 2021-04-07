@@ -18,20 +18,20 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMeasuredUserRep_UpsertUser(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.UpsertUserFunc = func(ctx context.Context, user *model.User) error {
+	repMock.UpsertUserFunc = func(ctx context.Context, user *coremodel.User) error {
 		return nil
 	}
 	m := New(repMock)
 
 	// when
-	_ = m.UpsertUser(context.Background(), &model.User{})
+	_ = m.UpsertUser(context.Background(), &coremodel.User{})
 
 	// then
 	require.Len(t, repMock.UpsertUserCalls(), 1)
@@ -55,8 +55,8 @@ func TestMeasuredUserRep_DeleteUser(t *testing.T) {
 func TestMeasuredUserRep_FetchUser(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchUserFunc = func(ctx context.Context, username string) (*model.User, error) {
-		return &model.User{}, nil
+	repMock.FetchUserFunc = func(ctx context.Context, username string) (*coremodel.User, error) {
+		return &coremodel.User{}, nil
 	}
 	m := New(repMock)
 

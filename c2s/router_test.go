@@ -22,7 +22,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/cluster/instance"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/router"
 	"github.com/stretchr/testify/suite"
 )
@@ -69,7 +69,7 @@ func (s *routerSuite) TestRouter_NotAuthenticated() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return nil, nil
 	}
 
@@ -88,8 +88,8 @@ func (s *routerSuite) TestRouter_ResourceNotFound() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{InstanceID: instance.ID(), JID: jd},
 		}, nil
 	}
@@ -109,8 +109,8 @@ func (s *routerSuite) TestRouter_LocalRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]model.Resource, error) {
-		return []model.Resource{
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{InstanceID: instance.ID(), JID: jd},
 		}, nil
 	}
@@ -136,8 +136,8 @@ func (s *routerSuite) TestRouter_ClusterRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]model.Resource, error) {
-		return []model.Resource{
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{InstanceID: "abcd1234", JID: jd},
 		}, nil
 	}

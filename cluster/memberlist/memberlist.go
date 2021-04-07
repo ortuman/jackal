@@ -28,7 +28,7 @@ import (
 	"github.com/ortuman/jackal/cluster/kv"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/version"
 )
 
@@ -49,7 +49,7 @@ type MemberList struct {
 	ctxCancel context.CancelFunc
 	sonar     *sonar.Sonar
 	mu        sync.RWMutex
-	members   map[string]model.ClusterMember
+	members   map[string]coremodel.ClusterMember
 }
 
 // New will create a new MemberList instance using the given configuration.
@@ -58,7 +58,7 @@ func New(kv kv.KV, localPort int, sonar *sonar.Sonar) *MemberList {
 	return &MemberList{
 		localPort: localPort,
 		kv:        kv,
-		members:   make(map[string]model.ClusterMember),
+		members:   make(map[string]coremodel.ClusterMember),
 		ctx:       ctx,
 		ctxCancel: cancelFn,
 		sonar:     sonar,
@@ -94,7 +94,7 @@ func (ml *MemberList) Stop(ctx context.Context) error {
 }
 
 // GetMember returns cluster member info associated to an identifier.
-func (ml *MemberList) GetMember(instanceID string) (m model.ClusterMember, ok bool) {
+func (ml *MemberList) GetMember(instanceID string) (m coremodel.ClusterMember, ok bool) {
 	ml.mu.RLock()
 	defer ml.mu.RUnlock()
 	m, ok = ml.members[instanceID]
@@ -102,10 +102,10 @@ func (ml *MemberList) GetMember(instanceID string) (m model.ClusterMember, ok bo
 }
 
 // GetMembers returns all cluster registered members.
-func (ml *MemberList) GetMembers() map[string]model.ClusterMember {
+func (ml *MemberList) GetMembers() map[string]coremodel.ClusterMember {
 	ml.mu.RLock()
 	defer ml.mu.RUnlock()
-	res := make(map[string]model.ClusterMember)
+	res := make(map[string]coremodel.ClusterMember)
 	for k, v := range ml.members {
 		res[k] = v
 	}
@@ -163,12 +163,12 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 	return <-ch
 }
 
-func (ml *MemberList) getMembers(ctx context.Context) ([]model.ClusterMember, error) {
+func (ml *MemberList) getMembers(ctx context.Context) ([]coremodel.ClusterMember, error) {
 	vs, err := ml.kv.GetPrefix(ctx, memberKeyPrefix)
 	if err != nil {
 		return nil, err
 	}
-	res := make([]model.ClusterMember, 0, len(vs))
+	res := make([]coremodel.ClusterMember, 0, len(vs))
 	for k, val := range vs {
 		if isLocalMemberKey(k) {
 			continue // ignore local instance events
@@ -186,12 +186,12 @@ func (ml *MemberList) getMembers(ctx context.Context) ([]model.ClusterMember, er
 	return res, nil
 }
 
-func (ml *MemberList) getLocalMember() (*model.ClusterMember, error) {
+func (ml *MemberList) getLocalMember() (*coremodel.ClusterMember, error) {
 	localIP, err := getLocalIP()
 	if err != nil {
 		return nil, err
 	}
-	return &model.ClusterMember{
+	return &coremodel.ClusterMember{
 		InstanceID: instance.ID(),
 		Host:       localIP,
 		Port:       ml.localPort,
@@ -200,7 +200,7 @@ func (ml *MemberList) getLocalMember() (*model.ClusterMember, error) {
 }
 
 func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEvent) error {
-	var putMembers []model.ClusterMember
+	var putMembers []coremodel.ClusterMember
 	var delMemberKeys []string
 
 	ml.mu.Lock()
@@ -244,7 +244,7 @@ func (ml *MemberList) postUpdateEvent(ctx context.Context, evInf *event.MemberLi
 	return ml.sonar.Post(ctx, e)
 }
 
-func decodeClusterMember(key, val string) (*model.ClusterMember, error) {
+func decodeClusterMember(key, val string) (*coremodel.ClusterMember, error) {
 	instanceID := strings.TrimPrefix(key, memberKeyPrefix)
 
 	var addr, minClusterVer string
@@ -258,7 +258,7 @@ func decodeClusterMember(key, val string) (*model.ClusterMember, error) {
 		return nil, err
 	}
 	port, _ := strconv.Atoi(sPort)
-	return &model.ClusterMember{
+	return &coremodel.ClusterMember{
 		InstanceID: instanceID,
 		Host:       host,
 		Port:       port,

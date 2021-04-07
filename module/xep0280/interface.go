@@ -17,7 +17,7 @@ package xep0280
 import (
 	"context"
 
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
 )
@@ -44,5 +44,5 @@ type hosts interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]model.Resource, error)
+	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }

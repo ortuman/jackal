@@ -24,7 +24,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/c2s/pb"
 	"github.com/ortuman/jackal/cluster/kv"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 )
 
 const (
@@ -42,7 +42,7 @@ func NewResourceManager(kv kv.KV) *ResourceManager {
 }
 
 // PutResource registers or updates a resource into the manager.
-func (m *ResourceManager) PutResource(ctx context.Context, res *model.Resource) error {
+func (m *ResourceManager) PutResource(ctx context.Context, res *coremodel.Resource) error {
 	b, err := resourceVal(res)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (m *ResourceManager) PutResource(ctx context.Context, res *model.Resource) 
 }
 
 // GetResource returns a previously registered resource.
-func (m *ResourceManager) GetResource(ctx context.Context, username, resource string) (*model.Resource, error) {
+func (m *ResourceManager) GetResource(ctx context.Context, username, resource string) (*coremodel.Resource, error) {
 	kvs, err := m.kv.GetPrefix(ctx, fmt.Sprintf("%s%s@%s", resourceKeyPrefix, username, resource))
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (m *ResourceManager) GetResource(ctx context.Context, username, resource st
 }
 
 // GetResources returns all user registered resources.
-func (m *ResourceManager) GetResources(ctx context.Context, username string) ([]model.Resource, error) {
+func (m *ResourceManager) GetResources(ctx context.Context, username string) ([]coremodel.Resource, error) {
 	kvs, err := m.kv.GetPrefix(ctx, fmt.Sprintf("%s%s", resourceKeyPrefix, username))
 	if err != nil {
 		return nil, err
@@ -84,8 +84,8 @@ func (m *ResourceManager) DelResource(ctx context.Context, username, resource st
 	return m.kv.Del(ctx, resourceKey(username, resource))
 }
 
-func (m *ResourceManager) deserializeKVResources(kvs map[string][]byte) ([]model.Resource, error) {
-	var rs []model.Resource
+func (m *ResourceManager) deserializeKVResources(kvs map[string][]byte) ([]coremodel.Resource, error) {
+	var rs []coremodel.Resource
 	for k, v := range kvs {
 		res, err := decodeResource(k, v)
 		if err != nil {
@@ -96,8 +96,8 @@ func (m *ResourceManager) deserializeKVResources(kvs map[string][]byte) ([]model
 	return rs, nil
 }
 
-func decodeResource(key string, val []byte) (*model.Resource, error) {
-	var res model.Resource
+func decodeResource(key string, val []byte) (*coremodel.Resource, error) {
+	var res coremodel.Resource
 
 	ss := strings.Split(strings.TrimPrefix(key, resourceKeyPrefix), "@")
 	if len(ss) != 2 {
@@ -132,7 +132,7 @@ func resourceKey(username, resource string) string {
 	)
 }
 
-func resourceVal(res *model.Resource) ([]byte, error) {
+func resourceVal(res *coremodel.Resource) ([]byte, error) {
 	var pbPresence *stravaganza.PBElement
 	if res.Presence != nil {
 		pbPresence = res.Presence.Proto()

@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -36,7 +36,7 @@ type globalRouter interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]model.Resource, error)
+	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }
 
 //go:generate moq -out components.mock_test.go . components

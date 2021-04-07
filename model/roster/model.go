@@ -14,9 +14,34 @@
 
 package rostermodel
 
-import (
-	"github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza"
+
+const (
+	// None represents 'none' subscription type.
+	None = "none"
+
+	// From represents 'from' subscription type.
+	From = "from"
+
+	// To represents 'to' subscription type.
+	To = "to"
+
+	// Both represents 'both' subscription type.
+	Both = "both"
+
+	// Remove represents 'remove' subscription type.
+	Remove = "remove"
 )
+
+// Item represents a roster item entity.
+type Item struct {
+	Username     string
+	JID          string
+	Name         string
+	Subscription string
+	Ask          bool
+	Groups       []string
+}
 
 // Notification represents a roster subscription pending notification.
 type Notification struct {

@@ -12,12 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package coremodel
 
 import (
+	"fmt"
+
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/version"
 )
+
+// ClusterMember represents a cluster instance address and port.
+type ClusterMember struct {
+	InstanceID string
+	Host       string
+	Port       int
+	APIVer     *version.SemanticVersion
+}
+
+// String returns Member string representation.
+func (m *ClusterMember) String() string {
+	return fmt.Sprintf("%s:%d", m.Host, m.Port)
+}
+
+// User represents a user entity.
+type User struct {
+	Username string
+	Scram    struct {
+		SHA1           string
+		SHA256         string
+		SHA512         string
+		SHA3512        string
+		Salt           string
+		IterationCount int
+		PepperID       string
+	}
+}
 
 // Resource represents a resource entity.
 type Resource struct {
