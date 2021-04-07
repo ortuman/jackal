@@ -173,7 +173,6 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.comps,
 		l.mods,
 		l.resMng,
-		l.rep,
 		l.shapers,
 		l.sonar,
 		l.opts,
