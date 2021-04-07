@@ -38,7 +38,6 @@ import (
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
 	xmppparser "github.com/ortuman/jackal/parser"
-	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
 	xmppsession "github.com/ortuman/jackal/session"
@@ -71,7 +70,6 @@ type inC2S struct {
 	comps          components
 	mods           modules
 	resMng         resourceManager
-	blockListRep   repository.BlockList
 	session        session
 	shapers        shaper.Shapers
 	sn             *sonar.Sonar
@@ -96,7 +94,6 @@ func newInC2S(
 	comps *component.Components,
 	mods *module.Modules,
 	resMng *ResourceManager,
-	blockListRep repository.BlockList,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
 	opts Options,
@@ -130,7 +127,6 @@ func newInC2S(
 		comps:          comps,
 		mods:           mods,
 		resMng:         resMng,
-		blockListRep:   blockListRep,
 		shapers:        shapers,
 		rq:             runqueue.New(id.String(), log.Errorf),
 		doneCh:         make(chan struct{}),
@@ -429,14 +425,6 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	toJID := stanza.ToJID()
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
-	}
-	// check if recipient JID is blocked
-	if s.isBlockedJID(ctx, toJID) {
-		se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
-		se.ApplicationElement = stravaganza.NewBuilder("blocked").
-			WithAttribute(stravaganza.Namespace, blockingErrorNamespace).
-			Build()
-		return s.sendElement(ctx, se.Element())
 	}
 	// apply incoming stanza interceptor
 	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
@@ -1048,28 +1036,6 @@ func (s *inC2S) updateRateLimiter() error {
 	j := s.JID()
 	rLim := s.shapers.MatchingJID(j).RateLimiter()
 	return s.tr.SetReadRateLimiter(rLim)
-}
-
-func (s *inC2S) isBlockedJID(ctx context.Context, j *jid.JID) bool {
-	blockList, err := s.blockListRep.FetchBlockListItems(ctx, s.Username())
-	if err != nil {
-		log.Warnf("Failed to fetch %s block list: %v", s.Username(), err)
-		return false
-	}
-	if len(blockList) == 0 {
-		return false
-	}
-	blockListJIDs := make([]jid.JID, len(blockList))
-	for i, listItem := range blockList {
-		j, _ := jid.NewWithString(listItem.JID, true)
-		blockListJIDs[i] = *j
-	}
-	for _, blockedJID := range blockListJIDs {
-		if blockedJID.Matches(j) {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *inC2S) setJID(jd *jid.JID) {

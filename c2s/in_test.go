@@ -634,7 +634,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			compsMock := &componentsMock{}
 			modsMock := &modulesMock{}
 			resMngMock := &resourceManagerMock{}
-			repMock := &repositoryMock{}
 			authMock := &authenticatorMock{}
 
 			// transport mock
@@ -718,10 +717,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			resMngMock.DelResourceFunc = func(ctx context.Context, username string, resource string) error {
 				return nil
 			}
-			// repository mock
-			repMock.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]model.BlockListItem, error) {
-				return nil, nil
-			}
 
 			userJID, _ := jid.NewWithString("ortuman@localhost", true)
 			stm := &inC2S{
@@ -745,7 +740,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				activeAuth:     authMock,
 				session:        ssMock,
 				resMng:         resMngMock,
-				blockListRep:   repMock,
 				sn:             sonar.New(),
 			}
 			// when
