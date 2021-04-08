@@ -51,7 +51,7 @@ type Options struct {
 	// NamespaceMatcher defines external module IQ namespace matcher.
 	NamespaceMatcher stringmatcher.Matcher
 
-	// TargetEntity specifies target entity type to which module IQ handler should be applied.
+	// TargetEntity specifies target entity type for which module IQ handler should be applied.
 	TargetEntity string
 
 	// Interceptors contains external module StanzaInterceptor set.
