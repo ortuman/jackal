@@ -73,7 +73,7 @@ func (v *VCard) AccountFeatures(_ context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches vCard module.
-func (v *VCard) MatchesNamespace(namespace string) bool {
+func (v *VCard) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == vCardNamespace
 }
 

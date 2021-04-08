@@ -92,7 +92,10 @@ func (r *Roster) ServerFeatures(_ context.Context) ([]string, error) { return ni
 func (r *Roster) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches roster module.
-func (r *Roster) MatchesNamespace(namespace string) bool {
+func (r *Roster) MatchesNamespace(namespace string, serverTarget bool) bool {
+	if serverTarget {
+		return false
+	}
 	return namespace == rosterNamespace
 }
 

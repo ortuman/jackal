@@ -110,7 +110,7 @@ func (d *Disco) AccountFeatures(_ context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches version module.
-func (d *Disco) MatchesNamespace(namespace string) bool {
+func (d *Disco) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == discoInfoNamespace || namespace == discoItemsNamespace
 }
 

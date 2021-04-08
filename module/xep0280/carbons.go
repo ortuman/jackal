@@ -87,7 +87,7 @@ func (p *Carbons) ServerFeatures(_ context.Context) ([]string, error) {
 
 // AccountFeatures returns ping account disco features.
 func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
-	return []string{carbonsNamespace}, nil
+	return nil, nil
 }
 
 // Start starts carbons module.
@@ -109,7 +109,10 @@ func (p *Carbons) Stop(_ context.Context) error {
 }
 
 // MatchesNamespace tells whether namespace matches carbons module.
-func (p *Carbons) MatchesNamespace(namespace string) bool {
+func (p *Carbons) MatchesNamespace(namespace string, serverTarget bool) bool {
+	if serverTarget {
+		return false
+	}
 	return namespace == carbonsNamespace
 }
 

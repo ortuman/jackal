@@ -100,7 +100,7 @@ func (p *Ping) ServerFeatures(_ context.Context) ([]string, error) {
 
 // AccountFeatures returns ping account disco features.
 func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
-	return []string{pingNamespace}, nil
+	return nil, nil
 }
 
 // Start starts ping module.
@@ -124,7 +124,7 @@ func (p *Ping) Stop(_ context.Context) error {
 }
 
 // MatchesNamespace tells whether namespace matches ping module.
-func (p *Ping) MatchesNamespace(namespace string) bool {
+func (p *Ping) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == pingNamespace
 }
 
