@@ -122,10 +122,9 @@ func initExtModules(a *serverApp, configs []extModuleConfig) ([]module.Module, e
 				return nil, err
 			}
 			opts.NamespaceMatcher = nsMatcher
-
-		default:
-			opts.NamespaceMatcher = stringmatcher.Any
 		}
+		opts.TargetEntity = cfg.IQHandler.TargetEntity
+
 		for _, interceptor := range cfg.StanzaInterceptors {
 			opts.Interceptors = append(opts.Interceptors, module.StanzaInterceptor{
 				ID:       interceptor.ID,

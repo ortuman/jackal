@@ -138,6 +138,7 @@ modules:
 #        namespace:
 #          in: [ https://jackal.im ]
 #          # reg_ex: ^org.jackal.+
+#        target_entity: server
 #
 #      stanza_interceptors:
 #        - id: 1

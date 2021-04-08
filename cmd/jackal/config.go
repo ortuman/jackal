@@ -129,6 +129,7 @@ type extModuleConfig struct {
 			In    []string `fig:"in"`
 			RegEx string   `fig:"reg_ex"`
 		} `fig:"namespace"`
+		TargetEntity string `fig:"target_entity"`
 	} `fig:"iq_handler"`
 
 	StanzaInterceptors []struct {
