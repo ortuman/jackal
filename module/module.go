@@ -52,7 +52,7 @@ type IQProcessor interface {
 	Module
 
 	// MatchesNamespace tells whether iq child namespace corresponds to this module.
-	// The serverTarget parameter will be true in case iq target corresponds to an account entity.
+	// The serverTarget parameter will be true in case iq target is a server entity.
 	MatchesNamespace(namespace string, serverTarget bool) bool
 
 	// ProcessIQ will be invoked whenever iq stanza should be processed by this module.
