@@ -33,6 +33,7 @@ const (
 	XEPNumber = "0191"
 )
 
+// BlockList represents blocklist (XEP-0191) module type.
 type BlockList struct {
 	router router.Router
 }

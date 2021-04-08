@@ -47,7 +47,7 @@ const (
 	killAction = "kill"
 )
 
-// Options contains ping module configuration options.
+// Options contains ping  module configuration options.
 type Options struct {
 	// AckTimeout tells how long should we wait until considering a client to be disconnected.
 	AckTimeout time.Duration

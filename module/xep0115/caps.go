@@ -80,7 +80,7 @@ const (
 	XEPNumber = "0115"
 )
 
-// Capabilities represents entity capabilities module type.
+// Capabilities represents entity capabilities (XEP-0115) module type.
 type Capabilities struct {
 	disco  *xep0030.Disco
 	router router.Router
