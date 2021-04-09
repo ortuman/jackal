@@ -24,6 +24,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0115"
+	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/module/xep0280"
 	"github.com/ortuman/jackal/util/stringmatcher"
@@ -73,6 +74,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
 		caps := xep0115.New(disc, a.router, a.rep, a.sonar)
 		mods = append(mods, caps)
+	}
+	// blocklist
+	if stringsutil.StringSliceContains(xep0191.ModuleName, cfg.Enabled) {
+		blockList := xep0191.New(a.router)
+		mods = append(mods, blockList)
 	}
 	// ping
 	if stringsutil.StringSliceContains(xep0199.ModuleName, cfg.Enabled) {
