@@ -147,14 +147,16 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 
 	ms, err := m.rep.FetchOfflineMessages(ctx, username)
 	if err != nil {
-		return err
+		log.Errorw(err.Error(), "xep", "offline")
+		return nil
 	}
 	if len(ms) == 0 {
 		// empty queue... we're done here
 		return nil
 	}
 	if err := m.rep.DeleteOfflineMessages(ctx, username); err != nil {
-		return err
+		log.Errorw(err.Error(), "xep", "offline")
+		return nil
 	}
 	// route offline messages
 	for _, msg := range ms {
@@ -192,7 +194,8 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
-		return err
+		log.Errorw(err.Error(), "xep", "offline")
+		return nil
 	}
 	if qSize == m.opts.QueueSize { // offline queue is full
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
@@ -203,7 +206,8 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 
 	// enqueue offline message
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
-		return err
+		log.Errorw(err.Error(), "xep", "offline")
+		return nil
 	}
 	err = m.sn.Post(ctx, sonar.NewEventBuilder(event.OfflineMessageArchived).
 		WithInfo(&event.OfflineEventInfo{
@@ -213,7 +217,8 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 		Build(),
 	)
 	if err != nil {
-		return err
+		log.Errorw(err.Error(), "xep", "offline")
+		return nil
 	}
 	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
 	return nil

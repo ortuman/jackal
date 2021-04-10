@@ -202,10 +202,11 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 		break
 	case errors.Is(err, errSubscriptionRequired):
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
-		return err
+		return nil
 	default:
+		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
+		return nil
 	}
 	sb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, discoInfoNamespace)
@@ -248,10 +249,11 @@ func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fr
 		break
 	case errors.Is(err, errSubscriptionRequired):
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
-		return err
+		return nil
 	default:
+		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
+		return nil
 	}
 	qb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, discoItemsNamespace)

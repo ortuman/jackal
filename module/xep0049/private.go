@@ -137,8 +137,9 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 	prvElem, err := p.rep.FetchPrivate(ctx, ns, username)
 	if err != nil {
+		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
+		return nil
 	}
 	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
@@ -178,8 +179,9 @@ func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			return nil
 		}
 		if err := p.rep.UpsertPrivate(ctx, prv, ns, username); err != nil {
+			log.Errorw(err.Error(), "xep", XEPNumber)
 			_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-			return err
+			return nil
 		}
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 

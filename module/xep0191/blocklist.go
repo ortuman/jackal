@@ -17,6 +17,14 @@ package xep0191
 import (
 	"context"
 
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
+
+	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/repository"
+
+	"github.com/ortuman/jackal/event"
+
 	"github.com/jackal-xmpp/stravaganza"
 
 	"github.com/ortuman/jackal/log"
@@ -35,36 +43,41 @@ const (
 
 // BlockList represents blocklist (XEP-0191) module type.
 type BlockList struct {
+	rep    repository.BlockList
 	router router.Router
+	sn     *sonar.Sonar
+	subs   []sonar.SubID
 }
 
 // New returns a new initialized BlockList instance.
-func New(router router.Router) *BlockList {
+func New(router router.Router, rep repository.BlockList, sn *sonar.Sonar) *BlockList {
 	return &BlockList{
+		rep:    rep,
 		router: router,
+		sn:     sn,
 	}
 }
 
 // Name returns blocklist module name.
-func (v *BlockList) Name() string { return ModuleName }
+func (m *BlockList) Name() string { return ModuleName }
 
 // StreamFeature returns blocklist module stream feature.
-func (v *BlockList) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+func (m *BlockList) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return nil, nil
 }
 
 // ServerFeatures returns blocklist server disco features.
-func (v *BlockList) ServerFeatures(_ context.Context) ([]string, error) {
+func (m *BlockList) ServerFeatures(_ context.Context) ([]string, error) {
 	return []string{blockListNamespace}, nil
 }
 
 // AccountFeatures returns blocklist account disco features.
-func (v *BlockList) AccountFeatures(_ context.Context) ([]string, error) {
+func (m *BlockList) AccountFeatures(_ context.Context) ([]string, error) {
 	return nil, nil
 }
 
 // MatchesNamespace tells whether namespace matches blocklist module.
-func (v *BlockList) MatchesNamespace(namespace string, serverTarget bool) bool {
+func (m *BlockList) MatchesNamespace(namespace string, serverTarget bool) bool {
 	if serverTarget {
 		return false
 	}
@@ -72,18 +85,67 @@ func (v *BlockList) MatchesNamespace(namespace string, serverTarget bool) bool {
 }
 
 // ProcessIQ process a blocklist iq.
-func (v *BlockList) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *BlockList) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+	switch {
+	case iq.IsGet():
+		return m.getBlockList(ctx, iq)
+	case iq.IsSet():
+		break
+	}
 	return nil
 }
 
 // Start starts blocklist module.
-func (v *BlockList) Start(ctx context.Context) error {
+func (m *BlockList) Start(_ context.Context) error {
+	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
+
 	log.Infow("Started blocklist module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops blocklist module.
-func (v *BlockList) Stop(_ context.Context) error {
+func (m *BlockList) Stop(_ context.Context) error {
+	for _, sub := range m.subs {
+		m.sn.Unsubscribe(sub)
+	}
 	log.Infow("Stopped blocklist module", "xep", XEPNumber)
+	return nil
+}
+
+func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.UserEventInfo)
+	return m.rep.DeleteBlockListItems(ctx, inf.Username)
+}
+
+func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error {
+	fromJID := iq.FromJID()
+	toJID := iq.ToJID()
+	if fromJID.Node() != toJID.Node() {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		return nil
+	}
+	if iq.ChildNamespace("blocklist", blockListNamespace) == nil {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
+	}
+	blockList, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
+	if err != nil {
+		log.Errorw(err.Error(), "xep", XEPNumber)
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		return nil
+	}
+	// send reply
+	sb := stravaganza.NewBuilder("blocklist").
+		WithAttribute(stravaganza.Namespace, blockListNamespace)
+	for _, itm := range blockList {
+		sb.WithChild(
+			stravaganza.NewBuilder("item").
+				WithAttribute("jid", itm.JID).
+				Build(),
+		)
+	}
+
+	resIQ := xmpputil.MakeResultIQ(iq, sb.Build())
+	_, _ = m.router.Route(ctx, resIQ)
 	return nil
 }

@@ -77,7 +77,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// blocklist
 	if stringsutil.StringSliceContains(xep0191.ModuleName, cfg.Enabled) {
-		blockList := xep0191.New(a.router)
+		blockList := xep0191.New(a.router, a.rep, a.sonar)
 		mods = append(mods, blockList)
 	}
 	// ping

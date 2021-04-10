@@ -119,6 +119,7 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	toJID := iq.ToJID()
 	vCard, err := v.rep.FetchVCard(ctx, toJID.Node())
 	if err != nil {
+		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -162,6 +163,7 @@ func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	err := v.rep.UpsertVCard(ctx, vCard, toJID.Node())
 	if err != nil {
+		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
