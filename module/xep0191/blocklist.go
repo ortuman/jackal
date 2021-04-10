@@ -17,18 +17,14 @@ package xep0191
 import (
 	"context"
 
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	xmpputil "github.com/ortuman/jackal/util/xmpp"
-
 	"github.com/jackal-xmpp/sonar"
-	"github.com/ortuman/jackal/repository"
-
-	"github.com/ortuman/jackal/event"
-
 	"github.com/jackal-xmpp/stravaganza"
-
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
 
 const blockListNamespace = "urn:xmpp:blocking"
