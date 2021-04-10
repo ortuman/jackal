@@ -99,7 +99,7 @@ func (m *Offline) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
 
-	log.Infow("Started offline module", "xep", "offline")
+	log.Infow("Started offline module", "xep", ModuleName)
 	return nil
 }
 
@@ -108,7 +108,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	for _, sub := range m.subs {
 		m.sn.Unsubscribe(sub)
 	}
-	log.Infow("Stopped offline module", "xep", "offline")
+	log.Infow("Stopped offline module", "xep", ModuleName)
 	return nil
 }
 
@@ -147,16 +147,14 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 
 	ms, err := m.rep.FetchOfflineMessages(ctx, username)
 	if err != nil {
-		log.Errorw(err.Error(), "xep", "offline")
-		return nil
+		return err
 	}
 	if len(ms) == 0 {
 		// empty queue... we're done here
 		return nil
 	}
 	if err := m.rep.DeleteOfflineMessages(ctx, username); err != nil {
-		log.Errorw(err.Error(), "xep", "offline")
-		return nil
+		return err
 	}
 	// route offline messages
 	for _, msg := range ms {
@@ -194,8 +192,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
-		log.Errorw(err.Error(), "xep", "offline")
-		return nil
+		return err
 	}
 	if qSize == m.opts.QueueSize { // offline queue is full
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
@@ -206,8 +203,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 
 	// enqueue offline message
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
-		log.Errorw(err.Error(), "xep", "offline")
-		return nil
+		return err
 	}
 	err = m.sn.Post(ctx, sonar.NewEventBuilder(event.OfflineMessageArchived).
 		WithInfo(&event.OfflineEventInfo{
@@ -217,8 +213,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 		Build(),
 	)
 	if err != nil {
-		log.Errorw(err.Error(), "xep", "offline")
-		return nil
+		return err
 	}
 	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
 	return nil

@@ -126,9 +126,8 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	}
 	blockList, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
 	if err != nil {
-		log.Errorw(err.Error(), "xep", XEPNumber)
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return nil
+		return err
 	}
 	// send reply
 	sb := stravaganza.NewBuilder("blocklist").

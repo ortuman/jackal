@@ -187,9 +187,8 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// check against current roster version
 	ver, err := r.rep.FetchRosterVersion(ctx, usrJID.Node())
 	if err != nil {
-		log.Errorw(err.Error(), "xep", "roster")
 		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return nil
+		return err
 	}
 	// return empty response in case version matches...
 	if ver > 0 && ver == parseVer(q.Attribute("ver")) {
@@ -205,9 +204,8 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
 	if err != nil {
-		log.Errorw(err.Error(), "xep", "roster")
 		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return nil
+		return err
 	}
 	sb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, rosterNamespace)
@@ -250,12 +248,12 @@ func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	case rostermodel.Remove:
 		if err := r.removeItem(ctx, ri, iq.FromJID().ToBareJID()); err != nil {
 			_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-			return nil
+			return err
 		}
 	default:
 		if err := r.updateItem(ctx, ri, iq.FromJID().Node()); err != nil {
 			_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-			return nil
+			return err
 		}
 	}
 	_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
