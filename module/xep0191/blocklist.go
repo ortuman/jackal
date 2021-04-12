@@ -171,7 +171,6 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 				Build(),
 		)
 	}
-
 	resIQ := xmpputil.MakeResultIQ(iq, sb.Build())
 	_, _ = m.router.Route(ctx, resIQ)
 
@@ -247,7 +246,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	// send unavailable presence to blocked JIDs
+	// send unavailable presences to blocked JIDs
 	rss, err := m.resMng.GetResources(ctx, username)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
@@ -310,7 +309,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	// send available presence
+	// send available presences to unblocked JIDs
 	rss, err := m.resMng.GetResources(ctx, username)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
