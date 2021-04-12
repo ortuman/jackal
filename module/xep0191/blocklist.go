@@ -131,7 +131,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 	return nil
 }
 
-// Interceptors returns blocklist stanza interceptor.
+// Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
 		{Priority: math.MaxInt64, Incoming: true},
