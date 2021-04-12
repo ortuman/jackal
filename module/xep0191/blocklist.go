@@ -207,8 +207,6 @@ func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) erro
 }
 
 func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block stravaganza.Element, blockList []blocklistmodel.Item) error {
-	username := iq.FromJID().Node()
-
 	// get JIDs
 	js, err := getItemJIDs(block)
 	if err != nil {
@@ -230,6 +228,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 			blockJIDs = append(blockJIDs, jd)
 		}
 	}
+	username := iq.FromJID().Node()
 	err = m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		for _, bj := range blockJIDs {
 			if err := tx.UpsertBlockListItem(ctx, &blocklistmodel.Item{
@@ -264,8 +263,6 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 }
 
 func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []blocklistmodel.Item) error {
-	username := iq.FromJID().Node()
-
 	// get JIDs
 	js, err := getItemJIDs(unblock)
 	if err != nil {
@@ -293,6 +290,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 			unblockJIDs = append(unblockJIDs, *jd)
 		}
 	}
+	username := iq.FromJID().Node()
 	err = m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		for _, uj := range unblockJIDs {
 			if err := tx.DeleteBlockListItem(ctx, &blocklistmodel.Item{
