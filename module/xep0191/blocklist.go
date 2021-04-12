@@ -20,8 +20,6 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/ortuman/jackal/module"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -33,6 +31,7 @@ import (
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
