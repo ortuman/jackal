@@ -19,10 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	coremodel "github.com/ortuman/jackal/model/core"
-
-	"github.com/ortuman/jackal/module"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -31,6 +27,8 @@ import (
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
+	coremodel "github.com/ortuman/jackal/model/core"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
