@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	rostermodel "github.com/ortuman/jackal/model/roster"
+
 	coremodel "github.com/ortuman/jackal/model/core"
 
 	"github.com/google/uuid"
@@ -184,29 +186,32 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	username := iq.FromJID().Node()
 
 	// get blocklist items
-	items, err := getItems(block, username)
+	js, err := getBlockListJIDs(block)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return err
 	}
-	// filter items
-	var blockItems []blocklistmodel.Item
+	// filter blocked JIDs
+	var blockJIDs []jid.JID
 
-	for _, itm := range items {
+	for _, jd := range js {
 		var found bool
-		for _, blItm := range blockList {
-			if itm.JID == blItm.JID {
+		for _, bli := range blockList {
+			if jd.String() == bli.JID {
 				found = true
 				break
 			}
 		}
 		if !found {
-			blockItems = append(blockItems, itm)
+			blockJIDs = append(blockJIDs, jd)
 		}
 	}
 	err = m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
-		for _, itm := range blockItems {
-			if err := tx.UpsertBlockListItem(ctx, &itm); err != nil {
+		for _, bj := range blockJIDs {
+			if err := tx.UpsertBlockListItem(ctx, &blocklistmodel.Item{
+				Username: username,
+				JID:      bj.String(),
+			}); err != nil {
 				return err
 			}
 		}
@@ -217,10 +222,13 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 		return err
 	}
 	// send unavailable presence to blocked JIDs
-	if err := m.sendUnavailablePresences(ctx, blockItems, username); err != nil {
+	if err := m.sendUnavailablePresences(ctx, blockJIDs, username); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
+	// send result IQ
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+
 	// send block push
 	rss, err := m.resMng.GetResources(ctx, username)
 	if err != nil {
@@ -235,32 +243,38 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	username := iq.FromJID().Node()
 
 	// get blocklist items
-	items, err := getItems(unblock, username)
+	js, err := getBlockListJIDs(unblock)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return err
 	}
-	var unblockItems []blocklistmodel.Item
-	if len(items) > 0 {
+	var unblockJIDs []jid.JID
+	if len(js) > 0 {
 		// filter items
-		for _, itm := range items {
+		for _, jd := range js {
 			var found bool
 			for _, blItm := range blockList {
-				if itm.JID == blItm.JID {
+				if jd.String() == blItm.JID {
 					found = true
 					break
 				}
 			}
 			if found {
-				unblockItems = append(unblockItems, itm)
+				unblockJIDs = append(unblockJIDs, jd)
 			}
 		}
 	} else {
-		unblockItems = blockList
+		for _, bli := range blockList {
+			jd, _ := jid.NewWithString(bli.JID, true)
+			unblockJIDs = append(unblockJIDs, *jd)
+		}
 	}
 	err = m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
-		for _, itm := range unblockItems {
-			if err := tx.DeleteBlockListItem(ctx, &itm); err != nil {
+		for _, uj := range unblockJIDs {
+			if err := tx.DeleteBlockListItem(ctx, &blocklistmodel.Item{
+				Username: username,
+				JID:      uj.String(),
+			}); err != nil {
 				return err
 			}
 		}
@@ -276,10 +290,13 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	if err := m.sendAvailablePresences(ctx, unblockItems, rss, username); err != nil {
+	if err := m.sendAvailablePresences(ctx, unblockJIDs, rss, username); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
+	// send result IQ
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+
 	// send unblock push
 	m.sendPush(ctx, unblock, rss)
 	return nil
@@ -304,11 +321,15 @@ func (m *BlockList) sendPush(ctx context.Context, push stravaganza.Element, reso
 	}
 }
 
-func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockedItems []blocklistmodel.Item, username string) error {
+func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, username string) error {
 	return nil
 }
 
-func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockedItems []blocklistmodel.Item, resources []coremodel.Resource, username string) error {
+func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+	_, err := m.rep.FetchRosterItems(ctx, username)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -320,19 +341,25 @@ func (m *BlockList) setStreamValue(ctx context.Context, username, resource, key,
 	return stm.SetValue(ctx, key, val)
 }
 
-func getItems(el stravaganza.Element, username string) ([]blocklistmodel.Item, error) {
-	var retVal []blocklistmodel.Item
+func getBlockListJIDs(el stravaganza.Element) ([]jid.JID, error) {
+	var retVal []jid.JID
 	for _, itm := range el.Children("item") {
 		j, err := jid.NewWithString(itm.Attribute("jid"), false)
 		if err != nil {
 			return nil, err
 		}
-		retVal = append(retVal, blocklistmodel.Item{
-			Username: username,
-			JID:      j.String(),
-		})
+		retVal = append(retVal, *j)
 	}
 	return retVal, nil
+}
+
+func isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) bool {
+	for _, ri := range ris {
+		if ri.JID == jid.String() {
+			return ri.Subscription == rostermodel.From || ri.Subscription == rostermodel.Both
+		}
+	}
+	return false
 }
 
 func errStreamNotFound(username, resource string) error {
