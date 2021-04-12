@@ -17,7 +17,10 @@ package xep0191
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
+
+	"github.com/ortuman/jackal/module"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
@@ -126,6 +129,19 @@ func (m *BlockList) Stop(_ context.Context) error {
 	}
 	log.Infow("Stopped blocklist module", "xep", XEPNumber)
 	return nil
+}
+
+// Interceptors returns blocklist stanza interceptor.
+func (m *BlockList) Interceptors() []module.StanzaInterceptor {
+	return []module.StanzaInterceptor{
+		{Priority: math.MaxInt64, Incoming: true},
+		{Priority: math.MaxInt64, Incoming: false},
+	}
+}
+
+// InterceptStanza will be used by blocklist module to determine whether a stanza should be blocked.
+func (m *BlockList) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {
+	return stanza, nil
 }
 
 func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
