@@ -324,7 +324,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	return nil
 }
 
-func (m *BlockList) sendPush(ctx context.Context, push stravaganza.Element, resources []coremodel.Resource) {
+func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
 	for _, res := range resources {
 		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey)) // block list requested?
 		if !ok {
@@ -335,7 +335,7 @@ func (m *BlockList) sendPush(ctx context.Context, push stravaganza.Element, reso
 			WithAttribute(stravaganza.To, res.JID.String()).
 			WithAttribute(stravaganza.Type, stravaganza.SetType).
 			WithAttribute(stravaganza.ID, uuid.New().String()).
-			WithChild(push).
+			WithChild(pushed).
 			BuildIQ(false)
 
 		_, _ = m.router.Route(ctx, pushIQ)
