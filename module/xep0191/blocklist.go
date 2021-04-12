@@ -19,12 +19,7 @@ import (
 	"fmt"
 	"strconv"
 
-	rostermodel "github.com/ortuman/jackal/model/roster"
-
-	coremodel "github.com/ortuman/jackal/model/core"
-
 	"github.com/google/uuid"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
@@ -33,6 +28,8 @@ import (
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
+	coremodel "github.com/ortuman/jackal/model/core"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	xmpputil "github.com/ortuman/jackal/util/xmpp"
@@ -142,7 +139,8 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		return nil
 	}
 	fromJID := iq.FromJID()
-	blockList, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
+
+	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
@@ -150,7 +148,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	// send reply
 	sb := stravaganza.NewBuilder("blocklist").
 		WithAttribute(stravaganza.Namespace, blockListNamespace)
-	for _, itm := range blockList {
+	for _, itm := range bli {
 		sb.WithChild(
 			stravaganza.NewBuilder("item").
 				WithAttribute("jid", itm.JID).
@@ -162,7 +160,19 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// mark as requested
-	return m.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), blockListRequestedCtxKey, strconv.FormatBool(true))
+	username := fromJID.Node()
+	res := fromJID.Resource()
+
+	stm := m.router.C2S().LocalStream(username, res)
+	if stm == nil {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
+	}
+	if err := stm.SetValue(ctx, blockListRequestedCtxKey, strconv.FormatBool(true)); err != nil {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		return err
+	}
+	return nil
 }
 
 func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) error {
@@ -185,13 +195,13 @@ func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) erro
 func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block stravaganza.Element, blockList []blocklistmodel.Item) error {
 	username := iq.FromJID().Node()
 
-	// get blocklist items
-	js, err := getBlockListJIDs(block)
+	// get JIDs
+	js, err := getItemJIDs(block)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return err
 	}
-	// filter blocked JIDs
+	// filter JIDs
 	var blockJIDs []jid.JID
 
 	for _, jd := range js {
@@ -222,7 +232,12 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 		return err
 	}
 	// send unavailable presence to blocked JIDs
-	if err := m.sendUnavailablePresences(ctx, blockJIDs, username); err != nil {
+	rss, err := m.resMng.GetResources(ctx, username)
+	if err != nil {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		return err
+	}
+	if err := m.sendUnavailablePresences(ctx, blockJIDs, rss, username); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -230,11 +245,6 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
 	// send block push
-	rss, err := m.resMng.GetResources(ctx, username)
-	if err != nil {
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
-	}
 	m.sendPush(ctx, block, rss)
 	return nil
 }
@@ -242,15 +252,15 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []blocklistmodel.Item) error {
 	username := iq.FromJID().Node()
 
-	// get blocklist items
-	js, err := getBlockListJIDs(unblock)
+	// get JIDs
+	js, err := getItemJIDs(unblock)
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return err
 	}
 	var unblockJIDs []jid.JID
 	if len(js) > 0 {
-		// filter items
+		// filter JIDs
 		for _, jd := range js {
 			var found bool
 			for _, blItm := range blockList {
@@ -304,8 +314,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 func (m *BlockList) sendPush(ctx context.Context, push stravaganza.Element, resources []coremodel.Resource) {
 	for _, res := range resources {
-		// blocklist requested?
-		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey))
+		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey)) // block list requested?
 		if !ok {
 			continue
 		}
@@ -321,27 +330,65 @@ func (m *BlockList) sendPush(ctx context.Context, push stravaganza.Element, reso
 	}
 }
 
-func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, username string) error {
+func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+	targets, err := m.getPresenceTargets(ctx, blockJIDs, username)
+	if err != nil {
+		return err
+	}
+	for _, res := range resources {
+		for _, target := range targets {
+			pr := xmpputil.MakePresence(res.JID, &target, stravaganza.UnavailableType, nil)
+			_, _ = m.router.Route(ctx, pr)
+		}
+	}
 	return nil
 }
 
 func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
-	_, err := m.rep.FetchRosterItems(ctx, username)
+	targets, err := m.getPresenceTargets(ctx, unblockJIDs, username)
 	if err != nil {
 		return err
+	}
+	for _, res := range resources {
+		for _, target := range targets {
+			pr := xmpputil.MakePresence(res.JID, &target, stravaganza.AvailableType, res.Presence.AllChildren())
+			_, _ = m.router.Route(ctx, pr)
+		}
 	}
 	return nil
 }
 
-func (m *BlockList) setStreamValue(ctx context.Context, username, resource, key, val string) error {
-	stm := m.router.C2S().LocalStream(username, resource)
-	if stm == nil {
-		return errStreamNotFound(username, resource)
+func (m *BlockList) getPresenceTargets(ctx context.Context, blockListJIDs []jid.JID, username string) ([]jid.JID, error) {
+	ris, err := m.rep.FetchRosterItems(ctx, username)
+	if err != nil {
+		return nil, err
 	}
-	return stm.SetValue(ctx, key, val)
+	var targets []jid.JID
+
+	for _, bj := range blockListJIDs {
+		for _, ri := range ris {
+			if ri.Subscription != rostermodel.From && ri.Subscription != rostermodel.Both {
+				continue
+			}
+			rj, _ := jid.NewWithString(ri.JID, true)
+			switch {
+			case bj.IsFullWithUser() && bj.MatchesWithOptions(rj, jid.MatchesBare):
+				targets = append(targets, bj)
+
+			case bj.IsFullWithServer() && bj.MatchesWithOptions(rj, jid.MatchesDomain):
+				t, _ := jid.New(rj.Node(), rj.Domain(), bj.Resource(), true)
+				targets = append(targets, *t)
+
+			case bj.IsBare() && bj.MatchesWithOptions(rj, jid.MatchesBare):
+			case bj.IsServer() && bj.MatchesWithOptions(rj, jid.MatchesDomain):
+				targets = append(targets, *rj)
+			}
+		}
+	}
+	return targets, nil
 }
 
-func getBlockListJIDs(el stravaganza.Element) ([]jid.JID, error) {
+func getItemJIDs(el stravaganza.Element) ([]jid.JID, error) {
 	var retVal []jid.JID
 	for _, itm := range el.Children("item") {
 		j, err := jid.NewWithString(itm.Attribute("jid"), false)
@@ -351,17 +398,4 @@ func getBlockListJIDs(el stravaganza.Element) ([]jid.JID, error) {
 		retVal = append(retVal, *j)
 	}
 	return retVal, nil
-}
-
-func isSubscribedTo(jid *jid.JID, ris []rostermodel.Item) bool {
-	for _, ri := range ris {
-		if ri.JID == jid.String() {
-			return ri.Subscription == rostermodel.From || ri.Subscription == rostermodel.Both
-		}
-	}
-	return false
-}
-
-func errStreamNotFound(username, resource string) error {
-	return fmt.Errorf("roster: local stream not found: %s/%s", username, resource)
 }
