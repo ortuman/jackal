@@ -51,6 +51,11 @@ const (
 	XEPNumber = "0191"
 )
 
+const (
+	incomingInterceptorID int = iota
+	outgoingInterceptorID
+)
+
 // BlockList represents blocklist (XEP-0191) module type.
 type BlockList struct {
 	rep    repository.Repository
@@ -133,8 +138,8 @@ func (m *BlockList) Stop(_ context.Context) error {
 // Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{Priority: math.MaxInt64, Incoming: true},
-		{Priority: math.MaxInt64, Incoming: false},
+		{ID: incomingInterceptorID, Priority: math.MaxInt64, Incoming: true},
+		{ID: outgoingInterceptorID, Priority: math.MaxInt64, Incoming: false},
 	}
 }
 
