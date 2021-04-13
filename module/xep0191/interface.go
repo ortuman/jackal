@@ -18,7 +18,13 @@ import (
 	"context"
 
 	coremodel "github.com/ortuman/jackal/model/core"
+	"github.com/ortuman/jackal/repository"
 )
+
+//go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
+type globalRepository interface {
+	repository.Repository
+}
 
 type resourceManager interface {
 	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)

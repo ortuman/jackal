@@ -392,6 +392,7 @@ func (m *BlockList) getPresenceTargets(ctx context.Context, blockListJIDs []jid.
 				targets = append(targets, *t)
 
 			case bj.IsBare() && bj.MatchesWithOptions(rj, jid.MatchesBare):
+				fallthrough
 			case bj.IsServer() && bj.MatchesWithOptions(rj, jid.MatchesDomain):
 				targets = append(targets, *rj)
 			}
