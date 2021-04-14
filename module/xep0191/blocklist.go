@@ -20,8 +20,6 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/ortuman/jackal/host"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -29,6 +27,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/event"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	coremodel "github.com/ortuman/jackal/model/core"
@@ -44,6 +43,8 @@ const (
 
 	blockListNamespace       = "urn:xmpp:blocking"
 	blockListErrorsNamespace = "urn:xmpp:blocking:errors"
+
+	blockedTargetErrorText = "Your active block list has denied the routing of this stanza."
 )
 
 const (
@@ -216,6 +217,7 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 		if jd.Matches(toJID) {
 			// return <not-acceptable> stanza error
 			se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
+			se.Text = blockedTargetErrorText
 			se.ApplicationElement = stravaganza.NewBuilder("blocked").
 				WithAttribute(stravaganza.Namespace, blockListErrorsNamespace).
 				Build()
