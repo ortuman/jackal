@@ -171,7 +171,7 @@ func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 }
 
 func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
-	fromJID := stanza.ToJID()
+	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
@@ -200,7 +200,7 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 }
 
 func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
-	fromJID := stanza.ToJID()
+	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalFrom := m.hosts.IsLocalHost(fromJID.Domain())
