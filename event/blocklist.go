@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,21 +14,26 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
-
-const (
-	// PrivateFetched event is posted when a user private XML is fetched.
-	PrivateFetched = "private.fetched"
-
-	// PrivateUpdated event is posted when a user private XML is updated.
-	PrivateUpdated = "private.updated"
+import (
+	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
-// PrivateEventInfo contains all information associated to a private event.
-type PrivateEventInfo struct {
+const (
+	// BlockListFetched event is posted when a user block list is fetched.
+	BlockListFetched = "blocklist.fetched"
+
+	// BlockListItemsBlocked event is posted when one or more JIDs are blocked.
+	BlockListItemsBlocked = "blocklist.items.blocked"
+
+	// BlockListItemsUnblocked event is posted when one or more JIDs are unblocked.
+	BlockListItemsUnblocked = "blocklist.items.unblocked"
+)
+
+// BlockListEventInfo contains all information associated to a blocklist event.
+type BlockListEventInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 
-	// Private is the private XML element associated to this event.
-	Private stravaganza.Element
+	// JIDs contains all block list JIDs associated to this event.
+	JIDs []jid.JID
 }

@@ -262,20 +262,32 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	return nil
+	// post event
+	var allJIDs []jid.JID
+	for _, itm := range bli {
+		j, _ := jid.NewWithString(itm.JID, false)
+		allJIDs = append(allJIDs, *j)
+	}
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListFetched).
+		WithInfo(&event.BlockListEventInfo{
+			Username: username,
+			JIDs:     allJIDs,
+		}).
+		Build(),
+	)
 }
 
 func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) error {
 	// fetch current list
-	blockList, err := m.rep.FetchBlockListItems(ctx, iq.FromJID().Node())
+	bli, err := m.rep.FetchBlockListItems(ctx, iq.FromJID().Node())
 	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	if block := iq.ChildNamespace("block", blockListNamespace); block != nil {
-		return m.blockJIDs(ctx, iq, block, blockList)
+		return m.blockJIDs(ctx, iq, block, bli)
 	} else if unblock := iq.ChildNamespace("unblock", blockListNamespace); unblock != nil {
-		return m.unblockJIDs(ctx, iq, unblock, blockList)
+		return m.unblockJIDs(ctx, iq, unblock, bli)
 	} else {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
@@ -335,7 +347,15 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 
 	// send block push
 	m.sendPush(ctx, block, rss)
-	return nil
+
+	// post event
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListItemsBlocked).
+		WithInfo(&event.BlockListEventInfo{
+			Username: username,
+			JIDs:     blockJIDs,
+		}).
+		Build(),
+	)
 }
 
 func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []blocklistmodel.Item) error {
@@ -397,7 +417,15 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 	// send unblock push
 	m.sendPush(ctx, unblock, rss)
-	return nil
+
+	// post event
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListItemsUnblocked).
+		WithInfo(&event.BlockListEventInfo{
+			Username: username,
+			JIDs:     unblockJIDs,
+		}).
+		Build(),
+	)
 }
 
 func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
