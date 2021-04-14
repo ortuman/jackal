@@ -173,7 +173,9 @@ func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
 	fromJID := stanza.ToJID()
 	toJID := stanza.ToJID()
-	if !m.hosts.IsLocalHost(toJID.Domain()) || fromJID.Node() == toJID.Node() {
+
+	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
+	if !isLocalTo || (isLocalTo && fromJID.Node() == toJID.Node()) {
 		return stanza, nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
@@ -200,7 +202,9 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
 	fromJID := stanza.ToJID()
 	toJID := stanza.ToJID()
-	if !m.hosts.IsLocalHost(fromJID.Domain()) || fromJID.Node() == toJID.Node() {
+
+	isLocalFrom := m.hosts.IsLocalHost(fromJID.Domain())
+	if !isLocalFrom || (isLocalFrom && fromJID.Node() == toJID.Node()) {
 		return stanza, nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
