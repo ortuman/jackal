@@ -23,7 +23,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlockList_GetPresenceTargets(t *testing.T) {
+func TestBlockList_GetBlockList(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_BlockItem(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_UnblockItem(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_Forbidden(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_UserDeleted(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_InterceptIncomingStanza(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestBlockList_PresenceTargets(t *testing.T) {
 	// given
 	rep := &repositoryMock{}
 	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {

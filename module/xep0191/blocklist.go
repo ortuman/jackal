@@ -20,6 +20,8 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/ortuman/jackal/host"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
@@ -40,7 +42,8 @@ import (
 const (
 	blockListRequestedCtxKey = "blocklist:requested"
 
-	blockListNamespace = "urn:xmpp:blocking"
+	blockListNamespace       = "urn:xmpp:blocking"
+	blockListErrorsNamespace = "urn:xmpp:blocking:errors"
 )
 
 const (
@@ -52,13 +55,14 @@ const (
 )
 
 const (
-	incomingInterceptorID int = iota
-	outgoingInterceptorID
+	incomingIID int = iota
+	outgoingIID
 )
 
 // BlockList represents blocklist (XEP-0191) module type.
 type BlockList struct {
 	rep    repository.Repository
+	hosts  hosts
 	router router.Router
 	resMng resourceManager
 	sn     *sonar.Sonar
@@ -66,10 +70,17 @@ type BlockList struct {
 }
 
 // New returns a new initialized BlockList instance.
-func New(router router.Router, resMng *c2s.ResourceManager, rep repository.Repository, sn *sonar.Sonar) *BlockList {
+func New(
+	router router.Router,
+	hosts *host.Hosts,
+	resMng *c2s.ResourceManager,
+	rep repository.Repository,
+	sn *sonar.Sonar,
+) *BlockList {
 	return &BlockList{
 		rep:    rep,
 		router: router,
+		hosts:  hosts,
 		resMng: resMng,
 		sn:     sn,
 	}
@@ -138,19 +149,79 @@ func (m *BlockList) Stop(_ context.Context) error {
 // Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{ID: incomingInterceptorID, Priority: math.MaxInt64, Incoming: true},
-		{ID: outgoingInterceptorID, Priority: math.MaxInt64, Incoming: false},
+		{ID: incomingIID, Priority: math.MaxInt64, Incoming: true},
+		{ID: outgoingIID, Priority: math.MaxInt64, Incoming: false},
 	}
 }
 
 // InterceptStanza will be used by blocklist module to determine whether a stanza should be blocked.
-func (m *BlockList) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {
+func (m *BlockList) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
+	switch id {
+	case incomingIID:
+		return m.interceptIncomingStanza(ctx, stanza)
+	case outgoingIID:
+		return m.interceptOutgoingStanza(ctx, stanza)
+	}
 	return stanza, nil
 }
 
 func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.UserEventInfo)
 	return m.rep.DeleteBlockListItems(ctx, inf.Username)
+}
+
+func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
+	fromJID := stanza.ToJID()
+	toJID := stanza.ToJID()
+	if !m.hosts.IsLocalHost(toJID.Domain()) || fromJID.Node() == toJID.Node() {
+		return stanza, nil
+	}
+	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
+	if err != nil {
+		return nil, err
+	}
+	for _, itm := range bli {
+		jd, _ := jid.NewWithString(itm.JID, true)
+		if jd.Matches(fromJID) {
+			switch st := stanza.(type) {
+			case *stravaganza.IQ:
+				if st.IsGet() || st.IsSet() {
+					_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
+				}
+			case *stravaganza.Message:
+				_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
+			}
+			return nil, module.ErrInterceptStanzaInterrupted
+		}
+	}
+	return stanza, nil
+}
+
+func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
+	fromJID := stanza.ToJID()
+	toJID := stanza.ToJID()
+	if !m.hosts.IsLocalHost(fromJID.Domain()) || fromJID.Node() == toJID.Node() {
+		return stanza, nil
+	}
+	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
+	if err != nil {
+		return nil, err
+	}
+	for _, itm := range bli {
+		jd, _ := jid.NewWithString(itm.JID, true)
+		if jd.Matches(toJID) {
+			// return <not-acceptable> stanza error
+			se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
+			se.ApplicationElement = stravaganza.NewBuilder("blocked").
+				WithAttribute(stravaganza.Namespace, blockListErrorsNamespace).
+				Build()
+			errStanza, _ := se.Stanza(false)
+
+			_, _ = m.router.Route(ctx, errStanza)
+			return nil, module.ErrInterceptStanzaInterrupted
+		}
+	}
+	return stanza, nil
 }
 
 func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error {

@@ -46,10 +46,10 @@ type VCard struct {
 }
 
 // New returns a new initialized VCard instance.
-func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *VCard {
+func New(router router.Router, rep repository.Repository, sn *sonar.Sonar) *VCard {
 	return &VCard{
-		rep:    rep,
 		router: router,
+		rep:    rep,
 		sn:     sn,
 	}
 }

@@ -67,7 +67,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// vCard
 	if stringsutil.StringSliceContains(xep0054.ModuleName, cfg.Enabled) {
-		vCard := xep0054.New(a.rep, a.router, a.sonar)
+		vCard := xep0054.New(a.router, a.rep, a.sonar)
 		mods = append(mods, vCard)
 	}
 	// capabilities
@@ -77,7 +77,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// blocklist
 	if stringsutil.StringSliceContains(xep0191.ModuleName, cfg.Enabled) {
-		blockList := xep0191.New(a.router, a.resMng, a.rep, a.sonar)
+		blockList := xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
 		mods = append(mods, blockList)
 	}
 	// ping
