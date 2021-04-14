@@ -266,6 +266,8 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
+	log.Infow("Fetched blocklist", "username", username, "xep", XEPNumber)
+
 	// post event
 	var allJIDs []jid.JID
 	for _, itm := range bli {
@@ -329,6 +331,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 			}); err != nil {
 				return err
 			}
+			log.Infow("Blocked JID", "username", username, "jid", bj.String(), "xep", XEPNumber)
 		}
 		return nil
 	})
@@ -399,6 +402,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 			}); err != nil {
 				return err
 			}
+			log.Infow("Unblocked JID", "username", username, "jid", uj.String(), "xep", XEPNumber)
 		}
 		return nil
 	})
