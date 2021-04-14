@@ -175,7 +175,7 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 	toJID := stanza.ToJID()
 
 	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
-	if !isLocalTo || (isLocalTo && fromJID.Node() == toJID.Node()) {
+	if !isLocalTo || (isLocalTo && toJID.MatchesWithOptions(fromJID, jid.MatchesBare)) {
 		return stanza, nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
@@ -204,7 +204,7 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 	toJID := stanza.ToJID()
 
 	isLocalFrom := m.hosts.IsLocalHost(fromJID.Domain())
-	if !isLocalFrom || (isLocalFrom && fromJID.Node() == toJID.Node()) {
+	if !isLocalFrom || (isLocalFrom && fromJID.MatchesWithOptions(toJID, jid.MatchesBare)) {
 		return stanza, nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
