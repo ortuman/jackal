@@ -17,9 +17,28 @@ package xep0191
 import (
 	"context"
 
+	"github.com/ortuman/jackal/router/stream"
+
+	"github.com/ortuman/jackal/router"
+
 	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/repository"
 )
+
+//go:generate moq -out router.mock_test.go . globalRouter:routerMock
+type globalRouter interface {
+	router.Router
+}
+
+//go:generate moq -out c2s_router.mock_test.go . globalC2SRouter:c2sRouterMock
+type globalC2SRouter interface {
+	router.C2SRouter
+}
+
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
+}
 
 //go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
 type globalRepository interface {

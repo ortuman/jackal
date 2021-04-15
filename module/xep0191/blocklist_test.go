@@ -18,15 +18,86 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
+	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/router"
+	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBlockList_GetBlockList(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+	rep := &repositoryMock{}
+	stmMock := &c2sStreamMock{}
+
+	var setK, setVal string
+	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+		setK = k
+		setVal = val
+		return nil
+	}
+	c2sRouterMock := &c2sRouterMock{}
+	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
+		return stmMock
+	}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+	routerMock.C2SFunc = func() router.C2SRouter {
+		return c2sRouterMock
+	}
+
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return []blocklistmodel.Item{
+			{Username: "ortuman", JID: "noelia@jackal.im"},
+			{Username: "ortuman", JID: "jabber.org"},
+		}, nil
+	}
 	// when
+	bl := &BlockList{
+		router: routerMock,
+		rep:    rep,
+		sn:     sonar.New(),
+	}
+
+	// when
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, uuid.New().String()).
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/chamber").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("blocklist").
+				WithAttribute(stravaganza.Namespace, blockListNamespace).
+				Build(),
+		).
+		BuildIQ(false)
+
 	// then
+	_ = bl.ProcessIQ(context.Background(), iq)
+
+	require.Len(t, respStanzas, 1)
+	require.Equal(t, stravaganza.ResultType, respStanzas[0].Attribute(stravaganza.Type))
+
+	blResp := respStanzas[0].ChildNamespace("blocklist", blockListNamespace)
+	require.NotNil(t, bl)
+
+	items := blResp.Children("item")
+	require.Len(t, items, 2)
+
+	require.Equal(t, "noelia@jackal.im", items[0].Attribute("jid"))
+	require.Equal(t, "jabber.org", items[1].Attribute("jid"))
+
+	require.Equal(t, setK, blockListRequestedCtxKey)
+	require.Equal(t, setVal, "true")
 }
 
 func TestBlockList_BlockItem(t *testing.T) {
