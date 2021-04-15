@@ -345,6 +345,16 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 				Username: inf.Username,
 			},
 		}
+
+	case *event.BlockListEventInfo:
+		var evInf extmodulepb.BlockListEventInfo
+		evInf.Username = inf.Username
+		for _, jd := range inf.JIDs {
+			evInf.Jids = append(evInf.Jids, jd.String())
+		}
+		ret.Payload = &extmodulepb.ProcessEventRequest_BlocklistEvInfo{
+			BlocklistEvInfo: &evInf,
+		}
 	}
 	return ret
 }
