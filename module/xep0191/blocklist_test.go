@@ -25,6 +25,7 @@ import (
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
@@ -340,8 +341,52 @@ func TestBlockList_UserDeleted(t *testing.T) {
 
 func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+	hMock := &hostsMock{}
+	rep := &repositoryMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+	hMock.IsLocalHostFunc = func(h string) bool {
+		return h == "jackal.im"
+	}
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return []blocklistmodel.Item{
+			{Username: "ortuman", JID: "jabber.org"},
+		}, nil
+	}
+	bl := &BlockList{
+		hosts:  hMock,
+		router: routerMock,
+		rep:    rep,
+		sn:     sonar.New(),
+	}
 	// when
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "juliet@jabber.org/yard")
+	b.WithAttribute("to", "ortuman@jackal.im/balcony")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage(true)
+
+	_, err := bl.InterceptStanza(context.Background(), msg, incomingIID)
+
 	// then
+	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+
+	require.Len(t, respStanzas, 1)
+	require.Equal(t, stravaganza.ErrorType, respStanzas[0].Attribute(stravaganza.Type))
+
+	errEl := respStanzas[0].Child("error")
+	require.NotNil(t, errEl)
+
+	require.NotNil(t, errEl.ChildNamespace("service-unavailable", "urn:ietf:params:xml:ns:xmpp-stanzas"))
 }
 
 func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
