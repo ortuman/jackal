@@ -22,6 +22,7 @@ import (
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/ortuman/jackal/event"
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -335,8 +336,29 @@ func TestBlockList_Forbidden(t *testing.T) {
 
 func TestBlockList_UserDeleted(t *testing.T) {
 	// given
+	rep := &repositoryMock{}
+	rep.DeleteBlockListItemsFunc = func(ctx context.Context, username string) error {
+		return nil
+	}
+
+	sn := sonar.New()
+	bl := &BlockList{
+		rep: rep,
+		sn:  sn,
+	}
 	// when
+	_ = bl.Start(context.Background())
+	defer func() { _ = bl.Stop(context.Background()) }()
+
+	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.UserDeleted).
+		WithInfo(&event.UserEventInfo{
+			Username: "ortuman",
+		}).
+		Build(),
+	)
+
 	// then
+	require.Len(t, rep.DeleteBlockListItemsCalls(), 1)
 }
 
 func TestBlockList_InterceptIncomingStanza(t *testing.T) {
@@ -355,7 +377,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	}
 	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
 		return []blocklistmodel.Item{
-			{Username: "ortuman", JID: "jabber.org"},
+			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
 	bl := &BlockList{
@@ -381,6 +403,8 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
 
 	require.Len(t, respStanzas, 1)
+	require.Equal(t, "ortuman@jackal.im/balcony", respStanzas[0].Attribute(stravaganza.From))
+	require.Equal(t, "juliet@jabber.org/yard", respStanzas[0].Attribute(stravaganza.To))
 	require.Equal(t, stravaganza.ErrorType, respStanzas[0].Attribute(stravaganza.Type))
 
 	errEl := respStanzas[0].Child("error")
@@ -391,8 +415,54 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 
 func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+	hMock := &hostsMock{}
+	rep := &repositoryMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+	hMock.IsLocalHostFunc = func(h string) bool {
+		return h == "jackal.im"
+	}
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return []blocklistmodel.Item{
+			{Username: "ortuman", JID: "jabber.org/yard"},
+		}, nil
+	}
+	bl := &BlockList{
+		hosts:  hMock,
+		router: routerMock,
+		rep:    rep,
+		sn:     sonar.New(),
+	}
 	// when
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "ortuman@jackal.im/balcony")
+	b.WithAttribute("to", "juliet@jabber.org/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage(true)
+
+	_, err := bl.InterceptStanza(context.Background(), msg, outgoingIID)
+
 	// then
+	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+
+	require.Len(t, respStanzas, 1)
+	require.Equal(t, "juliet@jabber.org/yard", respStanzas[0].Attribute(stravaganza.From))
+	require.Equal(t, "ortuman@jackal.im/balcony", respStanzas[0].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.ErrorType, respStanzas[0].Attribute(stravaganza.Type))
+
+	errEl := respStanzas[0].Child("error")
+	require.NotNil(t, errEl)
+
+	require.NotNil(t, errEl.ChildNamespace("not-acceptable", "urn:ietf:params:xml:ns:xmpp-stanzas"))
 }
 
 func TestBlockList_PresenceTargets(t *testing.T) {
