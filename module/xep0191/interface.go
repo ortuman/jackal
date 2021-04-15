@@ -45,6 +45,11 @@ type globalRepository interface {
 	repository.Repository
 }
 
+//go:generate moq -out tx.mock_test.go . repTransaction:txMock
+type repTransaction interface {
+	repository.Transaction
+}
+
 //go:generate moq -out hosts.mock_test.go . hosts
 type hosts interface {
 	IsLocalHost(h string) bool

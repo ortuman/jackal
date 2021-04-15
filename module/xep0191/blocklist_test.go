@@ -23,9 +23,12 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
+	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
+	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +64,6 @@ func TestBlockList_GetBlockList(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org"},
 		}, nil
 	}
-	// when
 	bl := &BlockList{
 		router: routerMock,
 		rep:    rep,
@@ -102,20 +104,232 @@ func TestBlockList_GetBlockList(t *testing.T) {
 
 func TestBlockList_BlockItem(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+	resMngMock := &resourceManagerMock{}
+	rep := &repositoryMock{}
+	txMock := &txMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+	txMock.UpsertBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
+		return nil
+	}
+	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
+		return []rostermodel.Item{
+			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
+		}, nil
+	}
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return nil, nil
+	}
+	rep.InTransactionFunc = func(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
+		return f(ctx, txMock)
+	}
+
+	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
+	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
+			{InstanceID: "i1", JID: jd0, Context: map[string]string{blockListRequestedCtxKey: "true"}},
+			{InstanceID: "i1", JID: jd1, Context: map[string]string{blockListRequestedCtxKey: "true"}},
+		}, nil
+	}
+	bl := &BlockList{
+		router: routerMock,
+		rep:    rep,
+		resMng: resMngMock,
+		sn:     sonar.New(),
+	}
+
 	// when
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, uuid.New().String()).
+		WithAttribute(stravaganza.Type, stravaganza.SetType).
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/chamber").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("block").
+				WithAttribute(stravaganza.Namespace, blockListNamespace).
+				WithChild(
+					stravaganza.NewBuilder("item").
+						WithAttribute("jid", "jabber.org").
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
 	// then
+	_ = bl.ProcessIQ(context.Background(), iq)
+
+	require.Len(t, respStanzas, 5)
+
+	require.Equal(t, "presence", respStanzas[0].Name())
+	require.Equal(t, "ortuman@jackal.im/chamber", respStanzas[0].Attribute(stravaganza.From))
+	require.Equal(t, "juliet@jabber.org", respStanzas[0].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.UnavailableType, respStanzas[0].Attribute(stravaganza.Type))
+
+	require.Equal(t, "presence", respStanzas[1].Name())
+	require.Equal(t, "ortuman@jackal.im/yard", respStanzas[1].Attribute(stravaganza.From))
+	require.Equal(t, "juliet@jabber.org", respStanzas[1].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.UnavailableType, respStanzas[1].Attribute(stravaganza.Type))
+
+	require.Equal(t, "iq", respStanzas[2].Name())
+	require.Equal(t, stravaganza.ResultType, respStanzas[2].Attribute(stravaganza.Type))
+
+	require.Equal(t, "iq", respStanzas[3].Name())
+	require.Equal(t, "ortuman@jackal.im", respStanzas[3].Attribute(stravaganza.From))
+	require.Equal(t, "ortuman@jackal.im/chamber", respStanzas[3].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.SetType, respStanzas[3].Attribute(stravaganza.Type))
+	require.NotNil(t, respStanzas[3].ChildNamespace("block", blockListNamespace))
+
+	require.Equal(t, "iq", respStanzas[4].Name())
+	require.Equal(t, "ortuman@jackal.im", respStanzas[4].Attribute(stravaganza.From))
+	require.Equal(t, "ortuman@jackal.im/yard", respStanzas[4].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.SetType, respStanzas[4].Attribute(stravaganza.Type))
+	require.NotNil(t, respStanzas[4].ChildNamespace("block", blockListNamespace))
 }
 
 func TestBlockList_UnblockItem(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+	resMngMock := &resourceManagerMock{}
+	rep := &repositoryMock{}
+	txMock := &txMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+	txMock.DeleteBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
+		return nil
+	}
+	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
+		return []rostermodel.Item{
+			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
+		}, nil
+	}
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return []blocklistmodel.Item{
+			{Username: "ortuman", JID: "jabber.org"},
+		}, nil
+	}
+	rep.InTransactionFunc = func(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
+		return f(ctx, txMock)
+	}
+
+	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
+	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
+			{
+				InstanceID: "i1",
+				JID:        jd0,
+				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
+				Context:    map[string]string{blockListRequestedCtxKey: "true"},
+			},
+			{
+				InstanceID: "i1",
+				JID:        jd1,
+				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
+				Context:    map[string]string{blockListRequestedCtxKey: "true"},
+			},
+		}, nil
+	}
+	bl := &BlockList{
+		router: routerMock,
+		rep:    rep,
+		resMng: resMngMock,
+		sn:     sonar.New(),
+	}
+
 	// when
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, uuid.New().String()).
+		WithAttribute(stravaganza.Type, stravaganza.SetType).
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/chamber").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("unblock").
+				WithAttribute(stravaganza.Namespace, blockListNamespace).
+				WithChild(
+					stravaganza.NewBuilder("item").
+						WithAttribute("jid", "jabber.org").
+						Build(),
+				).
+				Build(),
+		).
+		BuildIQ(false)
+
 	// then
+	_ = bl.ProcessIQ(context.Background(), iq)
+
+	require.Len(t, respStanzas, 5)
+
+	require.Equal(t, "presence", respStanzas[0].Name())
+	require.Equal(t, "ortuman@jackal.im/chamber", respStanzas[0].Attribute(stravaganza.From))
+	require.Equal(t, "juliet@jabber.org", respStanzas[0].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.AvailableType, respStanzas[0].Attribute(stravaganza.Type))
+
+	require.Equal(t, "presence", respStanzas[1].Name())
+	require.Equal(t, "ortuman@jackal.im/yard", respStanzas[1].Attribute(stravaganza.From))
+	require.Equal(t, "juliet@jabber.org", respStanzas[1].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.AvailableType, respStanzas[1].Attribute(stravaganza.Type))
+
+	require.Equal(t, "iq", respStanzas[2].Name())
+	require.Equal(t, stravaganza.ResultType, respStanzas[2].Attribute(stravaganza.Type))
+
+	require.Equal(t, "iq", respStanzas[3].Name())
+	require.Equal(t, "ortuman@jackal.im", respStanzas[3].Attribute(stravaganza.From))
+	require.Equal(t, "ortuman@jackal.im/chamber", respStanzas[3].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.SetType, respStanzas[3].Attribute(stravaganza.Type))
+	require.NotNil(t, respStanzas[3].ChildNamespace("unblock", blockListNamespace))
+
+	require.Equal(t, "iq", respStanzas[4].Name())
+	require.Equal(t, "ortuman@jackal.im", respStanzas[4].Attribute(stravaganza.From))
+	require.Equal(t, "ortuman@jackal.im/yard", respStanzas[4].Attribute(stravaganza.To))
+	require.Equal(t, stravaganza.SetType, respStanzas[4].Attribute(stravaganza.Type))
+	require.NotNil(t, respStanzas[4].ChildNamespace("unblock", blockListNamespace))
 }
 
 func TestBlockList_Forbidden(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+
+	bl := &BlockList{
+		router: routerMock,
+		sn:     sonar.New(),
+	}
+
 	// when
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, uuid.New().String()).
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/chamber").
+		WithAttribute(stravaganza.To, "noelia@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("blocklist").
+				WithAttribute(stravaganza.Namespace, blockListNamespace).
+				Build(),
+		).
+		BuildIQ(false)
+
 	// then
+	_ = bl.ProcessIQ(context.Background(), iq)
+
+	require.Len(t, respStanzas, 1)
+	require.Equal(t, stravaganza.ErrorType, respStanzas[0].Attribute(stravaganza.Type))
 }
 
 func TestBlockList_UserDeleted(t *testing.T) {
