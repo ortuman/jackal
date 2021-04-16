@@ -185,17 +185,19 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
-		if jd.Matches(fromJID) {
-			switch st := stanza.(type) {
-			case *stravaganza.IQ:
-				if st.IsGet() || st.IsSet() {
-					_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
-				}
-			case *stravaganza.Message:
+		if !jd.Matches(fromJID) {
+			continue
+		}
+		// block stanza routing
+		switch st := stanza.(type) {
+		case *stravaganza.IQ:
+			if st.IsGet() || st.IsSet() {
 				_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 			}
-			return nil, module.ErrInterceptStanzaInterrupted
+		case *stravaganza.Message:
+			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 		}
+		return nil, module.ErrInterceptStanzaInterrupted
 	}
 	return stanza, nil
 }
@@ -214,18 +216,19 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
-		if jd.Matches(toJID) {
-			// return <not-acceptable> stanza error
-			se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
-			se.Text = blockedTargetErrorText
-			se.ApplicationElement = stravaganza.NewBuilder("blocked").
-				WithAttribute(stravaganza.Namespace, blockListErrorsNamespace).
-				Build()
-			errStanza, _ := se.Stanza(false)
-
-			_, _ = m.router.Route(ctx, errStanza)
-			return nil, module.ErrInterceptStanzaInterrupted
+		if !jd.Matches(toJID) {
+			continue
 		}
+		// return <not-acceptable> stanza error
+		se := stanzaerror.E(stanzaerror.NotAcceptable, stanza)
+		se.Text = blockedTargetErrorText
+		se.ApplicationElement = stravaganza.NewBuilder("blocked").
+			WithAttribute(stravaganza.Namespace, blockListErrorsNamespace).
+			Build()
+		errStanza, _ := se.Stanza(false)
+
+		_, _ = m.router.Route(ctx, errStanza)
+		return nil, module.ErrInterceptStanzaInterrupted
 	}
 	return stanza, nil
 }
