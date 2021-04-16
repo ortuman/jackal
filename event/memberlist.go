@@ -14,7 +14,7 @@
 
 package event
 
-import "github.com/ortuman/jackal/model"
+import coremodel "github.com/ortuman/jackal/model/core"
 
 const (
 	// MemberListUpdated event is posted whenever cluster member list is updated.
@@ -24,7 +24,7 @@ const (
 // MemberListEventInfo contains all info associated to MemberListUpdated event.
 type MemberListEventInfo struct {
 	// Registered contains all new registered cluster members.
-	Registered []model.ClusterMember
+	Registered []coremodel.ClusterMember
 
 	// UnregisteredKeys contains unregistered cluster members keys.
 	UnregisteredKeys []string

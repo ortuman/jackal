@@ -24,6 +24,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0054"
 	"github.com/ortuman/jackal/module/xep0092"
 	"github.com/ortuman/jackal/module/xep0115"
+	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/module/xep0280"
 	"github.com/ortuman/jackal/util/stringmatcher"
@@ -66,13 +67,18 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// vCard
 	if stringsutil.StringSliceContains(xep0054.ModuleName, cfg.Enabled) {
-		vCard := xep0054.New(a.rep, a.router, a.sonar)
+		vCard := xep0054.New(a.router, a.rep, a.sonar)
 		mods = append(mods, vCard)
 	}
 	// capabilities
 	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
 		caps := xep0115.New(disc, a.router, a.rep, a.sonar)
 		mods = append(mods, caps)
+	}
+	// blocklist
+	if stringsutil.StringSliceContains(xep0191.ModuleName, cfg.Enabled) {
+		blockList := xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+		mods = append(mods, blockList)
 	}
 	// ping
 	if stringsutil.StringSliceContains(xep0199.ModuleName, cfg.Enabled) {
@@ -122,10 +128,9 @@ func initExtModules(a *serverApp, configs []extModuleConfig) ([]module.Module, e
 				return nil, err
 			}
 			opts.NamespaceMatcher = nsMatcher
-
-		default:
-			opts.NamespaceMatcher = stringmatcher.Any
 		}
+		opts.TargetEntity = cfg.IQHandler.TargetEntity
+
 		for _, interceptor := range cfg.StanzaInterceptors {
 			opts.Interceptors = append(opts.Interceptors, module.StanzaInterceptor{
 				ID:       interceptor.ID,

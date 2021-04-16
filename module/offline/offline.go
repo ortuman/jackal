@@ -99,7 +99,7 @@ func (m *Offline) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
 
-	log.Infow("Started offline module", "xep", "offline")
+	log.Infow("Started offline module", "xep", ModuleName)
 	return nil
 }
 
@@ -108,7 +108,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	for _, sub := range m.subs {
 		m.sn.Unsubscribe(sub)
 	}
-	log.Infow("Stopped offline module", "xep", "offline")
+	log.Infow("Stopped offline module", "xep", ModuleName)
 	return nil
 }
 

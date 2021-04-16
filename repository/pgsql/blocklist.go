@@ -18,7 +18,7 @@ import (
 	"context"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model"
+	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 )
 
 const (
@@ -29,7 +29,7 @@ type pgSQLBlockListRep struct {
 	conn conn
 }
 
-func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *model.BlockListItem) error {
+func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Insert(blockListsTableName).
 		Columns("username", "jid").
 		Values(item.Username, item.JID).
@@ -39,7 +39,7 @@ func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *model
 	return err
 }
 
-func (r *pgSQLBlockListRep) DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error {
+func (r *pgSQLBlockListRep) DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Delete(blockListsTableName).
 		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
 		RunWith(r.conn).
@@ -47,7 +47,7 @@ func (r *pgSQLBlockListRep) DeleteBlockListItem(ctx context.Context, item *model
 	return err
 }
 
-func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error) {
+func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
 	q := sq.Select("username", "jid").
 		From(blockListsTableName).
 		Where(sq.Eq{"username": username}).
@@ -62,10 +62,18 @@ func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username st
 	return scanBlockListItems(rows)
 }
 
-func scanBlockListItems(scanner rowsScanner) ([]model.BlockListItem, error) {
-	var ret []model.BlockListItem
+func (r *pgSQLBlockListRep) DeleteBlockListItems(ctx context.Context, username string) error {
+	_, err := sq.Delete(blockListsTableName).
+		Where(sq.Eq{"username": username}).
+		RunWith(r.conn).
+		ExecContext(ctx)
+	return err
+}
+
+func scanBlockListItems(scanner rowsScanner) ([]blocklistmodel.Item, error) {
+	var ret []blocklistmodel.Item
 	for scanner.Next() {
-		var it model.BlockListItem
+		var it blocklistmodel.Item
 		if err := scanner.Scan(&it.Username, &it.JID); err != nil {
 			return nil, err
 		}

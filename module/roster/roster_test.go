@@ -25,7 +25,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/event"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -149,8 +149,8 @@ func TestRoster_UpdateItem(t *testing.T) {
 	jd0, _ := jid.New("ortuman", "jackal.im", "yard", true)
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
@@ -254,8 +254,8 @@ func TestRoster_RemoveItem(t *testing.T) {
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
@@ -365,8 +365,8 @@ func TestRoster_Subscribe(t *testing.T) {
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{JID: jd0, InstanceID: "i0", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
@@ -461,14 +461,14 @@ func TestRoster_Subscribed(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		switch {
 		case username == "ortuman":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
@@ -573,14 +573,14 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		switch {
 		case username == "ortuman":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
@@ -687,14 +687,14 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		switch {
 		case username == "ortuman":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd0, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		case username == "noelia":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{JID: jd1, InstanceID: "i1", Context: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
 			}, nil
 		}
@@ -783,10 +783,10 @@ func TestRoster_Probe(t *testing.T) {
 
 	resMngMock := &resourceManagerMock{}
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		switch {
 		case username == "ortuman":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{
 					JID:        jd0,
 					InstanceID: "i1",
@@ -892,10 +892,10 @@ func TestRoster_Available(t *testing.T) {
 
 	resMngMock := &resourceManagerMock{}
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		switch {
 		case username == "noelia":
-			return []model.Resource{
+			return []coremodel.Resource{
 				{
 					JID:        jd1,
 					InstanceID: "i1",

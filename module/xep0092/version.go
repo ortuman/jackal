@@ -82,7 +82,10 @@ func (v *Version) AccountFeatures(_ context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches version module.
-func (v *Version) MatchesNamespace(namespace string) bool {
+func (v *Version) MatchesNamespace(namespace string, serverTarget bool) bool {
+	if !serverTarget {
+		return false
+	}
 	return namespace == versionNamespace
 }
 

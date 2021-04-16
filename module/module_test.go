@@ -45,7 +45,7 @@ func TestModules_StartStop(t *testing.T) {
 func TestModules_ProcessIQ(t *testing.T) {
 	// given
 	iqPrMock := &iqProcessorMock{}
-	iqPrMock.MatchesNamespaceFunc = func(namespace string) bool {
+	iqPrMock.MatchesNamespaceFunc = func(namespace string, _ bool) bool {
 		return namespace == "urn:xmpp:ping"
 	}
 	iqPrMock.StartFunc = func(ctx context.Context) error { return nil }

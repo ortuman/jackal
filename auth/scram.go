@@ -29,7 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/auth/pepper"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/transport"
 	stringsutil "github.com/ortuman/jackal/util/strings"
@@ -102,7 +102,7 @@ type Scram struct {
 	h             func() hash.Hash
 	state         scramState
 	params        *scramParameters
-	user          *model.User
+	user          *coremodel.User
 	srvNonce      string
 	firstMessage  string
 	authenticated bool

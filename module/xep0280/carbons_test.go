@@ -24,7 +24,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/event"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"
@@ -175,8 +175,8 @@ func TestCarbons_SentCC(t *testing.T) {
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{JID: jd0, Context: map[string]string{carbonsEnabledCtxKey: "true"}},
 		}, nil
 	}
@@ -245,8 +245,8 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	jd2, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{JID: jd0, Context: map[string]string{carbonsEnabledCtxKey: "true"}},
 			{JID: jd1, Context: map[string]string{carbonsEnabledCtxKey: "false"}},
 			{JID: jd2, Context: map[string]string{carbonsEnabledCtxKey: "true"}},

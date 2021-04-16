@@ -21,7 +21,7 @@ import (
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/host"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/router/stream"
 )
 
@@ -60,7 +60,7 @@ type C2SRouter interface {
 	Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) (targets []jid.JID, err error)
 
 	// Disconnect performs disconnection over an available resource.
-	Disconnect(ctx context.Context, res *model.Resource, streamErr *streamerror.Error) error
+	Disconnect(ctx context.Context, res *coremodel.Resource, streamErr *streamerror.Error) error
 
 	// Register registers a new stream.
 	Register(stm stream.C2S) error

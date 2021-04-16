@@ -110,7 +110,7 @@ func (d *Disco) AccountFeatures(_ context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches version module.
-func (d *Disco) MatchesNamespace(namespace string) bool {
+func (d *Disco) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == discoInfoNamespace || namespace == discoItemsNamespace
 }
 
@@ -202,7 +202,7 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 		break
 	case errors.Is(err, errSubscriptionRequired):
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
-		return err
+		return nil
 	default:
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
@@ -248,7 +248,7 @@ func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fr
 		break
 	case errors.Is(err, errSubscriptionRequired):
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
-		return err
+		return nil
 	default:
 		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err

@@ -80,7 +80,7 @@ const (
 	XEPNumber = "0115"
 )
 
-// Capabilities represents entity capabilities module type.
+// Capabilities represents entity capabilities (XEP-0115) module type.
 type Capabilities struct {
 	disco  *xep0030.Disco
 	router router.Router
@@ -136,12 +136,12 @@ func (m *Capabilities) StreamFeature(ctx context.Context, domain string) (strava
 
 // ServerFeatures returns entity capabilities module server disco features.
 func (m *Capabilities) ServerFeatures(_ context.Context) ([]string, error) {
-	return []string{capabilitiesFeature}, nil
+	return nil, nil
 }
 
 // AccountFeatures returns entity capabilities module account disco features.
 func (m *Capabilities) AccountFeatures(_ context.Context) ([]string, error) {
-	return []string{capabilitiesFeature}, nil
+	return nil, nil
 }
 
 // Start starts entity capabilities module.

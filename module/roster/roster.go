@@ -92,7 +92,10 @@ func (r *Roster) ServerFeatures(_ context.Context) ([]string, error) { return ni
 func (r *Roster) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches roster module.
-func (r *Roster) MatchesNamespace(namespace string) bool {
+func (r *Roster) MatchesNamespace(namespace string, serverTarget bool) bool {
+	if serverTarget {
+		return false
+	}
 	return namespace == rosterNamespace
 }
 
@@ -239,7 +242,7 @@ func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	ri, err := decodeRosterItem(items[0])
 	if err != nil {
 		_, _ = r.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
-		return err
+		return nil
 	}
 	switch ri.Subscription {
 	case rostermodel.Remove:

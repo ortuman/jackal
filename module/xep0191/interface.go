@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xep0280
+package xep0191
 
 import (
 	"context"
 
-	coremodel "github.com/ortuman/jackal/model/core"
-	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
+
+	"github.com/ortuman/jackal/router"
+
+	coremodel "github.com/ortuman/jackal/model/core"
+	"github.com/ortuman/jackal/repository"
 )
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock
@@ -37,12 +40,22 @@ type c2sStream interface {
 	stream.C2S
 }
 
+//go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
+type globalRepository interface {
+	repository.Repository
+}
+
+//go:generate moq -out tx.mock_test.go . repTransaction:txMock
+type repTransaction interface {
+	repository.Transaction
+}
+
 //go:generate moq -out hosts.mock_test.go . hosts
 type hosts interface {
 	IsLocalHost(h string) bool
 }
 
-//go:generate moq -out resourcemanager.mock_test.go . resourceManager
+//go:generate moq -out resource_manager.mock_test.go . resourceManager
 type resourceManager interface {
 	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }

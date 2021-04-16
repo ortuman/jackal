@@ -52,7 +52,8 @@ type IQProcessor interface {
 	Module
 
 	// MatchesNamespace tells whether iq child namespace corresponds to this module.
-	MatchesNamespace(namespace string) bool
+	// The serverTarget parameter will be true in case iq target is a server entity.
+	MatchesNamespace(namespace string, serverTarget bool) bool
 
 	// ProcessIQ will be invoked whenever iq stanza should be processed by this module.
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
@@ -158,7 +159,7 @@ func (m *Modules) IsModuleIQ(iq *stravaganza.IQ) bool {
 func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	ns := iq.AllChildren()[0].Attribute(stravaganza.Namespace)
 	for _, iqHnd := range m.iqProcessors {
-		if !iqHnd.MatchesNamespace(ns) {
+		if !iqHnd.MatchesNamespace(ns, iq.ToJID().IsServer()) {
 			continue
 		}
 		return iqHnd.ProcessIQ(ctx, iq)

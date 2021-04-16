@@ -70,7 +70,10 @@ func (p *Private) ServerFeatures(_ context.Context) ([]string, error) { return n
 func (p *Private) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches private module.
-func (p *Private) MatchesNamespace(namespace string) bool {
+func (p *Private) MatchesNamespace(namespace string, serverTarget bool) bool {
+	if serverTarget {
+		return false
+	}
 	return namespace == privateNamespace
 }
 
@@ -78,7 +81,7 @@ func (p *Private) MatchesNamespace(namespace string) bool {
 func (p *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJid := iq.FromJID()
 	toJid := iq.ToJID()
-	validTo := toJid.IsServer() || toJid.Node() == fromJid.Node()
+	validTo := toJid.Node() == fromJid.Node()
 	if !validTo {
 		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil

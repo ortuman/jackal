@@ -18,20 +18,20 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/model"
+	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMeasuredBlockListRep_UpsertBlockListItem(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.UpsertBlockListItemFunc = func(ctx context.Context, item *model.BlockListItem) error {
+	repMock.UpsertBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
 		return nil
 	}
 	m := New(repMock)
 
 	// when
-	_ = m.UpsertBlockListItem(context.Background(), &model.BlockListItem{})
+	_ = m.UpsertBlockListItem(context.Background(), &blocklistmodel.Item{})
 
 	// then
 	require.Len(t, repMock.UpsertBlockListItemCalls(), 1)
@@ -40,8 +40,8 @@ func TestMeasuredBlockListRep_UpsertBlockListItem(t *testing.T) {
 func TestMeasuredBlockListRep_FetchBlockListItems(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]model.BlockListItem, error) {
-		return []model.BlockListItem{}, nil
+	repMock.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+		return []blocklistmodel.Item{}, nil
 	}
 	m := New(repMock)
 
@@ -55,14 +55,29 @@ func TestMeasuredBlockListRep_FetchBlockListItems(t *testing.T) {
 func TestMeasuredBlockListRep_DeleteBlockListItem(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.DeleteBlockListItemFunc = func(ctx context.Context, item *model.BlockListItem) error {
+	repMock.DeleteBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
 		return nil
 	}
 	m := New(repMock)
 
 	// when
-	_ = m.DeleteBlockListItem(context.Background(), &model.BlockListItem{})
+	_ = m.DeleteBlockListItem(context.Background(), &blocklistmodel.Item{})
 
 	// then
 	require.Len(t, repMock.DeleteBlockListItemCalls(), 1)
+}
+
+func TestMeasuredBlockListRep_DeleteBlockListItems(t *testing.T) {
+	// given
+	repMock := &repositoryMock{}
+	repMock.DeleteBlockListItemsFunc = func(ctx context.Context, username string) error {
+		return nil
+	}
+	m := New(repMock)
+
+	// when
+	_ = m.DeleteBlockListItems(context.Background(), "usr-1")
+
+	// then
+	require.Len(t, repMock.DeleteBlockListItemsCalls(), 1)
 }

@@ -46,10 +46,10 @@ type VCard struct {
 }
 
 // New returns a new initialized VCard instance.
-func New(rep repository.Repository, router router.Router, sn *sonar.Sonar) *VCard {
+func New(router router.Router, rep repository.Repository, sn *sonar.Sonar) *VCard {
 	return &VCard{
-		rep:    rep,
 		router: router,
+		rep:    rep,
 		sn:     sn,
 	}
 }
@@ -73,7 +73,7 @@ func (v *VCard) AccountFeatures(_ context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches vCard module.
-func (v *VCard) MatchesNamespace(namespace string) bool {
+func (v *VCard) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == vCardNamespace
 }
 

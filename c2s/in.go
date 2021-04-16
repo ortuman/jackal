@@ -34,7 +34,7 @@ import (
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/offline"
 	xmppparser "github.com/ortuman/jackal/parser"
@@ -1019,11 +1019,11 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	return err
 }
 
-func (s *inC2S) getResource() *model.Resource {
+func (s *inC2S) getResource() *coremodel.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	rs := &model.Resource{
+	rs := &coremodel.Resource{
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,

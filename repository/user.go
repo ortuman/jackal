@@ -17,19 +17,19 @@ package repository
 import (
 	"context"
 
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 )
 
 // User defines user repository operations
 type User interface {
 	// UpsertUser inserts a new user entity into repository.
-	UpsertUser(ctx context.Context, user *model.User) error
+	UpsertUser(ctx context.Context, user *coremodel.User) error
 
 	// DeleteUser deletes a user entity from repository.
 	DeleteUser(ctx context.Context, username string) error
 
 	// FetchUser retrieves a user entity from repository.
-	FetchUser(ctx context.Context, username string) (*model.User, error)
+	FetchUser(ctx context.Context, username string) (*coremodel.User, error)
 
 	// UserExists tells whether or not a user exists within repository.
 	UserExists(ctx context.Context, username string) (bool, error)

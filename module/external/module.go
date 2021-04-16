@@ -35,6 +35,11 @@ import (
 	"google.golang.org/grpc/balancer/roundrobin"
 )
 
+const (
+	serverTargetEntity  = "server"
+	accountTargetEntity = "account"
+)
+
 // Options defines external module options set.
 type Options struct {
 	// RequestTimeout defines external module request timeout.
@@ -43,8 +48,11 @@ type Options struct {
 	// Topics defines all topics to which a external module wants to subscribe to.
 	Topics []string
 
-	// NamespaceMatcher defines external module namespace matcher.
+	// NamespaceMatcher defines external module IQ namespace matcher.
 	NamespaceMatcher stringmatcher.Matcher
+
+	// TargetEntity specifies target entity type for which module IQ handler should be applied.
+	TargetEntity string
 
 	// Interceptors contains external module StanzaInterceptor set.
 	Interceptors []module.StanzaInterceptor
@@ -118,9 +126,19 @@ func (m *ExtModule) AccountFeatures(ctx context.Context) ([]string, error) {
 }
 
 // MatchesNamespace tells whether namespace matches external iq handler.
-func (m *ExtModule) MatchesNamespace(namespace string) bool {
+func (m *ExtModule) MatchesNamespace(namespace string, serverTarget bool) bool {
 	if m.opts.NamespaceMatcher == nil {
 		return false
+	}
+	switch {
+	case serverTarget:
+		if m.opts.TargetEntity == accountTargetEntity {
+			return false
+		}
+	default:
+		if m.opts.TargetEntity == serverTargetEntity {
+			return false
+		}
 	}
 	return m.opts.NamespaceMatcher.Matches(namespace)
 }
@@ -326,6 +344,16 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			UserEvInfo: &extmodulepb.UserEventInfo{
 				Username: inf.Username,
 			},
+		}
+
+	case *event.BlockListEventInfo:
+		var evInf extmodulepb.BlockListEventInfo
+		evInf.Username = inf.Username
+		for _, jd := range inf.JIDs {
+			evInf.Jids = append(evInf.Jids, jd.String())
+		}
+		ret.Payload = &extmodulepb.ProcessEventRequest_BlocklistEvInfo{
+			BlocklistEvInfo: &evInf,
 		}
 	}
 	return ret

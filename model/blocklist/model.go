@@ -12,31 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rostermodel
+package blocklistmodel
 
-const (
-	// None represents 'none' subscription type.
-	None = "none"
-
-	// From represents 'from' subscription type.
-	From = "from"
-
-	// To represents 'to' subscription type.
-	To = "to"
-
-	// Both represents 'both' subscription type.
-	Both = "both"
-
-	// Remove represents 'remove' subscription type.
-	Remove = "remove"
-)
-
-// Item represents a roster item entity.
+// Item represents block list item entity.
 type Item struct {
-	Username     string
-	JID          string
-	Name         string
-	Subscription string
-	Ask          bool
-	Groups       []string
+	Username string
+	JID      string
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/ortuman/jackal/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
 	"github.com/ortuman/jackal/log"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
@@ -76,7 +76,7 @@ func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routin
 	return r.route(ctx, stanza, rss)
 }
 
-func (r *c2sRouter) Disconnect(ctx context.Context, res *model.Resource, streamErr *streamerror.Error) error {
+func (r *c2sRouter) Disconnect(ctx context.Context, res *coremodel.Resource, streamErr *streamerror.Error) error {
 	if instance.ID() == res.InstanceID {
 		return r.local.Disconnect(res.JID.Node(), res.JID.Resource(), streamErr)
 	}
@@ -125,7 +125,7 @@ func (r *c2sRouter) Stop(ctx context.Context) error {
 	return r.local.Stop(ctx)
 }
 
-func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []model.Resource) ([]jid.JID, error) {
+func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []coremodel.Resource) ([]jid.JID, error) {
 	if len(resources) == 0 {
 		return nil, router.ErrUserNotAvailable
 	}
@@ -179,7 +179,7 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	return targets, nil
 }
 
-func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *model.Resource) error {
+func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *coremodel.Resource) error {
 	if toRes.InstanceID == instance.ID() {
 		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
 	}

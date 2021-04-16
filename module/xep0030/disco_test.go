@@ -21,7 +21,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/module"
 	"github.com/stretchr/testify/require"
@@ -212,8 +212,8 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	}
 	jd0, _ := jid.NewWithString("noelia@jackal.im/chamber", true)
 	resMng := &resourceManagerMock{}
-	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]model.Resource, error) {
-		return []model.Resource{
+	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return []coremodel.Resource{
 			{
 				InstanceID: "inst-1",
 				JID:        jd0,

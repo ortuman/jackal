@@ -17,17 +17,20 @@ package repository
 import (
 	"context"
 
-	"github.com/ortuman/jackal/model"
+	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 )
 
 // BlockList defines storage operations for user's block list
 type BlockList interface {
 	// UpsertBlockListItem upserts a block list item entity into storage.
-	UpsertBlockListItem(ctx context.Context, item *model.BlockListItem) error
+	UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error
 
 	// DeleteBlockListItem deletes a block list item entity from storage.
-	DeleteBlockListItem(ctx context.Context, item *model.BlockListItem) error
+	DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error
 
-	// FetchBlockListItems retrieves from storage all block list item entities associated to a given user.
-	FetchBlockListItems(ctx context.Context, username string) ([]model.BlockListItem, error)
+	// FetchBlockListItems retrieves from storage all block list items associated to a user.
+	FetchBlockListItems(ctx context.Context, username string) ([]blocklistmodel.Item, error)
+
+	// DeleteBlockListItems deletes all block list items associated to a user.
+	DeleteBlockListItems(ctx context.Context, username string) error
 }

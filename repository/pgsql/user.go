@@ -19,7 +19,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/ortuman/jackal/model"
+	coremodel "github.com/ortuman/jackal/model/core"
 )
 
 const (
@@ -30,7 +30,7 @@ type pgSQLUserRep struct {
 	conn conn
 }
 
-func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *model.User) error {
+func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *coremodel.User) error {
 	cols := []string{
 		"username",
 		"h_sha_1",
@@ -68,8 +68,8 @@ func (r *pgSQLUserRep) DeleteUser(ctx context.Context, username string) error {
 	return err
 }
 
-func (r *pgSQLUserRep) FetchUser(ctx context.Context, username string) (*model.User, error) {
-	var usr model.User
+func (r *pgSQLUserRep) FetchUser(ctx context.Context, username string) (*coremodel.User, error) {
+	var usr coremodel.User
 
 	cols := []string{
 		"username",
