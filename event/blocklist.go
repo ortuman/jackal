@@ -20,7 +20,7 @@ import (
 
 const (
 	// BlockListFetched event is posted when a user block list is fetched.
-	BlockListFetched = "blocklist.fetched"
+	BlockListFetched = "blocklist.items.fetched"
 
 	// BlockListItemsBlocked event is posted when one or more JIDs are blocked.
 	BlockListItemsBlocked = "blocklist.items.blocked"
@@ -34,6 +34,6 @@ type BlockListEventInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 
-	// JIDs contains all block list JIDs associated to this event.
+	// JIDs contains all JIDs associated to this event.
 	JIDs []jid.JID
 }
