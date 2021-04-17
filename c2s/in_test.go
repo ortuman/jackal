@@ -353,7 +353,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							).
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedOutput:        `<iq id="bind_2" type="result" from="ortuman@localhost" to="ortuman@localhost"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ortuman@localhost/yard</jid></bind></iq>`,
@@ -378,7 +378,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							).
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			hubResources: []coremodel.Resource{
@@ -405,7 +405,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							).
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			hubResources: []coremodel.Resource{ // default max allowed sessions (3)
@@ -477,7 +477,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, sessionNamespace).
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedOutput: `<iq id="session_2" type="result" from="ortuman@localhost" to="ortuman@localhost"/>`,
@@ -498,7 +498,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, sessionNamespace).
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="session_2"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/><error code="405" type="cancel"><not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
@@ -519,7 +519,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedState: inBounded,
@@ -540,7 +540,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			routeError:     router.ErrResourceNotFound,
@@ -562,7 +562,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			routeError:     router.ErrRemoteServerNotFound,
@@ -579,7 +579,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "noelia@localhost/hall").
 					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
 					WithAttribute(stravaganza.ID, "pr_1").
-					BuildPresence(false)
+					BuildPresence()
 				return pr, nil
 			},
 			expectedState: inBounded,
@@ -595,7 +595,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "ortuman@localhost").
 					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
 					WithAttribute(stravaganza.ID, "pr_1").
-					BuildPresence(false)
+					BuildPresence()
 				return pr, nil
 			},
 			expectedState:         inBounded,
@@ -616,7 +616,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 							WithText("I'll give thee a wind.").
 							Build(),
 					).
-					BuildMessage(false)
+					BuildMessage()
 				return pr, nil
 			},
 			expectedState: inBounded,

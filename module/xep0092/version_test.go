@@ -65,7 +65,7 @@ func TestVersion_GetVersion(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, versionNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = v.Start(context.Background())
 	_ = v.ProcessIQ(context.Background(), iq)

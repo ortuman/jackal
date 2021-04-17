@@ -132,7 +132,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// when
 	_ = c.Start(context.Background())

@@ -94,7 +94,7 @@ func TestRoster_SendRoster(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, rosterNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -181,7 +181,7 @@ func TestRoster_UpdateItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -286,7 +286,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then

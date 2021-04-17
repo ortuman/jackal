@@ -188,7 +188,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// send ping IQ
 	ctx, cancel := context.WithTimeout(context.Background(), modRequestTimeout)

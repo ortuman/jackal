@@ -302,7 +302,7 @@ func TestSession_ReceiveSuccess(t *testing.T) {
 				WithText("I'll give thee a wind.").
 				Build(),
 		)
-		msg, _ := b.BuildMessage(false)
+		msg, _ := b.BuildMessage()
 		return msg, nil
 	}
 	elem, err := ss.Receive()

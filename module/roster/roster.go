@@ -796,7 +796,7 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 					WithChild(encodeRosterItem(ri)).
 					Build(),
 			).
-			BuildIQ(false)
+			BuildIQ()
 
 		_, _ = r.router.Route(ctx, pushIQ)
 	}

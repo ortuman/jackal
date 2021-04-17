@@ -172,16 +172,16 @@ func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stan
 	switch stanza.(type) {
 	case *stravaganza.IQ:
 		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildIQ(false)
+			BuildIQ()
 	case *stravaganza.Presence:
 		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildPresence(false)
+			BuildPresence()
 	case *stravaganza.Message:
 		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildMessage(false)
+			BuildMessage()
 	default:
 		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildStanza(false)
+			BuildStanza()
 	}
 }
 
@@ -239,7 +239,8 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 		switch err {
 		case nil:
 			stanza, err := stravaganza.NewBuilderFromProto(proto).
-				BuildStanza(false)
+				WithValidateJIDs(true).
+				BuildStanza()
 			if err != nil {
 				log.Warnf("externalmodule: failed to process incoming stanza: %v", err)
 				continue
@@ -253,6 +254,7 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 
 		default:
 			log.Warnf("externalmodule: failed to receive stanza: %v", err)
+			return
 		}
 	}
 }

@@ -453,7 +453,7 @@ func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, re
 			WithAttribute(stravaganza.Type, stravaganza.SetType).
 			WithAttribute(stravaganza.ID, uuid.New().String()).
 			WithChild(pushed).
-			BuildIQ(false)
+			BuildIQ()
 
 		_, _ = m.router.Route(ctx, pushIQ)
 	}

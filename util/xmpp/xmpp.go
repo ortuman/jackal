@@ -28,7 +28,7 @@ func MakeResultIQ(iq *stravaganza.IQ, queryChild stravaganza.Element) *stravagan
 	if queryChild != nil {
 		b.WithChild(queryChild)
 	}
-	resIQ, _ := b.BuildIQ(false)
+	resIQ, _ := b.BuildIQ()
 	return resIQ
 }
 
@@ -39,7 +39,7 @@ func MakePresence(fromJID, toJID *jid.JID, typ string, children []stravaganza.El
 		WithAttribute(stravaganza.To, toJID.String()).
 		WithAttribute(stravaganza.Type, typ).
 		WithChildren(children...).
-		BuildPresence(false)
+		BuildPresence()
 	return pr
 }
 
@@ -61,6 +61,6 @@ func MakeDelayMessage(stanza stravaganza.Stanza, stamp time.Time, from, text str
 			WithText(text).
 			Build(),
 	)
-	dMsg, _ := sb.BuildMessage(false)
+	dMsg, _ := sb.BuildMessage()
 	return dMsg
 }

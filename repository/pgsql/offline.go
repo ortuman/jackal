@@ -75,7 +75,7 @@ func (r *pgSQLOfflineRep) FetchOfflineMessages(ctx context.Context, username str
 		if err != nil {
 			return nil, err
 		}
-		msg, err := sb.BuildMessage(false)
+		msg, err := sb.BuildMessage()
 		if err != nil {
 			return nil, err
 		}

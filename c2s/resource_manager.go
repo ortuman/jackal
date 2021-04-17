@@ -114,7 +114,7 @@ func decodeResource(key string, val []byte) (*coremodel.Resource, error) {
 
 	if resInf.Presence != nil {
 		pr, err := stravaganza.NewBuilderFromProto(resInf.Presence).
-			BuildPresence(false)
+			BuildPresence()
 		if err != nil {
 			return nil, err
 		}

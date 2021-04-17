@@ -53,7 +53,7 @@ func newLocalRouterService(r *c2s.LocalRouter) *localRouterService {
 
 func (s *localRouterService) Route(_ context.Context, req *pb.LocalRouteRequest) (*pb.LocalRouteResponse, error) {
 	st, err := stravaganza.NewBuilderFromProto(req.GetStanza()).
-		BuildStanza(true)
+		BuildStanza()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

@@ -577,7 +577,7 @@ sendMsg:
 		msg, _ = stravaganza.NewBuilderFromElement(msg).
 			WithAttribute(stravaganza.From, message.FromJID().String()).
 			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
-			BuildMessage(false)
+			BuildMessage()
 		goto sendMsg
 
 	case router.ErrNotExistingAccount:
@@ -897,7 +897,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 		WithAttribute(stravaganza.From, userJID.String()).
 		WithAttribute(stravaganza.To, userJID.String()).
 		WithAttribute(stravaganza.Type, stravaganza.UnavailableType).
-		BuildPresence(false)
+		BuildPresence()
 	s.setPresence(pr)
 
 	// update rate limiter

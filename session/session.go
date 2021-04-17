@@ -330,21 +330,21 @@ func (ss *Session) buildStanza(elem stravaganza.Element) (stravaganza.Stanza, er
 
 	switch elem.Name() {
 	case "iq":
-		iq, err := sb.BuildIQ(false)
+		iq, err := sb.BuildIQ()
 		if err != nil {
 			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
 		}
 		return iq, nil
 
 	case "presence":
-		presence, err := sb.BuildPresence(false)
+		presence, err := sb.BuildPresence()
 		if err != nil {
 			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
 		}
 		return presence, nil
 
 	case "message":
-		message, err := sb.BuildMessage(false)
+		message, err := sb.BuildMessage()
 		if err != nil {
 			return nil, stanzaerror.E(stanzaerror.BadRequest, elem)
 		}

@@ -244,7 +244,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedState: inConnected,
@@ -265,7 +265,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			routeError:     router.ErrResourceNotFound,
@@ -282,7 +282,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "noelia@jackal.im/hall").
 					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
 					WithAttribute(stravaganza.ID, "pr_1").
-					BuildPresence(false)
+					BuildPresence()
 				return pr, nil
 			},
 			expectedState: inConnected,
@@ -303,7 +303,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithText("I'll give thee a wind.").
 							Build(),
 					).
-					BuildMessage(false)
+					BuildMessage()
 				return pr, nil
 			},
 			expectedState: inConnected,

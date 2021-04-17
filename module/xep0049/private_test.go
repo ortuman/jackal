@@ -69,7 +69,7 @@ func TestPrivate_GetPrivate(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 
@@ -126,7 +126,7 @@ func TestPrivate_SetPrivate(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 
@@ -169,7 +169,7 @@ func TestPrivate_ForbiddenRequest(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 

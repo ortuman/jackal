@@ -440,7 +440,7 @@ sendMsg:
 		msg, _ = stravaganza.NewBuilderFromElement(msg).
 			WithAttribute(stravaganza.From, message.FromJID().String()).
 			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
-			BuildMessage(false)
+			BuildMessage()
 		goto sendMsg
 
 	case router.ErrNotExistingAccount:

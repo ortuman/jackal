@@ -61,7 +61,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	_ = m.Start(context.Background())
@@ -121,7 +121,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	_ = m.Start(context.Background())
@@ -174,7 +174,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 				WithText("I'll give thee a wind.").
 				Build(),
 		)
-		msg, _ := b.BuildMessage(true)
+		msg, _ := b.BuildMessage()
 
 		return []*stravaganza.Message{msg}, nil
 	}

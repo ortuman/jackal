@@ -56,7 +56,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, discoInfoNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = d.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -114,7 +114,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, discoItemsNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = d.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -173,7 +173,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, discoInfoNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = d.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -238,7 +238,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, discoItemsNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = d.ProcessIQ(context.Background(), iq)
 
 	// then

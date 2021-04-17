@@ -37,7 +37,7 @@ func newComponentRouterService(comps *component.Components) *componentRouterServ
 
 func (s *componentRouterService) Route(ctx context.Context, req *pb.ComponentRouteRequest) (*pb.ComponentRouteResponse, error) {
 	st, err := stravaganza.NewBuilderFromProto(req.GetStanza()).
-		BuildStanza(true)
+		BuildStanza()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

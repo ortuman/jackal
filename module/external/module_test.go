@@ -125,7 +125,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// when
 	_ = mod.Start(context.Background())
@@ -174,7 +174,7 @@ func TestModule_IQHandler(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// when
 	_ = mod.ProcessIQ(context.Background(), iq)
@@ -207,7 +207,7 @@ func TestModule_InterceptStanza(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg0, _ := b.BuildMessage(true)
+	msg0, _ := b.BuildMessage()
 
 	fmt.Println(reflect.TypeOf(msg0).String())
 
@@ -269,7 +269,7 @@ func TestModule_Route(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	iq2, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, "iq0002").
@@ -281,7 +281,7 @@ func TestModule_Route(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// when
 	_ = mod.Start(context.Background())

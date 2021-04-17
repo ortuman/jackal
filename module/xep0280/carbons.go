@@ -143,7 +143,7 @@ func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, 
 	}
 	return stravaganza.NewBuilderFromElement(msg).
 		WithoutChildrenNamespace("private", carbonsNamespace).
-		BuildMessage(false)
+		BuildMessage()
 }
 
 func (p *Carbons) onC2SMessageRouted(ctx context.Context, ev sonar.Event) error {
@@ -312,7 +312,7 @@ func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
 				).
 				Build(),
 		).
-		BuildMessage(false)
+		BuildMessage()
 	return ccMsg
 }
 
@@ -332,7 +332,7 @@ func receivedMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message
 				).
 				Build(),
 		).
-		BuildMessage(false)
+		BuildMessage()
 	return ccMsg
 }
 

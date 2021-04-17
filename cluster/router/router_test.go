@@ -91,6 +91,6 @@ func testMessageStanza() *stravaganza.Message {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 	return msg
 }

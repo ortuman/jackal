@@ -261,7 +261,7 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 				WithAttribute("node", fmt.Sprintf("%s#%s", ci.node, ci.ver)).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_, _ = m.router.Route(ctx, discoIQ)
 }

@@ -129,7 +129,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			WithAttribute(stravaganza.Namespace, "Hi there!").
 			Build(),
 	)
-	iq, _ := b.BuildIQ(true)
+	iq, _ := b.BuildIQ()
 
 	var tests = []struct {
 		name string
@@ -372,6 +372,6 @@ func testMessageStanza() *stravaganza.Message {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 	return msg
 }

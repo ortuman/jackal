@@ -255,7 +255,7 @@ func scanRosterNotification(scanner rowScanner) (*rostermodel.Notification, erro
 	if err != nil {
 		return nil, err
 	}
-	pr, err := b.BuildPresence(true)
+	pr, err := b.BuildPresence()
 	if err != nil {
 		return nil, err
 	}

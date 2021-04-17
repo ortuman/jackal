@@ -31,7 +31,7 @@ func testMessageStanza() *stravaganza.Message {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 	return msg
 }
 
@@ -44,7 +44,7 @@ func testResource(instanceID string, priority int8) coremodel.Resource {
 				WithText(strconv.Itoa(int(priority))).
 				Build(),
 		).
-		BuildPresence(false)
+		BuildPresence()
 
 	jd, _ := jid.New("ortuman", "jackal.im", "yard", true)
 	return coremodel.Resource{

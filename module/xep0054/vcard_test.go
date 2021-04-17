@@ -74,7 +74,7 @@ func TestVCard_GetVCard(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, vCardNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = v.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -127,7 +127,7 @@ func TestVCard_SetVCard(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = v.ProcessIQ(context.Background(), iq)
 
 	// then

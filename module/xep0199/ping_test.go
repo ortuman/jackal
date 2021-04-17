@@ -53,7 +53,7 @@ func TestPing_Pong(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = p.ProcessIQ(context.Background(), iq)
 
 	// then
