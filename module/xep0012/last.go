@@ -14,7 +14,65 @@
 
 package xep0012
 
+import (
+	"context"
+
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/router"
+)
+
 const lastActivityNamespace = "jabber:iq:last"
 
+const (
+	// ModuleName represents last activity module name.
+	ModuleName = "last"
+
+	// XEPNumber represents last activity XEP number.
+	XEPNumber = "0012"
+)
+
+// LastActivity represents a last activity (XEP-0012) module type.
 type LastActivity struct {
+	router router.Router
+}
+
+// Name returns last activity module name.
+func (m *LastActivity) Name() string { return ModuleName }
+
+// StreamFeature returns last activity stream feature.
+func (m *LastActivity) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+	return nil, nil
+}
+
+// ServerFeatures returns server last activity features.
+func (m *LastActivity) ServerFeatures(_ context.Context) ([]string, error) {
+	return nil, nil
+}
+
+// AccountFeatures returns account last activity features.
+func (m *LastActivity) AccountFeatures(_ context.Context) ([]string, error) {
+	return []string{lastActivityNamespace}, nil
+}
+
+// MatchesNamespace tells whether namespace matches last activity module.
+func (m *LastActivity) MatchesNamespace(namespace string, _ bool) bool {
+	return namespace == lastActivityNamespace
+}
+
+// ProcessIQ process a last activity info iq.
+func (m *LastActivity) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+	return nil
+}
+
+// Start starts last activity module.
+func (m *LastActivity) Start(_ context.Context) error {
+	log.Infow("Started last module", "xep", XEPNumber)
+	return nil
+}
+
+// Stop stops last activity module.
+func (m *LastActivity) Stop(_ context.Context) error {
+	log.Infow("Stopped last module", "xep", XEPNumber)
+	return nil
 }
