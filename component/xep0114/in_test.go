@@ -25,8 +25,8 @@ import (
 
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/component"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/transport"
@@ -129,7 +129,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			WithAttribute(stravaganza.Namespace, "Hi there!").
 			Build(),
 	)
-	iq, _ := b.BuildIQ(true)
+	iq, _ := b.BuildIQ()
 
 	var tests = []struct {
 		name string
@@ -372,6 +372,6 @@ func testMessageStanza() *stravaganza.Message {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 	return msg
 }

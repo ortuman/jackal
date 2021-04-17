@@ -24,10 +24,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/component"
@@ -577,7 +577,7 @@ sendMsg:
 		msg, _ = stravaganza.NewBuilderFromElement(msg).
 			WithAttribute(stravaganza.From, message.FromJID().String()).
 			WithAttribute(stravaganza.To, message.ToJID().ToBareJID().String()).
-			BuildMessage(false)
+			BuildMessage()
 		goto sendMsg
 
 	case router.ErrNotExistingAccount:
@@ -897,7 +897,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 		WithAttribute(stravaganza.From, userJID.String()).
 		WithAttribute(stravaganza.To, userJID.String()).
 		WithAttribute(stravaganza.Type, stravaganza.UnavailableType).
-		BuildPresence(false)
+		BuildPresence()
 	s.setPresence(pr)
 
 	// update rate limiter

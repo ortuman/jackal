@@ -20,8 +20,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
 	blocklistmodel "github.com/ortuman/jackal/model/blocklist"
 	coremodel "github.com/ortuman/jackal/model/core"
@@ -83,7 +83,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, blockListNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// then
 	_ = bl.ProcessIQ(context.Background(), iq)
@@ -162,7 +162,7 @@ func TestBlockList_BlockItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// then
 	_ = bl.ProcessIQ(context.Background(), iq)
@@ -266,7 +266,7 @@ func TestBlockList_UnblockItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// then
 	_ = bl.ProcessIQ(context.Background(), iq)
@@ -325,7 +325,7 @@ func TestBlockList_Forbidden(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, blockListNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	// then
 	_ = bl.ProcessIQ(context.Background(), iq)
@@ -395,7 +395,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	_, err := bl.InterceptStanza(context.Background(), msg, incomingIID)
 
@@ -447,7 +447,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	_, err := bl.InterceptStanza(context.Background(), msg, outgoingIID)
 

@@ -17,7 +17,7 @@ package xep0004
 import (
 	"fmt"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 // FormType represents form type constant value.

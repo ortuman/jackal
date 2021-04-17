@@ -14,7 +14,7 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// VCardFetched event is posted whenever a user vCard is fetched.

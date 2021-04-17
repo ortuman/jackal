@@ -21,7 +21,7 @@ import (
 	"time"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	authpb "github.com/ortuman/jackal/auth/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"

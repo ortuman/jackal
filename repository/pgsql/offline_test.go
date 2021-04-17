@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,7 @@ func TestPgSQLOffline_InsertOfflineMessage(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	msgBytes, _ := msg.MarshalBinary()
 
@@ -79,7 +79,7 @@ func TestPgSQLOffline_FetchOfflineMessage(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	msgBytes, _ := msg.MarshalBinary()
 

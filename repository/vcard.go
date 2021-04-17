@@ -17,7 +17,7 @@ package repository
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 // VCard defines vCard repository operations.

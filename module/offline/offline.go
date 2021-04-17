@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/cluster/locker"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"

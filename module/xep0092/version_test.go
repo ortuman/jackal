@@ -19,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/version"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +65,7 @@ func TestVersion_GetVersion(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, versionNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = v.Start(context.Background())
 	_ = v.ProcessIQ(context.Background(), iq)

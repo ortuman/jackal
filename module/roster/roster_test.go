@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
 	coremodel "github.com/ortuman/jackal/model/core"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -94,7 +94,7 @@ func TestRoster_SendRoster(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, rosterNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -181,7 +181,7 @@ func TestRoster_UpdateItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then
@@ -286,7 +286,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 	_ = r.ProcessIQ(context.Background(), iq)
 
 	// then

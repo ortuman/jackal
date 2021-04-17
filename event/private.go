@@ -14,7 +14,7 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// PrivateFetched event is posted when a user private XML is fetched.

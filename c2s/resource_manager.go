@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/c2s/pb"
 	"github.com/ortuman/jackal/cluster/kv"
 	coremodel "github.com/ortuman/jackal/model/core"
@@ -114,7 +114,7 @@ func decodeResource(key string, val []byte) (*coremodel.Resource, error) {
 
 	if resInf.Presence != nil {
 		pr, err := stravaganza.NewBuilderFromProto(resInf.Presence).
-			BuildPresence(false)
+			BuildPresence()
 		if err != nil {
 			return nil, err
 		}

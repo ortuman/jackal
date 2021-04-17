@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,7 +76,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = mods.ProcessIQ(context.Background(), iq)
 
@@ -111,7 +111,7 @@ func TestModules_InterceptStanza(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	_, _ = mods.InterceptStanza(context.Background(), msg, true)

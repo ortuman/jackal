@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/cluster/pb"
 	"github.com/stretchr/testify/require"
 )
@@ -78,6 +78,6 @@ func testMessageStanza() *stravaganza.Message {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 	return msg
 }

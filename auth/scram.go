@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/auth/pepper"
 	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/repository"

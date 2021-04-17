@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router/stream"
 )

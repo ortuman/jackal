@@ -30,8 +30,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	capsmodel "github.com/ortuman/jackal/model/caps"
@@ -261,7 +261,7 @@ func (m *Capabilities) requestDiscoInfo(ctx context.Context, fromJID, toJID *jid
 				WithAttribute("node", fmt.Sprintf("%s#%s", ci.node, ci.ver)).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_, _ = m.router.Route(ctx, discoIQ)
 }

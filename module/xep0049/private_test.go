@@ -18,10 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/jid"
-
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,7 +69,7 @@ func TestPrivate_GetPrivate(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 
@@ -127,7 +126,7 @@ func TestPrivate_SetPrivate(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 
@@ -170,7 +169,7 @@ func TestPrivate_ForbiddenRequest(t *testing.T) {
 				).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = p.ProcessIQ(context.Background(), reqIQ)
 

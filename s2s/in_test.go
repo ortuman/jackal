@@ -27,9 +27,9 @@ import (
 
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
@@ -244,7 +244,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			expectedState: inConnected,
@@ -265,7 +265,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithAttribute(stravaganza.Namespace, "urn:xmpp:ping").
 							Build(),
 					).
-					BuildIQ(false)
+					BuildIQ()
 				return iq, nil
 			},
 			routeError:     router.ErrResourceNotFound,
@@ -282,7 +282,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "noelia@jackal.im/hall").
 					WithAttribute(stravaganza.Type, stravaganza.AvailableType).
 					WithAttribute(stravaganza.ID, "pr_1").
-					BuildPresence(false)
+					BuildPresence()
 				return pr, nil
 			},
 			expectedState: inConnected,
@@ -303,7 +303,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 							WithText("I'll give thee a wind.").
 							Build(),
 					).
-					BuildMessage(false)
+					BuildMessage()
 				return pr, nil
 			},
 			expectedState: inConnected,

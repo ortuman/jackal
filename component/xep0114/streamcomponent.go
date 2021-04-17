@@ -17,7 +17,7 @@ package xep0114
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 type streamComponent struct {

@@ -21,10 +21,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/transport"
 	"github.com/ortuman/jackal/util/ratelimiter"
@@ -302,7 +302,7 @@ func TestSession_ReceiveSuccess(t *testing.T) {
 				WithText("I'll give thee a wind.").
 				Build(),
 		)
-		msg, _ := b.BuildMessage(false)
+		msg, _ := b.BuildMessage()
 		return msg, nil
 	}
 	elem, err := ss.Receive()

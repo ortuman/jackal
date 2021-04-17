@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
 	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/router"
@@ -81,7 +81,7 @@ func TestCarbons_Enable(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, carbonsNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = c.ProcessIQ(context.Background(), iq)
 
@@ -147,7 +147,7 @@ func TestCarbons_Disable(t *testing.T) {
 				WithAttribute(stravaganza.Namespace, carbonsNamespace).
 				Build(),
 		).
-		BuildIQ(false)
+		BuildIQ()
 
 	_ = c.ProcessIQ(context.Background(), iq)
 
@@ -204,7 +204,7 @@ func TestCarbons_SentCC(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	_ = c.Start(context.Background())
@@ -276,7 +276,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 			WithText("I'll give thee a wind.").
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	_ = c.Start(context.Background())
@@ -320,7 +320,7 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 			WithAttribute(stravaganza.Namespace, carbonsNamespace).
 			Build(),
 	)
-	msg, _ := b.BuildMessage(true)
+	msg, _ := b.BuildMessage()
 
 	// when
 	tst, err := c.InterceptStanza(context.Background(), msg, 0)

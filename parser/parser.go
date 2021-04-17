@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 const rootElementIndex = -1

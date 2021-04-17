@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/cluster/pb"
 	"github.com/ortuman/jackal/component"
 	"google.golang.org/grpc/codes"
@@ -37,7 +37,7 @@ func newComponentRouterService(comps *component.Components) *componentRouterServ
 
 func (s *componentRouterService) Route(ctx context.Context, req *pb.ComponentRouteRequest) (*pb.ComponentRouteResponse, error) {
 	st, err := stravaganza.NewBuilderFromProto(req.GetStanza()).
-		BuildStanza(true)
+		BuildStanza()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

@@ -25,7 +25,7 @@ import (
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
-	stravaganza "github.com/jackal-xmpp/stravaganza"
+	stravaganza "github.com/jackal-xmpp/stravaganza/v2"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )

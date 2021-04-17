@@ -18,11 +18,10 @@ import (
 	"context"
 	"sort"
 
-	"github.com/ortuman/jackal/module/xep0004"
-
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	discomodel "github.com/ortuman/jackal/model/disco"
 	"github.com/ortuman/jackal/module"
+	"github.com/ortuman/jackal/module/xep0004"
 )
 
 type serverProvider struct {

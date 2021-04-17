@@ -25,9 +25,9 @@ import (
 
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/cluster/kv"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/host"
@@ -542,10 +542,10 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 	case stravaganza.Stanza:
 		// post S2S stanza sent event
 		err := s.postStreamEvent(ctx, event.S2SOutStreamStanzaSent, &event.S2SStreamEventInfo{
-			ID:           s.ID().String(),
+			ID:     s.ID().String(),
 			Sender: s.sender,
 			Target: s.target,
-			Stanza:       stanza,
+			Stanza: stanza,
 		})
 		if err != nil {
 			return err

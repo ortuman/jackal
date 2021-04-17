@@ -17,8 +17,8 @@ package xep0114
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/transport"

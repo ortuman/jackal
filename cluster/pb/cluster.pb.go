@@ -26,7 +26,7 @@ import (
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
-	stravaganza "github.com/jackal-xmpp/stravaganza"
+	stravaganza "github.com/jackal-xmpp/stravaganza/v2"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
