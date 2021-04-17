@@ -17,7 +17,7 @@ package shaper
 import (
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/util/stringmatcher"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"

@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 )
 
 // C2SID type represents a C2S stream unique identifier string.

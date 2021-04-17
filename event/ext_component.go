@@ -14,7 +14,7 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// ExternalComponentRegistered event is posted when a external component connection is registered.

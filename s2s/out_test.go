@@ -26,8 +26,8 @@ import (
 
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	xmppparser "github.com/ortuman/jackal/parser"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/ortuman/jackal/transport"

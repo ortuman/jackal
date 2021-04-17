@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/router/stream"
 	"github.com/stretchr/testify/require"

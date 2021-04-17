@@ -17,10 +17,9 @@ package clusterserver
 import (
 	"context"
 
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/c2s"
-
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/ortuman/jackal/cluster/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

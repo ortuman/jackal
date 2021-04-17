@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
 )
 

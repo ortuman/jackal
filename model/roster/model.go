@@ -14,7 +14,7 @@
 
 package rostermodel
 
-import "github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// None represents 'none' subscription type.

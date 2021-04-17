@@ -22,7 +22,7 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/cluster/instance"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"

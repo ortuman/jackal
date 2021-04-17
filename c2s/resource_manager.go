@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/c2s/pb"
 	"github.com/ortuman/jackal/cluster/kv"
 	coremodel "github.com/ortuman/jackal/model/core"

@@ -17,8 +17,8 @@ package clusterserver
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 )
 
 //go:generate moq -out localrouter.mock_test.go . localRouter

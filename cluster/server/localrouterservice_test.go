@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/cluster/pb"
 	"github.com/stretchr/testify/require"
 )

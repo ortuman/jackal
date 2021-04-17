@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
-	"github.com/jackal-xmpp/stravaganza"
-	"github.com/jackal-xmpp/stravaganza/jid"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
 	capsmodel "github.com/ortuman/jackal/model/caps"
 	discomodel "github.com/ortuman/jackal/model/disco"

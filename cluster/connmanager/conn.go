@@ -21,7 +21,7 @@ import (
 	"time"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	clusterpb "github.com/ortuman/jackal/cluster/pb"
 	"github.com/ortuman/jackal/version"
 	"google.golang.org/grpc"

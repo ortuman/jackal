@@ -14,7 +14,7 @@
 
 package event
 
-import "github.com/jackal-xmpp/stravaganza"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// OfflineMessageArchived event is posted whenever an offline message is archived.

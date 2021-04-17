@@ -18,10 +18,9 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/lib/pq"
-
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/lib/pq"
 	rostermodel "github.com/ortuman/jackal/model/roster"
 )
 
