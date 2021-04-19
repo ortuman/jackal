@@ -41,6 +41,7 @@ type Options struct {
 // Repository represents a PgSQL repository implementation.
 type Repository struct {
 	repository.User
+	repository.Last
 	repository.Capabilities
 	repository.Offline
 	repository.BlockList
@@ -100,6 +101,7 @@ func (r *Repository) Start(ctx context.Context) error {
 	log.Infow("Dialed PgSQL connection", "host", r.host)
 
 	r.User = &pgSQLUserRep{conn: db}
+	r.Last = &pgSQLLastRep{conn: db}
 	r.Capabilities = &pgSQLCapabilitiesRep{conn: db}
 	r.Offline = &pgSQLOfflineRep{conn: db}
 	r.BlockList = &pgSQLBlockListRep{conn: db}

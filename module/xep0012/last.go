@@ -47,12 +47,12 @@ func (m *LastActivity) StreamFeature(_ context.Context, _ string) (stravaganza.E
 
 // ServerFeatures returns server last activity features.
 func (m *LastActivity) ServerFeatures(_ context.Context) ([]string, error) {
-	return nil, nil
+	return []string{lastActivityNamespace}, nil
 }
 
 // AccountFeatures returns account last activity features.
 func (m *LastActivity) AccountFeatures(_ context.Context) ([]string, error) {
-	return []string{lastActivityNamespace}, nil
+	return nil, nil
 }
 
 // MatchesNamespace tells whether namespace matches last activity module.
