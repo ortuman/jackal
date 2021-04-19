@@ -118,9 +118,15 @@ func (m *Last) processPresence(ctx context.Context, pr *stravaganza.Presence) er
 	if !pr.IsUnavailable() || !toJID.IsBare() || fromJID.Node() != toJID.Node() {
 		return nil
 	}
-	return m.rep.UpsertLast(ctx, &lastmodel.Last{
-		Username: fromJID.Node(),
+	username := fromJID.Node()
+	err := m.rep.UpsertLast(ctx, &lastmodel.Last{
+		Username: username,
 		Seconds:  time.Now().Unix(),
 		Status:   pr.Status(),
 	})
+	if err != nil {
+		return err
+	}
+	log.Infow("Registered last activity", "username", username, "xep", XEPNumber)
+	return nil
 }
