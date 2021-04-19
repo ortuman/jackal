@@ -16,9 +16,15 @@ package xep0012
 
 import (
 	"context"
+	"time"
 
+	lastmodel "github.com/ortuman/jackal/model/last"
+
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
+	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 )
 
@@ -32,47 +38,89 @@ const (
 	XEPNumber = "0012"
 )
 
-// LastActivity represents a last activity (XEP-0012) module type.
-type LastActivity struct {
+// Last represents a last activity (XEP-0012) module type.
+type Last struct {
+	rep    repository.Last
 	router router.Router
+	sn     *sonar.Sonar
+	subs   []sonar.SubID
+}
+
+// New returns a new initialized Last instance.
+func New(rep repository.Last, router router.Router, sn *sonar.Sonar) *Last {
+	return &Last{
+		rep:    rep,
+		router: router,
+		sn:     sn,
+	}
 }
 
 // Name returns last activity module name.
-func (m *LastActivity) Name() string { return ModuleName }
+func (m *Last) Name() string { return ModuleName }
 
 // StreamFeature returns last activity stream feature.
-func (m *LastActivity) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+func (m *Last) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return nil, nil
 }
 
 // ServerFeatures returns server last activity features.
-func (m *LastActivity) ServerFeatures(_ context.Context) ([]string, error) {
+func (m *Last) ServerFeatures(_ context.Context) ([]string, error) {
 	return []string{lastActivityNamespace}, nil
 }
 
 // AccountFeatures returns account last activity features.
-func (m *LastActivity) AccountFeatures(_ context.Context) ([]string, error) {
+func (m *Last) AccountFeatures(_ context.Context) ([]string, error) {
 	return nil, nil
 }
 
 // MatchesNamespace tells whether namespace matches last activity module.
-func (m *LastActivity) MatchesNamespace(namespace string, _ bool) bool {
+func (m *Last) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == lastActivityNamespace
 }
 
 // ProcessIQ process a last activity info iq.
-func (m *LastActivity) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
 // Start starts last activity module.
-func (m *LastActivity) Start(_ context.Context) error {
+func (m *Last) Start(_ context.Context) error {
+	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onPresenceRecv))
+
 	log.Infow("Started last module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops last activity module.
-func (m *LastActivity) Stop(_ context.Context) error {
+func (m *Last) Stop(_ context.Context) error {
+	for _, sub := range m.subs {
+		m.sn.Unsubscribe(sub)
+	}
 	log.Infow("Stopped last module", "xep", XEPNumber)
 	return nil
+}
+
+func (m *Last) onUserDeleted(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.UserEventInfo)
+	return m.rep.DeleteLast(ctx, inf.Username)
+}
+
+func (m *Last) onPresenceRecv(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+	pr := inf.Stanza.(*stravaganza.Presence)
+	return m.processPresence(ctx, pr)
+}
+
+func (m *Last) processPresence(ctx context.Context, pr *stravaganza.Presence) error {
+	fromJID := pr.FromJID()
+	toJID := pr.ToJID()
+	if !pr.IsUnavailable() || !toJID.IsBare() || fromJID.Node() != toJID.Node() {
+		return nil
+	}
+	return m.rep.UpsertLast(ctx, &lastmodel.Last{
+		Username: fromJID.Node(),
+		Seconds:  time.Now().Unix(),
+		Status:   pr.Status(),
+	})
 }
