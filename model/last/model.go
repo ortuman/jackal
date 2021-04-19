@@ -14,6 +14,7 @@
 
 package lastmodel
 
+// Last represents a user last activity entity.
 type Last struct {
 	Username string
 	Seconds  int64
