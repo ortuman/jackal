@@ -40,11 +40,12 @@ const (
 
 // Last represents a last activity (XEP-0012) module type.
 type Last struct {
-	rep    repository.Repository
-	router router.Router
-	resMng resourceManager
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	rep       repository.Repository
+	router    router.Router
+	resMng    resourceManager
+	sn        *sonar.Sonar
+	subs      []sonar.SubID
+	startedAt int64
 }
 
 // New returns a new initialized Last instance.
@@ -94,6 +95,8 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *Last) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onPresenceRecv))
+
+	m.startedAt = time.Now().Unix()
 
 	log.Infow("Started last module", "xep", XEPNumber)
 	return nil
