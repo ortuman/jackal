@@ -56,7 +56,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// last
 	if stringsutil.StringSliceContains(xep0012.ModuleName, cfg.Enabled) {
-		last := xep0012.New(a.rep, a.router, a.sonar)
+		last := xep0012.New(a.router, a.resMng, a.rep, a.sonar)
 		mods = append(mods, last)
 	}
 	// version

@@ -18,12 +18,12 @@ import (
 	"context"
 	"time"
 
-	lastmodel "github.com/ortuman/jackal/model/last"
-
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
+	lastmodel "github.com/ortuman/jackal/model/last"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
 )
@@ -40,17 +40,24 @@ const (
 
 // Last represents a last activity (XEP-0012) module type.
 type Last struct {
-	rep    repository.Last
+	rep    repository.Repository
 	router router.Router
+	resMng resourceManager
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 }
 
 // New returns a new initialized Last instance.
-func New(rep repository.Last, router router.Router, sn *sonar.Sonar) *Last {
+func New(
+	router router.Router,
+	resMng *c2s.ResourceManager,
+	rep repository.Repository,
+	sn *sonar.Sonar,
+) *Last {
 	return &Last{
-		rep:    rep,
 		router: router,
+		resMng: resMng,
+		rep:    rep,
 		sn:     sn,
 	}
 }
@@ -127,6 +134,6 @@ func (m *Last) processPresence(ctx context.Context, pr *stravaganza.Presence) er
 	if err != nil {
 		return err
 	}
-	log.Infow("Registered last activity", "username", username, "xep", XEPNumber)
+	log.Infow("Last activity registered", "username", username, "xep", XEPNumber)
 	return nil
 }
