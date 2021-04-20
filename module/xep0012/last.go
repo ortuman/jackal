@@ -16,16 +16,21 @@ package xep0012
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	lastmodel "github.com/ortuman/jackal/model/last"
+	rostermodel "github.com/ortuman/jackal/model/roster"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
 
 const lastActivityNamespace = "jabber:iq:last"
@@ -88,7 +93,13 @@ func (m *Last) MatchesNamespace(namespace string, _ bool) bool {
 
 // ProcessIQ process a last activity info iq.
 func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
-	return nil
+	switch {
+	case iq.IsGet() && iq.ChildNamespace("query", lastActivityNamespace) != nil:
+		return m.getLastActivity(ctx, iq)
+	default:
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		return nil
+	}
 }
 
 // Start starts last activity module.
@@ -139,4 +150,71 @@ func (m *Last) processPresence(ctx context.Context, pr *stravaganza.Presence) er
 	}
 	log.Infow("Last activity registered", "username", username, "xep", XEPNumber)
 	return nil
+}
+
+func (m *Last) getLastActivity(ctx context.Context, iq *stravaganza.IQ) error {
+	if iq.ToJID().IsServer() {
+		return m.getServerLastActivity(ctx, iq)
+	}
+	return m.getAccountLastActivity(ctx, iq)
+}
+
+func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) error {
+	// reply with server uptime
+	m.sendReply(ctx, iq, time.Now().Unix()-m.startedAt, "")
+
+	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
+	return nil
+}
+
+func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) error {
+	fromJID := iq.FromJID()
+	toJID := iq.ToJID()
+	ok, err := m.isSubscribedTo(ctx, toJID, fromJID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		// requesting entity is not authorized
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		return nil
+	}
+	rss, err := m.resMng.GetResources(ctx, toJID.Node())
+	if err != nil {
+		return err
+	}
+	if len(rss) > 0 {
+		// online user
+		m.sendReply(ctx, iq, 0, "")
+		return nil
+	}
+	lst, err := m.rep.FetchLast(ctx, toJID.Node())
+	if err != nil {
+		return err
+	}
+	m.sendReply(ctx, iq, time.Now().Unix()-lst.Seconds, lst.Status)
+
+	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
+	return nil
+}
+
+func (m *Last) sendReply(ctx context.Context, iq *stravaganza.IQ, seconds int64, status string) {
+	resIQ := xmpputil.MakeResultIQ(iq, stravaganza.NewBuilder("query").
+		WithAttribute(stravaganza.Namespace, lastActivityNamespace).
+		WithAttribute("seconds", strconv.FormatInt(seconds, 10)).
+		WithText(status).
+		Build(),
+	)
+	_, _ = m.router.Route(ctx, resIQ)
+}
+
+func (m *Last) isSubscribedTo(ctx context.Context, contactJID *jid.JID, userJID *jid.JID) (bool, error) {
+	if contactJID.MatchesWithOptions(userJID, jid.MatchesBare) {
+		return true, nil
+	}
+	ri, err := m.rep.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
+	if err != nil {
+		return false, err
+	}
+	return ri != nil && (ri.Subscription == rostermodel.To || ri.Subscription == rostermodel.Both), nil
 }
