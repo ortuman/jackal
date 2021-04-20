@@ -25,9 +25,9 @@ type Last interface {
 	// UpsertLast upserts a last activity entity into storage.
 	UpsertLast(ctx context.Context, last *lastmodel.Last) error
 
-	// FetchLast retrieves from storage last activity item associated to a user.
+	// FetchLast retrieves from storage last activity entity associated to a user.
 	FetchLast(ctx context.Context, username string) (*lastmodel.Last, error)
 
-	// DeleteLast removes last activity item from storage.
+	// DeleteLast removes last activity entity from storage.
 	DeleteLast(ctx context.Context, username string) error
 }
