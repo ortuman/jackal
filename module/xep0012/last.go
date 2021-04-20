@@ -122,7 +122,9 @@ func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, i
 		return stanza, nil
 	}
 	toJID := iq.ToJID()
-	if !m.hosts.IsLocalHost(toJID.Domain()) || !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
+
+	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
+	if !isLocalTo || !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
 		return stanza, nil
 	}
 	ok, err := m.isSubscribedTo(ctx, toJID, iq.FromJID())
