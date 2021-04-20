@@ -22,6 +22,7 @@ import (
 
 type repTx struct {
 	repository.User
+	repository.Last
 	repository.Capabilities
 	repository.Offline
 	repository.BlockList
@@ -33,6 +34,7 @@ type repTx struct {
 func newRepTx(tx *sql.Tx) *repTx {
 	return &repTx{
 		User:         &pgSQLUserRep{conn: tx},
+		Last:         &pgSQLLastRep{conn: tx},
 		Capabilities: &pgSQLCapabilitiesRep{conn: tx},
 		Offline:      &pgSQLOfflineRep{conn: tx},
 		BlockList:    &pgSQLBlockListRep{conn: tx},

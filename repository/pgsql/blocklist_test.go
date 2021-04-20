@@ -24,20 +24,25 @@ import (
 )
 
 func TestPgSQLBlockList_Upsert(t *testing.T) {
+	// given
 	s, mock := newBlockListMock()
 	mock.ExpectExec(`INSERT INTO blocklist_items \(username,jid\) VALUES \(\$1,\$2\) ON CONFLICT \(username, jid\) DO NOTHING`).
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
+	// when
 	err := s.UpsertBlockListItem(context.Background(), &blocklistmodel.Item{
 		Username: "ortuman",
 		JID:      "noelia@jackal.im",
 	})
+
+	// then
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
 
 func TestPgSQLBlockList_Fetch(t *testing.T) {
+	// given
 	var blockListColumns = []string{"username", "jid"}
 	s, mock := newBlockListMock()
 	mock.ExpectQuery(`SELECT username, jid FROM blocklist_items WHERE username = \$1 ORDER BY created_at`).
@@ -46,29 +51,40 @@ func TestPgSQLBlockList_Fetch(t *testing.T) {
 			sqlmock.NewRows(blockListColumns).AddRow("ortuman", "noelia@jackal.im"),
 		)
 
+	// when
 	_, err := s.FetchBlockListItems(context.Background(), "ortuman")
+
+	// then
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
 
 func TestPgSQLBlockList_DeleteItem(t *testing.T) {
+	// given
 	s, mock := newBlockListMock()
 	mock.ExpectExec(`DELETE FROM blocklist_items WHERE \(username = \$1 AND jid = \$2\)`).
 		WithArgs("ortuman", "noelia@jackal.im").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
+	// when
 	err := s.DeleteBlockListItem(context.Background(), &blocklistmodel.Item{Username: "ortuman", JID: "noelia@jackal.im"})
+
+	// then
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }
 
 func TestPgSQLBlockList_DeleteItems(t *testing.T) {
+	// given
 	s, mock := newBlockListMock()
 	mock.ExpectExec(`DELETE FROM blocklist_items WHERE username = \$1`).
 		WithArgs("ortuman").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
+	// when
 	err := s.DeleteBlockListItems(context.Background(), "ortuman")
+
+	// then
 	require.Nil(t, mock.ExpectationsWereMet())
 	require.Nil(t, err)
 }

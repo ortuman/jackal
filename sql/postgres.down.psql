@@ -23,4 +23,5 @@ DROP TABLE IF EXISTS private_storage;
 DROP TABLE IF EXISTS blocklist_items;
 DROP TABLE IF EXISTS offline_messages;
 DROP TABLE IF EXISTS capabilities;
+DROP TABLE IF EXISTS last;
 DROP TABLE IF EXISTS users;

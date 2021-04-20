@@ -19,6 +19,7 @@ import (
 	externalmodule "github.com/ortuman/jackal/module/external"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
+	"github.com/ortuman/jackal/module/xep0012"
 	"github.com/ortuman/jackal/module/xep0030"
 	"github.com/ortuman/jackal/module/xep0049"
 	"github.com/ortuman/jackal/module/xep0054"
@@ -52,6 +53,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 			QueueSize: cfg.Offline.QueueSize,
 		})
 		mods = append(mods, off)
+	}
+	// last
+	if stringsutil.StringSliceContains(xep0012.ModuleName, cfg.Enabled) {
+		last := xep0012.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+		mods = append(mods, last)
 	}
 	// version
 	if stringsutil.StringSliceContains(xep0092.ModuleName, cfg.Enabled) {

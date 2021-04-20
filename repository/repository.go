@@ -39,6 +39,7 @@ type Transaction interface {
 
 type baseRepository interface {
 	User
+	Last
 	Capabilities
 	Offline
 	BlockList
