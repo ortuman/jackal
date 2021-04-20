@@ -254,7 +254,6 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 
 		default:
 			log.Warnf("externalmodule: failed to receive stanza: %v", err)
-			return
 		}
 	}
 }
@@ -356,6 +355,14 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_BlocklistEvInfo{
 			BlocklistEvInfo: &evInf,
+		}
+
+	case *event.LastActivityEventInfo:
+		ret.Payload = &extmodulepb.ProcessEventRequest_LastEvInfo{
+			LastEvInfo: &extmodulepb.LastEventInfo{
+				Username: inf.Username,
+				Jid:      inf.JID.String(),
+			},
 		}
 	}
 	return ret
