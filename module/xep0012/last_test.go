@@ -18,17 +18,38 @@ import (
 	"context"
 	"testing"
 
-	lastmodel "github.com/ortuman/jackal/model/last"
-
-	"github.com/jackal-xmpp/stravaganza/v2"
-
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	xmpputil "github.com/ortuman/jackal/util/xmpp"
-
 	"github.com/jackal-xmpp/sonar"
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/event"
+	lastmodel "github.com/ortuman/jackal/model/last"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
+
+func TestLast_GetServerUptime(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestLast_GetAccountLastActivity(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestLast_Forbidden(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestLast_InterceptStanza(t *testing.T) {
+	// given
+	// when
+	// then
+}
 
 func TestLast_ProcessPresence(t *testing.T) {
 	// given

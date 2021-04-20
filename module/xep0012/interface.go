@@ -30,3 +30,8 @@ type globalRepository interface {
 type resourceManager interface {
 	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }
+
+//go:generate moq -out hosts.mock_test.go . hosts
+type hosts interface {
+	IsLocalHost(h string) bool
+}

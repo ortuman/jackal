@@ -26,6 +26,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/event"
+	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	lastmodel "github.com/ortuman/jackal/model/last"
 	rostermodel "github.com/ortuman/jackal/model/roster"
@@ -47,9 +48,10 @@ const (
 
 // Last represents a last activity (XEP-0012) module type.
 type Last struct {
-	rep       repository.Repository
 	router    router.Router
+	hosts     hosts
 	resMng    resourceManager
+	rep       repository.Repository
 	sn        *sonar.Sonar
 	subs      []sonar.SubID
 	startedAt int64
@@ -58,12 +60,14 @@ type Last struct {
 // New returns a new initialized Last instance.
 func New(
 	router router.Router,
+	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
 	sn *sonar.Sonar,
 ) *Last {
 	return &Last{
 		router: router,
+		hosts:  hosts,
 		resMng: resMng,
 		rep:    rep,
 		sn:     sn,
@@ -118,7 +122,7 @@ func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, i
 		return stanza, nil
 	}
 	toJID := iq.ToJID()
-	if !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
+	if !m.hosts.IsLocalHost(toJID.Domain()) || !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
 		return stanza, nil
 	}
 	ok, err := m.isSubscribedTo(ctx, toJID, iq.FromJID())
