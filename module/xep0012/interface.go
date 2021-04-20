@@ -19,11 +19,17 @@ import (
 
 	coremodel "github.com/ortuman/jackal/model/core"
 	"github.com/ortuman/jackal/repository"
+	"github.com/ortuman/jackal/router"
 )
 
 //go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
 type globalRepository interface {
 	repository.Repository
+}
+
+//go:generate moq -out router.mock_test.go . globalRouter:routerMock
+type globalRouter interface {
+	router.Router
 }
 
 //go:generate moq -out resource_manager.mock_test.go . resourceManager

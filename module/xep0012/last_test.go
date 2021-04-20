@@ -17,7 +17,9 @@ package xep0012
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -29,11 +31,57 @@ import (
 
 func TestLast_GetServerUptime(t *testing.T) {
 	// given
+	routerMock := &routerMock{}
+
+	var respStanzas []stravaganza.Stanza
+	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
+		respStanzas = append(respStanzas, stanza)
+		return nil, nil
+	}
+
+	m := &Last{
+		router: routerMock,
+		sn:     sonar.New(),
+	}
+
+	// when
+	_ = m.Start(context.Background())
+	defer func() { _ = m.Stop(context.Background()) }()
+
+	time.Sleep(time.Second * 2)
+
+	iq, _ := stravaganza.NewIQBuilder().
+		WithAttribute(stravaganza.ID, uuid.New().String()).
+		WithAttribute(stravaganza.Type, stravaganza.GetType).
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/chamber").
+		WithAttribute(stravaganza.To, "jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("query").
+				WithAttribute(stravaganza.Namespace, lastActivityNamespace).
+				Build(),
+		).
+		BuildIQ()
+	_ = m.ProcessIQ(context.Background(), iq)
+
+	// then
+	require.Len(t, respStanzas, 1)
+
+	require.Equal(t, "iq", respStanzas[0].Name())
+	require.Equal(t, stravaganza.ResultType, respStanzas[0].Attribute(stravaganza.Type))
+
+	q := respStanzas[0].ChildNamespace("query", lastActivityNamespace)
+	require.NotNil(t, q)
+	require.True(t, len(q.Attribute("seconds")) > 0)
+	require.NotEqual(t, "0", q.Attribute("seconds"))
+}
+
+func TestLast_GetAccountLastActivityOnline(t *testing.T) {
+	// given
 	// when
 	// then
 }
 
-func TestLast_GetAccountLastActivity(t *testing.T) {
+func TestLast_GetAccountLastActivityOffline(t *testing.T) {
 	// given
 	// when
 	// then
