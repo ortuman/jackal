@@ -192,6 +192,10 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 	if err != nil {
 		return err
 	}
+	if lst == nil {
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.ItemNotFound))
+		return nil
+	}
 	m.sendReply(ctx, iq, time.Now().Unix()-lst.Seconds, lst.Status)
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
