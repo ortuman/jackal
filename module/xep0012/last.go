@@ -142,7 +142,7 @@ func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, i
 // Start starts last activity module.
 func (m *Last) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onPresenceRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
 
 	m.startedAt = time.Now().Unix()
 
@@ -164,13 +164,13 @@ func (m *Last) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 	return m.rep.DeleteLast(ctx, inf.Username)
 }
 
-func (m *Last) onPresenceRecv(ctx context.Context, ev sonar.Event) error {
+func (m *Last) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 	pr := inf.Stanza.(*stravaganza.Presence)
-	return m.processPresence(ctx, pr)
+	return m.processC2SPresence(ctx, pr)
 }
 
-func (m *Last) processPresence(ctx context.Context, pr *stravaganza.Presence) error {
+func (m *Last) processC2SPresence(ctx context.Context, pr *stravaganza.Presence) error {
 	fromJID := pr.FromJID()
 	toJID := pr.ToJID()
 	if !pr.IsUnavailable() || !toJID.IsBare() || fromJID.Node() != toJID.Node() {
@@ -201,7 +201,14 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 	m.sendReply(ctx, iq, time.Now().Unix()-m.startedAt, "")
 
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
-	return nil
+
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.LastActivityFetched).
+		WithInfo(&event.LastActivityEventInfo{
+			Username: iq.FromJID().Node(),
+			JID:      iq.ToJID(),
+		}).
+		Build(),
+	)
 }
 
 func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) error {
@@ -236,7 +243,14 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 	m.sendReply(ctx, iq, time.Now().Unix()-lst.Seconds, lst.Status)
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
-	return nil
+
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.LastActivityFetched).
+		WithInfo(&event.LastActivityEventInfo{
+			Username: fromJID.Node(),
+			JID:      toJID,
+		}).
+		Build(),
+	)
 }
 
 func (m *Last) sendReply(ctx context.Context, iq *stravaganza.IQ, seconds int64, status string) {
