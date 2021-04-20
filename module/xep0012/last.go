@@ -104,7 +104,7 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 }
 
-// Interceptors returns last activity stanza interceptors.
+// Interceptors returns last activity stanza interceptor.
 func (m *Last) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
 		{Priority: math.MaxInt64, Incoming: true},
@@ -113,6 +113,23 @@ func (m *Last) Interceptors() []module.StanzaInterceptor {
 
 // InterceptStanza will be used by last activity module to determine whether requesting entity is authorized.
 func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
+	iq, ok := stanza.(*stravaganza.IQ)
+	if !ok {
+		return stanza, nil
+	}
+	toJID := iq.ToJID()
+	if !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
+		return stanza, nil
+	}
+	ok, err := m.isSubscribedTo(ctx, toJID, iq.FromJID())
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		// reply on behalf
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		return nil, module.ErrInterceptStanzaInterrupted
+	}
 	return stanza, nil
 }
 
@@ -230,9 +247,9 @@ func (m *Last) isSubscribedTo(ctx context.Context, contactJID *jid.JID, userJID 
 	if contactJID.MatchesWithOptions(userJID, jid.MatchesBare) {
 		return true, nil
 	}
-	ri, err := m.rep.FetchRosterItem(ctx, userJID.Node(), contactJID.ToBareJID().String())
+	ri, err := m.rep.FetchRosterItem(ctx, contactJID.Node(), userJID.ToBareJID().String())
 	if err != nil {
 		return false, err
 	}
-	return ri != nil && (ri.Subscription == rostermodel.To || ri.Subscription == rostermodel.Both), nil
+	return ri != nil && (ri.Subscription == rostermodel.From || ri.Subscription == rostermodel.Both), nil
 }
