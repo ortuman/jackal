@@ -16,8 +16,11 @@ package xep0012
 
 import (
 	"context"
+	"math"
 	"strconv"
 	"time"
+
+	"github.com/ortuman/jackal/module"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -100,6 +103,18 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
+}
+
+// Interceptors returns last activity stanza interceptors.
+func (m *Last) Interceptors() []module.StanzaInterceptor {
+	return []module.StanzaInterceptor{
+		{Priority: math.MaxInt64, Incoming: true},
+	}
+}
+
+// InterceptStanza will be used by last activity module to determine whether requesting entity is authorized.
+func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
+	return stanza, nil
 }
 
 // Start starts last activity module.
