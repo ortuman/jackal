@@ -18,12 +18,11 @@ import (
 	"context"
 	"time"
 
-	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	xmpputil "github.com/ortuman/jackal/util/xmpp"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/router"
+	xmpputil "github.com/ortuman/jackal/util/xmpp"
 )
 
 const timeNamespace = "urn:xmpp:time"
