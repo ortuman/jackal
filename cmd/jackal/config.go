@@ -150,7 +150,7 @@ type s2sOutConfig struct {
 }
 
 type modulesConfig struct {
-	Enabled []string `fig:"enabled" default:"[roster,offline,last,disco,private,vcard,version,caps,blocklist,ping,carbons]"`
+	Enabled []string `fig:"enabled" default:"[roster,offline,last,disco,private,vcard,version,caps,blocklist,ping,time,carbons]"`
 
 	Offline struct {
 		QueueSize int `fig:"queue_size" default:"200"`

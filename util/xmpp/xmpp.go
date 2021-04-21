@@ -57,7 +57,7 @@ func MakeDelayMessage(stanza stravaganza.Stanza, stamp time.Time, from, text str
 		stravaganza.NewBuilder("delay").
 			WithAttribute(stravaganza.Namespace, "urn:xmpp:delay").
 			WithAttribute(stravaganza.From, from).
-			WithAttribute("stamp", stamp.UTC().Format(time.RFC3339)).
+			WithAttribute("stamp", stamp.UTC().Format("2006-01-02T15:04:05Z")).
 			WithText(text).
 			Build(),
 	)

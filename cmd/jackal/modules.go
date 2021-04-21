@@ -27,6 +27,7 @@ import (
 	"github.com/ortuman/jackal/module/xep0115"
 	"github.com/ortuman/jackal/module/xep0191"
 	"github.com/ortuman/jackal/module/xep0199"
+	"github.com/ortuman/jackal/module/xep0202"
 	"github.com/ortuman/jackal/module/xep0280"
 	"github.com/ortuman/jackal/util/stringmatcher"
 	stringsutil "github.com/ortuman/jackal/util/strings"
@@ -95,6 +96,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 			TimeoutAction: cfg.Ping.TimeoutAction,
 		})
 		mods = append(mods, ping)
+	}
+	// time
+	if stringsutil.StringSliceContains(xep0202.ModuleName, cfg.Enabled) {
+		time := xep0202.New(a.router)
+		mods = append(mods, time)
 	}
 	// carbons
 	if stringsutil.StringSliceContains(xep0280.ModuleName, cfg.Enabled) {
