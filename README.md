@@ -175,6 +175,7 @@ docker run --name=jackal \
 - [XEP-0160: Best Practices for Handling Offline Messages](https://xmpp.org/extensions/xep-0160.html) *1.0.1*
 - [XEP-0190: Best Practice for Closing Idle Streams](https://xmpp.org/extensions/xep-0190.html) *1.1*
 - [XEP-0191: Blocking Command](https://xmpp.org/extensions/xep-0191.html) *1.3*
+- [XEP-0198: Stream Management](https://xmpp.org/extensions/xep-0198.html) *1.6*  
 - [XEP-0199: XMPP Ping](https://xmpp.org/extensions/xep-0199.html) *2.0*
 - [XEP-0202: Entity Time](https://xmpp.org/extensions/xep-0202.html) *2.0*  
 - [XEP-0220: Server Dialback](https://xmpp.org/extensions/xep-0220.html) *1.1.1*
