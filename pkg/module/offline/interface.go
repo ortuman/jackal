@@ -15,14 +15,19 @@
 package offline
 
 import (
+	"context"
+
+	"github.com/ortuman/jackal/pkg/router/stream"
+
 	"github.com/ortuman/jackal/pkg/cluster/locker"
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 )
 
-//go:generate moq -out repository.mock_test.go . offlineRepository:repositoryMock
-type offlineRepository interface {
-	repository.Offline
+//go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
+type globalRepository interface {
+	repository.Repository
 }
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock
@@ -30,9 +35,19 @@ type globalRouter interface {
 	router.Router
 }
 
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream:streamMock
+type c2sStream interface {
+	stream.C2S
+}
+
 //go:generate moq -out hosts.mock_test.go . hosts
 type hosts interface {
 	IsLocalHost(h string) bool
+}
+
+//go:generate moq -out resource_manager.mock_test.go . resourceManager
+type resourceManager interface {
+	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }
 
 //go:generate moq -out locker.mock_test.go . clusterLocker:lockerMock

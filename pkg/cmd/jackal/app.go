@@ -435,7 +435,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	// enabled modules
 	enabled := cfg.Enabled
 	if len(enabled) == 0 {
-		enabled = defaultModules
+		enabled = defaultMods
 	}
 	for _, mName := range enabled {
 		fn, ok := modFns[mName]
@@ -460,9 +460,16 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			}
 		}
 		for _, interceptor := range extCfg.StanzaInterceptors {
+			var typ module.InterceptorType
+			switch {
+			case interceptor.Incoming:
+				typ = module.InboundInterceptor
+			default:
+				typ = module.OutboundInterceptor
+			}
 			interceptors = append(interceptors, module.StanzaInterceptor{
 				ID:       interceptor.ID,
-				Incoming: interceptor.Incoming,
+				Type:     typ,
 				Priority: interceptor.Priority,
 			})
 		}
@@ -491,7 +498,12 @@ func (a *serverApp) initAdminServer(bindAddr string, port int) {
 }
 
 func (a *serverApp) initClusterServer(bindAddr string, port int) {
-	clusterSrv := clusterserver.New(bindAddr, port, a.localRouter, a.comps)
+	clusterSrv := clusterserver.New(
+		bindAddr,
+		port,
+		a.localRouter,
+		a.comps,
+	)
 	a.registerStartStopper(clusterSrv)
 	return
 }

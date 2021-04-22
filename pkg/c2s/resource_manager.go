@@ -110,7 +110,7 @@ func decodeResource(key string, val []byte) (*coremodel.Resource, error) {
 	}
 	res.InstanceID = resInf.InstanceId
 	res.JID, _ = jid.New(ss[0], resInf.Domain, ss[1], true)
-	res.Context = resInf.Context
+	res.Info = coremodel.ResourceInfo{M: resInf.Context}
 
 	if resInf.Presence != nil {
 		pr, err := stravaganza.NewBuilderFromProto(resInf.Presence).
@@ -140,7 +140,7 @@ func resourceVal(res *coremodel.Resource) ([]byte, error) {
 	resInf := resourcemanagerpb.ResourceInfo{
 		InstanceId: res.InstanceID,
 		Domain:     res.JID.Domain(),
-		Context:    res.Context,
+		Context:    res.Info.M,
 		Presence:   pbPresence,
 	}
 	return proto.Marshal(&resInf)

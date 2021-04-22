@@ -17,7 +17,6 @@ package xep0280
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -34,7 +33,7 @@ import (
 )
 
 const (
-	carbonsEnabledCtxKey = "carbons:enabled"
+	enabledInfoKey = "xep0280:enabled"
 
 	carbonsNamespace          = "urn:xmpp:carbons:2"
 	deliveryReceiptsNamespace = "urn:xmpp:receipts"
@@ -128,7 +127,7 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 // Interceptors returns carbons stanza interceptor.
 func (p *Carbons) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{Incoming: false},
+		{Type: module.OutboundInterceptor},
 	}
 }
 
@@ -199,7 +198,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+	return stm.SetInfoValue(ctx, enabledInfoKey, enabled)
 }
 
 func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
@@ -228,8 +227,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(enabledInfoKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
@@ -243,8 +241,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(enabledInfoKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))

@@ -110,7 +110,7 @@ func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamBounded, p.onBounded))
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamElementReceived, p.onRecvElement))
-		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamUnregistered, p.onUnregister))
+		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamDisconnected, p.onDisconnected))
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
 	return nil
@@ -164,7 +164,7 @@ func (p *Ping) onRecvElement(_ context.Context, ev sonar.Event) error {
 	return nil
 }
 
-func (p *Ping) onUnregister(_ context.Context, ev sonar.Event) error {
+func (p *Ping) onDisconnected(_ context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 
 	if jd := inf.JID; jd != nil {

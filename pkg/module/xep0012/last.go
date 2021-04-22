@@ -111,7 +111,7 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 // Interceptors returns last activity stanza interceptor.
 func (m *Last) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{Priority: math.MaxInt64, Incoming: true},
+		{Priority: math.MaxInt32, Type: module.InboundInterceptor},
 	}
 }
 
@@ -134,7 +134,7 @@ func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, i
 	if !ok {
 		// reply on behalf
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	return stanza, nil
 }

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
@@ -39,7 +38,7 @@ import (
 )
 
 const (
-	blockListRequestedCtxKey = "blocklist:requested"
+	requestedInfoKey = "xep0191:requested"
 
 	blockListNamespace       = "urn:xmpp:blocking"
 	blockListErrorsNamespace = "urn:xmpp:blocking:errors"
@@ -150,8 +149,8 @@ func (m *BlockList) Stop(_ context.Context) error {
 // Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{ID: incomingIID, Priority: math.MaxInt64, Incoming: true},
-		{ID: outgoingIID, Priority: math.MaxInt64, Incoming: false},
+		{ID: incomingIID, Priority: math.MaxInt32, Type: module.InboundInterceptor},
+		{ID: outgoingIID, Priority: math.MaxInt32, Type: module.OutboundInterceptor},
 	}
 }
 
@@ -197,7 +196,7 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 		case *stravaganza.Message:
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 		}
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	return stanza, nil
 }
@@ -228,7 +227,7 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 		errStanza, _ := se.Stanza(false)
 
 		_, _ = m.router.Route(ctx, errStanza)
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	return stanza, nil
 }
@@ -267,7 +266,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
 	}
-	if err := stm.SetValue(ctx, blockListRequestedCtxKey, strconv.FormatBool(true)); err != nil {
+	if err := stm.SetInfoValue(ctx, requestedInfoKey, true); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -446,8 +445,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
 	for _, res := range resources {
-		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey)) // block list requested?
-		if !ok {
+		if !res.Info.Bool(requestedInfoKey) { // block list requested?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().

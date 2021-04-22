@@ -262,7 +262,7 @@ func TestLast_InterceptStanza(t *testing.T) {
 
 	// then
 	require.NotNil(t, err)
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.Equal(t, module.ErrInterceptionInterrupted, err)
 
 	require.Len(t, respStanzas, 1)
 

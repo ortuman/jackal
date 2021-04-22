@@ -45,7 +45,8 @@ func TestResourceManager_SetResource(t *testing.T) {
 	require.Equal(t, r0.InstanceID, r1.InstanceID)
 	require.Equal(t, r0.JID.Domain(), r1.JID.Domain())
 	require.Equal(t, r0.JID.Resource(), r1.JID.Resource())
-	require.Equal(t, r0.Context, r1.Context)
+
+	require.True(t, reflect.DeepEqual(r0.Info, r1.Info))
 	require.True(t, reflect.DeepEqual(r0.Presence.String(), r1.Presence.String()))
 }
 

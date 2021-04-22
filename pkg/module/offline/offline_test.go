@@ -24,6 +24,8 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/event"
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	"github.com/ortuman/jackal/pkg/module"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +40,17 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	lockerMock.AcquireLockFunc = func(ctx context.Context, lockID string) (locker.Lock, error) {
 		return lockMock, nil
 	}
+	hostsMock := &hostsMock{}
+	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
+
+	resManagerMock := &resourceManagerMock{}
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return nil, nil
+	}
 	repMock := &repositoryMock{}
+	repMock.UserExistsFunc = func(ctx context.Context, username string) (bool, error) {
+		return true, nil
+	}
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 0, nil
 	}
@@ -50,6 +62,8 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		rep:    repMock,
+		hosts:  hostsMock,
+		resMng: resManagerMock,
 		locker: lockerMock,
 		sn:     sn,
 	}
@@ -66,15 +80,12 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	// when
 	_ = m.Start(context.Background())
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: msg,
-			}).
-			Build(),
-	)
+	stanza, err := m.InterceptStanza(context.Background(), msg, 0)
 
 	// then
+	require.Equal(t, module.ErrInterceptionInterrupted, err)
+	require.Nil(t, stanza)
+
 	require.Len(t, repMock.CountOfflineMessagesCalls(), 1)
 	require.Len(t, repMock.InsertOfflineMessageCalls(), 1)
 }
@@ -88,6 +99,13 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		_ = stanza.ToXML(output, true)
 		return nil, nil
 	}
+	hostsMock := &hostsMock{}
+	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
+
+	resManagerMock := &resourceManagerMock{}
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return nil, nil
+	}
 
 	lockMock := &lockMock{}
 	lockMock.ReleaseFunc = func(ctx context.Context) error {
@@ -98,6 +116,9 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		return lockMock, nil
 	}
 	repMock := &repositoryMock{}
+	repMock.UserExistsFunc = func(ctx context.Context, username string) (bool, error) {
+		return true, nil
+	}
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 100, nil
 	}
@@ -109,6 +130,8 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		router: routerMock,
+		hosts:  hostsMock,
+		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
 		sn:     sn,
@@ -126,15 +149,12 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	// when
 	_ = m.Start(context.Background())
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: msg,
-			}).
-			Build(),
-	)
+	stanza, err := m.InterceptStanza(context.Background(), msg, 0)
 
 	// then
+	require.Equal(t, module.ErrInterceptionInterrupted, err)
+	require.Nil(t, stanza)
+
 	require.Len(t, repMock.CountOfflineMessagesCalls(), 1)
 	require.Len(t, repMock.InsertOfflineMessageCalls(), 0)
 
@@ -143,16 +163,13 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 
 func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	// given
-	routerMock := &routerMock{}
-
-	output := bytes.NewBuffer(nil)
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
-		_ = stanza.ToXML(output, true)
-		return nil, nil
-	}
 	hostsMock := &hostsMock{}
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
+	resManagerMock := &resourceManagerMock{}
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return nil, nil
+	}
 	lockMock := &lockMock{}
 	lockMock.ReleaseFunc = func(ctx context.Context) error {
 		return nil
@@ -181,12 +198,25 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	repMock.DeleteOfflineMessagesFunc = func(ctx context.Context, username string) error {
 		return nil
 	}
+	streamMock := &streamMock{}
+	streamMock.UsernameFunc = func() string { return "ortuman" }
+	streamMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
+		return nil
+	}
+	streamMock.InfoFunc = func() *coremodel.ResourceInfo {
+		return &coremodel.ResourceInfo{M: make(map[string]string)}
+	}
+	output := bytes.NewBuffer(nil)
+	streamMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		_ = elem.ToXML(output, true)
+		return nil
+	}
 
 	sn := sonar.New()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
-		router: routerMock,
 		hosts:  hostsMock,
+		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
 		sn:     sn,
@@ -205,6 +235,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 			WithInfo(&event.C2SStreamEventInfo{
 				Element: pr,
 			}).
+			WithSender(streamMock).
 			Build(),
 	)
 

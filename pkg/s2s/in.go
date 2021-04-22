@@ -33,7 +33,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/module/offline"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -342,7 +341,7 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	switch err {
 	case nil:
 		break
-	case module.ErrInterceptStanzaInterrupted:
+	case module.ErrInterceptionInterrupted:
 		return nil // stanza processing interrupted
 	default:
 		return err
@@ -382,7 +381,7 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch err {
 	case nil:
 		break
-	case module.ErrInterceptStanzaInterrupted:
+	case module.ErrInterceptionInterrupted:
 		return nil // stanza routing interrupted
 	default:
 		return err
@@ -428,7 +427,7 @@ sendMsg:
 	switch err {
 	case nil:
 		break
-	case module.ErrInterceptStanzaInterrupted:
+	case module.ErrInterceptionInterrupted:
 		return nil // stanza routing interrupted
 	default:
 		return err
@@ -453,15 +452,7 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
 
 	case router.ErrUserNotAvailable:
-		if !s.mods.IsEnabled(offline.ModuleName) {
-			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
-		}
-		return s.postStreamEvent(ctx, event.S2SInStreamMessageUnrouted, &event.S2SStreamEventInfo{
-			ID:      s.ID().String(),
-			Sender:  s.sender,
-			Target:  s.target,
-			Element: msg,
-		})
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
 		return s.postStreamEvent(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{
@@ -490,7 +481,7 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		switch err {
 		case nil:
 			break
-		case module.ErrInterceptStanzaInterrupted:
+		case module.ErrInterceptionInterrupted:
 			return nil // stanza routing interrupted
 		default:
 			return err

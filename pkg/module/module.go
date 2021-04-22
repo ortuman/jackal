@@ -61,6 +61,17 @@ type IQProcessor interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
+// InterceptorType defines stanza interceptor type.
+type InterceptorType int
+
+const (
+	// InboundInterceptor represents an inbound interceptor type.
+	InboundInterceptor = InterceptorType(iota)
+
+	// OutboundInterceptor represents an outbound interceptor type.
+	OutboundInterceptor
+)
+
 // StanzaInterceptor type allows to dynamically transform stanza content.
 // Interceptors may be invoked upon receiving a stanza or before sending it to the target.
 type StanzaInterceptor struct {
@@ -68,16 +79,16 @@ type StanzaInterceptor struct {
 	// is being invoked when calling InterceptStanza method, so it doesn't need to be unique across different modules.
 	ID int
 
-	// Incoming tells whether the interceptor should be invoked; either upon receiving a stanza or before sending it to the target.
-	Incoming bool
+	// Type determines whether the interceptor should be invoked; either upon receiving a stanza or before sending it to the target.
+	Type InterceptorType
 
 	// Priority represents interceptor priority that's used to determine which interceptors should be invoked first.
 	// The higher the number the more priority.
-	Priority int
+	Priority int32
 }
 
-// ErrInterceptStanzaInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
-var ErrInterceptStanzaInterrupted = errors.New("module: stanza interception interrupted")
+// ErrInterceptionInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
+var ErrInterceptionInterrupted = errors.New("module: stanza interception interrupted")
 
 // StanzaInterceptorProcessor represents an stanza interceptor module type.
 type StanzaInterceptorProcessor interface {
@@ -87,7 +98,7 @@ type StanzaInterceptorProcessor interface {
 	Interceptors() []StanzaInterceptor
 
 	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-	// To interrupt interception ErrInterceptStanzaInterrupted should be returned.
+	// To interrupt interception ErrInterceptionInterrupted should be returned.
 	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
 }
 
@@ -253,13 +264,13 @@ func (m *Modules) setupModules() {
 		if ok {
 			stanzaInterceptors := stanzaInterceptorPr.Interceptors()
 			for _, interceptor := range stanzaInterceptors {
-				switch {
-				case interceptor.Incoming:
+				switch interceptor.Type {
+				case InboundInterceptor:
 					m.recvInterceptors = append(m.recvInterceptors, stanzaInterceptor{
 						StanzaInterceptor: interceptor,
 						fn:                stanzaInterceptorPr.InterceptStanza,
 					})
-				default:
+				case OutboundInterceptor:
 					m.sendInterceptors = append(m.sendInterceptors, stanzaInterceptor{
 						StanzaInterceptor: interceptor,
 						fn:                stanzaInterceptorPr.InterceptStanza,

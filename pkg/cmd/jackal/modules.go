@@ -30,20 +30,6 @@ import (
 	"github.com/ortuman/jackal/pkg/module/xep0280"
 )
 
-var defaultModules = []string{
-	roster.ModuleName,
-	offline.ModuleName,
-	xep0012.ModuleName,
-	xep0030.ModuleName,
-	xep0049.ModuleName,
-	xep0054.ModuleName,
-	xep0092.ModuleName,
-	xep0115.ModuleName,
-	xep0191.ModuleName,
-	xep0199.ModuleName,
-	xep0280.ModuleName,
-}
-
 var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Roster
 	// (https://xmpp.org/rfcs/rfc6121.html#roster)
@@ -53,7 +39,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Config{
+		return offline.New(a.router, a.hosts, a.resMng, a.rep, a.locker, a.sonar, offline.Config{
 			QueueSize: cfg.Offline.QueueSize,
 		})
 	},
@@ -114,4 +100,18 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	xep0280.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
 		return xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
 	},
+}
+
+var defaultMods = []string{
+	roster.ModuleName,
+	offline.ModuleName,
+	xep0012.ModuleName,
+	xep0030.ModuleName,
+	xep0049.ModuleName,
+	xep0054.ModuleName,
+	xep0092.ModuleName,
+	xep0115.ModuleName,
+	xep0191.ModuleName,
+	xep0199.ModuleName,
+	xep0280.ModuleName,
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -36,8 +37,8 @@ import (
 )
 
 const (
-	rosterRequestedCtxKey      = "ros:requested"
-	rosterDidGoAvailableCtxKey = "ros:available"
+	requestedInfoKey = "roster:requested"
+	availableInfoKey = "roster:available"
 
 	rosterNamespace = "jabber:iq:roster"
 )
@@ -198,7 +199,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 		if err != nil {
 			return err
 		}
-		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
+		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedInfoKey, true)
 	}
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
@@ -224,7 +225,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
-	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), rosterRequestedCtxKey, strconv.FormatBool(true))
+	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedInfoKey, true)
 }
 
 func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
@@ -539,12 +540,11 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 	}
 	isAvailable := presence.IsAvailable()
 	if isAvailable {
-		didAvailStr, err := r.getStreamValue(fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey)
+		sInf, err := r.getStreamInfo(fromJID.Node(), fromJID.Resource())
 		if err != nil {
 			return err
 		}
-		didAvail, _ := strconv.ParseBool(didAvailStr)
-		if didAvail {
+		if sInf.Bool(availableInfoKey) {
 			goto broadcastPresence
 		}
 		// send self-presence
@@ -581,7 +581,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			}
 		}
 		// mark first avail
-		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), rosterDidGoAvailableCtxKey, strconv.FormatBool(true)); err != nil {
+		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), availableInfoKey, true); err != nil {
 			return err
 		}
 	}
@@ -780,8 +780,7 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 	}
 	for _, rs := range rss {
 		// did request roster?
-		rosRequested, _ := strconv.ParseBool(rs.Value(rosterRequestedCtxKey))
-		if !rosRequested {
+		if !rs.Info.Bool(requestedInfoKey) {
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().
@@ -819,20 +818,20 @@ func (r *Roster) routePresencesFrom(ctx context.Context, username string, toJID 
 	return nil
 }
 
-func (r *Roster) setStreamValue(ctx context.Context, username, resource, key, val string) error {
+func (r *Roster) setStreamValue(ctx context.Context, username, resource, key string, val interface{}) error {
 	stm := r.router.C2S().LocalStream(username, resource)
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, key, val)
+	return stm.SetInfoValue(ctx, key, val)
 }
 
-func (r *Roster) getStreamValue(username, resource, key string) (val string, err error) {
+func (r *Roster) getStreamInfo(username, resource string) (inf *coremodel.ResourceInfo, err error) {
 	stm := r.router.C2S().LocalStream(username, resource)
 	if stm == nil {
-		return "", errStreamNotFound(username, resource)
+		return nil, errStreamNotFound(username, resource)
 	}
-	return stm.Value(key), nil
+	return stm.Info(), nil
 }
 
 func (r *Roster) postRosterEvent(ctx context.Context, eventName string, inf *event.RosterEventInfo) error {
