@@ -42,8 +42,8 @@ const (
 	XEPNumber = "0092"
 )
 
-// Options contains version module configuration options.
-type Options struct {
+// Config contains version module configuration options.
+type Config struct {
 	// ShowOS tells whether OS info should be revealed or not.
 	ShowOS bool
 }
@@ -52,14 +52,14 @@ type Options struct {
 type Version struct {
 	router router.Router
 	osInfo string
-	opts   Options
+	cfg Config
 }
 
 // New returns a new initialized version instance.
-func New(router router.Router, opts Options) *Version {
+func New(router router.Router, cfg Config) *Version {
 	return &Version{
 		router: router,
-		opts:   opts,
+		cfg:   cfg,
 	}
 }
 
@@ -132,7 +132,7 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 			WithText(strings.TrimPrefix(version.Version.String(), "v")).
 			Build(),
 	)
-	if v.opts.ShowOS {
+	if v.cfg.ShowOS {
 		qb.WithChild(
 			stravaganza.NewBuilder("os").
 				WithText(v.osInfo).

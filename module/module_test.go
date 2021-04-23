@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -25,12 +26,14 @@ import (
 func TestModules_StartStop(t *testing.T) {
 	// given
 	iqPrMock := &iqProcessorMock{}
+	iqPrMock.NameFunc = func() string { return "m0" }
 	iqPrMock.StartFunc = func(ctx context.Context) error { return nil }
 	iqPrMock.StopFunc = func(ctx context.Context) error { return nil }
 
 	mods := &Modules{
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
+		sn:           sonar.New(),
 	}
 
 	// when
@@ -45,6 +48,7 @@ func TestModules_StartStop(t *testing.T) {
 func TestModules_ProcessIQ(t *testing.T) {
 	// given
 	iqPrMock := &iqProcessorMock{}
+	iqPrMock.NameFunc = func() string { return "m0" }
 	iqPrMock.MatchesNamespaceFunc = func(namespace string, _ bool) bool {
 		return namespace == "urn:xmpp:ping"
 	}
@@ -61,6 +65,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
 		hosts:        hMock,
+		sn:           sonar.New(),
 	}
 
 	// when

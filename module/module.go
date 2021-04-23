@@ -19,6 +19,10 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/ortuman/jackal/event"
+
+	"github.com/jackal-xmpp/sonar"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/host"
@@ -102,6 +106,7 @@ type Modules struct {
 	sendInterceptors []stanzaInterceptor
 	hosts            hosts
 	router           router.Router
+	sn               *sonar.Sonar
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -109,11 +114,13 @@ func NewModules(
 	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
+	sn *sonar.Sonar,
 ) *Modules {
 	m := &Modules{
 		mods:   mods,
 		hosts:  hosts,
 		router: router,
+		sn:     sn,
 	}
 	m.setupModules()
 	return m
@@ -121,31 +128,46 @@ func NewModules(
 
 // Start starts modules.
 func (m *Modules) Start(ctx context.Context) error {
-	// start IQ and event handlers
+	// start modules
+	var modNames []string
 	for _, mod := range m.mods {
 		if err := mod.Start(ctx); err != nil {
 			return err
 		}
+		modNames = append(modNames, mod.Name())
 	}
 	log.Infow("Started modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	return nil
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.ModulesStarted).
+		WithInfo(&event.ModulesEventInfo{
+			ModuleNames: modNames,
+		}).
+		Build(),
+	)
 }
 
 // Stop stops modules.
 func (m *Modules) Stop(ctx context.Context) error {
+	// stop modules
+	var modNames []string
 	for _, mod := range m.mods {
 		if err := mod.Stop(ctx); err != nil {
 			return err
 		}
+		modNames = append(modNames, mod.Name())
 	}
 	log.Infow("Stopped modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	return nil
+	return m.sn.Post(ctx, sonar.NewEventBuilder(event.ModulesStopped).
+		WithInfo(&event.ModulesEventInfo{
+			ModuleNames: modNames,
+		}).
+		Build(),
+	)
 }
 
 // IsModuleIQ returns true in case iq stanza should be handled by modules.

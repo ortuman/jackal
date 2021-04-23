@@ -50,7 +50,7 @@ func TestVersion_GetVersion(t *testing.T) {
 		return nil, nil
 	}
 	v := &Version{
-		opts:   Options{ShowOS: true},
+		cfg:    Config{ShowOS: true},
 		router: routerMock,
 	}
 

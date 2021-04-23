@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 )
 
@@ -49,12 +51,17 @@ type Component interface {
 type Components struct {
 	mtx   sync.RWMutex
 	comps map[string]Component
+	sn    *sonar.Sonar
 }
 
 // NewComponents returns a new initialized Components instance.
-func NewComponents(components []Component) *Components {
+func NewComponents(
+	components []Component,
+	sn *sonar.Sonar,
+) *Components {
 	cs := &Components{
 		comps: make(map[string]Component),
+		sn:    sn,
 	}
 	for _, comp := range components {
 		cs.comps[comp.Host()] = comp
@@ -137,13 +144,22 @@ func (c *Components) Start(ctx context.Context) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
+	// start components
+	var hosts []string
 	for _, comp := range c.comps {
 		if err := comp.Start(ctx); err != nil {
 			return err
 		}
+		hosts = append(hosts, comp.Host())
 	}
 	log.Infow("Started components", "components", len(c.comps))
-	return nil
+
+	return c.sn.Post(ctx, sonar.NewEventBuilder(event.ComponentsStarted).
+		WithInfo(&event.ComponentsEventInfo{
+			Hosts: hosts,
+		}).
+		Build(),
+	)
 }
 
 // Stop stops components.
@@ -151,11 +167,20 @@ func (c *Components) Stop(ctx context.Context) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
+	// stop components
+	var hosts []string
 	for _, comp := range c.comps {
 		if err := comp.Stop(ctx); err != nil {
 			return err
 		}
+		hosts = append(hosts, comp.Host())
 	}
 	log.Infow("Stopped components", "components", len(c.comps))
-	return nil
+
+	return c.sn.Post(ctx, sonar.NewEventBuilder(event.ComponentsStopped).
+		WithInfo(&event.ComponentsEventInfo{
+			Hosts: hosts,
+		}).
+		Build(),
+	)
 }

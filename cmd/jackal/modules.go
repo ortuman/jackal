@@ -33,6 +33,80 @@ import (
 	stringsutil "github.com/ortuman/jackal/util/strings"
 )
 
+/*
+var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
+	// Roster
+	// (https://xmpp.org/rfcs/rfc6121.html#roster)
+	roster.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0030.New(a.router, a.comps, a.rep, a.resMng)
+	},
+	// Offline
+	// ()
+	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
+		return offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Options{
+			QueueSize: cfg.Offline.QueueSize,
+		})
+	},
+	// XEP-0012: Last Activity
+	// (https://xmpp.org/extensions/xep-0012.html)
+	xep0012.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0012.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+	},
+	// XEP-0030: Service Discovery
+	// (https://xmpp.org/extensions/xep-0030.html)
+	xep0030.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0030.New(a.router, a.comps, a.rep, a.resMng)
+	},
+	// XEP-0049: Private XML Storage
+	// (https://xmpp.org/extensions/xep-0049.html)
+	xep0049.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0049.New(a.rep, a.router, a.sonar)
+	},
+	// XEP-0054: vcard-temp
+	// (https://xmpp.org/extensions/xep-0054.html)
+	xep0054.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0054.New(a.router, a.rep, a.sonar)
+	},
+	// XEP-0092: Software Version
+	// (https://xmpp.org/extensions/xep-0092.html)
+	xep0092.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
+		return xep0092.New(a.router, xep0092.Config{
+			ShowOS: cfg.Version.ShowOS,
+		})
+	},
+	// XEP-0115: Entity Capabilities
+	// (https://xmpp.org/extensions/xep-0115.html)
+	xep0115.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0115.New(disc, a.router, a.rep, a.sonar)
+	},
+	// XEP-0191: Blocking Command
+	// (https://xmpp.org/extensions/xep-0191.html)
+	xep0191.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+	},
+	// XEP-0199: XMPP Ping
+	// (https://xmpp.org/extensions/xep-0199.html)
+	xep0199.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
+		return xep0199.New(a.router, a.sonar, xep0199.Config{
+			AckTimeout:    cfg.Ping.AckTimeout,
+			Interval:      cfg.Ping.Interval,
+			SendPings:     cfg.Ping.SendPings,
+			TimeoutAction: cfg.Ping.TimeoutAction,
+		})
+	},
+	// XEP-0202: Entity Time
+	// (https://xmpp.org/extensions/xep-0202.html)
+	xep0202.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0202.New(a.router)
+	},
+	// XEP-0280: Message Carbons
+	// (https://xmpp.org/extensions/xep-0280.html)
+	xep0280.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
+	},
+}
+*/
+
 func initModules(a *serverApp, cfg modulesConfig) error {
 	var mods []module.Module
 
@@ -62,7 +136,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// version
 	if stringsutil.StringSliceContains(xep0092.ModuleName, cfg.Enabled) {
-		ver := xep0092.New(a.router, xep0092.Options{
+		ver := xep0092.New(a.router, xep0092.Config{
 			ShowOS: cfg.Version.ShowOS,
 		})
 		mods = append(mods, ver)
@@ -89,7 +163,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// ping
 	if stringsutil.StringSliceContains(xep0199.ModuleName, cfg.Enabled) {
-		ping := xep0199.New(a.router, a.sonar, xep0199.Options{
+		ping := xep0199.New(a.router, a.sonar, xep0199.Config{
 			AckTimeout:    cfg.Ping.AckTimeout,
 			Interval:      cfg.Ping.Interval,
 			SendPings:     cfg.Ping.SendPings,
@@ -118,7 +192,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	if disc != nil {
 		disc.SetModules(mods)
 	}
-	a.mods = module.NewModules(mods, a.hosts, a.router)
+	a.mods = module.NewModules(mods, a.hosts, a.router, a.sonar)
 	a.registerStartStopper(a.mods)
 	return nil
 }
@@ -150,7 +224,6 @@ func initExtModules(a *serverApp, configs []extModuleConfig) ([]module.Module, e
 				Priority: interceptor.Priority,
 			})
 		}
-
 		extMods = append(extMods, externalmodule.New(cfg.Address, cfg.IsSecure, a.router, a.sonar, opts))
 	}
 	return extMods, nil

@@ -40,7 +40,7 @@ func TestPing_Pong(t *testing.T) {
 		_ = stanza.ToXML(outBuf, true)
 		return nil, nil
 	}
-	p := New(routerMock, sonar.New(), Options{})
+	p := New(routerMock, sonar.New(), Config{})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -73,7 +73,7 @@ func TestPing_SendPing(t *testing.T) {
 		return nil, nil
 	}
 	sn := sonar.New()
-	p := New(routerMock, sn, Options{
+	p := New(routerMock, sn, Config{
 		Interval:  time.Millisecond * 500,
 		SendPings: true,
 	})
@@ -118,7 +118,7 @@ func TestPing_Timeout(t *testing.T) {
 	}
 
 	sn := sonar.New()
-	p := New(routerMock, sn, Options{
+	p := New(routerMock, sn, Config{
 		Interval:      time.Millisecond * 500,
 		AckTimeout:    time.Millisecond * 250,
 		SendPings:     true,

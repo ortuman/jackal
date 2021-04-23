@@ -47,8 +47,8 @@ const (
 	killAction = "kill"
 )
 
-// Options contains ping module configuration options.
-type Options struct {
+// Config contains ping module configuration options.
+type Config struct {
 	// AckTimeout tells how long should we wait until considering a client to be disconnected.
 	AckTimeout time.Duration
 
@@ -64,7 +64,7 @@ type Options struct {
 
 // Ping represents ping (XEP-0199) module type.
 type Ping struct {
-	opts   Options
+	cfg   Config
 	router router.Router
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
@@ -75,9 +75,9 @@ type Ping struct {
 }
 
 // New returns a new initialized ping instance.
-func New(router router.Router, sn *sonar.Sonar, opts Options) *Ping {
+func New(router router.Router, sn *sonar.Sonar, cfg   Config) *Ping {
 	return &Ping{
-		opts:       opts,
+		cfg:       cfg,
 		router:     router,
 		sn:         sn,
 		pingTimers: make(map[string]*time.Timer),
@@ -105,7 +105,7 @@ func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts ping module.
 func (p *Ping) Start(_ context.Context) error {
-	if p.opts.SendPings {
+	if p.cfg.SendPings {
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamBounded, p.onBounded))
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamStanzaReceived, p.onRecvStanza))
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamUnregistered, p.onUnregister))
@@ -171,7 +171,7 @@ func (p *Ping) onUnregister(_ context.Context, ev sonar.Event) error {
 
 func (p *Ping) schedulePing(jd *jid.JID) {
 	p.mu.Lock()
-	p.pingTimers[jd.String()] = time.AfterFunc(p.opts.Interval, func() {
+	p.pingTimers[jd.String()] = time.AfterFunc(p.cfg.Interval, func() {
 		p.sendPing(jd)
 	})
 	p.mu.Unlock()
@@ -198,7 +198,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 
 	// schedule ack timeout
 	p.mu.Lock()
-	p.ackTimers[jd.String()] = time.AfterFunc(p.opts.AckTimeout, func() {
+	p.ackTimers[jd.String()] = time.AfterFunc(p.cfg.AckTimeout, func() {
 		p.timeout(jd)
 	})
 	p.mu.Unlock()
@@ -208,7 +208,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 
 func (p *Ping) timeout(jd *jid.JID) {
 	// perform timeout action
-	switch p.opts.TimeoutAction {
+	switch p.cfg.TimeoutAction {
 	case killAction:
 		if stm := p.router.C2S().LocalStream(jd.Node(), jd.Resource()); stm != nil {
 			_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))

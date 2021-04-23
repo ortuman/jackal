@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package event
 
-import (
-	"github.com/ortuman/jackal/component"
-	"github.com/ortuman/jackal/component/extcomponentmanager"
+const (
+	// ModulesStarted event is posted after initializing all configured modules.
+	ModulesStarted = "modules.started"
+
+	// ModulesStopped event is posted after finishing all configured modules.
+	ModulesStopped = "modules.stopped"
 )
 
-func initComponents(a *serverApp, cfg componentsConfig) {
-	a.comps = component.NewComponents(nil, a.sonar)
-	a.extCompMng = extcomponentmanager.New(a.kv, a.clusterConnMng, a.comps)
-
-	a.registerStartStopper(a.comps)
-	a.registerStartStopper(a.extCompMng)
+// ModulesEventInfo contains all information associated to a modules event.
+type ModulesEventInfo struct {
+	ModuleNames []string
 }
