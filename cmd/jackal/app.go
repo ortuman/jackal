@@ -28,7 +28,6 @@ import (
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
-	adminserver "github.com/ortuman/jackal/admin/server"
 	"github.com/ortuman/jackal/auth/pepper"
 	"github.com/ortuman/jackal/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/cluster/connmanager"
@@ -36,7 +35,6 @@ import (
 	"github.com/ortuman/jackal/cluster/locker"
 	"github.com/ortuman/jackal/cluster/memberlist"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
-	clusterserver "github.com/ortuman/jackal/cluster/server"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/component/extcomponentmanager"
 	"github.com/ortuman/jackal/host"
@@ -99,13 +97,11 @@ type serverApp struct {
 	locker  locker.Locker
 	kv      kv.KV
 
-	peppers       *pepper.Keys
-	sonar         *sonar.Sonar
-	rep           repository.Repository
-	adminServer   *adminserver.Server
-	memberList    *memberlist.MemberList
-	resMng        *c2s.ResourceManager
-	clusterServer *clusterserver.Server
+	peppers    *pepper.Keys
+	sonar      *sonar.Sonar
+	rep        repository.Repository
+	memberList *memberlist.MemberList
+	resMng     *c2s.ResourceManager
 
 	shapers        shaper.Shapers
 	hosts          *host.Hosts
@@ -211,9 +207,6 @@ func run(output io.Writer, args []string) error {
 	if err := initRepository(a, cfg.Storage); err != nil {
 		return err
 	}
-	// init admin server
-	initAdminServer(a, cfg.Admin)
-
 	// init cluster connection manager
 	initClusterConnManager(a)
 
@@ -232,6 +225,10 @@ func run(output io.Writer, args []string) error {
 
 	if err := initModules(a, cfg.Modules); err != nil {
 		return err
+	}
+	// init admin server
+	if !cfg.Admin.Disabled {
+		initAdminServer(a, cfg.Admin.BindAddr, cfg.Admin.Port)
 	}
 	// init cluster server
 	initClusterServer(a, cfg.Cluster.BindAddr, cfg.Cluster.Port)

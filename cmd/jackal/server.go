@@ -19,16 +19,13 @@ import (
 	clusterserver "github.com/ortuman/jackal/cluster/server"
 )
 
-func initAdminServer(a *serverApp, cfg adminConfig) {
-	if cfg.Disabled {
-		return
-	}
-	a.adminServer = adminserver.New(cfg.BindAddr, cfg.Port, a.rep, a.peppers, a.sonar)
-	a.registerStartStopper(a.adminServer)
+func initAdminServer(a *serverApp, bindAddr string, port int) {
+	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.sonar)
+	a.registerStartStopper(adminSrv)
 }
 
-func initClusterServer(a *serverApp, bindAddr string, clusterPort int) {
-	a.clusterServer = clusterserver.New(bindAddr, clusterPort, a.localRouter, a.comps)
-	a.registerStartStopper(a.clusterServer)
+func initClusterServer(a *serverApp, bindAddr string, port int) {
+	clusterSrv := clusterserver.New(bindAddr, port, a.localRouter, a.comps)
+	a.registerStartStopper(clusterSrv)
 	return
 }
