@@ -142,7 +142,9 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 			WithInfo(&event.VCardEventInfo{
 				Username: toJID.Node(),
 				VCard:    vCard,
-			}).Build(),
+			}).
+			WithSender(v).
+			Build(),
 	)
 }
 
@@ -176,6 +178,8 @@ func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 			WithInfo(&event.VCardEventInfo{
 				Username: toJID.Node(),
 				VCard:    vCard,
-			}).Build(),
+			}).
+			WithSender(v).
+			Build(),
 	)
 }

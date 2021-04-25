@@ -161,7 +161,9 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			WithInfo(&event.PrivateEventInfo{
 				Username: username,
 				Private:  prvElem,
-			}).Build(),
+			}).
+			WithSender(p).
+			Build(),
 	)
 }
 
@@ -190,7 +192,9 @@ func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 				WithInfo(&event.PrivateEventInfo{
 					Username: username,
 					Private:  prv,
-				}).Build(),
+				}).
+				WithSender(p).
+				Build(),
 		)
 		if err != nil {
 			return err

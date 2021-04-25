@@ -158,6 +158,7 @@ func (c *Components) Start(ctx context.Context) error {
 		WithInfo(&event.ComponentsEventInfo{
 			Hosts: hosts,
 		}).
+		WithSender(c).
 		Build(),
 	)
 }
@@ -181,6 +182,7 @@ func (c *Components) Stop(ctx context.Context) error {
 		WithInfo(&event.ComponentsEventInfo{
 			Hosts: hosts,
 		}).
+		WithSender(c).
 		Build(),
 	)
 }

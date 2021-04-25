@@ -19,14 +19,15 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/c2s"
 	"github.com/ortuman/jackal/component"
+	"github.com/ortuman/jackal/event"
 	"github.com/ortuman/jackal/log"
 	discomodel "github.com/ortuman/jackal/model/disco"
-	"github.com/ortuman/jackal/module"
 	"github.com/ortuman/jackal/module/xep0004"
 	"github.com/ortuman/jackal/repository"
 	"github.com/ortuman/jackal/router"
@@ -69,6 +70,8 @@ type Disco struct {
 	components components
 	rosRep     repository.Roster
 	resMng     resourceManager
+	sn         *sonar.Sonar
+	subs       []sonar.SubID
 
 	mu      sync.RWMutex
 	srvProv InfoProvider
@@ -81,100 +84,109 @@ func New(
 	components *component.Components,
 	rosRep repository.Roster,
 	resMng *c2s.ResourceManager,
+	sn *sonar.Sonar,
 ) *Disco {
 	return &Disco{
 		router:     router,
 		components: components,
 		rosRep:     rosRep,
 		resMng:     resMng,
+		sn:         sn,
 	}
 }
 
 // Name returns disco module name.
-func (d *Disco) Name() string { return ModuleName }
+func (m *Disco) Name() string { return ModuleName }
 
 // StreamFeature returns disco stream feature.
-func (d *Disco) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+func (m *Disco) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return nil, nil
 }
 
 // ServerFeatures returns server disco features.
-func (d *Disco) ServerFeatures(_ context.Context) ([]string, error) {
+func (m *Disco) ServerFeatures(_ context.Context) ([]string, error) {
 	return []string{discoInfoNamespace, discoItemsNamespace}, nil
 }
 
 // AccountFeatures returns account disco features.
-func (d *Disco) AccountFeatures(_ context.Context) ([]string, error) {
+func (m *Disco) AccountFeatures(_ context.Context) ([]string, error) {
 	return []string{discoInfoNamespace, discoItemsNamespace}, nil
 }
 
 // MatchesNamespace tells whether namespace matches disco module.
-func (d *Disco) MatchesNamespace(namespace string, _ bool) bool {
+func (m *Disco) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == discoInfoNamespace || namespace == discoItemsNamespace
 }
 
 // ProcessIQ process a disco info iq.
-func (d *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch {
 	case iq.IsGet():
-		return d.getDiscoInfo(ctx, iq)
+		return m.getDiscoInfo(ctx, iq)
 	case iq.IsSet():
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 	}
 	return nil
 }
 
 // Start starts disco module.
-func (d *Disco) Start(_ context.Context) error {
+func (m *Disco) Start(_ context.Context) error {
+	m.subs = append(m.subs, m.sn.Subscribe(event.ModulesStarted, m.onModulesStarted))
+
 	log.Infow("Started disco module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops disco module.
-func (d *Disco) Stop(_ context.Context) error {
+func (m *Disco) Stop(_ context.Context) error {
 	log.Infow("Stopped disco module", "xep", XEPNumber)
 	return nil
 }
 
-// SetModules set disco modules to be announced on info request.
-func (d *Disco) SetModules(mods []module.Module) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.srvProv = newServerProvider(mods, d.components)
-	d.accProv = newAccountProvider(mods, d.rosRep, d.resMng)
-}
-
 // ServerProvider returns current disco info server provider.
-func (d *Disco) ServerProvider() InfoProvider {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.srvProv
+func (m *Disco) ServerProvider() InfoProvider {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.srvProv
 }
 
 // AccountProvider returns current disco info account provider.
-func (d *Disco) AccountProvider() InfoProvider {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.accProv
+func (m *Disco) AccountProvider() InfoProvider {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.accProv
 }
 
-func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Disco) onModulesStarted(_ context.Context, ev sonar.Event) error {
+	mods := ev.Sender().(modules)
+
+	m.mu.Lock()
+	m.srvProv = newServerProvider(mods.AllModules(), m.components)
+	m.accProv = newAccountProvider(mods.AllModules(), m.rosRep, m.resMng)
+	m.mu.Unlock()
+
+	return m.sn.Post(context.Background(), sonar.NewEventBuilder(event.DiscoProvidersStarted).
+		WithSender(m).
+		Build(),
+	)
+}
+
+func (m *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	q := iq.Child("query")
 	if q == nil {
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	var prov InfoProvider
 
-	d.mu.RLock()
+	m.mu.RLock()
 	switch {
 	case iq.ToJID().IsServer():
-		prov = d.srvProv
+		prov = m.srvProv
 	default:
-		prov = d.accProv
+		prov = m.accProv
 	}
-	d.mu.RUnlock()
+	m.mu.RUnlock()
 
 	if prov == nil {
 		return nil // modules not set
@@ -185,25 +197,25 @@ func (d *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {
 	node := q.Attribute("node")
 	switch q.Attribute(stravaganza.Namespace) {
 	case discoInfoNamespace:
-		return d.sendDiscoInfo(ctx, prov, toJID, fromJID, node, iq)
+		return m.sendDiscoInfo(ctx, prov, toJID, fromJID, node, iq)
 	case discoItemsNamespace:
-		return d.sendDiscoItems(ctx, prov, toJID, fromJID, node, iq)
+		return m.sendDiscoItems(ctx, prov, toJID, fromJID, node, iq)
 	default:
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 }
 
-func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (m *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	features, err := prov.Features(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:
 		break
 	case errors.Is(err, errSubscriptionRequired):
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
 		return nil
 	default:
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	sb := stravaganza.NewBuilder("query").
@@ -236,20 +248,20 @@ func (d *Disco) sendDiscoInfo(ctx context.Context, prov InfoProvider, toJID, fro
 	for _, form := range forms {
 		sb.WithChild(form.Element())
 	}
-	_, _ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, sb.Build()))
 	return nil
 }
 
-func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
+func (m *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fromJID *jid.JID, node string, iq *stravaganza.IQ) error {
 	items, err := prov.Items(ctx, toJID, fromJID, node)
 	switch {
 	case err == nil:
 		break
 	case errors.Is(err, errSubscriptionRequired):
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.SubscriptionRequired))
 		return nil
 	default:
-		_, _ = d.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	qb := stravaganza.NewBuilder("query").
@@ -266,6 +278,6 @@ func (d *Disco) sendDiscoItems(ctx context.Context, prov InfoProvider, toJID, fr
 		}
 		qb.WithChild(itemB.Build())
 	}
-	_, _ = d.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
 	return nil
 }

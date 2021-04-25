@@ -207,6 +207,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
@@ -249,6 +250,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 			Username: fromJID.Node(),
 			JID:      toJID,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }

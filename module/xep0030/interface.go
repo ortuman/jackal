@@ -39,6 +39,11 @@ type resourceManager interface {
 	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }
 
+//go:generate moq -out modules.mock_test.go . modules
+type modules interface {
+	AllModules() []module.Module
+}
+
 //go:generate moq -out components.mock_test.go . components
 type components interface {
 	AllComponents() []component.Component

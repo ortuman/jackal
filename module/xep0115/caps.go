@@ -82,26 +82,24 @@ const (
 
 // Capabilities represents entity capabilities (XEP-0115) module type.
 type Capabilities struct {
-	disco  *xep0030.Disco
 	router router.Router
 	rep    repository.Capabilities
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 
-	mu     sync.RWMutex
-	reqs   map[string]capsInfo
-	clrTms map[string]*time.Timer
+	mu      sync.RWMutex
+	reqs    map[string]capsInfo
+	clrTms  map[string]*time.Timer
+	srvProv xep0030.InfoProvider
 }
 
 // New creates and initializes a new Capabilities instance.
 func New(
-	disco *xep0030.Disco,
 	router router.Router,
 	rep repository.Capabilities,
 	sn *sonar.Sonar,
 ) *Capabilities {
 	return &Capabilities{
-		disco:  disco,
 		router: router,
 		rep:    rep,
 		sn:     sn,
@@ -115,15 +113,17 @@ func (m *Capabilities) Name() string { return ModuleName }
 
 // StreamFeature returns entity capabilities module stream feature.
 func (m *Capabilities) StreamFeature(ctx context.Context, domain string) (stravaganza.Element, error) {
-	if m.disco == nil {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.srvProv == nil {
 		return nil, nil
 	}
 	jd, _ := jid.NewWithString(domain, true)
 
-	srvProv := m.disco.ServerProvider()
-	identities := srvProv.Identities(ctx, jd, jd, "")
-	features, _ := srvProv.Features(ctx, jd, jd, "")
-	forms, _ := srvProv.Forms(ctx, jd, jd, "")
+	identities := m.srvProv.Identities(ctx, jd, jd, "")
+	features, _ := m.srvProv.Features(ctx, jd, jd, "")
+	forms, _ := m.srvProv.Forms(ctx, jd, jd, "")
 
 	ver := computeVer(identities, features, forms, sha256.New)
 	return stravaganza.NewBuilder("c").
@@ -150,6 +150,7 @@ func (m *Capabilities) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamIQReceived, m.onC2SIQRecv))
 	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamIQReceived, m.onS2SIQRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.DiscoProvidersStarted, m.onDiscoProvidersStarted))
 
 	log.Infow("Started capabilities module", "xep", XEPNumber)
 	return nil
@@ -186,6 +187,14 @@ func (m *Capabilities) onS2SIQRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.S2SStreamEventInfo)
 	iq := inf.Stanza.(*stravaganza.IQ)
 	return m.processIQ(ctx, iq)
+}
+
+func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, ev sonar.Event) error {
+	disc := ev.Sender().(*xep0030.Disco)
+	m.mu.Lock()
+	m.srvProv = disc.ServerProvider()
+	m.mu.Unlock()
+	return nil
 }
 
 func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Presence) error {

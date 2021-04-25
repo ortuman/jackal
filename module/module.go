@@ -144,6 +144,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		WithInfo(&event.ModulesEventInfo{
 			ModuleNames: modNames,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
@@ -166,6 +167,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		WithInfo(&event.ModulesEventInfo{
 			ModuleNames: modNames,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
@@ -213,16 +215,6 @@ func (m *Modules) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza
 	return ts, nil
 }
 
-// IsEnabled tells whether a specific module it's been registered.
-func (m *Modules) IsEnabled(moduleName string) bool {
-	for _, mod := range m.mods {
-		if mod.Name() == moduleName {
-			return true
-		}
-	}
-	return false
-}
-
 // StreamFeatures returns stream features of all registered modules.
 func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaganza.Element, error) {
 	var sfs []stravaganza.Element
@@ -236,6 +228,21 @@ func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaga
 		}
 	}
 	return sfs, nil
+}
+
+// IsEnabled tells whether a specific module it's been registered.
+func (m *Modules) IsEnabled(moduleName string) bool {
+	for _, mod := range m.mods {
+		if mod.Name() == moduleName {
+			return true
+		}
+	}
+	return false
+}
+
+// AllModules returns all configured modules.
+func (m *Modules) AllModules() []Module {
+	return m.mods
 }
 
 func (m *Modules) setupModules() {

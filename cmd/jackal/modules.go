@@ -110,13 +110,6 @@ var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 func initModules(a *serverApp, cfg modulesConfig) error {
 	var mods []module.Module
 
-	// disco
-	var disc *xep0030.Disco
-	if stringsutil.StringSliceContains(xep0030.ModuleName, cfg.Enabled) {
-		disc = xep0030.New(a.router, a.comps, a.rep, a.resMng)
-		mods = append(mods, disc)
-	}
-
 	// roster
 	if stringsutil.StringSliceContains(roster.ModuleName, cfg.Enabled) {
 		ros := roster.New(a.router, a.rep, a.resMng, a.hosts, a.sonar)
@@ -133,6 +126,11 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	if stringsutil.StringSliceContains(xep0012.ModuleName, cfg.Enabled) {
 		last := xep0012.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
 		mods = append(mods, last)
+	}
+	// disco
+	if stringsutil.StringSliceContains(xep0030.ModuleName, cfg.Enabled) {
+		disc := xep0030.New(a.router, a.comps, a.rep, a.resMng, a.sonar)
+		mods = append(mods, disc)
 	}
 	// version
 	if stringsutil.StringSliceContains(xep0092.ModuleName, cfg.Enabled) {
@@ -153,7 +151,7 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	// capabilities
 	if stringsutil.StringSliceContains(xep0115.ModuleName, cfg.Enabled) {
-		caps := xep0115.New(disc, a.router, a.rep, a.sonar)
+		caps := xep0115.New(a.router, a.rep, a.sonar)
 		mods = append(mods, caps)
 	}
 	// blocklist
@@ -188,10 +186,6 @@ func initModules(a *serverApp, cfg modulesConfig) error {
 	}
 	mods = append(mods, extModules...)
 
-	// set disco info modules
-	if disc != nil {
-		disc.SetModules(mods)
-	}
 	a.mods = module.NewModules(mods, a.hosts, a.router, a.sonar)
 	a.registerStartStopper(a.mods)
 	return nil

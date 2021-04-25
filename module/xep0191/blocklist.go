@@ -284,6 +284,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 			Username: username,
 			JIDs:     allJIDs,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
@@ -366,6 +367,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 			Username: username,
 			JIDs:     blockJIDs,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
@@ -437,6 +439,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 			Username: username,
 			JIDs:     unblockJIDs,
 		}).
+		WithSender(m).
 		Build(),
 	)
 }
