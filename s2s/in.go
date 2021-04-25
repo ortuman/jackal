@@ -55,7 +55,7 @@ var inDisconnectTimeout = time.Second * 5
 
 type inS2S struct {
 	id           stream.S2SInID
-	opts         Options
+	cfg          Config
 	tr           transport.Transport
 	session      session
 	hosts        hosts
@@ -91,7 +91,7 @@ func newInS2S(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) (*inS2S, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultS2S().RateLimiter()
@@ -105,14 +105,14 @@ func newInS2S(
 		id.String(),
 		tr,
 		hosts,
-		xmppsession.Options{
-			MaxStanzaSize: opts.MaxStanzaSize,
+		xmppsession.Config{
+			MaxStanzaSize: cfg.MaxStanzaSize,
 		},
 	)
 	// init stream
 	stm := &inS2S{
 		id:          id,
-		opts:        opts,
+		cfg:         cfg,
 		tr:          tr,
 		session:     session,
 		hosts:       hosts,
@@ -128,7 +128,7 @@ func newInS2S(
 		doneCh:      make(chan struct{}),
 		state:       uint32(inConnecting),
 	}
-	if opts.UseTLS {
+	if cfg.UseTLS {
 		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
@@ -176,7 +176,7 @@ func (s *inS2S) start() error {
 func (s *inS2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.opts.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -190,7 +190,7 @@ func (s *inS2S) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.opts.KeepAlive, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.KeepAlive, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -645,7 +645,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		return err
 	}
 	expectedKey := dbKey(
-		s.opts.DialbackSecret,
+		s.cfg.DialbackSecret,
 		sender,
 		target,
 		streamID,
@@ -812,7 +812,7 @@ func (s *inS2S) postStreamEvent(ctx context.Context, eventName string, inf *even
 }
 
 func (s *inS2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.opts.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
 }
 
 var currentID uint64

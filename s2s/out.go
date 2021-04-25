@@ -90,7 +90,7 @@ type outS2S struct {
 	typ      outType
 	sender   string
 	target   string
-	opts     Options
+	cfg      Config
 	tr       transport.Transport
 	kv       kv.KV
 	session  session
@@ -114,7 +114,7 @@ func newOutS2S(
 	target string,
 	tlsCfg *tls.Config,
 	hosts *host.Hosts,
-	opts Options,
+	cfg Config,
 	kv kv.KV,
 	shapers shaper.Shapers,
 	sn *sonar.Sonar,
@@ -126,12 +126,12 @@ func newOutS2S(
 		target:  target,
 		hosts:   hosts,
 		tlsCfg:  tlsCfg,
-		opts:    opts,
+		cfg:     cfg,
 		onClose: onClose,
 		kv:      kv,
 		shapers: shapers,
 		sn:      sn,
-		dialer:  newDialer(opts.DialTimeout, tlsCfg),
+		dialer:  newDialer(cfg.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
 	return stm
@@ -142,7 +142,7 @@ func newDialbackS2S(
 	target string,
 	tlsCfg *tls.Config,
 	hosts *host.Hosts,
-	opts Options,
+	cfg Config,
 	dbParams DialbackParams,
 	shapers shaper.Shapers,
 ) *outS2S {
@@ -152,9 +152,9 @@ func newDialbackS2S(
 		target:   target,
 		hosts:    hosts,
 		tlsCfg:   tlsCfg,
-		opts:     opts,
+		cfg:      cfg,
 		dbParams: dbParams,
-		dialer:   newDialer(opts.DialTimeout, tlsCfg),
+		dialer:   newDialer(cfg.DialTimeout, tlsCfg),
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
 	}
@@ -215,8 +215,8 @@ func (s *outS2S) dial(ctx context.Context) error {
 		s.ID().String(),
 		s.tr,
 		s.hosts,
-		xmppsession.Options{
-			MaxStanzaSize: s.opts.MaxStanzaSize,
+		xmppsession.Config{
+			MaxStanzaSize: s.cfg.MaxStanzaSize,
 			IsOut:         true,
 		},
 	)
@@ -258,7 +258,7 @@ func (s *outS2S) start() error {
 }
 
 func (s *outS2S) readLoop() {
-	tm := time.AfterFunc(s.opts.KeepAlive, s.connTimeout)
+	tm := time.AfterFunc(s.cfg.KeepAlive, s.connTimeout)
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -273,7 +273,7 @@ func (s *outS2S) readLoop() {
 
 	doRead:
 		if s.getState() != outAuthenticated {
-			tm = time.AfterFunc(s.opts.KeepAlive, s.connTimeout) // schedule read timeout
+			tm = time.AfterFunc(s.cfg.KeepAlive, s.connTimeout) // schedule read timeout
 		}
 		elem, sErr = s.session.Receive()
 		if tm != nil {
@@ -389,7 +389,7 @@ func (s *outS2S) handleConnected(ctx context.Context, elem stravaganza.Element) 
 				WithAttribute(stravaganza.To, s.target).
 				WithText(
 					dbKey(
-						s.opts.DialbackSecret,
+						s.cfg.DialbackSecret,
 						s.target,
 						s.sender,
 						streamID,
@@ -605,7 +605,7 @@ func (s *outS2S) postStreamEvent(ctx context.Context, eventName string, inf *eve
 }
 
 func (s *outS2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.opts.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
 }
 
 func hasExternalAuthMechanism(streamFeatures stravaganza.Element) bool {

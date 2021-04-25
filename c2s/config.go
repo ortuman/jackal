@@ -35,8 +35,8 @@ const (
 	TerminateOld
 )
 
-// Options defines C2S connection options.
-type Options struct {
+// Config defines C2S connection configuration.
+type Config struct {
 	// ConnectTimeout defines connection timeout.
 	ConnectTimeout time.Duration
 

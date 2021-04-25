@@ -40,8 +40,8 @@ const (
 	accountTargetEntity = "account"
 )
 
-// Options defines external module options set.
-type Options struct {
+// Config defines external module configuratiopn value.
+type Config struct {
 	// RequestTimeout defines external module request timeout.
 	RequestTimeout time.Duration
 
@@ -65,7 +65,7 @@ type ExtModule struct {
 	name     string
 	address  string
 	isSecure bool
-	opts     Options
+	cfg      Config
 	sonar    *sonar.Sonar
 	subs     []sonar.SubID
 	router   router.Router
@@ -80,12 +80,12 @@ func New(
 	isSecure bool,
 	router router.Router,
 	sonar *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *ExtModule {
 	return &ExtModule{
 		address:  address,
 		isSecure: isSecure,
-		opts:     opts,
+		cfg:      cfg,
 		router:   router,
 		sonar:    sonar,
 	}
@@ -127,20 +127,20 @@ func (m *ExtModule) AccountFeatures(ctx context.Context) ([]string, error) {
 
 // MatchesNamespace tells whether namespace matches external iq handler.
 func (m *ExtModule) MatchesNamespace(namespace string, serverTarget bool) bool {
-	if m.opts.NamespaceMatcher == nil {
+	if m.cfg.NamespaceMatcher == nil {
 		return false
 	}
 	switch {
 	case serverTarget:
-		if m.opts.TargetEntity == accountTargetEntity {
+		if m.cfg.TargetEntity == accountTargetEntity {
 			return false
 		}
 	default:
-		if m.opts.TargetEntity == serverTargetEntity {
+		if m.cfg.TargetEntity == serverTargetEntity {
 			return false
 		}
 	}
-	return m.opts.NamespaceMatcher.Matches(namespace)
+	return m.cfg.NamespaceMatcher.Matches(namespace)
 }
 
 // ProcessIQ will be invoked whenever iq stanza should be processed by this external module.
@@ -153,7 +153,7 @@ func (m *ExtModule) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Interceptors returns a set of all module interceptors.
 func (m *ExtModule) Interceptors() []module.StanzaInterceptor {
-	return m.opts.Interceptors
+	return m.cfg.Interceptors
 }
 
 // InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
@@ -203,7 +203,7 @@ func (m *ExtModule) Start(ctx context.Context) error {
 	go m.recvStanzas(stm)
 
 	// subscribe to handler events
-	for _, topic := range m.opts.Topics {
+	for _, topic := range m.cfg.Topics {
 		m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
 	}
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
@@ -259,7 +259,7 @@ func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
 }
 
 func (m *ExtModule) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), m.opts.RequestTimeout)
+	return context.WithTimeout(context.Background(), m.cfg.RequestTimeout)
 }
 
 func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.ProcessEventRequest {

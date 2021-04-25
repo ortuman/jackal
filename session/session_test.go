@@ -46,7 +46,7 @@ func TestSession_OpenStream(t *testing.T) {
 	ss := Session{
 		typ:   C2SSession,
 		id:    "ss-1",
-		opts:  Options{MaxStanzaSize: 4096},
+		cfg:   Config{MaxStanzaSize: 4096},
 		tr:    trMock,
 		hosts: &hostsMock{},
 		pr:    &xmppParserMock{},
@@ -79,7 +79,7 @@ func TestSession_OpenComponent(t *testing.T) {
 		typ:      ComponentSession,
 		id:       "comp-1",
 		streamID: "stm-1",
-		opts:     Options{MaxStanzaSize: 4096},
+		cfg:      Config{MaxStanzaSize: 4096},
 		tr:       trMock,
 		hosts:    &hostsMock{},
 		pr:       &xmppParserMock{},
@@ -111,7 +111,7 @@ func TestSession_OpenServer(t *testing.T) {
 	ss := Session{
 		typ:   S2SSession,
 		id:    "ss-1",
-		opts:  Options{MaxStanzaSize: 4096},
+		cfg:   Config{MaxStanzaSize: 4096},
 		tr:    trMock,
 		hosts: &hostsMock{},
 		pr:    &xmppParserMock{},
@@ -143,7 +143,7 @@ func TestSession_Close(t *testing.T) {
 	ss := Session{
 		typ:    C2SSession,
 		id:     "ss-1",
-		opts:   Options{MaxStanzaSize: 4096},
+		cfg:    Config{MaxStanzaSize: 4096},
 		tr:     trMock,
 		hosts:  &hostsMock{},
 		pr:     &xmppParserMock{},
@@ -176,7 +176,7 @@ func TestSession_Send(t *testing.T) {
 	ss := Session{
 		typ:    C2SSession,
 		id:     "ss-1",
-		opts:   Options{MaxStanzaSize: 4096},
+		cfg:    Config{MaxStanzaSize: 4096},
 		tr:     trMock,
 		hosts:  &hostsMock{},
 		pr:     &xmppParserMock{},
@@ -204,7 +204,7 @@ func TestSession_ReceiveStreamSuccess(t *testing.T) {
 	ss := Session{
 		typ:     C2SSession,
 		id:      "ss-1",
-		opts:    Options{MaxStanzaSize: 4096},
+		cfg:     Config{MaxStanzaSize: 4096},
 		tr:      trMock,
 		hosts:   hMock,
 		pr:      prMock,
@@ -244,7 +244,7 @@ func TestSession_ReceiveBadStream(t *testing.T) {
 	ss := Session{
 		typ:     C2SSession,
 		id:      "ss-1",
-		opts:    Options{MaxStanzaSize: 4096},
+		cfg:     Config{MaxStanzaSize: 4096},
 		tr:      trMock,
 		hosts:   hMock,
 		pr:      prMock,
@@ -283,7 +283,7 @@ func TestSession_ReceiveSuccess(t *testing.T) {
 	ss := Session{
 		typ:     C2SSession,
 		id:      "ss-1",
-		opts:    Options{MaxStanzaSize: 4096},
+		cfg:     Config{MaxStanzaSize: 4096},
 		tr:      &transportMock{},
 		hosts:   &hostsMock{},
 		pr:      prMock,
@@ -322,7 +322,7 @@ func TestSession_ReceiveStreamError(t *testing.T) {
 	ss := Session{
 		typ:     C2SSession,
 		id:      "ss-1",
-		opts:    Options{MaxStanzaSize: 4096},
+		cfg:     Config{MaxStanzaSize: 4096},
 		tr:      &transportMock{},
 		hosts:   &hostsMock{},
 		pr:      prMock,
@@ -373,7 +373,7 @@ func TestSession_ReceiveUnsupportedStanza(t *testing.T) {
 	ss := Session{
 		typ:     C2SSession,
 		id:      "ss-1",
-		opts:    Options{MaxStanzaSize: 4096},
+		cfg:     Config{MaxStanzaSize: 4096},
 		tr:      &transportMock{},
 		hosts:   &hostsMock{},
 		pr:      prMock,

@@ -48,7 +48,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	sn := sonar.New()
 
 	m := &Offline{
-		opts:   Options{QueueSize: 100},
+		cfg:    Config{QueueSize: 100},
 		rep:    repMock,
 		locker: lockerMock,
 		sn:     sn,
@@ -107,7 +107,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	sn := sonar.New()
 
 	m := &Offline{
-		opts:   Options{QueueSize: 100},
+		cfg:    Config{QueueSize: 100},
 		router: routerMock,
 		rep:    repMock,
 		locker: lockerMock,
@@ -184,7 +184,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 
 	sn := sonar.New()
 	m := &Offline{
-		opts:   Options{QueueSize: 100},
+		cfg:    Config{QueueSize: 100},
 		router: routerMock,
 		hosts:  hostsMock,
 		rep:    repMock,

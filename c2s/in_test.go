@@ -720,7 +720,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			userJID, _ := jid.NewWithString("ortuman@localhost", true)
 			stm := &inC2S{
-				opts: Options{
+				cfg: Config{
 					KeepAliveTimeout: time.Minute,
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
@@ -814,7 +814,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inC2S{
-				opts: Options{
+				cfg: Config{
 					KeepAliveTimeout: time.Minute,
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,

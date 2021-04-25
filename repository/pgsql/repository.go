@@ -30,8 +30,8 @@ func init() {
 	sq.StatementBuilder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 }
 
-// Options contais PgSQL configuration options.
-type Options struct {
+// Config contais PgSQL configuration value.
+type Config struct {
 	MaxIdleConns    int
 	MaxOpenConns    int
 	ConnMaxIdleTime time.Duration
@@ -51,18 +51,18 @@ type Repository struct {
 
 	host string
 	dsn  string
-	opts Options
+	cfg  Config
 
 	db *sql.DB
 }
 
 // New creates and returns an initialized PgSQL Repository instance.
-func New(host, username, password, database, sslMode string, opts Options) *Repository {
+func New(host, username, password, database, sslMode string, cfg Config) *Repository {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", username, password, host, database, sslMode)
 	return &Repository{
 		host: host,
 		dsn:  dsn,
-		opts: opts,
+		cfg:  cfg,
 	}
 }
 
@@ -90,10 +90,10 @@ func (r *Repository) Start(ctx context.Context) error {
 	}
 	r.db = db
 
-	db.SetMaxIdleConns(r.opts.MaxIdleConns)
-	db.SetMaxOpenConns(r.opts.MaxOpenConns)
-	db.SetConnMaxIdleTime(r.opts.ConnMaxIdleTime)
-	db.SetConnMaxLifetime(r.opts.ConnMaxLifetime)
+	db.SetMaxIdleConns(r.cfg.MaxIdleConns)
+	db.SetMaxOpenConns(r.cfg.MaxOpenConns)
+	db.SetConnMaxIdleTime(r.cfg.ConnMaxIdleTime)
+	db.SetConnMaxLifetime(r.cfg.ConnMaxLifetime)
 
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("pgsqlrepository: unable to verify PgSQL connection: %v", err)

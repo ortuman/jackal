@@ -411,7 +411,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 
 			stm := &inS2S{
-				opts: Options{
+				cfg: Config{
 					DialbackSecret: "adialbacksecret",
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,
@@ -514,7 +514,7 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inS2S{
-				opts: Options{
+				cfg: Config{
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,
 					MaxStanzaSize:  8192,

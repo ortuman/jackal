@@ -16,6 +16,7 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/c2s"
@@ -36,95 +37,100 @@ var resConflictMap = map[string]c2s.ResourceConflict{
 	"terminate_old": c2s.TerminateOld,
 }
 
+var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
+	c2sListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+		var extAuth *auth.External
+		if len(cfg.SASL.External.Address) > 0 {
+			extAuth = auth.NewExternal(
+				cfg.SASL.External.Address,
+				cfg.SASL.External.IsSecure,
+			)
+		}
+		return c2s.NewSocketListener(
+			cfg.BindAddr,
+			cfg.Port,
+			cfg.SASL.Mechanisms,
+			extAuth,
+			a.hosts,
+			a.router,
+			a.comps,
+			a.mods,
+			a.resMng,
+			a.rep,
+			a.peppers,
+			a.shapers,
+			a.sonar,
+			c2s.Config{
+				ConnectTimeout:   cfg.ConnectTimeout,
+				KeepAliveTimeout: cfg.KeepAliveTimeout,
+				RequestTimeout:   cfg.RequestTimeout,
+				MaxStanzaSize:    cfg.MaxStanzaSize,
+				CompressionLevel: cmpLevelMap[cfg.CompressionLevel],
+				ResourceConflict: resConflictMap[cfg.ResourceConflict],
+				UseTLS:           cfg.DirectTLS,
+				TLSConfig: &tls.Config{
+					Certificates: a.hosts.Certificates(),
+					MinVersion:   tls.VersionTLS12,
+				},
+			},
+		)
+	},
+	s2sListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+		return s2s.NewSocketListener(
+			cfg.BindAddr,
+			cfg.Port,
+			a.hosts,
+			a.router,
+			a.comps,
+			a.mods,
+			a.s2sOutProvider,
+			a.s2sInHub,
+			a.kv,
+			a.shapers,
+			a.sonar,
+			s2s.Config{
+				ConnectTimeout: cfg.ConnectTimeout,
+				KeepAlive:      cfg.KeepAliveTimeout,
+				RequestTimeout: cfg.RequestTimeout,
+				MaxStanzaSize:  cfg.MaxStanzaSize,
+				UseTLS:         cfg.DirectTLS,
+				TLSConfig: &tls.Config{
+					Certificates: a.hosts.Certificates(),
+					ClientAuth:   tls.RequireAndVerifyClientCert,
+					MinVersion:   tls.VersionTLS12,
+				},
+			},
+		)
+	},
+	componentListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+		return xep0114.NewSocketListener(
+			cfg.BindAddr,
+			cfg.Port,
+			a.hosts,
+			a.comps,
+			a.extCompMng,
+			a.router,
+			a.shapers,
+			a.sonar,
+			xep0114.Config{
+				ConnectTimeout:   cfg.ConnectTimeout,
+				KeepAliveTimeout: cfg.KeepAliveTimeout,
+				RequestTimeout:   cfg.RequestTimeout,
+				MaxStanzaSize:    cfg.MaxStanzaSize,
+				Secret:           cfg.Secret,
+			},
+		)
+	},
+}
+
 func initListeners(a *serverApp, configs []listenerConfig) error {
 	for _, cfg := range configs {
-		switch cfg.Type {
-		case c2sListenerType:
-			var extAuth *auth.External
-			if len(cfg.SASL.External.Address) > 0 {
-				extAuth = auth.NewExternal(
-					cfg.SASL.External.Address,
-					cfg.SASL.External.IsSecure,
-				)
-			}
-			ln := c2s.NewSocketListener(
-				cfg.BindAddr,
-				cfg.Port,
-				cfg.SASL.Mechanisms,
-				extAuth,
-				a.hosts,
-				a.router,
-				a.comps,
-				a.mods,
-				a.resMng,
-				a.rep,
-				a.peppers,
-				a.shapers,
-				a.sonar,
-				c2s.Options{
-					ConnectTimeout:   cfg.ConnectTimeout,
-					KeepAliveTimeout: cfg.KeepAliveTimeout,
-					RequestTimeout:   cfg.RequestTimeout,
-					MaxStanzaSize:    cfg.MaxStanzaSize,
-					CompressionLevel: cmpLevelMap[cfg.CompressionLevel],
-					ResourceConflict: resConflictMap[cfg.ResourceConflict],
-					UseTLS:           cfg.DirectTLS,
-					TLSConfig: &tls.Config{
-						Certificates: a.hosts.Certificates(),
-						MinVersion:   tls.VersionTLS12,
-					},
-				},
-			)
-			a.registerStartStopper(ln)
-
-		case s2sListenerType:
-			ln := s2s.NewSocketListener(
-				cfg.BindAddr,
-				cfg.Port,
-				a.hosts,
-				a.router,
-				a.comps,
-				a.mods,
-				a.s2sOutProvider,
-				a.s2sInHub,
-				a.kv,
-				a.shapers,
-				a.sonar,
-				s2s.Options{
-					ConnectTimeout: cfg.ConnectTimeout,
-					KeepAlive:      cfg.KeepAliveTimeout,
-					RequestTimeout: cfg.RequestTimeout,
-					MaxStanzaSize:  cfg.MaxStanzaSize,
-					UseTLS:         cfg.DirectTLS,
-					TLSConfig: &tls.Config{
-						Certificates: a.hosts.Certificates(),
-						ClientAuth:   tls.RequireAndVerifyClientCert,
-						MinVersion:   tls.VersionTLS12,
-					},
-				},
-			)
-			a.registerStartStopper(ln)
-
-		case componentListenerType:
-			ln := xep0114.NewSocketListener(
-				cfg.BindAddr,
-				cfg.Port,
-				a.hosts,
-				a.comps,
-				a.extCompMng,
-				a.router,
-				a.shapers,
-				a.sonar,
-				xep0114.Options{
-					ConnectTimeout:   cfg.ConnectTimeout,
-					KeepAliveTimeout: cfg.KeepAliveTimeout,
-					RequestTimeout:   cfg.RequestTimeout,
-					MaxStanzaSize:    cfg.MaxStanzaSize,
-					Secret:           cfg.Secret,
-				},
-			)
-			a.registerStartStopper(ln)
+		lnFn, ok := lnFns[cfg.Type]
+		if !ok {
+			return fmt.Errorf("main: unrecognized listener: %s", cfg.Type)
 		}
+		ln := lnFn(a, cfg)
+		a.registerStartStopper(ln)
 	}
 	return nil
 }

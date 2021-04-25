@@ -48,7 +48,7 @@ const (
 // SocketListener represents a C2S socket listener type.
 type SocketListener struct {
 	addr           string
-	opts           Options
+	cfg            Config
 	saslMechanisms []string
 	extAuth        *auth.External
 	hosts          *host.Hosts
@@ -81,13 +81,13 @@ func NewSocketListener(
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *SocketListener {
 	ln := &SocketListener{
 		addr:           getAddress(bindAddr, port),
 		saslMechanisms: saslMechanisms,
 		extAuth:        extAuth,
-		opts:           opts,
+		cfg:            cfg,
 		hosts:          hosts,
 		router:         router,
 		comps:          comps,
@@ -120,8 +120,8 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if l.opts.UseTLS {
-		ln = tls.NewListener(ln, l.opts.TLSConfig)
+	if l.cfg.UseTLS {
+		ln = tls.NewListener(ln, l.cfg.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1
@@ -142,7 +142,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	}()
 	log.Infow(
 		fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
-		"direct_tls", l.opts.UseTLS,
+		"direct_tls", l.cfg.UseTLS,
 	)
 	return nil
 }
@@ -175,7 +175,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.resMng,
 		l.shapers,
 		l.sonar,
-		l.opts,
+		l.cfg,
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize C2S stream: %v", err)

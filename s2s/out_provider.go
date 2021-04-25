@@ -33,7 +33,7 @@ import (
 // OutProvider is an outgoing S2S stream provider.
 type OutProvider struct {
 	hosts   *host.Hosts
-	opts    Options
+	cfg     Config
 	kv      kv.KV
 	shapers shaper.Shapers
 	sn      *sonar.Sonar
@@ -52,14 +52,14 @@ func NewOutProvider(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	sn *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *OutProvider {
 	op := &OutProvider{
 		hosts:      hosts,
 		shapers:    shapers,
 		kv:         kv,
 		sn:         sn,
-		opts:       opts,
+		cfg:        cfg,
 		outStreams: make(map[string]s2sOut),
 		doneCh:     make(chan chan struct{}),
 	}
@@ -189,7 +189,7 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		target,
 		p.tlsConfig(target),
 		p.hosts,
-		p.opts,
+		p.cfg,
 		p.kv,
 		p.shapers,
 		p.sn,
@@ -203,7 +203,7 @@ func (p *OutProvider) newDialbackS2S(sender, target string, dbParam DialbackPara
 		target,
 		p.tlsConfig(target),
 		p.hosts,
-		p.opts,
+		p.cfg,
 		dbParam,
 		p.shapers,
 	)

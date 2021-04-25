@@ -295,7 +295,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 			stm := &outS2S{
 				sender: "jackal.im",
 				target: "jabber.org",
-				opts: Options{
+				cfg: Config{
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,
 					MaxStanzaSize:  8192,
@@ -396,7 +396,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 			trMock.CloseFunc = func() error { return nil }
 
 			stm := &outS2S{
-				opts: Options{
+				cfg: Config{
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,
 					MaxStanzaSize:  8192,
@@ -483,7 +483,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &outS2S{
-				opts: Options{
+				cfg: Config{
 					KeepAlive:      time.Minute,
 					RequestTimeout: time.Minute,
 					MaxStanzaSize:  8192,

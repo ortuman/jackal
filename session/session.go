@@ -72,8 +72,8 @@ const (
 	ComponentSession
 )
 
-// Options structure is used to establish XMPP session options.
-type Options struct {
+// Config structure is used to establish XMPP session configuration.
+type Config struct {
 
 	// MaxStanzaSize defines the maximum stanza size that can be read from the session transport.
 	MaxStanzaSize int
@@ -86,7 +86,7 @@ type Options struct {
 type Session struct {
 	id    string
 	typ   Type
-	opts  Options
+	cfg   Config
 	hosts hosts
 	tr    transport.Transport
 	pr    xmppParser
@@ -98,16 +98,16 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts, opts Options) *Session {
+func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts, cfg Config) *Session {
 	ss := &Session{
 		typ:   typ,
 		id:    identifier,
-		opts:  opts,
+		cfg:   cfg,
 		hosts: hosts,
 		tr:    tr,
-		pr:    getParser(tr, opts.MaxStanzaSize),
+		pr:    getParser(tr, cfg.MaxStanzaSize),
 	}
-	if !ss.opts.IsOut {
+	if !ss.cfg.IsOut {
 		ss.streamID = uuid.New().String()
 	}
 	return ss
@@ -148,7 +148,7 @@ func (ss *Session) OpenStream(ctx context.Context, featuresElem stravaganza.Elem
 		return errUnsupportedTransport
 	}
 
-	if ss.opts.IsOut {
+	if ss.cfg.IsOut {
 		b.WithAttribute(stravaganza.From, ss.hosts.DefaultHostName())
 		b.WithAttribute(stravaganza.To, ss.jd.Domain())
 	} else {
@@ -254,7 +254,7 @@ func (ss *Session) Receive() (stravaganza.Element, error) {
 		if err := ss.validateStreamElement(elem); err != nil {
 			return nil, err
 		}
-		if ss.opts.IsOut {
+		if ss.cfg.IsOut {
 			ss.streamID = elem.Attribute(stravaganza.ID)
 		}
 		ss.started = true
@@ -268,11 +268,11 @@ func (ss *Session) Receive() (stravaganza.Element, error) {
 
 // Reset resets session internal state.
 func (ss *Session) Reset(tr transport.Transport) error {
-	if !ss.opts.IsOut {
+	if !ss.cfg.IsOut {
 		ss.streamID = uuid.New().String()
 	}
 	ss.tr = tr
-	ss.pr = getParser(tr, ss.opts.MaxStanzaSize)
+	ss.pr = getParser(tr, ss.cfg.MaxStanzaSize)
 	ss.opened = false
 	ss.started = false
 	return nil

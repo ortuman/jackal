@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	if err := runServer(os.Stdout, os.Args); err != nil {
+	if err := run(os.Stdout, os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

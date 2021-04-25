@@ -244,7 +244,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 			}
 
 			stm := &inComponent{
-				opts: Options{
+				cfg: Config{
 					KeepAliveTimeout: time.Minute,
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
@@ -339,7 +339,7 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inComponent{
-				opts: Options{
+				cfg: Config{
 					KeepAliveTimeout: time.Minute,
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192},

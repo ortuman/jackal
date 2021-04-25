@@ -59,7 +59,7 @@ var disconnectTimeout = time.Second * 5
 
 type inComponent struct {
 	id           inComponentID
-	opts         Options
+	cfg          Config
 	tr           transport.Transport
 	shapers      shaper.Shapers
 	session      session
@@ -89,7 +89,7 @@ func newInComponent(
 	router router.Router,
 	shapers shaper.Shapers,
 	sn *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) (*inComponent, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultS2S().RateLimiter()
@@ -104,15 +104,15 @@ func newInComponent(
 		id.String(),
 		tr,
 		hosts,
-		xmppsession.Options{
-			MaxStanzaSize: opts.MaxStanzaSize,
+		xmppsession.Config{
+			MaxStanzaSize: cfg.MaxStanzaSize,
 		},
 	)
 	// init stream
 	ctx, cancelFn := context.WithCancel(context.Background())
 	return &inComponent{
 		id:         id,
-		opts:       opts,
+		cfg:        cfg,
 		tr:         tr,
 		session:    session,
 		comps:      comps,
@@ -174,7 +174,7 @@ func (s *inComponent) done() <-chan struct{} {
 func (s *inComponent) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.opts.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -188,7 +188,7 @@ func (s *inComponent) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.opts.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -270,7 +270,7 @@ func (s *inComponent) handleHandshaking(ctx context.Context, elem stravaganza.El
 	}
 	// compute handshake
 	h := sha1.New()
-	h.Write([]byte(s.session.StreamID() + s.opts.Secret))
+	h.Write([]byte(s.session.StreamID() + s.cfg.Secret))
 	hs := hex.EncodeToString(h.Sum(nil))
 
 	if elem.Text() != hs {
@@ -451,7 +451,7 @@ func (s *inComponent) postStreamEvent(ctx context.Context, eventName string, inf
 }
 
 func (s *inComponent) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.opts.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
 }
 
 var currentID uint64

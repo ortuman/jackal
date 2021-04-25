@@ -50,7 +50,7 @@ type SocketListener struct {
 	kv            kv.KV
 	shapers       shaper.Shapers
 	sonar         *sonar.Sonar
-	opts          Options
+	cfg           Config
 	connHandlerFn func(conn net.Conn)
 
 	ln     net.Listener
@@ -70,12 +70,12 @@ func NewSocketListener(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *SocketListener {
 	addr := getAddress(bindAddr, port)
 	ln := &SocketListener{
 		addr:        addr,
-		opts:        opts,
+		cfg:         cfg,
 		hosts:       hosts,
 		router:      router,
 		comps:       comps,
@@ -102,8 +102,8 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if l.opts.UseTLS {
-		ln = tls.NewListener(ln, l.opts.TLSConfig)
+	if l.cfg.UseTLS {
+		ln = tls.NewListener(ln, l.cfg.TLSConfig)
 	}
 	l.ln = ln
 	l.active = 1
@@ -124,7 +124,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	}()
 	log.Infow(
 		fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
-		"direct_tls", l.opts.UseTLS,
+		"direct_tls", l.cfg.UseTLS,
 	)
 	return nil
 }
@@ -152,7 +152,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.kv,
 		l.shapers,
 		l.sonar,
-		l.opts,
+		l.cfg,
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize incoming S2S stream: %v", err)

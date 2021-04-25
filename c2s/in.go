@@ -61,7 +61,7 @@ var disconnectTimeout = time.Second * 5
 
 type inC2S struct {
 	id             stream.C2SID
-	opts           Options
+	cfg            Config
 	tr             transport.Transport
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
@@ -96,7 +96,7 @@ func newInC2S(
 	resMng *ResourceManager,
 	shapers shaper.Shapers,
 	sonar *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) (*inC2S, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultC2S().RateLimiter()
@@ -110,14 +110,14 @@ func newInC2S(
 		id.String(),
 		tr,
 		hosts,
-		xmppsession.Options{
-			MaxStanzaSize: opts.MaxStanzaSize,
+		xmppsession.Config{
+			MaxStanzaSize: cfg.MaxStanzaSize,
 		},
 	)
 	// init stream
 	stm := &inC2S{
 		id:             id,
-		opts:           opts,
+		cfg:            cfg,
 		sCtx:           make(map[string]string),
 		tr:             tr,
 		session:        session,
@@ -133,7 +133,7 @@ func newInC2S(
 		state:          uint32(inConnecting),
 		sn:             sonar,
 	}
-	if opts.UseTLS {
+	if cfg.UseTLS {
 		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
@@ -248,7 +248,7 @@ func (s *inC2S) start() error {
 func (s *inC2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.opts.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -262,7 +262,7 @@ func (s *inC2S) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.opts.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -659,7 +659,7 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Elemen
 	isSocketTr := s.tr.Type() == transport.Socket
 
 	// compression feature
-	compressionAvailable := isSocketTr && s.opts.CompressionLevel != compress.NoCompression
+	compressionAvailable := isSocketTr && s.cfg.CompressionLevel != compress.NoCompression
 
 	if !s.flags.isCompressed() && compressionAvailable {
 		compressionElem := stravaganza.NewBuilder("compression").
@@ -820,7 +820,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 		return err
 	}
 	// compress transport
-	s.tr.EnableCompression(s.opts.CompressionLevel)
+	s.tr.EnableCompression(s.cfg.CompressionLevel)
 	s.flags.setCompressed()
 
 	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
@@ -858,7 +858,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 			if rs.JID.Resource() != res {
 				continue
 			}
-			switch s.opts.ResourceConflict {
+			switch s.cfg.ResourceConflict {
 			// replace by a server generated resourcepart
 			case Override:
 				res = uuid.New().String()
@@ -1067,7 +1067,7 @@ func (s *inC2S) postStreamEvent(ctx context.Context, eventName string, inf *even
 }
 
 func (s *inC2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.opts.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
 }
 
 var currentID uint64

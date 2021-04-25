@@ -127,7 +127,7 @@ type serverApp struct {
 	waitStopCh chan os.Signal
 }
 
-func runServer(output io.Writer, args []string) error {
+func run(output io.Writer, args []string) error {
 	var configFile string
 	var showVersion, showUsage bool
 

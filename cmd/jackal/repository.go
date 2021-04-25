@@ -21,7 +21,7 @@ import (
 
 func initRepository(a *serverApp, sCfg storageConfig) error {
 	cfg := sCfg.PgSQL
-	opts := pgsqlrepository.Options{
+	opts := pgsqlrepository.Config{
 		MaxIdleConns:    cfg.MaxIdleConns,
 		MaxOpenConns:    cfg.MaxOpenConns,
 		ConnMaxIdleTime: cfg.ConnMaxIdleTime,

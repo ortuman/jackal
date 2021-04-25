@@ -36,8 +36,8 @@ const (
 	listenKeepAlive = time.Second * 15
 )
 
-// Options defines component connection options.
-type Options struct {
+// Config defines component connection configuration.
+type Config struct {
 	// ConnectTimeout defines connection timeout.
 	ConnectTimeout time.Duration
 
@@ -58,7 +58,7 @@ type Options struct {
 // SocketListener represents a component socket listener type.
 type SocketListener struct {
 	addr          string
-	opts          Options
+	cfg           Config
 	hosts         *host.Hosts
 	comps         *component.Components
 	router        router.Router
@@ -82,7 +82,7 @@ func NewSocketListener(
 	router router.Router,
 	shapers shaper.Shapers,
 	sn *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *SocketListener {
 	ln := &SocketListener{
 		addr:       getAddress(bindAddr, port),
@@ -91,7 +91,7 @@ func NewSocketListener(
 		router:     router,
 		shapers:    shapers,
 		sn:         sn,
-		opts:       opts,
+		cfg:        cfg,
 		stmHub:     newInHub(),
 		extCompMng: extCompMng,
 	}
@@ -153,7 +153,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.router,
 		l.shapers,
 		l.sn,
-		l.opts,
+		l.cfg,
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize component stream: %v", err)

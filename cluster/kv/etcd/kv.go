@@ -34,11 +34,6 @@ const (
 	maxLeaseRefreshTries = 5
 )
 
-// Options contains etcd key-value store options.
-type Options struct {
-	LeaseTTL time.Duration
-}
-
 // KV represents an etcd key-value store implementation.
 type KV struct {
 	cli               *etcdv3.Client

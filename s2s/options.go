@@ -19,8 +19,8 @@ import (
 	"time"
 )
 
-// Options defines S2S connection options.
-type Options struct {
+// Config defines S2S connection configuration.
+type Config struct {
 	DialTimeout time.Duration
 
 	DialbackSecret string

@@ -40,15 +40,15 @@ const (
 // ModuleName represents offline module name.
 const ModuleName = "offline"
 
-// Options contains offline module configuration options.
-type Options struct {
+// Config contains offline module configuration value.
+type Config struct {
 	// QueueSize defines maximum offline queue size.
 	QueueSize int
 }
 
 // Offline represents offline module type.
 type Offline struct {
-	opts   Options
+	cfg    Config
 	router router.Router
 	hosts  hosts
 	rep    repository.Offline
@@ -64,10 +64,10 @@ func New(
 	rep repository.Offline,
 	locker locker.Locker,
 	sn *sonar.Sonar,
-	opts Options,
+	cfg Config,
 ) *Offline {
 	return &Offline{
-		opts:   opts,
+		cfg:    cfg,
 		router: router,
 		hosts:  hosts,
 		rep:    rep,
@@ -194,7 +194,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err != nil {
 		return err
 	}
-	if qSize == m.opts.QueueSize { // offline queue is full
+	if qSize == m.cfg.QueueSize { // offline queue is full
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
 		return nil
 	}

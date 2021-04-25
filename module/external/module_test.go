@@ -109,7 +109,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 
 	sn := sonar.New()
 	mod := &ExtModule{
-		opts: Options{
+		cfg: Config{
 			Topics: []string{event.C2SStreamIQReceived},
 		},
 		sonar: sn,
@@ -158,7 +158,7 @@ func TestModule_IQHandler(t *testing.T) {
 		return cl, nil, nil
 	}
 	mod := &ExtModule{
-		opts: Options{
+		cfg: Config{
 			NamespaceMatcher: stringmatcher.Any,
 		},
 		cl: cl,
