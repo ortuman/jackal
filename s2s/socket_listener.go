@@ -102,7 +102,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if l.cfg.UseTLS {
+	if l.cfg.DirectTLS {
 		ln = tls.NewListener(ln, l.cfg.TLSConfig)
 	}
 	l.ln = ln
@@ -124,7 +124,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	}()
 	log.Infow(
 		fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
-		"direct_tls", l.cfg.UseTLS,
+		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
 }

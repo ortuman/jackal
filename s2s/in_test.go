@@ -412,10 +412,10 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			stm := &inS2S{
 				cfg: Config{
-					DialbackSecret: "adialbacksecret",
-					KeepAlive:      time.Minute,
-					RequestTimeout: time.Minute,
-					MaxStanzaSize:  8192,
+					DialbackSecret:   "adialbacksecret",
+					KeepAliveTimeout: time.Minute,
+					RequestTimeout:   time.Minute,
+					MaxStanzaSize:    8192,
 				},
 				state:       uint32(tt.state),
 				flags:       flags{fs: tt.flags},
@@ -515,9 +515,9 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 
 			stm := &inS2S{
 				cfg: Config{
-					KeepAlive:      time.Minute,
-					RequestTimeout: time.Minute,
-					MaxStanzaSize:  8192,
+					KeepAliveTimeout: time.Minute,
+					RequestTimeout:   time.Minute,
+					MaxStanzaSize:    8192,
 				},
 				state:   uint32(tt.state),
 				rq:      runqueue.New(tt.name, nil),

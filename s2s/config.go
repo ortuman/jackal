@@ -21,15 +21,17 @@ import (
 
 // Config defines S2S connection configuration.
 type Config struct {
+	// DialTimeout defines S2S out dialer timeout.
 	DialTimeout time.Duration
 
+	// DialbackSecret defines S2S dialback secret key.
 	DialbackSecret string
 
 	// ConnectTimeout defines connection timeout.
 	ConnectTimeout time.Duration
 
-	// KeepAlive defines stream read timeout.
-	KeepAlive time.Duration
+	// KeepAliveTimeout defines stream read timeout.
+	KeepAliveTimeout time.Duration
 
 	// RequestTimeout defines S2S stream request timeout.
 	RequestTimeout time.Duration
@@ -37,8 +39,8 @@ type Config struct {
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
 	MaxStanzaSize int
 
-	// UseTLS, if true, tls.Listen will be used as network listener.
-	UseTLS bool
+	// DirectTLS, if true, tls.Listen will be used as network listener.
+	DirectTLS bool
 
 	// TLSConfig contains configuration to be used when TLS listener is enabled.
 	TLSConfig *tls.Config

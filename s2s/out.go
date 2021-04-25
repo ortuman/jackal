@@ -258,7 +258,7 @@ func (s *outS2S) start() error {
 }
 
 func (s *outS2S) readLoop() {
-	tm := time.AfterFunc(s.cfg.KeepAlive, s.connTimeout)
+	tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout)
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -273,7 +273,7 @@ func (s *outS2S) readLoop() {
 
 	doRead:
 		if s.getState() != outAuthenticated {
-			tm = time.AfterFunc(s.cfg.KeepAlive, s.connTimeout) // schedule read timeout
+			tm = time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
 		}
 		elem, sErr = s.session.Receive()
 		if tm != nil {

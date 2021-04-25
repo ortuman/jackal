@@ -18,12 +18,12 @@ import "github.com/ortuman/jackal/s2s"
 
 func initS2S(a *serverApp, cfg s2sOutConfig) {
 	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.sonar, s2s.Config{
-		DialTimeout:    cfg.DialTimeout,
-		DialbackSecret: cfg.DialbackSecret,
-		ConnectTimeout: cfg.ConnectTimeout,
-		KeepAlive:      cfg.KeepAlive,
-		RequestTimeout: cfg.RequestTimeout,
-		MaxStanzaSize:  cfg.MaxStanzaSize,
+		DialTimeout:      cfg.DialTimeout,
+		DialbackSecret:   cfg.DialbackSecret,
+		ConnectTimeout:   cfg.ConnectTimeout,
+		KeepAliveTimeout: cfg.KeepAliveTimeout,
+		RequestTimeout:   cfg.RequestTimeout,
+		MaxStanzaSize:    cfg.MaxStanzaSize,
 	})
 	a.s2sInHub = s2s.NewInHub()
 

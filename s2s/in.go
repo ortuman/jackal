@@ -128,7 +128,7 @@ func newInS2S(
 		doneCh:      make(chan struct{}),
 		state:       uint32(inConnecting),
 	}
-	if cfg.UseTLS {
+	if cfg.DirectTLS {
 		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
@@ -190,7 +190,7 @@ func (s *inS2S) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.cfg.KeepAlive, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}

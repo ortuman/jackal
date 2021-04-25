@@ -89,11 +89,11 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			a.shapers,
 			a.sonar,
 			s2s.Config{
-				ConnectTimeout: cfg.ConnectTimeout,
-				KeepAlive:      cfg.KeepAliveTimeout,
-				RequestTimeout: cfg.RequestTimeout,
-				MaxStanzaSize:  cfg.MaxStanzaSize,
-				UseTLS:         cfg.DirectTLS,
+				ConnectTimeout:   cfg.ConnectTimeout,
+				KeepAliveTimeout: cfg.KeepAliveTimeout,
+				RequestTimeout:   cfg.RequestTimeout,
+				MaxStanzaSize:    cfg.MaxStanzaSize,
+				DirectTLS:        cfg.DirectTLS,
 				TLSConfig: &tls.Config{
 					Certificates: a.hosts.Certificates(),
 					ClientAuth:   tls.RequireAndVerifyClientCert,
