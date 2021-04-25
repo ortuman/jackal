@@ -33,15 +33,14 @@ import (
 	stringsutil "github.com/ortuman/jackal/util/strings"
 )
 
-/*
 var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Roster
 	// (https://xmpp.org/rfcs/rfc6121.html#roster)
 	roster.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0030.New(a.router, a.comps, a.rep, a.resMng)
+		return roster.New(a.router, a.rep, a.resMng, a.hosts, a.sonar)
 	},
 	// Offline
-	// ()
+	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
 		return offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Options{
 			QueueSize: cfg.Offline.QueueSize,
@@ -55,7 +54,7 @@ var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0030: Service Discovery
 	// (https://xmpp.org/extensions/xep-0030.html)
 	xep0030.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0030.New(a.router, a.comps, a.rep, a.resMng)
+		return xep0030.New(a.router, a.comps, a.rep, a.resMng, a.sonar)
 	},
 	// XEP-0049: Private XML Storage
 	// (https://xmpp.org/extensions/xep-0049.html)
@@ -77,7 +76,7 @@ var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0115: Entity Capabilities
 	// (https://xmpp.org/extensions/xep-0115.html)
 	xep0115.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0115.New(disc, a.router, a.rep, a.sonar)
+		return xep0115.New(a.router, a.rep, a.sonar)
 	},
 	// XEP-0191: Blocking Command
 	// (https://xmpp.org/extensions/xep-0191.html)
@@ -105,7 +104,6 @@ var mods = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 		return xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
 	},
 }
-*/
 
 func initModules(a *serverApp, cfg modulesConfig) error {
 	var mods []module.Module
