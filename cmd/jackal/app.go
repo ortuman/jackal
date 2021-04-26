@@ -64,8 +64,6 @@ const (
 	defaultShutdownTimeout  = time.Second * 30
 
 	envConfigFile = "JACKAL_CONFIG_FILE"
-
-	defaultDomain = "localhost"
 )
 
 var logoStr = []string{
@@ -319,6 +317,7 @@ func (a *serverApp) initRepository(sCfg storageConfig) error {
 }
 
 func (a *serverApp) initHosts(configs []hostConfig) error {
+	const defaultDomain = "localhost"
 	h := host.New()
 	if len(configs) == 0 {
 		cer, err := tlsutil.LoadCertificate("", "", defaultDomain)
