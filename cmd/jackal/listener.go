@@ -16,7 +16,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 
 	"github.com/ortuman/jackal/auth"
 	"github.com/ortuman/jackal/c2s"
@@ -121,16 +120,4 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			},
 		)
 	},
-}
-
-func initListeners(a *serverApp, configs []listenerConfig) error {
-	for _, cfg := range configs {
-		lnFn, ok := lnFns[cfg.Type]
-		if !ok {
-			return fmt.Errorf("main: unrecognized listener: %s", cfg.Type)
-		}
-		ln := lnFn(a, cfg)
-		a.registerStartStopper(ln)
-	}
-	return nil
 }

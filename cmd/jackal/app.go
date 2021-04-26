@@ -28,35 +28,44 @@ import (
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
+	adminserver "github.com/ortuman/jackal/admin/server"
 	"github.com/ortuman/jackal/auth/pepper"
 	"github.com/ortuman/jackal/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/cluster/connmanager"
 	"github.com/ortuman/jackal/cluster/kv"
+	etcdkv "github.com/ortuman/jackal/cluster/kv/etcd"
 	"github.com/ortuman/jackal/cluster/locker"
+	etcdlocker "github.com/ortuman/jackal/cluster/locker/etcd"
 	"github.com/ortuman/jackal/cluster/memberlist"
 	clusterrouter "github.com/ortuman/jackal/cluster/router"
+	clusterserver "github.com/ortuman/jackal/cluster/server"
 	"github.com/ortuman/jackal/component"
 	"github.com/ortuman/jackal/component/extcomponentmanager"
 	"github.com/ortuman/jackal/host"
 	"github.com/ortuman/jackal/log"
 	"github.com/ortuman/jackal/log/zap"
 	"github.com/ortuman/jackal/module"
+	externalmodule "github.com/ortuman/jackal/module/external"
 	"github.com/ortuman/jackal/repository"
+	measuredrepository "github.com/ortuman/jackal/repository/measured"
+	pgsqlrepository "github.com/ortuman/jackal/repository/pgsql"
 	"github.com/ortuman/jackal/router"
 	"github.com/ortuman/jackal/s2s"
 	"github.com/ortuman/jackal/shaper"
+	"github.com/ortuman/jackal/util/stringmatcher"
+	tlsutil "github.com/ortuman/jackal/util/tls"
 	"github.com/ortuman/jackal/version"
 )
 
 const (
 	darwinOpenMax = 10240
 
-	defaultDomain = "localhost"
-
 	defaultBootstrapTimeout = time.Minute
 	defaultShutdownTimeout  = time.Second * 30
 
 	envConfigFile = "JACKAL_CONFIG_FILE"
+
+	defaultDomain = "localhost"
 )
 
 var logoStr = []string{
@@ -93,12 +102,13 @@ type serverApp struct {
 	output io.Writer
 	args   []string
 
+	peppers *pepper.Keys
+	sonar   *sonar.Sonar
+
 	etcdCli *etcdv3.Client
 	locker  locker.Locker
 	kv      kv.KV
 
-	peppers    *pepper.Keys
-	sonar      *sonar.Sonar
 	rep        repository.Repository
 	memberList *memberlist.MemberList
 	resMng     *c2s.ResourceManager
@@ -110,8 +120,6 @@ type serverApp struct {
 	clusterRouter  *clusterrouter.Router
 	s2sOutProvider *s2s.OutProvider
 	s2sInHub       *s2s.InHub
-	c2sRouter      router.C2SRouter
-	s2sRouter      router.S2SRouter
 	router         router.Router
 	mods           *module.Modules
 	comps          *component.Components
@@ -156,13 +164,6 @@ func run(output io.Writer, args []string) error {
 		_, _ = fmt.Fprintf(a.output, "jackal version: %v\n", version.Version)
 		return nil
 	}
-	// set maximum opened files limit
-	if err := setRLimit(); err != nil {
-		return err
-	}
-	// enable gRPC prometheus histograms
-	grpc_prometheus.EnableHandlingTimeHistogram()
-
 	// if present, override config file url with env var
 	if envCfgFile := os.Getenv(envConfigFile); len(envCfgFile) > 0 {
 		configFile = envCfgFile
@@ -172,17 +173,24 @@ func run(output io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
+	// enable gRPC prometheus histograms
+	grpc_prometheus.EnableHandlingTimeHistogram()
+
+	// set maximum opened files limit
+	if err := setRLimit(); err != nil {
+		return err
+	}
 	// init logger
 	log.SetLogger(
 		zap.NewLogger(cfg.Logger.OutputPath),
 		cfg.Logger.Level,
 	)
-	// init etcd
-	if err := initEtcd(a, cfg.Cluster.Etcd); err != nil {
-		return err
-	}
-	initLocker(a)
-	initKVStore(a)
+	log.Infow("Jackal is starting...",
+		"version", version.Version,
+		"go_ver", runtime.Version(),
+		"go_os", runtime.GOOS,
+		"go_arch", runtime.GOARCH,
+	)
 
 	// init pepper keys
 	peppers, err := pepper.NewKeys(cfg.Peppers.Keys, cfg.Peppers.UseID)
@@ -194,50 +202,51 @@ func run(output io.Writer, args []string) error {
 	// init sonar hub
 	a.sonar = sonar.New()
 
-	log.Infow("Jackal is starting...",
-		"version", version.Version,
-		"go_ver", runtime.Version(),
-		"go_os", runtime.GOOS,
-		"go_arch", runtime.GOARCH,
-	)
+	// init etcd
+	if err := a.initEtcd(cfg.Cluster.Etcd); err != nil {
+		return err
+	}
+	a.initLocker()
+	a.initKVStore()
+
+	// init cluster connection manager
+	a.initClusterConnManager()
+
+	// init repository
+	if err := a.initRepository(cfg.Storage); err != nil {
+		return err
+	}
+	// init C2S/S2S routers
+	if err := a.initHosts(cfg.Hosts); err != nil {
+		return err
+	}
+	if err := a.initShapers(cfg.Shapers); err != nil {
+		return err
+	}
+	a.initS2S(cfg.S2SOut)
+	a.initRouters()
+
+	// init components & modules
+	a.initComponents(cfg.Components)
+
+	if err := a.initModules(cfg.Modules); err != nil {
+		return err
+	}
 	// init HTTP server
 	a.registerStartStopper(newHTTPServer(cfg.HTTPPort))
 
-	// init repository
-	if err := initRepository(a, cfg.Storage); err != nil {
-		return err
-	}
-	// init cluster connection manager
-	initClusterConnManager(a)
-
-	// init C2S/S2S routers
-	if err := initHosts(a, cfg.Hosts); err != nil {
-		return err
-	}
-	if err := initShapers(a, cfg.Shapers); err != nil {
-		return err
-	}
-	initS2S(a, cfg.S2SOut)
-	initRouters(a)
-
-	// init components & modules
-	initComponents(a, cfg.Components)
-
-	if err := initModules(a, cfg.Modules); err != nil {
-		return err
-	}
 	// init admin server
 	if !cfg.Admin.Disabled {
-		initAdminServer(a, cfg.Admin.BindAddr, cfg.Admin.Port)
+		a.initAdminServer(cfg.Admin.BindAddr, cfg.Admin.Port)
 	}
 	// init cluster server
-	initClusterServer(a, cfg.Cluster.BindAddr, cfg.Cluster.Port)
+	a.initClusterServer(cfg.Cluster.BindAddr, cfg.Cluster.Port)
 
 	// init memberlist
-	initMemberList(a, cfg.Cluster.Port)
+	a.initMemberList(cfg.Cluster.Port)
 
 	// init C2S/S2S listeners
-	if err := initListeners(a, cfg.Listeners); err != nil {
+	if err := a.initListeners(cfg.Listeners); err != nil {
 		return err
 	}
 
@@ -249,6 +258,239 @@ func run(output io.Writer, args []string) error {
 	log.Infof("Received %s signal... shutting down...", sig.String())
 
 	return a.shutdown()
+}
+
+func (a *serverApp) initEtcd(cfg etcdConfig) error {
+	const etcdMemberListTimeout = time.Second * 5
+	cli, err := etcdv3.New(etcdv3.Config{
+		Endpoints:   cfg.Endpoints,
+		DialTimeout: cfg.DialTimeout,
+	})
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
+	defer cancel()
+
+	// obtain memberlist to check cluster health
+	_, err = cli.MemberList(ctx)
+	if err != nil {
+		return err
+	}
+	a.etcdCli = cli
+	return nil
+}
+
+func (a *serverApp) initLocker() {
+	a.locker = etcdlocker.New(a.etcdCli)
+	a.registerStartStopper(a.locker)
+}
+
+func (a *serverApp) initKVStore() {
+	etcdKV := etcdkv.New(a.etcdCli)
+	a.kv = kv.NewMeasured(etcdKV)
+	a.registerStartStopper(a.kv)
+}
+
+func (a *serverApp) initClusterConnManager() {
+	a.clusterConnMng = clusterconnmanager.NewManager(a.sonar)
+	a.registerStartStopper(a.clusterConnMng)
+}
+
+func (a *serverApp) initRepository(sCfg storageConfig) error {
+	cfg := sCfg.PgSQL
+	opts := pgsqlrepository.Config{
+		MaxIdleConns:    cfg.MaxIdleConns,
+		MaxOpenConns:    cfg.MaxOpenConns,
+		ConnMaxIdleTime: cfg.ConnMaxIdleTime,
+		ConnMaxLifetime: cfg.ConnMaxLifetime,
+	}
+	pgRep := pgsqlrepository.New(
+		cfg.Host,
+		cfg.User,
+		cfg.Password,
+		cfg.Database,
+		cfg.SSLMode,
+		opts,
+	)
+	a.rep = measuredrepository.New(pgRep)
+	a.registerStartStopper(a.rep)
+	return nil
+}
+
+func (a *serverApp) initHosts(configs []hostConfig) error {
+	h := host.New()
+	if len(configs) == 0 {
+		cer, err := tlsutil.LoadCertificate("", "", defaultDomain)
+		if err != nil {
+			return err
+		}
+		h.RegisterDefaultHost(defaultDomain, cer)
+		a.hosts = h
+		return nil
+	}
+	for i, config := range configs {
+		cer, err := tlsutil.LoadCertificate(config.TLS.PrivateKeyFile, config.TLS.CertFile, config.Domain)
+		if err != nil {
+			return err
+		}
+		if i == 0 {
+			h.RegisterDefaultHost(config.Domain, cer)
+		} else {
+			h.RegisterHost(config.Domain, cer)
+		}
+	}
+	a.hosts = h
+	return nil
+}
+
+func (a *serverApp) initShapers(cfgs []shaperConfig) error {
+	a.shapers = make(shaper.Shapers, 0)
+	for _, cfg := range cfgs {
+		var sm stringmatcher.Matcher
+		switch {
+		case len(cfg.Matching.JID.In) > 0:
+			sm = stringmatcher.NewStringMatcher(cfg.Matching.JID.In)
+		case len(cfg.Matching.JID.RegEx) > 0:
+			var err error
+			sm, err = stringmatcher.NewRegExMatcher(cfg.Matching.JID.RegEx)
+			if err != nil {
+				return err
+			}
+		default:
+			sm = stringmatcher.Any
+		}
+		a.shapers = append(a.shapers, shaper.New(cfg.MaxSessions, cfg.Rate.Limit, cfg.Rate.Burst, sm))
+
+		log.Infow(fmt.Sprintf("Registered '%s' shaper configuration", cfg.Name),
+			"name", cfg.Name,
+			"max_sessions", cfg.MaxSessions,
+			"limit", cfg.Rate.Limit,
+			"burst", cfg.Rate.Burst)
+	}
+	return nil
+}
+
+func (a *serverApp) initMemberList(clusterPort int) {
+	a.memberList = memberlist.New(a.kv, clusterPort, a.sonar)
+	a.registerStartStopper(a.memberList)
+	return
+}
+
+func (a *serverApp) initListeners(configs []listenerConfig) error {
+	for _, cfg := range configs {
+		lnFn, ok := lnFns[cfg.Type]
+		if !ok {
+			return fmt.Errorf("main: unrecognized listener: %s", cfg.Type)
+		}
+		ln := lnFn(a, cfg)
+		a.registerStartStopper(ln)
+	}
+	return nil
+}
+
+func (a *serverApp) initS2S(cfg s2sOutConfig) {
+	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.sonar, s2s.Config{
+		DialTimeout:      cfg.DialTimeout,
+		DialbackSecret:   cfg.DialbackSecret,
+		ConnectTimeout:   cfg.ConnectTimeout,
+		KeepAliveTimeout: cfg.KeepAliveTimeout,
+		RequestTimeout:   cfg.RequestTimeout,
+		MaxStanzaSize:    cfg.MaxStanzaSize,
+	})
+	a.s2sInHub = s2s.NewInHub()
+
+	a.registerStartStopper(a.s2sOutProvider)
+	a.registerStartStopper(a.s2sInHub)
+}
+
+func (a *serverApp) initRouters() {
+	// init shared resource hub
+	a.resMng = c2s.NewResourceManager(a.kv)
+
+	// init C2S router
+	a.localRouter = c2s.NewLocalRouter(a.hosts, a.sonar)
+	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
+
+	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.sonar)
+	s2sRouter := s2s.NewRouter(a.s2sOutProvider)
+
+	// init global router
+	a.router = router.New(a.hosts, c2sRouter, s2sRouter)
+
+	a.registerStartStopper(a.router)
+	return
+}
+
+func (a *serverApp) initComponents(_ componentsConfig) {
+	a.comps = component.NewComponents(nil, a.sonar)
+	a.extCompMng = extcomponentmanager.New(a.kv, a.clusterConnMng, a.comps)
+
+	a.registerStartStopper(a.comps)
+	a.registerStartStopper(a.extCompMng)
+}
+
+func (a *serverApp) initModules(cfg modulesConfig) error {
+	var mods []module.Module
+
+	// enabled modules
+	for _, mName := range cfg.Enabled {
+		fn, ok := modFns[mName]
+		if !ok {
+			return fmt.Errorf("main: unrecognized module name: %s", mName)
+		}
+		mods = append(mods, fn(a, cfg))
+	}
+	// external modules
+	for _, extCfg := range cfg.External {
+		var err error
+		var nsMatcher stringmatcher.Matcher
+
+		var interceptors []module.StanzaInterceptor
+		switch {
+		case len(extCfg.IQHandler.Namespace.In) > 0:
+			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
+		case len(extCfg.IQHandler.Namespace.RegEx) > 0:
+			nsMatcher, err = stringmatcher.NewRegExMatcher(extCfg.IQHandler.Namespace.RegEx)
+			if err != nil {
+				return err
+			}
+		}
+		for _, interceptor := range extCfg.StanzaInterceptors {
+			interceptors = append(interceptors, module.StanzaInterceptor{
+				ID:       interceptor.ID,
+				Incoming: interceptor.Incoming,
+				Priority: interceptor.Priority,
+			})
+		}
+		mods = append(mods, externalmodule.New(
+			extCfg.Address,
+			extCfg.IsSecure,
+			a.router,
+			a.sonar,
+			externalmodule.Config{
+				RequestTimeout:   extCfg.RequestTimeout,
+				Topics:           extCfg.EventHandler.Topics,
+				TargetEntity:     extCfg.IQHandler.TargetEntity,
+				NamespaceMatcher: nsMatcher,
+				Interceptors:     interceptors,
+			},
+		))
+	}
+	a.mods = module.NewModules(mods, a.hosts, a.router, a.sonar)
+	a.registerStartStopper(a.mods)
+	return nil
+}
+
+func (a *serverApp) initAdminServer(bindAddr string, port int) {
+	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.sonar)
+	a.registerStartStopper(adminSrv)
+}
+
+func (a *serverApp) initClusterServer(bindAddr string, port int) {
+	clusterSrv := clusterserver.New(bindAddr, port, a.localRouter, a.comps)
+	a.registerStartStopper(clusterSrv)
+	return
 }
 
 func (a *serverApp) registerStartStopper(ss startStopper) {

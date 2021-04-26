@@ -15,10 +15,7 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/ortuman/jackal/module"
-	externalmodule "github.com/ortuman/jackal/module/external"
 	"github.com/ortuman/jackal/module/offline"
 	"github.com/ortuman/jackal/module/roster"
 	"github.com/ortuman/jackal/module/xep0012"
@@ -31,7 +28,6 @@ import (
 	"github.com/ortuman/jackal/module/xep0199"
 	"github.com/ortuman/jackal/module/xep0202"
 	"github.com/ortuman/jackal/module/xep0280"
-	"github.com/ortuman/jackal/util/stringmatcher"
 )
 
 var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
@@ -104,56 +100,4 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	xep0280.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
 		return xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
 	},
-}
-
-func initModules(a *serverApp, cfg modulesConfig) error {
-	var mods []module.Module
-
-	// enabled modules
-	for _, mName := range cfg.Enabled {
-		fn, ok := modFns[mName]
-		if !ok {
-			return fmt.Errorf("main: unrecognized module name: %s", mName)
-		}
-		mods = append(mods, fn(a, cfg))
-	}
-	// external modules
-	for _, extCfg := range cfg.External {
-		var err error
-		var nsMatcher stringmatcher.Matcher
-
-		var interceptors []module.StanzaInterceptor
-		switch {
-		case len(extCfg.IQHandler.Namespace.In) > 0:
-			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
-		case len(extCfg.IQHandler.Namespace.RegEx) > 0:
-			nsMatcher, err = stringmatcher.NewRegExMatcher(extCfg.IQHandler.Namespace.RegEx)
-			if err != nil {
-				return err
-			}
-		}
-		for _, interceptor := range extCfg.StanzaInterceptors {
-			interceptors = append(interceptors, module.StanzaInterceptor{
-				ID:       interceptor.ID,
-				Incoming: interceptor.Incoming,
-				Priority: interceptor.Priority,
-			})
-		}
-		mods = append(mods, externalmodule.New(
-			extCfg.Address,
-			extCfg.IsSecure,
-			a.router,
-			a.sonar,
-			externalmodule.Config{
-				RequestTimeout:   extCfg.RequestTimeout,
-				Topics:           extCfg.EventHandler.Topics,
-				TargetEntity:     extCfg.IQHandler.TargetEntity,
-				NamespaceMatcher: nsMatcher,
-				Interceptors:     interceptors,
-			},
-		))
-	}
-	a.mods = module.NewModules(mods, a.hosts, a.router, a.sonar)
-	a.registerStartStopper(a.mods)
-	return nil
 }
