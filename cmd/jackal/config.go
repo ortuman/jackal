@@ -21,12 +21,6 @@ import (
 	"github.com/kkyr/fig"
 )
 
-const (
-	c2sListenerType       = "c2s"
-	s2sListenerType       = "s2s"
-	componentListenerType = "component"
-)
-
 type peppersConfig struct {
 	Keys  map[string]string `fig:"keys"`
 	UseID string            `fig:"use"`
@@ -69,6 +63,21 @@ type storageConfig struct {
 	} `fig:"pgsql"`
 }
 
+type shaperConfig struct {
+	Name        string `fig:"name"`
+	MaxSessions int    `fig:"max_sessions" default:"10"`
+	Rate        struct {
+		Limit int `fig:"limit" default:"1000"`
+		Burst int `fig:"burst" default:"0"`
+	} `fig:"rate"`
+	Matching struct {
+		JID struct {
+			In    []string `fig:"in"`
+			RegEx string   `fig:"regex"`
+		}
+	} `fig:"matching"`
+}
+
 type hostConfig struct {
 	Domain string `fig:"domain"`
 	TLS    struct {
@@ -97,21 +106,6 @@ type listenerConfig struct {
 	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
 	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
-}
-
-type shaperConfig struct {
-	Name        string `fig:"name"`
-	MaxSessions int    `fig:"max_sessions" default:"10"`
-	Rate        struct {
-		Limit int `fig:"limit" default:"1000"`
-		Burst int `fig:"burst" default:"0"`
-	} `fig:"rate"`
-	Matching struct {
-		JID struct {
-			In    []string `fig:"in"`
-			RegEx string   `fig:"regex"`
-		}
-	} `fig:"matching"`
 }
 
 type extModuleConfig struct {
@@ -149,7 +143,7 @@ type s2sOutConfig struct {
 }
 
 type modulesConfig struct {
-	Enabled []string `fig:"enabled" default:"[roster,offline,last,disco,private,vcard,version,caps,blocklist,ping,time,carbons]"`
+	Enabled []string `fig:"enabled"`
 
 	Offline struct {
 		QueueSize int `fig:"queue_size" default:"200"`

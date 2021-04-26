@@ -434,7 +434,11 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	var mods []module.Module
 
 	// enabled modules
-	for _, mName := range cfg.Enabled {
+	enabled := cfg.Enabled
+	if len(enabled) == 0 {
+		enabled = defaultModules
+	}
+	for _, mName := range enabled {
 		fn, ok := modFns[mName]
 		if !ok {
 			return fmt.Errorf("main: unrecognized module name: %s", mName)
@@ -443,7 +447,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	}
 	// external modules
 	for _, extCfg := range cfg.External {
-		var err error
 		var nsMatcher stringmatcher.Matcher
 
 		var interceptors []module.StanzaInterceptor
@@ -451,6 +454,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 		case len(extCfg.IQHandler.Namespace.In) > 0:
 			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
 		case len(extCfg.IQHandler.Namespace.RegEx) > 0:
+			var err error
 			nsMatcher, err = stringmatcher.NewRegExMatcher(extCfg.IQHandler.Namespace.RegEx)
 			if err != nil {
 				return err

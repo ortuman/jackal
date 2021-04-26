@@ -24,6 +24,12 @@ import (
 	"github.com/ortuman/jackal/transport/compress"
 )
 
+const (
+	c2sListener       = "c2s"
+	s2sListener       = "s2s"
+	componentListener = "component"
+)
+
 var cmpLevelMap = map[string]compress.Level{
 	"default": compress.DefaultCompression,
 	"best":    compress.BestCompression,
@@ -37,7 +43,7 @@ var resConflictMap = map[string]c2s.ResourceConflict{
 }
 
 var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
-	c2sListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+	c2sListener: func(a *serverApp, cfg listenerConfig) startStopper {
 		var extAuth *auth.External
 		if len(cfg.SASL.External.Address) > 0 {
 			extAuth = auth.NewExternal(
@@ -74,7 +80,7 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			},
 		)
 	},
-	s2sListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+	s2sListener: func(a *serverApp, cfg listenerConfig) startStopper {
 		return s2s.NewSocketListener(
 			cfg.BindAddr,
 			cfg.Port,
@@ -101,7 +107,7 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			},
 		)
 	},
-	componentListenerType: func(a *serverApp, cfg listenerConfig) startStopper {
+	componentListener: func(a *serverApp, cfg listenerConfig) startStopper {
 		return xep0114.NewSocketListener(
 			cfg.BindAddr,
 			cfg.Port,

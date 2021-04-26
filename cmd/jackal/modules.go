@@ -30,6 +30,20 @@ import (
 	"github.com/ortuman/jackal/module/xep0280"
 )
 
+var defaultModules = []string{
+	roster.ModuleName,
+	offline.ModuleName,
+	xep0012.ModuleName,
+	xep0030.ModuleName,
+	xep0049.ModuleName,
+	xep0054.ModuleName,
+	xep0092.ModuleName,
+	xep0115.ModuleName,
+	xep0191.ModuleName,
+	xep0199.ModuleName,
+	xep0280.ModuleName,
+}
+
 var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Roster
 	// (https://xmpp.org/rfcs/rfc6121.html#roster)
