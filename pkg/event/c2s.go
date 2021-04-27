@@ -57,8 +57,8 @@ const (
 	// because no destination available resource was found.
 	C2SStreamMessageUnrouted = "c2s.stream.message_unrouted"
 
-	// C2SStreamManagementCommandReceived event is posted when a stream management command is received over a C2S stream.
-	C2SStreamManagementCommandReceived = "c2s.stream.mgmt_command_received"
+	// C2SStreamManagerCommandReceived event is posted when a stream management command is received over a C2S stream.
+	C2SStreamManagerCommandReceived = "c2s.stream.mng_command_received"
 )
 
 // C2SStreamEventInfo contains all info associated to a C2S stream event.

@@ -16,16 +16,25 @@ package xep0198
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackal-xmpp/sonar"
-	"github.com/ortuman/jackal/pkg/host"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
-const streamNamespace = "urn:xmpp:sm:3"
+const (
+	streamNamespace = "urn:xmpp:sm:3"
+
+	xmppStanzaNamespace = "urn:ietf:params:xml:ns:xmpp-stanzas"
+
+	badRequest        = "bad-request"
+	unexpectedRequest = "unexpected-request"
+)
 
 const (
 	// ModuleName represents stream module name.
@@ -40,6 +49,7 @@ type Stream struct {
 	router router.Router
 	hosts  *host.Hosts
 	sn     *sonar.Sonar
+	subs   []sonar.SubID
 }
 
 // New returns a new initialized Stream instance.
@@ -77,12 +87,73 @@ func (m *Stream) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts stream module.
 func (m *Stream) Start(_ context.Context) error {
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamManagerCommandReceived, m.onStreamMngCmd))
+
 	log.Infow("Started stream module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops stream module.
 func (m *Stream) Stop(_ context.Context) error {
+	for _, sub := range m.subs {
+		m.sn.Unsubscribe(sub)
+	}
 	log.Infow("Stopped stream module", "xep", XEPNumber)
 	return nil
+}
+
+func (m *Stream) onStreamMngCmd(ctx context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+	stm := ev.Sender().(stream.C2S)
+	return m.processCmd(ctx, inf.Stanza, stm)
+}
+
+func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm stream.C2S) error {
+	if cmd.ChildrenCount() > 0 {
+		sendFailedReply(badRequest, "", stm)
+		return nil
+	}
+	switch cmd.Name() {
+	case "enable":
+		return m.processEnable(ctx, stm)
+	case "a":
+		return m.processA(ctx, stm)
+	case "r":
+		return m.processR(ctx, stm)
+	default:
+		errText := fmt.Sprintf("Unknown tag %s qualified by namespace '%s'", cmd.Name(), streamNamespace)
+		sendFailedReply(badRequest, errText, stm)
+	}
+	return nil
+}
+
+func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
+	return nil
+}
+
+func (m *Stream) processA(ctx context.Context, stm stream.C2S) error {
+	return nil
+}
+
+func (m *Stream) processR(ctx context.Context, stm stream.C2S) error {
+	return nil
+}
+
+func sendFailedReply(reason string, text string, stm stream.C2S) {
+	sb := stravaganza.NewBuilder("failed").
+		WithAttribute(stravaganza.Namespace, streamNamespace).
+		WithChild(
+			stravaganza.NewBuilder(reason).
+				WithAttribute(stravaganza.Namespace, xmppStanzaNamespace).
+				Build(),
+		)
+	if len(text) > 0 {
+		sb.WithChild(
+			stravaganza.NewBuilder("text").
+				WithAttribute(stravaganza.Namespace, xmppStanzaNamespace).
+				WithText(text).
+				Build(),
+		)
+	}
+	_ = stm.SendElement(sb.Build())
 }
