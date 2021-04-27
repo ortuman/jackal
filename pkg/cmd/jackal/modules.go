@@ -108,7 +108,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	},
 }
 
-var defaultModules = []string{
+var defaultMods = []string{
 	roster.ModuleName,
 	offline.ModuleName,
 	xep0012.ModuleName,

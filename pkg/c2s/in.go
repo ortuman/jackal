@@ -37,6 +37,7 @@ import (
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/offline"
+	"github.com/ortuman/jackal/pkg/module/xep0198"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -428,6 +429,13 @@ func (s *inC2S) handleBounded(ctx context.Context, elem stravaganza.Element) err
 		return s.processStanza(ctx, stanza)
 
 	default:
+		if s.mods.IsEnabled(xep0198.ModuleName) && elem.Attribute(stravaganza.Namespace) == streamMgmtNamespace {
+			return s.postStreamEvent(ctx, event.C2SStreamManagementCommandReceived, &event.C2SStreamEventInfo{
+				ID:     s.ID().String(),
+				JID:    s.JID(),
+				Stanza: elem,
+			})
+		}
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 }

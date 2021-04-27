@@ -435,7 +435,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	// enabled modules
 	enabled := cfg.Enabled
 	if len(enabled) == 0 {
-		enabled = defaultModules
+		enabled = defaultMods
 	}
 	for _, mName := range enabled {
 		fn, ok := modFns[mName]
