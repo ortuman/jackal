@@ -25,8 +25,8 @@ const (
 	// S2SOutStreamUnregistered event is posted when an outgoing S2S connection is unregistered.
 	S2SOutStreamUnregistered = "s2s.out.stream.unregistered"
 
-	// S2SOutStreamStanzaSent event is posted whenever a stanza is sent over an outgoing S2S stream.
-	S2SOutStreamStanzaSent = "s2s.out.stream.stanza_sent"
+	// S2SOutStreamElementSent event is posted whenever a XMPP element is sent over an outgoing S2S stream.
+	S2SOutStreamElementSent = "s2s.out.stream.element_sent"
 
 	// S2SInStreamRegistered event is posted when an incoming S2S connection is registered.
 	S2SInStreamRegistered = "s2s.in.stream.registered"
@@ -34,8 +34,8 @@ const (
 	// S2SInStreamUnregistered event is posted when an incoming S2S connection is unregistered.
 	S2SInStreamUnregistered = "s2s.in.stream.unregistered"
 
-	// S2SInStreamStanzaReceived event is posted when a stanza is received over an incoming S2S stream.
-	S2SInStreamStanzaReceived = "s2s.in.stream.stanza_received"
+	// S2SInStreamElementReceived event is posted when a XMPP element is received over an incoming S2S stream.
+	S2SInStreamElementReceived = "s2s.in.stream.stanza_received"
 
 	// S2SInStreamIQReceived event is posted when an iq stanza is received over an incoming S2S stream.
 	S2SInStreamIQReceived = "s2s.in.stream.iq_received"
@@ -71,6 +71,6 @@ type S2SStreamEventInfo struct {
 	// Target is the S2S target domain.
 	Target string
 
-	// Stanza is the event associated stanza.
-	Stanza stravaganza.Stanza
+	// Element is the event associated XMPP element.
+	Element stravaganza.Element
 }

@@ -149,7 +149,7 @@ func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, 
 func (p *Carbons) onC2SMessageRouted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 
-	msg, ok := inf.Stanza.(*stravaganza.Message)
+	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
 		return nil
 	}
@@ -159,7 +159,7 @@ func (p *Carbons) onC2SMessageRouted(ctx context.Context, ev sonar.Event) error 
 func (p *Carbons) onS2SMessageRouted(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.S2SStreamEventInfo)
 
-	msg, ok := inf.Stanza.(*stravaganza.Message)
+	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
 		return nil
 	}

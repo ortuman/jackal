@@ -167,25 +167,25 @@ func (m *Capabilities) Stop(_ context.Context) error {
 
 func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
-	pr := inf.Stanza.(*stravaganza.Presence)
+	pr := inf.Element.(*stravaganza.Presence)
 	return m.processPresence(ctx, pr)
 }
 
 func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.S2SStreamEventInfo)
-	pr := inf.Stanza.(*stravaganza.Presence)
+	pr := inf.Element.(*stravaganza.Presence)
 	return m.processPresence(ctx, pr)
 }
 
 func (m *Capabilities) onC2SIQRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
-	iq := inf.Stanza.(*stravaganza.IQ)
+	iq := inf.Element.(*stravaganza.IQ)
 	return m.processIQ(ctx, iq)
 }
 
 func (m *Capabilities) onS2SIQRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.S2SStreamEventInfo)
-	iq := inf.Stanza.(*stravaganza.IQ)
+	iq := inf.Element.(*stravaganza.IQ)
 	return m.processIQ(ctx, iq)
 }
 

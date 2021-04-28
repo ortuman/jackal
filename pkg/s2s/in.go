@@ -310,6 +310,16 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 
 	default:
 		if s.flags.isAuthenticated() || s.flags.isDialbackKeyAuthorized() {
+			// post element received event
+			err := s.postStreamEvent(ctx, event.S2SInStreamElementReceived, &event.S2SStreamEventInfo{
+				ID:      s.ID().String(),
+				Sender:  s.sender,
+				Target:  s.target,
+				Element: elem,
+			})
+			if err != nil {
+				return err
+			}
 			switch stanza := elem.(type) {
 			case stravaganza.Stanza:
 				return s.processStanza(ctx, stanza)
@@ -323,16 +333,6 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 }
 
 func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) error {
-	// post stanza received event
-	err := s.postStreamEvent(ctx, event.S2SInStreamStanzaReceived, &event.S2SStreamEventInfo{
-		ID:     s.ID().String(),
-		Sender: s.sender,
-		Target: s.target,
-		Stanza: stanza,
-	})
-	if err != nil {
-		return err
-	}
 	toJID := stanza.ToJID()
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
@@ -363,10 +363,10 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// post IQ received event
 	err := s.postStreamEvent(ctx, event.S2SInStreamIQReceived, &event.S2SStreamEventInfo{
-		ID:     s.ID().String(),
-		Sender: s.sender,
-		Target: s.target,
-		Stanza: iq,
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: iq,
 	})
 	if err != nil {
 		return err
@@ -400,10 +400,10 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 	case nil:
 		return s.postStreamEvent(ctx, event.S2SInStreamIQRouted, &event.S2SStreamEventInfo{
-			ID:     s.ID().String(),
-			Sender: s.sender,
-			Target: s.target,
-			Stanza: iq,
+			ID:      s.ID().String(),
+			Sender:  s.sender,
+			Target:  s.target,
+			Element: iq,
 		})
 	}
 	return nil
@@ -412,10 +412,10 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// post message received event
 	err := s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
-		ID:     s.ID().String(),
-		Sender: s.sender,
-		Target: s.target,
-		Stanza: message,
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: message,
 	})
 	if err != nil {
 		return err
@@ -457,18 +457,18 @@ sendMsg:
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
 		return s.postStreamEvent(ctx, event.S2SInStreamMessageUnrouted, &event.S2SStreamEventInfo{
-			ID:     s.ID().String(),
-			Sender: s.sender,
-			Target: s.target,
-			Stanza: msg,
+			ID:      s.ID().String(),
+			Sender:  s.sender,
+			Target:  s.target,
+			Element: msg,
 		})
 
 	case nil:
 		return s.postStreamEvent(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{
-			ID:     s.ID().String(),
-			Sender: s.sender,
-			Target: s.target,
-			Stanza: msg,
+			ID:      s.ID().String(),
+			Sender:  s.sender,
+			Target:  s.target,
+			Element: msg,
 		})
 	}
 	return nil
@@ -477,10 +477,10 @@ sendMsg:
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// post presence received event
 	err := s.postStreamEvent(ctx, event.S2SInStreamPresenceReceived, &event.S2SStreamEventInfo{
-		ID:     s.ID().String(),
-		Sender: s.sender,
-		Target: s.target,
-		Stanza: presence,
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: presence,
 	})
 	if err != nil {
 		return err
@@ -499,10 +499,10 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		switch err {
 		case nil:
 			return s.postStreamEvent(ctx, event.S2SInStreamPresenceRouted, &event.S2SStreamEventInfo{
-				ID:     s.ID().String(),
-				Sender: s.sender,
-				Target: s.target,
-				Stanza: presence,
+				ID:      s.ID().String(),
+				Sender:  s.sender,
+				Target:  s.target,
+				Element: presence,
 			})
 		}
 		return nil

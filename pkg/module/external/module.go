@@ -268,6 +268,20 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		EventName:  evName,
 	}
 	switch inf := evInfo.(type) {
+	case *event.ModulesEventInfo:
+		ret.Payload = &extmodulepb.ProcessEventRequest_ModsEvInfo{
+			ModsEvInfo: &extmodulepb.ModulesEventInfo{
+				ModuleNames: inf.ModuleNames,
+			},
+		}
+
+	case *event.ComponentsEventInfo:
+		ret.Payload = &extmodulepb.ProcessEventRequest_CompsEvInfo{
+			CompsEvInfo: &extmodulepb.ComponentsEventInfo{
+				Hosts: inf.Hosts,
+			},
+		}
+
 	case *event.C2SStreamEventInfo:
 		var evInf extmodulepb.C2SStreamEventInfo
 		evInf.Id = inf.ID
@@ -277,8 +291,8 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		for _, target := range inf.Targets {
 			evInf.Targets = append(evInf.Targets, target.String())
 		}
-		if inf.Stanza != nil {
-			evInf.Stanza = inf.Stanza.Proto()
+		if inf.Element != nil {
+			evInf.Element = inf.Element.Proto()
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_C2SStreamEvInfo{
 			C2SStreamEvInfo: &evInf,
@@ -289,8 +303,8 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		evInf.Id = inf.ID
 		evInf.Sender = inf.Sender
 		evInf.Target = inf.Target
-		if inf.Stanza != nil {
-			evInf.Stanza = inf.Stanza.Proto()
+		if inf.Element != nil {
+			evInf.Element = inf.Element.Proto()
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_S2SStreamEvInfo{
 			S2SStreamEvInfo: &evInf,

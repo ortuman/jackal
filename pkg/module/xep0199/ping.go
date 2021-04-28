@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/router/stream"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -107,7 +109,7 @@ func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
 func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamBounded, p.onBounded))
-		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamStanzaReceived, p.onRecvStanza))
+		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamElementReceived, p.onRecvElement))
 		p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamUnregistered, p.onUnregister))
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
@@ -147,14 +149,16 @@ func (p *Ping) sendPongReply(ctx context.Context, pingIQ *stravaganza.IQ) error 
 
 func (p *Ping) onBounded(_ context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
-
 	p.schedulePing(inf.JID)
 	return nil
 }
 
-func (p *Ping) onRecvStanza(_ context.Context, ev sonar.Event) error {
+func (p *Ping) onRecvElement(_ context.Context, ev sonar.Event) error {
+	stm := ev.Sender().(stream.C2S)
+	if !stm.IsBounded() {
+		return nil
+	}
 	inf := ev.Info().(*event.C2SStreamEventInfo)
-
 	p.cancelTimers(inf.JID)
 	p.schedulePing(inf.JID)
 	return nil

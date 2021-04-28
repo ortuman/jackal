@@ -538,24 +538,19 @@ func (s *outS2S) sendOrEnqueueElement(ctx context.Context, elem stravaganza.Elem
 
 func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) error {
 	err := s.session.Send(ctx, elem)
-	switch stanza := elem.(type) {
-	case stravaganza.Stanza:
-		// post S2S stanza sent event
-		err := s.postStreamEvent(ctx, event.S2SOutStreamStanzaSent, &event.S2SStreamEventInfo{
-			ID:     s.ID().String(),
-			Sender: s.sender,
-			Target: s.target,
-			Stanza: stanza,
-		})
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return err
+	return s.postStreamEvent(ctx, event.S2SOutStreamElementSent, &event.S2SStreamEventInfo{
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: elem,
+	})
 }
 
 func (s *outS2S) close(ctx context.Context) error {

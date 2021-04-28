@@ -294,8 +294,8 @@ func TestLast_ProcessPresence(t *testing.T) {
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
 		WithInfo(&event.C2SStreamEventInfo{
-			JID:    jd0,
-			Stanza: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
+			JID:     jd0,
+			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
 		}).
 		Build(),
 	)

@@ -166,7 +166,7 @@ func (m *Last) onUserDeleted(ctx context.Context, ev sonar.Event) error {
 
 func (m *Last) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
-	pr := inf.Stanza.(*stravaganza.Presence)
+	pr := inf.Element.(*stravaganza.Presence)
 	return m.processC2SPresence(ctx, pr)
 }
 

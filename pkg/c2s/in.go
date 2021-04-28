@@ -80,7 +80,7 @@ type inC2S struct {
 
 	mu    sync.RWMutex
 	state uint32
-	flags inC2SFlags
+	flgs  inC2SFlags
 	sCtx  map[string]string
 	jd    *jid.JID
 	pr    *stravaganza.Presence
@@ -134,7 +134,7 @@ func newInC2S(
 		sn:             sonar,
 	}
 	if cfg.UseTLS {
-		stm.flags.setSecured() // stream already secured
+		stm.flgs.setSecured() // stream already secured
 	}
 	return stm, nil
 }
@@ -192,6 +192,18 @@ func (s *inC2S) Resource() string {
 		return jd.Resource()
 	}
 	return ""
+}
+
+func (s *inC2S) IsSecured() bool {
+	return s.flgs.isSecured()
+}
+
+func (s *inC2S) IsAuthenticated() bool {
+	return s.flgs.isAuthenticated()
+}
+
+func (s *inC2S) IsBounded() bool {
+	return s.flgs.isBounded()
 }
 
 func (s *inC2S) Presence() *stravaganza.Presence {
@@ -301,7 +313,15 @@ func (s *inC2S) connTimeout() {
 }
 
 func (s *inC2S) handleElement(ctx context.Context, elem stravaganza.Element) error {
-	var err error
+	// post element received event
+	err := s.postStreamEvent(ctx, event.C2SStreamElementReceived, &event.C2SStreamEventInfo{
+		ID:      s.ID().String(),
+		JID:     s.JID(),
+		Element: elem,
+	})
+	if err != nil {
+		return err
+	}
 	t0 := time.Now()
 	switch s.getState() {
 	case inConnecting:
@@ -337,7 +357,7 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
 		WithAttribute(stravaganza.Version, "1.0")
 
-	if !s.flags.isAuthenticated() {
+	if !s.flgs.isAuthenticated() {
 		sb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
@@ -413,15 +433,6 @@ func (s *inC2S) handleBounded(ctx context.Context, elem stravaganza.Element) err
 }
 
 func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) error {
-	// post stanza received event
-	err := s.postStreamEvent(ctx, event.C2SStreamStanzaReceived, &event.C2SStreamEventInfo{
-		ID:     s.ID().String(),
-		JID:    s.JID(),
-		Stanza: stanza,
-	})
-	if err != nil {
-		return err
-	}
 	toJID := stanza.ToJID()
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
@@ -452,16 +463,16 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// post iq received event
 	err := s.postStreamEvent(ctx, event.C2SStreamIQReceived, &event.C2SStreamEventInfo{
-		ID:     s.ID().String(),
-		JID:    s.JID(),
-		Stanza: iq,
+		ID:      s.ID().String(),
+		JID:     s.JID(),
+		Element: iq,
 	})
 	if err != nil {
 		return err
 	}
 	if iq.IsSet() && iq.ChildNamespace("session", sessionNamespace) != nil {
-		if !s.flags.isSessionStarted() {
-			s.flags.setSessionStarted()
+		if !s.flgs.isSessionStarted() {
+			s.flgs.setSessionStarted()
 			return s.sendElement(ctx, iq.ResultBuilder().Build())
 		}
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
@@ -498,7 +509,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 			ID:      s.ID().String(),
 			JID:     s.JID(),
 			Targets: targets,
-			Stanza:  iq,
+			Element: iq,
 		})
 	}
 	return nil
@@ -507,9 +518,9 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// post presence received event
 	err := s.postStreamEvent(ctx, event.C2SStreamPresenceReceived, &event.C2SStreamEventInfo{
-		ID:     s.ID().String(),
-		JID:    s.JID(),
-		Stanza: presence,
+		ID:      s.ID().String(),
+		JID:     s.JID(),
+		Element: presence,
 	})
 	if err != nil {
 		return err
@@ -533,7 +544,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 				ID:      s.ID().String(),
 				JID:     s.JID(),
 				Targets: targets,
-				Stanza:  presence,
+				Element: presence,
 			})
 		}
 		return nil
@@ -550,9 +561,9 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// post message received event
 	err := s.postStreamEvent(ctx, event.C2SStreamMessageReceived, &event.C2SStreamEventInfo{
-		ID:     s.ID().String(),
-		JID:    s.JID(),
-		Stanza: message,
+		ID:      s.ID().String(),
+		JID:     s.JID(),
+		Element: message,
 	})
 	if err != nil {
 		return err
@@ -594,9 +605,9 @@ sendMsg:
 			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 		}
 		return s.postStreamEvent(ctx, event.C2SStreamMessageUnrouted, &event.C2SStreamEventInfo{
-			ID:     s.ID().String(),
-			JID:    s.JID(),
-			Stanza: msg,
+			ID:      s.ID().String(),
+			JID:     s.JID(),
+			Element: msg,
 		})
 
 	case nil:
@@ -604,7 +615,7 @@ sendMsg:
 			ID:      s.ID().String(),
 			JID:     s.JID(),
 			Targets: targets,
-			Stanza:  msg,
+			Element: msg,
 		})
 
 	default:
@@ -628,7 +639,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 
 	// attach start-tls feature
 	isSocketTr := s.tr.Type() == transport.Socket
-	if isSocketTr && !s.flags.isSecured() {
+	if isSocketTr && !s.flgs.isSecured() {
 		features = append(features, stravaganza.NewBuilder("starttls").
 			WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-tls").
 			WithChild(stravaganza.NewBuilder("required").Build()).
@@ -636,7 +647,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 		)
 	}
 	// attach SASL mechanisms
-	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flags.isSecured())
+	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flgs.isSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
 		sb := stravaganza.NewBuilder("mechanisms")
@@ -661,7 +672,7 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Elemen
 	// compression feature
 	compressionAvailable := isSocketTr && s.cfg.CompressionLevel != compress.NoCompression
 
-	if !s.flags.isCompressed() && compressionAvailable {
+	if !s.flgs.isCompressed() && compressionAvailable {
 		compressionElem := stravaganza.NewBuilder("compression").
 			WithAttribute(stravaganza.Namespace, "http://jabber.org/features/compress").
 			WithChild(
@@ -694,14 +705,14 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Elemen
 }
 
 func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) error {
-	if s.flags.isSecured() {
+	if s.flgs.isSecured() {
 		return s.disconnect(ctx, streamerror.E(streamerror.NotAuthorized))
 	}
 	ns := elem.Attribute(stravaganza.Namespace)
 	if len(ns) > 0 && ns != tlsNamespace {
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
-	s.flags.setSecured()
+	s.flgs.setSecured()
 
 	if err := s.sendElement(ctx,
 		stravaganza.NewBuilder("proceed").
@@ -763,7 +774,7 @@ func (s *inC2S) finishAuthentication() error {
 
 	j, _ := jid.New(username, s.Domain(), "", true)
 	s.setJID(j)
-	s.flags.setAuthenticated()
+	s.flgs.setAuthenticated()
 
 	// update rate limiter
 	if err := s.updateRateLimiter(); err != nil {
@@ -795,7 +806,7 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 }
 
 func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
-	if elem.Attribute(stravaganza.Namespace) != compressNamespace || s.flags.isCompressed() {
+	if elem.Attribute(stravaganza.Namespace) != compressNamespace || s.flgs.isCompressed() {
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 	method := elem.Child("method")
@@ -821,7 +832,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	}
 	// compress transport
 	s.tr.EnableCompression(s.cfg.CompressionLevel)
-	s.flags.setCompressed()
+	s.flgs.setCompressed()
 
 	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
 
@@ -1012,11 +1023,19 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 		return nil
 	}
 	err := s.session.Send(ctx, elem)
+	if err != nil {
+		return err
+	}
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return err
+	// post element sent event
+	return s.postStreamEvent(ctx, event.C2SStreamElementSent, &event.C2SStreamEventInfo{
+		ID:      s.ID().String(),
+		JID:     s.JID(),
+		Element: elem,
+	})
 }
 
 func (s *inC2S) getResource() *coremodel.Resource {
