@@ -29,8 +29,11 @@ const (
 	// C2SStreamUnregistered event is posted when a C2S connection is unregistered.
 	C2SStreamUnregistered = "c2s.stream.unregistered"
 
-	// C2SStreamStanzaReceived event is posted when a stanza is received over a C2S stream.
-	C2SStreamStanzaReceived = "c2s.stream.stanza_received"
+	// C2SStreamElementReceived event is posted when a XMPP element is received over a C2S stream.
+	C2SStreamElementReceived = "c2s.stream.element_received"
+
+	// C2SStreamElementSent event is posted when a XMPP element is sent over a C2S stream.
+	C2SStreamElementSent = "c2s.stream.element_sent"
 
 	// C2SStreamIQReceived event is posted when an iq stanza is received over a C2S stream.
 	C2SStreamIQReceived = "c2s.stream.iq_received"
@@ -66,6 +69,6 @@ type C2SStreamEventInfo struct {
 	// Targets contains all JIDs to which the event stanza was routed.
 	Targets []jid.JID
 
-	// Stanza is the event associated stanza.
-	Stanza stravaganza.Stanza
+	// Element is the event associated XMPP element.
+	Element stravaganza.Element
 }

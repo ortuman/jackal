@@ -117,9 +117,9 @@ func (m *Offline) onMessageUnrouted(ctx context.Context, ev sonar.Event) error {
 
 	switch inf := ev.Info().(type) {
 	case *event.C2SStreamEventInfo:
-		msg = inf.Stanza.(*stravaganza.Message)
+		msg = inf.Element.(*stravaganza.Message)
 	case *event.S2SStreamEventInfo:
-		msg = inf.Stanza.(*stravaganza.Message)
+		msg = inf.Element.(*stravaganza.Message)
 	}
 	return m.archiveMessage(ctx, msg)
 }
@@ -127,7 +127,7 @@ func (m *Offline) onMessageUnrouted(ctx context.Context, ev sonar.Event) error {
 func (m *Offline) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 
-	pr := inf.Stanza.(*stravaganza.Presence)
+	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
 	if toJID.IsFull() || !m.hosts.IsLocalHost(toJID.Domain()) {
 		return nil

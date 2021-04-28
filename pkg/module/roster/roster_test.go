@@ -389,7 +389,7 @@ func TestRoster_Subscribe(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 
@@ -492,7 +492,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 	time.Sleep(time.Millisecond * 250)
@@ -604,7 +604,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 
@@ -718,7 +718,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 
@@ -815,7 +815,7 @@ func TestRoster_Probe(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 
@@ -924,7 +924,7 @@ func TestRoster_Available(t *testing.T) {
 	_ = r.Start(context.Background())
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(
 		event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: pr}).
+		WithInfo(&event.C2SStreamEventInfo{Element: pr}).
 		Build(),
 	)
 

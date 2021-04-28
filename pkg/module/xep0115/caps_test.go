@@ -71,7 +71,7 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 	_ = sn.Post(context.Background(),
 		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
 			WithInfo(&event.C2SStreamEventInfo{
-				Stanza: pr,
+				Element: pr,
 			}).
 			Build(),
 	)
@@ -141,7 +141,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = sn.Post(context.Background(),
 		sonar.NewEventBuilder(event.C2SStreamIQReceived).
 			WithInfo(&event.C2SStreamEventInfo{
-				Stanza: discoIQ,
+				Element: discoIQ,
 			}).
 			Build(),
 	)

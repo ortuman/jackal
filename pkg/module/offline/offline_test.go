@@ -69,7 +69,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	_ = sn.Post(context.Background(),
 		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
 			WithInfo(&event.C2SStreamEventInfo{
-				Stanza: msg,
+				Element: msg,
 			}).
 			Build(),
 	)
@@ -129,7 +129,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	_ = sn.Post(context.Background(),
 		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
 			WithInfo(&event.C2SStreamEventInfo{
-				Stanza: msg,
+				Element: msg,
 			}).
 			Build(),
 	)
@@ -203,7 +203,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	_ = sn.Post(context.Background(),
 		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
 			WithInfo(&event.C2SStreamEventInfo{
-				Stanza: pr,
+				Element: pr,
 			}).
 			Build(),
 	)

@@ -54,6 +54,15 @@ type C2S interface {
 	// Resource returns stream associated resource.
 	Resource() string
 
+	// IsSecured returns whether or not the XMPP stream has been secured using SSL/TLS.
+	IsSecured() bool
+
+	// IsAuthenticated returns whether or not the XMPP stream has successfully authenticated.
+	IsAuthenticated() bool
+
+	// IsBounded returns whether or not the XMPP stream has completed resource binding.
+	IsBounded() bool
+
 	// Presence returns stream associated presence stanza or nil if none is set.
 	Presence() *stravaganza.Presence
 

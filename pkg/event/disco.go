@@ -18,6 +18,3 @@ const (
 	// DiscoProvidersStarted event is posted after all entity providers have been initialized.
 	DiscoProvidersStarted = "disco.providers.started"
 )
-
-// DiscoEventInfo contains all information associated to a disco info event.
-type DiscoEventInfo struct{}

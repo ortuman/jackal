@@ -212,9 +212,9 @@ func TestCarbons_SentCC(t *testing.T) {
 
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.S2SInStreamMessageRouted).
 		WithInfo(&event.S2SStreamEventInfo{
-			Sender: "jackal.im",
-			Target: "jabber.org",
-			Stanza: msg,
+			Sender:  "jackal.im",
+			Target:  "jabber.org",
+			Element: msg,
 		}).
 		Build(),
 	)
@@ -285,7 +285,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamMessageRouted).
 		WithInfo(&event.C2SStreamEventInfo{
 			Targets: []jid.JID{*jd2},
-			Stanza:  msg,
+			Element: msg,
 		}).
 		Build(),
 	)

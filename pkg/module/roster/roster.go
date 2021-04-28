@@ -132,9 +132,9 @@ func (r *Roster) onPresenceRecv(ctx context.Context, ev sonar.Event) error {
 	var pr *stravaganza.Presence
 	switch inf := ev.Info().(type) {
 	case *event.C2SStreamEventInfo:
-		pr, _ = inf.Stanza.(*stravaganza.Presence)
+		pr, _ = inf.Element.(*stravaganza.Presence)
 	case *event.S2SStreamEventInfo:
-		pr, _ = inf.Stanza.(*stravaganza.Presence)
+		pr, _ = inf.Element.(*stravaganza.Presence)
 	default:
 		return nil
 	}

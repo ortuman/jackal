@@ -131,7 +131,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 	_ = mod.Start(context.Background())
 
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamIQReceived).
-		WithInfo(&event.C2SStreamEventInfo{Stanza: iq}).
+		WithInfo(&event.C2SStreamEventInfo{Element: iq}).
 		Build(),
 	)
 
@@ -141,8 +141,8 @@ func TestModule_ProcessEvent(t *testing.T) {
 	require.Equal(t, event.C2SStreamIQReceived, evReq.EventName)
 
 	require.NotNil(t, evReq.Payload)
-	require.NotNil(t, evReq.GetC2SStreamEvInfo().GetStanza())
-	require.Equal(t, "iq", evReq.GetC2SStreamEvInfo().GetStanza().Name)
+	require.NotNil(t, evReq.GetC2SStreamEvInfo().GetElement())
+	require.Equal(t, "iq", evReq.GetC2SStreamEvInfo().GetElement().Name)
 
 	require.Len(t, cl.ProcessEventCalls(), 1)
 	require.Len(t, closer.CloseCalls(), 1)
