@@ -38,7 +38,7 @@ const (
 
 const (
 	// ModuleName represents stream module name.
-	ModuleName = "stream"
+	ModuleName = "stream_mgmt"
 
 	// XEPNumber represents stream XEP number.
 	XEPNumber = "0198"
@@ -87,7 +87,7 @@ func (m *Stream) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts stream module.
 func (m *Stream) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamManagerCommandReceived, m.onStreamMngCmd))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamElementReceived, m.onElementRecv))
 
 	log.Infow("Started stream module", "xep", XEPNumber)
 	return nil
@@ -102,15 +102,19 @@ func (m *Stream) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Stream) onStreamMngCmd(ctx context.Context, ev sonar.Event) error {
+func (m *Stream) onElementRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 	stm := ev.Sender().(stream.C2S)
-	return m.processCmd(ctx, inf.Stanza, stm)
+	return m.processCmd(ctx, inf.Element, stm)
 }
 
 func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm stream.C2S) error {
 	if cmd.ChildrenCount() > 0 {
 		sendFailedReply(badRequest, "", stm)
+		return nil
+	}
+	if !stm.IsAuthenticated() || !stm.IsBounded() {
+		sendFailedReply(unexpectedRequest, "", stm)
 		return nil
 	}
 	switch cmd.Name() {

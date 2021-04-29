@@ -430,11 +430,7 @@ func (s *inC2S) handleBounded(ctx context.Context, elem stravaganza.Element) err
 
 	default:
 		if s.mods.IsEnabled(xep0198.ModuleName) && elem.Attribute(stravaganza.Namespace) == streamMgmtNamespace {
-			return s.postStreamEvent(ctx, event.C2SStreamManagerCommandReceived, &event.C2SStreamEventInfo{
-				ID:     s.ID().String(),
-				JID:    s.JID(),
-				Stanza: elem,
-			})
+			return nil
 		}
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
