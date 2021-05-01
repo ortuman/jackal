@@ -14,13 +14,68 @@
 
 package xep0198
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/stretchr/testify/require"
+)
 
 func TestQueuePush(t *testing.T) {
+	// given
+	q := newQueue()
+
+	// when
+	q.push(stravaganza.NewBuilder("iq").Build())
+	q.push(stravaganza.NewBuilder("message").Build())
+
+	// then
+	require.Len(t, q.entries, 2)
+	require.Equal(t, q.entries[0].h, uint64(1))
+	require.Equal(t, q.entries[1].h, uint64(2))
 }
 
 func TestQueueAcknowledge(t *testing.T) {
+	// given
+	q := newQueue()
+
+	q.push(stravaganza.NewBuilder("iq").Build())
+	q.push(stravaganza.NewBuilder("presence").Build())
+	q.push(stravaganza.NewBuilder("message").Build())
+
+	// when
+	q.acknowledge(2)
+
+	// then
+	require.Len(t, q.entries, 1)
+	require.Equal(t, "message", q.entries[0].el.Name())
+	require.Equal(t, uint64(3), q.entries[0].h)
+}
+
+func TestQueueEmpty(t *testing.T) {
+	// given
+	q := newQueue()
+
+	q.push(stravaganza.NewBuilder("iq").Build())
+
+	// when
+	q.acknowledge(1)
+
+	// then
+	require.Len(t, q.entries, 0)
 }
 
 func TestQueueElements(t *testing.T) {
+	// given
+	q := newQueue()
+
+	q.push(stravaganza.NewBuilder("iq").Build())
+	q.push(stravaganza.NewBuilder("presence").Build())
+	q.push(stravaganza.NewBuilder("message").Build())
+
+	// when
+	els := q.elements()
+
+	// then
+	require.Len(t, els, 3)
 }

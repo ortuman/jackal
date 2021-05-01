@@ -59,10 +59,10 @@ func (q *queue) acknowledge(h uint64) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	for i, e := range q.entries {
-		if e.h == h {
+		if e.h < h {
 			continue
 		}
-		q.entries = append(q.entries[:i], q.entries[i+1:]...)
+		q.entries = q.entries[i+1:]
 		break
 	}
 }
