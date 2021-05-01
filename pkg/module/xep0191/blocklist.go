@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	requestedCtxKey = "xep0191:requested"
+	requestedInfoKey = "xep0191:requested"
 
 	blockListNamespace       = "urn:xmpp:blocking"
 	blockListErrorsNamespace = "urn:xmpp:blocking:errors"
@@ -266,7 +266,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
 	}
-	if err := stm.SetInfoValue(ctx, requestedCtxKey, true); err != nil {
+	if err := stm.SetInfoValue(ctx, requestedInfoKey, true); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -445,7 +445,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
 	for _, res := range resources {
-		if !res.Info.Bool(requestedCtxKey) { // block list requested?
+		if !res.Info.Bool(requestedInfoKey) { // block list requested?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().

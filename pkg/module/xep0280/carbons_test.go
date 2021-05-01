@@ -89,7 +89,7 @@ func TestCarbons_Enable(t *testing.T) {
 	_ = c.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Equal(t, enabledInfKey, setK)
+	require.Equal(t, enabledInfoKey, setK)
 	require.Equal(t, true, setVal)
 
 	require.Len(t, respStanzas, 1)
@@ -158,7 +158,7 @@ func TestCarbons_Disable(t *testing.T) {
 	_ = c.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Equal(t, enabledInfKey, setK)
+	require.Equal(t, enabledInfoKey, setK)
 	require.Equal(t, false, setVal)
 
 	require.Len(t, respStanzas, 1)
@@ -184,7 +184,7 @@ func TestCarbons_SentCC(t *testing.T) {
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return []coremodel.Resource{
 			{JID: jd0, Info: coremodel.ResourceInfo{
-				M: map[string]string{enabledInfKey: "true"},
+				M: map[string]string{enabledInfoKey: "true"},
 			}},
 		}, nil
 	}
@@ -255,9 +255,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return []coremodel.Resource{
-			{JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "true"}}},
-			{JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "false"}}},
-			{JID: jd2, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "true"}}},
+			{JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfoKey: "true"}}},
+			{JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfoKey: "false"}}},
+			{JID: jd2, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfoKey: "true"}}},
 		}, nil
 	}
 

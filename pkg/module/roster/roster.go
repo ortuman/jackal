@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"strconv"
 
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -31,6 +29,7 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -38,8 +37,8 @@ import (
 )
 
 const (
-	requestedCtxKey = "roster:requested"
-	availableCtxKey = "roster:available"
+	requestedInfoKey = "roster:requested"
+	availableInfoKey = "roster:available"
 
 	rosterNamespace = "jabber:iq:roster"
 )
@@ -200,7 +199,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 		if err != nil {
 			return err
 		}
-		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedCtxKey, true)
+		return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedInfoKey, true)
 	}
 	// ...return whole roster otherwise
 	items, err := r.rep.FetchRosterItems(ctx, usrJID.Node())
@@ -226,7 +225,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
-	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedCtxKey, true)
+	return r.setStreamValue(ctx, usrJID.Node(), usrJID.Resource(), requestedInfoKey, true)
 }
 
 func (r *Roster) updateRoster(ctx context.Context, iq *stravaganza.IQ) error {
@@ -545,7 +544,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 		if err != nil {
 			return err
 		}
-		if sInf.Bool(availableCtxKey) {
+		if sInf.Bool(availableInfoKey) {
 			goto broadcastPresence
 		}
 		// send self-presence
@@ -582,7 +581,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			}
 		}
 		// mark first avail
-		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), availableCtxKey, true); err != nil {
+		if err := r.setStreamValue(ctx, fromJID.Node(), fromJID.Resource(), availableInfoKey, true); err != nil {
 			return err
 		}
 	}
@@ -781,7 +780,7 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 	}
 	for _, rs := range rss {
 		// did request roster?
-		if !rs.Info.Bool(requestedCtxKey) {
+		if !rs.Info.Bool(requestedInfoKey) {
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().

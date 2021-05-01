@@ -101,7 +101,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 	require.Equal(t, "noelia@jackal.im", items[0].Attribute("jid"))
 	require.Equal(t, "jabber.org", items[1].Attribute("jid"))
 
-	require.Equal(t, setK, requestedCtxKey)
+	require.Equal(t, setK, requestedInfoKey)
 	require.Equal(t, setVal, true)
 }
 
@@ -136,8 +136,8 @@ func TestBlockList_BlockItem(t *testing.T) {
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return []coremodel.Resource{
-			{InstanceID: "i1", JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{requestedCtxKey: "true"}}},
-			{InstanceID: "i1", JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{requestedCtxKey: "true"}}},
+			{InstanceID: "i1", JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}}},
+			{InstanceID: "i1", JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}}},
 		}, nil
 	}
 	bl := &BlockList{
@@ -234,13 +234,13 @@ func TestBlockList_UnblockItem(t *testing.T) {
 				InstanceID: "i1",
 				JID:        jd0,
 				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
-				Info:       coremodel.ResourceInfo{M: map[string]string{requestedCtxKey: "true"}},
+				Info:       coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}},
 			},
 			{
 				InstanceID: "i1",
 				JID:        jd1,
 				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
-				Info:       coremodel.ResourceInfo{M: map[string]string{requestedCtxKey: "true"}},
+				Info:       coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}},
 			},
 		}, nil
 	}

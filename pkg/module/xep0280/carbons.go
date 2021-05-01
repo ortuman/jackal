@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	enabledInfKey = "xep0280:enabled"
+	enabledInfoKey = "xep0280:enabled"
 
 	carbonsNamespace          = "urn:xmpp:carbons:2"
 	deliveryReceiptsNamespace = "urn:xmpp:receipts"
@@ -198,7 +198,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetInfoValue(ctx, enabledInfKey, enabled)
+	return stm.SetInfoValue(ctx, enabledInfoKey, enabled)
 }
 
 func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
@@ -227,7 +227,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		return err
 	}
 	for _, res := range rss {
-		if !res.Info.Bool(enabledInfKey) {
+		if !res.Info.Bool(enabledInfoKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
@@ -241,7 +241,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		return err
 	}
 	for _, res := range rss {
-		if !res.Info.Bool(enabledInfKey) {
+		if !res.Info.Bool(enabledInfoKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
