@@ -44,3 +44,16 @@ func (q *queue) push(el stravaganza.Element) {
 	})
 	q.hNext++
 }
+
+func (q *queue) elements(hStart uint64) []stravaganza.Element {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	var retVal []stravaganza.Element
+	for _, e := range q.entries {
+		if e.h < hStart {
+			continue
+		}
+		retVal = append(retVal, e.el)
+	}
+	return retVal
+}
