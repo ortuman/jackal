@@ -20,19 +20,27 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
-type streamQueue struct {
-	mu  sync.RWMutex
-	els []stravaganza.Element
-	h   int
+type queueEntry struct {
+	el stravaganza.Element
+	h  uint64
 }
 
-func newQueue() *streamQueue {
-	return &streamQueue{}
+type queue struct {
+	mu      sync.RWMutex
+	entries []queueEntry
+	hNext   uint64
 }
 
-func (q *streamQueue) push(el stravaganza.Element) {
+func newQueue() *queue {
+	return &queue{hNext: 1}
+}
+
+func (q *queue) push(el stravaganza.Element) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.els = append(q.els, el)
-	q.h++
+	q.entries = append(q.entries, queueEntry{
+		el: el,
+		h:  q.hNext,
+	})
+	q.hNext++
 }
