@@ -16,7 +16,6 @@ package xep0280
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
@@ -34,15 +33,19 @@ func TestCarbons_Enable(t *testing.T) {
 	// given
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal bool
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
-		setVal = val
+		setVal = val.(bool)
 		return nil
 	}
-	stmMock.ValueFunc = func(cKey string) string {
-		return ""
+	stmMock.InfoFunc = func() *coremodel.ResourceInfo {
+		return &coremodel.ResourceInfo{
+			M: map[string]string{},
+		}
 	}
+
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
 		return stmMock
@@ -86,8 +89,8 @@ func TestCarbons_Enable(t *testing.T) {
 	_ = c.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Equal(t, carbonsEnabledCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(true), setVal)
+	require.Equal(t, enabledInfKey, setK)
+	require.Equal(t, true, setVal)
 
 	require.Len(t, respStanzas, 1)
 
@@ -100,14 +103,17 @@ func TestCarbons_Disable(t *testing.T) {
 	// given
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal bool
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
-		setVal = val
+		setVal = val.(bool)
 		return nil
 	}
-	stmMock.ValueFunc = func(cKey string) string {
-		return ""
+	stmMock.InfoFunc = func() *coremodel.ResourceInfo {
+		return &coremodel.ResourceInfo{
+			M: map[string]string{},
+		}
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -152,8 +158,8 @@ func TestCarbons_Disable(t *testing.T) {
 	_ = c.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Equal(t, carbonsEnabledCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(false), setVal)
+	require.Equal(t, enabledInfKey, setK)
+	require.Equal(t, false, setVal)
 
 	require.Len(t, respStanzas, 1)
 
@@ -177,7 +183,9 @@ func TestCarbons_SentCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return []coremodel.Resource{
-			{JID: jd0, Context: map[string]string{carbonsEnabledCtxKey: "true"}},
+			{JID: jd0, Info: coremodel.ResourceInfo{
+				M: map[string]string{enabledInfKey: "true"},
+			}},
 		}, nil
 	}
 
@@ -247,9 +255,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return []coremodel.Resource{
-			{JID: jd0, Context: map[string]string{carbonsEnabledCtxKey: "true"}},
-			{JID: jd1, Context: map[string]string{carbonsEnabledCtxKey: "false"}},
-			{JID: jd2, Context: map[string]string{carbonsEnabledCtxKey: "true"}},
+			{JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "true"}}},
+			{JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "false"}}},
+			{JID: jd2, Info: coremodel.ResourceInfo{M: map[string]string{enabledInfKey: "true"}}},
 		}, nil
 	}
 

@@ -51,6 +51,6 @@ func testResource(instanceID string, priority int8) coremodel.Resource {
 		InstanceID: instanceID,
 		JID:        jd,
 		Presence:   pr,
-		Context:    map[string]string{"k1": "v1", "k2": "v2"},
+		Info:       coremodel.ResourceInfo{M: map[string]string{"k1": "v1", "k2": "v2"}},
 	}
 }

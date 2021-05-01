@@ -17,6 +17,8 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -82,7 +84,7 @@ type inC2S struct {
 	mu    sync.RWMutex
 	state uint32
 	flgs  inC2SFlags
-	sCtx  map[string]string
+	rInf  map[string]string
 	jd    *jid.JID
 	pr    *stravaganza.Presence
 }
@@ -119,7 +121,7 @@ func newInC2S(
 	stm := &inC2S{
 		id:             id,
 		cfg:            cfg,
-		sCtx:           make(map[string]string),
+		rInf:           make(map[string]string),
 		tr:             tr,
 		session:        session,
 		authenticators: authenticators,
@@ -144,22 +146,39 @@ func (s *inC2S) ID() stream.C2SID {
 	return s.id
 }
 
-func (s *inC2S) SetValue(ctx context.Context, k, val string) error {
+func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
+	var vStr string
+	switch v := val.(type) {
+	case int:
+		vStr = strconv.Itoa(v)
+	case float64:
+		vStr = strconv.FormatFloat(v, 'f', 7, 64)
+	case bool:
+		vStr = strconv.FormatBool(v)
+	case string:
+		vStr = v
+	default:
+		return fmt.Errorf("c2s: unsupported value type: %T", val)
+	}
 	s.mu.Lock()
-	v, ok := s.sCtx[k]
-	if ok && v == val {
+	v, ok := s.rInf[k]
+	if ok && v == vStr {
 		s.mu.Unlock()
 		return nil
 	}
-	s.sCtx[k] = val
+	s.rInf[k] = vStr
 	s.mu.Unlock()
 	return s.resMng.PutResource(ctx, s.getResource())
 }
 
-func (s *inC2S) Value(k string) string {
+func (s *inC2S) Info() *coremodel.ResourceInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.sCtx[k]
+	cpInf := make(map[string]string, len(s.rInf))
+	for k, v := range s.rInf {
+		cpInf[k] = v
+	}
+	return &coremodel.ResourceInfo{M: cpInf}
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -1051,7 +1070,7 @@ func (s *inC2S) getResource() *coremodel.Resource {
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Context:    s.sCtx,
+		Info:       coremodel.ResourceInfo{M: s.rInf},
 	}
 	return rs
 }

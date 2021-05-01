@@ -32,6 +32,8 @@ const (
 
 	xmppStanzaNamespace = "urn:ietf:params:xml:ns:xmpp-stanzas"
 
+	enabledCtxKey = "xep0198:enabled"
+
 	badRequest        = "bad-request"
 	unexpectedRequest = "unexpected-request"
 )

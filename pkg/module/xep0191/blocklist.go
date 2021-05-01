@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
@@ -39,7 +38,7 @@ import (
 )
 
 const (
-	blockListRequestedCtxKey = "blocklist:requested"
+	requestedCtxKey = "xep0191:requested"
 
 	blockListNamespace       = "urn:xmpp:blocking"
 	blockListErrorsNamespace = "urn:xmpp:blocking:errors"
@@ -267,7 +266,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
 	}
-	if err := stm.SetValue(ctx, blockListRequestedCtxKey, strconv.FormatBool(true)); err != nil {
+	if err := stm.SetInfoValue(ctx, requestedCtxKey, true); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -446,8 +445,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
 	for _, res := range resources {
-		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey)) // block list requested?
-		if !ok {
+		if !res.Info.Bool(requestedCtxKey) { // block list requested?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().
