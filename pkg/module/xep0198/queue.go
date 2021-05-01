@@ -63,6 +63,6 @@ func (q *queue) acknowledge(h uint64) {
 			continue
 		}
 		q.entries = q.entries[i+1:]
-		break
+		return
 	}
 }
