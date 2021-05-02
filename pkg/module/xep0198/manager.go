@@ -21,13 +21,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
-func incH(h uint32) uint32 {
-	if h == math.MaxUint32-1 {
-		return 0
-	}
-	return h + 1
-}
-
 type qEntry struct {
 	el   stravaganza.Element
 	outH uint32
@@ -38,6 +31,9 @@ type queue struct {
 	nextH   uint32
 }
 
+// manager contains all stream management related logic.
+// It is in charge of managing all the outgoing elements associated to a c2s stream
+// as well as keeping track of incoming handled stanzas.
 type manager struct {
 	mu  sync.RWMutex
 	q   queue
@@ -88,4 +84,11 @@ func (m *manager) inboundH() uint32 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.inH
+}
+
+func incH(h uint32) uint32 {
+	if h == math.MaxUint32-1 {
+		return 0
+	}
+	return h + 1
 }

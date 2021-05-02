@@ -109,7 +109,7 @@ modules:
 #    - version     # XEP-0092: Software Version
 #    - caps        # XEP-0115: Entity Capabilities
 #    - blocklist   # XEP-0191: Blocking Command
-#    - stream_mgmt # XEP-0199: XMPP Ping
+#    - stream_mgmt # XEP-0198: Stream Management
 #    - ping        # XEP-0199: XMPP Ping
 #    - time        # XEP-0202: Entity Time
 #    - carbons     # XEP-0280: Message Carbons
