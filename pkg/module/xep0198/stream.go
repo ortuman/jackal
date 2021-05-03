@@ -129,7 +129,7 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 		sendFailedReply(badRequest, "Malformed element", stm)
 		return nil
 	}
-	if !stm.IsAuthenticated() || !stm.IsBounded() {
+	if !stm.IsBounded() {
 		sendFailedReply(unexpectedRequest, "", stm)
 		return nil
 	}
