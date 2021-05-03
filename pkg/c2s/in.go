@@ -923,6 +923,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 		return err
 	}
 	s.setState(inBounded)
+	s.flgs.setBounded()
 
 	// post bounded C2S event
 	err = s.postStreamEvent(ctx, event.C2SStreamBounded, &event.C2SStreamEventInfo{
