@@ -17,6 +17,7 @@ package xep0198
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -45,6 +46,16 @@ const (
 	// XEPNumber represents stream XEP number.
 	XEPNumber = "0198"
 )
+
+// Config contains stream management module configuration options.
+type Config struct {
+	// AckTimeout defines stanza acknowledgement timeout.
+	AckTimeout time.Time
+
+	// MaxQueueSize defines maximum number of unacknowledged stanzas.
+	// When the limit is reached, the c2s stream is terminated
+	MaxQueueSize int
+}
 
 // Stream represents a stream (XEP-0198) module type.
 type Stream struct {
@@ -107,12 +118,15 @@ func (m *Stream) Stop(_ context.Context) error {
 func (m *Stream) onElementRecv(ctx context.Context, ev sonar.Event) error {
 	inf := ev.Info().(*event.C2SStreamEventInfo)
 	stm := ev.Sender().(stream.C2S)
-	return m.processCmd(ctx, inf.Element, stm)
+	if inf.Element.Attribute(stravaganza.Namespace) == streamNamespace {
+		return m.processCmd(ctx, inf.Element, stm)
+	}
+	return nil
 }
 
 func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm stream.C2S) error {
 	if cmd.ChildrenCount() > 0 {
-		sendFailedReply(badRequest, "", stm)
+		sendFailedReply(badRequest, "Malformed element", stm)
 		return nil
 	}
 	if !stm.IsAuthenticated() || !stm.IsBounded() {
@@ -134,6 +148,15 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 }
 
 func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
+	if stm.Info().Bool(enabledInfoKey) {
+		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
+		return nil
+	}
+	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
+		return err
+	}
+	log.Infow("Enabled stream management",
+		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber)
 	return nil
 }
 
