@@ -17,6 +17,8 @@ package xep0198
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
@@ -63,6 +65,9 @@ type Stream struct {
 	hosts  *host.Hosts
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
+
+	mu     sync.RWMutex
+	queues map[string]*stanzaQueue
 }
 
 // New returns a new initialized Stream instance.
@@ -75,6 +80,7 @@ func New(
 		router: router,
 		hosts:  hosts,
 		sn:     sn,
+		queues: make(map[string]*stanzaQueue),
 	}
 }
 
@@ -137,9 +143,9 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 	case "enable":
 		return m.processEnable(ctx, stm)
 	case "a":
-		return m.processA(ctx, stm)
+		m.processA(stm, cmd.Attribute("h"))
 	case "r":
-		return m.processR(ctx, stm)
+		m.processR(stm)
 	default:
 		errText := fmt.Sprintf("Unknown tag %s qualified by namespace '%s'", cmd.Name(), streamNamespace)
 		sendFailedReply(badRequest, errText, stm)
@@ -152,6 +158,10 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
 		return nil
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.queues[streamID(stm)] = &stanzaQueue{}
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
@@ -160,12 +170,38 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	return nil
 }
 
-func (m *Stream) processA(ctx context.Context, stm stream.C2S) error {
-	return nil
+func (m *Stream) processA(stm stream.C2S, h string) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	sq := m.queues[streamID(stm)]
+	if sq == nil {
+		return
+	}
+	hVal, _ := strconv.ParseUint(h, 10, 32)
+	if hVal == 0 {
+		return
+	}
+	sq.acknowledge(uint32(hVal))
 }
 
-func (m *Stream) processR(ctx context.Context, stm stream.C2S) error {
-	return nil
+func (m *Stream) processR(stm stream.C2S) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	sq := m.queues[streamID(stm)]
+	if sq == nil {
+		return
+	}
+	a := stravaganza.NewBuilder("a").
+		WithAttribute(stravaganza.Namespace, streamNamespace).
+		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
+		Build()
+	stm.SendElement(a)
+}
+
+func streamID(stm stream.C2S) string {
+	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
 }
 
 func sendFailedReply(reason string, text string, stm stream.C2S) {
