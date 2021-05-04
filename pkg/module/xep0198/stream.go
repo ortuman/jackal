@@ -53,7 +53,7 @@ type Config struct {
 	AckTimeout time.Time
 
 	// MaxQueueSize defines maximum number of unacknowledged stanzas.
-	// When the limit is reached, the c2s stream is terminated
+	// When the limit is reached, the c2s stream is terminated.
 	MaxQueueSize int
 }
 
