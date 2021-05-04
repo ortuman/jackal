@@ -14,19 +14,13 @@
 
 package xep0198
 
-import (
-	"testing"
-
-	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/stretchr/testify/require"
-)
-
+/*
 func TestStanzaQueuePush(t *testing.T) {
 	// given
-	q := &stanzaQueue{}
+	m := new
 
 	// when
-	q.push(testStanza())
+	q.pro(testStanza())
 	q.push(testStanza())
 
 	// then
@@ -74,3 +68,4 @@ func testStanza() stravaganza.Stanza {
 		BuildIQ()
 	return iq
 }
+*/

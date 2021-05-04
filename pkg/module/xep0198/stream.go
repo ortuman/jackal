@@ -66,8 +66,8 @@ type Stream struct {
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
 
-	mu     sync.RWMutex
-	queues map[string]*stanzaQueue
+	mu       sync.RWMutex
+	managers map[string]*manager
 }
 
 // New returns a new initialized Stream instance.
@@ -77,10 +77,10 @@ func New(
 	sn *sonar.Sonar,
 ) *Stream {
 	return &Stream{
-		router: router,
-		hosts:  hosts,
-		sn:     sn,
-		queues: make(map[string]*stanzaQueue),
+		router:   router,
+		hosts:    hosts,
+		sn:       sn,
+		managers: make(map[string]*manager),
 	}
 }
 
@@ -107,6 +107,7 @@ func (m *Stream) AccountFeatures(_ context.Context) ([]string, error) {
 // Start starts stream module.
 func (m *Stream) Start(_ context.Context) error {
 	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamElementReceived, m.onElementRecv))
+	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamElementSent, m.onElementSent))
 
 	log.Infow("Started stream module", "xep", XEPNumber)
 	return nil
@@ -127,6 +128,21 @@ func (m *Stream) onElementRecv(ctx context.Context, ev sonar.Event) error {
 	if inf.Element.Attribute(stravaganza.Namespace) == streamNamespace {
 		return m.processCmd(ctx, inf.Element, stm)
 	}
+	_, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
+	}
+	m.processInboundStanza(stm)
+	return nil
+}
+
+func (m *Stream) onElementSent(_ context.Context, ev sonar.Event) error {
+	inf := ev.Info().(*event.C2SStreamEventInfo)
+	stanza, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
+	}
+	m.processOutboundStanza(stanza, ev.Sender().(stream.C2S))
 	return nil
 }
 
@@ -153,6 +169,28 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 	return nil
 }
 
+func (m *Stream) processInboundStanza(stm stream.C2S) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	mng := m.managers[streamID(stm)]
+	if mng == nil {
+		return
+	}
+	mng.processInboundStanza()
+}
+
+func (m *Stream) processOutboundStanza(stanza stravaganza.Stanza, stm stream.C2S) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	mng := m.managers[streamID(stm)]
+	if mng == nil {
+		return
+	}
+	mng.processOutboundStanza(stanza)
+}
+
 func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	if stm.Info().Bool(enabledInfoKey) {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
@@ -161,7 +199,7 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.queues[streamID(stm)] = &stanzaQueue{}
+	m.managers[streamID(stm)] = newManager(stm)
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
@@ -174,28 +212,28 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	sq := m.queues[streamID(stm)]
-	if sq == nil {
+	mng := m.managers[streamID(stm)]
+	if mng == nil {
 		return
 	}
 	hVal, _ := strconv.ParseUint(h, 10, 32)
 	if hVal == 0 {
 		return
 	}
-	sq.acknowledge(uint32(hVal))
+	mng.acknowledge(uint32(hVal))
 }
 
 func (m *Stream) processR(stm stream.C2S) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	sq := m.queues[streamID(stm)]
-	if sq == nil {
+	mng := m.managers[streamID(stm)]
+	if mng == nil {
 		return
 	}
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
-		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
+		WithAttribute("h", strconv.FormatUint(uint64(mng.inboundH()), 10)).
 		Build()
 	stm.SendElement(a)
 }

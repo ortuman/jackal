@@ -14,9 +14,17 @@
 
 package xep0198
 
-import "github.com/ortuman/jackal/pkg/router"
+import (
+	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/router/stream"
+)
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock
 type globalRouter interface {
 	router.Router
+}
+
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
 }
