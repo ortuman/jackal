@@ -84,7 +84,7 @@ func (m *manager) acknowledge(h uint32) {
 	m.scheduleR()
 }
 
-func (m *manager) unacknowledgedStanzas() []stravaganza.Stanza {
+func (m *manager) stanzaQueue() []stravaganza.Stanza {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var retVal []stravaganza.Stanza
