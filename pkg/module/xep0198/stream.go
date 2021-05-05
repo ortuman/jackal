@@ -227,8 +227,8 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 	}
 	mng.acknowledge(uint32(hVal))
 
-	log.Infof("Received stanza ack",
-		"acked_h", hVal, "h", mng.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	log.Infow("Received stanza ack",
+		"ack_h", hVal, "h", mng.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 }
 
