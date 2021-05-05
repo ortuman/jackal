@@ -106,10 +106,13 @@ func (m *manager) outboundH() uint32 {
 	return m.outH
 }
 
-func (m *manager) cancelScheduledR() {
+func (m *manager) cancelTimers() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.tm.Stop()
+	if discTm := m.discTm; discTm != nil {
+		discTm.Stop()
+	}
 }
 
 func (m *manager) requestAck() {
