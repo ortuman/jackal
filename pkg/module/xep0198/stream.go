@@ -197,12 +197,16 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		return nil
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	m.managers[streamID(stm)] = newManager(stm)
+	m.mu.Unlock()
+
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
+	stm.SendElement(stravaganza.NewBuilder("enabled").
+		WithAttribute(stravaganza.Namespace, streamNamespace).
+		Build(),
+	)
 	log.Infow("Enabled stream management",
 		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber)
 	return nil

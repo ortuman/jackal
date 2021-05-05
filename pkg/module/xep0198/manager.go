@@ -19,14 +19,15 @@ import (
 	"sync"
 	"time"
 
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
 const (
 	requestAckInterval = time.Minute
-
-	requestAckStanzaCount = 5
+	waitForAckTimeout  = time.Second * 30
 )
 
 type qEntry struct {
@@ -37,11 +38,12 @@ type qEntry struct {
 type manager struct {
 	stm stream.C2S
 
-	mu    sync.RWMutex
-	queue []qEntry
-	outH  uint32
-	inH   uint32
-	tm    *time.Timer
+	mu     sync.RWMutex
+	queue  []qEntry
+	outH   uint32
+	inH    uint32
+	tm     *time.Timer
+	discTm *time.Timer
 }
 
 func newManager(stm stream.C2S) *manager {
@@ -53,8 +55,7 @@ func newManager(stm stream.C2S) *manager {
 func (m *manager) processInboundStanza() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.tm.Stop()
-	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
+	m.scheduleR()
 	m.inH = incH(m.inH)
 }
 
@@ -66,14 +67,14 @@ func (m *manager) processOutboundStanza(stanza stravaganza.Stanza) {
 		st: stanza,
 		h:  m.outH,
 	})
-	if m.outH%requestAckStanzaCount == 0 {
-		m.requestAck()
-	}
 }
 
 func (m *manager) acknowledge(h uint32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if discTm := m.discTm; discTm != nil {
+		discTm.Stop() // cancel disconnection timeout
+	}
 	for i, e := range m.queue {
 		if e.h < h {
 			continue
@@ -81,6 +82,7 @@ func (m *manager) acknowledge(h uint32) {
 		m.queue = m.queue[i+1:]
 		break
 	}
+	m.scheduleR()
 }
 
 func (m *manager) inboundH() uint32 {
@@ -96,10 +98,22 @@ func (m *manager) cancelScheduledR() {
 }
 
 func (m *manager) requestAck() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	r := stravaganza.NewBuilder("r").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		Build()
 	m.stm.SendElement(r)
+
+	// schedule disconnect
+	m.discTm = time.AfterFunc(waitForAckTimeout, func() {
+		m.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+	})
+}
+
+func (m *manager) scheduleR() {
+	m.tm.Stop()
 	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
 }
 
