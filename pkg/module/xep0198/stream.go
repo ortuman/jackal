@@ -232,7 +232,7 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 	)
 	pending := mng.unacknowledgedStanzas()
 	if len(pending) == 0 {
-		return
+		return // done here
 	}
 	log.Infow("Resending pending stanzas...",
 		"len", len(pending), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
@@ -250,6 +250,9 @@ func (m *Stream) processR(stm stream.C2S) {
 	if mng == nil {
 		return
 	}
+	log.Infow("Stanza ack requested",
+		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		WithAttribute("h", strconv.FormatUint(uint64(mng.inboundH()), 10)).
