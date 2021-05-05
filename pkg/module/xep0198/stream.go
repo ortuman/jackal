@@ -230,6 +230,16 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 	log.Infow("Received stanza ack",
 		"ack_h", hVal, "h", mng.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
+	pending := mng.unacknowledgedStanzas()
+	if len(pending) == 0 {
+		return
+	}
+	log.Infow("Resending pending stanzas...",
+		"len", len(pending), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
+	for _, stanza := range pending {
+		stm.SendElement(stanza)
+	}
 }
 
 func (m *Stream) processR(stm stream.C2S) {

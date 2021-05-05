@@ -84,6 +84,16 @@ func (m *manager) acknowledge(h uint32) {
 	m.scheduleR()
 }
 
+func (m *manager) unacknowledgedStanzas() []stravaganza.Stanza {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var retVal []stravaganza.Stanza
+	for _, e := range m.queue {
+		retVal = append(retVal, e.st)
+	}
+	return retVal
+}
+
 func (m *manager) inboundH() uint32 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
