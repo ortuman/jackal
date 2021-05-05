@@ -90,6 +90,12 @@ func (m *manager) inboundH() uint32 {
 	return m.inH
 }
 
+func (m *manager) outboundH() uint32 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.outH
+}
+
 func (m *manager) cancelScheduledR() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -208,7 +208,8 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		Build(),
 	)
 	log.Infow("Enabled stream management",
-		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber)
+		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
 	return nil
 }
 
@@ -225,6 +226,10 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 		return
 	}
 	mng.acknowledge(uint32(hVal))
+
+	log.Infof("Received stanza ack",
+		"acked_h", hVal, "h", mng.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
 }
 
 func (m *Stream) processR(stm stream.C2S) {
