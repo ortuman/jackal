@@ -31,7 +31,7 @@ func TestStanzaQueuePush(t *testing.T) {
 
 func TestStanzaQueueAcknowledge(t *testing.T) {
 	// given
-	q := &stanzaQueue{}
+	q := &queue{}
 
 	q.push(testStanza())
 	q.push(testStanza())
@@ -48,7 +48,7 @@ func TestStanzaQueueAcknowledge(t *testing.T) {
 
 func TestStanzaQueueEmpty(t *testing.T) {
 	// given
-	q := &stanzaQueue{}
+	q := &queue{}
 
 	q.push(testStanza())
 

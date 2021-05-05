@@ -38,7 +38,7 @@ type manager struct {
 	stm stream.C2S
 
 	mu     sync.RWMutex
-	queue  []qEntry
+	q      []qEntry
 	outH   uint32
 	inH    uint32
 	tm     *time.Timer
@@ -62,7 +62,7 @@ func (m *manager) processOutboundStanza(stanza stravaganza.Stanza) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.outH = incH(m.outH)
-	m.queue = append(m.queue, qEntry{
+	m.q = append(m.q, qEntry{
 		st: stanza,
 		h:  m.outH,
 	})
@@ -74,21 +74,21 @@ func (m *manager) acknowledge(h uint32) {
 	if discTm := m.discTm; discTm != nil {
 		discTm.Stop() // cancel disconnection timeout
 	}
-	for i, e := range m.queue {
+	for i, e := range m.q {
 		if e.h < h {
 			continue
 		}
-		m.queue = m.queue[i+1:]
+		m.q = m.q[i+1:]
 		break
 	}
 	m.scheduleR()
 }
 
-func (m *manager) stanzaQueue() []stravaganza.Stanza {
+func (m *manager) queue() []stravaganza.Stanza {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var retVal []stravaganza.Stanza
-	for _, e := range m.queue {
+	for _, e := range m.q {
 		retVal = append(retVal, e.st)
 	}
 	return retVal
