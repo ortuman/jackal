@@ -17,6 +17,8 @@ package offline
 import (
 	"context"
 
+	"github.com/ortuman/jackal/pkg/router/stream"
+
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -31,6 +33,11 @@ type globalRepository interface {
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock
 type globalRouter interface {
 	router.Router
+}
+
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream:streamMock
+type c2sStream interface {
+	stream.C2S
 }
 
 //go:generate moq -out hosts.mock_test.go . hosts

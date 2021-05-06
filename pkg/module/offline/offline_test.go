@@ -163,13 +163,6 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 
 func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	// given
-	routerMock := &routerMock{}
-
-	output := bytes.NewBuffer(nil)
-	routerMock.RouteFunc = func(ctx context.Context, stanza stravaganza.Stanza) ([]jid.JID, error) {
-		_ = stanza.ToXML(output, true)
-		return nil, nil
-	}
 	hostsMock := &hostsMock{}
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
@@ -205,11 +198,23 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	repMock.DeleteOfflineMessagesFunc = func(ctx context.Context, username string) error {
 		return nil
 	}
+	streamMock := &streamMock{}
+	streamMock.UsernameFunc = func() string { return "ortuman" }
+	streamMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
+		return nil
+	}
+	streamMock.InfoFunc = func() *coremodel.ResourceInfo {
+		return &coremodel.ResourceInfo{M: make(map[string]string)}
+	}
+	output := bytes.NewBuffer(nil)
+	streamMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		_ = elem.ToXML(output, true)
+		return nil
+	}
 
 	sn := sonar.New()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
-		router: routerMock,
 		hosts:  hostsMock,
 		resMng: resManagerMock,
 		rep:    repMock,
@@ -230,6 +235,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 			WithInfo(&event.C2SStreamEventInfo{
 				Element: pr,
 			}).
+			WithSender(streamMock).
 			Build(),
 	)
 
