@@ -40,7 +40,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Config{
+		return offline.New(a.router, a.hosts, a.resMng, a.rep, a.locker, a.sonar, offline.Config{
 			QueueSize: cfg.Offline.QueueSize,
 		})
 	},

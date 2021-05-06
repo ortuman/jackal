@@ -38,7 +38,6 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/module/offline"
 	"github.com/ortuman/jackal/pkg/module/xep0198"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -263,7 +262,7 @@ func (s *inC2S) start() error {
 	}
 	// post registered C2S event
 	ctx, cancel := s.requestContext()
-	err := s.postStreamEvent(ctx, event.C2SStreamRegistered, &event.C2SStreamEventInfo{
+	err := s.postStreamEvent(ctx, event.C2SStreamConnected, &event.C2SStreamEventInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -624,14 +623,7 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
 
 	case router.ErrUserNotAvailable:
-		if !s.mods.IsEnabled(offline.ModuleName) {
-			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
-		}
-		return s.postStreamEvent(ctx, event.C2SStreamMessageUnrouted, &event.C2SStreamEventInfo{
-			ID:      s.ID().String(),
-			JID:     s.JID(),
-			Element: msg,
-		})
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
 		return s.postStreamEvent(ctx, event.C2SStreamMessageRouted, &event.C2SStreamEventInfo{
@@ -1023,7 +1015,7 @@ func (s *inC2S) close(ctx context.Context) error {
 		return err
 	}
 	// post unregistered C2S event
-	err := s.postStreamEvent(ctx, event.C2SStreamUnregistered, &event.C2SStreamEventInfo{
+	err := s.postStreamEvent(ctx, event.C2SStreamDisconnected, &event.C2SStreamEventInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})

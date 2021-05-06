@@ -20,14 +20,14 @@ import (
 )
 
 const (
-	// C2SStreamRegistered event is posted when a C2S connection is registered.
-	C2SStreamRegistered = "c2s.stream.registered"
+	// C2SStreamConnected event is posted when a C2S connection is connected.
+	C2SStreamConnected = "c2s.stream.connected"
 
 	// C2SStreamBounded event is posted when C2S stream is bounded.
 	C2SStreamBounded = "c2s.stream.bounded"
 
-	// C2SStreamUnregistered event is posted when a C2S connection is unregistered.
-	C2SStreamUnregistered = "c2s.stream.unregistered"
+	// C2SStreamDisconnected event is posted when a C2S connection is disconnected.
+	C2SStreamDisconnected = "c2s.stream.disconnected"
 
 	// C2SStreamElementReceived event is posted when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
@@ -52,10 +52,6 @@ const (
 
 	// C2SStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more C2S streams.
 	C2SStreamMessageRouted = "c2s.stream.message_routed"
-
-	// C2SStreamMessageUnrouted event is posted when a received message stanza could not be routed
-	// because no destination available resource was found.
-	C2SStreamMessageUnrouted = "c2s.stream.message_unrouted"
 )
 
 // C2SStreamEventInfo contains all info associated to a C2S stream event.

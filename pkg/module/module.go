@@ -65,11 +65,11 @@ type IQProcessor interface {
 type InterceptorType int
 
 const (
-	// Inbound represents an inbound interceptor type.
-	Inbound = InterceptorType(iota)
+	// InboundInterceptor represents an inbound interceptor type.
+	InboundInterceptor = InterceptorType(iota)
 
-	// Outbound represents an outbound interceptor type.
-	Outbound
+	// OutboundInterceptor represents an outbound interceptor type.
+	OutboundInterceptor
 )
 
 // StanzaInterceptor type allows to dynamically transform stanza content.
@@ -265,12 +265,12 @@ func (m *Modules) setupModules() {
 			stanzaInterceptors := stanzaInterceptorPr.Interceptors()
 			for _, interceptor := range stanzaInterceptors {
 				switch interceptor.Type {
-				case Inbound:
+				case InboundInterceptor:
 					m.recvInterceptors = append(m.recvInterceptors, stanzaInterceptor{
 						StanzaInterceptor: interceptor,
 						fn:                stanzaInterceptorPr.InterceptStanza,
 					})
-				case Outbound:
+				case OutboundInterceptor:
 					m.sendInterceptors = append(m.sendInterceptors, stanzaInterceptor{
 						StanzaInterceptor: interceptor,
 						fn:                stanzaInterceptorPr.InterceptStanza,

@@ -463,9 +463,9 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			var typ module.InterceptorType
 			switch {
 			case interceptor.Incoming:
-				typ = module.Inbound
+				typ = module.InboundInterceptor
 			default:
-				typ = module.Outbound
+				typ = module.OutboundInterceptor
 			}
 			interceptors = append(interceptors, module.StanzaInterceptor{
 				ID:       interceptor.ID,

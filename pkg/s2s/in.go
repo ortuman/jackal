@@ -33,7 +33,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/module/offline"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -453,15 +452,7 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
 
 	case router.ErrUserNotAvailable:
-		if !s.mods.IsEnabled(offline.ModuleName) {
-			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
-		}
-		return s.postStreamEvent(ctx, event.S2SInStreamMessageUnrouted, &event.S2SStreamEventInfo{
-			ID:      s.ID().String(),
-			Sender:  s.sender,
-			Target:  s.target,
-			Element: msg,
-		})
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
 		return s.postStreamEvent(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{

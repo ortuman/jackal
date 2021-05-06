@@ -95,8 +95,8 @@ func TestModules_InterceptStanza(t *testing.T) {
 	stanzaInterceptorPrMock := &StanzaInterceptorProcessorMock{}
 	stanzaInterceptorPrMock.InterceptorsFunc = func() []StanzaInterceptor {
 		return []StanzaInterceptor{
-			{Type: Inbound, Priority: 500},
-			{Type: Outbound, Priority: 500},
+			{Type: InboundInterceptor, Priority: 500},
+			{Type: OutboundInterceptor, Priority: 500},
 		}
 	}
 	stanzaInterceptorPrMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
