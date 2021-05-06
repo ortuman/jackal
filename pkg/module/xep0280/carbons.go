@@ -127,7 +127,7 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 // Interceptors returns carbons stanza interceptor.
 func (p *Carbons) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{Incoming: false},
+		{Type: module.Outbound},
 	}
 }
 

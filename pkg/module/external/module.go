@@ -166,7 +166,7 @@ func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stan
 		return nil, err
 	}
 	if resp.Interrupt {
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	// ensure stanza type
 	switch stanza.(type) {

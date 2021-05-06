@@ -460,9 +460,16 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			}
 		}
 		for _, interceptor := range extCfg.StanzaInterceptors {
+			var typ module.InterceptorType
+			switch {
+			case interceptor.Incoming:
+				typ = module.Inbound
+			default:
+				typ = module.Outbound
+			}
 			interceptors = append(interceptors, module.StanzaInterceptor{
 				ID:       interceptor.ID,
-				Incoming: interceptor.Incoming,
+				Type:     typ,
 				Priority: interceptor.Priority,
 			})
 		}

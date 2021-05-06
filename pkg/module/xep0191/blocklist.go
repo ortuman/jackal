@@ -149,8 +149,8 @@ func (m *BlockList) Stop(_ context.Context) error {
 // Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
-		{ID: incomingIID, Priority: math.MaxInt32, Incoming: true},
-		{ID: outgoingIID, Priority: math.MaxInt32, Incoming: false},
+		{ID: incomingIID, Priority: math.MaxInt32, Type: module.Inbound},
+		{ID: outgoingIID, Priority: math.MaxInt32, Type: module.Outbound},
 	}
 }
 
@@ -196,7 +196,7 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 		case *stravaganza.Message:
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 		}
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	return stanza, nil
 }
@@ -227,7 +227,7 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 		errStanza, _ := se.Stanza(false)
 
 		_, _ = m.router.Route(ctx, errStanza)
-		return nil, module.ErrInterceptStanzaInterrupted
+		return nil, module.ErrInterceptionInterrupted
 	}
 	return stanza, nil
 }

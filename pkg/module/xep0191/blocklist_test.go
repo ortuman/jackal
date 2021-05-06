@@ -401,7 +401,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	_, err := bl.InterceptStanza(context.Background(), msg, incomingIID)
 
 	// then
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.Equal(t, module.ErrInterceptionInterrupted, err)
 
 	require.Len(t, respStanzas, 1)
 	require.Equal(t, "ortuman@jackal.im/balcony", respStanzas[0].Attribute(stravaganza.From))
@@ -453,7 +453,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	_, err := bl.InterceptStanza(context.Background(), msg, outgoingIID)
 
 	// then
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.Equal(t, module.ErrInterceptionInterrupted, err)
 
 	require.Len(t, respStanzas, 1)
 	require.Equal(t, "juliet@jabber.org/yard", respStanzas[0].Attribute(stravaganza.From))
