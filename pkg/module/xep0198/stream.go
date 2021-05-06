@@ -31,8 +31,7 @@ import (
 )
 
 const (
-	streamNamespace = "urn:xmpp:sm:3"
-
+	streamNamespace     = "urn:xmpp:sm:3"
 	xmppStanzaNamespace = "urn:ietf:params:xml:ns:xmpp-stanzas"
 
 	enabledInfoKey = "xep0198:enabled"
