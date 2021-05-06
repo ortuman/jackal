@@ -48,6 +48,9 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 		return nil, nil
 	}
 	repMock := &repositoryMock{}
+	repMock.UserExistsFunc = func(ctx context.Context, username string) (bool, error) {
+		return true, nil
+	}
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 0, nil
 	}
@@ -113,6 +116,9 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		return lockMock, nil
 	}
 	repMock := &repositoryMock{}
+	repMock.UserExistsFunc = func(ctx context.Context, username string) (bool, error) {
+		return true, nil
+	}
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 100, nil
 	}

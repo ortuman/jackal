@@ -23,9 +23,9 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 )
 
-//go:generate moq -out repository.mock_test.go . offlineRepository:repositoryMock
-type offlineRepository interface {
-	repository.Offline
+//go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
+type globalRepository interface {
+	repository.Repository
 }
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock

@@ -55,7 +55,7 @@ type Offline struct {
 	router router.Router
 	hosts  hosts
 	resMng resourceManager
-	rep    repository.Offline
+	rep    repository.Repository
 	locker locker.Locker
 	sn     *sonar.Sonar
 	subs   []sonar.SubID
@@ -66,7 +66,7 @@ func New(
 	router router.Router,
 	hosts *host.Hosts,
 	resMng resourceManager,
-	rep repository.Offline,
+	rep repository.Repository,
 	locker locker.Locker,
 	sn *sonar.Sonar,
 	cfg Config,
@@ -113,6 +113,13 @@ func (m *Offline) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza
 	}
 	toJID := msg.ToJID()
 	if !m.hosts.IsLocalHost(toJID.Domain()) {
+		return stanza, nil
+	}
+	exists, err := m.rep.UserExists(ctx, toJID.Node())
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
 		return stanza, nil
 	}
 	rss, err := m.resMng.GetResources(ctx, toJID.Node())
