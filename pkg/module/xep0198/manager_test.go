@@ -17,10 +17,8 @@ package xep0198
 import (
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
-
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/stretchr/testify/require"
 )
 
