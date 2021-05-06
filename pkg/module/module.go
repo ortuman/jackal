@@ -73,7 +73,7 @@ type StanzaInterceptor struct {
 
 	// Priority represents interceptor priority that's used to determine which interceptors should be invoked first.
 	// The higher the number the more priority.
-	Priority int
+	Priority int32
 }
 
 // ErrInterceptStanzaInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.

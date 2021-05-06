@@ -127,9 +127,9 @@ type extModuleConfig struct {
 	} `fig:"iq_handler"`
 
 	StanzaInterceptors []struct {
-		ID       int  `fig:"id"`
-		Incoming bool `fig:"incoming"`
-		Priority int  `fig:"priority"`
+		ID       int   `fig:"id"`
+		Incoming bool  `fig:"incoming"`
+		Priority int32 `fig:"priority"`
 	} `fig:"stanza_interceptors"`
 }
 
