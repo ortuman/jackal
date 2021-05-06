@@ -14,49 +14,65 @@
 
 package xep0198
 
-/*
-func TestStanzaQueuePush(t *testing.T) {
+import (
+	"testing"
+
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
+
+	"github.com/jackal-xmpp/stravaganza/v2"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestManagerProcessInboundStanza(t *testing.T) {
 	// given
-	m := new
+	m, _ := newManager(nil)
 
 	// when
-	q.pro(testStanza())
-	q.push(testStanza())
+	m.processOutboundStanza(testStanza())
+	m.processOutboundStanza(testStanza())
 
 	// then
-	require.Equal(t, 2, q.len())
-	require.Equal(t, q.queue[0].h, uint32(1))
-	require.Equal(t, q.queue[1].h, uint32(2))
+	require.Len(t, m.queue(), 2)
+	require.Equal(t, m.q[0].h, uint32(1))
+	require.Equal(t, m.q[1].h, uint32(2))
 }
 
-func TestStanzaQueueAcknowledge(t *testing.T) {
+func TestManagerAcknowledge(t *testing.T) {
 	// given
-	q := &queue{}
+	m, _ := newManager(nil)
 
-	q.push(testStanza())
-	q.push(testStanza())
-	q.push(testStanza())
+	m.processOutboundStanza(testStanza())
+	m.processOutboundStanza(testStanza())
+	m.processOutboundStanza(testStanza())
 
 	// when
-	q.acknowledge(2)
+	m.acknowledge(2)
 
 	// then
-	require.Equal(t, 1, q.len())
-	require.Equal(t, "iq", q.queue[0].st.Name())
-	require.Equal(t, uint32(3), q.queue[0].h)
+	require.Len(t, m.queue(), 1)
+	require.Equal(t, "iq", m.q[0].st.Name())
+	require.Equal(t, uint32(3), m.q[0].h)
 }
 
-func TestStanzaQueueEmpty(t *testing.T) {
+func TestManagerSMID(t *testing.T) {
 	// given
-	q := &queue{}
+	streamMock := &c2sStreamMock{}
+	streamMock.JIDFunc = func() *jid.JID {
+		jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+		return jd
+	}
 
-	q.push(testStanza())
+	m, _ := newManager(streamMock)
+	for i := range m.nonce {
+		m.nonce[i] = byte(i)
+	}
 
 	// when
-	q.acknowledge(1)
+	smID := m.smID()
 
 	// then
-	require.Equal(t, 0, q.len())
+	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAAAAQIDBAUGBwgJCgsMDQ4P", smID)
 }
 
 func testStanza() stravaganza.Stanza {
@@ -68,4 +84,3 @@ func testStanza() stravaganza.Stanza {
 		BuildIQ()
 	return iq
 }
-*/

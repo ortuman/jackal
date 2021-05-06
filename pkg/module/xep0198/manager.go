@@ -15,6 +15,9 @@
 package xep0198
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"math"
 	"sync"
 	"time"
@@ -35,7 +38,8 @@ type qEntry struct {
 }
 
 type manager struct {
-	stm stream.C2S
+	stm   stream.C2S
+	nonce [16]byte
 
 	mu     sync.RWMutex
 	q      []qEntry
@@ -45,10 +49,17 @@ type manager struct {
 	discTm *time.Timer
 }
 
-func newManager(stm stream.C2S) *manager {
-	m := &manager{stm: stm}
+func newManager(stm stream.C2S) (*manager, error) {
+	m := &manager{
+		stm: stm,
+	}
+	// generate nonce
+	_, err := rand.Read(m.nonce[:])
+	if err != nil {
+		return nil, err
+	}
 	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
-	return m
+	return m, nil
 }
 
 func (m *manager) processInboundStanza() {
@@ -128,6 +139,14 @@ func (m *manager) requestAck() {
 	m.discTm = time.AfterFunc(waitForAckTimeout, func() {
 		m.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
+}
+
+func (m *manager) smID() string {
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString(m.stm.JID().String())
+	buf.WriteByte(0)
+	buf.Write(m.nonce[:])
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
 func (m *manager) scheduleR() {

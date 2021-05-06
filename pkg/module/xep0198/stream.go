@@ -195,13 +195,17 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
 		return nil
 	}
-	m.mu.Lock()
-	m.managers[streamID(stm)] = newManager(stm)
-	m.mu.Unlock()
-
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
+	mng, err := newManager(stm)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	m.managers[streamID(stm)] = mng
+	m.mu.Unlock()
+
 	stm.SendElement(stravaganza.NewBuilder("enabled").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		Build(),
