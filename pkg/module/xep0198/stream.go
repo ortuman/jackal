@@ -15,11 +15,15 @@
 package xep0198
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -265,6 +269,18 @@ func (m *Stream) processR(stm stream.C2S) {
 
 func streamID(stm stream.C2S) string {
 	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
+}
+
+func encodeSMID(jd *jid.JID, nonce []byte) string {
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString(jd.String())
+	buf.WriteByte(0)
+	buf.Write(nonce)
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
+	return nil, nil, nil
 }
 
 func sendFailedReply(reason string, text string, stm stream.C2S) {

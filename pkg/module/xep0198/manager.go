@@ -15,9 +15,7 @@
 package xep0198
 
 import (
-	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 	"math"
 	"sync"
 	"time"
@@ -28,6 +26,8 @@ import (
 )
 
 const (
+	nonceLength = 16
+
 	requestAckInterval = time.Minute * 2
 	waitForAckTimeout  = time.Second * 30
 )
@@ -39,7 +39,7 @@ type qEntry struct {
 
 type manager struct {
 	stm   stream.C2S
-	nonce [16]byte
+	nonce []byte
 
 	mu     sync.RWMutex
 	q      []qEntry
@@ -51,10 +51,11 @@ type manager struct {
 
 func newManager(stm stream.C2S) (*manager, error) {
 	m := &manager{
-		stm: stm,
+		stm:   stm,
+		nonce: make([]byte, nonceLength),
 	}
 	// generate nonce
-	_, err := rand.Read(m.nonce[:])
+	_, err := rand.Read(m.nonce)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +140,6 @@ func (m *manager) requestAck() {
 	m.discTm = time.AfterFunc(waitForAckTimeout, func() {
 		m.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
-}
-
-func (m *manager) smID() string {
-	buf := bytes.NewBuffer(nil)
-	buf.WriteString(m.stm.JID().String())
-	buf.WriteByte(0)
-	buf.Write(m.nonce[:])
-	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
 func (m *manager) scheduleR() {

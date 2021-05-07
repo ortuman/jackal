@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,26 +50,6 @@ func TestManagerAcknowledge(t *testing.T) {
 	require.Len(t, m.queue(), 1)
 	require.Equal(t, "iq", m.q[0].st.Name())
 	require.Equal(t, uint32(3), m.q[0].h)
-}
-
-func TestManagerSMID(t *testing.T) {
-	// given
-	streamMock := &c2sStreamMock{}
-	streamMock.JIDFunc = func() *jid.JID {
-		jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-		return jd
-	}
-
-	m, _ := newManager(streamMock)
-	for i := range m.nonce {
-		m.nonce[i] = byte(i)
-	}
-
-	// when
-	smID := m.smID()
-
-	// then
-	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAAAAQIDBAUGBwgJCgsMDQ4P", smID)
 }
 
 func testStanza() stravaganza.Stanza {

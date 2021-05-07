@@ -498,7 +498,12 @@ func (a *serverApp) initAdminServer(bindAddr string, port int) {
 }
 
 func (a *serverApp) initClusterServer(bindAddr string, port int) {
-	clusterSrv := clusterserver.New(bindAddr, port, a.localRouter, a.comps)
+	clusterSrv := clusterserver.New(
+		bindAddr,
+		port,
+		a.localRouter,
+		a.comps,
+	)
 	a.registerStartStopper(clusterSrv)
 	return
 }
