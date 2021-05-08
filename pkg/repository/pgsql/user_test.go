@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func TestPgSQLUser_Upsert(t *testing.T) {
 		WithArgs("ortuman", "v_sha_1", "v_sha_256", "v_sha_512", "v_sha3_512", "salt", 1024, "v1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	usr := coremodel.User{Username: "ortuman"}
+	usr := usermodel.User{Username: "ortuman"}
 	usr.Scram.SHA1 = "v_sha_1"
 	usr.Scram.SHA256 = "v_sha_256"
 	usr.Scram.SHA512 = "v_sha_512"

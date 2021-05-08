@@ -18,14 +18,13 @@ import (
 	"context"
 	"crypto/tls"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -39,7 +38,7 @@ type kvStorage interface {
 
 //go:generate moq -out memberlist.mock_test.go . memberList
 type memberList interface {
-	GetMember(instanceID string) (m coremodel.ClusterMember, ok bool)
+	GetMember(instanceID string) (m clustermodel.Member, ok bool)
 }
 
 //go:generate moq -out c2s_stream.mock_test.go . c2sStream

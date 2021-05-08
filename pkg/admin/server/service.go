@@ -30,7 +30,7 @@ import (
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/repository"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
@@ -149,7 +149,7 @@ func (s *usersService) upsertUser(ctx context.Context, username, password string
 	hSHA512 := hashPassword([]byte(password), pepperedSalt, iterationCount, sha512.Size, sha512.New)
 	hSHA3512 := hashPassword([]byte(password), pepperedSalt, iterationCount, sha512.Size, sha3.New512)
 
-	usr := coremodel.User{Username: username}
+	usr := usermodel.User{Username: username}
 	usr.Scram.SHA1 = base64.RawURLEncoding.EncodeToString(hSHA1)
 	usr.Scram.SHA256 = base64.RawURLEncoding.EncodeToString(hSHA256)
 	usr.Scram.SHA512 = base64.RawURLEncoding.EncodeToString(hSHA512)

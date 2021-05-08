@@ -20,9 +20,10 @@ import (
 	"io"
 	"testing"
 
+	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/pkg/event"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +48,7 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	// register cluster member
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.MemberListUpdated).
 		WithInfo(&event.MemberListEventInfo{
-			Registered: []coremodel.ClusterMember{
+			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
 		}).Build(),
@@ -94,7 +95,7 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
 	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.MemberListUpdated).
 		WithInfo(&event.MemberListEventInfo{
-			Registered: []coremodel.ClusterMember{
+			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},
 		}).Build(),

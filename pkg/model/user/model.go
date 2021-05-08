@@ -12,26 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coremodel
-
-import (
-	"fmt"
-
-	"github.com/ortuman/jackal/pkg/version"
-)
-
-// ClusterMember represents a cluster instance address and port.
-type ClusterMember struct {
-	InstanceID string
-	Host       string
-	Port       int
-	APIVer     *version.SemanticVersion
-}
-
-// String returns Member string representation.
-func (m *ClusterMember) String() string {
-	return fmt.Sprintf("%s:%d", m.Host, m.Port)
-}
+package usermodel
 
 // User represents a user entity.
 type User struct {
