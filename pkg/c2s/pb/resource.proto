@@ -20,16 +20,16 @@ package resourcemanager.v1;
 
 option go_package = "./;pb";
 
-// ResourceInfo represents resource associated info content.
-message ResourceInfo {
+// Resource represents resource info content.
+message Resource {
   // instance_id indicates what instance registered this resource.
   string instance_id = 1;
 
   // domain is the resource associated domain.
   string domain = 2;
 
-  // context is the resource additional context info.
-  map<string, string> context = 3;
+  // info defines C2S info field.
+  map<string, string> info = 3;
 
   // presence is the resource last received presence.
   stravaganza.PBElement presence = 4;

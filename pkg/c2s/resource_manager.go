@@ -105,16 +105,16 @@ func decodeResource(key string, val []byte) (*c2smodel.Resource, error) {
 		return nil, fmt.Errorf("resourcemanager: invalid key format: %s", key)
 	}
 
-	var resInf resourcemanagerpb.ResourceInfo
-	if err := proto.Unmarshal(val, &resInf); err != nil {
+	var pbRes resourcemanagerpb.Resource
+	if err := proto.Unmarshal(val, &pbRes); err != nil {
 		return nil, err
 	}
-	res.InstanceID = resInf.InstanceId
-	res.JID, _ = jid.New(ss[0], resInf.Domain, ss[1], true)
-	res.Info = c2smodel.InfoFromMap(resInf.Context)
+	res.InstanceID = pbRes.InstanceId
+	res.JID, _ = jid.New(ss[0], pbRes.Domain, ss[1], true)
+	res.Info = c2smodel.InfoFromMap(pbRes.Info)
 
-	if resInf.Presence != nil {
-		pr, err := stravaganza.NewBuilderFromProto(resInf.Presence).
+	if pbRes.Presence != nil {
+		pr, err := stravaganza.NewBuilderFromProto(pbRes.Presence).
 			BuildPresence()
 		if err != nil {
 			return nil, err
@@ -138,10 +138,10 @@ func resourceVal(res *c2smodel.Resource) ([]byte, error) {
 	if res.Presence != nil {
 		pbPresence = res.Presence.Proto()
 	}
-	resInf := resourcemanagerpb.ResourceInfo{
+	resInf := resourcemanagerpb.Resource{
 		InstanceId: res.InstanceID,
 		Domain:     res.JID.Domain(),
-		Context:    res.Info.Map(),
+		Info:       res.Info.Map(),
 		Presence:   pbPresence,
 	}
 	return proto.Marshal(&resInf)
