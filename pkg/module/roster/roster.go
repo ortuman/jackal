@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -29,7 +31,6 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -826,10 +827,10 @@ func (r *Roster) setStreamValue(ctx context.Context, username, resource, key str
 	return stm.SetInfoValue(ctx, key, val)
 }
 
-func (r *Roster) getStreamInfo(username, resource string) (inf *coremodel.ResourceInfo, err error) {
+func (r *Roster) getStreamInfo(username, resource string) (inf c2smodel.Info, err error) {
 	stm := r.router.C2S().LocalStream(username, resource)
 	if stm == nil {
-		return nil, errStreamNotFound(username, resource)
+		return c2smodel.Info{}, errStreamNotFound(username, resource)
 	}
 	return stm.Info(), nil
 }

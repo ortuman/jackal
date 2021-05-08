@@ -17,10 +17,11 @@ package offline
 import (
 	"context"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/ortuman/jackal/pkg/router/stream"
 
 	"github.com/ortuman/jackal/pkg/cluster/locker"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 )
@@ -47,7 +48,7 @@ type hosts interface {
 
 //go:generate moq -out resource_manager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
+	GetResources(ctx context.Context, username string) ([]c2smodel.Resource, error)
 }
 
 //go:generate moq -out locker.mock_test.go . clusterLocker:lockerMock

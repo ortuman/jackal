@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -42,7 +42,7 @@ type C2S interface {
 	SetInfoValue(ctx context.Context, k string, val interface{}) error
 
 	// Info returns stream resource info.
-	Info() *coremodel.ResourceInfo
+	Info() c2smodel.Info
 
 	// JID returns stream associated jid or nil if none is set.
 	JID() *jid.JID

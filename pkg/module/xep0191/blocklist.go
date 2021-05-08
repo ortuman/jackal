@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"math"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -29,7 +31,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -443,7 +444,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	)
 }
 
-func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
+func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []c2smodel.Resource) {
 	for _, res := range resources {
 		if !res.Info.Bool(requestedInfoKey) { // block list requested?
 			continue
@@ -460,7 +461,7 @@ func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, re
 	}
 }
 
-func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
 	targets, err := m.getPresenceTargets(ctx, blockJIDs, username)
 	if err != nil {
 		return err
@@ -474,7 +475,7 @@ func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []ji
 	return nil
 }
 
-func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
 	targets, err := m.getPresenceTargets(ctx, unblockJIDs, username)
 	if err != nil {
 		return err

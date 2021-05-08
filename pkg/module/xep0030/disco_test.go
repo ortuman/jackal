@@ -18,12 +18,13 @@ import (
 	"context"
 	"testing"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/event"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/stretchr/testify/require"
@@ -250,8 +251,8 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	}
 	jd0, _ := jid.NewWithString("noelia@jackal.im/chamber", true)
 	resMng := &resourceManagerMock{}
-	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{
 				InstanceID: "inst-1",
 				JID:        jd0,

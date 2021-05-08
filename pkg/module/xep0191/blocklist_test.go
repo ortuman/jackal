@@ -18,13 +18,14 @@ import (
 	"context"
 	"testing"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/event"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -134,10 +135,18 @@ func TestBlockList_BlockItem(t *testing.T) {
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
-			{InstanceID: "i1", JID: jd0, Info: coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}}},
-			{InstanceID: "i1", JID: jd1, Info: coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}}},
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
+			{
+				InstanceID: "i1",
+				JID:        jd0,
+				Info:       c2smodel.InfoFromMap(map[string]string{requestedInfoKey: "true"}),
+			},
+			{
+				InstanceID: "i1",
+				JID:        jd1,
+				Info:       c2smodel.InfoFromMap(map[string]string{requestedInfoKey: "true"}),
+			},
 		}, nil
 	}
 	bl := &BlockList{
@@ -228,19 +237,19 @@ func TestBlockList_UnblockItem(t *testing.T) {
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{
 				InstanceID: "i1",
 				JID:        jd0,
 				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
-				Info:       coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}},
+				Info:       c2smodel.InfoFromMap(map[string]string{requestedInfoKey: "true"}),
 			},
 			{
 				InstanceID: "i1",
 				JID:        jd1,
 				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
-				Info:       coremodel.ResourceInfo{M: map[string]string{requestedInfoKey: "true"}},
+				Info:       c2smodel.InfoFromMap(map[string]string{requestedInfoKey: "true"}),
 			},
 		}, nil
 	}

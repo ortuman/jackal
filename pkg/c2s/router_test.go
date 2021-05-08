@@ -18,11 +18,12 @@ import (
 	"context"
 	"testing"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/stretchr/testify/suite"
 )
@@ -69,7 +70,7 @@ func (s *routerSuite) TestRouter_NotAuthenticated() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 
@@ -88,8 +89,8 @@ func (s *routerSuite) TestRouter_ResourceNotFound() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{InstanceID: instance.ID(), JID: jd},
 		}, nil
 	}
@@ -109,8 +110,8 @@ func (s *routerSuite) TestRouter_LocalRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{InstanceID: instance.ID(), JID: jd},
 		}, nil
 	}
@@ -136,8 +137,8 @@ func (s *routerSuite) TestRouter_ClusterRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{InstanceID: "abcd1234", JID: jd},
 		}, nil
 	}

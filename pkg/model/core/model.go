@@ -16,10 +16,7 @@ package coremodel
 
 import (
 	"fmt"
-	"strconv"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/version"
 )
 
@@ -48,56 +45,4 @@ type User struct {
 		IterationCount int
 		PepperID       string
 	}
-}
-
-// Resource represents a resource entity.
-type Resource struct {
-	InstanceID string
-	JID        *jid.JID
-	Presence   *stravaganza.Presence
-	Info       ResourceInfo
-}
-
-// IsAvailable returns presence available value.
-func (r *Resource) IsAvailable() bool {
-	if r.Presence != nil {
-		return r.Presence.IsAvailable()
-	}
-	return false
-}
-
-// Priority returns resource presence priority.
-func (r *Resource) Priority() int8 {
-	if r.Presence != nil {
-		return r.Presence.Priority()
-	}
-	return 0
-}
-
-// ResourceInfo represents a resource user info.
-type ResourceInfo struct {
-	M map[string]string
-}
-
-// String returns string value associated to k key.
-func (ui *ResourceInfo) String(k string) string {
-	return ui.M[k]
-}
-
-// Bool returns boolean value associated to k key.
-func (ui *ResourceInfo) Bool(k string) bool {
-	ok, _ := strconv.ParseBool(ui.M[k])
-	return ok
-}
-
-// Int returns integer value associated to k key.
-func (ui *ResourceInfo) Int(k string) int64 {
-	i, _ := strconv.ParseInt(ui.M[k], 10, 64)
-	return i
-}
-
-// Float returns integer value associated to k key.
-func (ui *ResourceInfo) Float(k string) float64 {
-	f, _ := strconv.ParseFloat(ui.M[k], 64)
-	return f
 }

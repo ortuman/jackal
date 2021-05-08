@@ -19,12 +19,13 @@ import (
 	"context"
 	"testing"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/event"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 	repMock := &repositoryMock{}
@@ -103,7 +104,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 
@@ -167,7 +168,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 	lockMock := &lockMock{}
@@ -203,8 +204,8 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	streamMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		return nil
 	}
-	streamMock.InfoFunc = func() *coremodel.ResourceInfo {
-		return &coremodel.ResourceInfo{M: make(map[string]string)}
+	streamMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.InfoFromMap(make(map[string]string))
 	}
 	output := bytes.NewBuffer(nil)
 	streamMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {

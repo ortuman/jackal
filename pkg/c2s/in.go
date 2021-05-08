@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
@@ -36,7 +38,6 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -84,7 +85,7 @@ type inC2S struct {
 	flags inC2SFlags
 	jd    *jid.JID
 	pr    *stravaganza.Presence
-	rInf  map[string]string
+	inf   map[string]string
 }
 
 func newInC2S(
@@ -131,7 +132,7 @@ func newInC2S(
 		rq:             runqueue.New(id.String(), log.Errorf),
 		doneCh:         make(chan struct{}),
 		state:          uint32(inConnecting),
-		rInf:           make(map[string]string),
+		inf:            make(map[string]string),
 		sn:             sonar,
 	}
 	if cfg.UseTLS {
@@ -159,24 +160,20 @@ func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) err
 		return fmt.Errorf("c2s: unsupported value type: %T", val)
 	}
 	s.mu.Lock()
-	v, ok := s.rInf[k]
+	v, ok := s.inf[k]
 	if ok && v == vStr {
 		s.mu.Unlock()
 		return nil
 	}
-	s.rInf[k] = vStr
+	s.inf[k] = vStr
 	s.mu.Unlock()
 	return s.resMng.PutResource(ctx, s.getResource())
 }
 
-func (s *inC2S) Info() *coremodel.ResourceInfo {
+func (s *inC2S) Info() c2smodel.Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	cpInf := make(map[string]string, len(s.rInf))
-	for k, v := range s.rInf {
-		cpInf[k] = v
-	}
-	return &coremodel.ResourceInfo{M: cpInf}
+	return c2smodel.InfoFromMap(s.inf)
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -1050,15 +1047,15 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	})
 }
 
-func (s *inC2S) getResource() *coremodel.Resource {
+func (s *inC2S) getResource() *c2smodel.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	rs := &coremodel.Resource{
+	rs := &c2smodel.Resource{
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Info:       coremodel.ResourceInfo{M: s.rInf},
+		Info:       c2smodel.InfoFromMap(s.inf),
 	}
 	return rs
 }

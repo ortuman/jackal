@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/tls"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -133,7 +135,7 @@ type modules interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	PutResource(ctx context.Context, resource *coremodel.Resource) error
-	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
+	PutResource(ctx context.Context, resource *c2smodel.Resource) error
+	GetResources(ctx context.Context, username string) ([]c2smodel.Resource, error)
 	DelResource(ctx context.Context, username, resource string) error
 }
