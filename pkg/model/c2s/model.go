@@ -21,6 +21,14 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 )
 
+// State represents a client-to-server stream state.
+type State struct {
+	State    uint32
+	JID      *jid.JID
+	Presence *stravaganza.Presence
+	Info     Info
+}
+
 // Resource represents a resource entity.
 type Resource struct {
 	InstanceID string
@@ -43,14 +51,6 @@ func (r *Resource) Priority() int8 {
 		return r.Presence.Priority()
 	}
 	return 0
-}
-
-// State represents a client-to-server stream state.
-type State struct {
-	State    uint32
-	JID      *jid.JID
-	Presence *stravaganza.Presence
-	Info     Info
 }
 
 // Info represents a C2S resource user info.

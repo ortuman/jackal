@@ -23,8 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/sonar"
@@ -38,6 +36,7 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -81,8 +80,8 @@ type inC2S struct {
 	sendDisabled   bool
 
 	mu    sync.RWMutex
-	state uint32
 	flags inC2SFlags
+	state uint32
 	jd    *jid.JID
 	pr    *stravaganza.Presence
 	inf   map[string]string
@@ -1079,11 +1078,15 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 }
 
 func (s *inC2S) setState(state inC2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = uint32(state)
 }
 
 func (s *inC2S) getState() inC2SState {
-	return inC2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return inC2SState(s.state)
 }
 
 func (s *inC2S) postStreamEvent(ctx context.Context, eventName string, inf *event.C2SStreamEventInfo) error {

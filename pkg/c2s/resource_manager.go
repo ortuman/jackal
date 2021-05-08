@@ -19,13 +19,12 @@ import (
 	"fmt"
 	"strings"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/pkg/c2s/pb"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )
 
 const (
