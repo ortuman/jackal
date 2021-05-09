@@ -54,7 +54,7 @@ const (
 	inConnected
 	inAuthenticating
 	inAuthenticated
-	inBounded
+	inBinded
 	inDisconnected
 )
 
@@ -346,7 +346,7 @@ func (s *inC2S) handleElement(ctx context.Context, elem stravaganza.Element) err
 		err = s.handleAuthenticating(ctx, elem)
 	case inAuthenticated:
 		err = s.handleAuthenticated(ctx, elem)
-	case inBounded:
+	case inBinded:
 		err = s.handleBounded(ctx, elem)
 	}
 	reportIncomingRequest(
@@ -451,24 +451,14 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
 	}
-	// apply incoming stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptionInterrupted:
-		return nil // stanza processing interrupted
-	default:
-		return err
-	}
 	// handle stanza
-	switch tst := tst.(type) {
+	switch st := stanza.(type) {
 	case *stravaganza.IQ:
-		return s.processIQ(ctx, tst)
+		return s.processIQ(ctx, st)
 	case *stravaganza.Presence:
-		return s.processPresence(ctx, tst)
+		return s.processPresence(ctx, st)
 	case *stravaganza.Message:
-		return s.processMessage(ctx, tst)
+		return s.processMessage(ctx, st)
 	default:
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
@@ -497,17 +487,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
-	// apply outgoing stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, iq, false)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptionInterrupted:
-		return nil // stanza routing interrupted
-	default:
-		return err
-	}
-	targets, err := s.router.Route(ctx, tst)
+	targets, err := s.router.Route(ctx, iq)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
@@ -541,17 +521,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 	}
 
 	if presence.ToJID().IsFullWithUser() {
-		// apply outgoing stanza interceptor
-		tst, err := s.mods.InterceptStanza(ctx, presence, false)
-		switch err {
-		case nil:
-			break
-		case module.ErrInterceptionInterrupted:
-			return nil // stanza routing interrupted
-		default:
-			return err
-		}
-		targets, err := s.router.Route(ctx, tst)
+		targets, err := s.router.Route(ctx, presence)
 		switch err {
 		case nil:
 			return s.postStreamEvent(ctx, event.C2SStreamPresenceRouted, &event.C2SStreamEventInfo{
@@ -585,17 +555,7 @@ func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message
 	msg := message
 
 sendMsg:
-	// apply outgoing stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, msg, false)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptionInterrupted:
-		return nil // stanza routing interrupted
-	default:
-		return err
-	}
-	targets, err := s.router.Route(ctx, tst)
+	targets, err := s.router.Route(ctx, msg)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -929,7 +889,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	if err = s.resMng.PutResource(ctx, s.getResource()); err != nil {
 		return err
 	}
-	s.setState(inBounded)
+	s.setState(inBinded)
 	s.flags.setBounded()
 
 	// post bounded C2S event
