@@ -359,9 +359,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// modules mock
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
-			modsMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-				return stanza, nil
-			}
 
 			// session mock
 			outBuf := bytes.NewBuffer(nil)

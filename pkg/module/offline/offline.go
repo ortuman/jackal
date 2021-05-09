@@ -17,7 +17,6 @@ package offline
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/jackal-xmpp/sonar"
@@ -100,12 +99,14 @@ func (m *Offline) ServerFeatures(_ context.Context) ([]string, error) {
 // AccountFeatures returns offline module account disco features.
 func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
+/*
 // Interceptors returns offline outbound interceptor.
 func (m *Offline) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
 		{Priority: math.MinInt32, Type: module.OutboundInterceptor},
 	}
 }
+*/
 
 // InterceptStanza will be used by offline module to archive outbound messages.
 func (m *Offline) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {

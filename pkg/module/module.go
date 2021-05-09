@@ -17,7 +17,6 @@ package module
 import (
 	"context"
 	"errors"
-	"sort"
 
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -61,61 +60,16 @@ type IQProcessor interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
-// InterceptorType defines stanza interceptor type.
-type InterceptorType int
-
-const (
-	// InboundInterceptor represents an inbound interceptor type.
-	InboundInterceptor = InterceptorType(iota)
-
-	// OutboundInterceptor represents an outbound interceptor type.
-	OutboundInterceptor
-)
-
-// StanzaInterceptor type allows to dynamically transform stanza content.
-// Interceptors may be invoked upon receiving a stanza or before sending it to the target.
-type StanzaInterceptor struct {
-	// ID is the interceptor identifier. Note this identifier is intended to discern which interceptor
-	// is being invoked when calling InterceptStanza method, so it doesn't need to be unique across different modules.
-	ID int
-
-	// Type determines whether the interceptor should be invoked; either upon receiving a stanza or before sending it to the target.
-	Type InterceptorType
-
-	// Priority represents interceptor priority that's used to determine which interceptors should be invoked first.
-	// The higher the number the more priority.
-	Priority int32
-}
-
 // ErrInterceptionInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
 var ErrInterceptionInterrupted = errors.New("module: stanza interception interrupted")
 
-// StanzaInterceptorProcessor represents an stanza interceptor module type.
-type StanzaInterceptorProcessor interface {
-	Module
-
-	// Interceptors returns a set of all module interceptors.
-	Interceptors() []StanzaInterceptor
-
-	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-	// To interrupt interception ErrInterceptionInterrupted should be returned.
-	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
-}
-
-type stanzaInterceptor struct {
-	StanzaInterceptor
-	fn func(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
-}
-
 // Modules is the global module hub.
 type Modules struct {
-	mods             []Module
-	iqProcessors     []IQProcessor
-	recvInterceptors []stanzaInterceptor
-	sendInterceptors []stanzaInterceptor
-	hosts            hosts
-	router           router.Router
-	sn               *sonar.Sonar
+	mods         []Module
+	iqProcessors []IQProcessor
+	hosts        hosts
+	router       router.Router
+	sn           *sonar.Sonar
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -203,27 +157,6 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-// InterceptStanza performs module stanza transformation.
-func (m *Modules) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-	var interceptors []stanzaInterceptor
-	switch {
-	case incoming:
-		interceptors = m.recvInterceptors
-	default:
-		interceptors = m.sendInterceptors
-	}
-	var err error
-
-	ts := stanza
-	for _, inter := range interceptors {
-		ts, err = inter.fn(ctx, ts, inter.ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ts, nil
-}
-
 // StreamFeatures returns stream features of all registered modules.
 func (m *Modules) StreamFeatures(ctx context.Context, domain string) ([]stravaganza.Element, error) {
 	var sfs []stravaganza.Element
@@ -260,30 +193,5 @@ func (m *Modules) setupModules() {
 		if ok {
 			m.iqProcessors = append(m.iqProcessors, iqPr)
 		}
-		stanzaInterceptorPr, ok := mod.(StanzaInterceptorProcessor)
-		if ok {
-			stanzaInterceptors := stanzaInterceptorPr.Interceptors()
-			for _, interceptor := range stanzaInterceptors {
-				switch interceptor.Type {
-				case InboundInterceptor:
-					m.recvInterceptors = append(m.recvInterceptors, stanzaInterceptor{
-						StanzaInterceptor: interceptor,
-						fn:                stanzaInterceptorPr.InterceptStanza,
-					})
-				case OutboundInterceptor:
-					m.sendInterceptors = append(m.sendInterceptors, stanzaInterceptor{
-						StanzaInterceptor: interceptor,
-						fn:                stanzaInterceptorPr.InterceptStanza,
-					})
-				}
-			}
-		}
 	}
-	// sort interceptors by priority
-	sort.Slice(m.recvInterceptors, func(i, j int) bool {
-		return m.recvInterceptors[i].Priority > m.recvInterceptors[j].Priority
-	})
-	sort.Slice(m.sendInterceptors, func(i, j int) bool {
-		return m.sendInterceptors[i].Priority > m.sendInterceptors[j].Priority
-	})
 }

@@ -53,9 +53,6 @@ type Config struct {
 
 	// TargetEntity specifies target entity type for which module IQ handler should be applied.
 	TargetEntity string
-
-	// Interceptors contains external module StanzaInterceptor set.
-	Interceptors []module.StanzaInterceptor
 }
 
 var dialExtConnFn = dialExtConn
@@ -151,10 +148,12 @@ func (m *ExtModule) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return err
 }
 
+/*
 // Interceptors returns a set of all module interceptors.
 func (m *ExtModule) Interceptors() []module.StanzaInterceptor {
 	return m.cfg.Interceptors
 }
+*/
 
 // InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
 func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {

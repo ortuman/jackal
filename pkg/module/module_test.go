@@ -89,39 +89,3 @@ func TestModules_ProcessIQ(t *testing.T) {
 	require.Len(t, iqPrMock.MatchesNamespaceCalls(), 1)
 	require.Len(t, iqPrMock.ProcessIQCalls(), 1)
 }
-
-func TestModules_InterceptStanza(t *testing.T) {
-	// given
-	stanzaInterceptorPrMock := &StanzaInterceptorProcessorMock{}
-	stanzaInterceptorPrMock.InterceptorsFunc = func() []StanzaInterceptor {
-		return []StanzaInterceptor{
-			{Type: InboundInterceptor, Priority: 500},
-			{Type: OutboundInterceptor, Priority: 500},
-		}
-	}
-	stanzaInterceptorPrMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
-		return stanza, nil
-	}
-
-	mods := &Modules{
-		mods: []Module{stanzaInterceptorPrMock},
-	}
-	mods.setupModules()
-
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg, _ := b.BuildMessage()
-
-	// when
-	_, _ = mods.InterceptStanza(context.Background(), msg, true)
-	_, _ = mods.InterceptStanza(context.Background(), msg, false)
-
-	// then
-	require.Len(t, stanzaInterceptorPrMock.InterceptStanzaCalls(), 2)
-}

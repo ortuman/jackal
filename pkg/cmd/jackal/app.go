@@ -448,7 +448,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	for _, extCfg := range cfg.External {
 		var nsMatcher stringmatcher.Matcher
 
-		var interceptors []module.StanzaInterceptor
 		switch {
 		case len(extCfg.IQHandler.Namespace.In) > 0:
 			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
@@ -458,20 +457,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			if err != nil {
 				return err
 			}
-		}
-		for _, interceptor := range extCfg.StanzaInterceptors {
-			var typ module.InterceptorType
-			switch {
-			case interceptor.Incoming:
-				typ = module.InboundInterceptor
-			default:
-				typ = module.OutboundInterceptor
-			}
-			interceptors = append(interceptors, module.StanzaInterceptor{
-				ID:       interceptor.ID,
-				Type:     typ,
-				Priority: interceptor.Priority,
-			})
 		}
 		mods = append(mods, externalmodule.New(
 			extCfg.Address,
@@ -483,7 +468,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 				Topics:           extCfg.EventHandler.Topics,
 				TargetEntity:     extCfg.IQHandler.TargetEntity,
 				NamespaceMatcher: nsMatcher,
-				Interceptors:     interceptors,
 			},
 		))
 	}

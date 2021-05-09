@@ -17,7 +17,6 @@ package xep0191
 import (
 	"context"
 	"fmt"
-	"math"
 
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
@@ -147,6 +146,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 	return nil
 }
 
+/*
 // Interceptors returns blocklist stanza interceptors.
 func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
@@ -154,6 +154,7 @@ func (m *BlockList) Interceptors() []module.StanzaInterceptor {
 		{ID: outgoingIID, Priority: math.MaxInt32, Type: module.OutboundInterceptor},
 	}
 }
+*/
 
 // InterceptStanza will be used by blocklist module to determine whether a stanza should be blocked.
 func (m *BlockList) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {

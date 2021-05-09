@@ -28,7 +28,6 @@ import (
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -125,12 +124,14 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
+/*
 // Interceptors returns carbons stanza interceptor.
 func (p *Carbons) Interceptors() []module.StanzaInterceptor {
 	return []module.StanzaInterceptor{
 		{Type: module.OutboundInterceptor},
 	}
 }
+*/
 
 // InterceptStanza will be used by carbons module to strip private element before routing stanza.
 func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {

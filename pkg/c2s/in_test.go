@@ -670,9 +670,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// modules mock
 			modsMock.StreamFeaturesFunc = func(_ context.Context, _ string) ([]stravaganza.Element, error) { return nil, nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
-			modsMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-				return stanza, nil
-			}
 
 			// authenticator mock
 			authMock.MechanismFunc = func() string { return "PLAIN" }

@@ -27,11 +27,6 @@ type iqProcessor interface {
 	IQProcessor
 }
 
-//go:generate moq -out stanza_interceptor_processor.mock_test.go . StanzaInterceptorProcessor
-type stanzaInterceptorProcessor interface {
-	StanzaInterceptorProcessor
-}
-
 //go:generate moq -out module.mock_test.go . module
 type module interface {
 	Module
