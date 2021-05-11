@@ -20,13 +20,14 @@ import (
 	"io"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
@@ -53,9 +54,6 @@ type Config struct {
 
 	// TargetEntity specifies target entity type for which module IQ handler should be applied.
 	TargetEntity string
-
-	// Interceptors contains external module StanzaInterceptor set.
-	Interceptors []module.StanzaInterceptor
 }
 
 var dialExtConnFn = dialExtConn
@@ -66,7 +64,7 @@ type ExtModule struct {
 	address  string
 	isSecure bool
 	cfg      Config
-	sonar    *sonar.Sonar
+	mh       *module.Hooks
 	subs     []sonar.SubID
 	router   router.Router
 
@@ -79,7 +77,7 @@ func New(
 	address string,
 	isSecure bool,
 	router router.Router,
-	sonar *sonar.Sonar,
+	mh *module.Hooks,
 	cfg Config,
 ) *ExtModule {
 	return &ExtModule{
@@ -87,7 +85,7 @@ func New(
 		isSecure: isSecure,
 		cfg:      cfg,
 		router:   router,
-		sonar:    sonar,
+		mh:       mh,
 	}
 }
 
@@ -151,40 +149,6 @@ func (m *ExtModule) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return err
 }
 
-// Interceptors returns a set of all module interceptors.
-func (m *ExtModule) Interceptors() []module.StanzaInterceptor {
-	return m.cfg.Interceptors
-}
-
-// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-func (m *ExtModule) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
-	resp, err := m.cl.InterceptStanza(ctx, &extmodulepb.InterceptStanzaRequest{
-		Id:     int64(id),
-		Stanza: stanza.Proto(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if resp.Interrupt {
-		return nil, module.ErrInterceptStanzaInterrupted
-	}
-	// ensure stanza type
-	switch stanza.(type) {
-	case *stravaganza.IQ:
-		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildIQ()
-	case *stravaganza.Presence:
-		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildPresence()
-	case *stravaganza.Message:
-		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildMessage()
-	default:
-		return stravaganza.NewBuilderFromProto(resp.Stanza).
-			BuildStanza()
-	}
-}
-
 // Start starts external module.
 func (m *ExtModule) Start(ctx context.Context) error {
 	// dial external module conn
@@ -203,9 +167,9 @@ func (m *ExtModule) Start(ctx context.Context) error {
 	go m.recvStanzas(stm)
 
 	// subscribe to handler events
-	for _, topic := range m.cfg.Topics {
-		m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
-	}
+	// for _, topic := range m.cfg.Topics {
+	//	m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
+	// }
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
 		"secured", m.isSecure,
 	)
@@ -215,9 +179,9 @@ func (m *ExtModule) Start(ctx context.Context) error {
 // Stop stops external module.
 func (m *ExtModule) Stop(_ context.Context) error {
 	// unsubscribe from external module events
-	for _, sub := range m.subs {
-		m.sonar.Unsubscribe(sub)
-	}
+	// for _, sub := range m.subs {
+	//	m.sonar.Unsubscribe(sub)
+	// }
 	if err := m.cc.Close(); err != nil {
 		return err
 	}
@@ -314,8 +278,8 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		var evInf extmodulepb.ExternalComponentEventInfo
 		evInf.Id = inf.ID
 		evInf.Host = inf.Host
-		if inf.Stanza != nil {
-			evInf.Stanza = inf.Stanza.Proto()
+		if inf.Element != nil {
+			evInf.Stanza = inf.Element.Proto()
 		}
 		ret.Payload = &extmodulepb.ProcessEventRequest_ExtComponentEvInfo{
 			ExtComponentEvInfo: &evInf,

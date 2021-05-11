@@ -64,7 +64,7 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			a.rep,
 			a.peppers,
 			a.shapers,
-			a.sonar,
+			a.mh,
 			c2s.Config{
 				ConnectTimeout:   cfg.ConnectTimeout,
 				KeepAliveTimeout: cfg.KeepAliveTimeout,
@@ -92,7 +92,7 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			a.s2sInHub,
 			a.kv,
 			a.shapers,
-			a.sonar,
+			a.mh,
 			s2s.Config{
 				ConnectTimeout:   cfg.ConnectTimeout,
 				KeepAliveTimeout: cfg.KeepAliveTimeout,
@@ -116,7 +116,7 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 			a.extCompMng,
 			a.router,
 			a.shapers,
-			a.sonar,
+			a.mh,
 			xep0114.Config{
 				ConnectTimeout:   cfg.ConnectTimeout,
 				KeepAliveTimeout: cfg.KeepAliveTimeout,

@@ -20,7 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/version"
@@ -43,16 +44,15 @@ type Conn interface {
 
 // Manager is the cluster connection manager.
 type Manager struct {
-	mu               sync.RWMutex
-	conns            map[string]*clusterConn
-	updateMembersSub sonar.SubID
-	sonar            *sonar.Sonar
+	mu    sync.RWMutex
+	conns map[string]*clusterConn
+	mh    *module.Hooks
 }
 
 // NewManager returns a new initialized cluster connection manager.
-func NewManager(sonar *sonar.Sonar) *Manager {
+func NewManager(mh *module.Hooks) *Manager {
 	return &Manager{
-		sonar: sonar,
+		mh:    mh,
 		conns: make(map[string]*clusterConn),
 	}
 }
@@ -79,7 +79,7 @@ func (m *Manager) Start(_ context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.updateMembersSub = m.sonar.Subscribe(event.MemberListUpdated, m.onMemberListUpdated)
+	m.mh.AddHook(event.MemberListUpdated, m.onMemberListUpdated, module.DefaultPriority)
 
 	log.Infof("Started cluster connection manager")
 	return nil
@@ -98,17 +98,17 @@ func (m *Manager) Stop(_ context.Context) error {
 		}
 		delete(m.conns, instanceID)
 	}
-	m.sonar.Unsubscribe(m.updateMembersSub)
+	m.mh.RemoveHook(event.MemberListUpdated, m.onMemberListUpdated)
 
 	log.Infof("Stopped cluster connection manager... (%d total connections)", count)
 	return nil
 }
 
-func (m *Manager) onMemberListUpdated(ctx context.Context, ev sonar.Event) error {
+func (m *Manager) onMemberListUpdated(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	inf := ev.Info().(*event.MemberListEventInfo)
+	inf := hookInf.Info.(*event.MemberListEventInfo)
 
 	// close unregistered members connections...
 	for _, instanceID := range inf.UnregisteredKeys {
@@ -129,5 +129,5 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, ev sonar.Event) error
 
 		m.conns[member.InstanceID] = cl
 	}
-	return nil
+	return false, nil
 }

@@ -19,7 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
@@ -53,8 +54,7 @@ type Offline struct {
 	hosts  hosts
 	rep    repository.Offline
 	locker locker.Locker
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	mh     *module.Hooks
 }
 
 // New creates and initializes a new Offline instance.
@@ -63,7 +63,7 @@ func New(
 	hosts *host.Hosts,
 	rep repository.Offline,
 	locker locker.Locker,
-	sn *sonar.Sonar,
+	mh *module.Hooks,
 	cfg Config,
 ) *Offline {
 	return &Offline{
@@ -72,7 +72,7 @@ func New(
 		hosts:  hosts,
 		rep:    rep,
 		locker: locker,
-		sn:     sn,
+		mh:     mh,
 	}
 }
 
@@ -94,10 +94,10 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamMessageUnrouted, m.onMessageUnrouted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamMessageUnrouted, m.onMessageUnrouted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
+	m.mh.AddHook(event.C2SStreamElementReceived, m.onElementRecv, module.LowestPriority)
+	m.mh.AddHook(event.S2SInStreamElementReceived, m.onElementRecv, module.LowestPriority)
+	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
+	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
 	log.Infow("Started offline module", "xep", ModuleName)
 	return nil
@@ -105,37 +105,54 @@ func (m *Offline) Start(_ context.Context) error {
 
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
-	for _, sub := range m.subs {
-		m.sn.Unsubscribe(sub)
-	}
+	m.mh.RemoveHook(event.C2SStreamElementReceived, m.onElementRecv)
+	m.mh.RemoveHook(event.S2SInStreamElementReceived, m.onElementRecv)
+	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
+
 	log.Infow("Stopped offline module", "xep", ModuleName)
 	return nil
 }
 
-func (m *Offline) onMessageUnrouted(ctx context.Context, ev sonar.Event) error {
+func (m *Offline) onElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
 	var msg *stravaganza.Message
 
-	switch inf := ev.Info().(type) {
+	switch inf := hookInf.Info.(type) {
 	case *event.C2SStreamEventInfo:
 		msg = inf.Element.(*stravaganza.Message)
 	case *event.S2SStreamEventInfo:
 		msg = inf.Element.(*stravaganza.Message)
 	}
+	if !isMessageArchievable(msg) {
+		return false, nil
+	}
 	return m.archiveMessage(ctx, msg)
 }
 
-func (m *Offline) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (m *Offline) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
 	if toJID.IsFull() || !m.hosts.IsLocalHost(toJID.Domain()) {
-		return nil
+		return false, nil
 	}
 	if !pr.IsAvailable() || pr.Priority() < 0 {
-		return nil
+		return false, nil
 	}
-	return m.deliverOfflineMessages(ctx, toJID.Node())
+	return false, m.deliverOfflineMessages(ctx, toJID.Node())
+}
+
+func (m *Offline) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.UserEventInfo)
+
+	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = lock.Release(ctx) }()
+
+	return false, m.rep.DeleteOfflineMessages(ctx, inf.Username)
 }
 
 func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) error {
@@ -165,58 +182,44 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	return nil
 }
 
-func (m *Offline) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
-
-	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = lock.Release(ctx) }()
-
-	return m.rep.DeleteOfflineMessages(ctx, inf.Username)
-}
-
-func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) error {
-	if !isMessageArchievable(msg) {
-		return nil
-	}
+func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) (halt bool, err error) {
 	toJID := msg.ToJID()
 	username := toJID.Node()
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(username))
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() { _ = lock.Release(ctx) }()
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if qSize == m.cfg.QueueSize { // offline queue is full
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
-		return nil
+		return true, nil // already handled
 	}
 	// add delay info
 	dMsg := xmpputil.MakeDelayMessage(msg, time.Now(), toJID.Domain(), "Offline Storage")
 
 	// enqueue offline message
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
-		return err
+		return false, err
 	}
-	err = m.sn.Post(ctx, sonar.NewEventBuilder(event.OfflineMessageArchived).
-		WithInfo(&event.OfflineEventInfo{
+	_, err = m.mh.Run(ctx, event.OfflineMessageArchived, &module.HookInfo{
+		Info: &event.OfflineEventInfo{
 			Username: username,
 			Message:  dMsg,
-		}).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
 	if err != nil {
-		return err
+		return false, err
 	}
 	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
-	return nil
+
+	return true, nil // already handled
 }
 
 func isMessageArchievable(msg *stravaganza.Message) bool {

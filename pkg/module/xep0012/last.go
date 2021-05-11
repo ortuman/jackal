@@ -16,11 +16,11 @@ package xep0012
 
 import (
 	"context"
-	"math"
 	"strconv"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -30,7 +30,6 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -52,8 +51,7 @@ type Last struct {
 	hosts     hosts
 	resMng    resourceManager
 	rep       repository.Repository
-	sn        *sonar.Sonar
-	subs      []sonar.SubID
+	mh        *module.Hooks
 	startedAt int64
 }
 
@@ -63,14 +61,14 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
-	sn *sonar.Sonar,
+	mh *module.Hooks,
 ) *Last {
 	return &Last{
 		router: router,
 		hosts:  hosts,
 		resMng: resMng,
 		rep:    rep,
-		sn:     sn,
+		mh:     mh,
 	}
 }
 
@@ -108,41 +106,12 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 }
 
-// Interceptors returns last activity stanza interceptor.
-func (m *Last) Interceptors() []module.StanzaInterceptor {
-	return []module.StanzaInterceptor{
-		{Priority: math.MaxInt64, Incoming: true},
-	}
-}
-
-// InterceptStanza will be used by last activity module to determine whether requesting entity is authorized.
-func (m *Last) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
-	iq, ok := stanza.(*stravaganza.IQ)
-	if !ok {
-		return stanza, nil
-	}
-	toJID := iq.ToJID()
-
-	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
-	if !isLocalTo || !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
-		return stanza, nil
-	}
-	ok, err := m.isSubscribedTo(ctx, toJID, iq.FromJID())
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		// reply on behalf
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
-		return nil, module.ErrInterceptStanzaInterrupted
-	}
-	return stanza, nil
-}
-
 // Start starts last activity module.
 func (m *Last) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
+	m.mh.AddHook(event.C2SStreamElementReceived, m.onElementRecv, module.DefaultPriority)
+	m.mh.AddHook(event.S2SInStreamElementReceived, m.onElementRecv, module.DefaultPriority)
+	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
+	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
 	m.startedAt = time.Now().Unix()
 
@@ -152,22 +121,61 @@ func (m *Last) Start(_ context.Context) error {
 
 // Stop stops last activity module.
 func (m *Last) Stop(_ context.Context) error {
-	for _, sub := range m.subs {
-		m.sn.Unsubscribe(sub)
-	}
+	m.mh.RemoveHook(event.C2SStreamElementReceived, m.onElementRecv)
+	m.mh.RemoveHook(event.S2SInStreamElementReceived, m.onElementRecv)
+	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
+
 	log.Infow("Stopped last module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *Last) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
-	return m.rep.DeleteLast(ctx, inf.Username)
+func (m *Last) onElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	var iq *stravaganza.IQ
+	var ok bool
+
+	switch inf := hookInf.Info.(type) {
+	case *event.C2SStreamEventInfo:
+		iq, ok = inf.Element.(*stravaganza.IQ)
+	case *event.S2SStreamEventInfo:
+		iq, ok = inf.Element.(*stravaganza.IQ)
+	default:
+		return false, nil
+	}
+	if !ok {
+		return false, nil
+	}
+	return m.processIncomingIQ(ctx, iq)
 }
 
-func (m *Last) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) (halt bool, err error) {
+	toJID := iq.ToJID()
+
+	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
+	if !isLocalTo || !toJID.IsFullWithUser() || iq.ChildNamespace("query", lastActivityNamespace) == nil {
+		return false, nil
+	}
+	ok, err := m.isSubscribedTo(ctx, toJID, iq.FromJID())
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		// reply on behalf
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		return true, nil // already handled
+	}
+	return false, nil
+}
+
+func (m *Last) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.UserEventInfo)
+	return false, m.rep.DeleteLast(ctx, inf.Username)
+}
+
+func (m *Last) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processC2SPresence(ctx, pr)
+	return false, m.processC2SPresence(ctx, pr)
 }
 
 func (m *Last) processC2SPresence(ctx context.Context, pr *stravaganza.Presence) error {
@@ -202,14 +210,14 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.LastActivityFetched).
-		WithInfo(&event.LastActivityEventInfo{
+	_, err := m.mh.Run(ctx, event.LastActivityFetched, &module.HookInfo{
+		Info: &event.LastActivityEventInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) error {
@@ -245,14 +253,14 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.LastActivityFetched).
-		WithInfo(&event.LastActivityEventInfo{
+	_, err = m.mh.Run(ctx, event.LastActivityFetched, &module.HookInfo{
+		Info: &event.LastActivityEventInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 func (m *Last) sendReply(ctx context.Context, iq *stravaganza.IQ, seconds int64, status string) {

@@ -25,8 +25,6 @@ import (
 	"syscall"
 	"time"
 
-	modhook "github.com/ortuman/jackal/pkg/module/hook"
-
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -102,7 +100,7 @@ type serverApp struct {
 	args   []string
 
 	peppers *pepper.Keys
-	mh      *modhook.Hooks
+	mh      *module.Hooks
 
 	etcdCli *etcdv3.Client
 	locker  locker.Locker
@@ -198,8 +196,8 @@ func run(output io.Writer, args []string) error {
 	}
 	a.peppers = peppers
 
-	// init sonar hub
-	a.mh = modhook.NewHooks()
+	// init hooks
+	a.mh = module.NewHooks()
 
 	// init etcd
 	if err := a.initEtcd(cfg.Cluster.Etcd); err != nil {
@@ -390,7 +388,7 @@ func (a *serverApp) initListeners(configs []listenerConfig) error {
 }
 
 func (a *serverApp) initS2S(cfg s2sOutConfig) {
-	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.sonar, s2s.Config{
+	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.mh, s2s.Config{
 		DialTimeout:      cfg.DialTimeout,
 		DialbackSecret:   cfg.DialbackSecret,
 		ConnectTimeout:   cfg.ConnectTimeout,
@@ -409,7 +407,7 @@ func (a *serverApp) initRouters() {
 	a.resMng = c2s.NewResourceManager(a.kv)
 
 	// init C2S router
-	a.localRouter = c2s.NewLocalRouter(a.hosts, a.mh)
+	a.localRouter = c2s.NewLocalRouter(a.hosts)
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
 	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.mh)
@@ -449,7 +447,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 	for _, extCfg := range cfg.External {
 		var nsMatcher stringmatcher.Matcher
 
-		var interceptors []module.StanzaInterceptor
 		switch {
 		case len(extCfg.IQHandler.Namespace.In) > 0:
 			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
@@ -459,13 +456,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			if err != nil {
 				return err
 			}
-		}
-		for _, interceptor := range extCfg.StanzaInterceptors {
-			interceptors = append(interceptors, module.StanzaInterceptor{
-				ID:       interceptor.ID,
-				Incoming: interceptor.Incoming,
-				Priority: interceptor.Priority,
-			})
 		}
 		mods = append(mods, externalmodule.New(
 			extCfg.Address,
@@ -477,7 +467,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 				Topics:           extCfg.EventHandler.Topics,
 				TargetEntity:     extCfg.IQHandler.TargetEntity,
 				NamespaceMatcher: nsMatcher,
-				Interceptors:     interceptors,
 			},
 		))
 	}

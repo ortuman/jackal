@@ -23,8 +23,8 @@ const (
 	// ExternalComponentUnregistered event is posted when a external component connection is unregistered.
 	ExternalComponentUnregistered = "ext_component.stream.unregistered"
 
-	// ExternalComponentStanzaReceived event is posted whenever a stanza is received over a external component stream.
-	ExternalComponentStanzaReceived = "ext_component.stream.stanza_received"
+	// ExternalComponentElementReceived event is posted whenever an XMPP element is received over a external component stream.
+	ExternalComponentElementReceived = "ext_component.stream.element_received"
 )
 
 // ExternalComponentEventInfo contains all info associated to an external component event.
@@ -35,6 +35,6 @@ type ExternalComponentEventInfo struct {
 	// Host is the external component host domain.
 	Host string
 
-	// Stanza represents the event associated stanza.
-	Stanza stravaganza.Stanza
+	// Element is the event associated XMPP element.
+	Element stravaganza.Element
 }

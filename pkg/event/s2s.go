@@ -57,10 +57,6 @@ const (
 
 	// S2SInStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more S2S streams.
 	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
-
-	// S2SInStreamMessageUnrouted event is posted when a received message stanza could not be routed
-	// because no destination available resource was found.
-	S2SInStreamMessageUnrouted = "s2s.in.stream.message_unrouted"
 )
 
 // S2SStreamEventInfo contains all info associated to a S2S event.

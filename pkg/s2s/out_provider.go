@@ -21,7 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/host"
@@ -36,7 +37,7 @@ type OutProvider struct {
 	cfg     Config
 	kv      kv.KV
 	shapers shaper.Shapers
-	sn      *sonar.Sonar
+	mh      *module.Hooks
 
 	mu         sync.RWMutex
 	outStreams map[string]s2sOut
@@ -51,14 +52,14 @@ func NewOutProvider(
 	hosts *host.Hosts,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	sn *sonar.Sonar,
+	mh *module.Hooks,
 	cfg Config,
 ) *OutProvider {
 	op := &OutProvider{
 		hosts:      hosts,
 		shapers:    shapers,
 		kv:         kv,
-		sn:         sn,
+		mh:         mh,
 		cfg:        cfg,
 		outStreams: make(map[string]s2sOut),
 		doneCh:     make(chan chan struct{}),
@@ -192,7 +193,7 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		p.cfg,
 		p.kv,
 		p.shapers,
-		p.sn,
+		p.mh,
 		p.unregister,
 	)
 }

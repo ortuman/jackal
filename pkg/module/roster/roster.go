@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -53,8 +54,7 @@ type Roster struct {
 	resMng resourceManager
 	router router.Router
 	hosts  hosts
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	mh     *module.Hooks
 }
 
 // New returns a new initialized Roster instance.
@@ -63,14 +63,14 @@ func New(
 	rep repository.Repository,
 	resMng *c2s.ResourceManager,
 	hosts *host.Hosts,
-	sonar *sonar.Sonar,
+	mh *module.Hooks,
 ) *Roster {
 	return &Roster{
 		router: router,
 		rep:    rep,
 		resMng: resMng,
 		hosts:  hosts,
-		sn:     sonar,
+		mh:     mh,
 	}
 }
 
@@ -111,9 +111,9 @@ func (r *Roster) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts roster module.
 func (r *Roster) Start(_ context.Context) error {
-	r.subs = append(r.subs, r.sn.Subscribe(event.C2SStreamPresenceReceived, r.onPresenceRecv))
-	r.subs = append(r.subs, r.sn.Subscribe(event.S2SInStreamPresenceReceived, r.onPresenceRecv))
-	r.subs = append(r.subs, r.sn.Subscribe(event.UserDeleted, r.onUserDeleted))
+	r.mh.AddHook(event.C2SStreamPresenceReceived, r.onPresenceRecv, module.DefaultPriority)
+	r.mh.AddHook(event.S2SInStreamPresenceReceived, r.onPresenceRecv, module.DefaultPriority)
+	r.mh.AddHook(event.UserDeleted, r.onUserDeleted, module.DefaultPriority)
 
 	log.Infow("Started roster module", "xep", "roster")
 	return nil
@@ -121,40 +121,42 @@ func (r *Roster) Start(_ context.Context) error {
 
 // Stop stops roster module.
 func (r *Roster) Stop(_ context.Context) error {
-	for _, sub := range r.subs {
-		r.sn.Unsubscribe(sub)
-	}
+	r.mh.RemoveHook(event.C2SStreamPresenceReceived, r.onPresenceRecv)
+	r.mh.RemoveHook(event.S2SInStreamPresenceReceived, r.onPresenceRecv)
+	r.mh.RemoveHook(event.UserDeleted, r.onUserDeleted)
+
 	log.Infow("Stopped roster module", "xep", "roster")
 	return nil
 }
 
-func (r *Roster) onPresenceRecv(ctx context.Context, ev sonar.Event) error {
+func (r *Roster) onPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
 	var pr *stravaganza.Presence
-	switch inf := ev.Info().(type) {
+	switch inf := hookInf.Info.(type) {
 	case *event.C2SStreamEventInfo:
 		pr, _ = inf.Element.(*stravaganza.Presence)
 	case *event.S2SStreamEventInfo:
 		pr, _ = inf.Element.(*stravaganza.Presence)
 	default:
-		return nil
+		return false, nil
 	}
 	if pr.ToJID().IsFull() {
-		return nil
+		return false, nil
 	}
 	if err := r.processPresence(ctx, pr); err != nil {
-		return fmt.Errorf("roster: failed to process C2S presence: %s", err)
+		return false, fmt.Errorf("roster: failed to process C2S presence: %s", err)
 	}
-	return nil
+	return false, nil
 }
 
-func (r *Roster) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
-	return r.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
+func (r *Roster) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.UserEventInfo)
+	err = r.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		if err := tx.DeleteRosterNotifications(ctx, inf.Username); err != nil {
 			return err
 		}
 		return tx.DeleteRosterItems(ctx, inf.Username)
 	})
+	return false, err
 }
 
 func (r *Roster) processPresence(ctx context.Context, pr *stravaganza.Presence) error {
@@ -192,7 +194,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// return empty response in case version matches...
 	if ver > 0 && ver == parseVer(q.Attribute("ver")) {
 		_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
-		err = r.postRosterEvent(ctx, event.RosterRequested, &event.RosterEventInfo{
+		err = r.runHook(ctx, event.RosterRequested, &event.RosterEventInfo{
 			Username: usrJID.Node(),
 		})
 		if err != nil {
@@ -218,7 +220,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 
 	log.Infow("Fetched user roster", "jid", usrJID.String(), "xep", "roster")
 
-	err = r.postRosterEvent(ctx, event.RosterRequested, &event.RosterEventInfo{
+	err = r.runHook(ctx, event.RosterRequested, &event.RosterEventInfo{
 		Username: usrJID.Node(),
 	})
 	if err != nil {
@@ -722,7 +724,7 @@ func (r *Roster) upsertItem(ctx context.Context, ri *rostermodel.Item) error {
 	if err != nil {
 		return err
 	}
-	return r.postRosterEvent(ctx, event.RosterItemUpdated, &event.RosterEventInfo{
+	return r.runHook(ctx, event.RosterItemUpdated, &event.RosterEventInfo{
 		Username:     ri.Username,
 		JID:          ri.JID,
 		Subscription: ri.Subscription,
@@ -743,7 +745,7 @@ func (r *Roster) deleteItem(ctx context.Context, ri *rostermodel.Item) error {
 	if err != nil {
 		return err
 	}
-	return r.postRosterEvent(ctx, event.RosterItemUpdated, &event.RosterEventInfo{
+	return r.runHook(ctx, event.RosterItemUpdated, &event.RosterEventInfo{
 		Username:     ri.Username,
 		JID:          ri.JID,
 		Subscription: rostermodel.Remove,
@@ -835,12 +837,12 @@ func (r *Roster) getStreamValue(username, resource, key string) (val string, err
 	return stm.Value(key), nil
 }
 
-func (r *Roster) postRosterEvent(ctx context.Context, eventName string, inf *event.RosterEventInfo) error {
-	return r.sn.Post(ctx, sonar.NewEventBuilder(eventName).
-		WithInfo(inf).
-		WithSender(r).
-		Build(),
-	)
+func (r *Roster) runHook(ctx context.Context, hookName string, inf *event.RosterEventInfo) error {
+	_, err := r.mh.Run(ctx, hookName, &module.HookInfo{
+		Info:   inf,
+		Sender: r,
+	})
+	return err
 }
 
 func decodeRosterItem(elem stravaganza.Element) (*rostermodel.Item, error) {
