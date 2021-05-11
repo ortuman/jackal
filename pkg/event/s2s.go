@@ -46,6 +46,9 @@ const (
 	// S2SInStreamMessageReceived event is posted when a message stanza is received over an incoming S2S stream.
 	S2SInStreamMessageReceived = "s2s.in.stream.message_received"
 
+	// S2SStreamWillRouteElement event is posted when an XMPP element is about to be routed on an incoming S2S stream.
+	S2SStreamWillRouteElement = "s2s.in.stream.will_route_element"
+
 	// S2SInStreamIQRouted event is posted when an iq stanza is successfully routed to one ore more S2S streams.
 	S2SInStreamIQRouted = "s2s.in.stream.iq_routed"
 

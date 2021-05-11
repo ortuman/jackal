@@ -12,35 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package modhook
+package module
 
 import (
 	"context"
-	"errors"
+	"math"
 	"reflect"
 	"sort"
 	"sync"
 )
 
-// ErrExecutionHalted is returned by Run and RunFold methods to indicate the interruption of a hook execution.
-var ErrExecutionHalted = errors.New("modhook: hook execution halted")
+type HookPriority int32
+
+const (
+	LowestPriority  = HookPriority(math.MinInt32)
+	DefaultPriority = HookPriority(0)
+	HighestPriority = HookPriority(math.MaxInt32)
+)
 
 // Handler defines a generic hook handler function.
-type Handler func(ctx context.Context, in Input, out *Output) error
+type Handler func(ctx context.Context, hookInf *HookInfo) (halt bool, err error)
 
-// Input defines a hook execution input type.
-type Input struct {
-	Info interface{}
-}
-
-// Output defines a hook execution output type.
-type Output struct {
-	Info interface{}
+// HookInfo defines a hook execution info type.
+type HookInfo struct {
+	Info   interface{}
+	Sender interface{}
 }
 
 type handler struct {
 	h Handler
-	p int32
+	p HookPriority
 }
 
 // Hooks represents a set of module hook handlers.
@@ -58,7 +59,7 @@ func NewHooks() *Hooks {
 
 // AddHook adds a new handler to a given hook providing an execution priority value.
 // hnd priority may be any number (including negative). Handlers with a higher priority are executed first.
-func (h *Hooks) AddHook(hook string, hnd Handler, priority int32) {
+func (h *Hooks) AddHook(hook string, hnd Handler, priority HookPriority) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -89,31 +90,20 @@ func (h *Hooks) RemoveHook(hook string, hnd Handler) {
 }
 
 // Run invokes all hook handlers in order.
-// If a handler returns ErrExecutionHalted no more handlers are invoked.
-func (h *Hooks) Run(ctx context.Context, hook string, in Input) error {
+// If halted return value is true no more handlers are invoked.
+func (h *Hooks) Run(ctx context.Context, hook string, hookInf *HookInfo) (halted bool, err error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	handlers := h.handlers[hook]
 	for _, handler := range handlers {
-		if err := handler.h(ctx, in, nil); err != nil {
-			return err
+		halt, err := handler.h(ctx, hookInf)
+		if err != nil {
+			return false, err
+		}
+		if halt {
+			return true, nil
 		}
 	}
-	return nil
-}
-
-// RunFold invokes all hook handlers in order propagating execution result across all invocations.
-// If a handler returns ErrExecutionHalted no more handlers are invoked.
-func (h *Hooks) RunFold(ctx context.Context, hook string, in Input, out *Output) error {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	handlers := h.handlers[hook]
-	for _, handler := range handlers {
-		if err := handler.h(ctx, in, out); err != nil {
-			return err
-		}
-	}
-	return nil
+	return false, nil
 }

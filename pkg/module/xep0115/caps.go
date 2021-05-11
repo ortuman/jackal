@@ -28,8 +28,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/event"
@@ -84,8 +85,7 @@ const (
 type Capabilities struct {
 	router router.Router
 	rep    repository.Capabilities
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	mh     *module.Hooks
 
 	mu      sync.RWMutex
 	reqs    map[string]capsInfo
@@ -97,12 +97,12 @@ type Capabilities struct {
 func New(
 	router router.Router,
 	rep repository.Capabilities,
-	sn *sonar.Sonar,
+	mh *module.Hooks,
 ) *Capabilities {
 	return &Capabilities{
 		router: router,
 		rep:    rep,
-		sn:     sn,
+		mh:     mh,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -146,11 +146,11 @@ func (m *Capabilities) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts entity capabilities module.
 func (m *Capabilities) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.C2SStreamIQReceived, m.onC2SIQRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.S2SInStreamIQReceived, m.onS2SIQRecv))
-	m.subs = append(m.subs, m.sn.Subscribe(event.DiscoProvidersStarted, m.onDiscoProvidersStarted))
+	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
+	m.mh.AddHook(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv, module.DefaultPriority)
+	m.mh.AddHook(event.C2SStreamIQReceived, m.onC2SIQRecv, module.DefaultPriority)
+	m.mh.AddHook(event.S2SInStreamIQReceived, m.onS2SIQRecv, module.DefaultPriority)
+	m.mh.AddHook(event.DiscoProvidersStarted, m.onDiscoProvidersStarted, module.DefaultPriority)
 
 	log.Infow("Started capabilities module", "xep", XEPNumber)
 	return nil
@@ -158,43 +158,46 @@ func (m *Capabilities) Start(_ context.Context) error {
 
 // Stop stops entity capabilities module.
 func (m *Capabilities) Stop(_ context.Context) error {
-	for _, sub := range m.subs {
-		m.sn.Unsubscribe(sub)
-	}
+	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.mh.RemoveHook(event.S2SInStreamPresenceReceived, m.onS2SPresenceRecv)
+	m.mh.RemoveHook(event.C2SStreamIQReceived, m.onC2SIQRecv)
+	m.mh.RemoveHook(event.S2SInStreamIQReceived, m.onS2SIQRecv)
+	m.mh.RemoveHook(event.DiscoProvidersStarted, m.onDiscoProvidersStarted)
+
 	log.Infow("Stopped capabilities module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processPresence(ctx, pr)
+	return false, m.processPresence(ctx, pr)
 }
 
-func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.S2SStreamEventInfo)
+func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.S2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processPresence(ctx, pr)
+	return false, m.processPresence(ctx, pr)
 }
 
-func (m *Capabilities) onC2SIQRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (m *Capabilities) onC2SIQRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
 	iq := inf.Element.(*stravaganza.IQ)
-	return m.processIQ(ctx, iq)
+	return false, m.processIQ(ctx, iq)
 }
 
-func (m *Capabilities) onS2SIQRecv(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.S2SStreamEventInfo)
+func (m *Capabilities) onS2SIQRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.S2SStreamEventInfo)
 	iq := inf.Element.(*stravaganza.IQ)
-	return m.processIQ(ctx, iq)
+	return false, m.processIQ(ctx, iq)
 }
 
-func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, ev sonar.Event) error {
-	disc := ev.Sender().(*xep0030.Disco)
+func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	disc := hookInf.Sender.(*xep0030.Disco)
 	m.mu.Lock()
 	m.srvProv = disc.ServerProvider()
 	m.mu.Unlock()
-	return nil
+	return false, nil
 }
 
 func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Presence) error {

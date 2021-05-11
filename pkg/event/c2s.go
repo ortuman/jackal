@@ -23,17 +23,14 @@ const (
 	// C2SStreamRegistered event is posted when a C2S connection is registered.
 	C2SStreamRegistered = "c2s.stream.registered"
 
-	// C2SStreamBounded event is posted when C2S stream is bounded.
-	C2SStreamBounded = "c2s.stream.bounded"
+	// C2SStreamBinded event is posted when C2S stream is bounded.
+	C2SStreamBinded = "c2s.stream.binded"
 
 	// C2SStreamUnregistered event is posted when a C2S connection is unregistered.
 	C2SStreamUnregistered = "c2s.stream.unregistered"
 
 	// C2SStreamElementReceived event is posted when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
-
-	// C2SStreamElementSent event is posted when a XMPP element is sent over a C2S stream.
-	C2SStreamElementSent = "c2s.stream.element_sent"
 
 	// C2SStreamIQReceived event is posted when an iq stanza is received over a C2S stream.
 	C2SStreamIQReceived = "c2s.stream.iq_received"
@@ -44,6 +41,9 @@ const (
 	// C2SStreamMessageReceived event is posted when a message stanza is received over a C2S stream.
 	C2SStreamMessageReceived = "c2s.stream.message_received"
 
+	// C2SStreamWillRouteElement event is posted when an XMPP element is about to be routed over a C2S stream.
+	C2SStreamWillRouteElement = "c2s.stream.will_route_element"
+
 	// C2SStreamIQRouted event is posted when an iq stanza is successfully routed to one ore more C2S streams.
 	C2SStreamIQRouted = "c2s.stream.iq_routed"
 
@@ -53,9 +53,8 @@ const (
 	// C2SStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more C2S streams.
 	C2SStreamMessageRouted = "c2s.stream.message_routed"
 
-	// C2SStreamMessageUnrouted event is posted when a received message stanza could not be routed
-	// because no destination available resource was found.
-	C2SStreamMessageUnrouted = "c2s.stream.message_unrouted"
+	// C2SStreamElementSent event is posted when a XMPP element is sent over a C2S stream.
+	C2SStreamElementSent = "c2s.stream.element_sent"
 )
 
 // C2SStreamEventInfo contains all info associated to a C2S stream event.

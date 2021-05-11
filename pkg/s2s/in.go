@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -33,7 +32,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/module/offline"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -66,7 +64,7 @@ type inS2S struct {
 	inHub        *InHub
 	kv           kv.KV
 	shapers      shaper.Shapers
-	sn           *sonar.Sonar
+	mh           *module.Hooks
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -90,7 +88,7 @@ func newInS2S(
 	inHub *InHub,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	sonar *sonar.Sonar,
+	mh *module.Hooks,
 	cfg Config,
 ) (*inS2S, error) {
 	// set default rate limiter
@@ -123,7 +121,7 @@ func newInS2S(
 		inHub:       inHub,
 		kv:          kv,
 		shapers:     shapers,
-		sn:          sonar,
+		mh:          mh,
 		rq:          runqueue.New(id.String(), log.Errorf),
 		doneCh:      make(chan struct{}),
 		state:       uint32(inConnecting),
@@ -159,7 +157,7 @@ func (s *inS2S) start() error {
 
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
-	err := s.postStreamEvent(ctx, event.S2SInStreamRegistered, &event.S2SStreamEventInfo{
+	_, err := s.hookRun(ctx, event.S2SInStreamRegistered, &event.S2SStreamEventInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -209,7 +207,6 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 			err := s.handleElement(ctx, elem)
 			if err != nil {
 				log.Warnw("Failed to process incoming S2S session element", "error", err, "id", s.id)
-				_ = s.close(ctx)
 				return
 			}
 
@@ -311,16 +308,20 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 	default:
 		if s.flags.isAuthenticated() || s.flags.isDialbackKeyAuthorized() {
 			// post element received event
-			err := s.postStreamEvent(ctx, event.S2SInStreamElementReceived, &event.S2SStreamEventInfo{
+			hInf := &event.S2SStreamEventInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
 				Element: elem,
-			})
+			}
+			halted, err := s.hookRun(ctx, event.S2SInStreamElementReceived, hInf)
 			if err != nil {
 				return err
 			}
-			switch stanza := elem.(type) {
+			if halted {
+				return nil
+			}
+			switch stanza := hInf.Element.(type) {
 			case stravaganza.Stanza:
 				return s.processStanza(ctx, stanza)
 
@@ -337,32 +338,22 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 	if s.comps.IsComponentHost(toJID.Domain()) {
 		return s.comps.ProcessStanza(ctx, stanza)
 	}
-	// apply incoming stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, stanza, true)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptStanzaInterrupted:
-		return nil // stanza processing interrupted
-	default:
-		return err
-	}
 	// handle stanza
-	switch tst := tst.(type) {
+	switch stz := stanza.(type) {
 	case *stravaganza.IQ:
-		return s.processIQ(ctx, tst)
+		return s.processIQ(ctx, stz)
 	case *stravaganza.Presence:
-		return s.processPresence(ctx, tst)
+		return s.processPresence(ctx, stz)
 	case *stravaganza.Message:
-		return s.processMessage(ctx, tst)
+		return s.processMessage(ctx, stz)
 	default:
 		return s.disconnect(ctx, streamerror.E(streamerror.UnsupportedStanzaType))
 	}
 }
 
 func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
-	// post IQ received event
-	err := s.postStreamEvent(ctx, event.S2SInStreamIQReceived, &event.S2SStreamEventInfo{
+	// run IQ received hook
+	_, err := s.hookRun(ctx, event.S2SInStreamIQReceived, &event.S2SStreamEventInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -377,17 +368,25 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if s.mods.IsModuleIQ(iq) {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
-	// apply outgoing stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, iq, false)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptStanzaInterrupted:
-		return nil // stanza routing interrupted
-	default:
+	// run will route iq hook
+	hInf := &event.S2SStreamEventInfo{
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: iq,
+	}
+	halted, err := s.hookRun(ctx, event.S2SStreamWillRouteElement, hInf)
+	if halted {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	_, err = s.router.Route(ctx, tst)
+	outIQ, ok := hInf.Element.(*stravaganza.IQ)
+	if !ok {
+		return nil
+	}
+	_, err = s.router.Route(ctx, outIQ)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
@@ -399,19 +398,20 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
 
 	case nil:
-		return s.postStreamEvent(ctx, event.S2SInStreamIQRouted, &event.S2SStreamEventInfo{
+		_, err = s.hookRun(ctx, event.S2SInStreamIQRouted, &event.S2SStreamEventInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
 			Element: iq,
 		})
+		return err
 	}
 	return nil
 }
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// post message received event
-	err := s.postStreamEvent(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
+	_, err := s.hookRun(ctx, event.S2SInStreamMessageReceived, &event.S2SStreamEventInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -423,17 +423,25 @@ func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message
 	msg := message
 
 sendMsg:
-	// apply outgoing stanza interceptor
-	tst, err := s.mods.InterceptStanza(ctx, msg, false)
-	switch err {
-	case nil:
-		break
-	case module.ErrInterceptStanzaInterrupted:
-		return nil // stanza routing interrupted
-	default:
+	// run will route Message hook
+	hInf := &event.S2SStreamEventInfo{
+		ID:      s.ID().String(),
+		Sender:  s.sender,
+		Target:  s.target,
+		Element: msg,
+	}
+	halted, err := s.hookRun(ctx, event.S2SStreamWillRouteElement, hInf)
+	if halted {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	_, err = s.router.Route(ctx, tst)
+	outMsg, ok := hInf.Element.(*stravaganza.Message)
+	if !ok {
+		return nil
+	}
+	_, err = s.router.Route(ctx, outMsg)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -453,30 +461,23 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
 
 	case router.ErrUserNotAvailable:
-		if !s.mods.IsEnabled(offline.ModuleName) {
-			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
-		}
-		return s.postStreamEvent(ctx, event.S2SInStreamMessageUnrouted, &event.S2SStreamEventInfo{
-			ID:      s.ID().String(),
-			Sender:  s.sender,
-			Target:  s.target,
-			Element: msg,
-		})
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
-		return s.postStreamEvent(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{
+		_, err = s.hookRun(ctx, event.S2SInStreamMessageRouted, &event.S2SStreamEventInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
 			Element: msg,
 		})
+		return err
 	}
 	return nil
 }
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
-	// post presence received event
-	err := s.postStreamEvent(ctx, event.S2SInStreamPresenceReceived, &event.S2SStreamEventInfo{
+	// run presence received hook
+	_, err := s.hookRun(ctx, event.S2SInStreamPresenceReceived, &event.S2SStreamEventInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -486,24 +487,34 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		return err
 	}
 	if presence.ToJID().IsFullWithUser() {
-		tst, err := s.mods.InterceptStanza(ctx, presence, false)
-		switch err {
-		case nil:
-			break
-		case module.ErrInterceptStanzaInterrupted:
-			return nil // stanza routing interrupted
-		default:
+		// run will route presence hook
+		hInf := &event.S2SStreamEventInfo{
+			ID:      s.ID().String(),
+			Sender:  s.sender,
+			Target:  s.target,
+			Element: presence,
+		}
+		halted, err := s.hookRun(ctx, event.S2SStreamWillRouteElement, hInf)
+		if halted {
+			return nil
+		}
+		if err != nil {
 			return err
 		}
-		_, err = s.router.Route(ctx, tst)
+		outPr, ok := hInf.Element.(*stravaganza.Presence)
+		if !ok {
+			return nil
+		}
+		_, err = s.router.Route(ctx, outPr)
 		switch err {
 		case nil:
-			return s.postStreamEvent(ctx, event.S2SInStreamPresenceRouted, &event.S2SStreamEventInfo{
+			_, err := s.hookRun(ctx, event.S2SInStreamPresenceRouted, &event.S2SStreamEventInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
 				Element: presence,
 			})
+			return err
 		}
 		return nil
 	}
@@ -768,8 +779,8 @@ func (s *inS2S) close(ctx context.Context) error {
 		"sender", s.sender,
 		"target", s.target,
 	)
-	// post unregistered incoming S2S event
-	err := s.postStreamEvent(ctx, event.S2SInStreamUnregistered, &event.S2SStreamEventInfo{
+	// run unregistered incoming S2S hook
+	_, err := s.hookRun(ctx, event.S2SInStreamUnregistered, &event.S2SStreamEventInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -803,12 +814,11 @@ func (s *inS2S) getState() inS2SState {
 	return inS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inS2S) postStreamEvent(ctx context.Context, eventName string, inf *event.S2SStreamEventInfo) error {
-	return s.sn.Post(ctx, sonar.NewEventBuilder(eventName).
-		WithInfo(inf).
-		WithSender(s).
-		Build(),
-	)
+func (s *inS2S) hookRun(ctx context.Context, hook string, inf *event.S2SStreamEventInfo) (halt bool, err error) {
+	return s.mh.Run(ctx, hook, &module.HookInfo{
+		Info:   inf,
+		Sender: s,
+	})
 }
 
 func (s *inS2S) requestContext() (context.Context, context.CancelFunc) {

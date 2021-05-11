@@ -125,10 +125,6 @@ type modules interface {
 
 	IsModuleIQ(iq *stravaganza.IQ) bool
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
-
-	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error)
-
-	IsEnabled(modName string) bool
 }
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager

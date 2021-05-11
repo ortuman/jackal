@@ -16,10 +16,7 @@ package module
 
 import (
 	"context"
-	"errors"
-	"sort"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/event"
@@ -61,50 +58,13 @@ type IQProcessor interface {
 	ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error
 }
 
-// StanzaInterceptor type allows to dynamically transform stanza content.
-// Interceptors may be invoked upon receiving a stanza or before sending it to the target.
-type StanzaInterceptor struct {
-	// ID is the interceptor identifier. Note this identifier is intended to discern which interceptor
-	// is being invoked when calling InterceptStanza method, so it doesn't need to be unique across different modules.
-	ID int
-
-	// Incoming tells whether the interceptor should be invoked; either upon receiving a stanza or before sending it to the target.
-	Incoming bool
-
-	// Priority represents interceptor priority that's used to determine which interceptors should be invoked first.
-	// The higher the number the more priority.
-	Priority int
-}
-
-// ErrInterceptStanzaInterrupted will be returned by InterceptStanza to indicate that interception was interrupted.
-var ErrInterceptStanzaInterrupted = errors.New("module: stanza interception interrupted")
-
-// StanzaInterceptorProcessor represents an stanza interceptor module type.
-type StanzaInterceptorProcessor interface {
-	Module
-
-	// Interceptors returns a set of all module interceptors.
-	Interceptors() []StanzaInterceptor
-
-	// InterceptStanza will be invoked to allow stanza transformation based on a StanzaInterceptor definition.
-	// To interrupt interception ErrInterceptStanzaInterrupted should be returned.
-	InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
-}
-
-type stanzaInterceptor struct {
-	StanzaInterceptor
-	fn func(ctx context.Context, stanza stravaganza.Stanza, id int) (result stravaganza.Stanza, err error)
-}
-
 // Modules is the global module hub.
 type Modules struct {
-	mods             []Module
-	iqProcessors     []IQProcessor
-	recvInterceptors []stanzaInterceptor
-	sendInterceptors []stanzaInterceptor
-	hosts            hosts
-	router           router.Router
-	sn               *sonar.Sonar
+	mods         []Module
+	iqProcessors []IQProcessor
+	hosts        hosts
+	router       router.Router
+	mh           *Hooks
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -112,13 +72,13 @@ func NewModules(
 	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
-	sn *sonar.Sonar,
+	mh *Hooks,
 ) *Modules {
 	m := &Modules{
 		mods:   mods,
 		hosts:  hosts,
 		router: router,
-		sn:     sn,
+		mh:     mh,
 	}
 	m.setupModules()
 	return m
@@ -138,13 +98,13 @@ func (m *Modules) Start(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.ModulesStarted).
-		WithInfo(&event.ModulesEventInfo{
+	_, err := m.mh.Run(ctx, event.ModulesStarted, &HookInfo{
+		Info: &event.ModulesEventInfo{
 			ModuleNames: modNames,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 // Stop stops modules.
@@ -161,13 +121,13 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.ModulesStopped).
-		WithInfo(&event.ModulesEventInfo{
+	_, err := m.mh.Run(ctx, event.ModulesStopped, &HookInfo{
+		Info: &event.ModulesEventInfo{
 			ModuleNames: modNames,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 // IsModuleIQ returns true in case iq stanza should be handled by modules.
@@ -190,27 +150,6 @@ func (m *Modules) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	resp, _ := stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Stanza(false)
 	_, _ = m.router.Route(ctx, resp)
 	return nil
-}
-
-// InterceptStanza performs module stanza transformation.
-func (m *Modules) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-	var interceptors []stanzaInterceptor
-	switch {
-	case incoming:
-		interceptors = m.recvInterceptors
-	default:
-		interceptors = m.sendInterceptors
-	}
-	var err error
-
-	ts := stanza
-	for _, inter := range interceptors {
-		ts, err = inter.fn(ctx, ts, inter.ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ts, nil
 }
 
 // StreamFeatures returns stream features of all registered modules.
@@ -249,30 +188,5 @@ func (m *Modules) setupModules() {
 		if ok {
 			m.iqProcessors = append(m.iqProcessors, iqPr)
 		}
-		stanzaInterceptorPr, ok := mod.(StanzaInterceptorProcessor)
-		if ok {
-			stanzaInterceptors := stanzaInterceptorPr.Interceptors()
-			for _, interceptor := range stanzaInterceptors {
-				switch {
-				case interceptor.Incoming:
-					m.recvInterceptors = append(m.recvInterceptors, stanzaInterceptor{
-						StanzaInterceptor: interceptor,
-						fn:                stanzaInterceptorPr.InterceptStanza,
-					})
-				default:
-					m.sendInterceptors = append(m.sendInterceptors, stanzaInterceptor{
-						StanzaInterceptor: interceptor,
-						fn:                stanzaInterceptorPr.InterceptStanza,
-					})
-				}
-			}
-		}
 	}
-	// sort interceptors by priority
-	sort.Slice(m.recvInterceptors, func(i, j int) bool {
-		return m.recvInterceptors[i].Priority > m.recvInterceptors[j].Priority
-	})
-	sort.Slice(m.sendInterceptors, func(i, j int) bool {
-		return m.sendInterceptors[i].Priority > m.sendInterceptors[j].Priority
-	})
 }

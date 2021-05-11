@@ -25,9 +25,10 @@ import (
 	"syscall"
 	"time"
 
+	modhook "github.com/ortuman/jackal/pkg/module/hook"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jackal-xmpp/sonar"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/c2s"
@@ -101,7 +102,7 @@ type serverApp struct {
 	args   []string
 
 	peppers *pepper.Keys
-	sonar   *sonar.Sonar
+	mh      *modhook.Hooks
 
 	etcdCli *etcdv3.Client
 	locker  locker.Locker
@@ -198,7 +199,7 @@ func run(output io.Writer, args []string) error {
 	a.peppers = peppers
 
 	// init sonar hub
-	a.sonar = sonar.New()
+	a.mh = modhook.NewHooks()
 
 	// init etcd
 	if err := a.initEtcd(cfg.Cluster.Etcd); err != nil {
@@ -291,7 +292,7 @@ func (a *serverApp) initKVStore() {
 }
 
 func (a *serverApp) initClusterConnManager() {
-	a.clusterConnMng = clusterconnmanager.NewManager(a.sonar)
+	a.clusterConnMng = clusterconnmanager.NewManager(a.mh)
 	a.registerStartStopper(a.clusterConnMng)
 }
 
@@ -371,7 +372,7 @@ func (a *serverApp) initShapers(cfgs []shaperConfig) error {
 }
 
 func (a *serverApp) initMemberList(clusterPort int) {
-	a.memberList = memberlist.New(a.kv, clusterPort, a.sonar)
+	a.memberList = memberlist.New(a.kv, clusterPort, a.mh)
 	a.registerStartStopper(a.memberList)
 	return
 }
@@ -408,10 +409,10 @@ func (a *serverApp) initRouters() {
 	a.resMng = c2s.NewResourceManager(a.kv)
 
 	// init C2S router
-	a.localRouter = c2s.NewLocalRouter(a.hosts, a.sonar)
+	a.localRouter = c2s.NewLocalRouter(a.hosts, a.mh)
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
-	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.sonar)
+	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.mh)
 	s2sRouter := s2s.NewRouter(a.s2sOutProvider)
 
 	// init global router
@@ -422,7 +423,7 @@ func (a *serverApp) initRouters() {
 }
 
 func (a *serverApp) initComponents(_ componentsConfig) {
-	a.comps = component.NewComponents(nil, a.sonar)
+	a.comps = component.NewComponents(nil, a.mh)
 	a.extCompMng = extcomponentmanager.New(a.kv, a.clusterConnMng, a.comps)
 
 	a.registerStartStopper(a.comps)
@@ -470,7 +471,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			extCfg.Address,
 			extCfg.IsSecure,
 			a.router,
-			a.sonar,
+			a.mh,
 			externalmodule.Config{
 				RequestTimeout:   extCfg.RequestTimeout,
 				Topics:           extCfg.EventHandler.Topics,
@@ -480,13 +481,13 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			},
 		))
 	}
-	a.mods = module.NewModules(mods, a.hosts, a.router, a.sonar)
+	a.mods = module.NewModules(mods, a.hosts, a.router, a.mh)
 	a.registerStartStopper(a.mods)
 	return nil
 }
 
 func (a *serverApp) initAdminServer(bindAddr string, port int) {
-	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.sonar)
+	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.mh)
 	a.registerStartStopper(adminSrv)
 }
 

@@ -20,7 +20,7 @@ const (
 	fSecured        uint8 = 1 << 0
 	fAuthenticated        = 1 << 1
 	fCompressed           = 1 << 2
-	fBounded              = 1 << 3
+	fBinded               = 1 << 3
 	fSessionStarted       = 1 << 4
 )
 
@@ -65,16 +65,16 @@ func (f *inC2SFlags) setCompressed() {
 	f.flg = f.flg | fCompressed
 }
 
-func (f *inC2SFlags) isBounded() bool {
+func (f *inC2SFlags) isBinded() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
-	return f.flg&fBounded > 0
+	return f.flg&fBinded > 0
 }
 
-func (f *inC2SFlags) setBounded() {
+func (f *inC2SFlags) setBinded() {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
-	f.flg = f.flg | fBounded
+	f.flg = f.flg | fBinded
 }
 
 func (f *inC2SFlags) isSessionStarted() bool {

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -56,17 +55,21 @@ type Carbons struct {
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	mh     *module.Hooks
 }
 
 // New returns a new initialized carbons instance.
-func New(hosts *host.Hosts, router router.Router, resMng *c2s.ResourceManager, sn *sonar.Sonar) *Carbons {
+func New(
+	hosts *host.Hosts,
+	router router.Router,
+	resMng *c2s.ResourceManager,
+	mh *module.Hooks,
+) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
 		router: router,
 		resMng: resMng,
-		sn:     sn,
+		mh:     mh,
 	}
 }
 
@@ -90,8 +93,10 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
-	p.subs = append(p.subs, p.sn.Subscribe(event.C2SStreamMessageRouted, p.onC2SMessageRouted))
-	p.subs = append(p.subs, p.sn.Subscribe(event.S2SInStreamMessageRouted, p.onS2SMessageRouted))
+	p.mh.AddHook(event.C2SStreamWillRouteElement, p.onC2SElementWillRoute, module.DefaultPriority)
+	p.mh.AddHook(event.S2SStreamWillRouteElement, p.onS2SElementWillRoute, module.DefaultPriority)
+	p.mh.AddHook(event.C2SStreamMessageRouted, p.onC2SMessageRouted, module.DefaultPriority)
+	p.mh.AddHook(event.S2SInStreamMessageRouted, p.onS2SMessageRouted, module.DefaultPriority)
 
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
@@ -99,9 +104,11 @@ func (p *Carbons) Start(_ context.Context) error {
 
 // Stop stops carbons module.
 func (p *Carbons) Stop(_ context.Context) error {
-	for _, sub := range p.subs {
-		p.sn.Unsubscribe(sub)
-	}
+	p.mh.RemoveHook(event.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
+	p.mh.RemoveHook(event.S2SStreamWillRouteElement, p.onS2SElementWillRoute)
+	p.mh.RemoveHook(event.C2SStreamMessageRouted, p.onC2SMessageRouted)
+	p.mh.RemoveHook(event.S2SInStreamMessageRouted, p.onS2SMessageRouted)
+
 	log.Infow("Stopped carbons module", "xep", XEPNumber)
 	return nil
 }
@@ -125,45 +132,46 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-// Interceptors returns carbons stanza interceptor.
-func (p *Carbons) Interceptors() []module.StanzaInterceptor {
-	return []module.StanzaInterceptor{
-		{Incoming: false},
-	}
-}
-
-// InterceptStanza will be used by carbons module to strip private element before routing stanza.
-func (p *Carbons) InterceptStanza(_ context.Context, stanza stravaganza.Stanza, _ int) (stravaganza.Stanza, error) {
-	msg, ok := stanza.(*stravaganza.Message)
-	if !ok {
-		return stanza, nil
-	}
-	if msg.ChildNamespace("private", carbonsNamespace) == nil {
-		return msg, nil
-	}
-	return stravaganza.NewBuilderFromElement(msg).
-		WithoutChildrenNamespace("private", carbonsNamespace).
-		BuildMessage()
-}
-
-func (p *Carbons) onC2SMessageRouted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.C2SStreamEventInfo)
+func (p *Carbons) onC2SElementWillRoute(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return nil
+		return false, nil
 	}
-	return p.processMessage(ctx, msg, inf.Targets)
+	inf.Element = stripMessagePrivate(msg)
+	return false, nil
 }
 
-func (p *Carbons) onS2SMessageRouted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.S2SStreamEventInfo)
+func (p *Carbons) onS2SElementWillRoute(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.S2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return nil
+		return false, nil
 	}
-	return p.processMessage(ctx, msg, nil)
+	inf.Element = stripMessagePrivate(msg)
+	return false, nil
+}
+
+func (p *Carbons) onC2SMessageRouted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+
+	msg, ok := inf.Element.(*stravaganza.Message)
+	if !ok {
+		return false, nil
+	}
+	return false, p.processMessage(ctx, msg, inf.Targets)
+}
+
+func (p *Carbons) onS2SMessageRouted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+
+	msg, ok := inf.Element.(*stravaganza.Message)
+	if !ok {
+		return false, nil
+	}
+	return false, p.processMessage(ctx, msg, nil)
 }
 
 func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
@@ -286,6 +294,16 @@ func isEligibleMessage(msg *stravaganza.Message) bool {
 		}
 	}
 	return false
+}
+
+func stripMessagePrivate(msg *stravaganza.Message) *stravaganza.Message {
+	if msg.ChildNamespace("private", carbonsNamespace) == nil {
+		return msg
+	}
+	newMsg, _ := stravaganza.NewBuilderFromElement(msg).
+		WithoutChildrenNamespace("private", carbonsNamespace).
+		BuildMessage()
+	return newMsg
 }
 
 func isPrivateMessage(msg *stravaganza.Message) bool {

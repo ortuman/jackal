@@ -61,7 +61,7 @@ type C2S interface {
 	IsAuthenticated() bool
 
 	// IsBounded returns whether or not the XMPP stream has completed resource binding.
-	IsBounded() bool
+	IsBinded() bool
 
 	// Presence returns stream associated presence stanza or nil if none is set.
 	Presence() *stravaganza.Presence
