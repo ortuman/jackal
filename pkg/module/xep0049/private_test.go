@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/module"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +52,7 @@ func TestPrivate_GetPrivate(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sonar.New(),
+		mh:     module.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
@@ -104,7 +104,7 @@ func TestPrivate_SetPrivate(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sonar.New(),
+		mh:     module.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.SetType).
@@ -152,7 +152,7 @@ func TestPrivate_ForbiddenRequest(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sonar.New(),
+		mh:     module.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).

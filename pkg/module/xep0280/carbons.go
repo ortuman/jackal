@@ -60,8 +60,8 @@ type Carbons struct {
 
 // New returns a new initialized carbons instance.
 func New(
-	hosts *host.Hosts,
 	router router.Router,
+	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	mh *module.Hooks,
 ) *Carbons {

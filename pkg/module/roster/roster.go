@@ -60,9 +60,9 @@ type Roster struct {
 // New returns a new initialized Roster instance.
 func New(
 	router router.Router,
-	rep repository.Repository,
-	resMng *c2s.ResourceManager,
 	hosts *host.Hosts,
+	resMng *c2s.ResourceManager,
+	rep repository.Repository,
 	mh *module.Hooks,
 ) *Roster {
 	return &Roster{

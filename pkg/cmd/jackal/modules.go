@@ -48,12 +48,12 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Roster
 	// (https://xmpp.org/rfcs/rfc6121.html#roster)
 	roster.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return roster.New(a.router, a.rep, a.resMng, a.hosts, a.mh)
+		return roster.New(a.router, a.hosts, a.resMng, a.rep, a.mh)
 	},
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return offline.New(a.router, a.hosts, a.rep, a.locker, a.mh, offline.Config{
+		return offline.New(a.router, a.hosts, a.resMng, a.rep, a.locker, a.mh, offline.Config{
 			QueueSize: cfg.Offline.QueueSize,
 		})
 	},
@@ -70,7 +70,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0049: Private XML Storage
 	// (https://xmpp.org/extensions/xep-0049.html)
 	xep0049.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0049.New(a.rep, a.router, a.mh)
+		return xep0049.New(a.router, a.rep, a.mh)
 	},
 	// XEP-0054: vcard-temp
 	// (https://xmpp.org/extensions/xep-0054.html)
@@ -112,6 +112,6 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0280: Message Carbons
 	// (https://xmpp.org/extensions/xep-0280.html)
 	xep0280.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0280.New(a.hosts, a.router, a.resMng, a.mh)
+		return xep0280.New(a.router, a.hosts, a.resMng, a.mh)
 	},
 }

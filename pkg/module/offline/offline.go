@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/c2s"
+
 	"github.com/ortuman/jackal/pkg/module"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -50,8 +52,9 @@ type Config struct {
 // Offline represents offline module type.
 type Offline struct {
 	cfg    Config
-	router router.Router
 	hosts  hosts
+	router router.Router
+	resMng resourceManager
 	rep    repository.Offline
 	locker locker.Locker
 	mh     *module.Hooks
@@ -61,6 +64,7 @@ type Offline struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
+	resMng *c2s.ResourceManager,
 	rep repository.Offline,
 	locker locker.Locker,
 	mh *module.Hooks,
@@ -70,6 +74,7 @@ func New(
 		cfg:    cfg,
 		router: router,
 		hosts:  hosts,
+		resMng: resMng,
 		rep:    rep,
 		locker: locker,
 		mh:     mh,
@@ -94,8 +99,9 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.mh.AddHook(event.C2SStreamElementReceived, m.onElementRecv, module.LowestPriority)
-	m.mh.AddHook(event.S2SInStreamElementReceived, m.onElementRecv, module.LowestPriority)
+	m.mh.AddHook(event.C2SStreamElementReceived, m.onWillRouteElement, module.LowestPriority)
+	m.mh.AddHook(event.S2SInStreamElementReceived, m.onWillRouteElement, module.LowestPriority)
+
 	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
 	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
@@ -105,8 +111,9 @@ func (m *Offline) Start(_ context.Context) error {
 
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
-	m.mh.RemoveHook(event.C2SStreamElementReceived, m.onElementRecv)
-	m.mh.RemoveHook(event.S2SInStreamElementReceived, m.onElementRecv)
+	m.mh.RemoveHook(event.C2SStreamWillRouteElement, m.onWillRouteElement)
+	m.mh.RemoveHook(event.S2SStreamWillRouteElement, m.onWillRouteElement)
+
 	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
 
@@ -114,16 +121,28 @@ func (m *Offline) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Offline) onElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	var msg *stravaganza.Message
+func (m *Offline) onWillRouteElement(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	var elem stravaganza.Element
 
 	switch inf := hookInf.Info.(type) {
 	case *event.C2SStreamEventInfo:
-		msg = inf.Element.(*stravaganza.Message)
+		elem = inf.Element.(*stravaganza.Message)
 	case *event.S2SStreamEventInfo:
-		msg = inf.Element.(*stravaganza.Message)
+		elem = inf.Element.(*stravaganza.Message)
 	}
-	if !isMessageArchievable(msg) {
+	msg, ok := elem.(*stravaganza.Message)
+	if !ok || !isMessageArchievable(msg) {
+		return false, nil
+	}
+	toJID := msg.ToJID()
+	if !m.hosts.IsLocalHost(toJID.Domain()) {
+		return false, nil
+	}
+	rss, err := m.resMng.GetResources(ctx, toJID.Node())
+	if err != nil {
+		return false, err
+	}
+	if len(rss) > 0 {
 		return false, nil
 	}
 	return m.archiveMessage(ctx, msg)

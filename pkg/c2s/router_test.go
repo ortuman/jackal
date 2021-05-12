@@ -18,7 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
@@ -46,7 +47,7 @@ func (s *routerSuite) SetupTest() {
 		cluster: s.clusterRouterMock,
 		resMng:  s.resMngMock,
 		rep:     s.repositoryMock,
-		sn:      sonar.New(),
+		mh:      module.NewHooks(),
 	}
 }
 

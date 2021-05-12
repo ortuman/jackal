@@ -23,8 +23,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
@@ -101,7 +102,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 		comps:      compsMock,
 		extCompMng: extCompMngMock,
 		inHub:      newInHub(),
-		sn:         sonar.New(),
+		mh:         module.NewHooks(),
 		rq:         runqueue.New("in_component:test", nil),
 	}
 	// when
@@ -258,7 +259,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 				comps:      compsMock,
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
-				sn:         sonar.New(),
+				mh:         module.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -351,7 +352,7 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 				comps:      compsMock,
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
-				sn:         sonar.New(),
+				mh:         module.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

@@ -20,12 +20,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/event"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
+	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
@@ -45,11 +45,11 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		return nil, nil
 	}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sn,
+		mh:     mh,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -68,13 +68,11 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: pr,
-			}).
-			Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
+			Element: pr,
+		},
+	})
 
 	// then
 	require.Len(t, respStanzas, 1)
@@ -98,11 +96,11 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	}
 	routerMock := &routerMock{}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sn,
+		mh:     mh,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -138,13 +136,11 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamIQReceived).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: discoIQ,
-			}).
-			Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.C2SStreamIQReceived, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
+			Element: discoIQ,
+		},
+	})
 
 	// then
 	require.NotNil(t, recvCaps)

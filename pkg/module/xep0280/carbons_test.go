@@ -20,11 +20,11 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/stretchr/testify/require"
@@ -66,7 +66,7 @@ func TestCarbons_Enable(t *testing.T) {
 	c := &Carbons{
 		router: routerMock,
 		hosts:  hMock,
-		sn:     sonar.New(),
+		mh:     module.NewHooks(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -132,7 +132,7 @@ func TestCarbons_Disable(t *testing.T) {
 	c := &Carbons{
 		router: routerMock,
 		hosts:  hMock,
-		sn:     sonar.New(),
+		mh:     module.NewHooks(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -186,12 +186,12 @@ func TestCarbons_SentCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
 		hosts:  hMock,
-		sn:     sn,
+		mh:     mh,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -210,14 +210,13 @@ func TestCarbons_SentCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.S2SInStreamMessageRouted).
-		WithInfo(&event.S2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), event.S2SInStreamMessageRouted, &module.HookInfo{
+		Info: &event.S2SStreamEventInfo{
 			Sender:  "jackal.im",
 			Target:  "jabber.org",
 			Element: msg,
-		}).
-		Build(),
-	)
+		},
+	})
 
 	// then
 	require.Len(t, respStanzas, 1)
@@ -258,12 +257,12 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
 		hosts:  hMock,
-		sn:     sn,
+		mh:     mh,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -282,13 +281,12 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamMessageRouted).
-		WithInfo(&event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamMessageRouted, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
 			Targets: []jid.JID{*jd2},
 			Element: msg,
-		}).
-		Build(),
-	)
+		},
+	})
 
 	// then
 	require.Len(t, respStanzas, 1)
@@ -303,8 +301,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 
 func TestCarbons_InterceptStanza(t *testing.T) {
 	// given
+	mh := module.NewHooks()
 	c := &Carbons{
-		sn: sonar.New(),
+		mh: mh,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -323,9 +322,17 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	msg, _ := b.BuildMessage()
 
 	// when
-	tst, err := c.InterceptStanza(context.Background(), msg, 0)
+	_ = c.Start(context.Background())
+	defer func() { _ = c.Stop(context.Background()) }()
+
+	hInf := &event.C2SStreamEventInfo{
+		Element: msg,
+	}
+	_, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookInfo{
+		Info: hInf,
+	})
 
 	// then
 	require.Nil(t, err)
-	require.Nil(t, tst.ChildNamespace("private", carbonsNamespace))
+	require.Nil(t, hInf.Element.ChildNamespace("private", carbonsNamespace))
 }

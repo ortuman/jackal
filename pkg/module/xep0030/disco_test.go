@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
@@ -42,10 +41,10 @@ func TestDisco_GetServerInfo(t *testing.T) {
 		respStanzas = append(respStanzas, stanza)
 		return nil, nil
 	}
-	sn := sonar.New()
+	mh := module.NewHooks()
 	d := &Disco{
 		router: routerMock,
-		sn:     sn,
+		mh:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -54,10 +53,9 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.ModulesStarted).
-		WithSender(modsMock).
-		Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookInfo{
+		Sender: modsMock,
+	})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -111,11 +109,11 @@ func TestDisco_GetServerItems(t *testing.T) {
 	compsMock.AllComponentsFunc = func() []component.Component {
 		return []component.Component{compMock}
 	}
-	sn := sonar.New()
+	mh := module.NewHooks()
 	d := &Disco{
 		router:     routerMock,
 		components: compsMock,
-		sn:         sn,
+		mh:         mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -124,10 +122,9 @@ func TestDisco_GetServerItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.ModulesStarted).
-		WithSender(modsMock).
-		Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookInfo{
+		Sender: modsMock,
+	})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -182,11 +179,11 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 		}, nil
 	}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
-		sn:     sn,
+		mh:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -195,10 +192,9 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.ModulesStarted).
-		WithSender(modsMock).
-		Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookInfo{
+		Sender: modsMock,
+	})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -258,12 +254,12 @@ func TestDisco_GetAccountItems(t *testing.T) {
 			},
 		}, nil
 	}
-	sn := sonar.New()
+	mh := module.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
 		resMng: resMng,
-		sn:     sn,
+		mh:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -272,10 +268,9 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.ModulesStarted).
-		WithSender(modsMock).
-		Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookInfo{
+		Sender: modsMock,
+	})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().

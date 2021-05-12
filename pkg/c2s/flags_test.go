@@ -52,7 +52,7 @@ func TestInC2SFlags_Set(t *testing.T) {
 	require.False(t, flgs.isBinded())
 	require.False(t, flgs.isSessionStarted())
 
-	flgs.setBounded()
+	flgs.setBinded()
 	require.True(t, flgs.isSecured())
 	require.True(t, flgs.isAuthenticated())
 	require.True(t, flgs.isCompressed())
