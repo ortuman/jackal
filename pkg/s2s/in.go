@@ -815,7 +815,7 @@ func (s *inS2S) getState() inS2SState {
 }
 
 func (s *inS2S) runHook(ctx context.Context, hook string, inf *event.S2SStreamEventInfo) (halt bool, err error) {
-	return s.mh.Run(ctx, hook, &module.HookInfo{
+	return s.mh.Run(ctx, hook, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

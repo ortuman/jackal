@@ -68,7 +68,7 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			Element: pr,
 		},
@@ -136,7 +136,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.C2SStreamIQReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamIQReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			Element: discoIQ,
 		},

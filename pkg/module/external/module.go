@@ -192,7 +192,7 @@ func (m *ExtModule) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *ExtModule) onHookEvent(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+func (m *ExtModule) onHookEvent(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
 	/*
 		_, err := m.cl.ProcessEvent(ctx, toPBProcessEventRequest(ev.Name(), ev.Info()))
 		if err != nil {

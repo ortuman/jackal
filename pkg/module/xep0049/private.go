@@ -118,8 +118,8 @@ func (m *Private) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Private) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.UserEventInfo)
+func (m *Private) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.UserEventInfo)
 	return false, m.rep.DeletePrivates(ctx, inf.Username)
 }
 
@@ -158,7 +158,7 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run private fetched hook
-	_, err = m.mh.Run(ctx, event.PrivateFetched, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.PrivateFetched, &module.HookExecutionContext{
 		Info: &event.PrivateEventInfo{
 			Username: username,
 			Private:  prvElem,
@@ -187,7 +187,7 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
 		// run private updated hook
-		_, err := m.mh.Run(ctx, event.PrivateUpdated, &module.HookInfo{
+		_, err := m.mh.Run(ctx, event.PrivateUpdated, &module.HookExecutionContext{
 			Info: &event.PrivateEventInfo{
 				Username: username,
 				Private:  prv,

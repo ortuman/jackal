@@ -31,10 +31,10 @@ const (
 )
 
 // Handler defines a generic hook handler function.
-type Handler func(ctx context.Context, hookInf *HookInfo) (halt bool, err error)
+type Handler func(ctx context.Context, execCtx *HookExecutionContext) (halt bool, err error)
 
-// HookInfo defines a hook execution info type.
-type HookInfo struct {
+// HookExecutionContext defines a hook execution info context.
+type HookExecutionContext struct {
 	Info   interface{}
 	Sender interface{}
 }
@@ -91,13 +91,13 @@ func (h *Hooks) RemoveHook(hook string, hnd Handler) {
 
 // Run invokes all hook handlers in order.
 // If halted return value is true no more handlers are invoked.
-func (h *Hooks) Run(ctx context.Context, hook string, hookInf *HookInfo) (halted bool, err error) {
+func (h *Hooks) Run(ctx context.Context, hook string, execCtx *HookExecutionContext) (halted bool, err error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	handlers := h.handlers[hook]
 	for _, handler := range handlers {
-		halt, err := handler.h(ctx, hookInf)
+		halt, err := handler.h(ctx, execCtx)
 		if err != nil {
 			return false, err
 		}

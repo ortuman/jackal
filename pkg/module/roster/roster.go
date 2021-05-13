@@ -129,9 +129,9 @@ func (r *Roster) Stop(_ context.Context) error {
 	return nil
 }
 
-func (r *Roster) onPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+func (r *Roster) onPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
 	var pr *stravaganza.Presence
-	switch inf := hookInf.Info.(type) {
+	switch inf := execCtx.Info.(type) {
 	case *event.C2SStreamEventInfo:
 		pr, _ = inf.Element.(*stravaganza.Presence)
 	case *event.S2SStreamEventInfo:
@@ -148,8 +148,8 @@ func (r *Roster) onPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (
 	return false, nil
 }
 
-func (r *Roster) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.UserEventInfo)
+func (r *Roster) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.UserEventInfo)
 	err = r.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		if err := tx.DeleteRosterNotifications(ctx, inf.Username); err != nil {
 			return err
@@ -838,7 +838,7 @@ func (r *Roster) getStreamValue(username, resource, key string) (val string, err
 }
 
 func (r *Roster) runHook(ctx context.Context, hookName string, inf *event.RosterEventInfo) error {
-	_, err := r.mh.Run(ctx, hookName, &module.HookInfo{
+	_, err := r.mh.Run(ctx, hookName, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: r,
 	})

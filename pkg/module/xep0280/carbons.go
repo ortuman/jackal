@@ -132,8 +132,8 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (p *Carbons) onC2SElementWillRoute(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -143,8 +143,8 @@ func (p *Carbons) onC2SElementWillRoute(_ context.Context, hookInf *module.HookI
 	return false, nil
 }
 
-func (p *Carbons) onS2SElementWillRoute(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -154,8 +154,8 @@ func (p *Carbons) onS2SElementWillRoute(_ context.Context, hookInf *module.HookI
 	return false, nil
 }
 
-func (p *Carbons) onC2SMessageRouted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -164,8 +164,8 @@ func (p *Carbons) onC2SMessageRouted(ctx context.Context, hookInf *module.HookIn
 	return false, p.processMessage(ctx, msg, inf.Targets)
 }
 
-func (p *Carbons) onS2SMessageRouted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {

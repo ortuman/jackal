@@ -349,7 +349,7 @@ func TestBlockList_UserDeleted(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.UserDeleted, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.UserDeleted, &module.HookExecutionContext{
 		Info: &event.UserEventInfo{
 			Username: "ortuman",
 		},
@@ -400,7 +400,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), event.C2SStreamElementReceived, &module.HookInfo{
+	halted, err := mh.Run(context.Background(), event.C2SStreamElementReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			Element: msg,
 		},
@@ -461,7 +461,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookInfo{
+	halted, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			Element: msg,
 		},

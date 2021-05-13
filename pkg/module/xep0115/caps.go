@@ -168,32 +168,32 @@ func (m *Capabilities) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processPresence(ctx, pr)
 }
 
-func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processPresence(ctx, pr)
 }
 
-func (m *Capabilities) onC2SIQRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *Capabilities) onC2SIQRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	iq := inf.Element.(*stravaganza.IQ)
 	return false, m.processIQ(ctx, iq)
 }
 
-func (m *Capabilities) onS2SIQRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (m *Capabilities) onS2SIQRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 	iq := inf.Element.(*stravaganza.IQ)
 	return false, m.processIQ(ctx, iq)
 }
 
-func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	disc := hookInf.Sender.(*xep0030.Disco)
+func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	disc := execCtx.Sender.(*xep0030.Disco)
 	m.mu.Lock()
 	m.srvProv = disc.ServerProvider()
 	m.mu.Unlock()

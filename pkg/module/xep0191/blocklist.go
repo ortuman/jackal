@@ -148,8 +148,8 @@ func (m *BlockList) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *BlockList) onC2SElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -157,8 +157,8 @@ func (m *BlockList) onC2SElementRecv(ctx context.Context, hookInf *module.HookIn
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -166,8 +166,8 @@ func (m *BlockList) onS2SElementRecv(ctx context.Context, hookInf *module.HookIn
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onC2SElementWillRoute(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -175,8 +175,8 @@ func (m *BlockList) onC2SElementWillRoute(ctx context.Context, hookInf *module.H
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementWillRoute(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.S2SStreamEventInfo)
+func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.S2SStreamEventInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -184,8 +184,8 @@ func (m *BlockList) onS2SElementWillRoute(ctx context.Context, hookInf *module.H
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.UserEventInfo)
+func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.UserEventInfo)
 	return false, m.rep.DeleteBlockListItems(ctx, inf.Username)
 }
 
@@ -297,7 +297,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		j, _ := jid.NewWithString(itm.JID, false)
 		allJIDs = append(allJIDs, *j)
 	}
-	_, err = m.mh.Run(ctx, event.BlockListFetched, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.BlockListFetched, &module.HookExecutionContext{
 		Info: &event.BlockListEventInfo{
 			Username: username,
 			JIDs:     allJIDs,
@@ -380,7 +380,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	m.sendPush(ctx, block, rss)
 
 	// run hook
-	_, err = m.mh.Run(ctx, event.BlockListItemsBlocked, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.BlockListItemsBlocked, &module.HookExecutionContext{
 		Info: &event.BlockListEventInfo{
 			Username: username,
 			JIDs:     blockJIDs,
@@ -452,7 +452,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	m.sendPush(ctx, unblock, rss)
 
 	// run hook
-	_, err = m.mh.Run(ctx, event.BlockListItemsUnblocked, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.BlockListItemsUnblocked, &module.HookExecutionContext{
 		Info: &event.BlockListEventInfo{
 			Username: username,
 			JIDs:     unblockJIDs,

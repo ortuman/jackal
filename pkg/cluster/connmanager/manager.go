@@ -104,11 +104,11 @@ func (m *Manager) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Manager) onMemberListUpdated(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	inf := hookInf.Info.(*event.MemberListEventInfo)
+	inf := execCtx.Info.(*event.MemberListEventInfo)
 
 	// close unregistered members connections...
 	for _, instanceID := range inf.UnregisteredKeys {

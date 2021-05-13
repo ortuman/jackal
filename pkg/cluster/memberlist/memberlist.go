@@ -238,7 +238,7 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 }
 
 func (ml *MemberList) runHook(ctx context.Context, inf *event.MemberListEventInfo) error {
-	_, err := ml.mh.Run(ctx, event.MemberListUpdated, &module.HookInfo{
+	_, err := ml.mh.Run(ctx, event.MemberListUpdated, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: ml,
 	})

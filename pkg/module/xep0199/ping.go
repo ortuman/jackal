@@ -147,25 +147,25 @@ func (p *Ping) sendPongReply(ctx context.Context, pingIQ *stravaganza.IQ) error 
 	return nil
 }
 
-func (p *Ping) onBinded(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (p *Ping) onBinded(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
 
-func (p *Ping) onRecvElement(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	stm := hookInf.Sender.(stream.C2S)
+func (p *Ping) onRecvElement(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	stm := execCtx.Sender.(stream.C2S)
 	if !stm.IsBinded() {
 		return false, nil
 	}
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	p.cancelTimers(inf.JID)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
 
-func (p *Ping) onUnregister(_ context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (p *Ping) onUnregister(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	if jd := inf.JID; jd != nil {
 		p.cancelTimers(jd)
 	}

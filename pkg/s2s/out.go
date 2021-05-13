@@ -593,7 +593,7 @@ func (s *outS2S) runHook(ctx context.Context, eventName string, inf *event.S2SSt
 	if s.typ == dialbackType {
 		return nil
 	}
-	_, err := s.mh.Run(ctx, eventName, &module.HookInfo{
+	_, err := s.mh.Run(ctx, eventName, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

@@ -63,7 +63,7 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 		return nil, err
 	}
 	// run user created hook
-	_, err := s.mh.Run(ctx, event.UserCreated, &module.HookInfo{
+	_, err := s.mh.Run(ctx, event.UserCreated, &module.HookExecutionContext{
 		Info: &event.UserEventInfo{
 			Username: username,
 		},
@@ -97,7 +97,7 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// run user deleted hook
-	_, err := s.mh.Run(ctx, event.UserDeleted, &module.HookInfo{
+	_, err := s.mh.Run(ctx, event.UserDeleted, &module.HookExecutionContext{
 		Info: &event.UserEventInfo{
 			Username: username,
 		},

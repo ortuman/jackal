@@ -81,7 +81,7 @@ func TestPing_SendPing(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			ID:  "c2s1",
 			JID: jd,
@@ -127,7 +127,7 @@ func TestPing_Timeout(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{
 			ID:  "c2s1",
 			JID: jd,

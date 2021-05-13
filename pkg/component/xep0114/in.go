@@ -449,7 +449,7 @@ func (s *inComponent) getState() inComponentState {
 }
 
 func (s *inComponent) runHook(ctx context.Context, eventName string, inf *event.ExternalComponentEventInfo) (halt bool, err error) {
-	return s.mh.Run(ctx, eventName, &module.HookInfo{
+	return s.mh.Run(ctx, eventName, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

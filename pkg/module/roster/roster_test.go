@@ -386,7 +386,7 @@ func TestRoster_Subscribe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.SubscribeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 
@@ -487,7 +487,7 @@ func TestRoster_Subscribed(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.SubscribedType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 
@@ -596,7 +596,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.UnsubscribeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 
@@ -708,7 +708,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.UnsubscribedType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 
@@ -803,7 +803,7 @@ func TestRoster_Probe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.ProbeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 
@@ -910,7 +910,7 @@ func TestRoster_Available(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
 		Info: &event.C2SStreamEventInfo{Element: pr},
 	})
 

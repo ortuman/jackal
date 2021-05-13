@@ -130,11 +130,11 @@ func (m *Last) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Last) onElementRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+func (m *Last) onElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
 	var iq *stravaganza.IQ
 	var ok bool
 
-	switch inf := hookInf.Info.(type) {
+	switch inf := execCtx.Info.(type) {
 	case *event.C2SStreamEventInfo:
 		iq, ok = inf.Element.(*stravaganza.IQ)
 	case *event.S2SStreamEventInfo:
@@ -167,13 +167,13 @@ func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) (halt 
 	return false, nil
 }
 
-func (m *Last) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.UserEventInfo)
+func (m *Last) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.UserEventInfo)
 	return false, m.rep.DeleteLast(ctx, inf.Username)
 }
 
-func (m *Last) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processC2SPresence(ctx, pr)
 }
@@ -210,7 +210,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
-	_, err := m.mh.Run(ctx, event.LastActivityFetched, &module.HookInfo{
+	_, err := m.mh.Run(ctx, event.LastActivityFetched, &module.HookExecutionContext{
 		Info: &event.LastActivityEventInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
@@ -253,7 +253,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
-	_, err = m.mh.Run(ctx, event.LastActivityFetched, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.LastActivityFetched, &module.HookExecutionContext{
 		Info: &event.LastActivityEventInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,

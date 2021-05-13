@@ -121,10 +121,10 @@ func (m *Offline) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Offline) onWillRouteElement(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
 	var elem stravaganza.Element
 
-	switch inf := hookInf.Info.(type) {
+	switch inf := execCtx.Info.(type) {
 	case *event.C2SStreamEventInfo:
 		elem = inf.Element.(*stravaganza.Message)
 	case *event.S2SStreamEventInfo:
@@ -148,8 +148,8 @@ func (m *Offline) onWillRouteElement(ctx context.Context, hookInf *module.HookIn
 	return m.archiveMessage(ctx, msg)
 }
 
-func (m *Offline) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.C2SStreamEventInfo)
+func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.C2SStreamEventInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
@@ -162,8 +162,8 @@ func (m *Offline) onC2SPresenceRecv(ctx context.Context, hookInf *module.HookInf
 	return false, m.deliverOfflineMessages(ctx, toJID.Node())
 }
 
-func (m *Offline) onUserDeleted(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
-	inf := hookInf.Info.(*event.UserEventInfo)
+func (m *Offline) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*event.UserEventInfo)
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
 	if err != nil {
@@ -226,7 +226,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
 		return false, err
 	}
-	_, err = m.mh.Run(ctx, event.OfflineMessageArchived, &module.HookInfo{
+	_, err = m.mh.Run(ctx, event.OfflineMessageArchived, &module.HookExecutionContext{
 		Info: &event.OfflineEventInfo{
 			Username: username,
 			Message:  dMsg,
