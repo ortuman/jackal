@@ -457,6 +457,13 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 				return err
 			}
 		}
+		var hookConfigs []externalmodule.HookConfig
+		for _, hCfg := range extCfg.EventHandler.Hooks {
+			hookConfigs = append(hookConfigs, externalmodule.HookConfig{
+				Name:     hCfg.Name,
+				Priority: module.HookPriority(hCfg.Priority),
+			})
+		}
 		mods = append(mods, externalmodule.New(
 			extCfg.Address,
 			extCfg.IsSecure,
@@ -464,7 +471,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			a.mh,
 			externalmodule.Config{
 				RequestTimeout:   extCfg.RequestTimeout,
-				Topics:           extCfg.EventHandler.Topics,
+				Hooks:            hookConfigs,
 				TargetEntity:     extCfg.IQHandler.TargetEntity,
 				NamespaceMatcher: nsMatcher,
 			},

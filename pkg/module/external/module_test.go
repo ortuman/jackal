@@ -16,17 +16,13 @@ package externalmodule
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	"github.com/stretchr/testify/require"
@@ -78,6 +74,7 @@ func TestModule_Features(t *testing.T) {
 	require.Equal(t, "bind", stmFeature.Name())
 }
 
+/*
 func TestModule_ProcessEvent(t *testing.T) {
 	// given
 	var evReq *extmodulepb.ProcessEventRequest
@@ -112,7 +109,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 		cfg: Config{
 			Topics: []string{event.C2SStreamIQReceived},
 		},
-		sonar: sn,
+		mh: module.NewHooks(),
 	}
 
 	iq, _ := stravaganza.NewIQBuilder().
@@ -147,6 +144,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 	require.Len(t, cl.ProcessEventCalls(), 1)
 	require.Len(t, closer.CloseCalls(), 1)
 }
+*/
 
 func TestModule_IQHandler(t *testing.T) {
 	// given
@@ -181,43 +179,6 @@ func TestModule_IQHandler(t *testing.T) {
 
 	// then
 	require.Len(t, cl.ProcessIQCalls(), 1)
-}
-
-func TestModule_InterceptStanza(t *testing.T) {
-	// given
-	cl := &grpcClientMock{}
-	cl.InterceptStanzaFunc = func(ctx context.Context, in *extmodulepb.InterceptStanzaRequest, opts ...grpc.CallOption) (*extmodulepb.InterceptStanzaResponse, error) {
-		return &extmodulepb.InterceptStanzaResponse{
-			Stanza: in.Stanza,
-		}, nil
-	}
-	dialExtConnFn = func(ctx context.Context, addr string, isSecure bool) (extmodulepb.ModuleClient, io.Closer, error) {
-		return cl, nil, nil
-	}
-	mod := &ExtModule{
-		cl: cl,
-	}
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("id", "i1234")
-	b.WithAttribute("from", "noelia@jabber.org/balcony")
-	b.WithAttribute("to", "ortuman@jackal.im/chamber")
-	b.WithAttribute("type", "chat")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg0, _ := b.BuildMessage()
-
-	fmt.Println(reflect.TypeOf(msg0).String())
-
-	// when
-	msg1, _ := mod.InterceptStanza(context.Background(), msg0, 1234)
-
-	// then
-	require.NotNil(t, msg1)
-
-	require.Len(t, cl.InterceptStanzaCalls(), 1)
 }
 
 func TestModule_Route(t *testing.T) {

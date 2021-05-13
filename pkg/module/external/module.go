@@ -23,7 +23,6 @@ import (
 	"github.com/ortuman/jackal/pkg/module"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/event"
@@ -31,7 +30,6 @@ import (
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
 )
@@ -41,13 +39,19 @@ const (
 	accountTargetEntity = "account"
 )
 
+// HookConfig defines a hook handler configuration
+type HookConfig struct {
+	Name     string
+	Priority module.HookPriority
+}
+
 // Config defines external module configuratiopn value.
 type Config struct {
 	// RequestTimeout defines external module request timeout.
 	RequestTimeout time.Duration
 
-	// Topics defines all topics to which a external module wants to subscribe to.
-	Topics []string
+	// Hooks defines all hooks to which a external module wants to subscribe to.
+	Hooks []HookConfig
 
 	// NamespaceMatcher defines external module IQ namespace matcher.
 	NamespaceMatcher stringmatcher.Matcher
@@ -65,7 +69,6 @@ type ExtModule struct {
 	isSecure bool
 	cfg      Config
 	mh       *module.Hooks
-	subs     []sonar.SubID
 	router   router.Router
 
 	cc io.Closer
@@ -166,10 +169,10 @@ func (m *ExtModule) Start(ctx context.Context) error {
 	}
 	go m.recvStanzas(stm)
 
-	// subscribe to handler events
-	// for _, topic := range m.cfg.Topics {
-	//	m.subs = append(m.subs, m.sonar.Subscribe(topic, m.onEvent))
-	// }
+	// add hook handlers
+	for _, hConfig := range m.cfg.Hooks {
+		m.mh.AddHook(hConfig.Name, m.onHookEvent, hConfig.Priority)
+	}
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
 		"secured", m.isSecure,
 	)
@@ -179,9 +182,9 @@ func (m *ExtModule) Start(ctx context.Context) error {
 // Stop stops external module.
 func (m *ExtModule) Stop(_ context.Context) error {
 	// unsubscribe from external module events
-	// for _, sub := range m.subs {
-	//	m.sonar.Unsubscribe(sub)
-	// }
+	for _, hConfig := range m.cfg.Hooks {
+		m.mh.RemoveHook(hConfig.Name, m.onHookEvent)
+	}
 	if err := m.cc.Close(); err != nil {
 		return err
 	}
@@ -189,12 +192,14 @@ func (m *ExtModule) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *ExtModule) onEvent(ctx context.Context, ev sonar.Event) error {
-	_, err := m.cl.ProcessEvent(ctx, toPBProcessEventRequest(ev.Name(), ev.Info()))
-	if err != nil {
-		return errors.Wrap(err, "externalmodule: failed to process event")
-	}
-	return nil
+func (m *ExtModule) onHookEvent(ctx context.Context, hookInf *module.HookInfo) (halt bool, err error) {
+	/*
+		_, err := m.cl.ProcessEvent(ctx, toPBProcessEventRequest(ev.Name(), ev.Info()))
+		if err != nil {
+			return errors.Wrap(err, "externalmodule: failed to process event")
+		}
+	*/
+	return false, nil
 }
 
 func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {

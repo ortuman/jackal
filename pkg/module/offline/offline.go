@@ -99,8 +99,8 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.mh.AddHook(event.C2SStreamElementReceived, m.onWillRouteElement, module.LowestPriority)
-	m.mh.AddHook(event.S2SInStreamElementReceived, m.onWillRouteElement, module.LowestPriority)
+	m.mh.AddHook(event.C2SStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
+	m.mh.AddHook(event.S2SInStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
 
 	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
 	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
@@ -112,7 +112,7 @@ func (m *Offline) Start(_ context.Context) error {
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
 	m.mh.RemoveHook(event.C2SStreamWillRouteElement, m.onWillRouteElement)
-	m.mh.RemoveHook(event.S2SStreamWillRouteElement, m.onWillRouteElement)
+	m.mh.RemoveHook(event.S2SInStreamWillRouteElement, m.onWillRouteElement)
 
 	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)

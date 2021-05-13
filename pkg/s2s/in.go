@@ -375,7 +375,7 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		Target:  s.target,
 		Element: iq,
 	}
-	halted, err := s.runHook(ctx, event.S2SStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, event.S2SInStreamWillRouteElement, hInf)
 	if halted {
 		return nil
 	}
@@ -430,7 +430,7 @@ sendMsg:
 		Target:  s.target,
 		Element: msg,
 	}
-	halted, err := s.runHook(ctx, event.S2SStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, event.S2SInStreamWillRouteElement, hInf)
 	if halted {
 		return nil
 	}
@@ -494,7 +494,7 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 			Target:  s.target,
 			Element: presence,
 		}
-		halted, err := s.runHook(ctx, event.S2SStreamWillRouteElement, hInf)
+		halted, err := s.runHook(ctx, event.S2SInStreamWillRouteElement, hInf)
 		if halted {
 			return nil
 		}

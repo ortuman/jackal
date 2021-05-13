@@ -21,7 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +54,7 @@ func TestMemberList_Join(t *testing.T) {
 			"i://b3fd": []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, sonar.New())
+	ml := New(kvMock, 4312, module.NewHooks())
 
 	// when
 	err := ml.Start(context.Background())
@@ -87,7 +88,7 @@ func TestMemberList_Leave(t *testing.T) {
 	kvMock.DelFunc = func(r context.Context, key string) error {
 		return nil
 	}
-	ml := New(kvMock, 4312, sonar.New())
+	ml := New(kvMock, 4312, module.NewHooks())
 
 	// when
 	_ = ml.Start(context.Background())
@@ -125,7 +126,7 @@ func TestMemberList_WatchChanges(t *testing.T) {
 			"i://b3fd": []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, sonar.New())
+	ml := New(kvMock, 4312, module.NewHooks())
 
 	// when
 	_ = ml.Start(context.Background())

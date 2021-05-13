@@ -129,7 +129,7 @@ func (m *BlockList) Start(_ context.Context) error {
 	m.mh.AddHook(event.C2SStreamElementReceived, m.onC2SElementRecv, module.HighestPriority)
 	m.mh.AddHook(event.S2SInStreamElementReceived, m.onS2SElementRecv, module.HighestPriority)
 	m.mh.AddHook(event.C2SStreamWillRouteElement, m.onC2SElementWillRoute, module.HighestPriority)
-	m.mh.AddHook(event.S2SStreamWillRouteElement, m.onS2SElementWillRoute, module.HighestPriority)
+	m.mh.AddHook(event.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, module.HighestPriority)
 	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
 	log.Infow("Started blocklist module", "xep", XEPNumber)
@@ -141,7 +141,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 	m.mh.RemoveHook(event.C2SStreamElementReceived, m.onC2SElementRecv)
 	m.mh.RemoveHook(event.S2SInStreamElementReceived, m.onS2SElementRecv)
 	m.mh.RemoveHook(event.C2SStreamWillRouteElement, m.onC2SElementWillRoute)
-	m.mh.RemoveHook(event.S2SStreamWillRouteElement, m.onS2SElementWillRoute)
+	m.mh.RemoveHook(event.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
 	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped blocklist module", "xep", XEPNumber)

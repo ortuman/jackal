@@ -115,7 +115,10 @@ type extModuleConfig struct {
 	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 
 	EventHandler struct {
-		Topics []string `fig:"topics"`
+		Hooks []struct {
+			Name     string `fig:"name"`
+			Priority int32  `fig:"priority"`
+		} `fig:"hooks"`
 	} `fig:"event_handler"`
 
 	IQHandler struct {

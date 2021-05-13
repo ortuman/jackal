@@ -20,7 +20,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
+	"github.com/ortuman/jackal/pkg/module"
+
 	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/version"
@@ -38,29 +39,29 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
 		return lrMock, crMock, ccMock, nil
 	}
-	sn := sonar.New()
-	connMng := NewManager(sn)
+	mh := module.NewHooks()
+	connMng := NewManager(mh)
 
 	// when
 	_ = connMng.Start(context.Background())
 
 	// register cluster member
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.MemberListUpdated).
-		WithInfo(&event.MemberListEventInfo{
+	_, _ = mh.Run(context.Background(), event.MemberListUpdated, &module.HookInfo{
+		Info: &event.MemberListEventInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
-		}).Build(),
-	)
+		},
+	})
 
 	conn1, err1 := connMng.GetConnection("a1234")
 
 	// register cluster member
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.MemberListUpdated).
-		WithInfo(&event.MemberListEventInfo{
+	_, _ = mh.Run(context.Background(), event.MemberListUpdated, &module.HookInfo{
+		Info: &event.MemberListEventInfo{
 			UnregisteredKeys: []string{"a1234"},
-		}).Build(),
-	)
+		},
+	})
 
 	conn2, err2 := connMng.GetConnection("a1234")
 
@@ -85,20 +86,20 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
 		return lrMock, crMock, ccMock, nil
 	}
-	sn := sonar.New()
-	connMng := NewManager(sn)
+	mh := module.NewHooks()
+	connMng := NewManager(mh)
 
 	// when
 	_ = connMng.Start(context.Background())
 
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.MemberListUpdated).
-		WithInfo(&event.MemberListEventInfo{
+	_, _ = mh.Run(context.Background(), event.MemberListUpdated, &module.HookInfo{
+		Info: &event.MemberListEventInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},
-		}).Build(),
-	)
+		},
+	})
 
 	// then
 	conn, err := connMng.GetConnection("a1234")

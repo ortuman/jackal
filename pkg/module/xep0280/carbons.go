@@ -94,7 +94,7 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
 	p.mh.AddHook(event.C2SStreamWillRouteElement, p.onC2SElementWillRoute, module.DefaultPriority)
-	p.mh.AddHook(event.S2SStreamWillRouteElement, p.onS2SElementWillRoute, module.DefaultPriority)
+	p.mh.AddHook(event.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, module.DefaultPriority)
 	p.mh.AddHook(event.C2SStreamMessageRouted, p.onC2SMessageRouted, module.DefaultPriority)
 	p.mh.AddHook(event.S2SInStreamMessageRouted, p.onS2SMessageRouted, module.DefaultPriority)
 
@@ -105,7 +105,7 @@ func (p *Carbons) Start(_ context.Context) error {
 // Stop stops carbons module.
 func (p *Carbons) Stop(_ context.Context) error {
 	p.mh.RemoveHook(event.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
-	p.mh.RemoveHook(event.S2SStreamWillRouteElement, p.onS2SElementWillRoute)
+	p.mh.RemoveHook(event.S2SInStreamWillRouteElement, p.onS2SElementWillRoute)
 	p.mh.RemoveHook(event.C2SStreamMessageRouted, p.onC2SMessageRouted)
 	p.mh.RemoveHook(event.S2SInStreamMessageRouted, p.onS2SMessageRouted)
 

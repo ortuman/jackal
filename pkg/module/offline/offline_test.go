@@ -19,11 +19,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/event"
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	"github.com/ortuman/jackal/pkg/module"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -45,13 +46,21 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	repMock.InsertOfflineMessageFunc = func(ctx context.Context, message *stravaganza.Message, username string) error {
 		return nil
 	}
-	sn := sonar.New()
+	hostsMock := &hostsMock{}
+	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
+	resManagerMock := &resourceManagerMock{}
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return nil, nil
+	}
+	mh := module.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
+		hosts:  hostsMock,
+		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
-		sn:     sn,
+		mh:     mh,
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -65,14 +74,13 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 
 	// when
 	_ = m.Start(context.Background())
+	defer func() { _ = m.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: msg,
-			}).
-			Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
+			Element: msg,
+		},
+	})
 
 	// then
 	require.Len(t, repMock.CountOfflineMessagesCalls(), 1)
@@ -88,6 +96,8 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		_ = stanza.ToXML(output, true)
 		return nil, nil
 	}
+	hostsMock := &hostsMock{}
+	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	lockMock := &lockMock{}
 	lockMock.ReleaseFunc = func(ctx context.Context) error {
@@ -104,14 +114,20 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	repMock.InsertOfflineMessageFunc = func(ctx context.Context, message *stravaganza.Message, username string) error {
 		return nil
 	}
-	sn := sonar.New()
+	resManagerMock := &resourceManagerMock{}
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+		return nil, nil
+	}
 
+	mh := module.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		router: routerMock,
+		hosts:  hostsMock,
+		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
-		sn:     sn,
+		mh:     mh,
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -125,16 +141,18 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 
 	// when
 	_ = m.Start(context.Background())
+	defer func() { _ = m.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamMessageUnrouted).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: msg,
-			}).
-			Build(),
-	)
+	halted, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
+			Element: msg,
+		},
+	})
 
 	// then
+	require.Nil(t, err)
+	require.True(t, halted)
+
 	require.Len(t, repMock.CountOfflineMessagesCalls(), 1)
 	require.Len(t, repMock.InsertOfflineMessageCalls(), 0)
 
@@ -182,14 +200,14 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 		return nil
 	}
 
-	sn := sonar.New()
+	mh := module.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		router: routerMock,
 		hosts:  hostsMock,
 		rep:    repMock,
 		locker: lockerMock,
-		sn:     sn,
+		mh:     mh,
 	}
 
 	// when
@@ -200,13 +218,11 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: pr,
-			}).
-			Build(),
-	)
+	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookInfo{
+		Info: &event.C2SStreamEventInfo{
+			Element: pr,
+		},
+	})
 
 	// then
 	require.Len(t, repMock.FetchOfflineMessagesCalls(), 1)
