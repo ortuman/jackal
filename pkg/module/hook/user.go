@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2020 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
-
-import "github.com/jackal-xmpp/stravaganza/v2/jid"
+package hook
 
 const (
-	// LastActivityFetched event is posted when a user last activity is fetched.
-	LastActivityFetched = "last.fetched"
+	// UserCreated event is posted whenever a new user is created.
+	UserCreated = "user.created"
+
+	// UserDeleted event is posted whenever a user is deleted.
+	UserDeleted = "user.deleted"
 )
 
-// LastActivityEventInfo contains all information associated to a last activity event.
-type LastActivityEventInfo struct {
+// UserHookInfo contains all information associated to a user event.
+type UserHookInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
-
-	// JID represents the event associated JID.
-	JID *jid.JID
 }

@@ -18,10 +18,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
-	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
@@ -53,7 +54,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -122,7 +123,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -192,7 +193,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -268,7 +269,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = mh.Run(context.Background(), event.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
 		Sender: modsMock,
 	})
 

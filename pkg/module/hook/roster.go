@@ -12,9 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 const (
-	// DiscoProvidersStarted event is posted after all entity providers have been initialized.
-	DiscoProvidersStarted = "disco.providers.started"
+	// RosterRequested event is posted whenever a user requests the roster.
+	RosterRequested = "roster.requested"
+
+	// RosterItemUpdated event is posted whenever a roster item subscription is updated.
+	RosterItemUpdated = "roster.item.updated"
 )
+
+// RosterHookInfo contains all information associated to a roster event.
+type RosterHookInfo struct {
+	// Username is the name of the roster owner.
+	Username string
+
+	// JID is the event contact JID.
+	JID string
+
+	// Subscription is the roster event subscription value.
+	Subscription string
+}

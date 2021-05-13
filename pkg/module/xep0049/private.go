@@ -18,11 +18,12 @@ import (
 	"context"
 	"strings"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	"github.com/ortuman/jackal/pkg/module"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -104,7 +105,7 @@ func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts private module.
 func (m *Private) Start(_ context.Context) error {
-	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
+	m.mh.AddHook(hook.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
 	log.Infow("Started private module", "xep", XEPNumber)
 	return nil
@@ -112,14 +113,14 @@ func (m *Private) Start(_ context.Context) error {
 
 // Stop stops private module.
 func (m *Private) Stop(_ context.Context) error {
-	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
+	m.mh.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped private module", "xep", XEPNumber)
 	return nil
 }
 
 func (m *Private) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*event.UserEventInfo)
+	inf := execCtx.Info.(*hook.UserHookInfo)
 	return false, m.rep.DeletePrivates(ctx, inf.Username)
 }
 
@@ -158,8 +159,8 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run private fetched hook
-	_, err = m.mh.Run(ctx, event.PrivateFetched, &module.HookExecutionContext{
-		Info: &event.PrivateEventInfo{
+	_, err = m.mh.Run(ctx, hook.PrivateFetched, &module.HookExecutionContext{
+		Info: &hook.PrivateHookInfo{
 			Username: username,
 			Private:  prvElem,
 		},
@@ -187,8 +188,8 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
 		// run private updated hook
-		_, err := m.mh.Run(ctx, event.PrivateUpdated, &module.HookExecutionContext{
-			Info: &event.PrivateEventInfo{
+		_, err := m.mh.Run(ctx, hook.PrivateUpdated, &module.HookExecutionContext{
+			Info: &hook.PrivateHookInfo{
 				Username: username,
 				Private:  prv,
 			},

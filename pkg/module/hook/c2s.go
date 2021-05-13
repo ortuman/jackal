@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import (
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -57,8 +57,8 @@ const (
 	C2SStreamElementSent = "c2s.stream.element_sent"
 )
 
-// C2SStreamEventInfo contains all info associated to a C2S stream event.
-type C2SStreamEventInfo struct {
+// C2SStreamHookInfo contains all info associated to a C2S stream event.
+type C2SStreamHookInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

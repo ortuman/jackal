@@ -12,18 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
+
+import coremodel "github.com/ortuman/jackal/pkg/model/core"
 
 const (
-	// UserCreated event is posted whenever a new user is created.
-	UserCreated = "user.created"
-
-	// UserDeleted event is posted whenever a user is deleted.
-	UserDeleted = "user.deleted"
+	// MemberListUpdated event is posted whenever cluster member list is updated.
+	MemberListUpdated = "memberlist.updated"
 )
 
-// UserEventInfo contains all information associated to a user event.
-type UserEventInfo struct {
-	// Username is the name of the user associated to this event.
-	Username string
+// MemberListHookInfo contains all info associated to MemberListUpdated event.
+type MemberListHookInfo struct {
+	// Registered contains all new registered cluster members.
+	Registered []coremodel.ClusterMember
+
+	// UnregisteredKeys contains unregistered cluster members keys.
+	UnregisteredKeys []string
 }

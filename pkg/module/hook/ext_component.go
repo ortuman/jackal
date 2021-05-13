@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import "github.com/jackal-xmpp/stravaganza/v2"
 
@@ -27,8 +27,8 @@ const (
 	ExternalComponentElementReceived = "ext_component.stream.element_received"
 )
 
-// ExternalComponentEventInfo contains all info associated to an external component event.
-type ExternalComponentEventInfo struct {
+// ExternalComponentHookInfo contains all info associated to an external component event.
+type ExternalComponentHookInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

@@ -23,13 +23,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ortuman/jackal/pkg/module"
-
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/version"
 )
 
@@ -140,7 +139,7 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 		ml.mu.Unlock()
 
 		// run updated member list hook
-		err = ml.runHook(ctx, &event.MemberListEventInfo{
+		err = ml.runHook(ctx, &hook.MemberListHookInfo{
 			Registered: ms,
 		})
 		if err != nil {
@@ -231,14 +230,14 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 	ml.mu.Unlock()
 
 	// run updated hook
-	return ml.runHook(ctx, &event.MemberListEventInfo{
+	return ml.runHook(ctx, &hook.MemberListHookInfo{
 		Registered:       putMembers,
 		UnregisteredKeys: delMemberKeys,
 	})
 }
 
-func (ml *MemberList) runHook(ctx context.Context, inf *event.MemberListEventInfo) error {
-	_, err := ml.mh.Run(ctx, event.MemberListUpdated, &module.HookExecutionContext{
+func (ml *MemberList) runHook(ctx context.Context, inf *hook.MemberListHookInfo) error {
+	_, err := ml.mh.Run(ctx, hook.MemberListUpdated, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: ml,
 	})

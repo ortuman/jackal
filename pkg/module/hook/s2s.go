@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import (
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -59,8 +59,8 @@ const (
 	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
 )
 
-// S2SStreamEventInfo contains all info associated to a S2S event.
-type S2SStreamEventInfo struct {
+// S2SStreamHookInfo contains all info associated to a S2S event.
+type S2SStreamHookInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

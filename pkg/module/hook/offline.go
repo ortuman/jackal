@@ -12,23 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// PrivateFetched event is posted when a user private XML is fetched.
-	PrivateFetched = "private.fetched"
-
-	// PrivateUpdated event is posted when a user private XML is updated.
-	PrivateUpdated = "private.updated"
+	// OfflineMessageArchived event is posted whenever an offline message is archived.
+	OfflineMessageArchived = "offline.message.archieved"
 )
 
-// PrivateEventInfo contains all information associated to a private event.
-type PrivateEventInfo struct {
-	// Username is the name of the user associated to this event.
+// OfflineHookInfo contains all information associated to an offline event.
+type OfflineHookInfo struct {
+	// Username is the name of the vCard user associated to this event.
 	Username string
 
-	// Private is the private XML element associated to this event.
-	Private stravaganza.Element
+	// Message represents the event associated message.
+	Message *stravaganza.Message
 }

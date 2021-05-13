@@ -24,10 +24,10 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/component"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -130,7 +130,7 @@ func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts disco module.
 func (m *Disco) Start(_ context.Context) error {
-	m.mh.AddHook(event.ModulesStarted, m.onModulesStarted, module.DefaultPriority)
+	m.mh.AddHook(hook.ModulesStarted, m.onModulesStarted, module.DefaultPriority)
 
 	log.Infow("Started disco module", "xep", XEPNumber)
 	return nil
@@ -138,7 +138,7 @@ func (m *Disco) Start(_ context.Context) error {
 
 // Stop stops disco module.
 func (m *Disco) Stop(_ context.Context) error {
-	m.mh.RemoveHook(event.ModulesStarted, m.onModulesStarted)
+	m.mh.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
 
 	log.Infow("Stopped disco module", "xep", XEPNumber)
 	return nil
@@ -166,7 +166,7 @@ func (m *Disco) onModulesStarted(ctx context.Context, execCtx *module.HookExecut
 	m.accProv = newAccountProvider(mods.AllModules(), m.rosRep, m.resMng)
 	m.mu.Unlock()
 
-	_, err = m.mh.Run(ctx, event.DiscoProvidersStarted, &module.HookExecutionContext{
+	_, err = m.mh.Run(ctx, hook.DiscoProvidersStarted, &module.HookExecutionContext{
 		Sender: m,
 	})
 	return false, err

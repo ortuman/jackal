@@ -24,9 +24,9 @@ import (
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -106,9 +106,9 @@ func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
 // Start starts ping module.
 func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
-		p.mh.AddHook(event.C2SStreamBinded, p.onBinded, module.DefaultPriority)
-		p.mh.AddHook(event.C2SStreamUnregistered, p.onUnregister, module.DefaultPriority)
-		p.mh.AddHook(event.C2SStreamElementReceived, p.onRecvElement, module.DefaultPriority)
+		p.mh.AddHook(hook.C2SStreamBinded, p.onBinded, module.DefaultPriority)
+		p.mh.AddHook(hook.C2SStreamUnregistered, p.onUnregister, module.DefaultPriority)
+		p.mh.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, module.DefaultPriority)
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
 	return nil
@@ -117,9 +117,9 @@ func (p *Ping) Start(_ context.Context) error {
 // Stop stops ping module.
 func (p *Ping) Stop(_ context.Context) error {
 	if p.cfg.SendPings {
-		p.mh.RemoveHook(event.C2SStreamBinded, p.onBinded)
-		p.mh.RemoveHook(event.C2SStreamUnregistered, p.onUnregister)
-		p.mh.RemoveHook(event.C2SStreamElementReceived, p.onRecvElement)
+		p.mh.RemoveHook(hook.C2SStreamBinded, p.onBinded)
+		p.mh.RemoveHook(hook.C2SStreamUnregistered, p.onUnregister)
+		p.mh.RemoveHook(hook.C2SStreamElementReceived, p.onRecvElement)
 	}
 	log.Infow("Stopped ping module", "xep", XEPNumber)
 	return nil
@@ -148,7 +148,7 @@ func (p *Ping) sendPongReply(ctx context.Context, pingIQ *stravaganza.IQ) error 
 }
 
 func (p *Ping) onBinded(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*event.C2SStreamEventInfo)
+	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
@@ -158,14 +158,14 @@ func (p *Ping) onRecvElement(_ context.Context, execCtx *module.HookExecutionCon
 	if !stm.IsBinded() {
 		return false, nil
 	}
-	inf := execCtx.Info.(*event.C2SStreamEventInfo)
+	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	p.cancelTimers(inf.JID)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
 
 func (p *Ping) onUnregister(_ context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*event.C2SStreamEventInfo)
+	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	if jd := inf.JID; jd != nil {
 		p.cancelTimers(jd)
 	}

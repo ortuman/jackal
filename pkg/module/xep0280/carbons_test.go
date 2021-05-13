@@ -22,9 +22,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/stretchr/testify/require"
@@ -210,8 +210,8 @@ func TestCarbons_SentCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.S2SInStreamMessageRouted, &module.HookExecutionContext{
-		Info: &event.S2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.S2SInStreamMessageRouted, &module.HookExecutionContext{
+		Info: &hook.S2SStreamHookInfo{
 			Sender:  "jackal.im",
 			Target:  "jabber.org",
 			Element: msg,
@@ -281,8 +281,8 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.C2SStreamMessageRouted, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamMessageRouted, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Targets: []jid.JID{*jd2},
 			Element: msg,
 		},
@@ -325,10 +325,10 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	hInf := &event.C2SStreamEventInfo{
+	hInf := &hook.C2SStreamHookInfo{
 		Element: msg,
 	}
-	_, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookExecutionContext{
+	_, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &module.HookExecutionContext{
 		Info: hInf,
 	})
 

@@ -21,11 +21,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -349,8 +349,8 @@ func TestBlockList_UserDeleted(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.UserDeleted, &module.HookExecutionContext{
-		Info: &event.UserEventInfo{
+	_, _ = mh.Run(context.Background(), hook.UserDeleted, &module.HookExecutionContext{
+		Info: &hook.UserHookInfo{
 			Username: "ortuman",
 		},
 	})
@@ -400,8 +400,8 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), event.C2SStreamElementReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	halted, err := mh.Run(context.Background(), hook.C2SStreamElementReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
 	})
@@ -461,8 +461,8 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	halted, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
 	})

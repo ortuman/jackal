@@ -20,11 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/pkg/module"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 )
 
 // ErrComponentNotFound will be returned by ProcessStanza in case the receiver component is not registered.
@@ -155,8 +154,8 @@ func (c *Components) Start(ctx context.Context) error {
 	}
 	log.Infow("Started components", "components", len(c.comps))
 
-	_, err := c.mh.Run(ctx, event.ComponentsStarted, &module.HookExecutionContext{
-		Info: &event.ComponentsEventInfo{
+	_, err := c.mh.Run(ctx, hook.ComponentsStarted, &module.HookExecutionContext{
+		Info: &hook.ComponentsHookInfo{
 			Hosts: hosts,
 		},
 		Sender: c,
@@ -179,8 +178,8 @@ func (c *Components) Stop(ctx context.Context) error {
 	}
 	log.Infow("Stopped components", "components", len(c.comps))
 
-	_, err := c.mh.Run(ctx, event.ComponentsStopped, &module.HookExecutionContext{
-		Info: &event.ComponentsEventInfo{
+	_, err := c.mh.Run(ctx, hook.ComponentsStopped, &module.HookExecutionContext{
+		Info: &hook.ComponentsHookInfo{
 			Hosts: hosts,
 		},
 		Sender: c,

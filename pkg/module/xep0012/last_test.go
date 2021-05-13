@@ -19,10 +19,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -260,8 +261,8 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := m.mh.Run(context.Background(), event.C2SStreamElementReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	halted, err := m.mh.Run(context.Background(), hook.C2SStreamElementReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: iq,
 		},
 	})
@@ -298,8 +299,8 @@ func TestLast_ProcessPresence(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
 		},

@@ -23,17 +23,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module"
-
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	xmppsession "github.com/ortuman/jackal/pkg/session"
@@ -134,7 +133,7 @@ func (s *inComponent) start() error {
 	log.Infow("Registered external component stream", "id", s.id)
 
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, event.ExternalComponentRegistered, &event.ExternalComponentEventInfo{
+	_, err := s.runHook(ctx, hook.ExternalComponentRegistered, &hook.ExternalComponentHookInfo{
 		ID: s.id.String(),
 	})
 	cancel()
@@ -218,7 +217,6 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 			err := s.handleElement(ctx, elem)
 			if err != nil {
 				log.Warnw("Failed to process incoming component session element", "error", err, "id", s.id)
-				_ = s.close(ctx)
 				return
 			}
 		}
@@ -228,12 +226,12 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 
 func (s *inComponent) handleElement(ctx context.Context, elem stravaganza.Element) error {
 	// run received element hook
-	hInf := &event.ExternalComponentEventInfo{
+	hInf := &hook.ExternalComponentHookInfo{
 		ID:      s.id.String(),
 		Host:    s.getJID().Domain(),
 		Element: elem,
 	}
-	halted, err := s.runHook(ctx, event.ExternalComponentElementReceived, hInf)
+	halted, err := s.runHook(ctx, hook.ExternalComponentElementReceived, hInf)
 	if err != nil {
 		return err
 	}
@@ -366,7 +364,7 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	_, err := s.runHook(ctx, event.ExternalComponentUnregistered, &event.ExternalComponentEventInfo{
+	_, err := s.runHook(ctx, hook.ExternalComponentUnregistered, &hook.ExternalComponentHookInfo{
 		ID:   s.id.String(),
 		Host: cHost,
 	})
@@ -448,7 +446,7 @@ func (s *inComponent) getState() inComponentState {
 	return inComponentState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inComponent) runHook(ctx context.Context, eventName string, inf *event.ExternalComponentEventInfo) (halt bool, err error) {
+func (s *inComponent) runHook(ctx context.Context, eventName string, inf *hook.ExternalComponentHookInfo) (halt bool, err error) {
 	return s.mh.Run(ctx, eventName, &module.HookExecutionContext{
 		Info:   inf,
 		Sender: s,

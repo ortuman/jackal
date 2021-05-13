@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 const (
-	// ComponentsStarted event is posted after initializing all configured components.
-	ComponentsStarted = "components.started"
+	// ModulesStarted event is posted after initializing all configured modules.
+	ModulesStarted = "modules.started"
 
-	// ComponentsStopped event is posted after finishing all configured components.
-	ComponentsStopped = "components.stopped"
+	// ModulesStopped event is posted after finishing all configured modules.
+	ModulesStopped = "modules.stopped"
 )
 
-// ComponentsEventInfo contains all information associated to a components event.
-type ComponentsEventInfo struct {
-	Hosts []string
+// ModulesHookInfo contains all information associated to a modules event.
+type ModulesHookInfo struct {
+	ModuleNames []string
 }

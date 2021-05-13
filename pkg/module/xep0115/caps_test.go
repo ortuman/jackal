@@ -22,10 +22,10 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
@@ -68,8 +68,8 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: pr,
 		},
 	})
@@ -136,8 +136,8 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.C2SStreamIQReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamIQReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: discoIQ,
 		},
 	})

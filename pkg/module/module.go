@@ -19,9 +19,9 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 )
 
@@ -98,8 +98,8 @@ func (m *Modules) Start(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.mh.Run(ctx, event.ModulesStarted, &HookExecutionContext{
-		Info: &event.ModulesEventInfo{
+	_, err := m.mh.Run(ctx, hook.ModulesStarted, &HookExecutionContext{
+		Info: &hook.ModulesHookInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,
@@ -121,8 +121,8 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.mh.Run(ctx, event.ModulesStopped, &HookExecutionContext{
-		Info: &event.ModulesEventInfo{
+	_, err := m.mh.Run(ctx, hook.ModulesStopped, &HookExecutionContext{
+		Info: &hook.ModulesHookInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,

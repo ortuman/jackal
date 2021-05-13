@@ -12,20 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
-
-import coremodel "github.com/ortuman/jackal/pkg/model/core"
+package hook
 
 const (
-	// MemberListUpdated event is posted whenever cluster member list is updated.
-	MemberListUpdated = "memberlist.updated"
+	// DiscoProvidersStarted event is posted after all entity providers have been initialized.
+	DiscoProvidersStarted = "disco.providers.started"
 )
-
-// MemberListEventInfo contains all info associated to MemberListUpdated event.
-type MemberListEventInfo struct {
-	// Registered contains all new registered cluster members.
-	Registered []coremodel.ClusterMember
-
-	// UnregisteredKeys contains unregistered cluster members keys.
-	UnregisteredKeys []string
-}

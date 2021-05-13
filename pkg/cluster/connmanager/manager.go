@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ortuman/jackal/pkg/module"
-
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/version"
 )
 
@@ -79,7 +78,7 @@ func (m *Manager) Start(_ context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.mh.AddHook(event.MemberListUpdated, m.onMemberListUpdated, module.DefaultPriority)
+	m.mh.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, module.DefaultPriority)
 
 	log.Infof("Started cluster connection manager")
 	return nil
@@ -98,7 +97,7 @@ func (m *Manager) Stop(_ context.Context) error {
 		}
 		delete(m.conns, instanceID)
 	}
-	m.mh.RemoveHook(event.MemberListUpdated, m.onMemberListUpdated)
+	m.mh.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
 
 	log.Infof("Stopped cluster connection manager... (%d total connections)", count)
 	return nil
@@ -108,7 +107,7 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *module.HookE
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	inf := execCtx.Info.(*event.MemberListEventInfo)
+	inf := execCtx.Info.(*hook.MemberListHookInfo)
 
 	// close unregistered members connections...
 	for _, instanceID := range inf.UnregisteredKeys {

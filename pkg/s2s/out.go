@@ -23,16 +23,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module"
-
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	xmppsession "github.com/ortuman/jackal/pkg/session"
@@ -244,7 +243,7 @@ func (s *outS2S) start() error {
 		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
-	err := s.runHook(ctx, event.S2SOutStreamRegistered, &event.S2SStreamEventInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamRegistered, &hook.S2SStreamHookInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -546,7 +545,7 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return s.runHook(ctx, event.S2SOutStreamElementSent, &event.S2SStreamEventInfo{
+	return s.runHook(ctx, hook.S2SOutStreamElementSent, &hook.S2SStreamHookInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -568,7 +567,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
-	err := s.runHook(ctx, event.S2SOutStreamUnregistered, &event.S2SStreamEventInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamUnregistered, &hook.S2SStreamHookInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -589,7 +588,7 @@ func (s *outS2S) getState() outS2SState {
 	return outS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *outS2S) runHook(ctx context.Context, eventName string, inf *event.S2SStreamEventInfo) error {
+func (s *outS2S) runHook(ctx context.Context, eventName string, inf *hook.S2SStreamHookInfo) error {
 	if s.typ == dialbackType {
 		return nil
 	}

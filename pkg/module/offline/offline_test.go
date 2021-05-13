@@ -22,9 +22,9 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
-	"github.com/ortuman/jackal/pkg/event"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -76,8 +76,8 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
 	})
@@ -143,8 +143,8 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), event.C2SStreamWillRouteElement, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	halted, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
 	})
@@ -218,8 +218,8 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
-	_, _ = mh.Run(context.Background(), event.C2SStreamPresenceReceived, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			Element: pr,
 		},
 	})

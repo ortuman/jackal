@@ -25,9 +25,10 @@ import (
 	"fmt"
 	"hash"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	userspb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
@@ -63,8 +64,8 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 		return nil, err
 	}
 	// run user created hook
-	_, err := s.mh.Run(ctx, event.UserCreated, &module.HookExecutionContext{
-		Info: &event.UserEventInfo{
+	_, err := s.mh.Run(ctx, hook.UserCreated, &module.HookExecutionContext{
+		Info: &hook.UserHookInfo{
 			Username: username,
 		},
 	})
@@ -97,8 +98,8 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// run user deleted hook
-	_, err := s.mh.Run(ctx, event.UserDeleted, &module.HookExecutionContext{
-		Info: &event.UserEventInfo{
+	_, err := s.mh.Run(ctx, hook.UserDeleted, &module.HookExecutionContext{
+		Info: &hook.UserHookInfo{
 			Username: username,
 		},
 	})

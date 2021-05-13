@@ -20,14 +20,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	"google.golang.org/grpc"
@@ -237,21 +236,21 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		EventName:  evName,
 	}
 	switch inf := evInfo.(type) {
-	case *event.ModulesEventInfo:
+	case *hook.ModulesHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_ModsEvInfo{
 			ModsEvInfo: &extmodulepb.ModulesEventInfo{
 				ModuleNames: inf.ModuleNames,
 			},
 		}
 
-	case *event.ComponentsEventInfo:
+	case *hook.ComponentsHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_CompsEvInfo{
 			CompsEvInfo: &extmodulepb.ComponentsEventInfo{
 				Hosts: inf.Hosts,
 			},
 		}
 
-	case *event.C2SStreamEventInfo:
+	case *hook.C2SStreamHookInfo:
 		var evInf extmodulepb.C2SStreamEventInfo
 		evInf.Id = inf.ID
 		if inf.JID != nil {
@@ -267,7 +266,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			C2SStreamEvInfo: &evInf,
 		}
 
-	case *event.S2SStreamEventInfo:
+	case *hook.S2SStreamHookInfo:
 		var evInf extmodulepb.S2SStreamEventInfo
 		evInf.Id = inf.ID
 		evInf.Sender = inf.Sender
@@ -279,7 +278,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			S2SStreamEvInfo: &evInf,
 		}
 
-	case *event.ExternalComponentEventInfo:
+	case *hook.ExternalComponentHookInfo:
 		var evInf extmodulepb.ExternalComponentEventInfo
 		evInf.Id = inf.ID
 		evInf.Host = inf.Host
@@ -290,7 +289,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			ExtComponentEvInfo: &evInf,
 		}
 
-	case *event.RosterEventInfo:
+	case *hook.RosterHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_RosterEvInfo{
 			RosterEvInfo: &extmodulepb.RosterEventInfo{
 				Username:     inf.Username,
@@ -299,7 +298,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *event.PrivateEventInfo:
+	case *hook.PrivateHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_PrivateEvInfo{
 			PrivateEvInfo: &extmodulepb.PrivateEventInfo{
 				Username: inf.Username,
@@ -307,7 +306,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *event.VCardEventInfo:
+	case *hook.VCardHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_VcardEvInfo{
 			VcardEvInfo: &extmodulepb.VCardEventInfo{
 				Username: inf.Username,
@@ -315,7 +314,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *event.OfflineEventInfo:
+	case *hook.OfflineHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_OfflineEvInfo{
 			OfflineEvInfo: &extmodulepb.OfflineEventInfo{
 				Username: inf.Username,
@@ -323,14 +322,14 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *event.UserEventInfo:
+	case *hook.UserHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_UserEvInfo{
 			UserEvInfo: &extmodulepb.UserEventInfo{
 				Username: inf.Username,
 			},
 		}
 
-	case *event.BlockListEventInfo:
+	case *hook.BlockListHookInfo:
 		var evInf extmodulepb.BlockListEventInfo
 		evInf.Username = inf.Username
 		for _, jd := range inf.JIDs {
@@ -340,7 +339,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			BlocklistEvInfo: &evInf,
 		}
 
-	case *event.LastActivityEventInfo:
+	case *hook.LastActivityHookInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_LastEvInfo{
 			LastEvInfo: &extmodulepb.LastEventInfo{
 				Username: inf.Username,

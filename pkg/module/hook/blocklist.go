@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -29,8 +29,8 @@ const (
 	BlockListItemsUnblocked = "blocklist.items.unblocked"
 )
 
-// BlockListEventInfo contains all information associated to a blocklist event.
-type BlockListEventInfo struct {
+// BlockListHookInfo contains all information associated to a blocklist event.
+type BlockListHookInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 

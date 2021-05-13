@@ -19,16 +19,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/c2s"
-
-	"github.com/ortuman/jackal/pkg/module"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -99,11 +97,11 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.mh.AddHook(event.C2SStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
-	m.mh.AddHook(event.S2SInStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
+	m.mh.AddHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
+	m.mh.AddHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement, module.LowestPriority)
 
-	m.mh.AddHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
-	m.mh.AddHook(event.UserDeleted, m.onUserDeleted, module.DefaultPriority)
+	m.mh.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
+	m.mh.AddHook(hook.UserDeleted, m.onUserDeleted, module.DefaultPriority)
 
 	log.Infow("Started offline module", "xep", ModuleName)
 	return nil
@@ -111,11 +109,11 @@ func (m *Offline) Start(_ context.Context) error {
 
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
-	m.mh.RemoveHook(event.C2SStreamWillRouteElement, m.onWillRouteElement)
-	m.mh.RemoveHook(event.S2SInStreamWillRouteElement, m.onWillRouteElement)
+	m.mh.RemoveHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement)
+	m.mh.RemoveHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement)
 
-	m.mh.RemoveHook(event.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
-	m.mh.RemoveHook(event.UserDeleted, m.onUserDeleted)
+	m.mh.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.mh.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped offline module", "xep", ModuleName)
 	return nil
@@ -125,9 +123,9 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *module.HookEx
 	var elem stravaganza.Element
 
 	switch inf := execCtx.Info.(type) {
-	case *event.C2SStreamEventInfo:
+	case *hook.C2SStreamHookInfo:
 		elem = inf.Element.(*stravaganza.Message)
-	case *event.S2SStreamEventInfo:
+	case *hook.S2SStreamHookInfo:
 		elem = inf.Element.(*stravaganza.Message)
 	}
 	msg, ok := elem.(*stravaganza.Message)
@@ -149,7 +147,7 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *module.HookEx
 }
 
 func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*event.C2SStreamEventInfo)
+	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
@@ -163,7 +161,7 @@ func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExe
 }
 
 func (m *Offline) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*event.UserEventInfo)
+	inf := execCtx.Info.(*hook.UserHookInfo)
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
 	if err != nil {
@@ -226,8 +224,8 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
 		return false, err
 	}
-	_, err = m.mh.Run(ctx, event.OfflineMessageArchived, &module.HookExecutionContext{
-		Info: &event.OfflineEventInfo{
+	_, err = m.mh.Run(ctx, hook.OfflineMessageArchived, &module.HookExecutionContext{
+		Info: &hook.OfflineHookInfo{
 			Username: username,
 			Message:  dMsg,
 		},

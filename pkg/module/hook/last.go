@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
+
+import "github.com/jackal-xmpp/stravaganza/v2/jid"
 
 const (
-	// ModulesStarted event is posted after initializing all configured modules.
-	ModulesStarted = "modules.started"
-
-	// ModulesStopped event is posted after finishing all configured modules.
-	ModulesStopped = "modules.stopped"
+	// LastActivityFetched event is posted when a user last activity is fetched.
+	LastActivityFetched = "last.fetched"
 )
 
-// ModulesEventInfo contains all information associated to a modules event.
-type ModulesEventInfo struct {
-	ModuleNames []string
+// LastActivityHookInfo contains all information associated to a last activity event.
+type LastActivityHookInfo struct {
+	// Username is the name of the user associated to this event.
+	Username string
+
+	// JID represents the event associated JID.
+	JID *jid.JID
 }

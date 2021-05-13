@@ -24,8 +24,8 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
 	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/stretchr/testify/require"
@@ -81,8 +81,8 @@ func TestPing_SendPing(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamBinded, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
@@ -127,8 +127,8 @@ func TestPing_Timeout(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), event.C2SStreamBinded, &module.HookExecutionContext{
-		Info: &event.C2SStreamEventInfo{
+	_, _ = mh.Run(context.Background(), hook.C2SStreamBinded, &module.HookExecutionContext{
+		Info: &hook.C2SStreamHookInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
