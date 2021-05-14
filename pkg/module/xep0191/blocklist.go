@@ -20,7 +20,6 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -60,7 +59,6 @@ type BlockList struct {
 	router router.Router
 	resMng resourceManager
 	hk     *hook.Hooks
-	subs   []sonar.SubID
 }
 
 // New returns a new initialized BlockList instance.
