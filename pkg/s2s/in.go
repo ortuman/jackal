@@ -21,8 +21,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -30,6 +28,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/component"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
@@ -65,7 +64,7 @@ type inS2S struct {
 	inHub        *InHub
 	kv           kv.KV
 	shapers      shaper.Shapers
-	hk           *hook2.Hooks
+	hk           *hook.Hooks
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -89,7 +88,7 @@ func newInS2S(
 	inHub *InHub,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	hk *hook2.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) (*inS2S, error) {
 	// set default rate limiter
@@ -158,7 +157,7 @@ func (s *inS2S) start() error {
 
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, hook2.S2SInStreamRegistered, &hook2.S2SStreamInfo{
+	_, err := s.runHook(ctx, hook.S2SInStreamRegistered, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -309,13 +308,13 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 	default:
 		if s.flags.isAuthenticated() || s.flags.isDialbackKeyAuthorized() {
 			// post element received event
-			hInf := &hook2.S2SStreamInfo{
+			hInf := &hook.S2SStreamInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
 				Element: elem,
 			}
-			halted, err := s.runHook(ctx, hook2.S2SInStreamElementReceived, hInf)
+			halted, err := s.runHook(ctx, hook.S2SInStreamElementReceived, hInf)
 			if err != nil {
 				return err
 			}
@@ -354,7 +353,7 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 
 func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// run IQ received hook
-	_, err := s.runHook(ctx, hook2.S2SInStreamIQReceived, &hook2.S2SStreamInfo{
+	_, err := s.runHook(ctx, hook.S2SInStreamIQReceived, &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -370,13 +369,13 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
 	// run will route iq hook
-	hInf := &hook2.S2SStreamInfo{
+	hInf := &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: iq,
 	}
-	halted, err := s.runHook(ctx, hook2.S2SInStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
 	if halted {
 		return nil
 	}
@@ -399,7 +398,7 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
 
 	case nil:
-		_, err = s.runHook(ctx, hook2.S2SInStreamIQRouted, &hook2.S2SStreamInfo{
+		_, err = s.runHook(ctx, hook.S2SInStreamIQRouted, &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
@@ -412,7 +411,7 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// post message received event
-	_, err := s.runHook(ctx, hook2.S2SInStreamMessageReceived, &hook2.S2SStreamInfo{
+	_, err := s.runHook(ctx, hook.S2SInStreamMessageReceived, &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -425,13 +424,13 @@ func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message
 
 sendMsg:
 	// run will route Message hook
-	hInf := &hook2.S2SStreamInfo{
+	hInf := &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: msg,
 	}
-	halted, err := s.runHook(ctx, hook2.S2SInStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
 	if halted {
 		return nil
 	}
@@ -465,7 +464,7 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
-		_, err = s.runHook(ctx, hook2.S2SInStreamMessageRouted, &hook2.S2SStreamInfo{
+		_, err = s.runHook(ctx, hook.S2SInStreamMessageRouted, &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
@@ -478,7 +477,7 @@ sendMsg:
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// run presence received hook
-	_, err := s.runHook(ctx, hook2.S2SInStreamPresenceReceived, &hook2.S2SStreamInfo{
+	_, err := s.runHook(ctx, hook.S2SInStreamPresenceReceived, &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -489,13 +488,13 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 	}
 	if presence.ToJID().IsFullWithUser() {
 		// run will route presence hook
-		hInf := &hook2.S2SStreamInfo{
+		hInf := &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
 			Element: presence,
 		}
-		halted, err := s.runHook(ctx, hook2.S2SInStreamWillRouteElement, hInf)
+		halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
 		if halted {
 			return nil
 		}
@@ -509,7 +508,7 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		_, err = s.router.Route(ctx, outPr)
 		switch err {
 		case nil:
-			_, err := s.runHook(ctx, hook2.S2SInStreamPresenceRouted, &hook2.S2SStreamInfo{
+			_, err := s.runHook(ctx, hook.S2SInStreamPresenceRouted, &hook.S2SStreamInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
@@ -781,7 +780,7 @@ func (s *inS2S) close(ctx context.Context) error {
 		"target", s.target,
 	)
 	// run unregistered incoming S2S hook
-	_, err := s.runHook(ctx, hook2.S2SInStreamUnregistered, &hook2.S2SStreamInfo{
+	_, err := s.runHook(ctx, hook.S2SInStreamUnregistered, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -815,8 +814,8 @@ func (s *inS2S) getState() inS2SState {
 	return inS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook2.S2SStreamInfo) (halt bool, err error) {
-	return s.hk.Run(ctx, hookName, &hook2.ExecutionContext{
+func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) (halt bool, err error) {
+	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

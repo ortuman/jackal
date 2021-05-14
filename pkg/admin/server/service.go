@@ -25,10 +25,9 @@ import (
 	"fmt"
 	"hash"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	userspb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -43,10 +42,10 @@ const iterationCount = 100_000
 type usersService struct {
 	rep     repository.Repository
 	peppers *pepper.Keys
-	hk      *hook2.Hooks
+	hk      *hook.Hooks
 }
 
-func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook2.Hooks) userspb.UsersServer {
+func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook.Hooks) userspb.UsersServer {
 	return &usersService{
 		rep:     rep,
 		peppers: peppers,
@@ -63,8 +62,8 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 		return nil, err
 	}
 	// run user created hook
-	_, err := s.hk.Run(ctx, hook2.UserCreated, &hook2.ExecutionContext{
-		Info: &hook2.UserInfo{
+	_, err := s.hk.Run(ctx, hook.UserCreated, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: username,
 		},
 	})
@@ -97,8 +96,8 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// run user deleted hook
-	_, err := s.hk.Run(ctx, hook2.UserDeleted, &hook2.ExecutionContext{
-		Info: &hook2.UserInfo{
+	_, err := s.hk.Run(ctx, hook.UserDeleted, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: username,
 		},
 	})

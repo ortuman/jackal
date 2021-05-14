@@ -19,11 +19,10 @@ import (
 	"testing"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -42,7 +41,7 @@ func TestLast_GetServerUptime(t *testing.T) {
 	}
 	m := &Last{
 		router: routerMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -123,7 +122,7 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 		rep:    repMock,
 		hosts:  hMock,
 		resMng: resMngMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -193,7 +192,7 @@ func TestLast_Forbidden(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -242,7 +241,7 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 	iq, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, uuid.New().String()).
@@ -260,8 +259,8 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := m.hk.Run(context.Background(), hook2.C2SStreamElementReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	halted, err := m.hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			Element: iq,
 		},
 	})
@@ -288,7 +287,7 @@ func TestLast_ProcessPresence(t *testing.T) {
 		return nil
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	m := &Last{
 		rep: rep,
 		hk:  hk,
@@ -298,8 +297,8 @@ func TestLast_ProcessPresence(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
 		},

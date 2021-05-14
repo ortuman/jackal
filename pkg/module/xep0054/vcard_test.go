@@ -18,10 +18,9 @@ import (
 	"context"
 	"testing"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,7 +61,7 @@ func TestVCard_GetVCard(t *testing.T) {
 	v := &VCard{
 		rep:    repMock,
 		router: routerMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -110,7 +109,7 @@ func TestVCard_SetVCard(t *testing.T) {
 	v := &VCard{
 		rep:    repMock,
 		router: routerMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().

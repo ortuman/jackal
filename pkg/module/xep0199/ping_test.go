@@ -21,11 +21,10 @@ import (
 	"testing"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/stretchr/testify/require"
@@ -40,7 +39,7 @@ func TestPing_Pong(t *testing.T) {
 		_ = stanza.ToXML(outBuf, true)
 		return nil, nil
 	}
-	p := New(routerMock, &hook2.Hooks{}, Config{})
+	p := New(routerMock, &hook.Hooks{}, Config{})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -72,7 +71,7 @@ func TestPing_SendPing(t *testing.T) {
 		outStanza = stanza
 		return nil, nil
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	p := New(routerMock, hk, Config{
 		Interval:  time.Millisecond * 500,
 		SendPings: true,
@@ -81,8 +80,8 @@ func TestPing_SendPing(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook2.C2SStreamBinded, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
@@ -116,7 +115,7 @@ func TestPing_Timeout(t *testing.T) {
 		return c2sRouterMock
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	p := New(routerMock, hk, Config{
 		Interval:      time.Millisecond * 500,
 		AckTimeout:    time.Millisecond * 250,
@@ -127,8 +126,8 @@ func TestPing_Timeout(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook2.C2SStreamBinded, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
