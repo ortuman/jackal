@@ -22,11 +22,17 @@ import (
 	"sync"
 )
 
+// Priority defines hook execution priority.
 type Priority int32
 
 const (
-	LowestPriority  = Priority(math.MinInt32)
+	// LowestPriority defines lowest hook execution priority.
+	LowestPriority = Priority(math.MinInt32)
+
+	// DefaultPriority defines default hook execution priority.
 	DefaultPriority = Priority(0)
+
+	// HighestPriority defines highest hook execution priority.
 	HighestPriority = Priority(math.MaxInt32)
 )
 
