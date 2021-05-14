@@ -18,11 +18,10 @@ import (
 	"context"
 	"testing"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
@@ -42,7 +41,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 		respStanzas = append(respStanzas, stanza)
 		return nil, nil
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		hk:     hk,
@@ -54,7 +53,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = hk.Run(context.Background(), hook2.ModulesStarted, &hook2.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -110,7 +109,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 	compsMock.AllComponentsFunc = func() []component.Component {
 		return []component.Component{compMock}
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	d := &Disco{
 		router:     routerMock,
 		components: compsMock,
@@ -123,7 +122,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = hk.Run(context.Background(), hook2.ModulesStarted, &hook2.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -180,7 +179,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 		}, nil
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
@@ -193,7 +192,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = hk.Run(context.Background(), hook2.ModulesStarted, &hook2.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -255,7 +254,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 			},
 		}, nil
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
@@ -269,7 +268,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = hk.Run(context.Background(), hook2.ModulesStarted, &hook2.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 

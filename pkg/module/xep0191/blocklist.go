@@ -145,58 +145,58 @@ func (m *BlockList) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.S2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.S2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return false, m.rep.DeleteBlockListItems(ctx, inf.Username)
+	return m.rep.DeleteBlockListItems(ctx, inf.Username)
 }
 
-func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) (halted bool, err error) {
+func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
 	if !isLocalTo || (isLocalTo && toJID.MatchesWithOptions(fromJID, jid.MatchesBare)) {
-		return false, nil
+		return nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
 	if err != nil {
-		return false, err
+		return err
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
@@ -212,22 +212,22 @@ func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganz
 		case *stravaganza.Message:
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 		}
-		return true, nil // element already handled
+		return hook.ErrStopped // element already handled
 	}
-	return false, nil
+	return nil
 }
 
-func (m *BlockList) processOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) (halted bool, err error) {
+func (m *BlockList) processOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalFrom := m.hosts.IsLocalHost(fromJID.Domain())
 	if !isLocalFrom || (isLocalFrom && fromJID.MatchesWithOptions(toJID, jid.MatchesBare)) {
-		return false, nil
+		return nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
 	if err != nil {
-		return false, err
+		return err
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
@@ -243,9 +243,9 @@ func (m *BlockList) processOutgoingStanza(ctx context.Context, stanza stravaganz
 		errStanza, _ := se.Stanza(false)
 
 		_, _ = m.router.Route(ctx, errStanza)
-		return true, nil // element already handled
+		return hook.ErrStopped // element already handled
 	}
-	return false, nil
+	return nil
 }
 
 func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error {

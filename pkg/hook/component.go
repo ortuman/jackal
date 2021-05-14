@@ -15,10 +15,10 @@
 package hook
 
 const (
-	// ComponentsStarted event is posted after initializing all configured components.
+	// ComponentsStarted hook runs after initializing all configured components.
 	ComponentsStarted = "components.started"
 
-	// ComponentsStopped event is posted after finishing all configured components.
+	// ComponentsStopped hook runs after finishing all configured components.
 	ComponentsStopped = "components.stopped"
 )
 

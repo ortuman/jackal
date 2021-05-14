@@ -19,11 +19,10 @@ import (
 	"strconv"
 	"testing"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -66,7 +65,7 @@ func TestCarbons_Enable(t *testing.T) {
 	c := &Carbons{
 		router: routerMock,
 		hosts:  hMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -132,7 +131,7 @@ func TestCarbons_Disable(t *testing.T) {
 	c := &Carbons{
 		router: routerMock,
 		hosts:  hMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -186,7 +185,7 @@ func TestCarbons_SentCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
@@ -210,8 +209,8 @@ func TestCarbons_SentCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = hk.Run(context.Background(), hook2.S2SInStreamMessageRouted, &hook2.ExecutionContext{
-		Info: &hook2.S2SStreamInfo{
+	_, _ = hk.Run(context.Background(), hook.S2SInStreamMessageRouted, &hook.ExecutionContext{
+		Info: &hook.S2SStreamInfo{
 			Sender:  "jackal.im",
 			Target:  "jabber.org",
 			Element: msg,
@@ -257,7 +256,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
@@ -281,8 +280,8 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = hk.Run(context.Background(), hook2.C2SStreamMessageRouted, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamMessageRouted, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			Targets: []jid.JID{*jd2},
 			Element: msg,
 		},
@@ -301,7 +300,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 
 func TestCarbons_InterceptStanza(t *testing.T) {
 	// given
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
 		hk: hk,
 	}
@@ -325,10 +324,10 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	hInf := &hook2.C2SStreamInfo{
+	hInf := &hook.C2SStreamInfo{
 		Element: msg,
 	}
-	_, err := hk.Run(context.Background(), hook2.C2SStreamWillRouteElement, &hook2.ExecutionContext{
+	_, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
 		Info: hInf,
 	})
 

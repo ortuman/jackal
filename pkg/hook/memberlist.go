@@ -17,7 +17,7 @@ package hook
 import coremodel "github.com/ortuman/jackal/pkg/model/core"
 
 const (
-	// MemberListUpdated event is posted whenever cluster member list is updated.
+	// MemberListUpdated hook runs whenever cluster member list is updated.
 	MemberListUpdated = "memberlist.updated"
 )
 

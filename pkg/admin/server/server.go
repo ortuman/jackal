@@ -20,11 +20,10 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminpb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
 	"google.golang.org/grpc"
@@ -41,7 +40,7 @@ type Server struct {
 
 	rep     repository.Repository
 	peppers *pepper.Keys
-	hk      *hook2.Hooks
+	hk      *hook.Hooks
 }
 
 // New returns a new initialized admin server.
@@ -50,7 +49,7 @@ func New(
 	port int,
 	rep repository.Repository,
 	peppers *pepper.Keys,
-	hk *hook2.Hooks,
+	hk *hook.Hooks,
 ) *Server {
 	return &Server{
 		bindAddr: bindAddr,

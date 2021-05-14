@@ -23,12 +23,11 @@ import (
 	"testing"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
+	"github.com/ortuman/jackal/pkg/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/transport"
 	"github.com/stretchr/testify/require"
@@ -102,7 +101,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 		comps:      compsMock,
 		extCompMng: extCompMngMock,
 		inHub:      newInHub(),
-		hk:         hook2.NewHooks(),
+		hk:         hook.NewHooks(),
 		rq:         runqueue.New("in_component:test", nil),
 	}
 	// when
@@ -259,7 +258,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 				comps:      compsMock,
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
-				hk:         hook2.NewHooks(),
+				hk:         hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -352,7 +351,7 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 				comps:      compsMock,
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
-				hk:         hook2.NewHooks(),
+				hk:         hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

@@ -20,11 +20,10 @@ import (
 	"io"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
 	"github.com/ortuman/jackal/pkg/router"
@@ -41,7 +40,7 @@ const (
 // HookConfig defines a hook handler configuration
 type HookConfig struct {
 	Name     string
-	Priority hook2.Priority
+	Priority hook.Priority
 }
 
 // Config defines external module configuratiopn value.
@@ -67,7 +66,7 @@ type ExtModule struct {
 	address  string
 	isSecure bool
 	cfg      Config
-	hk       *hook2.Hooks
+	hk       *hook.Hooks
 	router   router.Router
 
 	cc io.Closer
@@ -79,7 +78,7 @@ func New(
 	address string,
 	isSecure bool,
 	router router.Router,
-	hk *hook2.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) *ExtModule {
 	return &ExtModule{
@@ -191,14 +190,14 @@ func (m *ExtModule) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *ExtModule) onHookEvent(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+func (m *ExtModule) onHookEvent(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	/*
 		_, err := m.cl.ProcessEvent(ctx, toPBProcessEventRequest(ev.Name(), ev.Info()))
 		if err != nil {
 			return errors.Wrap(err, "externalmodule: failed to process event")
 		}
 	*/
-	return false, nil
+	return nil
 }
 
 func (m *ExtModule) recvStanzas(stm extmodulepb.Module_GetStanzasClient) {
@@ -236,21 +235,21 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 		EventName:  evName,
 	}
 	switch inf := evInfo.(type) {
-	case *hook2.ModulesInfo:
+	case *hook.ModulesInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_ModsEvInfo{
 			ModsEvInfo: &extmodulepb.ModulesEventInfo{
 				ModuleNames: inf.ModuleNames,
 			},
 		}
 
-	case *hook2.ComponentsInfo:
+	case *hook.ComponentsInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_CompsEvInfo{
 			CompsEvInfo: &extmodulepb.ComponentsEventInfo{
 				Hosts: inf.Hosts,
 			},
 		}
 
-	case *hook2.C2SStreamInfo:
+	case *hook.C2SStreamInfo:
 		var evInf extmodulepb.C2SStreamEventInfo
 		evInf.Id = inf.ID
 		if inf.JID != nil {
@@ -266,7 +265,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			C2SStreamEvInfo: &evInf,
 		}
 
-	case *hook2.S2SStreamInfo:
+	case *hook.S2SStreamInfo:
 		var evInf extmodulepb.S2SStreamEventInfo
 		evInf.Id = inf.ID
 		evInf.Sender = inf.Sender
@@ -278,7 +277,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			S2SStreamEvInfo: &evInf,
 		}
 
-	case *hook2.ExternalComponentInfo:
+	case *hook.ExternalComponentInfo:
 		var evInf extmodulepb.ExternalComponentEventInfo
 		evInf.Id = inf.ID
 		evInf.Host = inf.Host
@@ -289,7 +288,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			ExtComponentEvInfo: &evInf,
 		}
 
-	case *hook2.RosterInfo:
+	case *hook.RosterInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_RosterEvInfo{
 			RosterEvInfo: &extmodulepb.RosterEventInfo{
 				Username:     inf.Username,
@@ -298,7 +297,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *hook2.PrivateInfo:
+	case *hook.PrivateInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_PrivateEvInfo{
 			PrivateEvInfo: &extmodulepb.PrivateEventInfo{
 				Username: inf.Username,
@@ -306,7 +305,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *hook2.VCardInfo:
+	case *hook.VCardInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_VcardEvInfo{
 			VcardEvInfo: &extmodulepb.VCardEventInfo{
 				Username: inf.Username,
@@ -314,7 +313,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *hook2.OfflineInfo:
+	case *hook.OfflineInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_OfflineEvInfo{
 			OfflineEvInfo: &extmodulepb.OfflineEventInfo{
 				Username: inf.Username,
@@ -322,14 +321,14 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			},
 		}
 
-	case *hook2.UserInfo:
+	case *hook.UserInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_UserEvInfo{
 			UserEvInfo: &extmodulepb.UserEventInfo{
 				Username: inf.Username,
 			},
 		}
 
-	case *hook2.BlockListInfo:
+	case *hook.BlockListInfo:
 		var evInf extmodulepb.BlockListEventInfo
 		evInf.Username = inf.Username
 		for _, jd := range inf.JIDs {
@@ -339,7 +338,7 @@ func toPBProcessEventRequest(evName string, evInfo interface{}) *extmodulepb.Pro
 			BlocklistEvInfo: &evInf,
 		}
 
-	case *hook2.LastActivityInfo:
+	case *hook.LastActivityInfo:
 		ret.Payload = &extmodulepb.ProcessEventRequest_LastEvInfo{
 			LastEvInfo: &extmodulepb.LastEventInfo{
 				Username: inf.Username,

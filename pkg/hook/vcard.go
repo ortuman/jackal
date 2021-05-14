@@ -17,10 +17,10 @@ package hook
 import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// VCardFetched event is posted whenever a user vCard is fetched.
+	// VCardFetched hook runs whenever a user vCard is fetched.
 	VCardFetched = "vcard.fetched"
 
-	// VCardUpdated event is posted whenever a user vCard is updated.
+	// VCardUpdated hook runs whenever a user vCard is updated.
 	VCardUpdated = "vcard.updated"
 )
 

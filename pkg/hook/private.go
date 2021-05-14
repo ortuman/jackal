@@ -17,10 +17,10 @@ package hook
 import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// PrivateFetched event is posted when a user private XML is fetched.
+	// PrivateFetched hook runs when a user private XML is fetched.
 	PrivateFetched = "private.fetched"
 
-	// PrivateUpdated event is posted when a user private XML is updated.
+	// PrivateUpdated hook runs when a user private XML is updated.
 	PrivateUpdated = "private.updated"
 )
 

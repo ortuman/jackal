@@ -18,11 +18,10 @@ import (
 	"context"
 	"testing"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -68,7 +67,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 	bl := &BlockList{
 		router: routerMock,
 		rep:    rep,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -142,7 +141,7 @@ func TestBlockList_BlockItem(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		resMng: resMngMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -246,7 +245,7 @@ func TestBlockList_UnblockItem(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		resMng: resMngMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -310,7 +309,7 @@ func TestBlockList_Forbidden(t *testing.T) {
 
 	bl := &BlockList{
 		router: routerMock,
-		hk:     hook2.NewHooks(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -340,7 +339,7 @@ func TestBlockList_UserDeleted(t *testing.T) {
 		return nil
 	}
 
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		rep: rep,
 		hk:  hk,
@@ -349,8 +348,8 @@ func TestBlockList_UserDeleted(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	_, _ = hk.Run(context.Background(), hook2.UserDeleted, &hook2.ExecutionContext{
-		Info: &hook2.UserInfo{
+	_, _ = hk.Run(context.Background(), hook.UserDeleted, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: "ortuman",
 		},
 	})
@@ -378,7 +377,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
@@ -400,8 +399,8 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook2.C2SStreamElementReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			Element: msg,
 		},
 	})
@@ -440,7 +439,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
-	hk := hook2.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
@@ -461,8 +460,8 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook2.C2SStreamWillRouteElement, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamInfo{
+	halted, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			Element: msg,
 		},
 	})

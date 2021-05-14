@@ -15,10 +15,10 @@
 package hook
 
 const (
-	// UserCreated event is posted whenever a new user is created.
+	// UserCreated hook runs whenever a new user is created.
 	UserCreated = "user.created"
 
-	// UserDeleted event is posted whenever a user is deleted.
+	// UserDeleted hook runs whenever a user is deleted.
 	UserDeleted = "user.deleted"
 )
 

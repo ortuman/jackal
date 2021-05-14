@@ -15,10 +15,10 @@
 package hook
 
 const (
-	// RosterRequested event is posted whenever a user requests the roster.
+	// RosterRequested hook runs whenever a user requests the roster.
 	RosterRequested = "roster.requested"
 
-	// RosterItemUpdated event is posted whenever a roster item subscription is updated.
+	// RosterItemUpdated hook runs whenever a roster item subscription is updated.
 	RosterItemUpdated = "roster.item.updated"
 )
 

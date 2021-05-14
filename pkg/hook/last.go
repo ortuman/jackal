@@ -17,7 +17,7 @@ package hook
 import "github.com/jackal-xmpp/stravaganza/v2/jid"
 
 const (
-	// LastActivityFetched event is posted when a user last activity is fetched.
+	// LastActivityFetched hook runs when a user last activity is fetched.
 	LastActivityFetched = "last.fetched"
 )
 

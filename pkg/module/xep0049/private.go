@@ -116,9 +116,9 @@ func (m *Private) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return false, m.rep.DeletePrivates(ctx, inf.Username)
+	return m.rep.DeletePrivates(ctx, inf.Username)
 }
 
 func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {

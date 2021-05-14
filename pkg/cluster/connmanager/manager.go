@@ -102,7 +102,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -127,5 +127,5 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 
 		m.conns[member.InstanceID] = cl
 	}
-	return false, nil
+	return nil
 }

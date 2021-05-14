@@ -19,12 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -55,7 +54,7 @@ type Offline struct {
 	resMng resourceManager
 	rep    repository.Offline
 	locker locker.Locker
-	hk     *hook2.Hooks
+	hk     *hook.Hooks
 }
 
 // New creates and initializes a new Offline instance.
@@ -65,7 +64,7 @@ func New(
 	resMng *c2s.ResourceManager,
 	rep repository.Offline,
 	locker locker.Locker,
-	hk *hook2.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) *Offline {
 	return &Offline{
@@ -97,11 +96,11 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.hk.AddHook(hook2.C2SStreamWillRouteElement, m.onWillRouteElement, hook2.LowestPriority)
-	m.hk.AddHook(hook2.S2SInStreamWillRouteElement, m.onWillRouteElement, hook2.LowestPriority)
+	m.hk.AddHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement, hook.LowestPriority)
+	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement, hook.LowestPriority)
 
-	m.hk.AddHook(hook2.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook2.DefaultPriority)
-	m.hk.AddHook(hook2.UserDeleted, m.onUserDeleted, hook2.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started offline module", "xep", ModuleName)
 	return nil
@@ -109,67 +108,67 @@ func (m *Offline) Start(_ context.Context) error {
 
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
-	m.hk.RemoveHook(hook2.C2SStreamWillRouteElement, m.onWillRouteElement)
-	m.hk.RemoveHook(hook2.S2SInStreamWillRouteElement, m.onWillRouteElement)
+	m.hk.RemoveHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement)
+	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement)
 
-	m.hk.RemoveHook(hook2.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
-	m.hk.RemoveHook(hook2.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped offline module", "xep", ModuleName)
 	return nil
 }
 
-func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	var elem stravaganza.Element
 
 	switch inf := execCtx.Info.(type) {
-	case *hook2.C2SStreamInfo:
+	case *hook.C2SStreamInfo:
 		elem = inf.Element.(*stravaganza.Message)
-	case *hook2.S2SStreamInfo:
+	case *hook.S2SStreamInfo:
 		elem = inf.Element.(*stravaganza.Message)
 	}
 	msg, ok := elem.(*stravaganza.Message)
 	if !ok || !isMessageArchievable(msg) {
-		return false, nil
+		return nil
 	}
 	toJID := msg.ToJID()
 	if !m.hosts.IsLocalHost(toJID.Domain()) {
-		return false, nil
+		return nil
 	}
 	rss, err := m.resMng.GetResources(ctx, toJID.Node())
 	if err != nil {
-		return false, err
+		return err
 	}
 	if len(rss) > 0 {
-		return false, nil
+		return nil
 	}
 	return m.archiveMessage(ctx, msg)
 }
 
-func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamInfo)
+func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
 	if toJID.IsFull() || !m.hosts.IsLocalHost(toJID.Domain()) {
-		return false, nil
+		return nil
 	}
 	if !pr.IsAvailable() || pr.Priority() < 0 {
-		return false, nil
+		return nil
 	}
-	return false, m.deliverOfflineMessages(ctx, toJID.Node())
+	return m.deliverOfflineMessages(ctx, toJID.Node())
 }
 
-func (m *Offline) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserInfo)
+func (m *Offline) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.UserInfo)
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer func() { _ = lock.Release(ctx) }()
 
-	return false, m.rep.DeleteOfflineMessages(ctx, inf.Username)
+	return m.rep.DeleteOfflineMessages(ctx, inf.Username)
 }
 
 func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) error {
@@ -199,44 +198,44 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	return nil
 }
 
-func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) (halt bool, err error) {
+func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) error {
 	toJID := msg.ToJID()
 	username := toJID.Node()
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(username))
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer func() { _ = lock.Release(ctx) }()
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if qSize == m.cfg.QueueSize { // offline queue is full
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(msg, stanzaerror.ServiceUnavailable))
-		return true, nil // already handled
+		return hook.ErrStopped // already handled
 	}
 	// add delay info
 	dMsg := xmpputil.MakeDelayMessage(msg, time.Now(), toJID.Domain(), "Offline Storage")
 
 	// enqueue offline message
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
-		return false, err
+		return err
 	}
-	_, err = m.hk.Run(ctx, hook2.OfflineMessageArchived, &hook2.ExecutionContext{
-		Info: &hook2.OfflineInfo{
+	_, err = m.hk.Run(ctx, hook.OfflineMessageArchived, &hook.ExecutionContext{
+		Info: &hook.OfflineInfo{
 			Username: username,
 			Message:  dMsg,
 		},
 		Sender: m,
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
 	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
 
-	return true, nil // already handled
+	return hook.ErrStopped // already handled
 }
 
 func isMessageArchievable(msg *stravaganza.Message) bool {

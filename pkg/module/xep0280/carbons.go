@@ -19,12 +19,11 @@ import (
 	"fmt"
 	"strconv"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
@@ -55,7 +54,7 @@ type Carbons struct {
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	hk     *hook2.Hooks
+	hk     *hook.Hooks
 }
 
 // New returns a new initialized carbons instance.
@@ -63,7 +62,7 @@ func New(
 	router router.Router,
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
-	hk *hook2.Hooks,
+	hk *hook.Hooks,
 ) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
@@ -93,10 +92,10 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
-	p.hk.AddHook(hook2.C2SStreamWillRouteElement, p.onC2SElementWillRoute, hook2.DefaultPriority)
-	p.hk.AddHook(hook2.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, hook2.DefaultPriority)
-	p.hk.AddHook(hook2.C2SStreamMessageRouted, p.onC2SMessageRouted, hook2.DefaultPriority)
-	p.hk.AddHook(hook2.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook2.DefaultPriority)
+	p.hk.AddHook(hook.C2SStreamWillRouteElement, p.onC2SElementWillRoute, hook.DefaultPriority)
+	p.hk.AddHook(hook.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, hook.DefaultPriority)
+	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.DefaultPriority)
+	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.DefaultPriority)
 
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
@@ -104,10 +103,10 @@ func (p *Carbons) Start(_ context.Context) error {
 
 // Stop stops carbons module.
 func (p *Carbons) Stop(_ context.Context) error {
-	p.hk.RemoveHook(hook2.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
-	p.hk.RemoveHook(hook2.S2SInStreamWillRouteElement, p.onS2SElementWillRoute)
-	p.hk.RemoveHook(hook2.C2SStreamMessageRouted, p.onC2SMessageRouted)
-	p.hk.RemoveHook(hook2.S2SInStreamMessageRouted, p.onS2SMessageRouted)
+	p.hk.RemoveHook(hook.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
+	p.hk.RemoveHook(hook.S2SInStreamWillRouteElement, p.onS2SElementWillRoute)
+	p.hk.RemoveHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted)
+	p.hk.RemoveHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted)
 
 	log.Infow("Stopped carbons module", "xep", XEPNumber)
 	return nil
@@ -132,46 +131,46 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamInfo)
+func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	inf.Element = stripMessagePrivate(msg)
-	return false, nil
+	return nil
 }
 
-func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamInfo)
+func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.S2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return false, nil
+		return nil
 	}
 	inf.Element = stripMessagePrivate(msg)
-	return false, nil
+	return nil
 }
 
-func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamInfo)
+func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return false, nil
+		return nil
 	}
-	return false, p.processMessage(ctx, msg, inf.Targets)
+	return p.processMessage(ctx, msg, inf.Targets)
 }
 
-func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamInfo)
+func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.S2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
-		return false, nil
+		return nil
 	}
-	return false, p.processMessage(ctx, msg, nil)
+	return p.processMessage(ctx, msg, nil)
 }
 
 func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {

@@ -17,13 +17,13 @@ package hook
 import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// ExternalComponentRegistered event is posted when a external component connection is registered.
+	// ExternalComponentRegistered hook runs when a external component connection is registered.
 	ExternalComponentRegistered = "ext_component.stream.registered"
 
-	// ExternalComponentUnregistered event is posted when a external component connection is unregistered.
+	// ExternalComponentUnregistered hook runs when a external component connection is unregistered.
 	ExternalComponentUnregistered = "ext_component.stream.unregistered"
 
-	// ExternalComponentElementReceived event is posted whenever an XMPP element is received over a external component stream.
+	// ExternalComponentElementReceived hook runs whenever an XMPP element is received over a external component stream.
 	ExternalComponentElementReceived = "ext_component.stream.element_received"
 )
 

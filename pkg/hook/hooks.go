@@ -16,6 +16,7 @@ package hook
 
 import (
 	"context"
+	"errors"
 	"math"
 	"reflect"
 	"sort"
@@ -37,7 +38,10 @@ const (
 )
 
 // Handler defines a generic hook handler function.
-type Handler func(ctx context.Context, execCtx *ExecutionContext) (halt bool, err error)
+type Handler func(ctx context.Context, execCtx *ExecutionContext) error
+
+// ErrStopped error is returned by a handler to halt hook execution.
+var ErrStopped = errors.New("hook: execution stopped")
 
 // ExecutionContext defines a hook execution info context.
 type ExecutionContext struct {
@@ -103,12 +107,14 @@ func (h *Hooks) Run(ctx context.Context, hook string, execCtx *ExecutionContext)
 
 	handlers := h.handlers[hook]
 	for _, handler := range handlers {
-		halt, err := handler.h(ctx, execCtx)
-		if err != nil {
-			return false, err
-		}
-		if halt {
+		err := handler.h(ctx, execCtx)
+		switch {
+		case err == nil:
+			break
+		case errors.Is(err, ErrStopped):
 			return true, nil
+		default:
+			return false, err
 		}
 	}
 	return false, nil

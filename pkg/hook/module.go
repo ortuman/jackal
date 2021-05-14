@@ -15,10 +15,10 @@
 package hook
 
 const (
-	// ModulesStarted event is posted after initializing all configured modules.
+	// ModulesStarted hook runs after initializing all configured modules.
 	ModulesStarted = "modules.started"
 
-	// ModulesStopped event is posted after finishing all configured modules.
+	// ModulesStopped hook runs after finishing all configured modules.
 	ModulesStopped = "modules.stopped"
 )
 

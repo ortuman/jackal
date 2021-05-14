@@ -20,40 +20,40 @@ import (
 )
 
 const (
-	// C2SStreamRegistered event is posted when a C2S connection is registered.
+	// C2SStreamRegistered hook runs when a C2S connection is registered.
 	C2SStreamRegistered = "c2s.stream.registered"
 
-	// C2SStreamBinded event is posted when C2S stream is bounded.
+	// C2SStreamBinded hook runs when C2S stream is bounded.
 	C2SStreamBinded = "c2s.stream.binded"
 
-	// C2SStreamUnregistered event is posted when a C2S connection is unregistered.
+	// C2SStreamUnregistered hook runs when a C2S connection is unregistered.
 	C2SStreamUnregistered = "c2s.stream.unregistered"
 
-	// C2SStreamElementReceived event is posted when a XMPP element is received over a C2S stream.
+	// C2SStreamElementReceived hook runs when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
 
-	// C2SStreamIQReceived event is posted when an iq stanza is received over a C2S stream.
+	// C2SStreamIQReceived hook runs when an iq stanza is received over a C2S stream.
 	C2SStreamIQReceived = "c2s.stream.iq_received"
 
-	// C2SStreamPresenceReceived event is posted when a presence stanza is received over a C2S stream.
+	// C2SStreamPresenceReceived hook runs when a presence stanza is received over a C2S stream.
 	C2SStreamPresenceReceived = "c2s.stream.presence_received"
 
-	// C2SStreamMessageReceived event is posted when a message stanza is received over a C2S stream.
+	// C2SStreamMessageReceived hook runs when a message stanza is received over a C2S stream.
 	C2SStreamMessageReceived = "c2s.stream.message_received"
 
-	// C2SStreamWillRouteElement event is posted when an XMPP element is about to be routed over a C2S stream.
+	// C2SStreamWillRouteElement hook runs when an XMPP element is about to be routed over a C2S stream.
 	C2SStreamWillRouteElement = "c2s.stream.will_route_element"
 
-	// C2SStreamIQRouted event is posted when an iq stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamIQRouted hook runs when an iq stanza is successfully routed to one ore more C2S streams.
 	C2SStreamIQRouted = "c2s.stream.iq_routed"
 
-	// C2SStreamPresenceRouted event is posted when a presence stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamPresenceRouted hook runs when a presence stanza is successfully routed to one ore more C2S streams.
 	C2SStreamPresenceRouted = "c2s.stream.presence_routed"
 
-	// C2SStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamMessageRouted hook runs when a message stanza is successfully routed to one ore more C2S streams.
 	C2SStreamMessageRouted = "c2s.stream.message_routed"
 
-	// C2SStreamElementSent event is posted when a XMPP element is sent over a C2S stream.
+	// C2SStreamElementSent hook runs when a XMPP element is sent over a C2S stream.
 	C2SStreamElementSent = "c2s.stream.element_sent"
 )
 

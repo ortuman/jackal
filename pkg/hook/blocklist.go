@@ -19,13 +19,13 @@ import (
 )
 
 const (
-	// BlockListFetched event is posted when a user block list is fetched.
+	// BlockListFetched hook runs when a user block list is fetched.
 	BlockListFetched = "blocklist.items.fetched"
 
-	// BlockListItemsBlocked event is posted when one or more JIDs are blocked.
+	// BlockListItemsBlocked hook runs when one or more JIDs are blocked.
 	BlockListItemsBlocked = "blocklist.items.blocked"
 
-	// BlockListItemsUnblocked event is posted when one or more JIDs are unblocked.
+	// BlockListItemsUnblocked hook runs when one or more JIDs are unblocked.
 	BlockListItemsUnblocked = "blocklist.items.unblocked"
 )
 

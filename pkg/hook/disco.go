@@ -15,6 +15,6 @@
 package hook
 
 const (
-	// DiscoProvidersStarted event is posted after all entity providers have been initialized.
+	// DiscoProvidersStarted hook runs after all entity providers have been initialized.
 	DiscoProvidersStarted = "disco.providers.started"
 )

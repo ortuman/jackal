@@ -24,13 +24,12 @@ import (
 	"testing"
 	"time"
 
-	hook2 "github.com/ortuman/jackal/pkg/hook"
-
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -116,7 +115,7 @@ func TestInC2S_Disconnect(t *testing.T) {
 		router:  routerMock,
 		resMng:  rmMock,
 		rq:      runqueue.New("in_c2s:test", nil),
-		hk:      hook2.NewHooks(),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -738,7 +737,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				activeAuth:     authMock,
 				session:        ssMock,
 				resMng:         resMngMock,
-				hk:             hook2.NewHooks(),
+				hk:             hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -823,7 +822,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 				session: ssMock,
 				router:  routerMock,
 				resMng:  resMngMock,
-				hk:      hook2.NewHooks(),
+				hk:      hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)
