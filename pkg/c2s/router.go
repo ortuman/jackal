@@ -37,7 +37,7 @@ type c2sRouter struct {
 	cluster clusterRouter
 	resMng  resourceManager
 	rep     repository.Repository
-	mh      *hook.Hooks
+	hk      *hook.Hooks
 }
 
 // NewRouter creates and returns an initialized C2S router.
@@ -46,14 +46,14 @@ func NewRouter(
 	clusterRouter *clusterrouter.Router,
 	resMng *ResourceManager,
 	rep repository.Repository,
-	mh *hook.Hooks,
+	hk *hook.Hooks,
 ) router.C2SRouter {
 	return &c2sRouter{
 		local:   localRouter,
 		cluster: clusterRouter,
 		resMng:  resMng,
 		rep:     rep,
-		mh:      mh,
+		hk:      hk,
 	}
 }
 

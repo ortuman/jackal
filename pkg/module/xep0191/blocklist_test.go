@@ -339,16 +339,16 @@ func TestBlockList_UserDeleted(t *testing.T) {
 		return nil
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		rep: rep,
-		hk:  mh,
+		hk:  hk,
 	}
 	// when
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), hook.UserDeleted, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.UserDeleted, &hook.ExecutionContext{
 		Info: &hook.UserHookInfo{
 			Username: "ortuman",
 		},
@@ -377,12 +377,12 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
 		rep:    rep,
-		hk:     mh,
+		hk:     hk,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -399,7 +399,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
@@ -439,12 +439,12 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
 		rep:    rep,
-		hk:     mh,
+		hk:     hk,
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/balcony")
@@ -460,7 +460,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+	halted, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},

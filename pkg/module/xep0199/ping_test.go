@@ -71,8 +71,8 @@ func TestPing_SendPing(t *testing.T) {
 		outStanza = stanza
 		return nil, nil
 	}
-	mh := hook.NewHooks()
-	p := New(routerMock, mh, Config{
+	hk := hook.NewHooks()
+	p := New(routerMock, hk, Config{
 		Interval:  time.Millisecond * 500,
 		SendPings: true,
 	})
@@ -80,7 +80,7 @@ func TestPing_SendPing(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			ID:  "c2s1",
 			JID: jd,
@@ -115,8 +115,8 @@ func TestPing_Timeout(t *testing.T) {
 		return c2sRouterMock
 	}
 
-	mh := hook.NewHooks()
-	p := New(routerMock, mh, Config{
+	hk := hook.NewHooks()
+	p := New(routerMock, hk, Config{
 		Interval:      time.Millisecond * 500,
 		AckTimeout:    time.Millisecond * 250,
 		SendPings:     true,
@@ -126,7 +126,7 @@ func TestPing_Timeout(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = mh.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			ID:  "c2s1",
 			JID: jd,

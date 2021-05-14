@@ -52,14 +52,14 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
 		return nil, nil
 	}
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		hosts:  hostsMock,
 		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
-		hk:     mh,
+		hk:     hk,
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -75,7 +75,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
@@ -118,7 +118,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		return nil, nil
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		router: routerMock,
@@ -126,7 +126,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		resMng: resManagerMock,
 		rep:    repMock,
 		locker: lockerMock,
-		hk:     mh,
+		hk:     hk,
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -142,7 +142,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+	halted, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: msg,
 		},
@@ -199,14 +199,14 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 		return nil
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	m := &Offline{
 		cfg:    Config{QueueSize: 100},
 		router: routerMock,
 		hosts:  hostsMock,
 		rep:    repMock,
 		locker: lockerMock,
-		hk:     mh,
+		hk:     hk,
 	}
 
 	// when
@@ -217,7 +217,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
-	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: pr,
 		},

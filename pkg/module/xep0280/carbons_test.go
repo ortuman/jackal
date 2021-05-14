@@ -185,12 +185,12 @@ func TestCarbons_SentCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
 		hosts:  hMock,
-		hk:     mh,
+		hk:     hk,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -209,7 +209,7 @@ func TestCarbons_SentCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), hook.S2SInStreamMessageRouted, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.S2SInStreamMessageRouted, &hook.ExecutionContext{
 		Info: &hook.S2SStreamHookInfo{
 			Sender:  "jackal.im",
 			Target:  "jabber.org",
@@ -256,12 +256,12 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 		return h == "jackal.im"
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
 		router: routerMock,
 		resMng: resManagerMock,
 		hosts:  hMock,
-		hk:     mh,
+		hk:     hk,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -280,7 +280,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), hook.C2SStreamMessageRouted, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamMessageRouted, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Targets: []jid.JID{*jd2},
 			Element: msg,
@@ -300,9 +300,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 
 func TestCarbons_InterceptStanza(t *testing.T) {
 	// given
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	c := &Carbons{
-		hk: mh,
+		hk: hk,
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -327,7 +327,7 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	hInf := &hook.C2SStreamHookInfo{
 		Element: msg,
 	}
-	_, err := mh.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+	_, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
 		Info: hInf,
 	})
 

@@ -288,17 +288,17 @@ func TestLast_ProcessPresence(t *testing.T) {
 		return nil
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	m := &Last{
 		rep: rep,
-		hk:  mh,
+		hk:  hk,
 	}
 	// when
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),

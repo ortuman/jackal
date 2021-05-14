@@ -41,7 +41,7 @@ type Server struct {
 
 	rep     repository.Repository
 	peppers *pepper.Keys
-	mh      *hook.Hooks
+	hk      *hook.Hooks
 }
 
 // New returns a new initialized admin server.
@@ -50,14 +50,14 @@ func New(
 	port int,
 	rep repository.Repository,
 	peppers *pepper.Keys,
-	mh *hook.Hooks,
+	hk *hook.Hooks,
 ) *Server {
 	return &Server{
 		bindAddr: bindAddr,
 		port:     port,
 		rep:      rep,
 		peppers:  peppers,
-		mh:       mh,
+		hk:       hk,
 	}
 }
 
@@ -79,7 +79,7 @@ func (s *Server) Start(_ context.Context) error {
 			grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 			grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 		)
-		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.mh))
+		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.hk))
 		if err := grpcServer.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
 				log.Errorf("Admin server error: %s", err)

@@ -44,11 +44,11 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		return nil, nil
 	}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		hk:     mh,
+		hk:     hk,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -67,7 +67,7 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_, _ = mh.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: pr,
 		},
@@ -95,11 +95,11 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	}
 	routerMock := &routerMock{}
 
-	mh := hook.NewHooks()
+	hk := hook.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		hk:     mh,
+		hk:     hk,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -135,7 +135,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = mh.Run(context.Background(), hook.C2SStreamIQReceived, &hook.ExecutionContext{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamIQReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamHookInfo{
 			Element: discoIQ,
 		},
