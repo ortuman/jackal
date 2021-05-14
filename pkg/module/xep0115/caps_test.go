@@ -20,11 +20,12 @@ import (
 	"testing"
 	"time"
 
+	hook2 "github.com/ortuman/jackal/pkg/hook"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
-	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
@@ -67,8 +68,8 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{
 			Element: pr,
 		},
 	})
@@ -95,7 +96,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	}
 	routerMock := &routerMock{}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
@@ -135,8 +136,8 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_, _ = hk.Run(context.Background(), hook.C2SStreamIQReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamIQReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{
 			Element: discoIQ,
 		},
 	})

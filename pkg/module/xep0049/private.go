@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -42,14 +42,14 @@ const (
 type Private struct {
 	router router.Router
 	rep    repository.Private
-	hk     *hook.Hooks
+	hk     *hook2.Hooks
 }
 
 // New returns a new initialized Private instance.
 func New(
 	router router.Router,
 	rep repository.Private,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) *Private {
 	return &Private{
 		rep:    rep,
@@ -103,7 +103,7 @@ func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts private module.
 func (m *Private) Start(_ context.Context) error {
-	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
+	m.hk.AddHook(hook2.UserDeleted, m.onUserDeleted, hook2.DefaultPriority)
 
 	log.Infow("Started private module", "xep", XEPNumber)
 	return nil
@@ -111,14 +111,14 @@ func (m *Private) Start(_ context.Context) error {
 
 // Stop stops private module.
 func (m *Private) Stop(_ context.Context) error {
-	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook2.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped private module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.UserHookInfo)
+func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.UserHookInfo)
 	return false, m.rep.DeletePrivates(ctx, inf.Username)
 }
 
@@ -157,8 +157,8 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run private fetched hook
-	_, err = m.hk.Run(ctx, hook.PrivateFetched, &hook.ExecutionContext{
-		Info: &hook.PrivateHookInfo{
+	_, err = m.hk.Run(ctx, hook2.PrivateFetched, &hook2.ExecutionContext{
+		Info: &hook2.PrivateHookInfo{
 			Username: username,
 			Private:  prvElem,
 		},
@@ -186,8 +186,8 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
 		// run private updated hook
-		_, err := m.hk.Run(ctx, hook.PrivateUpdated, &hook.ExecutionContext{
-			Info: &hook.PrivateHookInfo{
+		_, err := m.hk.Run(ctx, hook2.PrivateUpdated, &hook2.ExecutionContext{
+			Info: &hook2.PrivateHookInfo{
 				Username: username,
 				Private:  prv,
 			},

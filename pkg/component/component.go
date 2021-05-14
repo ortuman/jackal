@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"sync"
 
+	hook2 "github.com/ortuman/jackal/pkg/hook"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module/hook"
 )
 
 // ErrComponentNotFound will be returned by ProcessStanza in case the receiver component is not registered.
@@ -50,13 +51,13 @@ type Component interface {
 type Components struct {
 	mtx   sync.RWMutex
 	comps map[string]Component
-	hk    *hook.Hooks
+	hk    *hook2.Hooks
 }
 
 // NewComponents returns a new initialized Components instance.
 func NewComponents(
 	components []Component,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) *Components {
 	cs := &Components{
 		comps: make(map[string]Component),
@@ -153,8 +154,8 @@ func (c *Components) Start(ctx context.Context) error {
 	}
 	log.Infow("Started components", "components", len(c.comps))
 
-	_, err := c.hk.Run(ctx, hook.ComponentsStarted, &hook.ExecutionContext{
-		Info: &hook.ComponentsHookInfo{
+	_, err := c.hk.Run(ctx, hook2.ComponentsStarted, &hook2.ExecutionContext{
+		Info: &hook2.ComponentsHookInfo{
 			Hosts: hosts,
 		},
 		Sender: c,
@@ -177,8 +178,8 @@ func (c *Components) Stop(ctx context.Context) error {
 	}
 	log.Infow("Stopped components", "components", len(c.comps))
 
-	_, err := c.hk.Run(ctx, hook.ComponentsStopped, &hook.ExecutionContext{
-		Info: &hook.ComponentsHookInfo{
+	_, err := c.hk.Run(ctx, hook2.ComponentsStopped, &hook2.ExecutionContext{
+		Info: &hook2.ComponentsHookInfo{
 			Hosts: hosts,
 		},
 		Sender: c,

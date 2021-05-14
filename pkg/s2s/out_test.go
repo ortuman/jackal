@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -53,7 +53,7 @@ func TestOutS2S_SendElement(t *testing.T) {
 		state:   uint32(outAuthenticated),
 		session: sessMock,
 		rq:      runqueue.New("out_s2s:test", nil),
-		hk:      hook.NewHooks(),
+		hk:      hook2.NewHooks(),
 	}
 	// when
 	stanza := stravaganza.NewBuilder("auth").
@@ -95,7 +95,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 		session: sessMock,
 		tr:      trMock,
 		rq:      runqueue.New("out_s2s:test", nil),
-		hk:      hook.NewHooks(),
+		hk:      hook2.NewHooks(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -309,7 +309,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 				tr:      trMock,
 				session: ssMock,
 				kv:      kvMock,
-				hk:      hook.NewHooks(),
+				hk:      hook2.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -416,7 +416,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
 				session: ssMock,
-				hk:      hook.NewHooks(),
+				hk:      hook2.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -495,7 +495,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
 				session: ssMock,
-				hk:      hook.NewHooks(),
+				hk:      hook2.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

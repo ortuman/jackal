@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -102,7 +102,7 @@ type serverApp struct {
 	args   []string
 
 	peppers *pepper.Keys
-	hk      *hook.Hooks
+	hk      *hook2.Hooks
 
 	etcdCli *etcdv3.Client
 	locker  locker.Locker
@@ -199,7 +199,7 @@ func run(output io.Writer, args []string) error {
 	a.peppers = peppers
 
 	// init hooks
-	a.hk = hook.NewHooks()
+	a.hk = hook2.NewHooks()
 
 	// init etcd
 	if err := a.initEtcd(cfg.Cluster.Etcd); err != nil {
@@ -463,7 +463,7 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 		for _, hCfg := range extCfg.EventHandler.Hooks {
 			hookConfigs = append(hookConfigs, externalmodule.HookConfig{
 				Name:     hCfg.Name,
-				Priority: hook.Priority(hCfg.Priority),
+				Priority: hook2.Priority(hCfg.Priority),
 			})
 		}
 		mods = append(mods, externalmodule.New(

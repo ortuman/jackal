@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -53,7 +53,7 @@ func TestPrivate_GetPrivate(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
@@ -105,7 +105,7 @@ func TestPrivate_SetPrivate(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.SetType).
@@ -153,7 +153,7 @@ func TestPrivate_ForbiddenRequest(t *testing.T) {
 	p := &Private{
 		rep:    repMock,
 		router: routerMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).

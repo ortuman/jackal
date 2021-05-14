@@ -18,7 +18,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -37,7 +37,7 @@ type c2sRouter struct {
 	cluster clusterRouter
 	resMng  resourceManager
 	rep     repository.Repository
-	hk      *hook.Hooks
+	hk      *hook2.Hooks
 }
 
 // NewRouter creates and returns an initialized C2S router.
@@ -46,7 +46,7 @@ func NewRouter(
 	clusterRouter *clusterrouter.Router,
 	resMng *ResourceManager,
 	rep repository.Repository,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) router.C2SRouter {
 	return &c2sRouter{
 		local:   localRouter,

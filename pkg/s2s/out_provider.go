@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -37,7 +37,7 @@ type OutProvider struct {
 	cfg     Config
 	kv      kv.KV
 	shapers shaper.Shapers
-	hk      *hook.Hooks
+	hk      *hook2.Hooks
 
 	mu         sync.RWMutex
 	outStreams map[string]s2sOut
@@ -52,7 +52,7 @@ func NewOutProvider(
 	hosts *host.Hosts,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 	cfg Config,
 ) *OutProvider {
 	op := &OutProvider{

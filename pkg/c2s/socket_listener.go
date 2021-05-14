@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
@@ -60,7 +60,7 @@ type SocketListener struct {
 	rep            repository.Repository
 	peppers        *pepper.Keys
 	shapers        shaper.Shapers
-	hk             *hook.Hooks
+	hk             *hook2.Hooks
 	connHandlerFn  func(conn net.Conn)
 
 	ln     net.Listener
@@ -81,7 +81,7 @@ func NewSocketListener(
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 	cfg Config,
 ) *SocketListener {
 	ln := &SocketListener{

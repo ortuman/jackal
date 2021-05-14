@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	hook2 "github.com/ortuman/jackal/pkg/hook"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -26,7 +28,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
-	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -54,7 +55,7 @@ type Carbons struct {
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	hk     *hook.Hooks
+	hk     *hook2.Hooks
 }
 
 // New returns a new initialized carbons instance.
@@ -62,7 +63,7 @@ func New(
 	router router.Router,
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
@@ -92,10 +93,10 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts carbons module.
 func (p *Carbons) Start(_ context.Context) error {
-	p.hk.AddHook(hook.C2SStreamWillRouteElement, p.onC2SElementWillRoute, hook.DefaultPriority)
-	p.hk.AddHook(hook.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, hook.DefaultPriority)
-	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.DefaultPriority)
-	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.DefaultPriority)
+	p.hk.AddHook(hook2.C2SStreamWillRouteElement, p.onC2SElementWillRoute, hook2.DefaultPriority)
+	p.hk.AddHook(hook2.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, hook2.DefaultPriority)
+	p.hk.AddHook(hook2.C2SStreamMessageRouted, p.onC2SMessageRouted, hook2.DefaultPriority)
+	p.hk.AddHook(hook2.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook2.DefaultPriority)
 
 	log.Infow("Started carbons module", "xep", XEPNumber)
 	return nil
@@ -103,10 +104,10 @@ func (p *Carbons) Start(_ context.Context) error {
 
 // Stop stops carbons module.
 func (p *Carbons) Stop(_ context.Context) error {
-	p.hk.RemoveHook(hook.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
-	p.hk.RemoveHook(hook.S2SInStreamWillRouteElement, p.onS2SElementWillRoute)
-	p.hk.RemoveHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted)
-	p.hk.RemoveHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted)
+	p.hk.RemoveHook(hook2.C2SStreamWillRouteElement, p.onC2SElementWillRoute)
+	p.hk.RemoveHook(hook2.S2SInStreamWillRouteElement, p.onS2SElementWillRoute)
+	p.hk.RemoveHook(hook2.C2SStreamMessageRouted, p.onC2SMessageRouted)
+	p.hk.RemoveHook(hook2.S2SInStreamMessageRouted, p.onS2SMessageRouted)
 
 	log.Infow("Stopped carbons module", "xep", XEPNumber)
 	return nil
@@ -131,8 +132,8 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
+func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -142,8 +143,8 @@ func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook.Executi
 	return false, nil
 }
 
-func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.S2SStreamHookInfo)
+func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -153,8 +154,8 @@ func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook.Executi
 	return false, nil
 }
 
-func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
+func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -163,8 +164,8 @@ func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook.Executio
 	return false, p.processMessage(ctx, msg, inf.Targets)
 }
 
-func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.S2SStreamHookInfo)
+func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {

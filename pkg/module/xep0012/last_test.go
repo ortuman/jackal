@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -42,7 +42,7 @@ func TestLast_GetServerUptime(t *testing.T) {
 	}
 	m := &Last{
 		router: routerMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 
 	// when
@@ -123,7 +123,7 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 		rep:    repMock,
 		hosts:  hMock,
 		resMng: resMngMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 
 	// when
@@ -193,7 +193,7 @@ func TestLast_Forbidden(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 
 	// when
@@ -242,7 +242,7 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	iq, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, uuid.New().String()).
@@ -260,8 +260,8 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := m.hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{
+	halted, err := m.hk.Run(context.Background(), hook2.C2SStreamElementReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{
 			Element: iq,
 		},
 	})
@@ -288,7 +288,7 @@ func TestLast_ProcessPresence(t *testing.T) {
 		return nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	m := &Last{
 		rep: rep,
 		hk:  hk,
@@ -298,8 +298,8 @@ func TestLast_ProcessPresence(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
 		},

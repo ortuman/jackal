@@ -17,11 +17,12 @@ package module
 import (
 	"context"
 
+	hook2 "github.com/ortuman/jackal/pkg/hook"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
 )
 
@@ -64,7 +65,7 @@ type Modules struct {
 	iqProcessors []IQProcessor
 	hosts        hosts
 	router       router.Router
-	hk           *hook.Hooks
+	hk           *hook2.Hooks
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -72,7 +73,7 @@ func NewModules(
 	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) *Modules {
 	m := &Modules{
 		mods:   mods,
@@ -98,8 +99,8 @@ func (m *Modules) Start(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.hk.Run(ctx, hook.ModulesStarted, &hook.ExecutionContext{
-		Info: &hook.ModulesHookInfo{
+	_, err := m.hk.Run(ctx, hook2.ModulesStarted, &hook2.ExecutionContext{
+		Info: &hook2.ModulesHookInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,
@@ -121,8 +122,8 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.hk.Run(ctx, hook.ModulesStopped, &hook.ExecutionContext{
-		Info: &hook.ModulesHookInfo{
+	_, err := m.hk.Run(ctx, hook2.ModulesStopped, &hook2.ExecutionContext{
+		Info: &hook2.ModulesHookInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,

@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -50,7 +50,7 @@ type Last struct {
 	hosts     hosts
 	resMng    resourceManager
 	rep       repository.Repository
-	hk        *hook.Hooks
+	hk        *hook2.Hooks
 	startedAt int64
 }
 
@@ -60,7 +60,7 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
-	hk *hook.Hooks,
+	hk *hook2.Hooks,
 ) *Last {
 	return &Last{
 		router: router,
@@ -107,10 +107,10 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts last activity module.
 func (m *Last) Start(_ context.Context) error {
-	m.hk.AddHook(hook.C2SStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
-	m.hk.AddHook(hook.S2SInStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
-	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
-	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
+	m.hk.AddHook(hook2.C2SStreamElementReceived, m.onElementRecv, hook2.DefaultPriority)
+	m.hk.AddHook(hook2.S2SInStreamElementReceived, m.onElementRecv, hook2.DefaultPriority)
+	m.hk.AddHook(hook2.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook2.DefaultPriority)
+	m.hk.AddHook(hook2.UserDeleted, m.onUserDeleted, hook2.DefaultPriority)
 
 	m.startedAt = time.Now().Unix()
 
@@ -120,23 +120,23 @@ func (m *Last) Start(_ context.Context) error {
 
 // Stop stops last activity module.
 func (m *Last) Stop(_ context.Context) error {
-	m.hk.RemoveHook(hook.C2SStreamElementReceived, m.onElementRecv)
-	m.hk.RemoveHook(hook.S2SInStreamElementReceived, m.onElementRecv)
-	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
-	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook2.C2SStreamElementReceived, m.onElementRecv)
+	m.hk.RemoveHook(hook2.S2SInStreamElementReceived, m.onElementRecv)
+	m.hk.RemoveHook(hook2.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.hk.RemoveHook(hook2.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped last module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *Last) onElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
+func (m *Last) onElementRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
 	var iq *stravaganza.IQ
 	var ok bool
 
 	switch inf := execCtx.Info.(type) {
-	case *hook.C2SStreamHookInfo:
+	case *hook2.C2SStreamHookInfo:
 		iq, ok = inf.Element.(*stravaganza.IQ)
-	case *hook.S2SStreamHookInfo:
+	case *hook2.S2SStreamHookInfo:
 		iq, ok = inf.Element.(*stravaganza.IQ)
 	default:
 		return false, nil
@@ -166,13 +166,13 @@ func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) (halt 
 	return false, nil
 }
 
-func (m *Last) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.UserHookInfo)
+func (m *Last) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.UserHookInfo)
 	return false, m.rep.DeleteLast(ctx, inf.Username)
 }
 
-func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
+func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
+	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processC2SPresence(ctx, pr)
 }
@@ -209,8 +209,8 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
-	_, err := m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
-		Info: &hook.LastActivityHookInfo{
+	_, err := m.hk.Run(ctx, hook2.LastActivityFetched, &hook2.ExecutionContext{
+		Info: &hook2.LastActivityHookInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
 		},
@@ -252,8 +252,8 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
-	_, err = m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
-		Info: &hook.LastActivityHookInfo{
+	_, err = m.hk.Run(ctx, hook2.LastActivityFetched, &hook2.ExecutionContext{
+		Info: &hook2.LastActivityHookInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,
 		},

@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestComponents_Components(t *testing.T) {
 	}
 	compMock.StartFunc = func(_ context.Context) error { return nil }
 
-	cs := NewComponents(nil, hook.NewHooks())
+	cs := NewComponents(nil, hook2.NewHooks())
 
 	// when
 	_ = cs.Start(context.Background())
@@ -52,7 +52,7 @@ func TestComponents_RegisterComponent(t *testing.T) {
 	compMock.StartFunc = func(_ context.Context) error { return nil }
 	compMock.StopFunc = func(_ context.Context) error { return nil }
 
-	cs := NewComponents(nil, hook.NewHooks())
+	cs := NewComponents(nil, hook2.NewHooks())
 
 	// when
 	_ = cs.Start(context.Background())
@@ -80,7 +80,7 @@ func TestComponents_ProcessStanza(t *testing.T) {
 	compMock.StartFunc = func(_ context.Context) error { return nil }
 	compMock.ProcessStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza) error { return nil }
 
-	cs := NewComponents(nil, hook.NewHooks())
+	cs := NewComponents(nil, hook2.NewHooks())
 
 	// when
 	_ = cs.Start(context.Background())

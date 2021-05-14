@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/stretchr/testify/require"
@@ -34,7 +34,7 @@ func TestModules_StartStop(t *testing.T) {
 	mods := &Modules{
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
-		hk:           hook.NewHooks(),
+		hk:           hook2.NewHooks(),
 	}
 
 	// when
@@ -66,7 +66,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
 		hosts:        hMock,
-		hk:           hook.NewHooks(),
+		hk:           hook2.NewHooks(),
 	}
 
 	// when

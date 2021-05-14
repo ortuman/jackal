@@ -20,8 +20,9 @@ import (
 	"io"
 	"testing"
 
+	hook2 "github.com/ortuman/jackal/pkg/hook"
+
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
-	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
@@ -37,15 +38,15 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
 		return lrMock, crMock, ccMock, nil
 	}
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	connMng := NewManager(hk)
 
 	// when
 	_ = connMng.Start(context.Background())
 
 	// register cluster member
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
-		Info: &hook.MemberListHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
+		Info: &hook2.MemberListHookInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
@@ -55,8 +56,8 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	conn1, err1 := connMng.GetConnection("a1234")
 
 	// register cluster member
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
-		Info: &hook.MemberListHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
+		Info: &hook2.MemberListHookInfo{
 			UnregisteredKeys: []string{"a1234"},
 		},
 	})
@@ -84,15 +85,15 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
 		return lrMock, crMock, ccMock, nil
 	}
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	connMng := NewManager(hk)
 
 	// when
 	_ = connMng.Start(context.Background())
 
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
-		Info: &hook.MemberListHookInfo{
+	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
+		Info: &hook2.MemberListHookInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},

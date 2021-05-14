@@ -20,7 +20,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ortuman/jackal/pkg/module/hook"
+	hook2 "github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -80,7 +80,7 @@ func TestRoster_SendRoster(t *testing.T) {
 		resMng: resMngMock,
 		router: routerMock,
 		hosts:  hMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -160,7 +160,7 @@ func TestRoster_UpdateItem(t *testing.T) {
 		resMng: resMngMock,
 		router: routerMock,
 		hosts:  hMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -265,7 +265,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 		resMng: resMngMock,
 		router: routerMock,
 		hosts:  hMock,
-		hk:     hook.NewHooks(),
+		hk:     hook2.NewHooks(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -371,7 +371,7 @@ func TestRoster_Subscribe(t *testing.T) {
 		}, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -386,8 +386,8 @@ func TestRoster_Subscribe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.SubscribeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
@@ -472,7 +472,7 @@ func TestRoster_Subscribed(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -487,8 +487,8 @@ func TestRoster_Subscribed(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.SubscribedType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
@@ -581,7 +581,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -596,8 +596,8 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.UnsubscribeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
@@ -693,7 +693,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -708,8 +708,8 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.UnsubscribedType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
@@ -788,7 +788,7 @@ func TestRoster_Probe(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -803,8 +803,8 @@ func TestRoster_Probe(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.ProbeType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
@@ -895,7 +895,7 @@ func TestRoster_Available(t *testing.T) {
 		return nil, nil
 	}
 
-	hk := hook.NewHooks()
+	hk := hook2.NewHooks()
 	r := &Roster{
 		rep:    repMock,
 		resMng: resMngMock,
@@ -910,8 +910,8 @@ func TestRoster_Available(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
 	_ = r.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
-		Info: &hook.C2SStreamHookInfo{Element: pr},
+	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
+		Info: &hook2.C2SStreamHookInfo{Element: pr},
 	})
 
 	// then
