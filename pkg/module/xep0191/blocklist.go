@@ -147,7 +147,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 }
 
 func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -156,7 +156,7 @@ func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook2.Executi
 }
 
 func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -165,7 +165,7 @@ func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook2.Executi
 }
 
 func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -174,7 +174,7 @@ func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook2.Ex
 }
 
 func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
 		return false, nil
@@ -183,7 +183,7 @@ func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook2.Ex
 }
 
 func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 	return false, m.rep.DeleteBlockListItems(ctx, inf.Username)
 }
 
@@ -296,7 +296,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		allJIDs = append(allJIDs, *j)
 	}
 	_, err = m.hk.Run(ctx, hook2.BlockListFetched, &hook2.ExecutionContext{
-		Info: &hook2.BlockListHookInfo{
+		Info: &hook2.BlockListInfo{
 			Username: username,
 			JIDs:     allJIDs,
 		},
@@ -379,7 +379,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 
 	// run hook
 	_, err = m.hk.Run(ctx, hook2.BlockListItemsBlocked, &hook2.ExecutionContext{
-		Info: &hook2.BlockListHookInfo{
+		Info: &hook2.BlockListInfo{
 			Username: username,
 			JIDs:     blockJIDs,
 		},
@@ -451,7 +451,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 
 	// run hook
 	_, err = m.hk.Run(ctx, hook2.BlockListItemsUnblocked, &hook2.ExecutionContext{
-		Info: &hook2.BlockListHookInfo{
+		Info: &hook2.BlockListInfo{
 			Username: username,
 			JIDs:     unblockJIDs,
 		},

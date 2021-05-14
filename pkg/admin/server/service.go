@@ -64,7 +64,7 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 	}
 	// run user created hook
 	_, err := s.hk.Run(ctx, hook2.UserCreated, &hook2.ExecutionContext{
-		Info: &hook2.UserHookInfo{
+		Info: &hook2.UserInfo{
 			Username: username,
 		},
 	})
@@ -98,7 +98,7 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 	}
 	// run user deleted hook
 	_, err := s.hk.Run(ctx, hook2.UserDeleted, &hook2.ExecutionContext{
-		Info: &hook2.UserHookInfo{
+		Info: &hook2.UserInfo{
 			Username: username,
 		},
 	})

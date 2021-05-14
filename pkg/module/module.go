@@ -100,7 +100,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		"mods_count", len(m.mods),
 	)
 	_, err := m.hk.Run(ctx, hook2.ModulesStarted, &hook2.ExecutionContext{
-		Info: &hook2.ModulesHookInfo{
+		Info: &hook2.ModulesInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,
@@ -123,7 +123,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"mods_count", len(m.mods),
 	)
 	_, err := m.hk.Run(ctx, hook2.ModulesStopped, &hook2.ExecutionContext{
-		Info: &hook2.ModulesHookInfo{
+		Info: &hook2.ModulesInfo{
 			ModuleNames: modNames,
 		},
 		Sender: m,

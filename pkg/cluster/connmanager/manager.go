@@ -107,7 +107,7 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook2.Execut
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	inf := execCtx.Info.(*hook2.MemberListHookInfo)
+	inf := execCtx.Info.(*hook2.MemberListInfo)
 
 	// close unregistered members connections...
 	for _, instanceID := range inf.UnregisteredKeys {

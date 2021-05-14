@@ -59,8 +59,8 @@ const (
 	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
 )
 
-// S2SStreamHookInfo contains all info associated to a S2S event.
-type S2SStreamHookInfo struct {
+// S2SStreamInfo contains all info associated to a S2S event.
+type S2SStreamInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

@@ -155,7 +155,7 @@ func (c *Components) Start(ctx context.Context) error {
 	log.Infow("Started components", "components", len(c.comps))
 
 	_, err := c.hk.Run(ctx, hook2.ComponentsStarted, &hook2.ExecutionContext{
-		Info: &hook2.ComponentsHookInfo{
+		Info: &hook2.ComponentsInfo{
 			Hosts: hosts,
 		},
 		Sender: c,
@@ -179,7 +179,7 @@ func (c *Components) Stop(ctx context.Context) error {
 	log.Infow("Stopped components", "components", len(c.comps))
 
 	_, err := c.hk.Run(ctx, hook2.ComponentsStopped, &hook2.ExecutionContext{
-		Info: &hook2.ComponentsHookInfo{
+		Info: &hook2.ComponentsInfo{
 			Hosts: hosts,
 		},
 		Sender: c,

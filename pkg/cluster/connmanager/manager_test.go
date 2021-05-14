@@ -46,7 +46,7 @@ func TestConnections_UpdateMembers(t *testing.T) {
 
 	// register cluster member
 	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
-		Info: &hook2.MemberListHookInfo{
+		Info: &hook2.MemberListInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
@@ -57,7 +57,7 @@ func TestConnections_UpdateMembers(t *testing.T) {
 
 	// register cluster member
 	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
-		Info: &hook2.MemberListHookInfo{
+		Info: &hook2.MemberListInfo{
 			UnregisteredKeys: []string{"a1234"},
 		},
 	})
@@ -93,7 +93,7 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
 	_, _ = hk.Run(context.Background(), hook2.MemberListUpdated, &hook2.ExecutionContext{
-		Info: &hook2.MemberListHookInfo{
+		Info: &hook2.MemberListInfo{
 			Registered: []coremodel.ClusterMember{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},

@@ -27,8 +27,8 @@ const (
 	ExternalComponentElementReceived = "ext_component.stream.element_received"
 )
 
-// ExternalComponentHookInfo contains all info associated to an external component event.
-type ExternalComponentHookInfo struct {
+// ExternalComponentInfo contains all info associated to an external component event.
+type ExternalComponentInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

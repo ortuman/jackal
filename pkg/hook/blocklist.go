@@ -29,8 +29,8 @@ const (
 	BlockListItemsUnblocked = "blocklist.items.unblocked"
 )
 
-// BlockListHookInfo contains all information associated to a blocklist event.
-type BlockListHookInfo struct {
+// BlockListInfo contains all information associated to a blocklist event.
+type BlockListInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 

@@ -131,9 +131,9 @@ func (r *Roster) Stop(_ context.Context) error {
 func (r *Roster) onPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
 	var pr *stravaganza.Presence
 	switch inf := execCtx.Info.(type) {
-	case *hook2.C2SStreamHookInfo:
+	case *hook2.C2SStreamInfo:
 		pr, _ = inf.Element.(*stravaganza.Presence)
-	case *hook2.S2SStreamHookInfo:
+	case *hook2.S2SStreamInfo:
 		pr, _ = inf.Element.(*stravaganza.Presence)
 	default:
 		return false, nil
@@ -148,7 +148,7 @@ func (r *Roster) onPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionCon
 }
 
 func (r *Roster) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 	err = r.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		if err := tx.DeleteRosterNotifications(ctx, inf.Username); err != nil {
 			return err
@@ -193,7 +193,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// return empty response in case version matches...
 	if ver > 0 && ver == parseVer(q.Attribute("ver")) {
 		_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
-		err = r.runHook(ctx, hook2.RosterRequested, &hook2.RosterHookInfo{
+		err = r.runHook(ctx, hook2.RosterRequested, &hook2.RosterInfo{
 			Username: usrJID.Node(),
 		})
 		if err != nil {
@@ -219,7 +219,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 
 	log.Infow("Fetched user roster", "jid", usrJID.String(), "xep", "roster")
 
-	err = r.runHook(ctx, hook2.RosterRequested, &hook2.RosterHookInfo{
+	err = r.runHook(ctx, hook2.RosterRequested, &hook2.RosterInfo{
 		Username: usrJID.Node(),
 	})
 	if err != nil {
@@ -723,7 +723,7 @@ func (r *Roster) upsertItem(ctx context.Context, ri *rostermodel.Item) error {
 	if err != nil {
 		return err
 	}
-	return r.runHook(ctx, hook2.RosterItemUpdated, &hook2.RosterHookInfo{
+	return r.runHook(ctx, hook2.RosterItemUpdated, &hook2.RosterInfo{
 		Username:     ri.Username,
 		JID:          ri.JID,
 		Subscription: ri.Subscription,
@@ -744,7 +744,7 @@ func (r *Roster) deleteItem(ctx context.Context, ri *rostermodel.Item) error {
 	if err != nil {
 		return err
 	}
-	return r.runHook(ctx, hook2.RosterItemUpdated, &hook2.RosterHookInfo{
+	return r.runHook(ctx, hook2.RosterItemUpdated, &hook2.RosterInfo{
 		Username:     ri.Username,
 		JID:          ri.JID,
 		Subscription: rostermodel.Remove,
@@ -836,7 +836,7 @@ func (r *Roster) getStreamValue(username, resource, key string) (val string, err
 	return stm.Value(key), nil
 }
 
-func (r *Roster) runHook(ctx context.Context, hookName string, inf *hook2.RosterHookInfo) error {
+func (r *Roster) runHook(ctx context.Context, hookName string, inf *hook2.RosterInfo) error {
 	_, err := r.hk.Run(ctx, hookName, &hook2.ExecutionContext{
 		Info:   inf,
 		Sender: r,

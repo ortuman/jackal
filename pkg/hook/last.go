@@ -21,8 +21,8 @@ const (
 	LastActivityFetched = "last.fetched"
 )
 
-// LastActivityHookInfo contains all information associated to a last activity event.
-type LastActivityHookInfo struct {
+// LastActivityInfo contains all information associated to a last activity event.
+type LastActivityInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 

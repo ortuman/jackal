@@ -22,7 +22,7 @@ const (
 	ModulesStopped = "modules.stopped"
 )
 
-// ModulesHookInfo contains all information associated to a modules event.
-type ModulesHookInfo struct {
+// ModulesInfo contains all information associated to a modules event.
+type ModulesInfo struct {
 	ModuleNames []string
 }

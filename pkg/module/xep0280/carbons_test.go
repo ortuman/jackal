@@ -211,7 +211,7 @@ func TestCarbons_SentCC(t *testing.T) {
 	defer func() { _ = c.Stop(context.Background()) }()
 
 	_, _ = hk.Run(context.Background(), hook2.S2SInStreamMessageRouted, &hook2.ExecutionContext{
-		Info: &hook2.S2SStreamHookInfo{
+		Info: &hook2.S2SStreamInfo{
 			Sender:  "jackal.im",
 			Target:  "jabber.org",
 			Element: msg,
@@ -282,7 +282,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	defer func() { _ = c.Stop(context.Background()) }()
 
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamMessageRouted, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{
+		Info: &hook2.C2SStreamInfo{
 			Targets: []jid.JID{*jd2},
 			Element: msg,
 		},
@@ -325,7 +325,7 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	hInf := &hook2.C2SStreamHookInfo{
+	hInf := &hook2.C2SStreamInfo{
 		Element: msg,
 	}
 	_, err := hk.Run(context.Background(), hook2.C2SStreamWillRouteElement, &hook2.ExecutionContext{

@@ -242,7 +242,7 @@ func (s *inC2S) start() error {
 	}
 	// run registered C2S hook
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, hook2.C2SStreamRegistered, &hook2.C2SStreamHookInfo{
+	_, err := s.runHook(ctx, hook2.C2SStreamRegistered, &hook2.C2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -312,7 +312,7 @@ func (s *inC2S) connTimeout() {
 
 func (s *inC2S) handleElement(ctx context.Context, elem stravaganza.Element) error {
 	// run received element hook
-	hInf := &hook2.C2SStreamHookInfo{
+	hInf := &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: elem,
@@ -455,7 +455,7 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 
 func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// run iq received hook
-	_, err := s.runHook(ctx, hook2.C2SStreamIQReceived, &hook2.C2SStreamHookInfo{
+	_, err := s.runHook(ctx, hook2.C2SStreamIQReceived, &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: iq,
@@ -477,7 +477,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
 	// run will route iq hook
-	hInf := &hook2.C2SStreamHookInfo{
+	hInf := &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: iq,
@@ -505,7 +505,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
 
 	case nil:
-		_, err := s.runHook(ctx, hook2.C2SStreamIQRouted, &hook2.C2SStreamHookInfo{
+		_, err := s.runHook(ctx, hook2.C2SStreamIQRouted, &hook2.C2SStreamInfo{
 			ID:      s.ID().String(),
 			JID:     s.JID(),
 			Targets: targets,
@@ -518,7 +518,7 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// run presence received hook
-	_, err := s.runHook(ctx, hook2.C2SStreamPresenceReceived, &hook2.C2SStreamHookInfo{
+	_, err := s.runHook(ctx, hook2.C2SStreamPresenceReceived, &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: presence,
@@ -529,7 +529,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 
 	if presence.ToJID().IsFullWithUser() {
 		// run will route presence hook
-		hInf := &hook2.C2SStreamHookInfo{
+		hInf := &hook2.C2SStreamInfo{
 			ID:      s.ID().String(),
 			JID:     s.JID(),
 			Element: presence,
@@ -548,7 +548,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		targets, err := s.router.Route(ctx, outPr)
 		switch err {
 		case nil:
-			_, err = s.runHook(ctx, hook2.C2SStreamPresenceRouted, &hook2.C2SStreamHookInfo{
+			_, err = s.runHook(ctx, hook2.C2SStreamPresenceRouted, &hook2.C2SStreamInfo{
 				ID:      s.ID().String(),
 				JID:     s.JID(),
 				Targets: targets,
@@ -569,7 +569,7 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// run message received hook
-	_, err := s.runHook(ctx, hook2.C2SStreamMessageReceived, &hook2.C2SStreamHookInfo{
+	_, err := s.runHook(ctx, hook2.C2SStreamMessageReceived, &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: message,
@@ -581,7 +581,7 @@ func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message
 
 sendMsg:
 	// run will route Message hook
-	hInf := &hook2.C2SStreamHookInfo{
+	hInf := &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: msg,
@@ -620,7 +620,7 @@ sendMsg:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
 
 	case nil:
-		_, err = s.runHook(ctx, hook2.C2SStreamMessageRouted, &hook2.C2SStreamHookInfo{
+		_, err = s.runHook(ctx, hook2.C2SStreamMessageRouted, &hook2.C2SStreamInfo{
 			ID:      s.ID().String(),
 			JID:     s.JID(),
 			Targets: targets,
@@ -936,7 +936,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	s.flags.setBinded()
 
 	// run binded C2S hook
-	_, err = s.runHook(ctx, hook2.C2SStreamBinded, &hook2.C2SStreamHookInfo{
+	_, err = s.runHook(ctx, hook2.C2SStreamBinded, &hook2.C2SStreamInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
@@ -1010,7 +1010,7 @@ func (s *inC2S) close(ctx context.Context) error {
 		return err
 	}
 	// run unregistered C2S hook
-	_, err := s.runHook(ctx, hook2.C2SStreamUnregistered, &hook2.C2SStreamHookInfo{
+	_, err := s.runHook(ctx, hook2.C2SStreamUnregistered, &hook2.C2SStreamInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
@@ -1042,7 +1042,7 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 		elem.Attribute(stravaganza.Type),
 	)
 	// run element sent hook
-	_, err = s.runHook(ctx, hook2.C2SStreamElementSent, &hook2.C2SStreamHookInfo{
+	_, err = s.runHook(ctx, hook2.C2SStreamElementSent, &hook2.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: elem,
@@ -1089,7 +1089,7 @@ func (s *inC2S) getState() inC2SState {
 	return inC2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook2.C2SStreamHookInfo) (halt bool, err error) {
+func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook2.C2SStreamInfo) (halt bool, err error) {
 	return s.hk.Run(ctx, hookName, &hook2.ExecutionContext{
 		Info:   inf,
 		Sender: s,

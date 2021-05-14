@@ -21,8 +21,8 @@ const (
 	MemberListUpdated = "memberlist.updated"
 )
 
-// MemberListHookInfo contains all info associated to MemberListUpdated event.
-type MemberListHookInfo struct {
+// MemberListInfo contains all info associated to MemberListUpdated event.
+type MemberListInfo struct {
 	// Registered contains all new registered cluster members.
 	Registered []coremodel.ClusterMember
 

@@ -21,8 +21,8 @@ const (
 	OfflineMessageArchived = "offline.message.archieved"
 )
 
-// OfflineHookInfo contains all information associated to an offline event.
-type OfflineHookInfo struct {
+// OfflineInfo contains all information associated to an offline event.
+type OfflineInfo struct {
 	// Username is the name of the vCard user associated to this event.
 	Username string
 

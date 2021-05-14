@@ -148,7 +148,7 @@ func (p *Ping) sendPongReply(ctx context.Context, pingIQ *stravaganza.IQ) error 
 }
 
 func (p *Ping) onBinded(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
@@ -158,14 +158,14 @@ func (p *Ping) onRecvElement(_ context.Context, execCtx *hook2.ExecutionContext)
 	if !stm.IsBinded() {
 		return false, nil
 	}
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	p.cancelTimers(inf.JID)
 	p.schedulePing(inf.JID)
 	return false, nil
 }
 
 func (p *Ping) onUnregister(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	if jd := inf.JID; jd != nil {
 		p.cancelTimers(jd)
 	}

@@ -22,8 +22,8 @@ const (
 	RosterItemUpdated = "roster.item.updated"
 )
 
-// RosterHookInfo contains all information associated to a roster event.
-type RosterHookInfo struct {
+// RosterInfo contains all information associated to a roster event.
+type RosterInfo struct {
 	// Username is the name of the roster owner.
 	Username string
 

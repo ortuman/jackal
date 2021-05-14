@@ -22,8 +22,8 @@ const (
 	UserDeleted = "user.deleted"
 )
 
-// UserHookInfo contains all information associated to a user event.
-type UserHookInfo struct {
+// UserInfo contains all information associated to a user event.
+type UserInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 }

@@ -134,9 +134,9 @@ func (m *Last) onElementRecv(ctx context.Context, execCtx *hook2.ExecutionContex
 	var ok bool
 
 	switch inf := execCtx.Info.(type) {
-	case *hook2.C2SStreamHookInfo:
+	case *hook2.C2SStreamInfo:
 		iq, ok = inf.Element.(*stravaganza.IQ)
-	case *hook2.S2SStreamHookInfo:
+	case *hook2.S2SStreamInfo:
 		iq, ok = inf.Element.(*stravaganza.IQ)
 	default:
 		return false, nil
@@ -167,12 +167,12 @@ func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) (halt 
 }
 
 func (m *Last) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 	return false, m.rep.DeleteLast(ctx, inf.Username)
 }
 
 func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processC2SPresence(ctx, pr)
 }
@@ -210,7 +210,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
 	_, err := m.hk.Run(ctx, hook2.LastActivityFetched, &hook2.ExecutionContext{
-		Info: &hook2.LastActivityHookInfo{
+		Info: &hook2.LastActivityInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
 		},
@@ -253,7 +253,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
 	_, err = m.hk.Run(ctx, hook2.LastActivityFetched, &hook2.ExecutionContext{
-		Info: &hook2.LastActivityHookInfo{
+		Info: &hook2.LastActivityInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,
 		},

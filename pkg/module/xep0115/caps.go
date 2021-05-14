@@ -168,25 +168,25 @@ func (m *Capabilities) Stop(_ context.Context) error {
 }
 
 func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processPresence(ctx, pr)
 }
 
 func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processPresence(ctx, pr)
 }
 
 func (m *Capabilities) onC2SIQRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 	iq := inf.Element.(*stravaganza.IQ)
 	return false, m.processIQ(ctx, iq)
 }
 
 func (m *Capabilities) onS2SIQRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 	iq := inf.Element.(*stravaganza.IQ)
 	return false, m.processIQ(ctx, iq)
 }

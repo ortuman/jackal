@@ -123,9 +123,9 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook2.Executi
 	var elem stravaganza.Element
 
 	switch inf := execCtx.Info.(type) {
-	case *hook2.C2SStreamHookInfo:
+	case *hook2.C2SStreamInfo:
 		elem = inf.Element.(*stravaganza.Message)
-	case *hook2.S2SStreamHookInfo:
+	case *hook2.S2SStreamInfo:
 		elem = inf.Element.(*stravaganza.Message)
 	}
 	msg, ok := elem.(*stravaganza.Message)
@@ -147,7 +147,7 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook2.Executi
 }
 
 func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
 	toJID := pr.ToJID()
@@ -161,7 +161,7 @@ func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook2.Executio
 }
 
 func (m *Offline) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 
 	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
 	if err != nil {
@@ -225,7 +225,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 		return false, err
 	}
 	_, err = m.hk.Run(ctx, hook2.OfflineMessageArchived, &hook2.ExecutionContext{
-		Info: &hook2.OfflineHookInfo{
+		Info: &hook2.OfflineInfo{
 			Username: username,
 			Message:  dMsg,
 		},

@@ -387,7 +387,7 @@ func TestRoster_Subscribe(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then
@@ -488,7 +488,7 @@ func TestRoster_Subscribed(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then
@@ -597,7 +597,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then
@@ -709,7 +709,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then
@@ -804,7 +804,7 @@ func TestRoster_Probe(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then
@@ -911,7 +911,7 @@ func TestRoster_Available(t *testing.T) {
 
 	_ = r.Start(context.Background())
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{Element: pr},
+		Info: &hook2.C2SStreamInfo{Element: pr},
 	})
 
 	// then

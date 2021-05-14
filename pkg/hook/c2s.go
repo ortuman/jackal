@@ -57,8 +57,8 @@ const (
 	C2SStreamElementSent = "c2s.stream.element_sent"
 )
 
-// C2SStreamHookInfo contains all info associated to a C2S stream event.
-type C2SStreamHookInfo struct {
+// C2SStreamInfo contains all info associated to a C2S stream event.
+type C2SStreamInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

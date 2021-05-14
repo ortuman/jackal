@@ -24,8 +24,8 @@ const (
 	PrivateUpdated = "private.updated"
 )
 
-// PrivateHookInfo contains all information associated to a private event.
-type PrivateHookInfo struct {
+// PrivateInfo contains all information associated to a private event.
+type PrivateInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 

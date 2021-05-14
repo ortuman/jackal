@@ -139,7 +139,7 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 		ml.mu.Unlock()
 
 		// run updated member list hook
-		err = ml.runHook(ctx, &hook2.MemberListHookInfo{
+		err = ml.runHook(ctx, &hook2.MemberListInfo{
 			Registered: ms,
 		})
 		if err != nil {
@@ -230,13 +230,13 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 	ml.mu.Unlock()
 
 	// run updated hook
-	return ml.runHook(ctx, &hook2.MemberListHookInfo{
+	return ml.runHook(ctx, &hook2.MemberListInfo{
 		Registered:       putMembers,
 		UnregisteredKeys: delMemberKeys,
 	})
 }
 
-func (ml *MemberList) runHook(ctx context.Context, inf *hook2.MemberListHookInfo) error {
+func (ml *MemberList) runHook(ctx context.Context, inf *hook2.MemberListInfo) error {
 	_, err := ml.hk.Run(ctx, hook2.MemberListUpdated, &hook2.ExecutionContext{
 		Info:   inf,
 		Sender: ml,

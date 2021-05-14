@@ -243,7 +243,7 @@ func (s *outS2S) start() error {
 		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
-	err := s.runHook(ctx, hook2.S2SOutStreamRegistered, &hook2.S2SStreamHookInfo{
+	err := s.runHook(ctx, hook2.S2SOutStreamRegistered, &hook2.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -545,7 +545,7 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return s.runHook(ctx, hook2.S2SOutStreamElementSent, &hook2.S2SStreamHookInfo{
+	return s.runHook(ctx, hook2.S2SOutStreamElementSent, &hook2.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -567,7 +567,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
-	err := s.runHook(ctx, hook2.S2SOutStreamUnregistered, &hook2.S2SStreamHookInfo{
+	err := s.runHook(ctx, hook2.S2SOutStreamUnregistered, &hook2.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -588,7 +588,7 @@ func (s *outS2S) getState() outS2SState {
 	return outS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook2.S2SStreamHookInfo) error {
+func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook2.S2SStreamInfo) error {
 	if s.typ == dialbackType {
 		return nil
 	}

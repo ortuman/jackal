@@ -118,7 +118,7 @@ func (m *Private) Stop(_ context.Context) error {
 }
 
 func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 	return false, m.rep.DeletePrivates(ctx, inf.Username)
 }
 
@@ -158,7 +158,7 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 	// run private fetched hook
 	_, err = m.hk.Run(ctx, hook2.PrivateFetched, &hook2.ExecutionContext{
-		Info: &hook2.PrivateHookInfo{
+		Info: &hook2.PrivateInfo{
 			Username: username,
 			Private:  prvElem,
 		},
@@ -187,7 +187,7 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 		// run private updated hook
 		_, err := m.hk.Run(ctx, hook2.PrivateUpdated, &hook2.ExecutionContext{
-			Info: &hook2.PrivateHookInfo{
+			Info: &hook2.PrivateInfo{
 				Username: username,
 				Private:  prv,
 			},

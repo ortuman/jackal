@@ -22,7 +22,7 @@ const (
 	ComponentsStopped = "components.stopped"
 )
 
-// ComponentsHookInfo contains all information associated to a components event.
-type ComponentsHookInfo struct {
+// ComponentsInfo contains all information associated to a components event.
+type ComponentsInfo struct {
 	Hosts []string
 }

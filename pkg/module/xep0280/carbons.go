@@ -133,7 +133,7 @@ func (p *Carbons) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 }
 
 func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -144,7 +144,7 @@ func (p *Carbons) onC2SElementWillRoute(_ context.Context, execCtx *hook2.Execut
 }
 
 func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -155,7 +155,7 @@ func (p *Carbons) onS2SElementWillRoute(_ context.Context, execCtx *hook2.Execut
 }
 
 func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.C2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.C2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {
@@ -165,7 +165,7 @@ func (p *Carbons) onC2SMessageRouted(ctx context.Context, execCtx *hook2.Executi
 }
 
 func (p *Carbons) onS2SMessageRouted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.S2SStreamHookInfo)
+	inf := execCtx.Info.(*hook2.S2SStreamInfo)
 
 	msg, ok := inf.Element.(*stravaganza.Message)
 	if !ok {

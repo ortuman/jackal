@@ -24,8 +24,8 @@ const (
 	VCardUpdated = "vcard.updated"
 )
 
-// VCardHookInfo contains all information associated to a vCard event.
-type VCardHookInfo struct {
+// VCardInfo contains all information associated to a vCard event.
+type VCardInfo struct {
 	// Username is the name of the vCard user associated to this event.
 	Username string
 

@@ -108,7 +108,7 @@ func (m *VCard) Stop(_ context.Context) error {
 }
 
 func (m *VCard) onUserDeleted(ctx context.Context, execCtx *hook2.ExecutionContext) (halt bool, err error) {
-	inf := execCtx.Info.(*hook2.UserHookInfo)
+	inf := execCtx.Info.(*hook2.UserInfo)
 	return false, m.rep.DeleteVCard(ctx, inf.Username)
 }
 
@@ -139,7 +139,7 @@ func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 
 	// run vCard fetched hook
 	_, err = m.hk.Run(ctx, hook2.VCardFetched, &hook2.ExecutionContext{
-		Info: &hook2.VCardHookInfo{
+		Info: &hook2.VCardInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,
 		},
@@ -173,7 +173,7 @@ func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 
 	// run vCard updated hook
 	_, err = m.hk.Run(ctx, hook2.VCardUpdated, &hook2.ExecutionContext{
-		Info: &hook2.VCardHookInfo{
+		Info: &hook2.VCardInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,
 		},

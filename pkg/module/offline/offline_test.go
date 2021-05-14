@@ -77,7 +77,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamWillRouteElement, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{
+		Info: &hook2.C2SStreamInfo{
 			Element: msg,
 		},
 	})
@@ -144,7 +144,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	halted, err := hk.Run(context.Background(), hook2.C2SStreamWillRouteElement, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{
+		Info: &hook2.C2SStreamInfo{
 			Element: msg,
 		},
 	})
@@ -219,7 +219,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	pr := xmpputil.MakePresence(fromJID, toJID, stravaganza.AvailableType, nil)
 
 	_, _ = hk.Run(context.Background(), hook2.C2SStreamPresenceReceived, &hook2.ExecutionContext{
-		Info: &hook2.C2SStreamHookInfo{
+		Info: &hook2.C2SStreamInfo{
 			Element: pr,
 		},
 	})

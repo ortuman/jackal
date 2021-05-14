@@ -133,7 +133,7 @@ func (s *inComponent) start() error {
 	log.Infow("Registered external component stream", "id", s.id)
 
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, hook2.ExternalComponentRegistered, &hook2.ExternalComponentHookInfo{
+	_, err := s.runHook(ctx, hook2.ExternalComponentRegistered, &hook2.ExternalComponentInfo{
 		ID: s.id.String(),
 	})
 	cancel()
@@ -226,7 +226,7 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 
 func (s *inComponent) handleElement(ctx context.Context, elem stravaganza.Element) error {
 	// run received element hook
-	hInf := &hook2.ExternalComponentHookInfo{
+	hInf := &hook2.ExternalComponentInfo{
 		ID:      s.id.String(),
 		Host:    s.getJID().Domain(),
 		Element: elem,
@@ -364,7 +364,7 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	_, err := s.runHook(ctx, hook2.ExternalComponentUnregistered, &hook2.ExternalComponentHookInfo{
+	_, err := s.runHook(ctx, hook2.ExternalComponentUnregistered, &hook2.ExternalComponentInfo{
 		ID:   s.id.String(),
 		Host: cHost,
 	})
@@ -446,7 +446,7 @@ func (s *inComponent) getState() inComponentState {
 	return inComponentState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inComponent) runHook(ctx context.Context, hookName string, inf *hook2.ExternalComponentHookInfo) (halt bool, err error) {
+func (s *inComponent) runHook(ctx context.Context, hookName string, inf *hook2.ExternalComponentInfo) (halt bool, err error) {
 	return s.hk.Run(ctx, hookName, &hook2.ExecutionContext{
 		Info:   inf,
 		Sender: s,
