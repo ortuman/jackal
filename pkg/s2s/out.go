@@ -30,7 +30,6 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -101,7 +100,7 @@ type outS2S struct {
 	onClose  func(s *outS2S)
 	dbResCh  chan stream.DialbackResult
 	shapers  shaper.Shapers
-	mh       *module.Hooks
+	hk       *hook.Hooks
 	rq       *runqueue.RunQueue
 
 	state        uint32
@@ -117,7 +116,7 @@ func newOutS2S(
 	cfg Config,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	onClose func(s *outS2S),
 ) *outS2S {
 	stm := &outS2S{
@@ -130,7 +129,7 @@ func newOutS2S(
 		onClose: onClose,
 		kv:      kv,
 		shapers: shapers,
-		mh:      mh,
+		hk:      hk,
 		dialer:  newDialer(cfg.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
@@ -588,11 +587,11 @@ func (s *outS2S) getState() outS2SState {
 	return outS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *outS2S) runHook(ctx context.Context, eventName string, inf *hook.S2SStreamHookInfo) error {
+func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamHookInfo) error {
 	if s.typ == dialbackType {
 		return nil
 	}
-	_, err := s.mh.Run(ctx, eventName, &module.HookExecutionContext{
+	_, err := s.hk.Run(ctx, hookName, &hook.ExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

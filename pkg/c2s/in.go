@@ -70,7 +70,7 @@ type inC2S struct {
 	resMng         resourceManager
 	session        session
 	shapers        shaper.Shapers
-	mh             *module.Hooks
+	hk             *hook.Hooks
 	rq             *runqueue.RunQueue
 	discTm         *time.Timer
 	doneCh         chan struct{}
@@ -93,7 +93,7 @@ func newInC2S(
 	mods *module.Modules,
 	resMng *ResourceManager,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) (*inC2S, error) {
 	// set default rate limiter
@@ -129,7 +129,7 @@ func newInC2S(
 		rq:             runqueue.New(id.String(), log.Errorf),
 		doneCh:         make(chan struct{}),
 		state:          uint32(inConnecting),
-		mh:             mh,
+		hk:             hk,
 	}
 	if cfg.UseTLS {
 		stm.flags.setSecured() // stream already secured
@@ -1088,8 +1088,8 @@ func (s *inC2S) getState() inC2SState {
 	return inC2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inC2S) runHook(ctx context.Context, hook string, inf *hook.C2SStreamHookInfo) (halt bool, err error) {
-	return s.mh.Run(ctx, hook, &module.HookExecutionContext{
+func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook.C2SStreamHookInfo) (halt bool, err error) {
+	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

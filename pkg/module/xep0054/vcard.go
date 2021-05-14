@@ -20,7 +20,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -41,15 +40,19 @@ const (
 type VCard struct {
 	rep    repository.VCard
 	router router.Router
-	mh     *module.Hooks
+	hk     *hook.Hooks
 }
 
 // New returns a new initialized VCard instance.
-func New(router router.Router, rep repository.Repository, mh *module.Hooks) *VCard {
+func New(
+	router router.Router,
+	rep repository.Repository,
+	hk *hook.Hooks,
+) *VCard {
 	return &VCard{
 		router: router,
 		rep:    rep,
-		mh:     mh,
+		hk:     hk,
 	}
 }
 
@@ -89,7 +92,7 @@ func (m *VCard) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts vCard module.
 func (m *VCard) Start(_ context.Context) error {
-	m.mh.AddHook(hook.UserDeleted, m.onUserDeleted, module.DefaultPriority)
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started vCard module", "xep", XEPNumber)
 	return nil
@@ -97,13 +100,13 @@ func (m *VCard) Start(_ context.Context) error {
 
 // Stop stops vCard module.
 func (m *VCard) Stop(_ context.Context) error {
-	m.mh.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped vCard module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *VCard) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *VCard) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.UserHookInfo)
 	return false, m.rep.DeleteVCard(ctx, inf.Username)
 }
@@ -134,7 +137,7 @@ func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run vCard fetched hook
-	_, err = m.mh.Run(ctx, hook.VCardFetched, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.VCardFetched, &hook.ExecutionContext{
 		Info: &hook.VCardHookInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,
@@ -168,7 +171,7 @@ func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
 	// run vCard updated hook
-	_, err = m.mh.Run(ctx, hook.VCardUpdated, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.VCardUpdated, &hook.ExecutionContext{
 		Info: &hook.VCardHookInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,

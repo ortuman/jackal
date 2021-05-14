@@ -64,7 +64,7 @@ type inS2S struct {
 	inHub        *InHub
 	kv           kv.KV
 	shapers      shaper.Shapers
-	mh           *module.Hooks
+	hk           *hook.Hooks
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -88,7 +88,7 @@ func newInS2S(
 	inHub *InHub,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) (*inS2S, error) {
 	// set default rate limiter
@@ -121,7 +121,7 @@ func newInS2S(
 		inHub:       inHub,
 		kv:          kv,
 		shapers:     shapers,
-		mh:          mh,
+		hk:          hk,
 		rq:          runqueue.New(id.String(), log.Errorf),
 		doneCh:      make(chan struct{}),
 		state:       uint32(inConnecting),
@@ -814,8 +814,8 @@ func (s *inS2S) getState() inS2SState {
 	return inS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inS2S) runHook(ctx context.Context, hook string, inf *hook.S2SStreamHookInfo) (halt bool, err error) {
-	return s.mh.Run(ctx, hook, &module.HookExecutionContext{
+func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamHookInfo) (halt bool, err error) {
+	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

@@ -31,7 +31,6 @@ import (
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
@@ -44,14 +43,14 @@ const iterationCount = 100_000
 type usersService struct {
 	rep     repository.Repository
 	peppers *pepper.Keys
-	mh      *module.Hooks
+	hk      *hook.Hooks
 }
 
-func newUsersService(rep repository.Repository, peppers *pepper.Keys, mh *module.Hooks) userspb.UsersServer {
+func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook.Hooks) userspb.UsersServer {
 	return &usersService{
 		rep:     rep,
 		peppers: peppers,
-		mh:      mh,
+		hk:      hk,
 	}
 }
 
@@ -64,7 +63,7 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 		return nil, err
 	}
 	// run user created hook
-	_, err := s.mh.Run(ctx, hook.UserCreated, &module.HookExecutionContext{
+	_, err := s.hk.Run(ctx, hook.UserCreated, &hook.ExecutionContext{
 		Info: &hook.UserHookInfo{
 			Username: username,
 		},
@@ -98,7 +97,7 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// run user deleted hook
-	_, err := s.mh.Run(ctx, hook.UserDeleted, &module.HookExecutionContext{
+	_, err := s.hk.Run(ctx, hook.UserDeleted, &hook.ExecutionContext{
 		Info: &hook.UserHookInfo{
 			Username: username,
 		},

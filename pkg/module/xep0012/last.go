@@ -29,7 +29,6 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -51,7 +50,7 @@ type Last struct {
 	hosts     hosts
 	resMng    resourceManager
 	rep       repository.Repository
-	mh        *module.Hooks
+	hk        *hook.Hooks
 	startedAt int64
 }
 
@@ -61,14 +60,14 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 ) *Last {
 	return &Last{
 		router: router,
 		hosts:  hosts,
 		resMng: resMng,
 		rep:    rep,
-		mh:     mh,
+		hk:     hk,
 	}
 }
 
@@ -108,10 +107,10 @@ func (m *Last) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts last activity module.
 func (m *Last) Start(_ context.Context) error {
-	m.mh.AddHook(hook.C2SStreamElementReceived, m.onElementRecv, module.DefaultPriority)
-	m.mh.AddHook(hook.S2SInStreamElementReceived, m.onElementRecv, module.DefaultPriority)
-	m.mh.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, module.DefaultPriority)
-	m.mh.AddHook(hook.UserDeleted, m.onUserDeleted, module.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
+	m.hk.AddHook(hook.S2SInStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	m.startedAt = time.Now().Unix()
 
@@ -121,16 +120,16 @@ func (m *Last) Start(_ context.Context) error {
 
 // Stop stops last activity module.
 func (m *Last) Stop(_ context.Context) error {
-	m.mh.RemoveHook(hook.C2SStreamElementReceived, m.onElementRecv)
-	m.mh.RemoveHook(hook.S2SInStreamElementReceived, m.onElementRecv)
-	m.mh.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
-	m.mh.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook.C2SStreamElementReceived, m.onElementRecv)
+	m.hk.RemoveHook(hook.S2SInStreamElementReceived, m.onElementRecv)
+	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped last module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *Last) onElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *Last) onElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	var iq *stravaganza.IQ
 	var ok bool
 
@@ -167,12 +166,12 @@ func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) (halt 
 	return false, nil
 }
 
-func (m *Last) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *Last) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.UserHookInfo)
 	return false, m.rep.DeleteLast(ctx, inf.Username)
 }
 
-func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	pr := inf.Element.(*stravaganza.Presence)
 	return false, m.processC2SPresence(ctx, pr)
@@ -210,7 +209,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 
 	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
-	_, err := m.mh.Run(ctx, hook.LastActivityFetched, &module.HookExecutionContext{
+	_, err := m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityHookInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
@@ -253,7 +252,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 
 	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
-	_, err = m.mh.Run(ctx, hook.LastActivityFetched, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityHookInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,

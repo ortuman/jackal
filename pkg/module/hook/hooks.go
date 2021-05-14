@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package module
+package hook
 
 import (
 	"context"
@@ -22,26 +22,26 @@ import (
 	"sync"
 )
 
-type HookPriority int32
+type Priority int32
 
 const (
-	LowestPriority  = HookPriority(math.MinInt32)
-	DefaultPriority = HookPriority(0)
-	HighestPriority = HookPriority(math.MaxInt32)
+	LowestPriority  = Priority(math.MinInt32)
+	DefaultPriority = Priority(0)
+	HighestPriority = Priority(math.MaxInt32)
 )
 
 // Handler defines a generic hook handler function.
-type Handler func(ctx context.Context, execCtx *HookExecutionContext) (halt bool, err error)
+type Handler func(ctx context.Context, execCtx *ExecutionContext) (halt bool, err error)
 
-// HookExecutionContext defines a hook execution info context.
-type HookExecutionContext struct {
+// ExecutionContext defines a hook execution info context.
+type ExecutionContext struct {
 	Info   interface{}
 	Sender interface{}
 }
 
 type handler struct {
 	h Handler
-	p HookPriority
+	p Priority
 }
 
 // Hooks represents a set of module hook handlers.
@@ -59,7 +59,7 @@ func NewHooks() *Hooks {
 
 // AddHook adds a new handler to a given hook providing an execution priority value.
 // hnd priority may be any number (including negative). Handlers with a higher priority are executed first.
-func (h *Hooks) AddHook(hook string, hnd Handler, priority HookPriority) {
+func (h *Hooks) AddHook(hook string, hnd Handler, priority Priority) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -91,7 +91,7 @@ func (h *Hooks) RemoveHook(hook string, hnd Handler) {
 
 // Run invokes all hook handlers in order.
 // If halted return value is true no more handlers are invoked.
-func (h *Hooks) Run(ctx context.Context, hook string, execCtx *HookExecutionContext) (halted bool, err error) {
+func (h *Hooks) Run(ctx context.Context, hook string, execCtx *ExecutionContext) (halted bool, err error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 

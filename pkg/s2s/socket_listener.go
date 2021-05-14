@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/host"
@@ -48,7 +50,7 @@ type SocketListener struct {
 	inHub         *InHub
 	kv            kv.KV
 	shapers       shaper.Shapers
-	mh            *module.Hooks
+	hk            *hook.Hooks
 	cfg           Config
 	connHandlerFn func(conn net.Conn)
 
@@ -68,7 +70,7 @@ func NewSocketListener(
 	inHub *InHub,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) *SocketListener {
 	addr := getAddress(bindAddr, port)
@@ -83,7 +85,7 @@ func NewSocketListener(
 		inHub:       inHub,
 		kv:          kv,
 		shapers:     shapers,
-		mh:          mh,
+		hk:          hk,
 	}
 	ln.connHandlerFn = ln.handleConn
 	return ln
@@ -150,7 +152,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.inHub,
 		l.kv,
 		l.shapers,
-		l.mh,
+		l.hk,
 		l.cfg,
 	)
 	if err != nil {

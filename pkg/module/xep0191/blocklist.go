@@ -30,7 +30,6 @@ import (
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -60,7 +59,7 @@ type BlockList struct {
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	mh     *module.Hooks
+	hk     *hook.Hooks
 	subs   []sonar.SubID
 }
 
@@ -70,14 +69,14 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 ) *BlockList {
 	return &BlockList{
 		rep:    rep,
 		router: router,
 		hosts:  hosts,
 		resMng: resMng,
-		mh:     mh,
+		hk:     hk,
 	}
 }
 
@@ -126,11 +125,11 @@ func (m *BlockList) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts blocklist module.
 func (m *BlockList) Start(_ context.Context) error {
-	m.mh.AddHook(hook.C2SStreamElementReceived, m.onC2SElementRecv, module.HighestPriority)
-	m.mh.AddHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv, module.HighestPriority)
-	m.mh.AddHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute, module.HighestPriority)
-	m.mh.AddHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, module.HighestPriority)
-	m.mh.AddHook(hook.UserDeleted, m.onUserDeleted, module.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamElementReceived, m.onC2SElementRecv, hook.HighestPriority)
+	m.hk.AddHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv, hook.HighestPriority)
+	m.hk.AddHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute, hook.HighestPriority)
+	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, hook.HighestPriority)
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started blocklist module", "xep", XEPNumber)
 	return nil
@@ -138,17 +137,17 @@ func (m *BlockList) Start(_ context.Context) error {
 
 // Stop stops blocklist module.
 func (m *BlockList) Stop(_ context.Context) error {
-	m.mh.RemoveHook(hook.C2SStreamElementReceived, m.onC2SElementRecv)
-	m.mh.RemoveHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv)
-	m.mh.RemoveHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute)
-	m.mh.RemoveHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
-	m.mh.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+	m.hk.RemoveHook(hook.C2SStreamElementReceived, m.onC2SElementRecv)
+	m.hk.RemoveHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv)
+	m.hk.RemoveHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute)
+	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
 	log.Infow("Stopped blocklist module", "xep", XEPNumber)
 	return nil
 }
 
-func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -157,7 +156,7 @@ func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *module.HookEx
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.S2SStreamHookInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -166,7 +165,7 @@ func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *module.HookEx
 	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.C2SStreamHookInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -175,7 +174,7 @@ func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *module.H
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.S2SStreamHookInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -184,7 +183,7 @@ func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *module.H
 	return m.processOutgoingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	inf := execCtx.Info.(*hook.UserHookInfo)
 	return false, m.rep.DeleteBlockListItems(ctx, inf.Username)
 }
@@ -297,7 +296,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		j, _ := jid.NewWithString(itm.JID, false)
 		allJIDs = append(allJIDs, *j)
 	}
-	_, err = m.mh.Run(ctx, hook.BlockListFetched, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.BlockListFetched, &hook.ExecutionContext{
 		Info: &hook.BlockListHookInfo{
 			Username: username,
 			JIDs:     allJIDs,
@@ -380,7 +379,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	m.sendPush(ctx, block, rss)
 
 	// run hook
-	_, err = m.mh.Run(ctx, hook.BlockListItemsBlocked, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.BlockListItemsBlocked, &hook.ExecutionContext{
 		Info: &hook.BlockListHookInfo{
 			Username: username,
 			JIDs:     blockJIDs,
@@ -452,7 +451,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	m.sendPush(ctx, unblock, rss)
 
 	// run hook
-	_, err = m.mh.Run(ctx, hook.BlockListItemsUnblocked, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.BlockListItemsUnblocked, &hook.ExecutionContext{
 		Info: &hook.BlockListHookInfo{
 			Username: username,
 			JIDs:     unblockJIDs,

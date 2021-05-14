@@ -22,7 +22,6 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 )
 
@@ -51,17 +50,17 @@ type Component interface {
 type Components struct {
 	mtx   sync.RWMutex
 	comps map[string]Component
-	mh    *module.Hooks
+	hk    *hook.Hooks
 }
 
 // NewComponents returns a new initialized Components instance.
 func NewComponents(
 	components []Component,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 ) *Components {
 	cs := &Components{
 		comps: make(map[string]Component),
-		mh:    mh,
+		hk:    hk,
 	}
 	for _, comp := range components {
 		cs.comps[comp.Host()] = comp
@@ -154,7 +153,7 @@ func (c *Components) Start(ctx context.Context) error {
 	}
 	log.Infow("Started components", "components", len(c.comps))
 
-	_, err := c.mh.Run(ctx, hook.ComponentsStarted, &module.HookExecutionContext{
+	_, err := c.hk.Run(ctx, hook.ComponentsStarted, &hook.ExecutionContext{
 		Info: &hook.ComponentsHookInfo{
 			Hosts: hosts,
 		},
@@ -178,7 +177,7 @@ func (c *Components) Stop(ctx context.Context) error {
 	}
 	log.Infow("Stopped components", "components", len(c.comps))
 
-	_, err := c.mh.Run(ctx, hook.ComponentsStopped, &module.HookExecutionContext{
+	_, err := c.hk.Run(ctx, hook.ComponentsStopped, &hook.ExecutionContext{
 		Info: &hook.ComponentsHookInfo{
 			Hosts: hosts,
 		},

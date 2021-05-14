@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -47,7 +47,7 @@ func (s *routerSuite) SetupTest() {
 		cluster: s.clusterRouterMock,
 		resMng:  s.resMngMock,
 		rep:     s.repositoryMock,
-		mh:      module.NewHooks(),
+		mh:      hook.NewHooks(),
 	}
 }
 

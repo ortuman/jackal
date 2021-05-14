@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/version"
 )
@@ -45,13 +44,13 @@ type Conn interface {
 type Manager struct {
 	mu    sync.RWMutex
 	conns map[string]*clusterConn
-	mh    *module.Hooks
+	hk    *hook.Hooks
 }
 
 // NewManager returns a new initialized cluster connection manager.
-func NewManager(mh *module.Hooks) *Manager {
+func NewManager(hk *hook.Hooks) *Manager {
 	return &Manager{
-		mh:    mh,
+		hk:    hk,
 		conns: make(map[string]*clusterConn),
 	}
 }
@@ -78,7 +77,7 @@ func (m *Manager) Start(_ context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.mh.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, module.DefaultPriority)
+	m.hk.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, hook.DefaultPriority)
 
 	log.Infof("Started cluster connection manager")
 	return nil
@@ -97,13 +96,13 @@ func (m *Manager) Stop(_ context.Context) error {
 		}
 		delete(m.conns, instanceID)
 	}
-	m.mh.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
+	m.hk.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
 
 	log.Infof("Stopped cluster connection manager... (%d total connections)", count)
 	return nil
 }
 
-func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

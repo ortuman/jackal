@@ -64,7 +64,7 @@ type Modules struct {
 	iqProcessors []IQProcessor
 	hosts        hosts
 	router       router.Router
-	mh           *Hooks
+	hk           *hook.Hooks
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -72,13 +72,13 @@ func NewModules(
 	mods []Module,
 	hosts *host.Hosts,
 	router router.Router,
-	mh *Hooks,
+	hk *hook.Hooks,
 ) *Modules {
 	m := &Modules{
 		mods:   mods,
 		hosts:  hosts,
 		router: router,
-		mh:     mh,
+		hk:     hk,
 	}
 	m.setupModules()
 	return m
@@ -98,7 +98,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.mh.Run(ctx, hook.ModulesStarted, &HookExecutionContext{
+	_, err := m.hk.Run(ctx, hook.ModulesStarted, &hook.ExecutionContext{
 		Info: &hook.ModulesHookInfo{
 			ModuleNames: modNames,
 		},
@@ -121,7 +121,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.mh.Run(ctx, hook.ModulesStopped, &HookExecutionContext{
+	_, err := m.hk.Run(ctx, hook.ModulesStopped, &hook.ExecutionContext{
 		Info: &hook.ModulesHookInfo{
 			ModuleNames: modNames,
 		},

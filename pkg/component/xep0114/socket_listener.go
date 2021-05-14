@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/module"
+	"github.com/ortuman/jackal/pkg/module/hook"
 
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
@@ -64,7 +64,7 @@ type SocketListener struct {
 	comps         *component.Components
 	router        router.Router
 	shapers       shaper.Shapers
-	mh            *module.Hooks
+	mh            *hook.Hooks
 	extCompMng    *extcomponentmanager.Manager
 	stmHub        *inHub
 	connHandlerFn func(conn net.Conn)
@@ -82,7 +82,7 @@ func NewSocketListener(
 	extCompMng *extcomponentmanager.Manager,
 	router router.Router,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	mh *hook.Hooks,
 	cfg Config,
 ) *SocketListener {
 	ln := &SocketListener{

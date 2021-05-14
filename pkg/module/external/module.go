@@ -24,7 +24,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	extmodulepb "github.com/ortuman/jackal/pkg/module/external/pb"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/router"
@@ -41,7 +40,7 @@ const (
 // HookConfig defines a hook handler configuration
 type HookConfig struct {
 	Name     string
-	Priority module.HookPriority
+	Priority hook.Priority
 }
 
 // Config defines external module configuratiopn value.
@@ -67,7 +66,7 @@ type ExtModule struct {
 	address  string
 	isSecure bool
 	cfg      Config
-	mh       *module.Hooks
+	hk       *hook.Hooks
 	router   router.Router
 
 	cc io.Closer
@@ -79,7 +78,7 @@ func New(
 	address string,
 	isSecure bool,
 	router router.Router,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) *ExtModule {
 	return &ExtModule{
@@ -87,7 +86,7 @@ func New(
 		isSecure: isSecure,
 		cfg:      cfg,
 		router:   router,
-		mh:       mh,
+		hk:       hk,
 	}
 }
 
@@ -170,7 +169,7 @@ func (m *ExtModule) Start(ctx context.Context) error {
 
 	// add hook handlers
 	for _, hConfig := range m.cfg.Hooks {
-		m.mh.AddHook(hConfig.Name, m.onHookEvent, hConfig.Priority)
+		m.hk.AddHook(hConfig.Name, m.onHookEvent, hConfig.Priority)
 	}
 	log.Infow(fmt.Sprintf("Started %s external module at: %s", m.name, m.address),
 		"secured", m.isSecure,
@@ -182,7 +181,7 @@ func (m *ExtModule) Start(ctx context.Context) error {
 func (m *ExtModule) Stop(_ context.Context) error {
 	// unsubscribe from external module events
 	for _, hConfig := range m.cfg.Hooks {
-		m.mh.RemoveHook(hConfig.Name, m.onHookEvent)
+		m.hk.RemoveHook(hConfig.Name, m.onHookEvent)
 	}
 	if err := m.cc.Close(); err != nil {
 		return err
@@ -191,7 +190,7 @@ func (m *ExtModule) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *ExtModule) onHookEvent(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *ExtModule) onHookEvent(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	/*
 		_, err := m.cl.ProcessEvent(ctx, toPBProcessEventRequest(ev.Name(), ev.Info()))
 		if err != nil {

@@ -31,7 +31,6 @@ import (
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -67,7 +66,7 @@ type inComponent struct {
 	router       router.Router
 	extCompMng   externalComponentManager
 	inHub        *inHub
-	mh           *module.Hooks
+	hk           *hook.Hooks
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -88,7 +87,7 @@ func newInComponent(
 	stmHub *inHub,
 	router router.Router,
 	shapers shaper.Shapers,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 	cfg Config,
 ) (*inComponent, error) {
 	// set default rate limiter
@@ -124,7 +123,7 @@ func newInComponent(
 		rq:         runqueue.New(id.String(), log.Errorf),
 		doneCh:     make(chan struct{}),
 		shapers:    shapers,
-		mh:         mh,
+		hk:         hk,
 	}, nil
 }
 
@@ -446,8 +445,8 @@ func (s *inComponent) getState() inComponentState {
 	return inComponentState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inComponent) runHook(ctx context.Context, eventName string, inf *hook.ExternalComponentHookInfo) (halt bool, err error) {
-	return s.mh.Run(ctx, eventName, &module.HookExecutionContext{
+func (s *inComponent) runHook(ctx context.Context, hookName string, inf *hook.ExternalComponentHookInfo) (halt bool, err error) {
+	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
 		Info:   inf,
 		Sender: s,
 	})

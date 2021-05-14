@@ -26,7 +26,6 @@ import (
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/log"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/hook"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -70,7 +69,7 @@ type Disco struct {
 	components components
 	rosRep     repository.Roster
 	resMng     resourceManager
-	mh         *module.Hooks
+	hk         *hook.Hooks
 
 	mu      sync.RWMutex
 	srvProv InfoProvider
@@ -83,14 +82,14 @@ func New(
 	components *component.Components,
 	rosRep repository.Roster,
 	resMng *c2s.ResourceManager,
-	mh *module.Hooks,
+	hk *hook.Hooks,
 ) *Disco {
 	return &Disco{
 		router:     router,
 		components: components,
 		rosRep:     rosRep,
 		resMng:     resMng,
-		mh:         mh,
+		hk:         hk,
 	}
 }
 
@@ -130,7 +129,7 @@ func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts disco module.
 func (m *Disco) Start(_ context.Context) error {
-	m.mh.AddHook(hook.ModulesStarted, m.onModulesStarted, module.DefaultPriority)
+	m.hk.AddHook(hook.ModulesStarted, m.onModulesStarted, hook.DefaultPriority)
 
 	log.Infow("Started disco module", "xep", XEPNumber)
 	return nil
@@ -138,7 +137,7 @@ func (m *Disco) Start(_ context.Context) error {
 
 // Stop stops disco module.
 func (m *Disco) Stop(_ context.Context) error {
-	m.mh.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
+	m.hk.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
 
 	log.Infow("Stopped disco module", "xep", XEPNumber)
 	return nil
@@ -158,7 +157,7 @@ func (m *Disco) AccountProvider() InfoProvider {
 	return m.accProv
 }
 
-func (m *Disco) onModulesStarted(ctx context.Context, execCtx *module.HookExecutionContext) (halt bool, err error) {
+func (m *Disco) onModulesStarted(ctx context.Context, execCtx *hook.ExecutionContext) (halt bool, err error) {
 	mods := execCtx.Sender.(modules)
 
 	m.mu.Lock()
@@ -166,7 +165,7 @@ func (m *Disco) onModulesStarted(ctx context.Context, execCtx *module.HookExecut
 	m.accProv = newAccountProvider(mods.AllModules(), m.rosRep, m.resMng)
 	m.mu.Unlock()
 
-	_, err = m.mh.Run(ctx, hook.DiscoProvidersStarted, &module.HookExecutionContext{
+	_, err = m.hk.Run(ctx, hook.DiscoProvidersStarted, &hook.ExecutionContext{
 		Sender: m,
 	})
 	return false, err

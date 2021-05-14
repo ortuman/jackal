@@ -109,7 +109,7 @@ func TestModule_ProcessEvent(t *testing.T) {
 		cfg: Config{
 			Topics: []string{event.C2SStreamIQReceived},
 		},
-		mh: module.NewHooks(),
+		hk: module.NewHooks(),
 	}
 
 	iq, _ := stravaganza.NewIQBuilder().

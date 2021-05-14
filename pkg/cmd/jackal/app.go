@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module/hook"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -100,7 +102,7 @@ type serverApp struct {
 	args   []string
 
 	peppers *pepper.Keys
-	mh      *module.Hooks
+	hk      *hook.Hooks
 
 	etcdCli *etcdv3.Client
 	locker  locker.Locker
@@ -197,7 +199,7 @@ func run(output io.Writer, args []string) error {
 	a.peppers = peppers
 
 	// init hooks
-	a.mh = module.NewHooks()
+	a.hk = hook.NewHooks()
 
 	// init etcd
 	if err := a.initEtcd(cfg.Cluster.Etcd); err != nil {
@@ -290,7 +292,7 @@ func (a *serverApp) initKVStore() {
 }
 
 func (a *serverApp) initClusterConnManager() {
-	a.clusterConnMng = clusterconnmanager.NewManager(a.mh)
+	a.clusterConnMng = clusterconnmanager.NewManager(a.hk)
 	a.registerStartStopper(a.clusterConnMng)
 }
 
@@ -370,7 +372,7 @@ func (a *serverApp) initShapers(cfgs []shaperConfig) error {
 }
 
 func (a *serverApp) initMemberList(clusterPort int) {
-	a.memberList = memberlist.New(a.kv, clusterPort, a.mh)
+	a.memberList = memberlist.New(a.kv, clusterPort, a.hk)
 	a.registerStartStopper(a.memberList)
 	return
 }
@@ -388,7 +390,7 @@ func (a *serverApp) initListeners(configs []listenerConfig) error {
 }
 
 func (a *serverApp) initS2S(cfg s2sOutConfig) {
-	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.mh, s2s.Config{
+	a.s2sOutProvider = s2s.NewOutProvider(a.hosts, a.kv, a.shapers, a.hk, s2s.Config{
 		DialTimeout:      cfg.DialTimeout,
 		DialbackSecret:   cfg.DialbackSecret,
 		ConnectTimeout:   cfg.ConnectTimeout,
@@ -410,7 +412,7 @@ func (a *serverApp) initRouters() {
 	a.localRouter = c2s.NewLocalRouter(a.hosts)
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
-	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.mh)
+	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.hk)
 	s2sRouter := s2s.NewRouter(a.s2sOutProvider)
 
 	// init global router
@@ -421,7 +423,7 @@ func (a *serverApp) initRouters() {
 }
 
 func (a *serverApp) initComponents(_ componentsConfig) {
-	a.comps = component.NewComponents(nil, a.mh)
+	a.comps = component.NewComponents(nil, a.hk)
 	a.extCompMng = extcomponentmanager.New(a.kv, a.clusterConnMng, a.comps)
 
 	a.registerStartStopper(a.comps)
@@ -461,14 +463,14 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 		for _, hCfg := range extCfg.EventHandler.Hooks {
 			hookConfigs = append(hookConfigs, externalmodule.HookConfig{
 				Name:     hCfg.Name,
-				Priority: module.HookPriority(hCfg.Priority),
+				Priority: hook.Priority(hCfg.Priority),
 			})
 		}
 		mods = append(mods, externalmodule.New(
 			extCfg.Address,
 			extCfg.IsSecure,
 			a.router,
-			a.mh,
+			a.hk,
 			externalmodule.Config{
 				RequestTimeout:   extCfg.RequestTimeout,
 				Hooks:            hookConfigs,
@@ -477,13 +479,13 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			},
 		))
 	}
-	a.mods = module.NewModules(mods, a.hosts, a.router, a.mh)
+	a.mods = module.NewModules(mods, a.hosts, a.router, a.hk)
 	a.registerStartStopper(a.mods)
 	return nil
 }
 
 func (a *serverApp) initAdminServer(bindAddr string, port int) {
-	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.mh)
+	adminSrv := adminserver.New(bindAddr, port, a.rep, a.peppers, a.hk)
 	a.registerStartStopper(adminSrv)
 }
 

@@ -42,10 +42,10 @@ func TestDisco_GetServerInfo(t *testing.T) {
 		respStanzas = append(respStanzas, stanza)
 		return nil, nil
 	}
-	mh := module.NewHooks()
+	mh := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
-		mh:     mh,
+		hk:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -54,7 +54,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -110,11 +110,11 @@ func TestDisco_GetServerItems(t *testing.T) {
 	compsMock.AllComponentsFunc = func() []component.Component {
 		return []component.Component{compMock}
 	}
-	mh := module.NewHooks()
+	mh := hook.NewHooks()
 	d := &Disco{
 		router:     routerMock,
 		components: compsMock,
-		mh:         mh,
+		hk:         mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -123,7 +123,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -180,11 +180,11 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 		}, nil
 	}
 
-	mh := module.NewHooks()
+	mh := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
-		mh:     mh,
+		hk:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -193,7 +193,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
@@ -255,12 +255,12 @@ func TestDisco_GetAccountItems(t *testing.T) {
 			},
 		}, nil
 	}
-	mh := module.NewHooks()
+	mh := hook.NewHooks()
 	d := &Disco{
 		router: routerMock,
 		rosRep: repMock,
 		resMng: resMng,
-		mh:     mh,
+		hk:     mh,
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -269,7 +269,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &module.HookExecutionContext{
+	_, _ = mh.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
 		Sender: modsMock,
 	})
 
