@@ -45,7 +45,6 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/log/zap"
 	"github.com/ortuman/jackal/pkg/module"
-	externalmodule "github.com/ortuman/jackal/pkg/module/external"
 	"github.com/ortuman/jackal/pkg/repository"
 	measuredrepository "github.com/ortuman/jackal/pkg/repository/measured"
 	pgsqlrepository "github.com/ortuman/jackal/pkg/repository/pgsql"
@@ -443,40 +442,6 @@ func (a *serverApp) initModules(cfg modulesConfig) error {
 			return fmt.Errorf("main: unrecognized module name: %s", mName)
 		}
 		mods = append(mods, fn(a, cfg))
-	}
-	// external modules
-	for _, extCfg := range cfg.External {
-		var nsMatcher stringmatcher.Matcher
-
-		switch {
-		case len(extCfg.IQHandler.Namespace.In) > 0:
-			nsMatcher = stringmatcher.NewStringMatcher(extCfg.IQHandler.Namespace.In)
-		case len(extCfg.IQHandler.Namespace.RegEx) > 0:
-			var err error
-			nsMatcher, err = stringmatcher.NewRegExMatcher(extCfg.IQHandler.Namespace.RegEx)
-			if err != nil {
-				return err
-			}
-		}
-		var hookConfigs []externalmodule.HookConfig
-		for _, hCfg := range extCfg.EventHandler.Hooks {
-			hookConfigs = append(hookConfigs, externalmodule.HookConfig{
-				Name:     hCfg.Name,
-				Priority: hook.Priority(hCfg.Priority),
-			})
-		}
-		mods = append(mods, externalmodule.New(
-			extCfg.Address,
-			extCfg.IsSecure,
-			a.router,
-			a.hk,
-			externalmodule.Config{
-				RequestTimeout:   extCfg.RequestTimeout,
-				Hooks:            hookConfigs,
-				TargetEntity:     extCfg.IQHandler.TargetEntity,
-				NamespaceMatcher: nsMatcher,
-			},
-		))
 	}
 	a.mods = module.NewModules(mods, a.hosts, a.router, a.hk)
 	a.registerStartStopper(a.mods)
