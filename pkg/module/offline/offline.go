@@ -123,9 +123,9 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook.Executio
 
 	switch inf := execCtx.Info.(type) {
 	case *hook.C2SStreamInfo:
-		elem = inf.Element.(*stravaganza.Message)
+		elem = inf.Element
 	case *hook.S2SStreamInfo:
-		elem = inf.Element.(*stravaganza.Message)
+		elem = inf.Element
 	}
 	msg, ok := elem.(*stravaganza.Message)
 	if !ok || !isMessageArchievable(msg) {
