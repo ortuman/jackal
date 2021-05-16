@@ -163,7 +163,7 @@ Alternatively, and with the purpose of facilitating service mounting, you can ma
 docker-compose -f dockerfiles/docker-compose.yml up
 ```
 
-This command will spin up a `jackal` server along with its dependencies on its own docker network and start listening for incoming connections on port `5222`.
+This command will spin up a `jackal` server along with its dependencies on a docker network and start listening for incoming connections on port `5222`.
 
 Once up and running, don't forget to [register one or more users](#creating-jackal-user) using `jackalctl`.
 
