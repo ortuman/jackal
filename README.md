@@ -98,11 +98,11 @@ Your database is now ready to connect with jackal.
 
 ### Creating jackal user
 
-After completing database setup you will have to register a new user to be able to login. To do so, you can use
+After completing database setup and starting `jackal` service you'll have to register a new user to be able to login. To do so, you can use
 jackal command-line tool to create a new user proving name and password.
 
 ```sh
-jackalctl user add <user>:<password>
+make installctl && jackalctl user add <user>:<password>
 ```
 
 ## Clustering
@@ -164,7 +164,7 @@ Alternatively and with the purpose of facilitating service mounting you can make
 docker-compose -f dockerfiles/docker-compose.yml up
 ```
 
-Once ready, don't forget to [register one or more test users](#creating-jackal-user) using `jackalctl`.
+Once `jackal` is up and running, don't forget to [register one or more users](#creating-jackal-user) using `jackalctl`.
 
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
