@@ -164,7 +164,9 @@ Alternatively and with the purpose of facilitating service mounting you can make
 docker-compose -f dockerfiles/docker-compose.yml up
 ```
 
-Once `jackal` is up and running, don't forget to [register one or more users](#creating-jackal-user) using `jackalctl`.
+This command will spin up a `jackal` service along with its dependencies on its own docker network and start listening for incoming connections on port `5222`.
+
+Once up and running, don't forget to [register one or more users](#creating-jackal-user) using `jackalctl`.
 
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
