@@ -157,7 +157,7 @@ docker run --name=jackal \
 
 ### Docker compose
 
-Alternatively, and with the purpose of facilitating service mounting, you can make use of `docker-compose` as follows.
+Alternatively, and with the purpose of facilitating service mounting, you can make use of `docker-compose` as follows:
 
 ```sh
 docker-compose -f dockerfiles/docker-compose.yml up
