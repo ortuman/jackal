@@ -24,13 +24,12 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
@@ -67,7 +66,7 @@ type inComponent struct {
 	router       router.Router
 	extCompMng   externalComponentManager
 	inHub        *inHub
-	sn           *sonar.Sonar
+	hk           *hook.Hooks
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -88,7 +87,7 @@ func newInComponent(
 	stmHub *inHub,
 	router router.Router,
 	shapers shaper.Shapers,
-	sn *sonar.Sonar,
+	hk *hook.Hooks,
 	cfg Config,
 ) (*inComponent, error) {
 	// set default rate limiter
@@ -124,7 +123,7 @@ func newInComponent(
 		rq:         runqueue.New(id.String(), log.Errorf),
 		doneCh:     make(chan struct{}),
 		shapers:    shapers,
-		sn:         sn,
+		hk:         hk,
 	}, nil
 }
 
@@ -133,7 +132,7 @@ func (s *inComponent) start() error {
 	log.Infow("Registered external component stream", "id", s.id)
 
 	ctx, cancel := s.requestContext()
-	err := s.postStreamEvent(ctx, event.ExternalComponentRegistered, &event.ExternalComponentEventInfo{
+	_, err := s.runHook(ctx, hook.ExternalComponentRegistered, &hook.ExternalComponentInfo{
 		ID: s.id.String(),
 	})
 	cancel()
@@ -217,7 +216,6 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 			err := s.handleElement(ctx, elem)
 			if err != nil {
 				log.Warnw("Failed to process incoming component session element", "error", err, "id", s.id)
-				_ = s.close(ctx)
 				return
 			}
 		}
@@ -226,14 +224,28 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 }
 
 func (s *inComponent) handleElement(ctx context.Context, elem stravaganza.Element) error {
+	// run received element hook
+	hInf := &hook.ExternalComponentInfo{
+		ID:      s.id.String(),
+		Host:    s.getJID().Domain(),
+		Element: elem,
+	}
+	halted, err := s.runHook(ctx, hook.ExternalComponentElementReceived, hInf)
+	if err != nil {
+		return err
+	}
+	if halted {
+		return nil
+	}
+
 	t0 := time.Now()
 	switch s.getState() {
 	case connecting:
-		return s.handleConnecting(ctx, elem)
+		return s.handleConnecting(ctx, hInf.Element)
 	case handshaking:
-		return s.handleHandshaking(ctx, elem)
+		return s.handleHandshaking(ctx, hInf.Element)
 	case authenticated:
-		return s.handleAuthenticated(ctx, elem)
+		return s.handleAuthenticated(ctx, hInf.Element)
 	}
 	reportIncomingRequest(
 		elem.Name(),
@@ -287,15 +299,6 @@ func (s *inComponent) handleHandshaking(ctx context.Context, elem stravaganza.El
 func (s *inComponent) handleAuthenticated(ctx context.Context, elem stravaganza.Element) error {
 	switch stanza := elem.(type) {
 	case stravaganza.Stanza:
-		// post stanza received event
-		err := s.postStreamEvent(ctx, event.ExternalComponentStanzaReceived, &event.ExternalComponentEventInfo{
-			ID:     s.id.String(),
-			Host:   s.getJID().Domain(),
-			Stanza: stanza,
-		})
-		if err != nil {
-			return err
-		}
 		_, _ = s.router.Route(ctx, stanza)
 		return nil
 
@@ -360,7 +363,7 @@ func (s *inComponent) close(ctx context.Context) error {
 	s.inHub.unregister(s)
 	log.Infow("Unregistered external component stream", "id", s.id)
 
-	err := s.postStreamEvent(ctx, event.ExternalComponentUnregistered, &event.ExternalComponentEventInfo{
+	_, err := s.runHook(ctx, hook.ExternalComponentUnregistered, &hook.ExternalComponentInfo{
 		ID:   s.id.String(),
 		Host: cHost,
 	})
@@ -442,12 +445,11 @@ func (s *inComponent) getState() inComponentState {
 	return inComponentState(atomic.LoadUint32(&s.state))
 }
 
-func (s *inComponent) postStreamEvent(ctx context.Context, eventName string, inf *event.ExternalComponentEventInfo) error {
-	return s.sn.Post(ctx, sonar.NewEventBuilder(eventName).
-		WithInfo(inf).
-		WithSender(s).
-		Build(),
-	)
+func (s *inComponent) runHook(ctx context.Context, hookName string, inf *hook.ExternalComponentInfo) (halt bool, err error) {
+	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
+		Info:   inf,
+		Sender: s,
+	})
 }
 
 func (s *inComponent) requestContext() (context.Context, context.CancelFunc) {

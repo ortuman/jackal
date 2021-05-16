@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2020 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
-import "github.com/jackal-xmpp/stravaganza/v2/jid"
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// LastActivityFetched event is posted when a user last activity is fetched.
-	LastActivityFetched = "last.fetched"
+	// VCardFetched hook runs whenever a user vCard is fetched.
+	VCardFetched = "vcard.fetched"
+
+	// VCardUpdated hook runs whenever a user vCard is updated.
+	VCardUpdated = "vcard.updated"
 )
 
-// LastActivityEventInfo contains all information associated to a last activity event.
-type LastActivityEventInfo struct {
-	// Username is the name of the user associated to this event.
+// VCardInfo contains all information associated to a vCard event.
+type VCardInfo struct {
+	// Username is the name of the vCard user associated to this event.
 	Username string
 
-	// JID represents the event associated JID.
-	JID *jid.JID
+	// VCard is the vCard element associated to this event.
+	VCard stravaganza.Element
 }

@@ -124,28 +124,6 @@ modules:
 #    interval: 3m
 #    send_pings: true
 #    timeout_action: kill
-#
-#  external:
-#    - name: ext_mod_1
-#      address: 127.0.0.1:4569
-#      is_secure: false
-#      request_timeout: 60s
-#
-#      event_handler:
-#        topics: # notify c2s connect/disconnect events
-#          - c2s.stream.registered
-#          - c2s.stream.unregistered
-#
-#      iq_handler:
-#        namespace:
-#          in: [ https://jackal.im ]
-#          # reg_ex: ^org.jackal.+
-#        target_entity: server
-#
-#      stanza_interceptors:
-#        - id: 1
-#          incoming: true
-#          priority: 500
 
 components:
 

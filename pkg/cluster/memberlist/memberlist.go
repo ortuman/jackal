@@ -23,10 +23,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/version"
@@ -47,13 +46,13 @@ type MemberList struct {
 	kv        kv.KV
 	ctx       context.Context
 	ctxCancel context.CancelFunc
-	sonar     *sonar.Sonar
+	hk        *hook.Hooks
 	mu        sync.RWMutex
 	members   map[string]coremodel.ClusterMember
 }
 
 // New will create a new MemberList instance using the given configuration.
-func New(kv kv.KV, localPort int, sonar *sonar.Sonar) *MemberList {
+func New(kv kv.KV, localPort int, hk *hook.Hooks) *MemberList {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	return &MemberList{
 		localPort: localPort,
@@ -61,7 +60,7 @@ func New(kv kv.KV, localPort int, sonar *sonar.Sonar) *MemberList {
 		members:   make(map[string]coremodel.ClusterMember),
 		ctx:       ctx,
 		ctxCancel: cancelFn,
-		sonar:     sonar,
+		hk:        hk,
 	}
 }
 
@@ -138,8 +137,8 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 		}
 		ml.mu.Unlock()
 
-		// post updated member list event
-		err = ml.postUpdateEvent(ctx, &event.MemberListEventInfo{
+		// run updated member list hook
+		err = ml.runHook(ctx, &hook.MemberListInfo{
 			Registered: ms,
 		})
 		if err != nil {
@@ -229,19 +228,19 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 	}
 	ml.mu.Unlock()
 
-	// post updated event
-	return ml.postUpdateEvent(ctx, &event.MemberListEventInfo{
+	// run updated hook
+	return ml.runHook(ctx, &hook.MemberListInfo{
 		Registered:       putMembers,
 		UnregisteredKeys: delMemberKeys,
 	})
 }
 
-func (ml *MemberList) postUpdateEvent(ctx context.Context, evInf *event.MemberListEventInfo) error {
-	e := sonar.NewEventBuilder(event.MemberListUpdated).
-		WithInfo(evInf).
-		WithSender(ml).
-		Build()
-	return ml.sonar.Post(ctx, e)
+func (ml *MemberList) runHook(ctx context.Context, inf *hook.MemberListInfo) error {
+	_, err := ml.hk.Run(ctx, hook.MemberListUpdated, &hook.ExecutionContext{
+		Info:   inf,
+		Sender: ml,
+	})
+	return err
 }
 
 func decodeClusterMember(key, val string) (*coremodel.ClusterMember, error) {

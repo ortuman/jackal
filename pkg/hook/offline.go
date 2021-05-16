@@ -12,24 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
+
+import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// RosterRequested event is posted whenever a user requests the roster.
-	RosterRequested = "roster.requested"
-
-	// RosterItemUpdated event is posted whenever a roster item subscription is updated.
-	RosterItemUpdated = "roster.item.updated"
+	// OfflineMessageArchived hook runs whenever an offline message is archived.
+	OfflineMessageArchived = "offline.message.archieved"
 )
 
-// RosterEventInfo contains all information associated to a roster event.
-type RosterEventInfo struct {
-	// Username is the name of the roster owner.
+// OfflineInfo contains all information associated to an offline event.
+type OfflineInfo struct {
+	// Username is the name of the vCard user associated to this event.
 	Username string
 
-	// JID is the event contact JID.
-	JID string
-
-	// Subscription is the roster event subscription value.
-	Subscription string
+	// Message represents the event associated message.
+	Message *stravaganza.Message
 }

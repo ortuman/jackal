@@ -12,28 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
-import (
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
-)
+import "github.com/jackal-xmpp/stravaganza/v2/jid"
 
 const (
-	// BlockListFetched event is posted when a user block list is fetched.
-	BlockListFetched = "blocklist.items.fetched"
-
-	// BlockListItemsBlocked event is posted when one or more JIDs are blocked.
-	BlockListItemsBlocked = "blocklist.items.blocked"
-
-	// BlockListItemsUnblocked event is posted when one or more JIDs are unblocked.
-	BlockListItemsUnblocked = "blocklist.items.unblocked"
+	// LastActivityFetched hook runs when a user last activity is fetched.
+	LastActivityFetched = "last.fetched"
 )
 
-// BlockListEventInfo contains all information associated to a blocklist event.
-type BlockListEventInfo struct {
+// LastActivityInfo contains all information associated to a last activity event.
+type LastActivityInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 
-	// JIDs contains all JIDs associated to this event.
-	JIDs []jid.JID
+	// JID represents the event associated JID.
+	JID *jid.JID
 }

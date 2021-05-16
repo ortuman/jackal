@@ -20,10 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
@@ -45,11 +44,11 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		return nil, nil
 	}
 
-	sn := sonar.New()
+	hk := hook.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sn,
+		hk:     hk,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -68,13 +67,11 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		Build()
 
 	pr := xmpputil.MakePresence(jd0, jd1, stravaganza.AvailableType, []stravaganza.Element{cElem})
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: pr,
-			}).
-			Build(),
-	)
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: pr,
+		},
+	})
 
 	// then
 	require.Len(t, respStanzas, 1)
@@ -98,11 +95,11 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	}
 	routerMock := &routerMock{}
 
-	sn := sonar.New()
+	hk := hook.NewHooks()
 	c := &Capabilities{
 		rep:    repMock,
 		router: routerMock,
-		sn:     sn,
+		hk:     hk,
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -138,13 +135,11 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 	_ = c.Start(context.Background())
 	defer func() { _ = c.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(),
-		sonar.NewEventBuilder(event.C2SStreamIQReceived).
-			WithInfo(&event.C2SStreamEventInfo{
-				Element: discoIQ,
-			}).
-			Build(),
-	)
+	_, _ = hk.Run(context.Background(), hook.C2SStreamIQReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: discoIQ,
+		},
+	})
 
 	// then
 	require.NotNil(t, recvCaps)

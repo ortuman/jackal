@@ -24,12 +24,11 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
@@ -101,7 +100,7 @@ type outS2S struct {
 	onClose  func(s *outS2S)
 	dbResCh  chan stream.DialbackResult
 	shapers  shaper.Shapers
-	sn       *sonar.Sonar
+	hk       *hook.Hooks
 	rq       *runqueue.RunQueue
 
 	state        uint32
@@ -117,7 +116,7 @@ func newOutS2S(
 	cfg Config,
 	kv kv.KV,
 	shapers shaper.Shapers,
-	sn *sonar.Sonar,
+	hk *hook.Hooks,
 	onClose func(s *outS2S),
 ) *outS2S {
 	stm := &outS2S{
@@ -130,7 +129,7 @@ func newOutS2S(
 		onClose: onClose,
 		kv:      kv,
 		shapers: shapers,
-		sn:      sn,
+		hk:      hk,
 		dialer:  newDialer(cfg.DialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
@@ -243,7 +242,7 @@ func (s *outS2S) start() error {
 		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
-	err := s.postStreamEvent(ctx, event.S2SOutStreamRegistered, &event.S2SStreamEventInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamRegistered, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -545,7 +544,7 @@ func (s *outS2S) sendElement(ctx context.Context, elem stravaganza.Element) erro
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
-	return s.postStreamEvent(ctx, event.S2SOutStreamElementSent, &event.S2SStreamEventInfo{
+	return s.runHook(ctx, hook.S2SOutStreamElementSent, &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
@@ -566,8 +565,8 @@ func (s *outS2S) close(ctx context.Context) error {
 	if s.typ == defaultType {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
-	// post unregistered S2S event
-	err := s.postStreamEvent(ctx, event.S2SOutStreamUnregistered, &event.S2SStreamEventInfo{
+	// run unregistered S2S hook
+	err := s.runHook(ctx, hook.S2SOutStreamUnregistered, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -588,15 +587,15 @@ func (s *outS2S) getState() outS2SState {
 	return outS2SState(atomic.LoadUint32(&s.state))
 }
 
-func (s *outS2S) postStreamEvent(ctx context.Context, eventName string, inf *event.S2SStreamEventInfo) error {
+func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) error {
 	if s.typ == dialbackType {
 		return nil
 	}
-	return s.sn.Post(ctx, sonar.NewEventBuilder(eventName).
-		WithInfo(inf).
-		WithSender(s).
-		Build(),
-	)
+	_, err := s.hk.Run(ctx, hookName, &hook.ExecutionContext{
+		Info:   inf,
+		Sender: s,
+	})
+	return err
 }
 
 func (s *outS2S) requestContext() (context.Context, context.CancelFunc) {

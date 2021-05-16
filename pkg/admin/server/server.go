@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jackal-xmpp/sonar"
 	adminpb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
 	"google.golang.org/grpc"
@@ -40,7 +40,7 @@ type Server struct {
 
 	rep     repository.Repository
 	peppers *pepper.Keys
-	sonar   *sonar.Sonar
+	hk      *hook.Hooks
 }
 
 // New returns a new initialized admin server.
@@ -49,14 +49,14 @@ func New(
 	port int,
 	rep repository.Repository,
 	peppers *pepper.Keys,
-	sonar *sonar.Sonar,
+	hk *hook.Hooks,
 ) *Server {
 	return &Server{
 		bindAddr: bindAddr,
 		port:     port,
 		rep:      rep,
 		peppers:  peppers,
-		sonar:    sonar,
+		hk:       hk,
 	}
 }
 
@@ -78,7 +78,7 @@ func (s *Server) Start(_ context.Context) error {
 			grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 			grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 		)
-		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.sonar))
+		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.hk))
 		if err := grpcServer.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
 				log.Errorf("Admin server error: %s", err)

@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
-	// PrivateFetched event is posted when a user private XML is fetched.
+	// PrivateFetched hook runs when a user private XML is fetched.
 	PrivateFetched = "private.fetched"
 
-	// PrivateUpdated event is posted when a user private XML is updated.
+	// PrivateUpdated hook runs when a user private XML is updated.
 	PrivateUpdated = "private.updated"
 )
 
-// PrivateEventInfo contains all information associated to a private event.
-type PrivateEventInfo struct {
+// PrivateInfo contains all information associated to a private event.
+type PrivateInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
 

@@ -12,56 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 const (
-	// S2SOutStreamRegistered event is posted when an outgoing S2S connection is registered.
+	// S2SOutStreamRegistered hook runs when an outgoing S2S connection is registered.
 	S2SOutStreamRegistered = "s2s.out.stream.registered"
 
-	// S2SOutStreamUnregistered event is posted when an outgoing S2S connection is unregistered.
+	// S2SOutStreamUnregistered hook runs when an outgoing S2S connection is unregistered.
 	S2SOutStreamUnregistered = "s2s.out.stream.unregistered"
 
-	// S2SOutStreamElementSent event is posted whenever a XMPP element is sent over an outgoing S2S stream.
+	// S2SOutStreamElementSent hook runs whenever a XMPP element is sent over an outgoing S2S stream.
 	S2SOutStreamElementSent = "s2s.out.stream.element_sent"
 
-	// S2SInStreamRegistered event is posted when an incoming S2S connection is registered.
+	// S2SInStreamRegistered hook runs when an incoming S2S connection is registered.
 	S2SInStreamRegistered = "s2s.in.stream.registered"
 
-	// S2SInStreamUnregistered event is posted when an incoming S2S connection is unregistered.
+	// S2SInStreamUnregistered hook runs when an incoming S2S connection is unregistered.
 	S2SInStreamUnregistered = "s2s.in.stream.unregistered"
 
-	// S2SInStreamElementReceived event is posted when a XMPP element is received over an incoming S2S stream.
+	// S2SInStreamElementReceived hook runs when a XMPP element is received over an incoming S2S stream.
 	S2SInStreamElementReceived = "s2s.in.stream.stanza_received"
 
-	// S2SInStreamIQReceived event is posted when an iq stanza is received over an incoming S2S stream.
+	// S2SInStreamIQReceived hook runs when an iq stanza is received over an incoming S2S stream.
 	S2SInStreamIQReceived = "s2s.in.stream.iq_received"
 
-	// S2SInStreamPresenceReceived event is posted when a presence stanza is received over an incoming S2S stream.
+	// S2SInStreamPresenceReceived hook runs when a presence stanza is received over an incoming S2S stream.
 	S2SInStreamPresenceReceived = "s2s.in.stream.presence_received"
 
-	// S2SInStreamMessageReceived event is posted when a message stanza is received over an incoming S2S stream.
+	// S2SInStreamMessageReceived hook runs when a message stanza is received over an incoming S2S stream.
 	S2SInStreamMessageReceived = "s2s.in.stream.message_received"
 
-	// S2SInStreamIQRouted event is posted when an iq stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamWillRouteElement hook runs when an XMPP element is about to be routed on an incoming S2S stream.
+	S2SInStreamWillRouteElement = "s2s.in.stream.will_route_element"
+
+	// S2SInStreamIQRouted hook runs when an iq stanza is successfully routed to one ore more S2S streams.
 	S2SInStreamIQRouted = "s2s.in.stream.iq_routed"
 
-	// S2SInStreamPresenceRouted event is posted when a presence stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamPresenceRouted hook runs when a presence stanza is successfully routed to one ore more S2S streams.
 	S2SInStreamPresenceRouted = "s2s.in.stream.presence_routed"
 
-	// S2SInStreamMessageRouted event is posted when a message stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamMessageRouted hook runs when a message stanza is successfully routed to one ore more S2S streams.
 	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
-
-	// S2SInStreamMessageUnrouted event is posted when a received message stanza could not be routed
-	// because no destination available resource was found.
-	S2SInStreamMessageUnrouted = "s2s.in.stream.message_unrouted"
 )
 
-// S2SStreamEventInfo contains all info associated to a S2S event.
-type S2SStreamEventInfo struct {
+// S2SStreamInfo contains all info associated to a S2S event.
+type S2SStreamInfo struct {
 	// ID is the event stream identifier.
 	ID string
 

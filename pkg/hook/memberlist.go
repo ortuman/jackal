@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2020 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
+
+import coremodel "github.com/ortuman/jackal/pkg/model/core"
 
 const (
-	// ComponentsStarted event is posted after initializing all configured components.
-	ComponentsStarted = "components.started"
-
-	// ComponentsStopped event is posted after finishing all configured components.
-	ComponentsStopped = "components.stopped"
+	// MemberListUpdated hook runs whenever cluster member list is updated.
+	MemberListUpdated = "memberlist.updated"
 )
 
-// ComponentsEventInfo contains all information associated to a components event.
-type ComponentsEventInfo struct {
-	Hosts []string
+// MemberListInfo contains all info associated to MemberListUpdated event.
+type MemberListInfo struct {
+	// Registered contains all new registered cluster members.
+	Registered []coremodel.ClusterMember
+
+	// UnregisteredKeys contains unregistered cluster members keys.
+	UnregisteredKeys []string
 }

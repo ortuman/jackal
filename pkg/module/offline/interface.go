@@ -15,6 +15,10 @@
 package offline
 
 import (
+	"context"
+
+	coremodel "github.com/ortuman/jackal/pkg/model/core"
+
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -43,4 +47,9 @@ type clusterLocker interface {
 //go:generate moq -out lock.mock_test.go . clusterLock:lockMock
 type clusterLock interface {
 	locker.Lock
+}
+
+//go:generate moq -out resourcemanager.mock_test.go . resourceManager
+type resourceManager interface {
+	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
 }

@@ -18,10 +18,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -40,37 +39,40 @@ const (
 
 // Private represents a private (XEP-0049) module type.
 type Private struct {
-	rep    repository.Private
 	router router.Router
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	rep    repository.Private
+	hk     *hook.Hooks
 }
 
 // New returns a new initialized Private instance.
-func New(rep repository.Private, router router.Router, sn *sonar.Sonar) *Private {
+func New(
+	router router.Router,
+	rep repository.Private,
+	hk *hook.Hooks,
+) *Private {
 	return &Private{
 		rep:    rep,
 		router: router,
-		sn:     sn,
+		hk:     hk,
 	}
 }
 
 // Name returns private module name.
-func (p *Private) Name() string { return ModuleName }
+func (m *Private) Name() string { return ModuleName }
 
 // StreamFeature returns private module stream feature.
-func (p *Private) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+func (m *Private) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return nil, nil
 }
 
 // ServerFeatures returns private server disco features.
-func (p *Private) ServerFeatures(_ context.Context) ([]string, error) { return nil, nil }
+func (m *Private) ServerFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // AccountFeatures returns private account disco features.
-func (p *Private) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
+func (m *Private) AccountFeatures(_ context.Context) ([]string, error) { return nil, nil }
 
 // MatchesNamespace tells whether namespace matches private module.
-func (p *Private) MatchesNamespace(namespace string, serverTarget bool) bool {
+func (m *Private) MatchesNamespace(namespace string, serverTarget bool) bool {
 	if serverTarget {
 		return false
 	}
@@ -78,51 +80,50 @@ func (p *Private) MatchesNamespace(namespace string, serverTarget bool) bool {
 }
 
 // ProcessIQ process a private iq.
-func (p *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJid := iq.FromJID()
 	toJid := iq.ToJID()
 	validTo := toJid.Node() == fromJid.Node()
 	if !validTo {
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
 	q := iq.ChildNamespace("query", privateNamespace)
 	switch {
 	case iq.IsGet() && q != nil:
-		return p.getPrivate(ctx, iq, q)
+		return m.getPrivate(ctx, iq, q)
 	case iq.IsSet() && q != nil:
-		return p.setPrivate(ctx, iq, q)
+		return m.setPrivate(ctx, iq, q)
 	default:
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 }
 
 // Start starts private module.
-func (p *Private) Start(_ context.Context) error {
-	p.subs = append(p.subs, p.sn.Subscribe(event.UserDeleted, p.onUserDeleted))
+func (m *Private) Start(_ context.Context) error {
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started private module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops private module.
-func (p *Private) Stop(_ context.Context) error {
-	for _, sub := range p.subs {
-		p.sn.Unsubscribe(sub)
-	}
+func (m *Private) Stop(_ context.Context) error {
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+
 	log.Infow("Stopped private module", "xep", XEPNumber)
 	return nil
 }
 
-func (p *Private) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
-	return p.rep.DeletePrivates(ctx, inf.Username)
+func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.UserInfo)
+	return m.rep.DeletePrivates(ctx, inf.Username)
 }
 
-func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
+func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
 	if q.ChildrenCount() != 1 {
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	prv := q.AllChildren()[0]
@@ -130,14 +131,14 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 
 	isValidNS := isValidNamespace(ns)
 	if prv.ChildrenCount() > 0 || !isValidNS {
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	username := iq.FromJID().Node()
 
-	prvElem, err := p.rep.FetchPrivate(ctx, ns, username)
+	prvElem, err := m.rep.FetchPrivate(ctx, ns, username)
 	if err != nil {
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
@@ -152,55 +153,50 @@ func (p *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	qb.WithChild(pb.Build())
 	resIQ := xmpputil.MakeResultIQ(iq, qb.Build())
 
-	_, _ = p.router.Route(ctx, resIQ)
+	_, _ = m.router.Route(ctx, resIQ)
 
-	// post private fetched event
-	return p.sn.Post(
-		ctx,
-		sonar.NewEventBuilder(event.PrivateFetched).
-			WithInfo(&event.PrivateEventInfo{
-				Username: username,
-				Private:  prvElem,
-			}).
-			WithSender(p).
-			Build(),
-	)
+	// run private fetched hook
+	_, err = m.hk.Run(ctx, hook.PrivateFetched, &hook.ExecutionContext{
+		Info: &hook.PrivateInfo{
+			Username: username,
+			Private:  prvElem,
+		},
+		Sender: m,
+	})
+	return err
 }
 
-func (p *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
+func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
 	if q.ChildrenCount() == 0 {
-		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 		return nil
 	}
 	username := iq.FromJID().Node()
 	for _, prv := range q.AllChildren() {
 		ns := prv.Attribute(stravaganza.Namespace)
 		if !isValidNamespace(ns) {
-			_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
+			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.NotAcceptable))
 			return nil
 		}
-		if err := p.rep.UpsertPrivate(ctx, prv, ns, username); err != nil {
-			_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		if err := m.rep.UpsertPrivate(ctx, prv, ns, username); err != nil {
+			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
 		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
-		// post private updated event
-		err := p.sn.Post(
-			ctx,
-			sonar.NewEventBuilder(event.PrivateUpdated).
-				WithInfo(&event.PrivateEventInfo{
-					Username: username,
-					Private:  prv,
-				}).
-				WithSender(p).
-				Build(),
-		)
+		// run private updated hook
+		_, err := m.hk.Run(ctx, hook.PrivateUpdated, &hook.ExecutionContext{
+			Info: &hook.PrivateInfo{
+				Username: username,
+				Private:  prv,
+			},
+			Sender: m,
+		})
 		if err != nil {
 			return err
 		}
 	}
-	_, _ = p.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 	return nil
 }
 

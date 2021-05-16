@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 )
 
@@ -51,17 +50,17 @@ type Component interface {
 type Components struct {
 	mtx   sync.RWMutex
 	comps map[string]Component
-	sn    *sonar.Sonar
+	hk    *hook.Hooks
 }
 
 // NewComponents returns a new initialized Components instance.
 func NewComponents(
 	components []Component,
-	sn *sonar.Sonar,
+	hk *hook.Hooks,
 ) *Components {
 	cs := &Components{
 		comps: make(map[string]Component),
-		sn:    sn,
+		hk:    hk,
 	}
 	for _, comp := range components {
 		cs.comps[comp.Host()] = comp
@@ -154,13 +153,13 @@ func (c *Components) Start(ctx context.Context) error {
 	}
 	log.Infow("Started components", "components", len(c.comps))
 
-	return c.sn.Post(ctx, sonar.NewEventBuilder(event.ComponentsStarted).
-		WithInfo(&event.ComponentsEventInfo{
+	_, err := c.hk.Run(ctx, hook.ComponentsStarted, &hook.ExecutionContext{
+		Info: &hook.ComponentsInfo{
 			Hosts: hosts,
-		}).
-		WithSender(c).
-		Build(),
-	)
+		},
+		Sender: c,
+	})
+	return err
 }
 
 // Stop stops components.
@@ -178,11 +177,11 @@ func (c *Components) Stop(ctx context.Context) error {
 	}
 	log.Infow("Stopped components", "components", len(c.comps))
 
-	return c.sn.Post(ctx, sonar.NewEventBuilder(event.ComponentsStopped).
-		WithInfo(&event.ComponentsEventInfo{
+	_, err := c.hk.Run(ctx, hook.ComponentsStopped, &hook.ExecutionContext{
+		Info: &hook.ComponentsInfo{
 			Hosts: hosts,
-		}).
-		WithSender(c).
-		Build(),
-	)
+		},
+		Sender: c,
+	})
+	return err
 }

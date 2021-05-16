@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -109,13 +109,13 @@ func TestInC2S_Disconnect(t *testing.T) {
 		return c2sRouterMock
 	}
 	s := &inC2S{
-		state:   uint32(inBounded),
+		state:   uint32(inBinded),
 		session: sessMock,
 		tr:      trMock,
 		router:  routerMock,
 		resMng:  rmMock,
 		rq:      runqueue.New("in_c2s:test", nil),
-		sn:      sonar.New(),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -357,7 +357,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			expectedOutput:        `<iq id="bind_2" type="result" from="ortuman@localhost" to="ortuman@localhost"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ortuman@localhost/yard</jid></bind></iq>`,
-			expectedState:         inBounded,
+			expectedState:         inBinded,
 			expectResourceUpdated: true,
 		},
 		{
@@ -463,8 +463,8 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			expectedState:  inAuthenticated,
 		},
 		{
-			name:  "Bounded/InitSession",
-			state: inBounded,
+			name:  "Binded/InitSession",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated,
 			sessionResFn: func() (stravaganza.Element, error) {
 				iq, _ := stravaganza.NewIQBuilder().
@@ -481,11 +481,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			expectedOutput: `<iq id="session_2" type="result" from="ortuman@localhost" to="ortuman@localhost"/>`,
-			expectedState:  inBounded,
+			expectedState:  inBinded,
 		},
 		{
-			name:  "Bounded/InitSessionNotAllowed",
-			state: inBounded,
+			name:  "Binded/InitSessionNotAllowed",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				iq, _ := stravaganza.NewIQBuilder().
@@ -502,11 +502,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="session_2"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/><error code="405" type="cancel"><not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
-			expectedState:  inBounded,
+			expectedState:  inBinded,
 		},
 		{
-			name:  "Bounded/RouteIQSuccess",
-			state: inBounded,
+			name:  "Binded/RouteIQSuccess",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				iq, _ := stravaganza.NewIQBuilder().
@@ -522,12 +522,12 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			expectedState: inBounded,
+			expectedState: inBinded,
 			expectRouted:  true,
 		},
 		{
-			name:  "Bounded/RouteIQResourceNotFound",
-			state: inBounded,
+			name:  "Binded/RouteIQResourceNotFound",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				iq, _ := stravaganza.NewIQBuilder().
@@ -545,11 +545,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			},
 			routeError:     router.ErrResourceNotFound,
 			expectedOutput: `<iq from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
-			expectedState:  inBounded,
+			expectedState:  inBinded,
 		},
 		{
-			name:  "Bounded/RouteIQFailedRemoteConnect",
-			state: inBounded,
+			name:  "Binded/RouteIQFailedRemoteConnect",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				iq, _ := stravaganza.NewIQBuilder().
@@ -567,11 +567,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			},
 			routeError:     router.ErrRemoteServerNotFound,
 			expectedOutput: `<iq from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="404" type="cancel"><remote-server-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
-			expectedState:  inBounded,
+			expectedState:  inBinded,
 		},
 		{
-			name:  "Bounded/RoutePresenceSuccess",
-			state: inBounded,
+			name:  "Binded/RoutePresenceSuccess",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				pr, _ := stravaganza.NewPresenceBuilder().
@@ -582,12 +582,12 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildPresence()
 				return pr, nil
 			},
-			expectedState: inBounded,
+			expectedState: inBinded,
 			expectRouted:  true,
 		},
 		{
-			name:  "Bounded/RoutePresenceUpdateResource",
-			state: inBounded,
+			name:  "Binded/RoutePresenceUpdateResource",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				pr, _ := stravaganza.NewPresenceBuilder().
@@ -598,12 +598,12 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildPresence()
 				return pr, nil
 			},
-			expectedState:         inBounded,
+			expectedState:         inBinded,
 			expectResourceUpdated: true,
 		},
 		{
-			name:  "Bounded/RouteMessageSuccess",
-			state: inBounded,
+			name:  "Binded/RouteMessageSuccess",
+			state: inBinded,
 			flags: fSecured | fCompressed | fAuthenticated | fSessionStarted,
 			sessionResFn: func() (stravaganza.Element, error) {
 				pr, _ := stravaganza.NewMessageBuilder().
@@ -619,7 +619,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildMessage()
 				return pr, nil
 			},
-			expectedState: inBounded,
+			expectedState: inBinded,
 			expectRouted:  true,
 		},
 	}
@@ -669,9 +669,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// modules mock
 			modsMock.StreamFeaturesFunc = func(_ context.Context, _ string) ([]stravaganza.Element, error) { return nil, nil }
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
-			modsMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-				return stanza, nil
-			}
 
 			// authenticator mock
 			authMock.MechanismFunc = func() string { return "PLAIN" }
@@ -728,7 +725,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					ResourceConflict: Disallow,
 				},
 				state:          uint32(tt.state),
-				flgs:           inC2SFlags{flg: tt.flags},
+				flags:          inC2SFlags{flg: tt.flags},
 				rq:             runqueue.New(tt.name, nil),
 				jd:             userJID,
 				tr:             trMock,
@@ -740,7 +737,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				activeAuth:     authMock,
 				session:        ssMock,
 				resMng:         resMngMock,
-				sn:             sonar.New(),
+				hk:             hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -764,14 +761,14 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 	}{
 		{
 			name:           "ClosedByPeerError",
-			state:          inBounded,
+			state:          inBinded,
 			sErr:           xmppparser.ErrStreamClosedByPeer,
 			expectedOutput: `</stream:stream>`,
 			expectClosed:   true,
 		},
 		{
 			name:           "EOFError",
-			state:          inBounded,
+			state:          inBinded,
 			sErr:           io.EOF,
 			expectedOutput: ``,
 			expectClosed:   true,
@@ -825,7 +822,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 				session: ssMock,
 				router:  routerMock,
 				resMng:  resMngMock,
-				sn:      sonar.New(),
+				hk:      hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

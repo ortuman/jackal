@@ -48,34 +48,34 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Roster
 	// (https://xmpp.org/rfcs/rfc6121.html#roster)
 	roster.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return roster.New(a.router, a.rep, a.resMng, a.hosts, a.sonar)
+		return roster.New(a.router, a.hosts, a.resMng, a.rep, a.hk)
 	},
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return offline.New(a.router, a.hosts, a.rep, a.locker, a.sonar, offline.Config{
+		return offline.New(a.router, a.hosts, a.resMng, a.rep, a.locker, a.hk, offline.Config{
 			QueueSize: cfg.Offline.QueueSize,
 		})
 	},
 	// XEP-0012: Last Activity
 	// (https://xmpp.org/extensions/xep-0012.html)
 	xep0012.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0012.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+		return xep0012.New(a.router, a.hosts, a.resMng, a.rep, a.hk)
 	},
 	// XEP-0030: Service Discovery
 	// (https://xmpp.org/extensions/xep-0030.html)
 	xep0030.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0030.New(a.router, a.comps, a.rep, a.resMng, a.sonar)
+		return xep0030.New(a.router, a.comps, a.rep, a.resMng, a.hk)
 	},
 	// XEP-0049: Private XML Storage
 	// (https://xmpp.org/extensions/xep-0049.html)
 	xep0049.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0049.New(a.rep, a.router, a.sonar)
+		return xep0049.New(a.router, a.rep, a.hk)
 	},
 	// XEP-0054: vcard-temp
 	// (https://xmpp.org/extensions/xep-0054.html)
 	xep0054.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0054.New(a.router, a.rep, a.sonar)
+		return xep0054.New(a.router, a.rep, a.hk)
 	},
 	// XEP-0092: Software Version
 	// (https://xmpp.org/extensions/xep-0092.html)
@@ -87,17 +87,17 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0115: Entity Capabilities
 	// (https://xmpp.org/extensions/xep-0115.html)
 	xep0115.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0115.New(a.router, a.rep, a.sonar)
+		return xep0115.New(a.router, a.rep, a.hk)
 	},
 	// XEP-0191: Blocking Command
 	// (https://xmpp.org/extensions/xep-0191.html)
 	xep0191.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.sonar)
+		return xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.hk)
 	},
 	// XEP-0199: XMPP Ping
 	// (https://xmpp.org/extensions/xep-0199.html)
 	xep0199.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return xep0199.New(a.router, a.sonar, xep0199.Config{
+		return xep0199.New(a.router, a.hk, xep0199.Config{
 			AckTimeout:    cfg.Ping.AckTimeout,
 			Interval:      cfg.Ping.Interval,
 			SendPings:     cfg.Ping.SendPings,
@@ -112,6 +112,6 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0280: Message Carbons
 	// (https://xmpp.org/extensions/xep-0280.html)
 	xep0280.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		return xep0280.New(a.hosts, a.router, a.resMng, a.sonar)
+		return xep0280.New(a.router, a.hosts, a.resMng, a.hk)
 	},
 }

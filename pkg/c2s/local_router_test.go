@@ -19,7 +19,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -35,7 +34,6 @@ func TestLocalRouter_RegisterBind(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 	}
@@ -60,7 +58,6 @@ func TestLocalRouter_Stream(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 	}
@@ -96,7 +93,6 @@ func TestLocalRouter_Stop(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 		doneCh: make(chan chan struct{}),
@@ -124,7 +120,6 @@ func TestLocalRouter_Unregister(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 	}
@@ -161,7 +156,6 @@ func TestLocalRouter_Route(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 	}
@@ -196,7 +190,6 @@ func TestLocalRouter_Disconnect(t *testing.T) {
 
 	r := &LocalRouter{
 		hosts:  &hostsMock{},
-		sonar:  sonar.New(),
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 	}

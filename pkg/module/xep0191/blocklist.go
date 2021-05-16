@@ -17,22 +17,19 @@ package xep0191
 import (
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -55,19 +52,13 @@ const (
 	XEPNumber = "0191"
 )
 
-const (
-	incomingIID int = iota
-	outgoingIID
-)
-
 // BlockList represents blocklist (XEP-0191) module type.
 type BlockList struct {
 	rep    repository.Repository
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	hk     *hook.Hooks
 }
 
 // New returns a new initialized BlockList instance.
@@ -76,14 +67,14 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
-	sn *sonar.Sonar,
+	hk *hook.Hooks,
 ) *BlockList {
 	return &BlockList{
 		rep:    rep,
 		router: router,
 		hosts:  hosts,
 		resMng: resMng,
-		sn:     sn,
+		hk:     hk,
 	}
 }
 
@@ -132,7 +123,11 @@ func (m *BlockList) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts blocklist module.
 func (m *BlockList) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.UserDeleted, m.onUserDeleted))
+	m.hk.AddHook(hook.C2SStreamElementReceived, m.onC2SElementRecv, hook.HighestPriority)
+	m.hk.AddHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv, hook.HighestPriority)
+	m.hk.AddHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute, hook.HighestPriority)
+	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, hook.HighestPriority)
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started blocklist module", "xep", XEPNumber)
 	return nil
@@ -140,48 +135,68 @@ func (m *BlockList) Start(_ context.Context) error {
 
 // Stop stops blocklist module.
 func (m *BlockList) Stop(_ context.Context) error {
-	for _, sub := range m.subs {
-		m.sn.Unsubscribe(sub)
-	}
+	m.hk.RemoveHook(hook.C2SStreamElementReceived, m.onC2SElementRecv)
+	m.hk.RemoveHook(hook.S2SInStreamElementReceived, m.onS2SElementRecv)
+	m.hk.RemoveHook(hook.C2SStreamWillRouteElement, m.onC2SElementWillRoute)
+	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+
 	log.Infow("Stopped blocklist module", "xep", XEPNumber)
 	return nil
 }
 
-// Interceptors returns blocklist stanza interceptors.
-func (m *BlockList) Interceptors() []module.StanzaInterceptor {
-	return []module.StanzaInterceptor{
-		{ID: incomingIID, Priority: math.MaxInt64, Incoming: true},
-		{ID: outgoingIID, Priority: math.MaxInt64, Incoming: false},
+func (m *BlockList) onC2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
+	stanza, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
 	}
+	return m.processIncomingStanza(ctx, stanza)
 }
 
-// InterceptStanza will be used by blocklist module to determine whether a stanza should be blocked.
-func (m *BlockList) InterceptStanza(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
-	switch id {
-	case incomingIID:
-		return m.interceptIncomingStanza(ctx, stanza)
-	case outgoingIID:
-		return m.interceptOutgoingStanza(ctx, stanza)
+func (m *BlockList) onS2SElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.S2SStreamInfo)
+	stanza, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
 	}
-	return stanza, nil
+	return m.processIncomingStanza(ctx, stanza)
 }
 
-func (m *BlockList) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
+func (m *BlockList) onC2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
+	stanza, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
+	}
+	return m.processOutgoingStanza(ctx, stanza)
+}
+
+func (m *BlockList) onS2SElementWillRoute(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.S2SStreamInfo)
+	stanza, ok := inf.Element.(stravaganza.Stanza)
+	if !ok {
+		return nil
+	}
+	return m.processOutgoingStanza(ctx, stanza)
+}
+
+func (m *BlockList) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.UserInfo)
 	return m.rep.DeleteBlockListItems(ctx, inf.Username)
 }
 
-func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
+func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganza.Stanza) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
 	if !isLocalTo || (isLocalTo && toJID.MatchesWithOptions(fromJID, jid.MatchesBare)) {
-		return stanza, nil
+		return nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
@@ -197,22 +212,22 @@ func (m *BlockList) interceptIncomingStanza(ctx context.Context, stanza stravaga
 		case *stravaganza.Message:
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(stanza, stanzaerror.ServiceUnavailable))
 		}
-		return nil, module.ErrInterceptStanzaInterrupted
+		return hook.ErrStopped // element already handled
 	}
-	return stanza, nil
+	return nil
 }
 
-func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) (stravaganza.Stanza, error) {
+func (m *BlockList) processOutgoingStanza(ctx context.Context, stanza stravaganza.Stanza) error {
 	fromJID := stanza.FromJID()
 	toJID := stanza.ToJID()
 
 	isLocalFrom := m.hosts.IsLocalHost(fromJID.Domain())
 	if !isLocalFrom || (isLocalFrom && fromJID.MatchesWithOptions(toJID, jid.MatchesBare)) {
-		return stanza, nil
+		return nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, fromJID.Node())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, itm := range bli {
 		jd, _ := jid.NewWithString(itm.JID, true)
@@ -228,9 +243,9 @@ func (m *BlockList) interceptOutgoingStanza(ctx context.Context, stanza stravaga
 		errStanza, _ := se.Stanza(false)
 
 		_, _ = m.router.Route(ctx, errStanza)
-		return nil, module.ErrInterceptStanzaInterrupted
+		return hook.ErrStopped // element already handled
 	}
-	return stanza, nil
+	return nil
 }
 
 func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error {
@@ -273,20 +288,20 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	}
 	log.Infow("Fetched blocklist", "username", username, "xep", XEPNumber)
 
-	// post event
+	// run hook
 	var allJIDs []jid.JID
 	for _, itm := range bli {
 		j, _ := jid.NewWithString(itm.JID, false)
 		allJIDs = append(allJIDs, *j)
 	}
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListFetched).
-		WithInfo(&event.BlockListEventInfo{
+	_, err = m.hk.Run(ctx, hook.BlockListFetched, &hook.ExecutionContext{
+		Info: &hook.BlockListInfo{
 			Username: username,
 			JIDs:     allJIDs,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) error {
@@ -361,15 +376,15 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	// send block push
 	m.sendPush(ctx, block, rss)
 
-	// post event
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListItemsBlocked).
-		WithInfo(&event.BlockListEventInfo{
+	// run hook
+	_, err = m.hk.Run(ctx, hook.BlockListItemsBlocked, &hook.ExecutionContext{
+		Info: &hook.BlockListInfo{
 			Username: username,
 			JIDs:     blockJIDs,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []blocklistmodel.Item) error {
@@ -433,15 +448,15 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	// send unblock push
 	m.sendPush(ctx, unblock, rss)
 
-	// post event
-	return m.sn.Post(ctx, sonar.NewEventBuilder(event.BlockListItemsUnblocked).
-		WithInfo(&event.BlockListEventInfo{
+	// run hook
+	_, err = m.hk.Run(ctx, hook.BlockListItemsUnblocked, &hook.ExecutionContext{
+		Info: &hook.BlockListInfo{
 			Username: username,
 			JIDs:     unblockJIDs,
-		}).
-		WithSender(m).
-		Build(),
-	)
+		},
+		Sender: m,
+	})
+	return err
 }
 
 func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {

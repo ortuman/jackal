@@ -14,12 +14,10 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackal-xmpp/runqueue v0.5.2
-	github.com/jackal-xmpp/sonar v0.12.0
 	github.com/jackal-xmpp/stravaganza/v2 v2.0.0
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
-	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5

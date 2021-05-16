@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,7 @@ func TestModules_StartStop(t *testing.T) {
 	mods := &Modules{
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
-		sn:           sonar.New(),
+		hk:           hook.NewHooks(),
 	}
 
 	// when
@@ -65,7 +65,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
 		hosts:        hMock,
-		sn:           sonar.New(),
+		hk:           hook.NewHooks(),
 	}
 
 	// when
@@ -88,40 +88,4 @@ func TestModules_ProcessIQ(t *testing.T) {
 	// then
 	require.Len(t, iqPrMock.MatchesNamespaceCalls(), 1)
 	require.Len(t, iqPrMock.ProcessIQCalls(), 1)
-}
-
-func TestModules_InterceptStanza(t *testing.T) {
-	// given
-	stanzaInterceptorPrMock := &StanzaInterceptorProcessorMock{}
-	stanzaInterceptorPrMock.InterceptorsFunc = func() []StanzaInterceptor {
-		return []StanzaInterceptor{
-			{Incoming: true, Priority: 500},
-			{Incoming: false, Priority: 500},
-		}
-	}
-	stanzaInterceptorPrMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, id int) (stravaganza.Stanza, error) {
-		return stanza, nil
-	}
-
-	mods := &Modules{
-		mods: []Module{stanzaInterceptorPrMock},
-	}
-	mods.setupModules()
-
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg, _ := b.BuildMessage()
-
-	// when
-	_, _ = mods.InterceptStanza(context.Background(), msg, true)
-	_, _ = mods.InterceptStanza(context.Background(), msg, false)
-
-	// then
-	require.Len(t, stanzaInterceptorPrMock.InterceptStanzaCalls(), 2)
 }

@@ -19,13 +19,12 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/component"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
@@ -70,8 +69,7 @@ type Disco struct {
 	components components
 	rosRep     repository.Roster
 	resMng     resourceManager
-	sn         *sonar.Sonar
-	subs       []sonar.SubID
+	hk         *hook.Hooks
 
 	mu      sync.RWMutex
 	srvProv InfoProvider
@@ -84,14 +82,14 @@ func New(
 	components *component.Components,
 	rosRep repository.Roster,
 	resMng *c2s.ResourceManager,
-	sn *sonar.Sonar,
+	hk *hook.Hooks,
 ) *Disco {
 	return &Disco{
 		router:     router,
 		components: components,
 		rosRep:     rosRep,
 		resMng:     resMng,
-		sn:         sn,
+		hk:         hk,
 	}
 }
 
@@ -131,7 +129,7 @@ func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 // Start starts disco module.
 func (m *Disco) Start(_ context.Context) error {
-	m.subs = append(m.subs, m.sn.Subscribe(event.ModulesStarted, m.onModulesStarted))
+	m.hk.AddHook(hook.ModulesStarted, m.onModulesStarted, hook.DefaultPriority)
 
 	log.Infow("Started disco module", "xep", XEPNumber)
 	return nil
@@ -139,6 +137,8 @@ func (m *Disco) Start(_ context.Context) error {
 
 // Stop stops disco module.
 func (m *Disco) Stop(_ context.Context) error {
+	m.hk.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
+
 	log.Infow("Stopped disco module", "xep", XEPNumber)
 	return nil
 }
@@ -157,18 +157,18 @@ func (m *Disco) AccountProvider() InfoProvider {
 	return m.accProv
 }
 
-func (m *Disco) onModulesStarted(_ context.Context, ev sonar.Event) error {
-	mods := ev.Sender().(modules)
+func (m *Disco) onModulesStarted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	mods := execCtx.Sender.(modules)
 
 	m.mu.Lock()
 	m.srvProv = newServerProvider(mods.AllModules(), m.components)
 	m.accProv = newAccountProvider(mods.AllModules(), m.rosRep, m.resMng)
 	m.mu.Unlock()
 
-	return m.sn.Post(context.Background(), sonar.NewEventBuilder(event.DiscoProvidersStarted).
-		WithSender(m).
-		Build(),
-	)
+	_, err := m.hk.Run(ctx, hook.DiscoProvidersStarted, &hook.ExecutionContext{
+		Sender: m,
+	})
+	return err
 }
 
 func (m *Disco) getDiscoInfo(ctx context.Context, iq *stravaganza.IQ) error {

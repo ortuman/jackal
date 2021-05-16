@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
-const (
-	// UserCreated event is posted whenever a new user is created.
-	UserCreated = "user.created"
-
-	// UserDeleted event is posted whenever a user is deleted.
-	UserDeleted = "user.deleted"
+import (
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 )
 
-// UserEventInfo contains all information associated to a user event.
-type UserEventInfo struct {
+const (
+	// BlockListFetched hook runs when a user block list is fetched.
+	BlockListFetched = "blocklist.items.fetched"
+
+	// BlockListItemsBlocked hook runs when one or more JIDs are blocked.
+	BlockListItemsBlocked = "blocklist.items.blocked"
+
+	// BlockListItemsUnblocked hook runs when one or more JIDs are unblocked.
+	BlockListItemsUnblocked = "blocklist.items.unblocked"
+)
+
+// BlockListInfo contains all information associated to a blocklist event.
+type BlockListInfo struct {
 	// Username is the name of the user associated to this event.
 	Username string
+
+	// JIDs contains all JIDs associated to this event.
+	JIDs []jid.JID
 }

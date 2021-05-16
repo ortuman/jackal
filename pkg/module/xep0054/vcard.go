@@ -17,10 +17,9 @@ package xep0054
 import (
 	"context"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -41,85 +40,87 @@ const (
 type VCard struct {
 	rep    repository.VCard
 	router router.Router
-	sn     *sonar.Sonar
-	subs   []sonar.SubID
+	hk     *hook.Hooks
 }
 
 // New returns a new initialized VCard instance.
-func New(router router.Router, rep repository.Repository, sn *sonar.Sonar) *VCard {
+func New(
+	router router.Router,
+	rep repository.Repository,
+	hk *hook.Hooks,
+) *VCard {
 	return &VCard{
 		router: router,
 		rep:    rep,
-		sn:     sn,
+		hk:     hk,
 	}
 }
 
 // Name returns vCard module name.
-func (v *VCard) Name() string { return ModuleName }
+func (m *VCard) Name() string { return ModuleName }
 
 // StreamFeature returns vCard module stream feature.
-func (v *VCard) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
+func (m *VCard) StreamFeature(_ context.Context, _ string) (stravaganza.Element, error) {
 	return nil, nil
 }
 
 // ServerFeatures returns vCard server disco features.
-func (v *VCard) ServerFeatures(_ context.Context) ([]string, error) {
+func (m *VCard) ServerFeatures(_ context.Context) ([]string, error) {
 	return []string{vCardNamespace}, nil
 }
 
 // AccountFeatures returns vCard account disco features.
-func (v *VCard) AccountFeatures(_ context.Context) ([]string, error) {
+func (m *VCard) AccountFeatures(_ context.Context) ([]string, error) {
 	return []string{vCardNamespace}, nil
 }
 
 // MatchesNamespace tells whether namespace matches vCard module.
-func (v *VCard) MatchesNamespace(namespace string, _ bool) bool {
+func (m *VCard) MatchesNamespace(namespace string, _ bool) bool {
 	return namespace == vCardNamespace
 }
 
 // ProcessIQ process a vCard iq.
-func (v *VCard) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *VCard) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	switch {
 	case iq.IsGet():
-		return v.getVCard(ctx, iq)
+		return m.getVCard(ctx, iq)
 	case iq.IsSet():
-		return v.setVCard(ctx, iq)
+		return m.setVCard(ctx, iq)
 	}
 	return nil
 }
 
 // Start starts vCard module.
-func (v *VCard) Start(_ context.Context) error {
-	v.subs = append(v.subs, v.sn.Subscribe(event.UserDeleted, v.onUserDeleted))
+func (m *VCard) Start(_ context.Context) error {
+	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
 	log.Infow("Started vCard module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops vCard module.
-func (v *VCard) Stop(_ context.Context) error {
-	for _, sub := range v.subs {
-		v.sn.Unsubscribe(sub)
-	}
+func (m *VCard) Stop(_ context.Context) error {
+	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
+
 	log.Infow("Stopped vCard module", "xep", XEPNumber)
 	return nil
 }
 
-func (v *VCard) onUserDeleted(ctx context.Context, ev sonar.Event) error {
-	inf := ev.Info().(*event.UserEventInfo)
-	return v.rep.DeleteVCard(ctx, inf.Username)
+func (m *VCard) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.UserInfo)
+	return m.rep.DeleteVCard(ctx, inf.Username)
 }
 
-func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	vc := iq.ChildNamespace("vCard", vCardNamespace)
 	if vc == nil || vc.ChildrenCount() > 0 {
-		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	toJID := iq.ToJID()
-	vCard, err := v.rep.FetchVCard(ctx, toJID.Node())
+	vCard, err := m.rep.FetchVCard(ctx, toJID.Node())
 	if err != nil {
-		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	var resIQ *stravaganza.IQ
@@ -133,25 +134,23 @@ func (v *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	log.Infow("Fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
 
-	_, _ = v.router.Route(ctx, resIQ)
+	_, _ = m.router.Route(ctx, resIQ)
 
-	// post vCard fetched event
-	return v.sn.Post(
-		ctx,
-		sonar.NewEventBuilder(event.VCardFetched).
-			WithInfo(&event.VCardEventInfo{
-				Username: toJID.Node(),
-				VCard:    vCard,
-			}).
-			WithSender(v).
-			Build(),
-	)
+	// run vCard fetched hook
+	_, err = m.hk.Run(ctx, hook.VCardFetched, &hook.ExecutionContext{
+		Info: &hook.VCardInfo{
+			Username: toJID.Node(),
+			VCard:    vCard,
+		},
+		Sender: m,
+	})
+	return err
 }
 
-func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	vCard := iq.ChildNamespace("vCard", vCardNamespace)
 	if vCard == nil {
-		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
 		return nil
 	}
 	fromJID := iq.FromJID()
@@ -159,27 +158,25 @@ func (v *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 
 	allowed := toJID.IsServer() || (toJID.Node() == fromJID.Node())
 	if !allowed {
-		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
-	err := v.rep.UpsertVCard(ctx, vCard, toJID.Node())
+	err := m.rep.UpsertVCard(ctx, vCard, toJID.Node())
 	if err != nil {
-		_, _ = v.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
+		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
 	log.Infow("Saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
 
-	_, _ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
+	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
-	// post vCard updated event
-	return v.sn.Post(
-		ctx,
-		sonar.NewEventBuilder(event.VCardUpdated).
-			WithInfo(&event.VCardEventInfo{
-				Username: toJID.Node(),
-				VCard:    vCard,
-			}).
-			WithSender(v).
-			Build(),
-	)
+	// run vCard updated hook
+	_, err = m.hk.Run(ctx, hook.VCardUpdated, &hook.ExecutionContext{
+		Info: &hook.VCardInfo{
+			Username: toJID.Node(),
+			VCard:    vCard,
+		},
+		Sender: m,
+	})
+	return err
 }

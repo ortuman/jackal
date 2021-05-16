@@ -12,23 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
-
-import "github.com/jackal-xmpp/stravaganza/v2"
+package hook
 
 const (
-	// VCardFetched event is posted whenever a user vCard is fetched.
-	VCardFetched = "vcard.fetched"
+	// UserCreated hook runs whenever a new user is created.
+	UserCreated = "user.created"
 
-	// VCardUpdated event is posted whenever a user vCard is updated.
-	VCardUpdated = "vcard.updated"
+	// UserDeleted hook runs whenever a user is deleted.
+	UserDeleted = "user.deleted"
 )
 
-// VCardEventInfo contains all information associated to a vCard event.
-type VCardEventInfo struct {
-	// Username is the name of the vCard user associated to this event.
+// UserInfo contains all information associated to a user event.
+type UserInfo struct {
+	// Username is the name of the user associated to this event.
 	Username string
-
-	// VCard is the vCard element associated to this event.
-	VCard stravaganza.Element
 }

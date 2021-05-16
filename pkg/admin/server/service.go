@@ -25,10 +25,9 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/jackal-xmpp/sonar"
 	userspb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -43,14 +42,14 @@ const iterationCount = 100_000
 type usersService struct {
 	rep     repository.Repository
 	peppers *pepper.Keys
-	sonar   *sonar.Sonar
+	hk      *hook.Hooks
 }
 
-func newUsersService(rep repository.Repository, peppers *pepper.Keys, sonar *sonar.Sonar) userspb.UsersServer {
+func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook.Hooks) userspb.UsersServer {
 	return &usersService{
 		rep:     rep,
 		peppers: peppers,
-		sonar:   sonar,
+		hk:      hk,
 	}
 }
 
@@ -62,12 +61,12 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 	if err := s.upsertUser(ctx, username, req.GetPassword()); err != nil {
 		return nil, err
 	}
-	// post user created event
-	err := s.sonar.Post(ctx, sonar.NewEventBuilder(event.UserCreated).
-		WithInfo(&event.UserEventInfo{
+	// run user created hook
+	_, err := s.hk.Run(ctx, hook.UserCreated, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: username,
-		}).Build(),
-	)
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -96,12 +95,12 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 	if err := s.rep.DeleteUser(ctx, username); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	// post user deleted event
-	err := s.sonar.Post(ctx, sonar.NewEventBuilder(event.UserDeleted).
-		WithInfo(&event.UserEventInfo{
+	// run user deleted hook
+	_, err := s.hk.Run(ctx, hook.UserDeleted, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: username,
-		}).Build(),
-	)
+		},
+	})
 	if err != nil {
 		return nil, err
 	}

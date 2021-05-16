@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/host"
@@ -39,7 +38,6 @@ var errStreamNotFound = func(id stream.C2SID) error {
 // LocalRouter represents a cluster local router.
 type LocalRouter struct {
 	hosts hosts
-	sonar *sonar.Sonar
 
 	mu     sync.RWMutex
 	stms   map[stream.C2SID]stream.C2S
@@ -48,10 +46,9 @@ type LocalRouter struct {
 }
 
 // NewLocalRouter returns a new initialized local router.
-func NewLocalRouter(hosts *host.Hosts, sonar *sonar.Sonar) *LocalRouter {
+func NewLocalRouter(hosts *host.Hosts) *LocalRouter {
 	return &LocalRouter{
 		hosts:  hosts,
-		sonar:  sonar,
 		stms:   make(map[stream.C2SID]stream.C2S),
 		bndRes: make(map[string]*resources),
 		doneCh: make(chan chan struct{}),

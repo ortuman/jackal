@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2020 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package event
+package hook
 
 const (
-	// ModulesStarted event is posted after initializing all configured modules.
-	ModulesStarted = "modules.started"
+	// RosterRequested hook runs whenever a user requests the roster.
+	RosterRequested = "roster.requested"
 
-	// ModulesStopped event is posted after finishing all configured modules.
-	ModulesStopped = "modules.stopped"
+	// RosterItemUpdated hook runs whenever a roster item subscription is updated.
+	RosterItemUpdated = "roster.item.updated"
 )
 
-// ModulesEventInfo contains all information associated to a modules event.
-type ModulesEventInfo struct {
-	ModuleNames []string
+// RosterInfo contains all information associated to a roster event.
+type RosterInfo struct {
+	// Username is the name of the roster owner.
+	Username string
+
+	// JID is the event contact JID.
+	JID string
+
+	// Subscription is the roster event subscription value.
+	Subscription string
 }

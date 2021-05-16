@@ -19,14 +19,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -69,7 +67,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 	bl := &BlockList{
 		router: routerMock,
 		rep:    rep,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -143,7 +141,7 @@ func TestBlockList_BlockItem(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		resMng: resMngMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -247,7 +245,7 @@ func TestBlockList_UnblockItem(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		resMng: resMngMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -311,7 +309,7 @@ func TestBlockList_Forbidden(t *testing.T) {
 
 	bl := &BlockList{
 		router: routerMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -341,21 +339,20 @@ func TestBlockList_UserDeleted(t *testing.T) {
 		return nil
 	}
 
-	sn := sonar.New()
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		rep: rep,
-		sn:  sn,
+		hk:  hk,
 	}
 	// when
 	_ = bl.Start(context.Background())
 	defer func() { _ = bl.Stop(context.Background()) }()
 
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.UserDeleted).
-		WithInfo(&event.UserEventInfo{
+	_, _ = hk.Run(context.Background(), hook.UserDeleted, &hook.ExecutionContext{
+		Info: &hook.UserInfo{
 			Username: "ortuman",
-		}).
-		Build(),
-	)
+		},
+	})
 
 	// then
 	require.Len(t, rep.DeleteBlockListItemsCalls(), 1)
@@ -380,13 +377,14 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
 		rep:    rep,
-		sn:     sonar.New(),
+		hk:     hk,
 	}
-	// when
+
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "juliet@jabber.org/yard")
 	b.WithAttribute("to", "ortuman@jackal.im/balcony")
@@ -397,10 +395,19 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	)
 	msg, _ := b.BuildMessage()
 
-	_, err := bl.InterceptStanza(context.Background(), msg, incomingIID)
+	// when
+	_ = bl.Start(context.Background())
+	defer func() { _ = bl.Stop(context.Background()) }()
+
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: msg,
+		},
+	})
 
 	// then
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.True(t, halted)
+	require.Nil(t, err)
 
 	require.Len(t, respStanzas, 1)
 	require.Equal(t, "ortuman@jackal.im/balcony", respStanzas[0].Attribute(stravaganza.From))
@@ -432,13 +439,13 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 			{Username: "ortuman", JID: "jabber.org/yard"},
 		}, nil
 	}
+	hk := hook.NewHooks()
 	bl := &BlockList{
 		hosts:  hMock,
 		router: routerMock,
 		rep:    rep,
-		sn:     sonar.New(),
+		hk:     hk,
 	}
-	// when
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/balcony")
 	b.WithAttribute("to", "juliet@jabber.org/yard")
@@ -449,10 +456,19 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	)
 	msg, _ := b.BuildMessage()
 
-	_, err := bl.InterceptStanza(context.Background(), msg, outgoingIID)
+	// when
+	_ = bl.Start(context.Background())
+	defer func() { _ = bl.Stop(context.Background()) }()
+
+	halted, err := hk.Run(context.Background(), hook.C2SStreamWillRouteElement, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: msg,
+		},
+	})
 
 	// then
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.Nil(t, err)
+	require.True(t, halted)
 
 	require.Len(t, respStanzas, 1)
 	require.Equal(t, "juliet@jabber.org/yard", respStanzas[0].Attribute(stravaganza.From))

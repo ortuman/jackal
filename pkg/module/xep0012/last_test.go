@@ -20,14 +20,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/event"
+	"github.com/ortuman/jackal/pkg/hook"
 	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/module"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +41,7 @@ func TestLast_GetServerUptime(t *testing.T) {
 	}
 	m := &Last{
 		router: routerMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -124,7 +122,7 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 		rep:    repMock,
 		hosts:  hMock,
 		resMng: resMngMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -194,7 +192,7 @@ func TestLast_Forbidden(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
 
 	// when
@@ -223,7 +221,7 @@ func TestLast_Forbidden(t *testing.T) {
 	require.NotNil(t, errEl.ChildNamespace("forbidden", "urn:ietf:params:xml:ns:xmpp-stanzas"))
 }
 
-func TestLast_InterceptStanza(t *testing.T) {
+func TestLast_InterceptInboundElement(t *testing.T) {
 	// given
 	routerMock := &routerMock{}
 
@@ -243,9 +241,8 @@ func TestLast_InterceptStanza(t *testing.T) {
 		router: routerMock,
 		rep:    repMock,
 		hosts:  hMock,
-		sn:     sonar.New(),
+		hk:     hook.NewHooks(),
 	}
-	// when
 	iq, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, uuid.New().String()).
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
@@ -258,11 +255,19 @@ func TestLast_InterceptStanza(t *testing.T) {
 		).
 		BuildIQ()
 
-	_, err := m.InterceptStanza(context.Background(), iq, 0)
+	// when
+	_ = m.Start(context.Background())
+	defer func() { _ = m.Stop(context.Background()) }()
+
+	halted, err := m.hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: iq,
+		},
+	})
 
 	// then
-	require.NotNil(t, err)
-	require.Equal(t, module.ErrInterceptStanzaInterrupted, err)
+	require.Nil(t, err)
+	require.True(t, halted)
 
 	require.Len(t, respStanzas, 1)
 
@@ -282,23 +287,22 @@ func TestLast_ProcessPresence(t *testing.T) {
 		return nil
 	}
 
-	sn := sonar.New()
-	bl := &Last{
+	hk := hook.NewHooks()
+	m := &Last{
 		rep: rep,
-		sn:  sn,
+		hk:  hk,
 	}
 	// when
-	_ = bl.Start(context.Background())
-	defer func() { _ = bl.Stop(context.Background()) }()
+	_ = m.Start(context.Background())
+	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_ = sn.Post(context.Background(), sonar.NewEventBuilder(event.C2SStreamPresenceReceived).
-		WithInfo(&event.C2SStreamEventInfo{
+	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
-		}).
-		Build(),
-	)
+		},
+	})
 
 	// then
 	require.Len(t, rep.UpsertLastCalls(), 1)

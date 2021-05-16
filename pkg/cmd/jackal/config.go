@@ -115,7 +115,10 @@ type extModuleConfig struct {
 	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 
 	EventHandler struct {
-		Topics []string `fig:"topics"`
+		Hooks []struct {
+			Name     string `fig:"name"`
+			Priority int32  `fig:"priority"`
+		} `fig:"hooks"`
 	} `fig:"event_handler"`
 
 	IQHandler struct {
@@ -125,12 +128,6 @@ type extModuleConfig struct {
 		} `fig:"namespace"`
 		TargetEntity string `fig:"target_entity"`
 	} `fig:"iq_handler"`
-
-	StanzaInterceptors []struct {
-		ID       int  `fig:"id"`
-		Incoming bool `fig:"incoming"`
-		Priority int  `fig:"priority"`
-	} `fig:"stanza_interceptors"`
 }
 
 type s2sOutConfig struct {

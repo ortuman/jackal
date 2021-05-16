@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
-	"github.com/jackal-xmpp/sonar"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/hook"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -67,7 +67,7 @@ func TestInS2S_Disconnect(t *testing.T) {
 		tr:      trMock,
 		rq:      runqueue.New("in_s2s:test", nil),
 		inHub:   NewInHub(),
-		sn:      sonar.New(),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -359,9 +359,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			// modules mock
 			modsMock.IsModuleIQFunc = func(iq *stravaganza.IQ) bool { return false }
-			modsMock.InterceptStanzaFunc = func(ctx context.Context, stanza stravaganza.Stanza, incoming bool) (stravaganza.Stanza, error) {
-				return stanza, nil
-			}
 
 			// session mock
 			outBuf := bytes.NewBuffer(nil)
@@ -430,8 +427,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 				comps:       compsMock,
 				session:     ssMock,
 				outProvider: outProviderMock,
-
-				sn: sonar.New(),
+				hk:          hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -525,7 +521,7 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 				session: ssMock,
 				router:  routerMock,
 				inHub:   NewInHub(),
-				sn:      sonar.New(),
+				hk:      hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)
