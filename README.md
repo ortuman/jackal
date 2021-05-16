@@ -164,7 +164,7 @@ Alternatively and with the purpose of facilitating service mounting you can make
 docker-compose -f dockerfiles/docker-compose.yml up
 ```
 
-Once ready, don't forget to [register one or more test users](creating-jackal-user) using `jackalctl`.
+Once ready, don't forget to [register one or more test users](#creating-jackal-user) using `jackalctl`.
 
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
