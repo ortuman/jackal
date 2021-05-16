@@ -159,7 +159,6 @@ docker run --name=jackal \
 
 Alternatively and with the purpose of facilitating service mounting you can make use of `docker-compose` as follows.
 
-
 ```sh
 docker-compose -f dockerfiles/docker-compose.yml up
 ```
