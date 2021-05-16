@@ -155,6 +155,17 @@ docker run --name=jackal \
    -d ortuman/jackal:latest
 ```
 
+### Docker compose
+
+Alternatively and with the purpose of facilitating service mounting you can make use of `docker-compose` as follows.
+
+
+```sh
+docker-compose -f dockerfiles/docker-compose.yml up
+```
+
+Once ready, don't forget to [register one or more test users](creating-jackal-user) using `jackalctl`.
+
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)
 - [RFC 6121: XMPP IM](https://xmpp.org/rfcs/rfc6121.html)
