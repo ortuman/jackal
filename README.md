@@ -98,11 +98,11 @@ Your database is now ready to connect with jackal.
 
 ### Creating jackal user
 
-After completing database setup you will have to register a new user to be able to login. To do so, you can use
+After completing database setup and starting `jackal` service you'll have to register a new user to be able to login. To do so, you can use
 jackal command-line tool to create a new user proving name and password.
 
 ```sh
-jackalctl user add <user>:<password>
+make installctl && jackalctl user add <user>:<password>
 ```
 
 ## Clustering
@@ -154,6 +154,18 @@ docker run --name=jackal \
    --mount type=bind,src=/path-on-host-machine/my-custom-config.yaml,dst=/jackal/config.yaml \
    -d ortuman/jackal:latest
 ```
+
+### Docker compose
+
+Alternatively, and with the purpose of facilitating service mounting, you can make use of `docker-compose` as follows.
+
+```sh
+docker-compose -f dockerfiles/docker-compose.yml up
+```
+
+This command will spin up a `jackal` server along with its dependencies on its own docker network and start listening for incoming connections on port `5222`.
+
+Once up and running, don't forget to [register one or more users](#creating-jackal-user) using `jackalctl`.
 
 ## Supported Specifications
 - [RFC 6120: XMPP CORE](https://xmpp.org/rfcs/rfc6120.html)

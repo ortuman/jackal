@@ -1,0 +1,38 @@
+###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+###             docker compose configuration file            ###
+###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
+
+peppers:
+  keys:
+    v1: M8Tcc9NzHCTwEemTVzpDFf7D
+  use: v1
+
+logger:
+  level: debug
+  output_path: jackal.log
+
+storage:
+  type: pgsql
+  pgsql:
+    host: 'pgsql:5432'
+    user: jackal
+    password: asecretpassword
+    database: jackal
+    max_open_conns: 16
+
+cluster:
+  etcd:
+    endpoints:
+      - 'http://etcd:2379'
+
+listeners:
+  - type: c2s
+    port: 5222
+    req_timeout: 60s
+    transport: socket
+    sasl:
+      mechanisms:
+        - scram_sha_1
+        - scram_sha_256
+        - scram_sha_512
+        - scram_sha3_512
