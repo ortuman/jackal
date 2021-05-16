@@ -4,8 +4,6 @@ volumes:
 services:
   etcd:
     image: quay.io/coreos/etcd:v3.4.16
-    ports:
-      - 2379
     volumes:
       - etcd:/etcd_data
     command:
@@ -35,6 +33,7 @@ services:
     image: ortuman/jackal:latest
     ports:
       - 5222:5222
+      - 15280:15280
     depends_on:
       - etcd
       - pgsql
