@@ -126,7 +126,10 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stm := execCtx.Sender.(stream.C2S)
 	if inf.Element.Attribute(stravaganza.Namespace) == streamNamespace {
-		return m.processCmd(ctx, inf.Element, stm)
+		if err := m.processCmd(ctx, inf.Element, stm); err != nil {
+			return err
+		}
+		return hook.ErrStopped // already handled
 	}
 	_, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -149,11 +152,11 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm stream.C2S) error {
 	if cmd.ChildrenCount() > 0 {
 		sendFailedReply(badRequest, "Malformed element", stm)
-		return hook.ErrStopped
+		return nil
 	}
 	if !stm.IsBinded() {
 		sendFailedReply(unexpectedRequest, "", stm)
-		return hook.ErrStopped
+		return nil
 	}
 	switch cmd.Name() {
 	case "enable":
@@ -166,7 +169,7 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 		errText := fmt.Sprintf("Unknown tag %s qualified by namespace '%s'", cmd.Name(), streamNamespace)
 		sendFailedReply(badRequest, errText, stm)
 	}
-	return hook.ErrStopped
+	return nil
 }
 
 func (m *Stream) processInboundStanza(stm stream.C2S) {
