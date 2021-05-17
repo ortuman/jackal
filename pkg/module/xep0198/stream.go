@@ -15,15 +15,12 @@
 package xep0198
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
@@ -187,7 +184,9 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetValue(ctx, enabledInfoKey, "true"); err != nil {
 		return err
 	}
-	if err := m.mng.registerQueue(stm); err != nil {
+	// register stream into the manager
+	smid, err := m.mng.register(stm)
+	if err != nil {
 		return err
 	}
 
@@ -196,7 +195,7 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		Build(),
 	)
 	log.Infow("Enabled stream management",
-		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"smid", smid, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
 }
@@ -240,18 +239,6 @@ func (m *Stream) processR(stm stream.C2S) {
 		WithAttribute("h", strconv.FormatUint(uint64(q.inboundH()), 10)).
 		Build()
 	stm.SendElement(a)
-}
-
-func encodeSMID(jd *jid.JID, nonce []byte) string {
-	buf := bytes.NewBuffer(nil)
-	buf.WriteString(jd.String())
-	buf.WriteByte(0)
-	buf.Write(nonce)
-	return base64.StdEncoding.EncodeToString(buf.Bytes())
-}
-
-func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
-	return nil, nil, nil
 }
 
 func sendFailedReply(reason string, text string, stm stream.C2S) {

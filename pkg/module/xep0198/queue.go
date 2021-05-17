@@ -26,31 +26,29 @@ import (
 )
 
 const (
-	nonceLength = 16
-
 	requestAckInterval = time.Minute * 2
 	waitForAckTimeout  = time.Second * 30
 )
 
-type qEntry struct {
+type stmQE struct {
 	st stravaganza.Stanza
 	h  uint32
 }
 
-type queue struct {
+type stmQ struct {
 	stm   stream.C2S
 	nonce []byte
 
 	mu     sync.RWMutex
-	q      []qEntry
+	q      []stmQE
 	outH   uint32
 	inH    uint32
 	tm     *time.Timer
 	discTm *time.Timer
 }
 
-func newQueue(stm stream.C2S) (*queue, error) {
-	m := &queue{
+func newSQ(stm stream.C2S, nonce []byte) (*stmQ, error) {
+	m := &stmQ{
 		stm:   stm,
 		nonce: make([]byte, nonceLength),
 	}
@@ -63,24 +61,24 @@ func newQueue(stm stream.C2S) (*queue, error) {
 	return m, nil
 }
 
-func (m *queue) processInboundStanza() {
+func (m *stmQ) processInboundStanza() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.scheduleR()
 	m.inH = incH(m.inH)
 }
 
-func (m *queue) processOutboundStanza(stanza stravaganza.Stanza) {
+func (m *stmQ) processOutboundStanza(stanza stravaganza.Stanza) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.outH = incH(m.outH)
-	m.q = append(m.q, qEntry{
+	m.q = append(m.q, stmQE{
 		st: stanza,
 		h:  m.outH,
 	})
 }
 
-func (m *queue) acknowledge(h uint32) {
+func (m *stmQ) acknowledge(h uint32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if discTm := m.discTm; discTm != nil {
@@ -96,7 +94,7 @@ func (m *queue) acknowledge(h uint32) {
 	m.scheduleR()
 }
 
-func (m *queue) queue() []stravaganza.Stanza {
+func (m *stmQ) queue() []stravaganza.Stanza {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var retVal []stravaganza.Stanza
@@ -106,19 +104,19 @@ func (m *queue) queue() []stravaganza.Stanza {
 	return retVal
 }
 
-func (m *queue) inboundH() uint32 {
+func (m *stmQ) inboundH() uint32 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.inH
 }
 
-func (m *queue) outboundH() uint32 {
+func (m *stmQ) outboundH() uint32 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.outH
 }
 
-func (m *queue) cancelTimers() {
+func (m *stmQ) cancelTimers() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.tm.Stop()
@@ -127,7 +125,7 @@ func (m *queue) cancelTimers() {
 	}
 }
 
-func (m *queue) requestAck() {
+func (m *stmQ) requestAck() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -142,7 +140,7 @@ func (m *queue) requestAck() {
 	})
 }
 
-func (m *queue) scheduleR() {
+func (m *stmQ) scheduleR() {
 	m.tm.Stop()
 	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
 }
