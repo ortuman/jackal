@@ -15,7 +15,6 @@
 package xep0198
 
 import (
-	"crypto/rand"
 	"math"
 	"sync"
 	"time"
@@ -50,12 +49,7 @@ type stmQ struct {
 func newSQ(stm stream.C2S, nonce []byte) (*stmQ, error) {
 	m := &stmQ{
 		stm:   stm,
-		nonce: make([]byte, nonceLength),
-	}
-	// generate nonce
-	_, err := rand.Read(m.nonce)
-	if err != nil {
-		return nil, err
+		nonce: nonce,
 	}
 	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
 	return m, nil

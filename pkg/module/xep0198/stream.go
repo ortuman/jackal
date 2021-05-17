@@ -163,11 +163,11 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 	}
 	switch cmd.Name() {
 	case "enable":
-		return m.processEnable(ctx, stm)
+		return m.handleEnable(ctx, stm)
 	case "a":
-		m.processA(stm, cmd.Attribute("h"))
+		m.handleA(stm, cmd.Attribute("h"))
 	case "r":
-		m.processR(stm)
+		m.handleR(stm)
 	default:
 		errText := fmt.Sprintf("Unknown tag %s qualified by namespace '%s'", cmd.Name(), streamNamespace)
 		sendFailedReply(badRequest, errText, stm)
@@ -175,7 +175,7 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 	return nil
 }
 
-func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
+func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	enabled, _ := strconv.ParseBool(stm.Value(enabledInfoKey))
 	if enabled {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
@@ -200,7 +200,7 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	return nil
 }
 
-func (m *Stream) processA(stm stream.C2S, h string) {
+func (m *Stream) handleA(stm stream.C2S, h string) {
 	sq := m.mng.getQueue(stm)
 	if sq == nil {
 		return
@@ -226,7 +226,7 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 	}
 }
 
-func (m *Stream) processR(stm stream.C2S) {
+func (m *Stream) handleR(stm stream.C2S) {
 	q := m.mng.getQueue(stm)
 	if q == nil {
 		return
