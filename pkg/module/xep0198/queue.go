@@ -46,13 +46,13 @@ type stmQ struct {
 	discTm *time.Timer
 }
 
-func newSQ(stm stream.C2S, nonce []byte) (*stmQ, error) {
-	m := &stmQ{
+func newSQ(stm stream.C2S, nonce []byte) *stmQ {
+	sq := &stmQ{
 		stm:   stm,
 		nonce: nonce,
 	}
-	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
-	return m, nil
+	sq.tm = time.AfterFunc(requestAckInterval, sq.requestAck)
+	return sq
 }
 
 func (m *stmQ) processInboundStanza() {

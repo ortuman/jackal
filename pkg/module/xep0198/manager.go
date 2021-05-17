@@ -68,11 +68,7 @@ func (m *Manager) register(stm stream.C2S) (smid string, err error) {
 	if err != nil {
 		return "", err
 	}
-	q, err := newSQ(stm, nonce)
-	if err != nil {
-		return "", err
-	}
-	m.queues[sID] = q
+	m.queues[sID] = newSQ(stm, nonce)
 
 	return encodeSMID(stm.JID(), nonce), nil
 }
