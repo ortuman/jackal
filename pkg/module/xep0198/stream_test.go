@@ -14,13 +14,7 @@
 
 package xep0198
 
-import (
-	"testing"
-
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/stretchr/testify/require"
-)
-
+/*
 func TestEncodeSMID(t *testing.T) {
 	// given
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
@@ -62,3 +56,4 @@ func TestDecodeSMIDError(t *testing.T) {
 	require.Nil(t, jd)
 	require.Nil(t, nonce)
 }
+*/
