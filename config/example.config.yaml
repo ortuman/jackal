@@ -102,16 +102,17 @@ modules:
 #  enabled:
 #    - roster
 #    - offline
-#    - last      # XEP-0012: Last Activity
-#    - disco     # XEP-0030: Service Discovery
-#    - private   # XEP-0049: Private XML Storage
-#    - vcard     # XEP-0054: vcard-temp
-#    - version   # XEP-0092: Software Version
-#    - caps      # XEP-0115: Entity Capabilities
-#    - blocklist # XEP-0191: Blocking Command
-#    - ping      # XEP-0199: XMPP Ping
-#    - time      # XEP-0202: Entity Time
-#    - carbons   # XEP-0280: Message Carbons
+#    - last        # XEP-0012: Last Activity
+#    - disco       # XEP-0030: Service Discovery
+#    - private     # XEP-0049: Private XML Storage
+#    - vcard       # XEP-0054: vcard-temp
+#    - version     # XEP-0092: Software Version
+#    - caps        # XEP-0115: Entity Capabilities
+#    - blocklist   # XEP-0191: Blocking Command
+#    - stream_mgmt # XEP-0198: Stream Management
+#    - ping        # XEP-0199: XMPP Ping
+#    - time        # XEP-0202: Entity Time
+#    - carbons     # XEP-0280: Message Carbons
 #
 #  version:
 #    show_os: true

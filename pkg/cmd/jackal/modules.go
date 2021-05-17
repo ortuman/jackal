@@ -25,6 +25,7 @@ import (
 	"github.com/ortuman/jackal/pkg/module/xep0092"
 	"github.com/ortuman/jackal/pkg/module/xep0115"
 	"github.com/ortuman/jackal/pkg/module/xep0191"
+	"github.com/ortuman/jackal/pkg/module/xep0198"
 	"github.com/ortuman/jackal/pkg/module/xep0199"
 	"github.com/ortuman/jackal/pkg/module/xep0202"
 	"github.com/ortuman/jackal/pkg/module/xep0280"
@@ -40,6 +41,7 @@ var defaultModules = []string{
 	xep0092.ModuleName,
 	xep0115.ModuleName,
 	xep0191.ModuleName,
+	xep0198.ModuleName,
 	xep0199.ModuleName,
 	xep0280.ModuleName,
 }
@@ -93,6 +95,11 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// (https://xmpp.org/extensions/xep-0191.html)
 	xep0191.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
 		return xep0191.New(a.router, a.hosts, a.resMng, a.rep, a.hk)
+	},
+	// XEP-0198: Stream Management
+	// (https://xmpp.org/extensions/xep-0198.html)
+	xep0198.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
+		return xep0198.New(a.router, a.hosts, a.hk)
 	},
 	// XEP-0199: XMPP Ping
 	// (https://xmpp.org/extensions/xep-0199.html)
