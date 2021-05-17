@@ -65,9 +65,12 @@ type C2SStreamInfo struct {
 	// JID represents the event associated JID.
 	JID *jid.JID
 
-	// Targets contains all JIDs to which the event stanza was routed.
-	Targets []jid.JID
+	// Presence is current C2S resource presence.
+	Presence *stravaganza.Presence
 
 	// Element is the event associated XMPP element.
 	Element stravaganza.Element
+
+	// Targets contains all JIDs to which the event stanza was routed.
+	Targets []jid.JID
 }

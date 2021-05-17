@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module/xep0198"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -121,6 +123,8 @@ type serverApp struct {
 	mods           *module.Modules
 	comps          *component.Components
 	extCompMng     *extcomponentmanager.Manager
+
+	stmMng *xep0198.Manager
 
 	starters []starter
 	stoppers []stopper

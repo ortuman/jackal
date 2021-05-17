@@ -15,141 +15,56 @@
 package xep0198
 
 import (
-	"crypto/rand"
-	"math"
+	"fmt"
 	"sync"
-	"time"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
-const (
-	nonceLength = 16
-
-	requestAckInterval = time.Minute * 2
-	waitForAckTimeout  = time.Second * 30
-)
-
-type qEntry struct {
-	st stravaganza.Stanza
-	h  uint32
-}
-
-type manager struct {
-	stm   stream.C2S
-	nonce []byte
-
+type Manager struct {
 	mu     sync.RWMutex
-	q      []qEntry
-	outH   uint32
-	inH    uint32
-	tm     *time.Timer
-	discTm *time.Timer
+	queues map[string]*queue
 }
 
-func newManager(stm stream.C2S) (*manager, error) {
-	m := &manager{
-		stm:   stm,
-		nonce: make([]byte, nonceLength),
+func NewManager() *Manager {
+	return &Manager{
+		queues: make(map[string]*queue),
 	}
-	// generate nonce
-	_, err := rand.Read(m.nonce)
+}
+
+func (m *Manager) GetQueue(stm stream.C2S) []stravaganza.Stanza {
+	q := m.getQueue(stm)
+	if q == nil {
+		return nil
+	}
+	return q.queue()
+}
+
+func (m *Manager) UnregisterQueue(stm stream.C2S) {
+	m.mu.Lock()
+	delete(m.queues, streamID(stm))
+	m.mu.Unlock()
+}
+
+func (m *Manager) registerQueue(stm stream.C2S) error {
+	q, err := newQueue(stm)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
-	return m, nil
-}
-
-func (m *manager) processInboundStanza() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.scheduleR()
-	m.inH = incH(m.inH)
+	m.queues[streamID(stm)] = q
+	m.mu.Unlock()
+	return nil
 }
 
-func (m *manager) processOutboundStanza(stanza stravaganza.Stanza) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.outH = incH(m.outH)
-	m.q = append(m.q, qEntry{
-		st: stanza,
-		h:  m.outH,
-	})
-}
-
-func (m *manager) acknowledge(h uint32) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if discTm := m.discTm; discTm != nil {
-		discTm.Stop() // cancel disconnection timeout
-	}
-	for i, e := range m.q {
-		if e.h < h {
-			continue
-		}
-		m.q = m.q[i+1:]
-		break
-	}
-	m.scheduleR()
-}
-
-func (m *manager) queue() []stravaganza.Stanza {
+func (m *Manager) getQueue(stm stream.C2S) *queue {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-	var retVal []stravaganza.Stanza
-	for _, e := range m.q {
-		retVal = append(retVal, e.st)
-	}
-	return retVal
+	q := m.queues[streamID(stm)]
+	m.mu.RUnlock()
+	return q
 }
 
-func (m *manager) inboundH() uint32 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.inH
-}
-
-func (m *manager) outboundH() uint32 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.outH
-}
-
-func (m *manager) cancelTimers() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.tm.Stop()
-	if discTm := m.discTm; discTm != nil {
-		discTm.Stop()
-	}
-}
-
-func (m *manager) requestAck() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	r := stravaganza.NewBuilder("r").
-		WithAttribute(stravaganza.Namespace, streamNamespace).
-		Build()
-	m.stm.SendElement(r)
-
-	// schedule disconnect
-	m.discTm = time.AfterFunc(waitForAckTimeout, func() {
-		m.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
-	})
-}
-
-func (m *manager) scheduleR() {
-	m.tm.Stop()
-	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
-}
-
-func incH(h uint32) uint32 {
-	if h == math.MaxUint32-1 {
-		return 0
-	}
-	return h + 1
+func streamID(stm stream.C2S) string {
+	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
 }

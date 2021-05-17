@@ -23,7 +23,7 @@ import (
 
 func TestManagerProcessInboundStanza(t *testing.T) {
 	// given
-	m, _ := newManager(nil)
+	m, _ := newQueue(nil)
 
 	// when
 	m.processOutboundStanza(testStanza())
@@ -37,7 +37,7 @@ func TestManagerProcessInboundStanza(t *testing.T) {
 
 func TestManagerAcknowledge(t *testing.T) {
 	// given
-	m, _ := newManager(nil)
+	m, _ := newQueue(nil)
 
 	m.processOutboundStanza(testStanza())
 	m.processOutboundStanza(testStanza())

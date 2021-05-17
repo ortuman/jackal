@@ -20,7 +20,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -62,25 +61,24 @@ type Config struct {
 
 // Stream represents a stream (XEP-0198) module type.
 type Stream struct {
+	mng    *Manager
 	router router.Router
 	hosts  *host.Hosts
 	hk     *hook.Hooks
-
-	mu       sync.RWMutex
-	managers map[string]*manager
 }
 
 // New returns a new initialized Stream instance.
 func New(
+	mng *Manager,
 	router router.Router,
 	hosts *host.Hosts,
 	hk *hook.Hooks,
 ) *Stream {
 	return &Stream{
-		router:   router,
-		hosts:    hosts,
-		hk:       hk,
-		managers: make(map[string]*manager),
+		mng:    mng,
+		router: router,
+		hosts:  hosts,
+		hk:     hk,
 	}
 }
 
@@ -135,7 +133,11 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	m.processInboundStanza(stm)
+	q := m.mng.getQueue(stm)
+	if q == nil {
+		return nil
+	}
+	q.processInboundStanza()
 	return nil
 }
 
@@ -145,7 +147,11 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if !ok {
 		return nil
 	}
-	m.processOutboundStanza(stanza, execCtx.Sender.(stream.C2S))
+	q := m.mng.getQueue(execCtx.Sender.(stream.C2S))
+	if q == nil {
+		return nil
+	}
+	q.processOutboundStanza(stanza)
 	return nil
 }
 
@@ -172,28 +178,6 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 	return nil
 }
 
-func (m *Stream) processInboundStanza(stm stream.C2S) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	mng := m.managers[streamID(stm)]
-	if mng == nil {
-		return
-	}
-	mng.processInboundStanza()
-}
-
-func (m *Stream) processOutboundStanza(stanza stravaganza.Stanza, stm stream.C2S) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	mng := m.managers[streamID(stm)]
-	if mng == nil {
-		return
-	}
-	mng.processOutboundStanza(stanza)
-}
-
 func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	enabled, _ := strconv.ParseBool(stm.Value(enabledInfoKey))
 	if enabled {
@@ -203,13 +187,9 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetValue(ctx, enabledInfoKey, "true"); err != nil {
 		return err
 	}
-	mng, err := newManager(stm)
-	if err != nil {
+	if err := m.mng.registerQueue(stm); err != nil {
 		return err
 	}
-	m.mu.Lock()
-	m.managers[streamID(stm)] = mng
-	m.mu.Unlock()
 
 	stm.SendElement(stravaganza.NewBuilder("enabled").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
@@ -222,23 +202,20 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 }
 
 func (m *Stream) processA(stm stream.C2S, h string) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	mng := m.managers[streamID(stm)]
-	if mng == nil {
+	q := m.mng.getQueue(stm)
+	if q == nil {
 		return
 	}
 	hVal, _ := strconv.ParseUint(h, 10, 32)
 	if hVal == 0 {
 		return
 	}
-	mng.acknowledge(uint32(hVal))
+	q.acknowledge(uint32(hVal))
 
 	log.Infow("Received stanza ack",
-		"ack_h", hVal, "h", mng.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"ack_h", hVal, "h", q.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
-	pending := mng.queue()
+	pending := q.queue()
 	if len(pending) == 0 {
 		return // done here
 	}
@@ -251,11 +228,8 @@ func (m *Stream) processA(stm stream.C2S, h string) {
 }
 
 func (m *Stream) processR(stm stream.C2S) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	mng := m.managers[streamID(stm)]
-	if mng == nil {
+	q := m.mng.getQueue(stm)
+	if q == nil {
 		return
 	}
 	log.Infow("Stanza ack requested",
@@ -263,13 +237,9 @@ func (m *Stream) processR(stm stream.C2S) {
 	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
-		WithAttribute("h", strconv.FormatUint(uint64(mng.inboundH()), 10)).
+		WithAttribute("h", strconv.FormatUint(uint64(q.inboundH()), 10)).
 		Build()
 	stm.SendElement(a)
-}
-
-func streamID(stm stream.C2S) string {
-	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
 }
 
 func encodeSMID(jd *jid.JID, nonce []byte) string {
