@@ -185,7 +185,7 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		return err
 	}
 	// register stream into the manager
-	smid, err := m.mng.register(stm)
+	smID, err := m.mng.register(stm)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 		Build(),
 	)
 	log.Infow("Enabled stream management",
-		"smid", smid, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"smid", smID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
 }
