@@ -94,7 +94,7 @@ func (m *stmQ) acknowledge(h uint32) {
 	m.scheduleR()
 }
 
-func (m *stmQ) queue() []stravaganza.Stanza {
+func (m *stmQ) stanzas() []stravaganza.Stanza {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var retVal []stravaganza.Stanza

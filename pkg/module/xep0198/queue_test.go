@@ -30,7 +30,7 @@ func TestManagerProcessInboundStanza(t *testing.T) {
 	m.processOutboundStanza(testStanza())
 
 	// then
-	require.Len(t, m.queue(), 2)
+	require.Len(t, m.stanzas(), 2)
 	require.Equal(t, m.q[0].h, uint32(1))
 	require.Equal(t, m.q[1].h, uint32(2))
 }
@@ -47,7 +47,7 @@ func TestManagerAcknowledge(t *testing.T) {
 	m.acknowledge(2)
 
 	// then
-	require.Len(t, m.queue(), 1)
+	require.Len(t, m.stanzas(), 1)
 	require.Equal(t, "iq", m.q[0].st.Name())
 	require.Equal(t, uint32(3), m.q[0].h)
 }

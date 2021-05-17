@@ -130,11 +130,11 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	q := m.mng.getQueue(stm)
-	if q == nil {
+	sq := m.mng.getQueue(stm)
+	if sq == nil {
 		return nil
 	}
-	q.processInboundStanza()
+	sq.processInboundStanza()
 	return nil
 }
 
@@ -144,11 +144,11 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if !ok {
 		return nil
 	}
-	q := m.mng.getQueue(execCtx.Sender.(stream.C2S))
-	if q == nil {
+	sq := m.mng.getQueue(execCtx.Sender.(stream.C2S))
+	if sq == nil {
 		return nil
 	}
-	q.processOutboundStanza(stanza)
+	sq.processOutboundStanza(stanza)
 	return nil
 }
 
@@ -201,20 +201,20 @@ func (m *Stream) processEnable(ctx context.Context, stm stream.C2S) error {
 }
 
 func (m *Stream) processA(stm stream.C2S, h string) {
-	q := m.mng.getQueue(stm)
-	if q == nil {
+	sq := m.mng.getQueue(stm)
+	if sq == nil {
 		return
 	}
 	hVal, _ := strconv.ParseUint(h, 10, 32)
 	if hVal == 0 {
 		return
 	}
-	q.acknowledge(uint32(hVal))
+	sq.acknowledge(uint32(hVal))
 
 	log.Infow("Received stanza ack",
-		"ack_h", hVal, "h", q.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"ack_h", hVal, "h", sq.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
-	pending := q.queue()
+	pending := sq.stanzas()
 	if len(pending) == 0 {
 		return // done here
 	}
