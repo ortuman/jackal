@@ -27,20 +27,18 @@ import (
 
 const nonceLength = 16
 
-// Manager represents XEP-0198 stream manager.
-type Manager struct {
+type manager struct {
 	mu     sync.RWMutex
 	queues map[string]*stmQ
 }
 
-// NewManager created and initializes a new Manager instance.
-func NewManager() *Manager {
-	return &Manager{
+func newManager() *manager {
+	return &manager{
 		queues: make(map[string]*stmQ),
 	}
 }
 
-func (m *Manager) unregister(stm stream.C2S) {
+func (m *manager) unregister(stm stream.C2S) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -52,7 +50,7 @@ func (m *Manager) unregister(stm stream.C2S) {
 	delete(m.queues, stmID(stm))
 }
 
-func (m *Manager) register(stm stream.C2S) (smid string, err error) {
+func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -73,7 +71,7 @@ func (m *Manager) register(stm stream.C2S) (smid string, err error) {
 	return encodeSMID(stm.JID(), nonce), nil
 }
 
-func (m *Manager) getQueue(stm stream.C2S) *stmQ {
+func (m *manager) getQueue(stm stream.C2S) *stmQ {
 	m.mu.RLock()
 	q := m.queues[stmID(stm)]
 	m.mu.RUnlock()

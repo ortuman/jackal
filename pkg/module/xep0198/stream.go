@@ -58,24 +58,23 @@ type Config struct {
 
 // Stream represents a stream (XEP-0198) module type.
 type Stream struct {
-	mng    *Manager
 	router router.Router
 	hosts  *host.Hosts
 	hk     *hook.Hooks
+	mng    *manager
 }
 
 // New returns a new initialized Stream instance.
 func New(
-	mng *Manager,
 	router router.Router,
 	hosts *host.Hosts,
 	hk *hook.Hooks,
 ) *Stream {
 	return &Stream{
-		mng:    mng,
 		router: router,
 		hosts:  hosts,
 		hk:     hk,
+		mng:    newManager(),
 	}
 }
 

@@ -99,8 +99,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0198: Stream Management
 	// (https://xmpp.org/extensions/xep-0198.html)
 	xep0198.ModuleName: func(a *serverApp, _ modulesConfig) module.Module {
-		a.stmMng = xep0198.NewManager()
-		return xep0198.New(a.stmMng, a.router, a.hosts, a.hk)
+		return xep0198.New(a.router, a.hosts, a.hk)
 	},
 	// XEP-0199: XMPP Ping
 	// (https://xmpp.org/extensions/xep-0199.html)
