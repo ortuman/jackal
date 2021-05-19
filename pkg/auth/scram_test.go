@@ -29,9 +29,10 @@ import (
 	"strings"
 	"testing"
 
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/transport"
 	stringsutil "github.com/ortuman/jackal/pkg/util/strings"
 	"github.com/stretchr/testify/require"
@@ -246,7 +247,7 @@ func processScramTestCase(t *testing.T, tc *scramAuthTestCase) *SASLError {
 		return tc.cbBytes
 	}
 	testUsr := testUser()
-	repMock.FetchUserFunc = func(_ context.Context, username string) (*coremodel.User, error) {
+	repMock.FetchUserFunc = func(_ context.Context, username string) (*usermodel.User, error) {
 		if username != "ortuman" {
 			return nil, nil
 		}
@@ -398,9 +399,9 @@ func testScramAuthHash(b []byte, scramType ScramType) []byte {
 	return h.Sum(nil)
 }
 
-func testUser() *coremodel.User {
+func testUser() *usermodel.User {
 	// password: 1234
-	var usr coremodel.User
+	var usr usermodel.User
 	usr.Username = "ortuman"
 	usr.Scram.SHA1 = tScramSHA1Base64
 	usr.Scram.SHA256 = tScramSHA256Base64

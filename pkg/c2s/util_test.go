@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )
 
 func testMessageStanza() *stravaganza.Message {
@@ -35,7 +35,7 @@ func testMessageStanza() *stravaganza.Message {
 	return msg
 }
 
-func testResource(instanceID string, priority int8) coremodel.Resource {
+func testResource(instanceID string, priority int8) c2smodel.Resource {
 	pr, _ := stravaganza.NewPresenceBuilder().
 		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
 		WithAttribute(stravaganza.To, "ortuman@jackal.im").
@@ -47,10 +47,10 @@ func testResource(instanceID string, priority int8) coremodel.Resource {
 		BuildPresence()
 
 	jd, _ := jid.New("ortuman", "jackal.im", "yard", true)
-	return coremodel.Resource{
+	return c2smodel.Resource{
 		InstanceID: instanceID,
 		JID:        jd,
 		Presence:   pr,
-		Context:    map[string]string{"k1": "v1", "k2": "v2"},
+		Info:       map[string]string{"k1": "v1", "k2": "v2"},
 	}
 }

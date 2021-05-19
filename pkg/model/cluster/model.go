@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hook
+package clustermodel
 
 import (
-	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
+	"fmt"
+
+	"github.com/ortuman/jackal/pkg/version"
 )
 
-const (
-	// MemberListUpdated hook runs whenever cluster member list is updated.
-	MemberListUpdated = "memberlist.updated"
-)
+// Member represents a cluster instance address and port.
+type Member struct {
+	InstanceID string
+	Host       string
+	Port       int
+	APIVer     *version.SemanticVersion
+}
 
-// MemberListInfo contains all info associated to MemberListUpdated event.
-type MemberListInfo struct {
-	// Registered contains all new registered cluster members.
-	Registered []clustermodel.Member
-
-	// UnregisteredKeys contains unregistered cluster members keys.
-	UnregisteredKeys []string
+// String returns Member string representation.
+func (m *Member) String() string {
+	return fmt.Sprintf("%s:%d", m.Host, m.Port)
 }

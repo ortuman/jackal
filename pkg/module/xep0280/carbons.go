@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -26,7 +28,6 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -259,7 +260,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 	return nil
 }
 
-func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]coremodel.Resource, error) {
+func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]c2smodel.Resource, error) {
 	rs, err := p.resMng.GetResources(ctx, username)
 	if err != nil {
 		return nil, err
@@ -268,7 +269,7 @@ func (p *Carbons) getFilteredResources(ctx context.Context, username string, ign
 	for _, j := range ignoringJIDs {
 		ignoredJIDs[j.String()] = struct{}{}
 	}
-	var ret []coremodel.Resource
+	var ret []c2smodel.Resource
 	for _, res := range rs {
 		_, ok := ignoredJIDs[res.JID.String()]
 		if ok {

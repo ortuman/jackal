@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hook
+package usermodel
 
-import (
-	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
-)
-
-const (
-	// MemberListUpdated hook runs whenever cluster member list is updated.
-	MemberListUpdated = "memberlist.updated"
-)
-
-// MemberListInfo contains all info associated to MemberListUpdated event.
-type MemberListInfo struct {
-	// Registered contains all new registered cluster members.
-	Registered []clustermodel.Member
-
-	// UnregisteredKeys contains unregistered cluster members keys.
-	UnregisteredKeys []string
+// User represents a user entity.
+type User struct {
+	Username string
+	Scram    struct {
+		SHA1           string
+		SHA256         string
+		SHA512         string
+		SHA3512        string
+		Salt           string
+		IterationCount int
+		PepperID       string
+	}
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -131,10 +131,10 @@ func TestBlockList_BlockItem(t *testing.T) {
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
-			{InstanceID: "i1", JID: jd0, Context: map[string]string{blockListRequestedCtxKey: "true"}},
-			{InstanceID: "i1", JID: jd1, Context: map[string]string{blockListRequestedCtxKey: "true"}},
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
+			{InstanceID: "i1", JID: jd0, Info: map[string]string{blockListRequestedCtxKey: "true"}},
+			{InstanceID: "i1", JID: jd1, Info: map[string]string{blockListRequestedCtxKey: "true"}},
 		}, nil
 	}
 	bl := &BlockList{
@@ -225,19 +225,19 @@ func TestBlockList_UnblockItem(t *testing.T) {
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/chamber", true)
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
-		return []coremodel.Resource{
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+		return []c2smodel.Resource{
 			{
 				InstanceID: "i1",
 				JID:        jd0,
 				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
-				Context:    map[string]string{blockListRequestedCtxKey: "true"},
+				Info:       map[string]string{blockListRequestedCtxKey: "true"},
 			},
 			{
 				InstanceID: "i1",
 				JID:        jd1,
 				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
-				Context:    map[string]string{blockListRequestedCtxKey: "true"},
+				Info:       map[string]string{blockListRequestedCtxKey: "true"},
 			},
 		}, nil
 	}

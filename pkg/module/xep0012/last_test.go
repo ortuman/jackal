@@ -19,11 +19,12 @@ import (
 	"testing"
 	"time"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -108,11 +109,11 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 
 	jd0, _ := jid.NewWithString("noelia@jackal.im/yard", true)
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		if username != "noelia" {
 			return nil, nil
 		}
-		return []coremodel.Resource{
+		return []c2smodel.Resource{
 			{JID: jd0},
 		}, nil
 	}

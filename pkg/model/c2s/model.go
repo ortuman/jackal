@@ -12,49 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coremodel
+package c2smodel
 
 import (
-	"fmt"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/version"
 )
-
-// ClusterMember represents a cluster instance address and port.
-type ClusterMember struct {
-	InstanceID string
-	Host       string
-	Port       int
-	APIVer     *version.SemanticVersion
-}
-
-// String returns Member string representation.
-func (m *ClusterMember) String() string {
-	return fmt.Sprintf("%s:%d", m.Host, m.Port)
-}
-
-// User represents a user entity.
-type User struct {
-	Username string
-	Scram    struct {
-		SHA1           string
-		SHA256         string
-		SHA512         string
-		SHA3512        string
-		Salt           string
-		IterationCount int
-		PepperID       string
-	}
-}
 
 // Resource represents a resource entity.
 type Resource struct {
 	InstanceID string
 	JID        *jid.JID
 	Presence   *stravaganza.Presence
-	Context    map[string]string
+	Info       map[string]string
 }
 
 // IsAvailable returns presence available value.
@@ -75,5 +45,5 @@ func (r *Resource) Priority() int8 {
 
 // Value returns resource context value associated to cKey.
 func (r *Resource) Value(cKey string) string {
-	return r.Context[cKey]
+	return r.Info[cKey]
 }

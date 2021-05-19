@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -33,7 +35,6 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -1058,15 +1059,15 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	return err
 }
 
-func (s *inC2S) getResource() *coremodel.Resource {
+func (s *inC2S) getResource() *c2smodel.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	rs := &coremodel.Resource{
+	rs := &c2smodel.Resource{
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Context:    s.inf,
+		Info:       s.inf,
 	}
 	return rs
 }

@@ -17,7 +17,7 @@ package offline
 import (
 	"context"
 
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/repository"
@@ -51,5 +51,5 @@ type clusterLock interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]coremodel.Resource, error)
+	GetResources(ctx context.Context, username string) ([]c2smodel.Resource, error)
 }
