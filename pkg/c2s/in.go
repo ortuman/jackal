@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
+
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/google/uuid"
@@ -859,10 +861,10 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	return nil
 }
 
-func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error {
-	bind := bindIQ.ChildNamespace("bind", bindNamespace)
-	if bindIQ.Attribute(stravaganza.Type) != stravaganza.SetType || bind == nil {
-		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, bindIQ).Element())
+func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
+	bind := iq.ChildNamespace("bind", bindNamespace)
+	if iq.Attribute(stravaganza.Type) != stravaganza.SetType || bind == nil {
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
 	}
 	// fetch active resources
 	rss, err := s.resMng.GetResources(ctx, s.Username())
@@ -907,7 +909,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 
 			// disallow resource binding
 			case Disallow:
-				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, bindIQ).Element())
+				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, iq).Element())
 			}
 			break
 		}
@@ -918,7 +920,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	// set stream jid and presence
 	userJID, err := jid.New(s.Username(), s.Domain(), res, false)
 	if err != nil {
-		return s.sendElement(ctx, stanzaerror.E(stanzaerror.BadRequest, bindIQ).Element())
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.BadRequest, iq).Element())
 	}
 	s.setJID(userJID)
 	s.session.SetFromJID(userJID)
@@ -954,18 +956,16 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	}
 
 	// notify successful binding
-	resIQ := bindIQ.ResultBuilder().
-		WithChild(
-			stravaganza.NewBuilder("bind").
-				WithAttribute(stravaganza.Namespace, bindNamespace).
-				WithChild(
-					stravaganza.NewBuilder("jid").
-						WithText(s.JID().String()).
-						Build(),
-				).
-				Build(),
-		).
-		Build()
+	resIQ := xmpputil.MakeResultIQ(iq,
+		stravaganza.NewBuilder("bind").
+			WithAttribute(stravaganza.Namespace, bindNamespace).
+			WithChild(
+				stravaganza.NewBuilder("jid").
+					WithText(s.JID().String()).
+					Build(),
+			).
+			Build(),
+	)
 
 	log.Infow("Binded C2S stream", "id", s.id,
 		"username", s.Username(),
