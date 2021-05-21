@@ -48,8 +48,9 @@ func TestRoster_SendRoster(t *testing.T) {
 
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal interface{}
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
 		setVal = val
 		return nil
@@ -107,9 +108,9 @@ func TestRoster_SendRoster(t *testing.T) {
 	require.Len(t, items, 2)
 
 	require.Equal(t, rosterRequestedCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(true), setVal)
+	require.Equal(t, true, setVal)
 
-	require.Len(t, stmMock.SetValueCalls(), 1)
+	require.Len(t, stmMock.SetInfoValueCalls(), 1)
 }
 
 func TestRoster_UpdateItem(t *testing.T) {

@@ -175,12 +175,11 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 }
 
 func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
-	enabled, _ := strconv.ParseBool(stm.Value(enabledInfoKey))
-	if enabled {
+	if stm.Info().Bool(enabledInfoKey) {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
 		return nil
 	}
-	if err := stm.SetValue(ctx, enabledInfoKey, "true"); err != nil {
+	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
 	// register stream into the manager

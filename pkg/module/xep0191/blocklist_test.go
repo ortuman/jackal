@@ -38,8 +38,9 @@ func TestBlockList_GetBlockList(t *testing.T) {
 	rep := &repositoryMock{}
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal interface{}
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
 		setVal = val
 		return nil
@@ -99,7 +100,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 	require.Equal(t, "jabber.org", items[1].Attribute("jid"))
 
 	require.Equal(t, setK, blockListRequestedCtxKey)
-	require.Equal(t, setVal, "true")
+	require.Equal(t, setVal, true)
 }
 
 func TestBlockList_BlockItem(t *testing.T) {
@@ -133,8 +134,8 @@ func TestBlockList_BlockItem(t *testing.T) {
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{InstanceID: "i1", JID: jd0, Info: map[string]string{blockListRequestedCtxKey: "true"}},
-			{InstanceID: "i1", JID: jd1, Info: map[string]string{blockListRequestedCtxKey: "true"}},
+			{InstanceID: "i1", JID: jd0, Info: c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"})},
+			{InstanceID: "i1", JID: jd1, Info: c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"})},
 		}, nil
 	}
 	bl := &BlockList{
@@ -231,13 +232,13 @@ func TestBlockList_UnblockItem(t *testing.T) {
 				InstanceID: "i1",
 				JID:        jd0,
 				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
-				Info:       map[string]string{blockListRequestedCtxKey: "true"},
+				Info:       c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"}),
 			},
 			{
 				InstanceID: "i1",
 				JID:        jd1,
 				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
-				Info:       map[string]string{blockListRequestedCtxKey: "true"},
+				Info:       c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"}),
 			},
 		}, nil
 	}

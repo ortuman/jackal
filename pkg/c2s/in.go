@@ -17,6 +17,7 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -83,7 +84,7 @@ type inC2S struct {
 	state uint32
 	jd    *jid.JID
 	pr    *stravaganza.Presence
-	inf   map[string]string
+	inf   c2smodel.MutableInfo
 	flags inC2SFlags
 }
 
@@ -119,7 +120,7 @@ func newInC2S(
 	stm := &inC2S{
 		id:             id,
 		cfg:            cfg,
-		inf:            make(map[string]string),
+		inf:            c2smodel.NewMutableInfo(),
 		tr:             tr,
 		session:        session,
 		authenticators: authenticators,
@@ -144,22 +145,35 @@ func (s *inC2S) ID() stream.C2SID {
 	return s.id
 }
 
-func (s *inC2S) SetValue(ctx context.Context, k, val string) error {
+func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
+	var updated bool
+
 	s.mu.Lock()
-	v, ok := s.inf[k]
-	if ok && v == val {
+	switch v := val.(type) {
+	case string:
+		updated = s.inf.SetString(k, v)
+	case bool:
+		updated = s.inf.SetBool(k, v)
+	case int:
+		updated = s.inf.SetInt(k, v)
+	case float64:
+		updated = s.inf.SetFloat(k, v)
+	default:
 		s.mu.Unlock()
+		return fmt.Errorf("c2s: unsupported info value: %T", val)
+	}
+	s.mu.Unlock()
+
+	if !updated {
 		return nil
 	}
-	s.inf[k] = val
-	s.mu.Unlock()
 	return s.resMng.PutResource(ctx, s.getResource())
 }
 
-func (s *inC2S) Value(k string) string {
+func (s *inC2S) Info() c2smodel.Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.inf[k]
+	return s.inf.Copy()
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -244,7 +258,7 @@ func (s *inC2S) start() error {
 	}
 	// run registered C2S hook
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, hook.C2SStreamRegistered, &hook.C2SStreamInfo{
+	_, err := s.runHook(ctx, hook.C2SStreamConnected, &hook.C2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -1019,7 +1033,7 @@ func (s *inC2S) close(ctx context.Context) error {
 		return err
 	}
 	// run unregistered C2S hook
-	_, err := s.runHook(ctx, hook.C2SStreamUnregistered, &hook.C2SStreamInfo{
+	_, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
@@ -1067,7 +1081,7 @@ func (s *inC2S) getResource() *c2smodel.Resource {
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Info:       s.inf,
+		Info:       s.inf.Copy(),
 	}
 	return rs
 }

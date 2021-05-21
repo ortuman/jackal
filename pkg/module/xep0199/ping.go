@@ -106,7 +106,7 @@ func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
 func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.hk.AddHook(hook.C2SStreamBinded, p.onBinded, hook.DefaultPriority)
-		p.hk.AddHook(hook.C2SStreamUnregistered, p.onUnregister, hook.DefaultPriority)
+		p.hk.AddHook(hook.C2SStreamDisconnected, p.onUnregister, hook.DefaultPriority)
 		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.DefaultPriority)
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
@@ -117,7 +117,7 @@ func (p *Ping) Start(_ context.Context) error {
 func (p *Ping) Stop(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.hk.RemoveHook(hook.C2SStreamBinded, p.onBinded)
-		p.hk.RemoveHook(hook.C2SStreamUnregistered, p.onUnregister)
+		p.hk.RemoveHook(hook.C2SStreamDisconnected, p.onUnregister)
 		p.hk.RemoveHook(hook.C2SStreamElementReceived, p.onRecvElement)
 	}
 	log.Infow("Stopped ping module", "xep", XEPNumber)

@@ -17,7 +17,6 @@ package xep0280
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
@@ -207,7 +206,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+	return stm.SetInfoValue(ctx, carbonsEnabledCtxKey, enabled)
 }
 
 func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
@@ -236,8 +235,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(carbonsEnabledCtxKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
@@ -251,8 +249,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(carbonsEnabledCtxKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))

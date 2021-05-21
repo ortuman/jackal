@@ -33,14 +33,6 @@ service ComponentRouter {
   rpc Route(ComponentRouteRequest) returns (ComponentRouteResponse);
 }
 
-service StreamManager {
-  // GetStreamQueue returns stream managed in memory queue.
-  rpc GetStreamQueue(GetStreamQueueRequest) returns (GetStreamQueueResponse);
-
-  // DeleteStreamQueue removes a stream managed in memory queue.
-  rpc DeleteStreamQueue(DeleteStreamQueueRequest) returns (DeleteStreamQueueResponse);
-}
-
 // LocalRouteRequest is the parameter message for LocalRouter Route rpc.
 message LocalRouteRequest {
   // username name of the user to which the stanza is routed to.
@@ -79,27 +71,6 @@ message ComponentRouteRequest {
 
 // ComponentRouteResponse is the response returned by ComponentRouter Route rpc.
 message ComponentRouteResponse {}
-
-// GetStreamQueueRequest is the parameter message for StreamManager GetStreamQueue rpc.
-message GetStreamQueueRequest {
-  // ssid is the unique stream session identifier.
-  string ssid = 1;
-}
-
-// GetStreamQueueResponse is the response returned by StreamManager GetStreamQueue rpc.
-message GetStreamQueueResponse {
-  // stanza contains all resumed session queued stanzas.
-  repeated  stravaganza.PBElement stanza_queue = 1;
-}
-
-// DeleteStreamQueue is the parameter message for StreamManager DeleteStreamQueue rpc.
-message DeleteStreamQueueRequest {
-  // ssid is the unique stream session identifier.
-  string ssid = 1;
-}
-
-// DeleteStreamQueueResponse is the response returned by StreamManager DeleteStreamQueue rpc.
-message DeleteStreamQueueResponse {}
 
 // StreamError represents a stream disconnection error reason.
 message StreamError {

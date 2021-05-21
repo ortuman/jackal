@@ -242,7 +242,7 @@ func (s *outS2S) start() error {
 		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
-	err := s.runHook(ctx, hook.S2SOutStreamRegistered, &hook.S2SStreamInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamConnected, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -566,7 +566,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
-	err := s.runHook(ctx, hook.S2SOutStreamUnregistered, &hook.S2SStreamInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamDisconnected, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {

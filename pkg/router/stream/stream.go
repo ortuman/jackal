@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -36,11 +38,11 @@ type C2S interface {
 	// ID returns C2S stream identifier.
 	ID() C2SID
 
-	// SetValue sets a stream context value.
-	SetValue(ctx context.Context, k, val string) error
+	// SetInfoValue sets a C2S stream info value.
+	SetInfoValue(ctx context.Context, k string, val interface{}) error
 
-	// Value returns stream context value associated to cKey.
-	Value(cKey string) string
+	// Info returns C2S stream context.
+	Info() c2smodel.Info
 
 	// JID returns stream associated jid or nil if none is set.
 	JID() *jid.JID

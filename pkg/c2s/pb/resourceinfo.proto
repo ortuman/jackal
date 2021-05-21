@@ -28,8 +28,8 @@ message ResourceInfo {
   // domain is the resource associated domain.
   string domain = 2;
 
-  // context is the resource additional context info.
-  map<string, string> context = 3;
+  // info is the resource additional context info.
+  map<string, string> info = 3;
 
   // presence is the resource last received presence.
   stravaganza.PBElement presence = 4;

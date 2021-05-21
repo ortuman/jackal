@@ -20,14 +20,14 @@ import (
 )
 
 const (
-	// C2SStreamRegistered hook runs when a C2S connection is registered.
-	C2SStreamRegistered = "c2s.stream.registered"
+	// C2SStreamConnected hook runs when a C2S connection is registered.
+	C2SStreamConnected = "c2s.stream.connected"
 
 	// C2SStreamBinded hook runs when C2S stream is bounded.
 	C2SStreamBinded = "c2s.stream.binded"
 
-	// C2SStreamUnregistered hook runs when a C2S connection is unregistered.
-	C2SStreamUnregistered = "c2s.stream.unregistered"
+	// C2SStreamDisconnected hook runs when a C2S connection is unregistered.
+	C2SStreamDisconnected = "c2s.stream.disconnected"
 
 	// C2SStreamElementReceived hook runs when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
