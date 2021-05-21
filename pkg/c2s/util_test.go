@@ -51,6 +51,6 @@ func testResource(instanceID string, priority int8) c2smodel.Resource {
 		InstanceID: instanceID,
 		JID:        jd,
 		Presence:   pr,
-		Info:       c2smodel.NewInfo(map[string]string{"k1": "v1", "k2": "v2"}),
+		Info:       c2smodel.Info{M: map[string]string{"k1": "v1", "k2": "v2"}},
 	}
 }

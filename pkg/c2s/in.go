@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -84,7 +85,7 @@ type inC2S struct {
 	state uint32
 	jd    *jid.JID
 	pr    *stravaganza.Presence
-	inf   c2smodel.MutableInfo
+	inf   map[string]string
 	flags inC2SFlags
 }
 
@@ -120,7 +121,7 @@ func newInC2S(
 	stm := &inC2S{
 		id:             id,
 		cfg:            cfg,
-		inf:            c2smodel.NewMutableInfo(),
+		inf:            make(map[string]string),
 		tr:             tr,
 		session:        session,
 		authenticators: authenticators,
@@ -146,34 +147,43 @@ func (s *inC2S) ID() stream.C2SID {
 }
 
 func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
-	var updated bool
+	errCh := make(chan error, 1)
+	s.rq.Run(func() {
+		var vStr string
 
-	s.mu.Lock()
-	switch v := val.(type) {
-	case string:
-		updated = s.inf.SetString(k, v)
-	case bool:
-		updated = s.inf.SetBool(k, v)
-	case int:
-		updated = s.inf.SetInt(k, v)
-	case float64:
-		updated = s.inf.SetFloat(k, v)
-	default:
+		switch v := val.(type) {
+		case string:
+			vStr = v
+		case bool:
+			vStr = strconv.FormatBool(v)
+		case int:
+			vStr = strconv.FormatInt(int64(v), 10)
+		case float64:
+			vStr = strconv.FormatFloat(v, 'E', -1, 64)
+		default:
+			s.mu.Unlock()
+			errCh <- fmt.Errorf("c2s: unsupported info value: %T", val)
+			return
+		}
+		s.mu.Lock()
+		mv, ok := s.inf[k]
+		if ok && mv == vStr {
+			s.mu.Unlock()
+			close(errCh) // already present
+			return
+		}
+		s.inf[k] = vStr
 		s.mu.Unlock()
-		return fmt.Errorf("c2s: unsupported info value: %T", val)
-	}
-	s.mu.Unlock()
 
-	if !updated {
-		return nil
-	}
-	return s.resMng.PutResource(ctx, s.getResource())
+		errCh <- s.resMng.PutResource(ctx, s.getResource())
+	})
+	return <-errCh
 }
 
 func (s *inC2S) Info() c2smodel.Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.inf.Copy()
+	return s.cloneInfo()
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -185,7 +195,7 @@ func (s *inC2S) JID() *jid.JID {
 func (s *inC2S) Username() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Node()
 	}
 	return ""
@@ -194,7 +204,7 @@ func (s *inC2S) Username() string {
 func (s *inC2S) Domain() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Domain()
 	}
 	return ""
@@ -203,7 +213,7 @@ func (s *inC2S) Domain() string {
 func (s *inC2S) Resource() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Resource()
 	}
 	return ""
@@ -1076,12 +1086,11 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 func (s *inC2S) getResource() *c2smodel.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	rs := &c2smodel.Resource{
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Info:       s.inf.Copy(),
+		Info:       s.cloneInfo(),
 	}
 	return rs
 }
@@ -1102,6 +1111,14 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pr = pr
+}
+
+func (s *inC2S) cloneInfo() c2smodel.Info {
+	nm := make(map[string]string, len(s.inf))
+	for k, v := range s.inf {
+		nm[k] = v
+	}
+	return c2smodel.Info{M: nm}
 }
 
 func (s *inC2S) setState(state inC2SState) {

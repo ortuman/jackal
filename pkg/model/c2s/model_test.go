@@ -15,45 +15,26 @@
 package c2smodel
 
 import (
-	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestInfo_SetGet(t *testing.T) {
+func TestInfo_Get(t *testing.T) {
 	// given
-	m := NewMutableInfo()
+	m := map[string]string{
+		"k1": "v1",
+		"k2": "true",
+		"k3": "46",
+		"k4": "2.24532",
+	}
 
 	// when
-	m.SetString("k1", "v1")
-	m.SetBool("k2", true)
-	m.SetInt("k3", 46)
-	m.SetFloat("k4", 2.24532)
-
-	allKeys := m.AllKeys()
-	sort.Slice(allKeys, func(i, j int) bool { return allKeys[i] < allKeys[j] })
-
-	k4v, _ := m.Value("k4")
-
-	cpInf := m.Copy()
+	i := Info{M: m}
 
 	// then
-	require.Equal(t, "v1", m.String("k1"))
-	require.Equal(t, true, m.Bool("k2"))
-	require.Equal(t, 46, m.Int("k3"))
-	require.Equal(t, 2.24532, m.Float("k4"))
-
-	require.Equal(t, "2.24532E+00", k4v)
-
-	require.Equal(t, []string{"k1", "k2", "k3", "k4"}, allKeys)
-
-	require.True(t, reflect.DeepEqual(cpInf.m, m.m))
-}
-
-func TestInfo_Value(t *testing.T) {
-	// given
-	// when
-	// then
+	require.Equal(t, "v1", i.String("k1"))
+	require.Equal(t, true, i.Bool("k2"))
+	require.Equal(t, 46, i.Int("k3"))
+	require.Equal(t, 2.24532, i.Float("k4"))
 }

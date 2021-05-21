@@ -134,8 +134,8 @@ func TestBlockList_BlockItem(t *testing.T) {
 	jd1, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{InstanceID: "i1", JID: jd0, Info: c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"})},
-			{InstanceID: "i1", JID: jd1, Info: c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"})},
+			{InstanceID: "i1", JID: jd0, Info: c2smodel.Info{M: map[string]string{blockListRequestedCtxKey: "true"}}},
+			{InstanceID: "i1", JID: jd1, Info: c2smodel.Info{M: map[string]string{blockListRequestedCtxKey: "true"}}},
 		}, nil
 	}
 	bl := &BlockList{
@@ -232,13 +232,13 @@ func TestBlockList_UnblockItem(t *testing.T) {
 				InstanceID: "i1",
 				JID:        jd0,
 				Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0, stravaganza.AvailableType, nil),
-				Info:       c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"}),
+				Info:       c2smodel.Info{M: map[string]string{blockListRequestedCtxKey: "true"}},
 			},
 			{
 				InstanceID: "i1",
 				JID:        jd1,
 				Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1, stravaganza.AvailableType, nil),
-				Info:       c2smodel.NewInfo(map[string]string{blockListRequestedCtxKey: "true"}),
+				Info:       c2smodel.Info{M: map[string]string{blockListRequestedCtxKey: "true"}},
 			},
 		}, nil
 	}

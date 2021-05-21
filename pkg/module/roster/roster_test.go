@@ -151,8 +151,17 @@ func TestRoster_UpdateItem(t *testing.T) {
 
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{JID: jd0, InstanceID: "i0", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
-			{JID: jd1, InstanceID: "i1"},
+			{
+				JID:        jd0,
+				InstanceID: "i0",
+				Info: c2smodel.Info{
+					M: map[string]string{rosterRequestedCtxKey: "true"},
+				},
+			},
+			{
+				JID:        jd1,
+				InstanceID: "i1",
+			},
 		}, nil
 	}
 

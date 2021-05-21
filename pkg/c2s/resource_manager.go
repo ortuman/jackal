@@ -110,7 +110,7 @@ func decodeResource(key string, val []byte) (*c2smodel.Resource, error) {
 	}
 	res.InstanceID = resInf.InstanceId
 	res.JID, _ = jid.New(ss[0], resInf.Domain, ss[1], true)
-	res.Info = c2smodel.NewInfo(resInf.Info)
+	res.Info = c2smodel.Info{M: resInf.Info}
 
 	if resInf.Presence != nil {
 		pr, err := stravaganza.NewBuilderFromProto(resInf.Presence).
@@ -137,16 +137,10 @@ func resourceVal(res *c2smodel.Resource) ([]byte, error) {
 	if res.Presence != nil {
 		pbPresence = res.Presence.Proto()
 	}
-	// populate info map
-	infKeys := res.Info.AllKeys()
-	inf := make(map[string]string, len(infKeys))
-	for _, k := range infKeys {
-		inf[k], _ = res.Info.Value(k)
-	}
 	resInf := resourcemanagerpb.ResourceInfo{
 		InstanceId: res.InstanceID,
 		Domain:     res.JID.Domain(),
-		Info:       inf,
+		Info:       res.Info.M,
 		Presence:   pbPresence,
 	}
 	return proto.Marshal(&resInf)
