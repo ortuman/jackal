@@ -17,6 +17,9 @@ package c2smodel
 import (
 	"testing"
 
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,4 +40,27 @@ func TestInfo_Get(t *testing.T) {
 	require.Equal(t, true, i.Bool("k2"))
 	require.Equal(t, 46, i.Int("k3"))
 	require.Equal(t, 2.24532, i.Float("k4"))
+}
+
+func TestResource_Presence(t *testing.T) {
+	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im", true)
+
+	pr := xmpputil.MakePresence(jd, jd, stravaganza.AvailableType, []stravaganza.Element{
+		stravaganza.NewBuilder("priority").
+			WithText("10").
+			Build(),
+	})
+
+	r := &Resource{
+		Presence: pr,
+	}
+
+	// when
+	avail := r.IsAvailable()
+	prio := r.Priority()
+
+	// then
+	require.True(t, avail)
+	require.Equal(t, prio, int8(10))
 }

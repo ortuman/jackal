@@ -16,7 +16,6 @@ package xep0280
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
@@ -34,14 +33,15 @@ func TestCarbons_Enable(t *testing.T) {
 	// given
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal interface{}
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
 		setVal = val
 		return nil
 	}
-	stmMock.ValueFunc = func(cKey string) string {
-		return ""
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{}
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -87,7 +87,7 @@ func TestCarbons_Enable(t *testing.T) {
 
 	// then
 	require.Equal(t, carbonsEnabledCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(true), setVal)
+	require.Equal(t, true, setVal)
 
 	require.Len(t, respStanzas, 1)
 
@@ -100,14 +100,15 @@ func TestCarbons_Disable(t *testing.T) {
 	// given
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal interface{}
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
 		setVal = val
 		return nil
 	}
-	stmMock.ValueFunc = func(cKey string) string {
-		return ""
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{}
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -153,7 +154,7 @@ func TestCarbons_Disable(t *testing.T) {
 
 	// then
 	require.Equal(t, carbonsEnabledCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(false), setVal)
+	require.Equal(t, false, setVal)
 
 	require.Len(t, respStanzas, 1)
 
@@ -177,7 +178,7 @@ func TestCarbons_SentCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{JID: jd0, Info: map[string]string{carbonsEnabledCtxKey: "true"}},
+			{JID: jd0, Info: c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}},
 		}, nil
 	}
 
@@ -246,9 +247,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{JID: jd0, Info: map[string]string{carbonsEnabledCtxKey: "true"}},
-			{JID: jd1, Info: map[string]string{carbonsEnabledCtxKey: "false"}},
-			{JID: jd2, Info: map[string]string{carbonsEnabledCtxKey: "true"}},
+			{JID: jd0, Info: c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}},
+			{JID: jd1, Info: c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "false"}}},
+			{JID: jd2, Info: c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}},
 		}, nil
 	}
 

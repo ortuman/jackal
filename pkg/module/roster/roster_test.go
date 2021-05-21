@@ -16,7 +16,6 @@ package roster
 
 import (
 	"context"
-	"strconv"
 	"sync"
 	"testing"
 
@@ -265,7 +264,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{JID: jd0, InstanceID: "i0", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+			{JID: jd0, InstanceID: "i0", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
 	}
@@ -376,7 +375,7 @@ func TestRoster_Subscribe(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return []c2smodel.Resource{
-			{JID: jd0, InstanceID: "i0", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+			{JID: jd0, InstanceID: "i0", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			{JID: jd1, InstanceID: "i1"},
 		}, nil
 	}
@@ -472,11 +471,11 @@ func TestRoster_Subscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		case username == "noelia":
 			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		}
 		return nil, nil
@@ -581,11 +580,11 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		case username == "noelia":
 			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		}
 		return nil, nil
@@ -693,11 +692,11 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		case username == "noelia":
 			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)}},
+				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
 			}, nil
 		}
 		return nil, nil
@@ -791,7 +790,7 @@ func TestRoster_Probe(t *testing.T) {
 					JID:        jd0,
 					InstanceID: "i1",
 					Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0.ToBareJID(), stravaganza.AvailableType, nil),
-					Info:       map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)},
+					Info:       c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
 				},
 			}, nil
 		}
@@ -854,16 +853,17 @@ func TestRoster_Available(t *testing.T) {
 
 	stmMock := &c2sStreamMock{}
 
-	var setK, setVal string
-	stmMock.SetValueFunc = func(ctx context.Context, k string, val string) error {
+	var setK string
+	var setVal interface{}
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		mtx.Lock()
 		defer mtx.Unlock()
 		setK = k
 		setVal = val
 		return nil
 	}
-	stmMock.ValueFunc = func(cKey string) string {
-		return ""
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{}
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -898,7 +898,7 @@ func TestRoster_Available(t *testing.T) {
 					JID:        jd1,
 					InstanceID: "i1",
 					Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1.ToBareJID(), stravaganza.AvailableType, nil),
-					Info:       map[string]string{rosterRequestedCtxKey: strconv.FormatBool(true)},
+					Info:       c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
 				},
 			}, nil
 		}
@@ -929,7 +929,7 @@ func TestRoster_Available(t *testing.T) {
 	defer mtx.RUnlock()
 
 	require.Equal(t, rosterDidGoAvailableCtxKey, setK)
-	require.Equal(t, strconv.FormatBool(true), setVal)
+	require.Equal(t, true, setVal)
 
 	require.Len(t, respStanzas, 2)
 
