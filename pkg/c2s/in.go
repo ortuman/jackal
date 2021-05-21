@@ -149,33 +149,7 @@ func (s *inC2S) ID() stream.C2SID {
 func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
 	errCh := make(chan error, 1)
 	s.rq.Run(func() {
-		var vStr string
-
-		switch v := val.(type) {
-		case string:
-			vStr = v
-		case bool:
-			vStr = strconv.FormatBool(v)
-		case int:
-			vStr = strconv.FormatInt(int64(v), 10)
-		case float64:
-			vStr = strconv.FormatFloat(v, 'E', -1, 64)
-		default:
-			s.mu.Unlock()
-			errCh <- fmt.Errorf("c2s: unsupported info value: %T", val)
-			return
-		}
-		s.mu.Lock()
-		mv, ok := s.inf[k]
-		if ok && mv == vStr {
-			s.mu.Unlock()
-			close(errCh) // already present
-			return
-		}
-		s.inf[k] = vStr
-		s.mu.Unlock()
-
-		errCh <- s.resMng.PutResource(ctx, s.getResource())
+		errCh <- s.setInfoValue(ctx, k, val)
 	})
 	return <-errCh
 }
@@ -259,6 +233,34 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 
 func (s *inC2S) Done() <-chan struct{} {
 	return s.doneCh
+}
+
+func (s *inC2S) setInfoValue(ctx context.Context, k string, val interface{}) error {
+	var vStr string
+
+	switch v := val.(type) {
+	case string:
+		vStr = v
+	case bool:
+		vStr = strconv.FormatBool(v)
+	case int:
+		vStr = strconv.Itoa(v)
+	case float64:
+		vStr = strconv.FormatFloat(v, 'E', -1, 64)
+	default:
+		s.mu.Unlock()
+		return fmt.Errorf("c2s: unsupported info value: %T", val)
+	}
+	s.mu.Lock()
+	mv, ok := s.inf[k]
+	if ok && mv == vStr {
+		s.mu.Unlock()
+		return nil // already present
+	}
+	s.inf[k] = vStr
+	s.mu.Unlock()
+
+	return s.resMng.PutResource(ctx, s.getResource())
 }
 
 func (s *inC2S) start() error {
