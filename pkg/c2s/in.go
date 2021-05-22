@@ -85,7 +85,7 @@ type inC2S struct {
 	state uint32
 	jd    *jid.JID
 	pr    *stravaganza.Presence
-	inf   map[string]string
+	inf   c2smodel.Info
 	flags inC2SFlags
 }
 
@@ -121,7 +121,7 @@ func newInC2S(
 	stm := &inC2S{
 		id:             id,
 		cfg:            cfg,
-		inf:            make(map[string]string),
+		inf:            c2smodel.Info{M: make(map[string]string)},
 		tr:             tr,
 		session:        session,
 		authenticators: authenticators,
@@ -163,12 +163,18 @@ func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) err
 		return fmt.Errorf("c2s: unsupported info value: %T", val)
 	}
 	s.mu.Lock()
-	mv, ok := s.inf[k]
+	mv, ok := s.inf.M[k]
 	if ok && mv == vStr {
 		s.mu.Unlock()
 		return nil // already present
 	}
-	s.inf[k] = vStr
+	// copy info
+	nm := make(map[string]string)
+	for ik, iv := range s.inf.M {
+		nm[ik] = iv
+	}
+	nm[k] = vStr
+	s.inf = c2smodel.Info{M: nm}
 	s.mu.Unlock()
 
 	return s.resMng.PutResource(ctx, s.getResource())
@@ -177,7 +183,7 @@ func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) err
 func (s *inC2S) Info() c2smodel.Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.cloneInfo()
+	return s.inf
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -1084,7 +1090,7 @@ func (s *inC2S) getResource() *c2smodel.Resource {
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Info:       s.cloneInfo(),
+		Info:       s.inf,
 	}
 	return rs
 }
@@ -1105,14 +1111,6 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pr = pr
-}
-
-func (s *inC2S) cloneInfo() c2smodel.Info {
-	nm := make(map[string]string, len(s.inf))
-	for k, v := range s.inf {
-		nm[k] = v
-	}
-	return c2smodel.Info{M: nm}
 }
 
 func (s *inC2S) setState(state inC2SState) {
