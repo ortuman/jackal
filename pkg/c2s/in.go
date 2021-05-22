@@ -168,7 +168,7 @@ func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) err
 		s.mu.Unlock()
 		return nil // already present
 	}
-	// copy info
+	// create info copy
 	nm := make(map[string]string)
 	for ik, iv := range s.inf.M {
 		nm[ik] = iv

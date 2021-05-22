@@ -16,7 +16,6 @@ package memberlist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -34,10 +33,6 @@ import (
 const (
 	memberKeyPrefix   = "i://"
 	memberValueFormat = "a=%s cv=%s"
-)
-
-var (
-	interfaceAddrs = net.InterfaceAddrs
 )
 
 // MemberList keeps and manages cluster memberlist set.
@@ -186,13 +181,9 @@ func (ml *MemberList) getMembers(ctx context.Context) ([]clustermodel.Member, er
 }
 
 func (ml *MemberList) getLocalMember() (*clustermodel.Member, error) {
-	localIP, err := getLocalIP()
-	if err != nil {
-		return nil, err
-	}
 	return &clustermodel.Member{
 		InstanceID: instance.ID(),
-		Host:       localIP,
+		Host:       instance.Hostname(),
 		Port:       ml.localPort,
 		APIVer:     version.ClusterAPIVersion,
 	}, nil
@@ -263,22 +254,6 @@ func decodeClusterMember(key, val string) (*clustermodel.Member, error) {
 		Port:       port,
 		APIVer:     version.NewVersion(major, minor, patch),
 	}, nil
-}
-
-func getLocalIP() (string, error) {
-	addrs, err := interfaceAddrs()
-	if err != nil {
-		return "", err
-	}
-
-	for _, a := range addrs {
-		if ipNet, ok := a.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP.String(), nil
-			}
-		}
-	}
-	return "", errors.New("memberlist: failed to get local ip")
 }
 
 func localMemberKey() string {

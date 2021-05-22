@@ -15,33 +15,80 @@
 package instance
 
 import (
+	"errors"
+	"net"
 	"os"
-	"sync"
 
 	"github.com/google/uuid"
 )
 
 const (
-	envInstanceID = "JACKAL_INSTANCE_ID"
+	envInstanceID   = "JACKAL_INSTANCE_ID"
+	envInstanceFQDN = "JACKAL_INSTANCE_FQDN"
 )
 
 var (
-	once   sync.Once
-	instID string
+	instID, hostName string
 )
+
+var (
+	readCachedResults = true
+	interfaceAddrs    = net.InterfaceAddrs
+)
+
+func init() {
+	instID = getID()
+	hostName = getHostname()
+}
 
 // ID returns local instance identifier.
 func ID() string {
-	loadInstance()
-	return instID
+	if readCachedResults {
+		return instID
+	}
+	return getID()
 }
 
-func loadInstance() {
-	once.Do(func() {
-		id := os.Getenv(envInstanceID)
-		if len(id) == 0 {
-			id = uuid.New().String() // if unspecified, assign UUID identifier
+// Hostname returns local instance host name.
+func Hostname() string {
+	if readCachedResults {
+		return hostName
+	}
+	return getHostname()
+}
+
+func getID() string {
+	id := os.Getenv(envInstanceID)
+	if len(id) == 0 {
+		return uuid.New().String() // if unspecified, assign UUID identifier
+	}
+	return id
+}
+
+func getHostname() string {
+	fqdn := os.Getenv(envInstanceFQDN)
+	if len(fqdn) > 0 {
+		return fqdn
+	}
+	hn, err := getLocalHostname()
+	if err == nil && len(hn) > 0 {
+		return hn
+	}
+	return "localhost" // fallback to 'localhost' name
+}
+
+func getLocalHostname() (string, error) {
+	addrs, err := interfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, a := range addrs {
+		if ipNet, ok := a.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+			if ipNet.IP.To4() != nil {
+				return ipNet.IP.String(), nil
+			}
 		}
-		instID = id
-	})
+	}
+	return "", errors.New("instance: failed to get local ip")
 }

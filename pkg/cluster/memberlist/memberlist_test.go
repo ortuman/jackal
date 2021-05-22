@@ -16,26 +16,15 @@ package memberlist
 
 import (
 	"context"
-	"net"
-	"os"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	_ = os.Setenv("JACKAL_INSTANCE_ID", "af2d")
-
-	interfaceAddrs = func() ([]net.Addr, error) {
-		return []net.Addr{&net.IPNet{
-			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 13},
-			Mask: []byte{255, 255, 255, 0},
-		}}, nil
-	}
-}
 
 func TestMemberList_Join(t *testing.T) {
 	// given
@@ -49,8 +38,8 @@ func TestMemberList_Join(t *testing.T) {
 	}
 	kvMock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
 		return map[string][]byte{
-			"i://af2d": []byte("a=192.168.0.13:4312 cv=v1.0.0"),
-			"i://b3fd": []byte("a=192.168.0.12:1456 cv=v1.0.0"),
+			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", instance.Hostname())),
+			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
 	ml := New(kvMock, 4312, hook.NewHooks())
@@ -121,8 +110,8 @@ func TestMemberList_WatchChanges(t *testing.T) {
 	}
 	kvMock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
 		return map[string][]byte{
-			"i://af2d": []byte("a=192.168.0.13:4312 cv=v1.0.0"),
-			"i://b3fd": []byte("a=192.168.0.12:1456 cv=v1.0.0"),
+			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", instance.Hostname())),
+			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
 	ml := New(kvMock, 4312, hook.NewHooks())
