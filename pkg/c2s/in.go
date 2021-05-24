@@ -1047,6 +1047,9 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 }
 
 func (s *inC2S) terminate(ctx context.Context) error {
+	if s.getState() == inTerminated {
+		return nil
+	}
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
