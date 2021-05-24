@@ -29,6 +29,9 @@ const (
 	// C2SStreamDisconnected hook runs when a C2S connection is unregistered.
 	C2SStreamDisconnected = "c2s.stream.disconnected"
 
+	// C2SStreamTerminated hook runs when a C2S connection is terminated.
+	C2SStreamTerminated = "c2s.stream.terminated"
+
 	// C2SStreamElementReceived hook runs when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
 

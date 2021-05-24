@@ -1026,7 +1026,8 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 
 func (s *inC2S) close(ctx context.Context) error {
 	if s.getState() == inDisconnected {
-		return nil // already disconnected
+		// already disconnected... terminate stream
+		return s.terminate(ctx)
 	}
 	s.setState(inDisconnected)
 
@@ -1034,10 +1035,13 @@ func (s *inC2S) close(ctx context.Context) error {
 		s.discTm.Stop()
 	}
 	// run disconnected C2S hook
-	_, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
+	halted, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
+	if halted {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -1062,7 +1066,12 @@ func (s *inC2S) terminate(ctx context.Context) error {
 
 	// close underlying transport
 	_ = s.tr.Close()
-	return nil
+
+	_, err := s.runHook(ctx, hook.C2SStreamTerminated, &hook.C2SStreamInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	return err
 }
 
 func (s *inC2S) restartSession() {
