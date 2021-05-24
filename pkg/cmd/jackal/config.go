@@ -108,28 +108,6 @@ type listenerConfig struct {
 	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
 }
 
-type extModuleConfig struct {
-	Name           string        `fig:"name"`
-	Address        string        `fig:"address"`
-	IsSecure       bool          `fig:"is_secure"`
-	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
-
-	EventHandler struct {
-		Hooks []struct {
-			Name     string `fig:"name"`
-			Priority int32  `fig:"priority"`
-		} `fig:"hooks"`
-	} `fig:"event_handler"`
-
-	IQHandler struct {
-		Namespace struct {
-			In    []string `fig:"in"`
-			RegEx string   `fig:"reg_ex"`
-		} `fig:"namespace"`
-		TargetEntity string `fig:"target_entity"`
-	} `fig:"iq_handler"`
-}
-
 type s2sOutConfig struct {
 	DialTimeout      time.Duration `fig:"dial_timeout" default:"5s"`
 	DialbackSecret   string        `fig:"secret"`
@@ -151,6 +129,13 @@ type modulesConfig struct {
 		ShowOS bool `fig:"show_os"`
 	} `fig:"version"`
 
+	// XEP-0198: Stream Management
+	Stream struct {
+		HibernateTime time.Duration `fig:"hibernate_time" default:"5m"`
+		AckTimeout    time.Duration `fig:"ack_timeout" default:"30s"`
+		MaxQueueSize  int           `fig:"max_queue_size" default:"30"`
+	}
+
 	// XEP-0199: XMPP Ping
 	Ping struct {
 		AckTimeout    time.Duration `fig:"ack_timeout" default:"32s"`
@@ -158,8 +143,6 @@ type modulesConfig struct {
 		SendPings     bool          `fig:"send_pings"`
 		TimeoutAction string        `fig:"timeout_action" default:"none"`
 	} `fig:"ping"`
-
-	External []extModuleConfig `fig:"external"`
 }
 
 type componentsConfig struct {

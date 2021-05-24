@@ -16,9 +16,14 @@ package xep0198
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
+
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	xmppparser "github.com/ortuman/jackal/pkg/parser"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -48,8 +53,12 @@ const (
 
 // Config contains stream management module configuration options.
 type Config struct {
+	// HibernateTime defines defines the amount of time a stream
+	// can stay in disconnected state before being terminated.
+	HibernateTime time.Duration
+
 	// AckTimeout defines stanza acknowledgement timeout.
-	AckTimeout time.Time
+	AckTimeout time.Duration
 
 	// MaxQueueSize defines maximum number of unacknowledged stanzas.
 	// When the limit is reached, the c2s stream is terminated.
@@ -58,10 +67,14 @@ type Config struct {
 
 // Stream represents a stream (XEP-0198) module type.
 type Stream struct {
+	cfg    Config
 	router router.Router
 	hosts  *host.Hosts
 	hk     *hook.Hooks
 	mng    *manager
+
+	mu         sync.RWMutex
+	termTimers map[string]*time.Timer
 }
 
 // New returns a new initialized Stream instance.
@@ -69,12 +82,15 @@ func New(
 	router router.Router,
 	hosts *host.Hosts,
 	hk *hook.Hooks,
+	cfg Config,
 ) *Stream {
 	return &Stream{
-		router: router,
-		hosts:  hosts,
-		hk:     hk,
-		mng:    newManager(),
+		cfg:        cfg,
+		router:     router,
+		hosts:      hosts,
+		hk:         hk,
+		mng:        newManager(),
+		termTimers: make(map[string]*time.Timer),
 	}
 }
 
@@ -102,6 +118,8 @@ func (m *Stream) AccountFeatures(_ context.Context) ([]string, error) {
 func (m *Stream) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.C2SStreamElementSent, m.onElementSent, hook.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamDisconnected, m.onDisconnect, hook.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamTerminated, m.onTerminate, hook.DefaultPriority)
 
 	log.Infow("Started stream module", "xep", XEPNumber)
 	return nil
@@ -111,6 +129,8 @@ func (m *Stream) Start(_ context.Context) error {
 func (m *Stream) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamElementReceived, m.onElementRecv)
 	m.hk.RemoveHook(hook.C2SStreamElementSent, m.onElementSent)
+	m.hk.RemoveHook(hook.C2SStreamDisconnected, m.onDisconnect)
+	m.hk.RemoveHook(hook.C2SStreamTerminated, m.onTerminate)
 
 	log.Infow("Stopped stream module", "xep", XEPNumber)
 	return nil
@@ -148,6 +168,42 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 		return nil
 	}
 	sq.processOutboundStanza(stanza)
+	return nil
+}
+
+func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
+	discErr := inf.DisconnectError
+	if discErr == nil {
+		return nil
+	}
+	_, ok := discErr.(*streamerror.Error)
+	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
+		return nil
+	}
+	// schedule stream termination
+	stm := execCtx.Sender.(stream.C2S)
+
+	m.mu.Lock()
+	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
+		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+	})
+	m.mu.Unlock()
+
+	return hook.ErrStopped
+}
+
+func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.C2SStreamInfo)
+
+	// cancel scheduled termination
+	m.mu.Lock()
+	if tm := m.termTimers[inf.ID]; tm != nil {
+		tm.Stop()
+	}
+	delete(m.termTimers, inf.ID)
+	m.mu.Unlock()
+
 	return nil
 }
 
