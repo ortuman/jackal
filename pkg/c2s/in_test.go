@@ -260,7 +260,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					Build(), nil
 			},
 			expectedOutput: `<stream:error><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Connected/ServiceUnavailable",
@@ -298,7 +298,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					Build(), nil
 			},
 			expectedOutput: `<stream:error><unsupported-stanza-type xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Authenticating/Success",
@@ -415,7 +415,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				{JID: jd2, InstanceID: "inst-3"},
 			},
 			expectedOutput: `<stream:error><policy-violation xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/><reached-max-session-count xmlns="urn:xmpp:errors"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Authenticated/CompressSuccess",

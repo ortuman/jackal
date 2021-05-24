@@ -58,6 +58,7 @@ const (
 	inAuthenticated
 	inBinded
 	inDisconnected
+	inTerminated
 )
 
 var disconnectTimeout = time.Second * 5
@@ -1027,27 +1028,34 @@ func (s *inC2S) close(ctx context.Context) error {
 	if s.getState() == inDisconnected {
 		return nil // already disconnected
 	}
-	defer close(s.doneCh)
-
 	s.setState(inDisconnected)
 
 	if s.discTm != nil {
 		s.discTm.Stop()
 	}
+	// run disconnected C2S hook
+	_, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	if err != nil {
+		return err
+	}
+	return s.terminate(ctx)
+}
+
+func (s *inC2S) terminate(ctx context.Context) error {
+	defer func() {
+		s.setState(inTerminated)
+		close(s.doneCh)
+	}()
+
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
 	// delete cluster resource
 	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
-		return err
-	}
-	// run unregistered C2S hook
-	_, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
-		ID:  s.ID().String(),
-		JID: s.JID(),
-	})
-	if err != nil {
 		return err
 	}
 	reportConnectionUnregistered()
