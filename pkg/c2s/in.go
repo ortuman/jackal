@@ -80,7 +80,7 @@ type inC2S struct {
 	hk             *hook.Hooks
 	rq             *runqueue.RunQueue
 	discTm         *time.Timer
-	doneCh         chan struct{}
+	terminateCh    chan struct{}
 	sendDisabled   bool
 
 	mu    sync.RWMutex
@@ -134,7 +134,7 @@ func newInC2S(
 		resMng:         resMng,
 		shapers:        shapers,
 		rq:             runqueue.New(id.String(), log.Errorf),
-		doneCh:         make(chan struct{}),
+		terminateCh:    make(chan struct{}),
 		state:          uint32(inConnecting),
 		hk:             hk,
 	}
@@ -260,7 +260,7 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 }
 
 func (s *inC2S) Done() <-chan struct{} {
-	return s.doneCh
+	return s.terminateCh
 }
 
 func (s *inC2S) start() error {
@@ -1067,7 +1067,7 @@ func (s *inC2S) terminate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	close(s.doneCh) // signal termination
+	close(s.terminateCh) // signal termination
 
 	s.setState(inTerminated)
 	return nil

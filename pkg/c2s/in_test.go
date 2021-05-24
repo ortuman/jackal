@@ -728,6 +728,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				state:          uint32(tt.state),
 				flags:          inC2SFlags{flg: tt.flags},
 				rq:             runqueue.New(tt.name, nil),
+				terminateCh:    make(chan struct{}),
 				jd:             userJID,
 				tr:             trMock,
 				hosts:          hMock,
