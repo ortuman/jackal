@@ -107,7 +107,7 @@ func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.hk.AddHook(hook.C2SStreamBinded, p.onBinded, hook.DefaultPriority)
 		p.hk.AddHook(hook.C2SStreamDisconnected, p.onDisconnect, hook.HighestPriority)
-		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.DefaultPriority)
+		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.HighestPriority)
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
 	return nil

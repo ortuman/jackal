@@ -181,9 +181,11 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	// schedule stream termination
 	stm := execCtx.Sender.(stream.C2S)
 
+	// TODO(ortuman): stop requesting acks
+
+	// schedule stream termination
 	m.mu.Lock()
 	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
