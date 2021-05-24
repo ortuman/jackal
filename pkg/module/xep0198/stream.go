@@ -190,6 +190,9 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	})
 	m.mu.Unlock()
 
+	log.Infow("Scheduled stream termination",
+		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
 	return hook.ErrStopped
 }
 
