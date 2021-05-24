@@ -1013,9 +1013,9 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 	if s.getState() != inConnecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
 		s.discTm = time.AfterFunc(disconnectTimeout, func() {
 			s.rq.Run(func() {
-				ctx, cancel := s.requestContext()
+				fnCtx, cancel := s.requestContext()
 				defer cancel()
-				_ = s.close(ctx)
+				_ = s.close(fnCtx)
 			})
 		})
 		s.sendDisabled = true // avoid sending anymore stanzas while closing
@@ -1049,11 +1049,6 @@ func (s *inC2S) close(ctx context.Context) error {
 }
 
 func (s *inC2S) terminate(ctx context.Context) error {
-	defer func() {
-		s.setState(inTerminated)
-		close(s.doneCh)
-	}()
-
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
@@ -1071,7 +1066,13 @@ func (s *inC2S) terminate(ctx context.Context) error {
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	close(s.doneCh) // signal termination
+
+	s.setState(inTerminated)
+	return nil
 }
 
 func (s *inC2S) restartSession() {
