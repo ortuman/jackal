@@ -17,6 +17,7 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -670,14 +671,10 @@ sendMsg:
 }
 
 func (s *inC2S) handleSessionError(ctx context.Context, err error) {
-	switch err {
-	case xmppparser.ErrStreamClosedByPeer:
+	if errors.Is(err, xmppparser.ErrStreamClosedByPeer) {
 		_ = s.session.Close(ctx)
-		fallthrough
-
-	default:
-		_ = s.close(ctx)
 	}
+	_ = s.close(ctx, err)
 }
 
 func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
@@ -1015,16 +1012,16 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 			s.rq.Run(func() {
 				fnCtx, cancel := s.requestContext()
 				defer cancel()
-				_ = s.close(fnCtx)
+				_ = s.close(fnCtx, streamErr)
 			})
 		})
 		s.sendDisabled = true // avoid sending anymore stanzas while closing
 		return nil
 	}
-	return s.close(ctx)
+	return s.close(ctx, streamErr)
 }
 
-func (s *inC2S) close(ctx context.Context) error {
+func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 	if s.getState() == inDisconnected {
 		// already disconnected... terminate stream
 		return s.terminate(ctx)
@@ -1036,8 +1033,9 @@ func (s *inC2S) close(ctx context.Context) error {
 	}
 	// run disconnected C2S hook
 	halted, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
-		ID:  s.ID().String(),
-		JID: s.JID(),
+		ID:              s.ID().String(),
+		JID:             s.JID(),
+		DisconnectError: disconnectErr,
 	})
 	if halted {
 		return nil

@@ -74,6 +74,9 @@ type C2SStreamInfo struct {
 	// Element is the event associated XMPP element.
 	Element stravaganza.Element
 
-	// Targets contains all JIDs to which the event stanza was routed.
+	// Targets contains all JIDs to which event stanza was routed.
 	Targets []jid.JID
+
+	// DisconnectError contains the original error that caused stream disconnection.
+	DisconnectError error
 }
