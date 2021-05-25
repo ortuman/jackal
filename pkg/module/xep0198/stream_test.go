@@ -34,12 +34,12 @@ func TestStream_EncodeSMID(t *testing.T) {
 	smID := encodeSMID(jd, nonce)
 
 	// then
-	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8Q", smID)
+	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxg=", smID)
 }
 
 func TestStream_DecodeSMID(t *testing.T) {
 	// given
-	smID := "b3J0dW1hbkBqYWNrYWwuaW0vQ29udmVyc2F0aW9ucy40UllFAP4o1dhOUax9pT8tSZ2FsDo="
+	smID := "b3J0dW1hbkBqYWNrYWwuaW0vQ29udmVyc2F0aW9ucy40UllFAHl5Jrx+gnSZ7hq3vjoW38oQM2ZrPknCyA=="
 
 	// when
 	jd, nonce, err := decodeSMID(smID)
@@ -48,4 +48,12 @@ func TestStream_DecodeSMID(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, jd)
 	require.NotNil(t, nonce)
+
+	expectedNonce := []byte{
+		0x79, 0x79, 0x26, 0xbc, 0x7e, 0x82, 0x74, 0x99,
+		0xee, 0x1a, 0xb7, 0xbe, 0x3a, 0x16, 0xdf, 0xca,
+		0x10, 0x33, 0x66, 0x6b, 0x3e, 0x49, 0xc2, 0xc8,
+	}
+	require.Equal(t, "ortuman@jackal.im/Conversations.4RYE", jd.String())
+	require.Equal(t, expectedNonce, nonce)
 }
