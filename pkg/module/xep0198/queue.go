@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	requestAckInterval = time.Minute * 1
+	requestAckInterval = time.Minute * 2
 	waitForAckTimeout  = time.Second * 30
 )
 
