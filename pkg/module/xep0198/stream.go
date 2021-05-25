@@ -228,11 +228,16 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 		sendFailedReply(unexpectedRequest, "", stm)
 		return nil
 	}
+	h := cmd.Attribute("h")
+
 	switch cmd.Name() {
 	case "enable":
 		return m.handleEnable(ctx, stm)
+	case "resume":
+		prevID := cmd.Attribute("previd")
+		return m.handleResume(ctx, stm, h, prevID)
 	case "a":
-		m.handleA(stm, cmd.Attribute("h"))
+		m.handleA(stm, h)
 	case "r":
 		m.handleR(stm)
 	default:
@@ -266,6 +271,11 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	log.Infow("Enabled stream management",
 		"smid", smID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
+	return nil
+}
+
+func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h, prevID string) error {
+	// TODO(ortuman): implement resume logic
 	return nil
 }
 
