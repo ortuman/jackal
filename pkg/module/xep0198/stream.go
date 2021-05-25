@@ -118,8 +118,8 @@ func (m *Stream) AccountFeatures(_ context.Context) ([]string, error) {
 func (m *Stream) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamElementReceived, m.onElementRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.C2SStreamElementSent, m.onElementSent, hook.DefaultPriority)
-	m.hk.AddHook(hook.C2SStreamDisconnected, m.onDisconnect, hook.DefaultPriority)
-	m.hk.AddHook(hook.C2SStreamTerminated, m.onTerminate, hook.DefaultPriority)
+	m.hk.AddHook(hook.C2SStreamDisconnected, m.onDisconnect, hook.LowestPriority)
+	m.hk.AddHook(hook.C2SStreamTerminated, m.onTerminate, hook.LowestPriority)
 
 	log.Infow("Started stream module", "xep", XEPNumber)
 	return nil
