@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
@@ -62,7 +61,6 @@ func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	}
 	// generate nonce
 	nonce := make([]byte, nonceLength)
-
 	_, err = rand.Read(nonce)
 	if err != nil {
 		return "", err
@@ -79,18 +77,18 @@ func (m *manager) getQueue(stm stream.C2S) *stmQ {
 	return q
 }
 
-func stmID(username, resource string) string {
-	return fmt.Sprintf("%s/%s", username, resource)
-}
-
 func encodeSMID(username, resource string, nonce []byte) string {
 	buf := bytes.NewBuffer(nil)
-	buf.WriteString(fmt.Sprintf("%s/%s", username, resource))
+	buf.WriteString(stmID(username, resource))
 	buf.WriteByte(0)
 	buf.Write(nonce)
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
-	return nil, nil, nil
+func decodeSMID(smID string) (username, resource string, nonce []byte, err error) {
+	return "", "", nil, nil
+}
+
+func stmID(username, resource string) string {
+	return fmt.Sprintf("%s/%s", username, resource)
 }
