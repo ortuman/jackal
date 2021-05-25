@@ -182,13 +182,13 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	// cancel scheduled R
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// cancel scheduled R
 	sq := m.mng.getQueue(stm)
 	if sq == nil {
-		log.Warnw("Stream queue not found",
+		log.Warnw("Stream management queue not found",
 			"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 		)
 		return nil
