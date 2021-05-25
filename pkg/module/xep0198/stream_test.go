@@ -13,3 +13,39 @@
 // limitations under the License.
 
 package xep0198
+
+import (
+	"testing"
+
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestSM_EncodeSMID(t *testing.T) {
+	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	nonce := make([]byte, nonceLength)
+	for i := range nonce {
+		nonce[i] = byte(i + 1)
+	}
+	// when
+	smID := encodeSMID(jd, nonce)
+
+	// then
+	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8Q", smID)
+}
+
+func TestSM_DecodeSMID(t *testing.T) {
+	// given
+	smID := "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8Q"
+
+	// when
+	jd, nonce, err := decodeSMID(smID)
+
+	// then
+	require.Nil(t, err)
+	require.NotNil(t, jd)
+	require.NotNil(t, nonce)
+}
