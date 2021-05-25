@@ -1007,10 +1007,7 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
 
-	state := s.getState()
-	activeState := state != inConnecting && state != inDisconnected
-
-	if activeState && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+	if s.getState() == inBinded && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
 		s.discTm = time.AfterFunc(disconnectTimeout, func() {
 			s.rq.Run(func() {
 				fnCtx, cancel := s.requestContext()

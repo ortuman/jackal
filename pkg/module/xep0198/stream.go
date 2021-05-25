@@ -172,6 +172,10 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 }
 
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
+	stm := execCtx.Sender.(stream.C2S)
+	if !stm.IsBinded() {
+		return nil
+	}
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	discErr := inf.DisconnectError
 	if discErr == nil {
@@ -181,8 +185,6 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	stm := execCtx.Sender.(stream.C2S)
-
 	// TODO(ortuman): stop requesting acks
 
 	// schedule stream termination
