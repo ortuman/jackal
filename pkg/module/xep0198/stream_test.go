@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-
 	"github.com/stretchr/testify/require"
 )
 
