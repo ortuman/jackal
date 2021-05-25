@@ -16,17 +16,17 @@ package xep0198
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
-const nonceLength = 16
+const nonceLength = 24
 
 var errInvalidSMID = errors.New("xep0198: invalid stream identifier format")
 
@@ -65,9 +65,8 @@ func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	}
 	// generate nonce
 	nonce := make([]byte, nonceLength)
-	_, err = rand.Read(nonce)
-	if err != nil {
-		return "", err
+	for i := range nonce {
+		nonce[i] = byte(rand.Intn(255) + 1)
 	}
 	m.queues[sID] = newSQ(stm, nonce)
 

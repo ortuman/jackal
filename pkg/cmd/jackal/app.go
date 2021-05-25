@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -131,6 +132,8 @@ type serverApp struct {
 func run(output io.Writer, args []string) error {
 	var configFile string
 	var showVersion, showUsage bool
+
+	rand.Seed(time.Now().UnixNano())
 
 	a := &serverApp{
 		output:     output,

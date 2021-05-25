@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSM_EncodeSMID(t *testing.T) {
+func TestStream_EncodeSMID(t *testing.T) {
 	// given
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
@@ -37,9 +37,9 @@ func TestSM_EncodeSMID(t *testing.T) {
 	require.Equal(t, "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8Q", smID)
 }
 
-func TestSM_DecodeSMID(t *testing.T) {
+func TestStream_DecodeSMID(t *testing.T) {
 	// given
-	smID := "b3J0dW1hbkBqYWNrYWwuaW0veWFyZAABAgMEBQYHCAkKCwwNDg8Q"
+	smID := "b3J0dW1hbkBqYWNrYWwuaW0vQ29udmVyc2F0aW9ucy40UllFAP4o1dhOUax9pT8tSZ2FsDo="
 
 	// when
 	jd, nonce, err := decodeSMID(smID)
