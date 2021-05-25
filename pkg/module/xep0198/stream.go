@@ -178,9 +178,6 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	}
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	discErr := inf.DisconnectError
-	if discErr == nil {
-		return nil
-	}
 	_, ok := discErr.(*streamerror.Error)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
