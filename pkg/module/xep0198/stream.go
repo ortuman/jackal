@@ -22,13 +22,12 @@ import (
 	"sync"
 	"time"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-	xmppparser "github.com/ortuman/jackal/pkg/parser"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
@@ -187,7 +186,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 		return nil
 	}
 	// cancel scheduled R
-	sq.cancelRTimer()
+	sq.cancelR()
 
 	// schedule stream termination
 	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {

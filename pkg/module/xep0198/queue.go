@@ -110,13 +110,13 @@ func (q *stmQ) outboundH() uint32 {
 	return q.outH
 }
 
-func (q *stmQ) scheduleRTimer() {
+func (q *stmQ) scheduleR() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	q.setRTimer()
 }
 
-func (q *stmQ) cancelRTimer() {
+func (q *stmQ) cancelR() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	q.rTm.Stop()
