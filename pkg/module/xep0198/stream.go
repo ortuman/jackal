@@ -71,7 +71,7 @@ type Stream struct {
 	router router.Router
 	hosts  *host.Hosts
 	hk     *hook.Hooks
-	mng    *manager
+	qm     *queueManager
 
 	mu         sync.RWMutex
 	termTimers map[string]*time.Timer
@@ -89,7 +89,7 @@ func New(
 		router:     router,
 		hosts:      hosts,
 		hk:         hk,
-		mng:        newManager(),
+		qm:         newQueueManager(),
 		termTimers: make(map[string]*time.Timer),
 	}
 }
@@ -149,7 +149,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	sq := m.mng.getQueue(stm)
+	sq := m.qm.getQueue(stm)
 	if sq == nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if !ok {
 		return nil
 	}
-	sq := m.mng.getQueue(execCtx.Sender.(stream.C2S))
+	sq := m.qm.getQueue(execCtx.Sender.(stream.C2S))
 	if sq == nil {
 		return nil
 	}
@@ -176,7 +176,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	defer m.mu.Unlock()
 
 	stm := execCtx.Sender.(stream.C2S)
-	sq := m.mng.getQueue(stm)
+	sq := m.qm.getQueue(stm)
 	if sq == nil {
 		return nil
 	}
@@ -206,6 +206,10 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 
 func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
+	stm := execCtx.Sender.(stream.C2S)
+
+	// unregisterQueue queue
+	m.qm.unregisterQueue(stm)
 
 	// cancel scheduled termination
 	m.mu.Lock()
@@ -254,8 +258,8 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
-	// register stream into the manager
-	smID, err := m.mng.register(stm)
+	// registerQueue stream into the queueManager
+	smID, err := m.qm.registerQueue(stm)
 	if err != nil {
 		return err
 	}
@@ -279,7 +283,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h, prevID str
 }
 
 func (m *Stream) handleA(stm stream.C2S, h string) {
-	sq := m.mng.getQueue(stm)
+	sq := m.qm.getQueue(stm)
 	if sq == nil {
 		return
 	}
@@ -305,7 +309,7 @@ func (m *Stream) handleA(stm stream.C2S, h string) {
 }
 
 func (m *Stream) handleR(stm stream.C2S) {
-	q := m.mng.getQueue(stm)
+	q := m.qm.getQueue(stm)
 	if q == nil {
 		return
 	}

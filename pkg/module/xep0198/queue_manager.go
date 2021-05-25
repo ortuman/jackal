@@ -30,31 +30,18 @@ const nonceLength = 24
 
 var errInvalidSMID = errors.New("xep0198: invalid stream identifier format")
 
-type manager struct {
+type queueManager struct {
 	mu     sync.RWMutex
 	queues map[string]*stmQ
 }
 
-func newManager() *manager {
-	return &manager{
+func newQueueManager() *queueManager {
+	return &queueManager{
 		queues: make(map[string]*stmQ),
 	}
 }
 
-func (m *manager) unregister(stm stream.C2S) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	sID := stmID(stm.Username(), stm.Resource())
-	sq := m.queues[sID]
-	if sq == nil {
-		return
-	}
-	sq.cancelTimers()
-	delete(m.queues, sID)
-}
-
-func (m *manager) register(stm stream.C2S) (smID string, err error) {
+func (m *queueManager) registerQueue(stm stream.C2S) (smID string, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -73,7 +60,20 @@ func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	return encodeSMID(stm.JID(), nonce), nil
 }
 
-func (m *manager) getQueue(stm stream.C2S) *stmQ {
+func (m *queueManager) unregisterQueue(stm stream.C2S) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sID := stmID(stm.Username(), stm.Resource())
+	sq := m.queues[sID]
+	if sq == nil {
+		return
+	}
+	sq.cancelTimers()
+	delete(m.queues, sID)
+}
+
+func (m *queueManager) getQueue(stm stream.C2S) *stmQ {
 	m.mu.RLock()
 	q := m.queues[stmID(stm.Username(), stm.Resource())]
 	m.mu.RUnlock()
