@@ -172,8 +172,12 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 }
 
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	stm := execCtx.Sender.(stream.C2S)
-	if !stm.IsBinded() || !stm.Info().Bool(enabledInfoKey) {
+	sq := m.mng.getQueue(stm)
+	if sq == nil {
 		return nil
 	}
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
@@ -182,17 +186,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	// cancel scheduled R
-	sq := m.mng.getQueue(stm)
-	if sq == nil {
-		log.Warnw("Stream management queue not found",
-			"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
-		)
-		return nil
-	}
 	sq.cancelRTimer()
 
 	// schedule stream termination
