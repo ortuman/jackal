@@ -18,13 +18,17 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
 const nonceLength = 16
+
+var errInvalidSMID = errors.New("xep0198: invalid stream identifier format")
 
 type manager struct {
 	mu     sync.RWMutex
@@ -67,7 +71,7 @@ func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	}
 	m.queues[sID] = newSQ(stm, nonce)
 
-	return encodeSMID(stm.Username(), stm.Resource(), nonce), nil
+	return encodeSMID(stm.JID(), nonce), nil
 }
 
 func (m *manager) getQueue(stm stream.C2S) *stmQ {
@@ -77,16 +81,28 @@ func (m *manager) getQueue(stm stream.C2S) *stmQ {
 	return q
 }
 
-func encodeSMID(username, resource string, nonce []byte) string {
+func encodeSMID(jd *jid.JID, nonce []byte) string {
 	buf := bytes.NewBuffer(nil)
-	buf.WriteString(stmID(username, resource))
+	buf.WriteString(jd.String())
 	buf.WriteByte(0)
 	buf.Write(nonce)
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-func decodeSMID(smID string) (username, resource string, nonce []byte, err error) {
-	return "", "", nil, nil
+func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
+	b, err := base64.StdEncoding.DecodeString(smID)
+	if err != nil {
+		return nil, nil, err
+	}
+	ss := bytes.Split(b, []byte{0})
+	if len(ss) != 2 {
+		return nil, nil, errInvalidSMID
+	}
+	jd, err = jid.NewWithString(string(ss[0]), false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", errInvalidSMID, err)
+	}
+	return jd, ss[1], nil
 }
 
 func stmID(username, resource string) string {
