@@ -1022,9 +1022,13 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 }
 
 func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
-	if s.getState() == inDisconnected {
-		// already disconnected... terminate stream
-		return s.terminate(ctx)
+	switch s.getState() {
+	case inDisconnected:
+		return s.terminate(ctx) // disconnected... terminate stream
+	case inTerminated:
+		return nil // terminated... we're done here
+	default:
+		break
 	}
 	s.setState(inDisconnected)
 
@@ -1047,9 +1051,6 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 }
 
 func (s *inC2S) terminate(ctx context.Context) error {
-	if s.getState() == inTerminated {
-		return nil
-	}
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err

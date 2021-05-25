@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	requestAckInterval = time.Minute * 2
+	requestAckInterval = time.Minute * 20
 	waitForAckTimeout  = time.Second * 30
 )
 
@@ -42,7 +42,7 @@ type stmQ struct {
 	q      []stmQE
 	outH   uint32
 	inH    uint32
-	tm     *time.Timer
+	rTm    *time.Timer
 	discTm *time.Timer
 }
 
@@ -51,92 +51,105 @@ func newSQ(stm stream.C2S, nonce []byte) *stmQ {
 		stm:   stm,
 		nonce: nonce,
 	}
-	sq.tm = time.AfterFunc(requestAckInterval, sq.requestAck)
+	sq.rTm = time.AfterFunc(requestAckInterval, sq.requestAck)
 	return sq
 }
 
-func (m *stmQ) processInboundStanza() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.scheduleR()
-	m.inH = incH(m.inH)
+func (q *stmQ) processInboundStanza() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.setRTimer()
+	q.inH = incH(q.inH)
 }
 
-func (m *stmQ) processOutboundStanza(stanza stravaganza.Stanza) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.outH = incH(m.outH)
-	m.q = append(m.q, stmQE{
+func (q *stmQ) processOutboundStanza(stanza stravaganza.Stanza) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.outH = incH(q.outH)
+	q.q = append(q.q, stmQE{
 		st: stanza,
-		h:  m.outH,
+		h:  q.outH,
 	})
 }
 
-func (m *stmQ) acknowledge(h uint32) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if discTm := m.discTm; discTm != nil {
+func (q *stmQ) acknowledge(h uint32) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if discTm := q.discTm; discTm != nil {
 		discTm.Stop() // cancel disconnection timeout
 	}
-	for i, e := range m.q {
+	for i, e := range q.q {
 		if e.h < h {
 			continue
 		}
-		m.q = m.q[i+1:]
+		q.q = q.q[i+1:]
 		break
 	}
-	m.scheduleR()
+	q.setRTimer()
 }
 
-func (m *stmQ) stanzas() []stravaganza.Stanza {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (q *stmQ) stanzas() []stravaganza.Stanza {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
 	var retVal []stravaganza.Stanza
-	for _, e := range m.q {
+	for _, e := range q.q {
 		retVal = append(retVal, e.st)
 	}
 	return retVal
 }
 
-func (m *stmQ) inboundH() uint32 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.inH
+func (q *stmQ) inboundH() uint32 {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	return q.inH
 }
 
-func (m *stmQ) outboundH() uint32 {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.outH
+func (q *stmQ) outboundH() uint32 {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	return q.outH
 }
 
-func (m *stmQ) cancelTimers() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.tm.Stop()
-	if discTm := m.discTm; discTm != nil {
+func (q *stmQ) scheduleRTimer() {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	q.setRTimer()
+}
+
+func (q *stmQ) cancelRTimer() {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	q.rTm.Stop()
+}
+
+func (q *stmQ) cancelTimers() {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	q.rTm.Stop()
+
+	if discTm := q.discTm; discTm != nil {
 		discTm.Stop()
 	}
 }
 
-func (m *stmQ) requestAck() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (q *stmQ) requestAck() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
 	r := stravaganza.NewBuilder("r").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		Build()
-	m.stm.SendElement(r)
+	q.stm.SendElement(r)
 
 	// schedule disconnect
-	m.discTm = time.AfterFunc(waitForAckTimeout, func() {
-		m.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+	q.discTm = time.AfterFunc(waitForAckTimeout, func() {
+		q.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
 }
 
-func (m *stmQ) scheduleR() {
-	m.tm.Stop()
-	m.tm = time.AfterFunc(requestAckInterval, m.requestAck)
+func (q *stmQ) setRTimer() {
+	q.rTm.Stop()
+	q.rTm = time.AfterFunc(requestAckInterval, q.requestAck)
 }
 
 func incH(h uint32) uint32 {

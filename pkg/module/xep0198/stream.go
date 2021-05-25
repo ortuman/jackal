@@ -173,7 +173,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
 	stm := execCtx.Sender.(stream.C2S)
-	if !stm.IsBinded() {
+	if !stm.IsBinded() || !stm.Info().Bool(enabledInfoKey) {
 		return nil
 	}
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
@@ -182,10 +182,20 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	// TODO(ortuman): stop requesting acks
+	// cancel scheduled R
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sq := m.mng.getQueue(stm)
+	if sq == nil {
+		log.Warnw("Stream queue not found",
+			"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		)
+		return nil
+	}
+	sq.cancelRTimer()
 
 	// schedule stream termination
-	m.mu.Lock()
 	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 
@@ -193,7 +203,6 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 			"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 		)
 	})
-	m.mu.Unlock()
 
 	log.Infow("Scheduled stream termination",
 		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
