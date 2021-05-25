@@ -42,19 +42,20 @@ func (m *manager) unregister(stm stream.C2S) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sq := m.queues[stmID(stm)]
+	sID := stmID(stm.Username(), stm.Resource())
+	sq := m.queues[sID]
 	if sq == nil {
 		return
 	}
 	sq.cancelTimers()
-	delete(m.queues, stmID(stm))
+	delete(m.queues, sID)
 }
 
 func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sID := stmID(stm)
+	sID := stmID(stm.Username(), stm.Resource())
 	_, ok := m.queues[sID]
 	if ok {
 		return "", fmt.Errorf("xep0198: stream already registered: %s", sID)
@@ -68,23 +69,23 @@ func (m *manager) register(stm stream.C2S) (smID string, err error) {
 	}
 	m.queues[sID] = newSQ(stm, nonce)
 
-	return encodeSMID(stm.JID(), nonce), nil
+	return encodeSMID(stm.Username(), stm.Resource(), nonce), nil
 }
 
 func (m *manager) getQueue(stm stream.C2S) *stmQ {
 	m.mu.RLock()
-	q := m.queues[stmID(stm)]
+	q := m.queues[stmID(stm.Username(), stm.Resource())]
 	m.mu.RUnlock()
 	return q
 }
 
-func stmID(stm stream.C2S) string {
-	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
+func stmID(username, resource string) string {
+	return fmt.Sprintf("%s/%s", username, resource)
 }
 
-func encodeSMID(jd *jid.JID, nonce []byte) string {
+func encodeSMID(username, resource string, nonce []byte) string {
 	buf := bytes.NewBuffer(nil)
-	buf.WriteString(jd.String())
+	buf.WriteString(fmt.Sprintf("%s/%s", username, resource))
 	buf.WriteByte(0)
 	buf.Write(nonce)
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
