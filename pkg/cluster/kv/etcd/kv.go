@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	leaseTTLInSeconds int64 = 10
+	leaseTTLInSeconds int64 = 5
 )
 
 // KV represents an etcd key-value store implementation.
