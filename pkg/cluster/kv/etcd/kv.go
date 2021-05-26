@@ -16,8 +16,6 @@ package etcdkv
 
 import (
 	"context"
-	"os"
-	"time"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -25,28 +23,18 @@ import (
 )
 
 const (
-	leaseTTLInSeconds       int64 = 5
-	refreshLeaseTTLInterval       = time.Second
-
-	keepAliveOpTimeout = time.Millisecond * 2500
-
-	maxLeaseRefreshTries = 2
+	leaseTTLInSeconds int64 = 10
 )
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
-	cli               *etcdv3.Client
-	leaseID           etcdv3.LeaseID
-	doneCh            chan chan struct{}
-	leaseRefreshTries int32
+	cli     *etcdv3.Client
+	leaseID etcdv3.LeaseID
 }
 
 // New returns a new etcd key-value store instance.
 func New(cli *etcdv3.Client) *KV {
-	return &KV{
-		cli:    cli,
-		doneCh: make(chan chan struct{}, 1),
-	}
+	return &KV{cli: cli}
 }
 
 // Put stores a new value associated to a given key.
@@ -118,59 +106,22 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	k.leaseID = resp.ID
 
-	go k.refreshLeaseTTL()
-
+	_, err = k.cli.KeepAlive(context.Background(), k.leaseID)
+	if err != nil {
+		return err
+	}
 	log.Infow("Started etcd KV store")
 	return nil
 }
 
 // Stop closes etcd underlying connection.
 func (k *KV) Stop(ctx context.Context) error {
-	// stop refreshing lease TTL
-	ch := make(chan struct{})
-	k.doneCh <- ch
-	<-ch
-
 	_, err := k.cli.Revoke(ctx, k.leaseID)
 	if err != nil {
 		return err
 	}
 	log.Infow("Stopped etcd KV store")
 	return nil
-}
-
-func (k *KV) refreshLeaseTTL() {
-	tc := time.NewTicker(refreshLeaseTTLInterval)
-	defer tc.Stop()
-
-	for {
-		select {
-		case <-tc.C:
-			ctx, cancel := context.WithTimeout(context.Background(), keepAliveOpTimeout)
-
-			_, err := k.cli.KeepAliveOnce(ctx, k.leaseID)
-			switch {
-			case err != nil && !etcdv3.IsConnCanceled(err):
-				log.Warnf("Failed to perform KV lease keepalive: %v", err)
-
-				k.leaseRefreshTries++
-				if k.leaseRefreshTries == maxLeaseRefreshTries {
-					// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
-					log.Errorw("Unable to refresh KV lease keepalive...")
-					shutdownProcess()
-					cancel()
-					return
-				}
-
-			default:
-				k.leaseRefreshTries = 0
-			}
-			cancel()
-
-		case ch := <-k.doneCh:
-			close(ch)
-		}
-	}
 }
 
 func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
@@ -199,9 +150,4 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 		Events: events,
 		Err:    wResp.Err(),
 	}
-}
-
-func shutdownProcess() {
-	p, _ := os.FindProcess(os.Getpid())
-	_ = p.Signal(os.Interrupt)
 }
