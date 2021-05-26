@@ -16,7 +16,6 @@ package etcdkv
 
 import (
 	"context"
-	"errors"
 	"os"
 	"time"
 
@@ -27,9 +26,9 @@ import (
 
 const (
 	leaseTTLInSeconds       int64 = 5
-	refreshLeaseTTLInterval       = time.Second * 1
+	refreshLeaseTTLInterval       = time.Millisecond * 250
 
-	keepAliveOpTimeout = time.Second * 5
+	keepAliveOpTimeout = time.Second
 
 	maxLeaseRefreshTries = 5
 )
@@ -155,7 +154,7 @@ func (k *KV) refreshLeaseTTL() {
 				log.Warnf("Failed to perform KV lease keepalive: %v", err)
 
 				k.leaseRefreshTries++
-				if k.leaseRefreshTries == maxLeaseRefreshTries || errors.Is(err, context.DeadlineExceeded) {
+				if k.leaseRefreshTries == maxLeaseRefreshTries {
 					// almost certainly KV lease has expired... shutdown process to avoid a split-brain scenario
 					log.Errorw("Unable to refresh KV lease keepalive...")
 					shutdownProcess()
