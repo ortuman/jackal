@@ -26,11 +26,11 @@ import (
 
 const (
 	leaseTTLInSeconds       int64 = 5
-	refreshLeaseTTLInterval       = time.Millisecond * 250
+	refreshLeaseTTLInterval       = time.Second
 
-	keepAliveOpTimeout = time.Second
+	keepAliveOpTimeout = time.Millisecond * 2500
 
-	maxLeaseRefreshTries = 5
+	maxLeaseRefreshTries = 2
 )
 
 // KV represents an etcd key-value store implementation.
