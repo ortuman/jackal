@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	leaseTTLInSeconds int64 = 5
+	leaseTTLInSeconds int64 = 10
 )
 
 // KV represents an etcd key-value store implementation.
@@ -121,7 +121,7 @@ func (k *KV) Start(ctx context.Context) error {
 			case kaResp := <-respCh: // keep draining response channel
 				if kaResp == nil {
 					log.Errorw("Unable to refresh KV lease keepalive...")
-					shutdownProcess() // shutdown process to avoid a split-brain scenario
+					shutdown() // shutdown process to avoid a split-brain scenario
 					return
 				}
 
@@ -174,7 +174,7 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 	}
 }
 
-func shutdownProcess() {
+func shutdown() {
 	p, _ := os.FindProcess(os.Getpid())
 	_ = p.Signal(os.Interrupt)
 }
