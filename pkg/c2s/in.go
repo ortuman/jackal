@@ -257,6 +257,18 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 	return errCh
 }
 
+func (s *inC2S) Resume(jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.jd = jd
+	s.pr = pr
+	s.inf = inf
+	s.session.SetFromJID(jd)
+
+	s.setState(inBinded)
+	s.flags.setBinded()
+}
+
 func (s *inC2S) Done() <-chan struct{} {
 	return s.terminateCh
 }

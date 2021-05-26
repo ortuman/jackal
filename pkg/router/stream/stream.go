@@ -62,7 +62,7 @@ type C2S interface {
 	// IsAuthenticated returns whether or not the XMPP stream has successfully authenticated.
 	IsAuthenticated() bool
 
-	// IsBounded returns whether or not the XMPP stream has completed resource binding.
+	// IsBinded returns whether or not the XMPP stream has completed resource binding.
 	IsBinded() bool
 
 	// Presence returns stream associated presence stanza or nil if none is set.
@@ -73,6 +73,9 @@ type C2S interface {
 
 	// Disconnect performs disconnection over the stream.
 	Disconnect(streamErr *streamerror.Error) <-chan error
+
+	// Resume resumes a previously initiated c2s session.
+	Resume(jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info)
 
 	// Done returns a channel that's closed when stream transport and all associated resources have been released.
 	Done() <-chan struct{}
