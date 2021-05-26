@@ -16,6 +16,7 @@ package etcdkv
 
 import (
 	"context"
+	"os"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -30,11 +31,15 @@ const (
 type KV struct {
 	cli     *etcdv3.Client
 	leaseID etcdv3.LeaseID
+	closeCh chan struct{}
 }
 
 // New returns a new etcd key-value store instance.
 func New(cli *etcdv3.Client) *KV {
-	return &KV{cli: cli}
+	return &KV{
+		cli:     cli,
+		closeCh: make(chan struct{}),
+	}
 }
 
 // Put stores a new value associated to a given key.
@@ -106,16 +111,33 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	k.leaseID = resp.ID
 
-	_, err = k.cli.KeepAlive(context.Background(), k.leaseID)
+	respCh, err := k.cli.KeepAlive(context.Background(), k.leaseID)
 	if err != nil {
 		return err
 	}
+	go func() {
+		for {
+			select {
+			case kaResp := <-respCh: // keep draining response channel
+				if kaResp == nil {
+					log.Errorw("Unable to refresh KV lease keepalive...")
+					shutdownProcess() // shutdown process to avoid a split-brain scenario
+					return
+				}
+
+			case <-k.closeCh:
+				return
+			}
+		}
+	}()
 	log.Infow("Started etcd KV store")
 	return nil
 }
 
 // Stop closes etcd underlying connection.
 func (k *KV) Stop(ctx context.Context) error {
+	close(k.closeCh) // signal termination
+
 	_, err := k.cli.Revoke(ctx, k.leaseID)
 	if err != nil {
 		return err
@@ -150,4 +172,9 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 		Events: events,
 		Err:    wResp.Err(),
 	}
+}
+
+func shutdownProcess() {
+	p, _ := os.FindProcess(os.Getpid())
+	_ = p.Signal(os.Interrupt)
 }
