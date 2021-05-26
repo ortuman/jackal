@@ -71,7 +71,7 @@ type inS2S struct {
 	sendDisabled bool
 
 	mu     sync.RWMutex
-	state  uint32
+	state  inS2SState
 	flags  flags
 	jd     *jid.JID
 	target string
@@ -124,7 +124,7 @@ func newInS2S(
 		hk:          hk,
 		rq:          runqueue.New(id.String(), log.Errorf),
 		doneCh:      make(chan struct{}),
-		state:       uint32(inConnecting),
+		state:       inConnecting,
 	}
 	if cfg.DirectTLS {
 		stm.flags.setSecured() // stream already secured
@@ -807,11 +807,15 @@ func (s *inS2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 }
 
 func (s *inS2S) setState(state inS2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = state
 }
 
 func (s *inS2S) getState() inS2SState {
-	return inS2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
 }
 
 func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) (halt bool, err error) {

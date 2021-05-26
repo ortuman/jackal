@@ -24,10 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
-
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -40,6 +36,7 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -48,6 +45,7 @@ import (
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/transport"
 	"github.com/ortuman/jackal/pkg/transport/compress"
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 
 type inC2SState uint32
@@ -84,7 +82,7 @@ type inC2S struct {
 	sendDisabled   bool
 
 	mu    sync.RWMutex
-	state uint32
+	state inC2SState
 	jd    *jid.JID
 	pr    *stravaganza.Presence
 	inf   c2smodel.Info
@@ -135,7 +133,7 @@ func newInC2S(
 		shapers:        shapers,
 		rq:             runqueue.New(id.String(), log.Errorf),
 		terminateCh:    make(chan struct{}),
-		state:          uint32(inConnecting),
+		state:          inConnecting,
 		hk:             hk,
 	}
 	if cfg.UseTLS {
@@ -1134,11 +1132,15 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 }
 
 func (s *inC2S) setState(state inC2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = state
 }
 
 func (s *inC2S) getState() inC2SState {
-	return inC2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
 }
 
 func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook.C2SStreamInfo) (halt bool, err error) {

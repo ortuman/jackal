@@ -110,7 +110,7 @@ func TestInC2S_Disconnect(t *testing.T) {
 		return c2sRouterMock
 	}
 	s := &inC2S{
-		state:   uint32(inBinded),
+		state:   inBinded,
 		session: sessMock,
 		tr:      trMock,
 		router:  routerMock,
@@ -725,7 +725,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					CompressionLevel: compress.DefaultCompression,
 					ResourceConflict: Disallow,
 				},
-				state:          uint32(tt.state),
+				state:          tt.state,
 				flags:          inC2SFlags{flg: tt.flags},
 				rq:             runqueue.New(tt.name, nil),
 				terminateCh:    make(chan struct{}),
@@ -818,7 +818,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
 				},
-				state:   uint32(tt.state),
+				state:   tt.state,
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
 				session: ssMock,

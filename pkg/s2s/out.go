@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/jackal-xmpp/runqueue"
@@ -103,7 +103,8 @@ type outS2S struct {
 	hk       *hook.Hooks
 	rq       *runqueue.RunQueue
 
-	state        uint32
+	mu           sync.RWMutex
+	state        outS2SState
 	flags        flags
 	pendingQueue []stravaganza.Element
 }
@@ -580,11 +581,15 @@ func (s *outS2S) close(ctx context.Context) error {
 }
 
 func (s *outS2S) setState(state outS2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = state
 }
 
 func (s *outS2S) getState() outS2SState {
-	return outS2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
 }
 
 func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) error {

@@ -49,7 +49,7 @@ func TestOutS2S_SendElement(t *testing.T) {
 		return nil
 	}
 	s := &outS2S{
-		state:   uint32(outAuthenticated),
+		state:   outAuthenticated,
 		session: sessMock,
 		rq:      runqueue.New("out_s2s:test", nil),
 		hk:      hook.NewHooks(),
@@ -90,7 +90,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 	sessMock.CloseFunc = func(ctx context.Context) error { return nil }
 
 	s := &outS2S{
-		state:   uint32(outAuthenticated),
+		state:   outAuthenticated,
 		session: sessMock,
 		tr:      trMock,
 		rq:      runqueue.New("out_s2s:test", nil),
@@ -302,7 +302,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					MaxStanzaSize:    8192,
 				},
 				typ:     defaultType,
-				state:   uint32(tt.state),
+				state:   tt.state,
 				flags:   flags{fs: tt.flags},
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
@@ -410,7 +410,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 					Key:      "1234",
 				},
 				dbResCh: make(chan stream.DialbackResult, 1),
-				state:   uint32(tt.state),
+				state:   tt.state,
 				flags:   flags{fs: tt.flags},
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
@@ -490,7 +490,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 					MaxStanzaSize:    8192,
 				},
 				typ:     defaultType,
-				state:   uint32(tt.state),
+				state:   tt.state,
 				rq:      runqueue.New(tt.name, nil),
 				tr:      trMock,
 				session: ssMock,
