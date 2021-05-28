@@ -259,10 +259,11 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 
 func (s *inC2S) Resume(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.jd = jd
 	s.pr = pr
 	s.inf = inf
+	s.mu.Unlock()
+
 	s.session.SetFromJID(jd)
 
 	if err := s.bindC2S(ctx); err != nil {

@@ -347,10 +347,8 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		return nil
 	}
 	// disconnect hibernated c2s stream and establish new one
-	log.Infow("BEFORE DISCONNECT...")
 	<-sq.stream().Disconnect(streamerror.E(streamerror.Conflict))
 	sq.setStream(stm)
-	log.Infow("AFTER DISCONNECT...")
 
 	// since we disconnected old stream, we need to re-register session stream queue
 	m.mu.Lock()
