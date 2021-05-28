@@ -291,7 +291,7 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
-	// generate nc
+	// generate nonce
 	nonce := make([]byte, nonceLength)
 	for i := range nonce {
 		nonce[i] = byte(rand.Intn(255) + 1)
@@ -347,8 +347,10 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		return nil
 	}
 	// disconnect hibernated c2s stream and establish new one
+	log.Infow("BEFORE DISCONNECT...")
 	<-sq.stream().Disconnect(streamerror.E(streamerror.Conflict))
 	sq.setStream(stm)
+	log.Infow("AFTER DISCONNECT...")
 
 	// since we disconnected old stream, we need to re-register session stream queue
 	m.mu.Lock()
