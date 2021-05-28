@@ -15,12 +15,17 @@
 package xep0198
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -41,7 +46,11 @@ const (
 
 	badRequest        = "bad-request"
 	unexpectedRequest = "unexpected-request"
+
+	nonceLength = 24
 )
+
+var errInvalidSMID = errors.New("xep0198: invalid stream identifier format")
 
 const (
 	// ModuleName represents stream module name.
@@ -71,9 +80,9 @@ type Stream struct {
 	router router.Router
 	hosts  *host.Hosts
 	hk     *hook.Hooks
-	qm     *queueManager
 
 	mu         sync.RWMutex
+	queues     map[string]*stmQ
 	termTimers map[string]*time.Timer
 }
 
@@ -89,7 +98,7 @@ func New(
 		router:     router,
 		hosts:      hosts,
 		hk:         hk,
-		qm:         newQueueManager(),
+		queues:     make(map[string]*stmQ),
 		termTimers: make(map[string]*time.Timer),
 	}
 }
@@ -149,7 +158,9 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	sq := m.qm.getQueue(stm)
+	m.mu.RLock()
+	sq := m.queues[stmID(stm)]
+	m.mu.RUnlock()
 	if sq == nil {
 		return nil
 	}
@@ -163,7 +174,11 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if !ok {
 		return nil
 	}
-	sq := m.qm.getQueue(execCtx.Sender.(stream.C2S))
+	stm := execCtx.Sender.(stream.C2S)
+
+	m.mu.RLock()
+	sq := m.queues[stmID(stm)]
+	m.mu.RUnlock()
 	if sq == nil {
 		return nil
 	}
@@ -172,11 +187,12 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 }
 
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
+	stm := execCtx.Sender.(stream.C2S)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	stm := execCtx.Sender.(stream.C2S)
-	sq := m.qm.getQueue(stm)
+	sq := m.queues[stmID(stm)]
 	if sq == nil {
 		return nil
 	}
@@ -208,16 +224,23 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stm := execCtx.Sender.(stream.C2S)
 
-	// unregisterQueue queue
-	m.qm.unregisterQueue(stm)
+	// unregister stream queue
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sID := stmID(stm)
+	sq := m.queues[sID]
+	if sq == nil {
+		return nil
+	}
+	sq.cancelTimers()
+	delete(m.queues, sID)
 
 	// cancel scheduled termination
-	m.mu.Lock()
 	if tm := m.termTimers[inf.ID]; tm != nil {
 		tm.Stop()
 	}
 	delete(m.termTimers, inf.ID)
-	m.mu.Unlock()
 
 	return nil
 }
@@ -258,11 +281,18 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
-	// registerQueue stream into the queueManager
-	smID, err := m.qm.registerQueue(stm)
-	if err != nil {
-		return err
+	// register stream queue
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// generate nonce
+	nonce := make([]byte, nonceLength)
+	for i := range nonce {
+		nonce[i] = byte(rand.Intn(255) + 1)
 	}
+	m.queues[stmID(stm)] = newSQ(stm, nonce)
+
+	smID := encodeSMID(stm.JID(), nonce)
 
 	stm.SendElement(stravaganza.NewBuilder("enabled").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
@@ -283,7 +313,9 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h, prevID str
 }
 
 func (m *Stream) handleA(stm stream.C2S, h string) {
-	sq := m.qm.getQueue(stm)
+	m.mu.RLock()
+	sq := m.queues[stmID(stm)]
+	m.mu.RUnlock()
 	if sq == nil {
 		return
 	}
@@ -309,8 +341,10 @@ func (m *Stream) handleA(stm stream.C2S, h string) {
 }
 
 func (m *Stream) handleR(stm stream.C2S) {
-	q := m.qm.getQueue(stm)
-	if q == nil {
+	m.mu.RLock()
+	sq := m.queues[stmID(stm)]
+	m.mu.RUnlock()
+	if sq == nil {
 		return
 	}
 	log.Infow("Stanza ack requested",
@@ -318,7 +352,7 @@ func (m *Stream) handleR(stm stream.C2S) {
 	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
-		WithAttribute("h", strconv.FormatUint(uint64(q.inboundH()), 10)).
+		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
 		Build()
 	stm.SendElement(a)
 }
@@ -340,4 +374,32 @@ func sendFailedReply(reason string, text string, stm stream.C2S) {
 		)
 	}
 	_ = stm.SendElement(sb.Build())
+}
+
+func encodeSMID(jd *jid.JID, nonce []byte) string {
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString(jd.String())
+	buf.WriteByte(0)
+	buf.Write(nonce)
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
+	b, err := base64.StdEncoding.DecodeString(smID)
+	if err != nil {
+		return nil, nil, err
+	}
+	ss := bytes.Split(b, []byte{0})
+	if len(ss) != 2 {
+		return nil, nil, errInvalidSMID
+	}
+	jd, err = jid.NewWithString(string(ss[0]), false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", errInvalidSMID, err)
+	}
+	return jd, ss[1], nil
+}
+
+func stmID(stm stream.C2S) string {
+	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
 }
