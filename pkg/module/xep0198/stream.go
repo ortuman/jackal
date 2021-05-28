@@ -361,6 +361,12 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	sq.sendPending()
 	sq.scheduleR()
 
+	stm.SendElement(stravaganza.NewBuilder("resumed").
+		WithAttribute(stravaganza.Namespace, streamNamespace).
+		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
+		WithAttribute("previd", prevSMID).
+		Build(),
+	)
 	log.Infow("Resumed stream",
 		"smID", prevSMID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
