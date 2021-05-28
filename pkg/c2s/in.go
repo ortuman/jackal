@@ -257,7 +257,7 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 	return errCh
 }
 
-func (s *inC2S) Resume(jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) {
+func (s *inC2S) Resume(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.jd = jd
@@ -265,8 +265,30 @@ func (s *inC2S) Resume(jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info)
 	s.inf = inf
 	s.session.SetFromJID(jd)
 
+	if err := s.bindC2S(ctx); err != nil {
+		return err
+	}
 	s.setState(inBinded)
 	s.flags.setBinded()
+
+	// run binded C2S hook
+	_, err := s.runHook(ctx, hook.C2SStreamBinded, &hook.C2SStreamInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	return err
+}
+
+func (s *inC2S) bindC2S(ctx context.Context) error {
+	// update rate limiter
+	if err := s.updateRateLimiter(); err != nil {
+		return err
+	}
+	// bind and register cluster resource
+	if err := s.router.C2S().Bind(s.ID()); err != nil {
+		return err
+	}
+	return s.resMng.PutResource(ctx, s.getResource())
 }
 
 func (s *inC2S) Done() <-chan struct{} {
@@ -965,14 +987,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 	s.setPresence(pr)
 
 	// update rate limiter
-	if err := s.updateRateLimiter(); err != nil {
-		return err
-	}
-	// bind and register cluster resource
-	if err := s.router.C2S().Bind(s.ID()); err != nil {
-		return err
-	}
-	if err = s.resMng.PutResource(ctx, s.getResource()); err != nil {
+	if err := s.bindC2S(ctx); err != nil {
 		return err
 	}
 	s.setState(inBinded)

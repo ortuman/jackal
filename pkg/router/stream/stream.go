@@ -75,7 +75,7 @@ type C2S interface {
 	Disconnect(streamErr *streamerror.Error) <-chan error
 
 	// Resume resumes a previously initiated c2s session.
-	Resume(jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info)
+	Resume(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error
 
 	// Done returns a channel that's closed when stream transport and all associated resources have been released.
 	Done() <-chan struct{}

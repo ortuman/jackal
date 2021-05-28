@@ -29,100 +29,114 @@ const (
 	waitForAckTimeout  = time.Second * 30
 )
 
-type stmQE struct {
+type queueElement struct {
 	st stravaganza.Stanza
 	h  uint32
 }
 
-type stmQ struct {
-	stm   stream.C2S
-	nonce []byte
+type queue struct {
+	stm stream.C2S
+	nc  []byte
 
-	mu     sync.RWMutex
-	q      []stmQE
-	outH   uint32
-	inH    uint32
-	rTm    *time.Timer
-	discTm *time.Timer
+	mu       sync.RWMutex
+	elements []queueElement
+	outH     uint32
+	inH      uint32
+	rTm      *time.Timer
+	discTm   *time.Timer
 }
 
-func newSQ(stm stream.C2S, nonce []byte) *stmQ {
-	sq := &stmQ{
-		stm:   stm,
-		nonce: nonce,
+func newQueue(stm stream.C2S, nonce []byte) *queue {
+	sq := &queue{
+		stm: stm,
+		nc:  nonce,
 	}
 	sq.rTm = time.AfterFunc(requestAckInterval, sq.requestAck)
 	return sq
 }
 
-func (q *stmQ) processInboundStanza() {
+func (q *queue) processInboundStanza() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.setRTimer()
 	q.inH = incH(q.inH)
 }
 
-func (q *stmQ) processOutboundStanza(stanza stravaganza.Stanza) {
+func (q *queue) processOutboundStanza(stanza stravaganza.Stanza) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.outH = incH(q.outH)
-	q.q = append(q.q, stmQE{
+	q.elements = append(q.elements, queueElement{
 		st: stanza,
 		h:  q.outH,
 	})
 }
 
-func (q *stmQ) acknowledge(h uint32) {
+func (q *queue) setStream(stm stream.C2S) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.stm = stm
+}
+
+func (q *queue) stream() stream.C2S {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	return q.stm
+}
+
+func (q *queue) nonce() []byte {
+	return q.nc
+}
+
+func (q *queue) acknowledge(h uint32) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if discTm := q.discTm; discTm != nil {
 		discTm.Stop() // cancel disconnection timeout
 	}
-	for i, e := range q.q {
+	for i, e := range q.elements {
 		if e.h < h {
 			continue
 		}
-		q.q = q.q[i+1:]
+		q.elements = q.elements[i+1:]
 		break
 	}
 	q.setRTimer()
 }
 
-func (q *stmQ) stanzas() []stravaganza.Stanza {
+func (q *queue) sendPending() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
-	var retVal []stravaganza.Stanza
-	for _, e := range q.q {
-		retVal = append(retVal, e.st)
+	for _, e := range q.elements {
+		q.stm.SendElement(e.st)
 	}
-	return retVal
 }
 
-func (q *stmQ) inboundH() uint32 {
+func (q *queue) len() int {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+	return len(q.elements)
+}
+
+func (q *queue) inboundH() uint32 {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	return q.inH
 }
 
-func (q *stmQ) outboundH() uint32 {
+func (q *queue) outboundH() uint32 {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	return q.outH
 }
 
-func (q *stmQ) scheduleR() {
+func (q *queue) scheduleR() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	q.setRTimer()
 }
 
-func (q *stmQ) cancelR() {
-	q.mu.RLock()
-	defer q.mu.RUnlock()
-	q.rTm.Stop()
-}
-
-func (q *stmQ) cancelTimers() {
+func (q *queue) cancelTimers() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	q.rTm.Stop()
@@ -132,7 +146,7 @@ func (q *stmQ) cancelTimers() {
 	}
 }
 
-func (q *stmQ) requestAck() {
+func (q *queue) requestAck() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -147,7 +161,7 @@ func (q *stmQ) requestAck() {
 	})
 }
 
-func (q *stmQ) setRTimer() {
+func (q *queue) setRTimer() {
 	q.rTm.Stop()
 	q.rTm = time.AfterFunc(requestAckInterval, q.requestAck)
 }

@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/c2s"
+
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -46,6 +48,7 @@ const (
 
 	badRequest        = "bad-request"
 	unexpectedRequest = "unexpected-request"
+	itemNotFound      = "item-not-found"
 
 	nonceLength = 24
 )
@@ -79,10 +82,11 @@ type Stream struct {
 	cfg    Config
 	router router.Router
 	hosts  *host.Hosts
+	resMng resourceManager
 	hk     *hook.Hooks
 
 	mu         sync.RWMutex
-	queues     map[string]*stmQ
+	queues     map[string]*queue
 	termTimers map[string]*time.Timer
 }
 
@@ -90,6 +94,7 @@ type Stream struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
+	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
 	cfg Config,
 ) *Stream {
@@ -97,8 +102,9 @@ func New(
 		cfg:        cfg,
 		router:     router,
 		hosts:      hosts,
+		resMng:     resMng,
 		hk:         hk,
-		queues:     make(map[string]*stmQ),
+		queues:     make(map[string]*queue),
 		termTimers: make(map[string]*time.Timer),
 	}
 }
@@ -159,7 +165,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 		return nil
 	}
 	m.mu.RLock()
-	sq := m.queues[stmID(stm)]
+	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
 	if sq == nil {
 		return nil
@@ -177,7 +183,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	stm := execCtx.Sender.(stream.C2S)
 
 	m.mu.RLock()
-	sq := m.queues[stmID(stm)]
+	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
 	if sq == nil {
 		return nil
@@ -189,10 +195,10 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
 	stm := execCtx.Sender.(stream.C2S)
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	sq := m.queues[queueKey(stm.JID())]
+	m.mu.RUnlock()
 
-	sq := m.queues[stmID(stm)]
 	if sq == nil {
 		return nil
 	}
@@ -203,9 +209,10 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 		return nil
 	}
 	// cancel scheduled R
-	sq.cancelR()
+	sq.cancelTimers()
 
 	// schedule stream termination
+	m.mu.Lock()
 	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 
@@ -213,6 +220,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 			"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 		)
 	})
+	m.mu.Unlock()
 
 	log.Infow("Scheduled stream termination",
 		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
@@ -228,13 +236,13 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sID := stmID(stm)
-	sq := m.queues[sID]
+	qk := queueKey(stm.JID())
+	sq := m.queues[qk]
 	if sq == nil {
 		return nil
 	}
 	sq.cancelTimers()
-	delete(m.queues, sID)
+	delete(m.queues, qk)
 
 	// cancel scheduled termination
 	if tm := m.termTimers[inf.ID]; tm != nil {
@@ -250,20 +258,16 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 		sendFailedReply(badRequest, "Malformed element", stm)
 		return nil
 	}
-	if !stm.IsBinded() {
-		sendFailedReply(unexpectedRequest, "", stm)
-		return nil
-	}
-	h := cmd.Attribute("h")
+	h, _ := strconv.ParseUint(cmd.Attribute("h"), 10, 32)
 
 	switch cmd.Name() {
 	case "enable":
 		return m.handleEnable(ctx, stm)
 	case "resume":
 		prevID := cmd.Attribute("previd")
-		return m.handleResume(ctx, stm, h, prevID)
+		return m.handleResume(ctx, stm, uint32(h), prevID)
 	case "a":
-		m.handleA(stm, h)
+		m.handleA(stm, uint32(h))
 	case "r":
 		m.handleR(stm)
 	default:
@@ -274,6 +278,10 @@ func (m *Stream) processCmd(ctx context.Context, cmd stravaganza.Element, stm st
 }
 
 func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
+	if !stm.IsBinded() {
+		sendFailedReply(unexpectedRequest, "", stm)
+		return nil
+	}
 	if stm.Info().Bool(enabledInfoKey) {
 		sendFailedReply(unexpectedRequest, "Stream management is already enabled", stm)
 		return nil
@@ -281,16 +289,15 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	if err := stm.SetInfoValue(ctx, enabledInfoKey, true); err != nil {
 		return err
 	}
-	// register stream queue
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// generate nonce
+	// generate nc
 	nonce := make([]byte, nonceLength)
 	for i := range nonce {
 		nonce[i] = byte(rand.Intn(255) + 1)
 	}
-	m.queues[stmID(stm)] = newSQ(stm, nonce)
+	// register stream queue
+	m.mu.Lock()
+	m.queues[queueKey(stm.JID())] = newQueue(stm, nonce)
+	m.mu.Unlock()
 
 	smID := encodeSMID(stm.JID(), nonce)
 
@@ -302,47 +309,88 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		Build(),
 	)
 	log.Infow("Enabled stream management",
-		"smid", smID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"smID", smID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
 }
 
-func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h, prevID string) error {
-	// TODO(ortuman): implement resume logic
+func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, prevSMID string) error {
+	if !stm.IsAuthenticated() {
+		sendFailedReply(unexpectedRequest, "", stm)
+		return nil
+	}
+	// perform stream resumption
+	jd, nonce, err := decodeSMID(prevSMID)
+	if err != nil {
+		return err
+	}
+	qk := queueKey(jd)
+
+	m.mu.RLock()
+	sq := m.queues[qk]
+	m.mu.RUnlock()
+
+	// invalid smID?
+	if !jd.MatchesWithOptions(stm.JID(), jid.MatchesBare) || sq == nil || bytes.Compare(sq.nonce(), nonce) != 0 {
+		sendFailedReply(itemNotFound, "", stm)
+		return nil
+	}
+	// fetch resource info
+	res, err := m.resMng.GetResource(ctx, jd.Node(), jd.Resource())
+	if err != nil {
+		return err
+	}
+	if res == nil {
+		sendFailedReply(itemNotFound, "", stm)
+		return nil
+	}
+	// disconnect hibernated c2s stream and establish new one
+	<-sq.stream().Disconnect(streamerror.E(streamerror.Conflict))
+	sq.setStream(stm)
+
+	// since we disconnected old stream, we need to re-register session stream queue
+	m.mu.Lock()
+	m.queues[qk] = sq
+	m.mu.Unlock()
+
+	// resume stream and send unacknowledged stanzas
+	if err := stm.Resume(ctx, res.JID, res.Presence, res.Info); err != nil {
+		return err
+	}
+	sq.acknowledge(h)
+	sq.sendPending()
+	sq.scheduleR()
+
+	log.Infow("Resumed stream",
+		"smID", prevSMID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	)
 	return nil
 }
 
-func (m *Stream) handleA(stm stream.C2S, h string) {
+func (m *Stream) handleA(stm stream.C2S, h uint32) {
 	m.mu.RLock()
-	sq := m.queues[stmID(stm)]
+	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
 	if sq == nil {
 		return
 	}
-	hVal, _ := strconv.ParseUint(h, 10, 32)
-	if hVal == 0 {
-		return
-	}
-	sq.acknowledge(uint32(hVal))
+	sq.acknowledge(h)
 
 	log.Infow("Received stanza ack",
-		"ack_h", hVal, "h", sq.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"ack_h", h, "h", sq.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
-	pending := sq.stanzas()
-	if len(pending) == 0 {
+	if sq.len() == 0 {
 		return // done here
 	}
 	log.Infow("Resending pending stanzas...",
-		"len", len(pending), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"len", sq.len(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
-	for _, stanza := range pending {
-		stm.SendElement(stanza)
-	}
+	sq.sendPending()
 }
 
 func (m *Stream) handleR(stm stream.C2S) {
 	m.mu.RLock()
-	sq := m.queues[stmID(stm)]
+	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
 	if sq == nil {
 		return
@@ -400,6 +448,6 @@ func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
 	return jd, ss[1], nil
 }
 
-func stmID(stm stream.C2S) string {
-	return fmt.Sprintf("%s/%s", stm.Username(), stm.Resource())
+func queueKey(jd *jid.JID) string {
+	return jd.String()
 }

@@ -15,6 +15,9 @@
 package xep0198
 
 import (
+	"context"
+
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
@@ -27,4 +30,9 @@ type globalRouter interface {
 //go:generate moq -out c2s_stream.mock_test.go . c2sStream
 type c2sStream interface {
 	stream.C2S
+}
+
+//go:generate moq -out resourcemanager.mock_test.go . resourceManager
+type resourceManager interface {
+	GetResource(ctx context.Context, username, resource string) (*c2smodel.Resource, error)
 }
