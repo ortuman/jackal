@@ -167,6 +167,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	m.mu.RLock()
 	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
+
 	if sq == nil {
 		return nil
 	}
@@ -185,6 +186,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	m.mu.RLock()
 	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
+
 	if sq == nil {
 		return nil
 	}
@@ -208,7 +210,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	// cancel scheduled R
+	// cancel scheduled timers
 	sq.cancelTimers()
 
 	// schedule stream termination
