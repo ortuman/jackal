@@ -111,7 +111,9 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	k.leaseID = resp.ID
 
-	respCh, err := k.cli.KeepAlive(context.Background(), k.leaseID)
+	var respCh <-chan *etcdv3.LeaseKeepAliveResponse
+
+	respCh, err = k.cli.KeepAlive(context.Background(), k.leaseID)
 	if err != nil {
 		return err
 	}
@@ -120,9 +122,16 @@ func (k *KV) Start(ctx context.Context) error {
 			select {
 			case kaResp := <-respCh: // keep draining response channel
 				if kaResp == nil {
-					log.Errorw("Unable to refresh KV lease keepalive...")
-					shutdown() // shutdown process to avoid a split-brain scenario
-					return
+					// try to restart keep-alive loop...
+					respCh, err = k.cli.KeepAlive(context.Background(), k.leaseID)
+					if err != nil {
+						log.Errorf("Unable to refresh KV lease keepalive: %s", err)
+
+						// shutdown process to avoid a split-brain scenario
+						shutdown()
+						return
+					}
+					continue
 				}
 
 			case <-k.closeCh:
