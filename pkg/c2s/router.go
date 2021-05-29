@@ -93,10 +93,13 @@ func (r *c2sRouter) Register(stm stream.C2S) error {
 }
 
 func (r *c2sRouter) Bind(id stream.C2SID) error {
-	_, err := r.local.Bind(id)
+	stm, err := r.local.Bind(id)
 	if err != nil {
 		return err
 	}
+	log.Infow("Binded C2S stream", "id", id,
+		"username", stm.Username(),
+		"resource", stm.Resource())
 	return nil
 }
 

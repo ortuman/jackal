@@ -85,9 +85,9 @@ type Stream struct {
 	resMng resourceManager
 	hk     *hook.Hooks
 
-	mu         sync.RWMutex
-	queues     map[string]*queue
-	termTimers map[string]*time.Timer
+	mu      sync.RWMutex
+	queues  map[string]*queue
+	termTms map[string]*time.Timer
 }
 
 // New returns a new initialized Stream instance.
@@ -99,13 +99,13 @@ func New(
 	cfg Config,
 ) *Stream {
 	return &Stream{
-		cfg:        cfg,
-		router:     router,
-		hosts:      hosts,
-		resMng:     resMng,
-		hk:         hk,
-		queues:     make(map[string]*queue),
-		termTimers: make(map[string]*time.Timer),
+		cfg:     cfg,
+		router:  router,
+		hosts:   hosts,
+		resMng:  resMng,
+		hk:      hk,
+		queues:  make(map[string]*queue),
+		termTms: make(map[string]*time.Timer),
 	}
 }
 
@@ -215,7 +215,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 
 	// schedule stream termination
 	m.mu.Lock()
-	m.termTimers[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
+	m.termTms[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 
 		log.Infow("Hibernated stream terminated",
@@ -247,10 +247,10 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	delete(m.queues, qk)
 
 	// cancel scheduled termination
-	if tm := m.termTimers[inf.ID]; tm != nil {
+	if tm := m.termTms[inf.ID]; tm != nil {
 		tm.Stop()
 	}
-	delete(m.termTimers, inf.ID)
+	delete(m.termTms, inf.ID)
 
 	return nil
 }
@@ -347,10 +347,12 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		return nil
 	}
 	// disconnect hibernated c2s stream and establish new one
-	<-sq.stream().Disconnect(streamerror.E(streamerror.Conflict))
+	if err := <-sq.stream().Disconnect(streamerror.E(streamerror.Conflict)); err != nil {
+		return err
+	}
 	sq.setStream(stm)
 
-	// since we disconnected old stream, we need to re-register session stream queue
+	// since we disconnected old stream, session stream queue must be re-register
 	m.mu.Lock()
 	m.queues[qk] = sq
 	m.mu.Unlock()
@@ -400,6 +402,7 @@ func (m *Stream) handleR(stm stream.C2S) {
 	m.mu.RLock()
 	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
+
 	if sq == nil {
 		return
 	}

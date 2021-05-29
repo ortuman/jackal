@@ -1014,10 +1014,6 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 			).
 			Build(),
 	)
-
-	log.Infow("Binded C2S stream", "id", s.id,
-		"username", s.Username(),
-		"resource", s.Resource())
 	return s.sendElement(ctx, resIQ)
 }
 
