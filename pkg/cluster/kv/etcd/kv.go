@@ -150,7 +150,7 @@ func (k *KV) refreshLeaseTTL() {
 			cancel()
 
 			if errors.Is(err, rpctypes.ErrLeaseNotFound) {
-				// shutdown process to avoid a split-brain scenario
+				// shutdown process to avoid split-brain scenario
 				log.Errorw("Unable to refresh etcd lease: %v", err)
 				shutdown()
 				return
