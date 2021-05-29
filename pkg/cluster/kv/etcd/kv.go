@@ -157,6 +157,7 @@ func (k *KV) refreshLeaseTTL() {
 				// shutdown process to avoid split-brain scenario
 				log.Errorf("Unable to refresh etcd lease: %v", err)
 				shutdown()
+				return
 
 			default:
 				log.Warnf("Failed to refresh etcd lease keepalive: %v", err)
