@@ -987,7 +987,6 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 		BuildPresence()
 	s.setPresence(pr)
 
-	// update rate limiter
 	if err := s.bindC2S(ctx); err != nil {
 		return err
 	}
@@ -1073,10 +1072,13 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 }
 
 func (s *inC2S) terminate(ctx context.Context) error {
+	log.Warnf("TERMINATING...")
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
+	log.Warnf("UNREGISTERED RESOURCE...")
+
 	// delete cluster resource
 	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
 		return err
@@ -1085,6 +1087,7 @@ func (s *inC2S) terminate(ctx context.Context) error {
 
 	// close underlying transport
 	_ = s.tr.Close()
+	log.Warnf("CLOSED SOCKET...")
 
 	_, err := s.runHook(ctx, hook.C2SStreamTerminated, &hook.C2SStreamInfo{
 		ID:  s.ID().String(),
