@@ -16,29 +16,35 @@ package etcdkv
 
 import (
 	"context"
+	"errors"
 	"os"
+	"time"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/log"
 )
 
 const (
-	leaseTTLInSeconds int64 = 10
+	leaseTTLInSeconds       int64 = 10
+	refreshLeaseTTLInterval       = time.Millisecond * 500
+
+	keepAliveOpTimeout = time.Second * 3
 )
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
 	cli     *etcdv3.Client
 	leaseID etcdv3.LeaseID
-	closeCh chan struct{}
+	doneCh  chan chan struct{}
 }
 
 // New returns a new etcd key-value store instance.
 func New(cli *etcdv3.Client) *KV {
 	return &KV{
-		cli:     cli,
-		closeCh: make(chan struct{}),
+		cli:    cli,
+		doneCh: make(chan chan struct{}, 1),
 	}
 }
 
@@ -111,41 +117,18 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	k.leaseID = resp.ID
 
-	var respCh <-chan *etcdv3.LeaseKeepAliveResponse
+	go k.refreshLeaseTTL()
 
-	respCh, err = k.cli.KeepAlive(context.Background(), k.leaseID)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for {
-			select {
-			case kaResp := <-respCh: // keep draining response channel
-				if kaResp == nil {
-					// try to restart keep-alive loop...
-					respCh, err = k.cli.KeepAlive(context.Background(), k.leaseID)
-					if err != nil {
-						log.Errorf("Unable to refresh KV lease keepalive: %s", err)
-
-						// shutdown process to avoid a split-brain scenario
-						shutdown()
-						return
-					}
-					continue
-				}
-
-			case <-k.closeCh:
-				return
-			}
-		}
-	}()
 	log.Infow("Started etcd KV store")
 	return nil
 }
 
 // Stop closes etcd underlying connection.
 func (k *KV) Stop(ctx context.Context) error {
-	close(k.closeCh) // signal termination
+	// stop refreshing lease TTL
+	ch := make(chan struct{})
+	k.doneCh <- ch
+	<-ch
 
 	_, err := k.cli.Revoke(ctx, k.leaseID)
 	if err != nil {
@@ -153,6 +136,30 @@ func (k *KV) Stop(ctx context.Context) error {
 	}
 	log.Infow("Stopped etcd KV store")
 	return nil
+}
+
+func (k *KV) refreshLeaseTTL() {
+	tc := time.NewTicker(refreshLeaseTTLInterval)
+	defer tc.Stop()
+
+	for {
+		select {
+		case <-tc.C:
+			ctx, cancel := context.WithTimeout(context.Background(), keepAliveOpTimeout)
+			_, err := k.cli.KeepAliveOnce(ctx, k.leaseID)
+			cancel()
+
+			if errors.Is(err, rpctypes.ErrLeaseNotFound) {
+				// shutdown process to avoid a split-brain scenario
+				log.Errorw("Unable to refresh etcd lease: %v", err)
+				shutdown()
+				return
+			}
+
+		case ch := <-k.doneCh:
+			close(ch)
+		}
+	}
 }
 
 func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
