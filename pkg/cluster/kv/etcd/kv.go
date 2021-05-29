@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	leaseTTLInSeconds       int64 = 10
-	refreshLeaseTTLInterval       = time.Millisecond * 500
+	leaseTTLInSeconds       int64 = 20
+	refreshLeaseTTLInterval       = time.Second
 
 	keepAliveOpTimeout = time.Second * 3
 )
@@ -149,11 +149,17 @@ func (k *KV) refreshLeaseTTL() {
 			_, err := k.cli.KeepAliveOnce(ctx, k.leaseID)
 			cancel()
 
-			if errors.Is(err, rpctypes.ErrLeaseNotFound) {
+			switch {
+			case err == nil:
+				break
+
+			case errors.Is(err, rpctypes.ErrLeaseNotFound):
 				// shutdown process to avoid split-brain scenario
-				log.Errorw("Unable to refresh etcd lease: %v", err)
+				log.Errorf("Unable to refresh etcd lease: %v", err)
 				shutdown()
-				return
+
+			default:
+				log.Warnf("Failed to refresh etcd lease keepalive: %v", err)
 			}
 
 		case ch := <-k.doneCh:

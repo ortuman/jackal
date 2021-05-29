@@ -196,7 +196,9 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 
 func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
 	stm := execCtx.Sender.(stream.C2S)
-
+	if !stm.IsAuthenticated() {
+		return nil
+	}
 	m.mu.RLock()
 	sq := m.queues[queueKey(stm.JID())]
 	m.mu.RUnlock()
@@ -233,7 +235,9 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stm := execCtx.Sender.(stream.C2S)
-
+	if !stm.IsAuthenticated() {
+		return nil
+	}
 	// unregister stream queue
 	m.mu.Lock()
 	defer m.mu.Unlock()

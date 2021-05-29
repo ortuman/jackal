@@ -263,8 +263,9 @@ func run(output io.Writer, args []string) error {
 func (a *serverApp) initEtcd(cfg etcdConfig) error {
 	const etcdMemberListTimeout = time.Second * 5
 	cli, err := etcdv3.New(etcdv3.Config{
-		Endpoints:   cfg.Endpoints,
-		DialTimeout: cfg.DialTimeout,
+		Endpoints:         cfg.Endpoints,
+		DialTimeout:       cfg.DialTimeout,
+		DialKeepAliveTime: time.Second,
 	})
 	if err != nil {
 		return err
