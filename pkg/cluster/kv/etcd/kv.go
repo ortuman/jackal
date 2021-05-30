@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	leaseTTLInSeconds       int64 = 30
-	refreshLeaseTTLInterval       = time.Second
+	leaseTTLInSeconds       int64 = 20
+	refreshLeaseTTLInterval       = time.Second * 2
 
 	keepAliveOpTimeout = time.Second * 5
 )
