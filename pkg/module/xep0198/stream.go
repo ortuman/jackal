@@ -218,7 +218,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	// schedule stream termination
 	m.mu.Lock()
 	m.termTms[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
-		_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+		_ = stm.Disconnect(nil)
 
 		log.Infow("Hibernated stream terminated",
 			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
