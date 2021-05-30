@@ -1072,12 +1072,10 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 }
 
 func (s *inC2S) terminate(ctx context.Context) error {
-	log.Warnf("TERMINATING...")
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
-	log.Warnf("UNREGISTERED RESOURCE...")
 
 	// delete cluster resource
 	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
@@ -1087,7 +1085,6 @@ func (s *inC2S) terminate(ctx context.Context) error {
 
 	// close underlying transport
 	_ = s.tr.Close()
-	log.Warnf("CLOSED SOCKET...")
 
 	_, err := s.runHook(ctx, hook.C2SStreamTerminated, &hook.C2SStreamInfo{
 		ID:  s.ID().String(),
