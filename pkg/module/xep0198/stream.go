@@ -25,12 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/c2s"
-
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
