@@ -247,15 +247,13 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	if sq == nil {
 		return nil
 	}
-	sq.cancelTimers()
 	delete(m.queues, qk)
 
 	// cancel scheduled termination
 	if tm := m.termTms[inf.ID]; tm != nil {
 		tm.Stop()
+		delete(m.termTms, inf.ID)
 	}
-	delete(m.termTms, inf.ID)
-
 	return nil
 }
 
