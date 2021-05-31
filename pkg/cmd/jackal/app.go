@@ -26,6 +26,9 @@ import (
 	"syscall"
 	"time"
 
+	syslog "log"
+
+	"github.com/cockroachdb/errors"
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -130,10 +133,10 @@ type serverApp struct {
 }
 
 func run(output io.Writer, args []string) error {
-	var configFile string
-	var showVersion, showUsage bool
-
+	// Seed the math/rand RNG from crypto/rand.
 	rand.Seed(time.Now().UnixNano())
+
+	defer recoverAndReportPanic()
 
 	a := &serverApp{
 		output:     output,
@@ -142,6 +145,9 @@ func run(output io.Writer, args []string) error {
 	}
 	fs := flag.NewFlagSet("jackal", flag.ExitOnError)
 	fs.SetOutput(a.output)
+
+	var configFile string
+	var showVersion, showUsage bool
 
 	fs.BoolVar(&showUsage, "help", false, "Show this message")
 	fs.BoolVar(&showVersion, "version", false, "Print version information.")
@@ -185,6 +191,7 @@ func run(output io.Writer, args []string) error {
 		zap.NewLogger(cfg.Logger.OutputPath),
 		cfg.Logger.Level,
 	)
+
 	log.Infow("Jackal is starting...",
 		"version", version.Version,
 		"go_ver", runtime.Version(),
@@ -521,6 +528,21 @@ func (a *serverApp) shutdown() error {
 func (a *serverApp) waitForStopSignal() os.Signal {
 	signal.Notify(a.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	return <-a.waitStopCh
+}
+
+func recoverAndReportPanic() {
+	const depthForRecoverAndReportPanic = 3
+	if r := recover(); r != nil {
+		panicErr := panicAsError(depthForRecoverAndReportPanic+1, r)
+		syslog.Fatalf("A panic has occurred!\n%+v", panicErr)
+	}
+}
+
+func panicAsError(depth int, r interface{}) error {
+	if err, ok := r.(error); ok {
+		return errors.WithStackDepth(err, depth+1)
+	}
+	return errors.NewWithDepthf(depth+1, "panic: %v", r)
 }
 
 func setRLimit() error {

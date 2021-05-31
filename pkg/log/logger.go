@@ -258,6 +258,9 @@ func logMessagef(level Level, msg string, args ...interface{}) {
 		}
 		loggedMessages.With(prometheus.Labels{"instance": instance.ID(), "level": level.String()})
 	})
+	if level == FatalLevel {
+		select {} // hang forever
+	}
 }
 
 func logMessagew(level Level, msg string, keysAndValues ...interface{}) {
