@@ -136,8 +136,6 @@ func run(output io.Writer, args []string) error {
 
 	defer crashreporter.RecoverAndReportPanic()
 
-	panic("foo panic")
-
 	a := &serverApp{
 		output:     output,
 		args:       args,
