@@ -43,6 +43,8 @@ func init() {
 	crashReporterEnabled = true
 }
 
+// RecoverAndReportPanic can be invoked on goroutines
+// to ensure the user gets informed that a panic has occurred.
 func RecoverAndReportPanic() {
 	if r := recover(); r != nil {
 		panicErr := panicAsError(depthForRecoverAndReportPanic+1, r)
