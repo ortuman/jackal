@@ -213,15 +213,15 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if sq == nil {
 		return nil
 	}
+	// cancel scheduled timers
+	sq.cancelTimers()
+
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	discErr := inf.DisconnectError
 	_, ok := discErr.(*streamerror.Error)
 	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
 		return nil
 	}
-	// cancel scheduled timers
-	sq.cancelTimers()
-
 	// schedule stream termination
 	m.mu.Lock()
 	m.termTms[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
