@@ -26,6 +26,10 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc/keepalive"
+
+	"google.golang.org/grpc"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -266,20 +270,31 @@ func run(output io.Writer, args []string) error {
 }
 
 func (a *serverApp) initEtcd(cfg etcdConfig) error {
-	const etcdMemberListTimeout = time.Second * 5
-	cli, err := etcdv3.New(etcdv3.Config{
-		Endpoints:         cfg.Endpoints,
-		DialTimeout:       cfg.DialTimeout,
-		DialKeepAliveTime: time.Second,
-	})
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
-	defer cancel()
+	const (
+		dialKeepAliveTime    = 30 * time.Second
+		dialKeepAliveTimeout = 10 * time.Second
+		dialTimeout          = 20 * time.Second
 
-	// obtain memberlist to check cluster health
-	_, err = cli.MemberList(ctx)
+		keepAlive = time.Minute
+		timeout   = time.Minute * 10
+	)
+	dialOptions := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                keepAlive,
+			Timeout:             timeout,
+			PermitWithoutStream: true,
+		}),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+	}
+	cli, err := etcdv3.New(etcdv3.Config{
+		Endpoints:            cfg.Endpoints,
+		DialTimeout:          dialTimeout,
+		DialKeepAliveTime:    dialKeepAliveTime,
+		DialKeepAliveTimeout: dialKeepAliveTimeout,
+		DialOptions:          dialOptions,
+	})
 	if err != nil {
 		return err
 	}
