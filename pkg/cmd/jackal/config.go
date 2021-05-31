@@ -131,9 +131,10 @@ type modulesConfig struct {
 
 	// XEP-0198: Stream Management
 	Stream struct {
-		HibernateTime time.Duration `fig:"hibernate_time" default:"2m"`
-		AckTimeout    time.Duration `fig:"ack_timeout" default:"30s"`
-		MaxQueueSize  int           `fig:"max_queue_size" default:"30"`
+		HibernateTime      time.Duration `fig:"hibernate_time" default:"3m"`
+		RequestAckInterval time.Duration `fig:"request_ack_interval" default:"2m"`
+		WaitForAckTimeout  time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
+		MaxQueueSize       int           `fig:"max_queue_size" default:"30"`
 	}
 
 	// XEP-0199: XMPP Ping

@@ -24,19 +24,16 @@ import (
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
-const (
-	requestAckInterval = time.Minute * 2
-	waitForAckTimeout  = time.Second * 30
-)
-
 type queueElement struct {
 	st stravaganza.Stanza
 	h  uint32
 }
 
 type queue struct {
-	stm stream.C2S
-	nc  []byte
+	stm               stream.C2S
+	nc                []byte
+	reqAckInterval    time.Duration
+	waitForAckTimeout time.Duration
 
 	mu       sync.RWMutex
 	elements []queueElement
@@ -46,10 +43,17 @@ type queue struct {
 	discTm   *time.Timer
 }
 
-func newQueue(stm stream.C2S, nonce []byte) *queue {
+func newQueue(
+	stm stream.C2S,
+	nonce []byte,
+	requestAckInterval time.Duration,
+	waitForAckTimeout time.Duration,
+) *queue {
 	sq := &queue{
-		stm: stm,
-		nc:  nonce,
+		stm:               stm,
+		nc:                nonce,
+		reqAckInterval:    requestAckInterval,
+		waitForAckTimeout: waitForAckTimeout,
 	}
 	sq.rTm = time.AfterFunc(requestAckInterval, sq.requestAck)
 	return sq
@@ -156,14 +160,14 @@ func (q *queue) requestAck() {
 	q.stm.SendElement(r)
 
 	// schedule disconnect
-	q.discTm = time.AfterFunc(waitForAckTimeout, func() {
+	q.discTm = time.AfterFunc(q.waitForAckTimeout, func() {
 		q.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
 }
 
 func (q *queue) setRTimer() {
 	q.rTm.Stop()
-	q.rTm = time.AfterFunc(requestAckInterval, q.requestAck)
+	q.rTm = time.AfterFunc(q.reqAckInterval, q.requestAck)
 }
 
 func incH(h uint32) uint32 {
