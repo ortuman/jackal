@@ -16,7 +16,6 @@ package crashreporter
 
 import (
 	syslog "log"
-	"os"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -24,7 +23,9 @@ import (
 )
 
 const (
-	envSentryDSN = "JACKAL_SENTRY_DSN"
+	// Only event submission is allowed, so it's safe to keep it public.
+	// More info here: https://docs.sentry.io/product/sentry-basics/dsn-explainer/#dsn-utilization
+	sentryDSN = "https://04d2e889c1b94225ac422be3ffc60eec@o761573.ingest.sentry.io/5793115"
 
 	depthForRecoverAndReportPanic = 3
 )
@@ -32,10 +33,6 @@ const (
 var crashReporterEnabled bool
 
 func init() {
-	sentryDSN := os.Getenv(envSentryDSN)
-	if len(sentryDSN) == 0 {
-		return
-	}
 	if err := sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
 		syslog.Printf("sentry.Init: %s", err)
 		return
