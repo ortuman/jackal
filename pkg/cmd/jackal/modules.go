@@ -100,9 +100,10 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// (https://xmpp.org/extensions/xep-0198.html)
 	xep0198.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
 		return xep0198.New(a.router, a.hosts, a.resMng, a.hk, xep0198.Config{
-			HibernateTime: cfg.Stream.HibernateTime,
-			AckTimeout:    cfg.Stream.AckTimeout,
-			MaxQueueSize:  cfg.Stream.MaxQueueSize,
+			HibernateTime:      cfg.Stream.HibernateTime,
+			RequestAckInterval: cfg.Stream.RequestAckInterval,
+			WaitForAckTimeout:  cfg.Stream.WaitForAckTimeout,
+			MaxQueueSize:       cfg.Stream.MaxQueueSize,
 		})
 	},
 	// XEP-0199: XMPP Ping
