@@ -275,8 +275,8 @@ func (a *serverApp) initEtcd(cfg etcdConfig) error {
 		dialKeepAliveTimeout = 10 * time.Second
 		dialTimeout          = 20 * time.Second
 
-		keepAlive = time.Minute
-		timeout   = time.Minute * 10
+		keepAlive = time.Second * 10
+		timeout   = time.Minute * 20
 	)
 	dialOptions := []grpc.DialOption{
 		grpc.WithBlock(),
