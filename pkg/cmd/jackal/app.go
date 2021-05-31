@@ -26,9 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	syslog "log"
-
-	"github.com/cockroachdb/errors"
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -55,6 +52,7 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
+	"github.com/ortuman/jackal/pkg/util/crashreporter"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	tlsutil "github.com/ortuman/jackal/pkg/util/tls"
 	"github.com/ortuman/jackal/pkg/version"
@@ -136,7 +134,9 @@ func run(output io.Writer, args []string) error {
 	// Seed the math/rand RNG from crypto/rand.
 	rand.Seed(time.Now().UnixNano())
 
-	defer recoverAndReportPanic()
+	defer crashreporter.RecoverAndReportPanic()
+
+	panic("foo panic")
 
 	a := &serverApp{
 		output:     output,
@@ -528,21 +528,6 @@ func (a *serverApp) shutdown() error {
 func (a *serverApp) waitForStopSignal() os.Signal {
 	signal.Notify(a.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	return <-a.waitStopCh
-}
-
-func recoverAndReportPanic() {
-	const depthForRecoverAndReportPanic = 3
-	if r := recover(); r != nil {
-		panicErr := panicAsError(depthForRecoverAndReportPanic+1, r)
-		syslog.Fatalf("A panic has occurred!\n%+v", panicErr)
-	}
-}
-
-func panicAsError(depth int, r interface{}) error {
-	if err, ok := r.(error); ok {
-		return errors.WithStackDepth(err, depth+1)
-	}
-	return errors.NewWithDepthf(depth+1, "panic: %v", r)
 }
 
 func setRLimit() error {

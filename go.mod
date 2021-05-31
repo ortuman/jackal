@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/bgentry/speakeasy v0.1.0
 	github.com/cockroachdb/errors v1.8.4
+	github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2
 	github.com/coreos/etcd v3.3.25+incompatible
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
