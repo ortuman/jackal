@@ -320,7 +320,7 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		Build(),
 	)
 	log.Infow("Enabled stream management",
-		"smID", smID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"smID", smID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
 }
@@ -381,7 +381,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	sq.scheduleR()
 
 	log.Infow("Resumed stream",
-		"smID", prevSMID, "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"smID", prevSMID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
 }
@@ -396,13 +396,13 @@ func (m *Stream) handleA(stm stream.C2S, h uint32) {
 	sq.acknowledge(h)
 
 	log.Infow("Received stanza ack",
-		"ack_h", h, "h", sq.outboundH(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"ack_h", h, "h", sq.outboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	if sq.len() == 0 {
 		return // done here
 	}
 	log.Infow("Resending pending stanzas...",
-		"len", sq.len(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"len", sq.len(), "username", "id", stm.ID(), stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	sq.sendPending()
 }
@@ -416,7 +416,7 @@ func (m *Stream) handleR(stm stream.C2S) {
 		return
 	}
 	log.Infow("Stanza ack requested",
-		"username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
