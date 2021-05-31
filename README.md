@@ -12,7 +12,7 @@ An XMPP server written in Go.
 
 <div align="center">
     <a href="#">
-        <img src="./logos/gopher.png">
+        <img src="./logos/logo.png">
     </a>
 </div>
 
