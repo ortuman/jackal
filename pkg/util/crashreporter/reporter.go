@@ -15,7 +15,6 @@
 package crashreporter
 
 import (
-	"fmt"
 	syslog "log"
 	"os"
 	"time"
@@ -38,7 +37,8 @@ func init() {
 		return
 	}
 	if err := sentry.Init(sentry.ClientOptions{Dsn: sentryDSN}); err != nil {
-		panic(fmt.Sprintf("sentry.Init: %s", err))
+		syslog.Printf("sentry.Init: %s", err)
+		return
 	}
 	crashReporterEnabled = true
 }
