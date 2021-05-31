@@ -70,8 +70,5 @@ func sendCrashReport(err error) {
 	event.Tags["report_type"] = "panic"
 
 	_ = sentry.CaptureEvent(event)
-
-	if !sentry.Flush(10 * time.Second) {
-		syslog.Printf("Timeout trying to submit crash report")
-	}
+	_ = sentry.Flush(10 * time.Second)
 }
