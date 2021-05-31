@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -51,7 +51,7 @@ func TestOutS2S_SendElement(t *testing.T) {
 	s := &outS2S{
 		state:   outAuthenticated,
 		session: sessMock,
-		rq:      runqueue.New("out_s2s:test", nil),
+		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -93,7 +93,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 		state:   outAuthenticated,
 		session: sessMock,
 		tr:      trMock,
-		rq:      runqueue.New("out_s2s:test", nil),
+		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -304,7 +304,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 				typ:     defaultType,
 				state:   tt.state,
 				flags:   flags{fs: tt.flags},
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				kv:      kvMock,
@@ -412,7 +412,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 				dbResCh: make(chan stream.DialbackResult, 1),
 				state:   tt.state,
 				flags:   flags{fs: tt.flags},
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),
@@ -491,7 +491,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 				},
 				typ:     defaultType,
 				state:   tt.state,
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),

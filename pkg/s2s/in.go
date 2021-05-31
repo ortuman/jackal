@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -122,7 +122,7 @@ func newInS2S(
 		kv:          kv,
 		shapers:     shapers,
 		hk:          hk,
-		rq:          runqueue.New(id.String(), log.Errorf),
+		rq:          runqueue.New(id.String()),
 		doneCh:      make(chan struct{}),
 		state:       inConnecting,
 	}

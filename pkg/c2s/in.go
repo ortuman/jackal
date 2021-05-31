@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -78,7 +78,7 @@ type inC2S struct {
 	hk             *hook.Hooks
 	rq             *runqueue.RunQueue
 	discTm         *time.Timer
-	terminateCh    chan struct{}
+	doneCh         chan struct{}
 	sendDisabled   bool
 
 	mu    sync.RWMutex
@@ -131,8 +131,8 @@ func newInC2S(
 		mods:           mods,
 		resMng:         resMng,
 		shapers:        shapers,
-		rq:             runqueue.New(id.String(), log.Errorf),
-		terminateCh:    make(chan struct{}),
+		rq:             runqueue.New(id.String()),
+		doneCh:         make(chan struct{}),
 		state:          inConnecting,
 		hk:             hk,
 	}
@@ -293,7 +293,7 @@ func (s *inC2S) bindC2S(ctx context.Context) error {
 }
 
 func (s *inC2S) Done() <-chan struct{} {
-	return s.terminateCh
+	return s.doneCh
 }
 
 func (s *inC2S) start() error {
@@ -1093,7 +1093,7 @@ func (s *inC2S) terminate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	close(s.terminateCh) // signal termination
+	close(s.doneCh) // signal termination
 
 	s.setState(inTerminated)
 	return nil

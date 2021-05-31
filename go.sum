@@ -201,8 +201,8 @@ github.com/iris-contrib/blackfriday v2.0.0+incompatible/go.mod h1:UzZ2bDEoaSGPbk
 github.com/iris-contrib/go.uuid v2.0.0+incompatible/go.mod h1:iz2lgM/1UnEf1kP0L/+fafWORmlnuysV2EMP8MW+qe0=
 github.com/iris-contrib/i18n v0.0.0-20171121225848-987a633949d0/go.mod h1:pMCz62A0xJL6I+umB2YTlFRwWXaDFA0jy+5HzGiJjqI=
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
-github.com/jackal-xmpp/runqueue v0.5.2 h1:NyJCxEVOgEv9HPx40kyoTv3Sb5XHaNQypvMCEPuNbW8=
-github.com/jackal-xmpp/runqueue v0.5.2/go.mod h1:dKIrjDxnePHfURqAlEw8H0pPHOSbUXw7rt3JdLqOTN4=
+github.com/jackal-xmpp/runqueue/v2 v2.0.0 h1:QfvOfL6zF5yK1LN5TKabpj+VBuELMwtR8Xpkz0CrjoI=
+github.com/jackal-xmpp/runqueue/v2 v2.0.0/go.mod h1:tXZARVqBMGeV8BTc/qDPg0qXILTUWmER7wlYbN9Xcac=
 github.com/jackal-xmpp/stravaganza/v2 v2.0.0 h1:rR6miLtdGR7P+UE7jgD2DyKhV6GiGOyR+KLxz/ibkCw=
 github.com/jackal-xmpp/stravaganza/v2 v2.0.0/go.mod h1:DY23vJqFaG7lC2MAeedORYZL2D2TTaSsmdYXUq7oNMM=
 github.com/jonboulle/clockwork v0.1.0 h1:VKV+ZcuP6l3yW9doeqz6ziZGgcynBVQO+obU0+0hcPo=

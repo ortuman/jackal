@@ -24,14 +24,13 @@ import (
 	"testing"
 	"time"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/hook"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -60,7 +59,8 @@ func TestInC2S_SendElement(t *testing.T) {
 	}
 	s := &inC2S{
 		session: sessMock,
-		rq:      runqueue.New("in_c2s:test", nil),
+		rq:      runqueue.New("in_c2s:test"),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	stanza := stravaganza.NewBuilder("auth").
@@ -115,7 +115,8 @@ func TestInC2S_Disconnect(t *testing.T) {
 		tr:      trMock,
 		router:  routerMock,
 		resMng:  rmMock,
-		rq:      runqueue.New("in_c2s:test", nil),
+		rq:      runqueue.New("in_c2s:test"),
+		doneCh:  make(chan struct{}),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -727,8 +728,8 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				},
 				state:          tt.state,
 				flags:          inC2SFlags{flg: tt.flags},
-				rq:             runqueue.New(tt.name, nil),
-				terminateCh:    make(chan struct{}),
+				rq:             runqueue.New(tt.name),
+				doneCh:         make(chan struct{}),
 				jd:             userJID,
 				tr:             trMock,
 				hosts:          hMock,
@@ -819,7 +820,8 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 					MaxStanzaSize:    8192,
 				},
 				state:   tt.state,
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
+				doneCh:  make(chan struct{}),
 				tr:      trMock,
 				session: ssMock,
 				router:  routerMock,

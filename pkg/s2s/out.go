@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -133,7 +133,7 @@ func newOutS2S(
 		hk:      hk,
 		dialer:  newDialer(cfg.DialTimeout, tlsCfg),
 	}
-	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
+	stm.rq = runqueue.New(stm.ID().String())
 	return stm
 }
 
@@ -158,7 +158,7 @@ func newDialbackS2S(
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
 	}
-	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
+	stm.rq = runqueue.New(stm.ID().String())
 	return stm
 }
 
