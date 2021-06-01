@@ -259,8 +259,9 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	// cancel scheduled termination
 	if tm := m.termTms[inf.ID]; tm != nil {
 		tm.Stop()
-		delete(m.termTms, inf.ID)
 	}
+	delete(m.termTms, inf.ID)
+
 	return nil
 }
 

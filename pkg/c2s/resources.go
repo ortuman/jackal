@@ -33,6 +33,12 @@ func (r *resources) all() []stream.C2S {
 	return r.stms
 }
 
+func (r *resources) len() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.stms)
+}
+
 func (r *resources) bind(stm stream.C2S) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

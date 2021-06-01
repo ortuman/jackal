@@ -198,9 +198,13 @@ func (r *LocalRouter) reportMetrics() {
 		select {
 		case <-tc.C:
 			r.mu.RLock()
-			totalConns := len(r.stms)
+			totalCount := len(r.stms)
+			for _, res := range r.bndRes {
+				totalCount += res.len()
+			}
 			r.mu.RUnlock()
-			reportTotalIncomingConnections(totalConns)
+
+			reportTotalIncomingConnections(totalCount)
 
 		case ch := <-r.doneCh:
 			close(ch)
