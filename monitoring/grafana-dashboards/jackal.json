@@ -47,10 +47,6 @@
               {
                 "color": "light-blue",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -89,7 +85,7 @@
           "refId": "A"
         }
       ],
-      "title": "C2S Connections",
+      "title": "🔻🔺 C2S Connections",
       "type": "stat"
     },
     {
@@ -426,12 +422,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-green",
+                "color": "light-blue",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -470,7 +462,7 @@
           "refId": "A"
         }
       ],
-      "title": "S2S In Connections",
+      "title": "🔻 S2S In Connections",
       "type": "stat"
     },
     {
@@ -485,12 +477,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-green",
+                "color": "light-blue",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -529,7 +517,7 @@
           "refId": "A"
         }
       ],
-      "title": "S2S Out Connections",
+      "title": "🔺 S2S Out Connections",
       "type": "stat"
     },
     {
@@ -1637,5 +1625,5 @@
   "timezone": "",
   "title": "Jackal - XMPP Server",
   "uid": "CiQs-46Gk",
-  "version": 36
+  "version": 38
 }
