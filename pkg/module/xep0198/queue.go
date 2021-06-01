@@ -159,15 +159,14 @@ func (q *queue) requestAck() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	stm := q.stm
 	r := stravaganza.NewBuilder("r").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		Build()
-	stm.SendElement(r)
+	q.stm.SendElement(r)
 
 	// schedule disconnect
 	q.discTm = time.AfterFunc(q.waitForAckTimeout, func() {
-		stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+		q.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
 }
 
