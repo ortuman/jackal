@@ -16,6 +16,7 @@ package etcdkv
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync/atomic"
 
@@ -158,15 +159,15 @@ func (k *KV) keepAliveLease() {
 				retries = 0
 
 			default:
-				log.Warnf("Failed to perform lease keepalive: %v", err)
+				log.Warnw(fmt.Sprintf("Failed to perform lease keepalive: %v", err), "lease_id", k.leaseID)
+
 				retries++
 				if retries == maxKeepAliveRetries {
-					log.Errorf("Unable to refresh lease keepalive: max retries reached", "retries", maxKeepAliveRetries)
+					log.Errorf("Unable to refresh lease keepalive: max retries reached", "lease_id", k.leaseID, "retries", maxKeepAliveRetries)
+					shutdown() // shutdown process to avoid a split-brain scenario
 					return
 				}
 			}
-		} else {
-			log.Debugw("Updated lease TTL", "id", resp.ID, "ttl", resp.TTL)
 		}
 	}
 }
