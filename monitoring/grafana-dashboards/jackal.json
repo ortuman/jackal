@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 1,
-  "iteration": 1622561235717,
+  "iteration": 1622573048470,
   "links": [],
   "panels": [
     {
@@ -302,7 +302,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 23,
+        "w": 24,
         "x": 0,
         "y": 17
       },
@@ -683,7 +683,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 23,
+        "w": 24,
         "x": 0,
         "y": 43
       },
@@ -1578,5 +1578,5 @@
   "timezone": "",
   "title": "Jackal - XMPP Server",
   "uid": "CiQs-46Gk",
-  "version": 33
+  "version": 35
 }
