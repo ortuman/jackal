@@ -144,7 +144,6 @@ func (q *queue) cancelTimers() {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	q.rTm.Stop()
-
 	if discTm := q.discTm; discTm != nil {
 		discTm.Stop()
 	}
@@ -154,14 +153,15 @@ func (q *queue) requestAck() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
+	stm := q.stm
 	r := stravaganza.NewBuilder("r").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		Build()
-	q.stm.SendElement(r)
+	stm.SendElement(r)
 
 	// schedule disconnect
 	q.discTm = time.AfterFunc(q.waitForAckTimeout, func() {
-		q.stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
+		stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 	})
 }
 

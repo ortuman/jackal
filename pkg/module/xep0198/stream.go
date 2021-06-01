@@ -347,6 +347,8 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		sendFailedReply(itemNotFound, "", stm)
 		return nil
 	}
+	sq.cancelTimers()
+
 	// fetch resource info
 	res, err := m.resMng.GetResource(ctx, jd.Node(), jd.Resource())
 	if err != nil {

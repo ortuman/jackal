@@ -1076,7 +1076,6 @@ func (s *inC2S) terminate(ctx context.Context) error {
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
 	}
-
 	// delete cluster resource
 	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
 		return err
