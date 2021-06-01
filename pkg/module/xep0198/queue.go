@@ -34,6 +34,7 @@ type queue struct {
 	nc                []byte
 	reqAckInterval    time.Duration
 	waitForAckTimeout time.Duration
+	maxSize           int
 
 	mu       sync.RWMutex
 	elements []queueElement
@@ -48,12 +49,14 @@ func newQueue(
 	nonce []byte,
 	requestAckInterval time.Duration,
 	waitForAckTimeout time.Duration,
+	maxSize int,
 ) *queue {
 	sq := &queue{
 		stm:               stm,
 		nc:                nonce,
 		reqAckInterval:    requestAckInterval,
 		waitForAckTimeout: waitForAckTimeout,
+		maxSize:           maxSize,
 	}
 	sq.rTm = time.AfterFunc(requestAckInterval, sq.requestAck)
 	return sq
@@ -80,6 +83,9 @@ func (q *queue) processOutboundStanza(stanza stravaganza.Stanza) {
 		st: stanza,
 		h:  q.outH,
 	})
+	if len(q.elements) == q.maxSize { // max queue size reached
+		_ = q.stm.Disconnect(streamerror.E(streamerror.PolicyViolation))
+	}
 }
 
 func (q *queue) setStream(stm stream.C2S) {

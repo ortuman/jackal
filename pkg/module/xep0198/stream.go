@@ -193,11 +193,6 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 		return nil
 	}
 	sq.processOutboundStanza(stanza)
-
-	if sq.len() == m.cfg.MaxQueueSize { // max queue size reached
-		_ = stm.Disconnect(streamerror.E(streamerror.PolicyViolation))
-		return nil
-	}
 	return nil
 }
 
@@ -308,7 +303,13 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	}
 	// register stream queue
 	m.mu.Lock()
-	m.queues[queueKey(stm.JID())] = newQueue(stm, nonce, m.cfg.RequestAckInterval, m.cfg.WaitForAckTimeout)
+	m.queues[queueKey(stm.JID())] = newQueue(
+		stm,
+		nonce,
+		m.cfg.RequestAckInterval,
+		m.cfg.WaitForAckTimeout,
+		m.cfg.MaxQueueSize,
+	)
 	m.mu.Unlock()
 
 	smID := encodeSMID(stm.JID(), nonce)
