@@ -16,35 +16,35 @@ package etcdkv
 
 import (
 	"context"
-	"errors"
 	"os"
-	"time"
+	"sync/atomic"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/log"
 )
 
 const (
-	leaseTTLInSeconds       int64 = 15
-	refreshLeaseTTLInterval       = time.Second
-
-	keepAliveOpTimeout = time.Second * 10
+	leaseTTLInSeconds int64 = 15
 )
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
-	cli     *etcdv3.Client
-	leaseID etcdv3.LeaseID
-	doneCh  chan chan struct{}
+	cli      *etcdv3.Client
+	leaseID  etcdv3.LeaseID
+	ctx      context.Context
+	cancelFn context.CancelFunc
+	kaCh     <-chan *etcdv3.LeaseKeepAliveResponse
+	done     int32
 }
 
 // New returns a new etcd key-value store instance.
 func New(cli *etcdv3.Client) *KV {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &KV{
-		cli:    cli,
-		doneCh: make(chan chan struct{}, 1),
+		cli:      cli,
+		ctx:      ctx,
+		cancelFn: cancel,
 	}
 }
 
@@ -117,7 +117,11 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	k.leaseID = resp.ID
 
-	go k.refreshLeaseTTL()
+	k.kaCh, err = k.cli.KeepAlive(k.ctx, k.leaseID)
+	if err != nil {
+		return err
+	}
+	go k.keepAliveLease()
 
 	log.Infow("Started etcd KV store")
 	return nil
@@ -125,10 +129,10 @@ func (k *KV) Start(ctx context.Context) error {
 
 // Stop closes etcd underlying connection.
 func (k *KV) Stop(ctx context.Context) error {
+	atomic.StoreInt32(&k.done, 1)
+
 	// stop refreshing lease TTL
-	ch := make(chan struct{})
-	k.doneCh <- ch
-	<-ch
+	k.cancelFn()
 
 	_, err := k.cli.Revoke(ctx, k.leaseID)
 	if err != nil {
@@ -138,33 +142,31 @@ func (k *KV) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (k *KV) refreshLeaseTTL() {
-	tc := time.NewTicker(refreshLeaseTTLInterval)
-	defer tc.Stop()
+func (k *KV) keepAliveLease() {
+	const maxKeepAliveRetries = 10
 
-	for {
-		select {
-		case <-tc.C:
-			ctx, cancel := context.WithTimeout(context.Background(), keepAliveOpTimeout)
-			_, err := k.cli.KeepAliveOnce(ctx, k.leaseID)
-			cancel()
-
-			switch {
-			case err == nil:
-				break
-
-			case errors.Is(err, rpctypes.ErrLeaseNotFound):
-				// shutdown process to avoid split-brain scenario
-				log.Errorf("Unable to refresh etcd lease keepalive: %v", err)
-				shutdown()
-				return
+	var err error
+	var retries int
+	for resp := range k.kaCh {
+		if atomic.LoadInt32(&k.done) == 1 {
+			return
+		}
+		if resp == nil {
+			k.kaCh, err = k.cli.KeepAlive(k.ctx, k.leaseID)
+			switch err {
+			case nil:
+				retries = 0
 
 			default:
-				log.Warnf("Failed to refresh etcd lease keepalive: %v", err)
+				log.Warnf("Failed to perform lease keepalive: %v", err)
+				retries++
+				if retries == maxKeepAliveRetries {
+					log.Errorf("Unable to refresh lease keepalive: max retries reached", "retries", maxKeepAliveRetries)
+					return
+				}
 			}
-
-		case ch := <-k.doneCh:
-			close(ch)
+		} else {
+			log.Debugw("Updated lease TTL", "id", resp.ID, "ttl", resp.TTL)
 		}
 	}
 }
