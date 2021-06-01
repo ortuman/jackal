@@ -163,8 +163,10 @@ func (k *KV) keepAliveLease() {
 
 				retries++
 				if retries == maxKeepAliveRetries {
-					log.Errorf("Unable to refresh lease keepalive: max retries reached", "lease_id", k.leaseID, "retries", maxKeepAliveRetries)
-					shutdown() // shutdown process to avoid a split-brain scenario
+					log.Errorf(fmt.Sprintf("Unable to refresh lease keepalive: max retries reached: %d", maxKeepAliveRetries), "lease_id", k.leaseID)
+
+					// shutdown process to avoid split-brain scenario
+					shutdown()
 					return
 				}
 			}
