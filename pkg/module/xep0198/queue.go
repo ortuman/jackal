@@ -69,6 +69,12 @@ func (q *queue) processInboundStanza() {
 func (q *queue) processOutboundStanza(stanza stravaganza.Stanza) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	for _, el := range q.elements {
+		if el.st == stanza {
+			// stanza is being resent
+			return
+		}
+	}
 	q.outH = incH(q.outH)
 	q.elements = append(q.elements, queueElement{
 		st: stanza,
