@@ -404,7 +404,7 @@ func (m *Stream) handleA(stm stream.C2S, h uint32) {
 		return // done here
 	}
 	log.Infow("Resending pending stanzas...",
-		"len", sq.len(), "username", "id", stm.ID(), stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		"len", sq.len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	sq.sendPending()
 }
