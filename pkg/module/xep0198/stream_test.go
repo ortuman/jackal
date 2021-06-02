@@ -56,3 +56,33 @@ func TestStream_DecodeSMID(t *testing.T) {
 	require.Equal(t, "ortuman@jackal.im/Conversations.4RYE", jd.String())
 	require.Equal(t, expectedNonce, nonce)
 }
+
+func TestStream_InStanza(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestStream_OutStanza(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestStream_R(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestStream_Resume(t *testing.T) {
+	// given
+	// when
+	// then
+}
