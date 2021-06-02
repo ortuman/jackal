@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 1,
-  "iteration": 1622561235717,
+  "iteration": 1622573125935,
   "links": [],
   "panels": [
     {
@@ -47,10 +47,6 @@
               {
                 "color": "light-blue",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -89,7 +85,7 @@
           "refId": "A"
         }
       ],
-      "title": "C2S Connections",
+      "title": "🔻🔺 C2S Connections",
       "type": "stat"
     },
     {
@@ -302,7 +298,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 23,
+        "w": 24,
         "x": 0,
         "y": 17
       },
@@ -426,12 +422,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-green",
+                "color": "light-blue",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -440,7 +432,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 27
       },
@@ -470,7 +462,62 @@
           "refId": "A"
         }
       ],
-      "title": "S2S Incoming Connections",
+      "title": "🔻 S2S In Connections",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "light-blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "id": 33,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.7",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(jackal_s2s_outgoing_total_connections)",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "🔺 S2S Out Connections",
       "type": "stat"
     },
     {
@@ -683,7 +730,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 23,
+        "w": 24,
         "x": 0,
         "y": 43
       },
@@ -1578,5 +1625,5 @@
   "timezone": "",
   "title": "Jackal - XMPP Server",
   "uid": "CiQs-46Gk",
-  "version": 33
+  "version": 38
 }
