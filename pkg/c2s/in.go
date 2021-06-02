@@ -325,7 +325,8 @@ func (s *inC2S) readLoop() {
 	tm.Stop()
 
 	for {
-		if s.getState() == inDisconnected {
+		st := s.getState()
+		if st == inDisconnected || st == inTerminated {
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
