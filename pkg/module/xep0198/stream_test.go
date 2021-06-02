@@ -57,6 +57,12 @@ func TestStream_DecodeSMID(t *testing.T) {
 	require.Equal(t, expectedNonce, nonce)
 }
 
+func TestStream_Enable(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
 func TestStream_InStanza(t *testing.T) {
 	// given
 	// when
@@ -76,6 +82,12 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 }
 
 func TestStream_R(t *testing.T) {
+	// given
+	// when
+	// then
+}
+
+func TestStream_Acknowledge(t *testing.T) {
 	// given
 	// when
 	// then

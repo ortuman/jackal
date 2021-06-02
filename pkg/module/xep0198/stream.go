@@ -363,7 +363,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	}
 	sq.setStream(stm)
 
-	// since we disconnected old stream, session stream queue must be re-register
+	// since we disconnected old stream, we must re-register retained queue
 	m.mu.Lock()
 	m.queues[qk] = sq
 	m.mu.Unlock()
