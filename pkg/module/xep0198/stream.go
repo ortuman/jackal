@@ -173,7 +173,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if sq == nil {
 		return nil
 	}
-	sq.processInboundStanza()
+	sq.handleIn()
 	return nil
 }
 
@@ -192,7 +192,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if sq == nil {
 		return nil
 	}
-	sq.processOutboundStanza(stanza)
+	sq.handleOut(stanza)
 	return nil
 }
 

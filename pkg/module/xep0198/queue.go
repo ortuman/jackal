@@ -62,14 +62,14 @@ func newQueue(
 	return sq
 }
 
-func (q *queue) processInboundStanza() {
+func (q *queue) handleIn() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.setRTimer()
 	q.inH = incH(q.inH)
 }
 
-func (q *queue) processOutboundStanza(stanza stravaganza.Stanza) {
+func (q *queue) handleOut(stanza stravaganza.Stanza) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	for _, el := range q.elements {
