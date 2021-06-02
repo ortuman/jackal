@@ -345,11 +345,14 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 	s.rq.Run(func() {
 		defer close(doneCh)
 
+		log.Debugf("HANDLING SESSION RESULT...")
+
 		ctx, cancel := s.requestContext()
 		defer cancel()
 
 		switch {
 		case sErr == nil && elem != nil:
+			log.Debugf("HANDLING ELEMENT...")
 			err := s.handleElement(ctx, elem)
 			if err != nil {
 				log.Warnw("Failed to process incoming C2S session element", "error", err, "id", s.id)
@@ -357,6 +360,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 			}
 
 		case sErr != nil:
+			log.Debugf("HANDLING SESSION ERROR...")
 			s.handleSessionError(ctx, sErr)
 		}
 	})
