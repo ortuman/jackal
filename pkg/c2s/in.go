@@ -360,7 +360,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 			}
 
 		case sErr != nil:
-			log.Debugf("HANDLING SESSION ERROR: %s...", err)
+			log.Debugf("HANDLING SESSION ERROR: %s...", sErr)
 			s.handleSessionError(ctx, sErr)
 		}
 	})
