@@ -325,8 +325,11 @@ func (s *inC2S) readLoop() {
 	tm.Stop()
 
 	for {
-		st := s.getState()
-		if st == inDisconnected || st == inTerminated {
+		switch s.getState() {
+		case inDisconnected:
+			<-s.doneCh // wait until terminated
+			fallthrough
+		case inTerminated:
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
@@ -342,9 +345,9 @@ func (s *inC2S) readLoop() {
 }
 
 func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
-	doneCh := make(chan struct{})
+	handledCh := make(chan struct{})
 	s.rq.Run(func() {
-		defer close(doneCh)
+		defer close(handledCh)
 
 		ctx, cancel := s.requestContext()
 		defer cancel()
@@ -361,7 +364,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 			s.handleSessionError(ctx, sErr)
 		}
 	})
-	<-doneCh
+	<-handledCh
 }
 
 func (s *inC2S) connTimeout() {
