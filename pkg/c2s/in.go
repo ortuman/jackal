@@ -1060,6 +1060,8 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 	}
 	s.setState(inDisconnected)
 
+	log.Infof("CLOSING STREAM: %v...(id: %s)", disconnectErr, s.ID())
+
 	if s.discTm != nil {
 		s.discTm.Stop()
 	}
@@ -1075,6 +1077,8 @@ func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
 	if err != nil {
 		return err
 	}
+	log.Infof("TERMINATING STREAM: %v...(id: %s)", disconnectErr, s.ID())
+
 	return s.terminate(ctx)
 }
 
