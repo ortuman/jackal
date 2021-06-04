@@ -15,7 +15,16 @@
 package xep0198
 
 import (
+	"context"
 	"testing"
+	"time"
+
+	"github.com/ortuman/jackal/pkg/router/stream"
+
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/pkg/hook"
 
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/stretchr/testify/require"
@@ -59,8 +68,62 @@ func TestStream_DecodeSMID(t *testing.T) {
 
 func TestStream_Enable(t *testing.T) {
 	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+
+	var setK string
+	var setVal interface{}
+	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
+		setK = k
+		setVal = val
+		return nil
+	}
+	stmMock.IsBindedFunc = func() bool { return true }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.InfoFunc = func() c2smodel.Info { return c2smodel.Info{M: map[string]string{}} }
+
+	var sentEl stravaganza.Element
+	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		sentEl = elem
+		return nil
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+
 	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: stravaganza.NewBuilder("enable").
+				WithAttribute(stravaganza.Namespace, streamNamespace).
+				Build(),
+		},
+		Sender: stmMock,
+	})
+
 	// then
+	require.True(t, halted)
+	require.Nil(t, err)
+
+	require.Equal(t, setK, enabledInfoKey)
+	require.Equal(t, true, setVal)
+
+	require.Equal(t, "enabled", sentEl.Name())
+	require.Equal(t, streamNamespace, sentEl.Attribute(stravaganza.Namespace))
+
+	sq := sm.queues[queueKey(jd)]
+	require.NotNil(t, sq)
 }
 
 func TestStream_InStanza(t *testing.T) {
@@ -97,4 +160,13 @@ func TestStream_Resume(t *testing.T) {
 	// given
 	// when
 	// then
+}
+
+func testSMConfig() Config {
+	return Config{
+		HibernateTime:      time.Second,
+		RequestAckInterval: time.Second,
+		WaitForAckTimeout:  time.Second,
+		MaxQueueSize:       10,
+	}
 }
