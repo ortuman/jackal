@@ -327,6 +327,7 @@ func (s *inC2S) readLoop() {
 	tm.Stop()
 
 	authTm := time.AfterFunc(s.cfg.AuthenticateTimeout, s.connTimeout) // schedule authenticate timeout
+	defer authTm.Stop()
 
 	for {
 		switch s.getState() {
