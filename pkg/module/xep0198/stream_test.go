@@ -516,7 +516,9 @@ func TestStream_Resume(t *testing.T) {
 		sndElements = append(sndElements, elem)
 		return nil
 	}
+	var resumed bool
 	stmMock.ResumeFunc = func(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error {
+		resumed = true
 		return nil
 	}
 
@@ -594,6 +596,8 @@ func TestStream_Resume(t *testing.T) {
 	// then
 	require.True(t, halted)
 	require.Nil(t, err)
+
+	require.True(t, resumed)
 
 	require.Equal(t, streamerror.Conflict, streamErr.Reason)
 
