@@ -19,9 +19,8 @@ import (
 	"testing"
 	"time"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
@@ -123,6 +122,7 @@ func TestStream_Enable(t *testing.T) {
 
 	sq := sm.queues[queueKey(jd)]
 	require.NotNil(t, sq)
+	sq.cancelTimers()
 }
 
 func TestStream_InStanza(t *testing.T) {
@@ -143,12 +143,12 @@ func TestStream_InStanza(t *testing.T) {
 		queues: make(map[string]*queue),
 		hk:     hk,
 	}
-	sm.queues[queueKey(jd)] = newQueue(
-		stmMock,
-		nil,
-		time.Second,
-		time.Second,
+	sq := newQueue(
+		stmMock, nil, time.Second, time.Minute,
 	)
+	sm.queues[queueKey(jd)] = sq
+	sq.cancelTimers() // do not send R
+
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
 	b.WithAttribute("to", "ortuman@jackal.im/yard")
@@ -171,7 +171,7 @@ func TestStream_InStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq := sm.queues[queueKey(jd)]
+	sq = sm.queues[queueKey(jd)]
 	require.NotNil(t, sq)
 
 	require.Equal(t, uint32(1), sq.inH)
@@ -195,12 +195,12 @@ func TestStream_OutStanza(t *testing.T) {
 		queues: make(map[string]*queue),
 		hk:     hk,
 	}
-	sm.queues[queueKey(jd)] = newQueue(
-		stmMock,
-		nil,
-		time.Second,
-		time.Second,
+	sq := newQueue(
+		stmMock, nil, time.Second, time.Minute,
 	)
+	sm.queues[queueKey(jd)] = sq
+	sq.cancelTimers() // do not send R
+
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
 	b.WithAttribute("to", "noelia@jackal.im/yard")
@@ -223,7 +223,7 @@ func TestStream_OutStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq := sm.queues[queueKey(jd)]
+	sq = sm.queues[queueKey(jd)]
 	require.NotNil(t, sq)
 
 	require.Len(t, sq.elements, 1)
@@ -260,14 +260,6 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 		queues: make(map[string]*queue),
 		hk:     hk,
 	}
-	sq := newQueue(
-		stmMock,
-		nil,
-		time.Second,
-		time.Second,
-	)
-	sq.cancelTimers()
-
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
 	b.WithAttribute("to", "noelia@jackal.im/yard")
@@ -279,11 +271,15 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	testMsg1, _ := b.BuildMessage()
 	testMsg2, _ := b.BuildMessage()
 
+	sq := newQueue(
+		stmMock, nil, time.Second, time.Minute,
+	)
 	sq.elements = append(sq.elements, queueElement{
 		st: testMsg1,
 		h:  1,
 	})
 	sm.queues[queueKey(jd)] = sq
+	sq.cancelTimers() // do not send R
 
 	// when
 	_ = sm.Start(context.Background())
@@ -301,13 +297,112 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	require.Equal(t, streamerror.PolicyViolation, streamErr.Reason)
 }
 
-func TestStream_R(t *testing.T) {
+func TestStream_SendR(t *testing.T) {
 	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{
+			M: map[string]string{enabledInfoKey: "true"},
+		}
+	}
+	sendCh := make(chan stravaganza.Element, 1)
+	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		sendCh <- elem
+		return nil
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+	sq := newQueue(
+		stmMock, nil, time.Millisecond*500, time.Minute,
+	)
+	sm.queues[queueKey(jd)] = sq
+	defer sq.cancelTimers()
+
 	// when
+	var sentEl stravaganza.Element
+	select {
+	case el := <-sendCh:
+		sentEl = el
+
+	case <-time.After(time.Second * 5):
+		require.Fail(t, "Failed to receive R element")
+		return
+	}
+
 	// then
+	require.NotNil(t, sentEl)
+
+	require.Equal(t, "r", sentEl.Name())
+	require.Equal(t, streamNamespace, sentEl.Attribute(stravaganza.Namespace))
 }
 
-func TestStream_A(t *testing.T) {
+func TestStream_HandleR(t *testing.T) {
+	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{
+			M: map[string]string{enabledInfoKey: "true"},
+		}
+	}
+	var sentEl stravaganza.Element
+	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		sentEl = elem
+		return nil
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+	sq := newQueue(
+		stmMock, nil, time.Second, time.Minute,
+	)
+	sm.queues[queueKey(jd)] = sq
+	sq.cancelTimers() // do not send R
+
+	sq.inH = 10
+
+	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: stravaganza.NewBuilder("r").
+				WithAttribute(stravaganza.Namespace, streamNamespace).
+				Build(),
+		},
+		Sender: stmMock,
+	})
+
+	// then
+	require.True(t, halted)
+	require.Nil(t, err)
+
+	require.Equal(t, "a", sentEl.Name())
+	require.Equal(t, "10", sentEl.Attribute("h"))
+}
+
+func TestStream_HandleA(t *testing.T) {
 	// given
 	// when
 	// then
