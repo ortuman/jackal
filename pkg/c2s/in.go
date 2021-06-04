@@ -60,7 +60,10 @@ const (
 	inTerminated
 )
 
-var disconnectTimeout = time.Second * 5
+var (
+	authenticateTimeout = time.Second * 30
+	disconnectTimeout   = time.Second * 5
+)
 
 type inC2S struct {
 	id             stream.C2SID
@@ -324,12 +327,14 @@ func (s *inC2S) readLoop() {
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
+	// authTm := time.AfterFunc(authenticateTimeout, s.connTimeout) // schedule authentication timeout
+
 	for {
 		switch s.getState() {
-		case inDisconnected:
-			<-s.doneCh // wait until terminated
-			fallthrough
-		case inTerminated:
+		case inAuthenticated:
+			// authTm.Stop()
+		case inDisconnected, inTerminated:
+			log.Infow("FINISHED...", "id", s.ID())
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
