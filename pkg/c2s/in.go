@@ -327,12 +327,8 @@ func (s *inC2S) readLoop() {
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
-	// authTm := time.AfterFunc(authenticateTimeout, s.connTimeout) // schedule authentication timeout
-
 	for {
 		switch s.getState() {
-		case inAuthenticated:
-			// authTm.Stop()
 		case inDisconnected, inTerminated:
 			log.Infow("FINISHED...", "id", s.ID())
 			return
