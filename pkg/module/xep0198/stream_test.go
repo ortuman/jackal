@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -72,15 +74,15 @@ func TestStream_Enable(t *testing.T) {
 	var setK string
 	var setVal interface{}
 	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.SetInfoValueFunc = func(ctx context.Context, k string, val interface{}) error {
 		setK = k
 		setVal = val
 		return nil
 	}
 	stmMock.IsBindedFunc = func() bool { return true }
-	stmMock.JIDFunc = func() *jid.JID { return jd }
-	stmMock.UsernameFunc = func() string { return jd.Node() }
-	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.InfoFunc = func() c2smodel.Info { return c2smodel.Info{M: map[string]string{}} }
 
 	var sentEl stravaganza.Element
@@ -125,20 +127,178 @@ func TestStream_Enable(t *testing.T) {
 
 func TestStream_InStanza(t *testing.T) {
 	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{
+			M: map[string]string{enabledInfoKey: "true"},
+		}
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+	sm.queues[queueKey(jd)] = newQueue(
+		stmMock,
+		nil,
+		time.Second,
+		time.Second,
+	)
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "noelia@jackal.im/yard")
+	b.WithAttribute("to", "ortuman@jackal.im/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	testMsg, _ := b.BuildMessage()
+
 	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	_, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info:   &hook.C2SStreamInfo{Element: testMsg},
+		Sender: stmMock,
+	})
+
 	// then
+	require.Nil(t, err)
+
+	sq := sm.queues[queueKey(jd)]
+	require.NotNil(t, sq)
+
+	require.Equal(t, uint32(1), sq.inH)
 }
 
 func TestStream_OutStanza(t *testing.T) {
 	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{
+			M: map[string]string{enabledInfoKey: "true"},
+		}
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+	sm.queues[queueKey(jd)] = newQueue(
+		stmMock,
+		nil,
+		time.Second,
+		time.Second,
+	)
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "ortuman@jackal.im/yard")
+	b.WithAttribute("to", "noelia@jackal.im/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	testMsg, _ := b.BuildMessage()
+
 	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	_, err := hk.Run(context.Background(), hook.C2SStreamElementSent, &hook.ExecutionContext{
+		Info:   &hook.C2SStreamInfo{Element: testMsg},
+		Sender: stmMock,
+	})
+
 	// then
+	require.Nil(t, err)
+
+	sq := sm.queues[queueKey(jd)]
+	require.NotNil(t, sq)
+
+	require.Len(t, sq.elements, 1)
+	require.Equal(t, sq.elements[0].st, testMsg)
+	require.Equal(t, uint32(1), sq.elements[0].h)
 }
 
 func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.InfoFunc = func() c2smodel.Info {
+		return c2smodel.Info{
+			M: map[string]string{enabledInfoKey: "true"},
+		}
+	}
+	var streamErr *streamerror.Error
+	stmMock.DisconnectFunc = func(sErr *streamerror.Error) <-chan error {
+		streamErr = sErr
+		return nil
+	}
+
+	cfg := testSMConfig()
+	cfg.MaxQueueSize = 1
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    cfg,
+		queues: make(map[string]*queue),
+		hk:     hk,
+	}
+	sq := newQueue(
+		stmMock,
+		nil,
+		time.Second,
+		time.Second,
+	)
+	sq.cancelTimers()
+
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "ortuman@jackal.im/yard")
+	b.WithAttribute("to", "noelia@jackal.im/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	testMsg1, _ := b.BuildMessage()
+	testMsg2, _ := b.BuildMessage()
+
+	sq.elements = append(sq.elements, queueElement{
+		st: testMsg1,
+		h:  1,
+	})
+	sm.queues[queueKey(jd)] = sq
+
 	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	_, err := hk.Run(context.Background(), hook.C2SStreamElementSent, &hook.ExecutionContext{
+		Info:   &hook.C2SStreamInfo{Element: testMsg2},
+		Sender: stmMock,
+	})
+
 	// then
+	require.Nil(t, err)
+
+	require.NotNil(t, streamErr)
+	require.Equal(t, streamerror.PolicyViolation, streamErr.Reason)
 }
 
 func TestStream_R(t *testing.T) {
@@ -147,7 +307,7 @@ func TestStream_R(t *testing.T) {
 	// then
 }
 
-func TestStream_Acknowledge(t *testing.T) {
+func TestStream_A(t *testing.T) {
 	// given
 	// when
 	// then
@@ -161,7 +321,7 @@ func TestStream_Resume(t *testing.T) {
 
 func testSMConfig() Config {
 	return Config{
-		HibernateTime:      time.Second,
+		HibernateTime:      time.Minute,
 		RequestAckInterval: time.Second,
 		WaitForAckTimeout:  time.Second,
 		MaxQueueSize:       10,

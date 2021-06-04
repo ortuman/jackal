@@ -193,6 +193,14 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 		return nil
 	}
 	sq.handleOut(stanza)
+
+	if sq.len() >= m.cfg.MaxQueueSize { // max queue size reached
+		_ = sq.stream().Disconnect(streamerror.E(streamerror.PolicyViolation))
+
+		log.Infow("Max queue size reached",
+			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		)
+	}
 	return nil
 }
 
@@ -308,7 +316,6 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		nonce,
 		m.cfg.RequestAckInterval,
 		m.cfg.WaitForAckTimeout,
-		m.cfg.MaxQueueSize,
 	)
 	m.mu.Unlock()
 
