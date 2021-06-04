@@ -104,12 +104,14 @@ func (q *queue) acknowledge(h uint32) {
 	if discTm := q.discTm; discTm != nil {
 		discTm.Stop() // cancel disconnection timeout
 	}
+	j := -1
 	for i, e := range q.elements {
-		if e.h < h {
-			continue
+		if e.h <= h {
+			j = i
 		}
-		q.elements = q.elements[i+1:]
-		break
+	}
+	if j != -1 {
+		q.elements = q.elements[j+1:]
 	}
 	q.setRTimer()
 }
