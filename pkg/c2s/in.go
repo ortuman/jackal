@@ -61,8 +61,7 @@ const (
 )
 
 var (
-	authenticateTimeout = time.Second * 30
-	disconnectTimeout   = time.Second * 5
+	disconnectTimeout = time.Second * 5
 )
 
 type inC2S struct {
@@ -327,14 +326,16 @@ func (s *inC2S) readLoop() {
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
+	authTm := time.AfterFunc(s.cfg.AuthenticateTimeout, s.connTimeout) // schedule authenticate timeout
+
 	for {
 		switch s.getState() {
+		case inAuthenticated:
+			authTm.Stop()
 		case inDisconnected, inTerminated:
-			log.Infow("FINISHED...", "id", s.ID())
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
-			log.Infow("EMPTY ELEMENT RECEIVED...", "id", s.ID())
 			goto doRead // continue reading
 		}
 		s.handleSessionResult(elem, sErr)
