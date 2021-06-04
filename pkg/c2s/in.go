@@ -334,6 +334,7 @@ func (s *inC2S) readLoop() {
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
+			log.Infow("EMPTY ELEMENT RECEIVED...", "id", s.ID())
 			goto doRead // continue reading
 		}
 		s.handleSessionResult(elem, sErr)
