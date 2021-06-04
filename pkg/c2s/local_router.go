@@ -23,7 +23,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
@@ -200,13 +199,9 @@ func (r *LocalRouter) reportMetrics() {
 		case <-tc.C:
 			r.mu.RLock()
 			totalCount := len(r.stms)
-			log.Debugf("ANONYMOUS TOTAL COUNT: %d", len(r.stms))
-
 			for _, res := range r.bndRes {
 				totalCount += res.len()
 			}
-			log.Debugf("RESOURCES TOTAL COUNT: %d", totalCount-len(r.stms))
-
 			r.mu.RUnlock()
 
 			reportTotalIncomingConnections(totalCount)
