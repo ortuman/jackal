@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -62,10 +62,11 @@ func TestInS2S_Disconnect(t *testing.T) {
 	sessMock.CloseFunc = func(ctx context.Context) error { return nil }
 
 	s := &inS2S{
-		state:   uint32(inConnected),
+		state:   inConnected,
 		session: sessMock,
 		tr:      trMock,
-		rq:      runqueue.New("in_s2s:test", nil),
+		rq:      runqueue.New("in_s2s:test"),
+		doneCh:  make(chan struct{}),
 		inHub:   NewInHub(),
 		hk:      hook.NewHooks(),
 	}
@@ -414,11 +415,12 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
 				},
-				state:       uint32(tt.state),
+				state:       tt.state,
 				flags:       flags{fs: tt.flags},
 				sender:      tt.sender,
 				target:      tt.target,
-				rq:          runqueue.New(tt.name, nil),
+				rq:          runqueue.New(tt.name),
+				doneCh:      make(chan struct{}),
 				tr:          trMock,
 				hosts:       hMock,
 				kv:          kvMock,
@@ -436,17 +438,6 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 
 			// then
-			/*
-				if tt.expectedState == inDisconnected {
-					// wait for disconnection
-					select {
-					case <-stm.Done():
-						break
-					case <-time.After(inDisconnectTimeout + time.Second):
-						break
-					}
-				}
-			*/
 			mtx.Lock()
 			defer mtx.Unlock()
 
@@ -515,8 +506,9 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
 				},
-				state:   uint32(tt.state),
-				rq:      runqueue.New(tt.name, nil),
+				state:   tt.state,
+				rq:      runqueue.New(tt.name),
+				doneCh:  make(chan struct{}),
 				tr:      trMock,
 				session: ssMock,
 				router:  routerMock,

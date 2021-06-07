@@ -17,12 +17,15 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -33,7 +36,7 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -42,6 +45,7 @@ import (
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/transport"
 	"github.com/ortuman/jackal/pkg/transport/compress"
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 
 type inC2SState uint32
@@ -53,9 +57,12 @@ const (
 	inAuthenticated
 	inBinded
 	inDisconnected
+	inTerminated
 )
 
-var disconnectTimeout = time.Second * 5
+var (
+	disconnectTimeout = time.Second * 5
+)
 
 type inC2S struct {
 	id             stream.C2SID
@@ -77,11 +84,11 @@ type inC2S struct {
 	sendDisabled   bool
 
 	mu    sync.RWMutex
-	state uint32
-	flags inC2SFlags
-	sCtx  map[string]string
+	state inC2SState
 	jd    *jid.JID
 	pr    *stravaganza.Presence
+	inf   c2smodel.Info
+	flags inC2SFlags
 }
 
 func newInC2S(
@@ -116,7 +123,7 @@ func newInC2S(
 	stm := &inC2S{
 		id:             id,
 		cfg:            cfg,
-		sCtx:           make(map[string]string),
+		inf:            c2smodel.Info{M: make(map[string]string)},
 		tr:             tr,
 		session:        session,
 		authenticators: authenticators,
@@ -126,9 +133,9 @@ func newInC2S(
 		mods:           mods,
 		resMng:         resMng,
 		shapers:        shapers,
-		rq:             runqueue.New(id.String(), log.Errorf),
+		rq:             runqueue.New(id.String()),
 		doneCh:         make(chan struct{}),
-		state:          uint32(inConnecting),
+		state:          inConnecting,
 		hk:             hk,
 	}
 	if cfg.UseTLS {
@@ -141,22 +148,44 @@ func (s *inC2S) ID() stream.C2SID {
 	return s.id
 }
 
-func (s *inC2S) SetValue(ctx context.Context, k, val string) error {
-	s.mu.Lock()
-	v, ok := s.sCtx[k]
-	if ok && v == val {
+func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
+	var vStr string
+
+	switch v := val.(type) {
+	case string:
+		vStr = v
+	case bool:
+		vStr = strconv.FormatBool(v)
+	case int:
+		vStr = strconv.Itoa(v)
+	case float64:
+		vStr = strconv.FormatFloat(v, 'E', -1, 64)
+	default:
 		s.mu.Unlock()
-		return nil
+		return fmt.Errorf("c2s: unsupported info value: %T", val)
 	}
-	s.sCtx[k] = val
+	s.mu.Lock()
+	mv, ok := s.inf.M[k]
+	if ok && mv == vStr {
+		s.mu.Unlock()
+		return nil // already present
+	}
+	// create info copy
+	nm := make(map[string]string)
+	for ik, iv := range s.inf.M {
+		nm[ik] = iv
+	}
+	nm[k] = vStr
+	s.inf = c2smodel.Info{M: nm}
 	s.mu.Unlock()
+
 	return s.resMng.PutResource(ctx, s.getResource())
 }
 
-func (s *inC2S) Value(k string) string {
+func (s *inC2S) Info() c2smodel.Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.sCtx[k]
+	return s.inf
 }
 
 func (s *inC2S) JID() *jid.JID {
@@ -168,7 +197,7 @@ func (s *inC2S) JID() *jid.JID {
 func (s *inC2S) Username() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Node()
 	}
 	return ""
@@ -177,7 +206,7 @@ func (s *inC2S) Username() string {
 func (s *inC2S) Domain() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Domain()
 	}
 	return ""
@@ -186,7 +215,7 @@ func (s *inC2S) Domain() string {
 func (s *inC2S) Resource() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if jd := s.JID(); jd != nil {
+	if jd := s.jd; jd != nil {
 		return jd.Resource()
 	}
 	return ""
@@ -230,6 +259,41 @@ func (s *inC2S) Disconnect(streamErr *streamerror.Error) <-chan error {
 	return errCh
 }
 
+func (s *inC2S) Resume(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error {
+	s.mu.Lock()
+	s.jd = jd
+	s.pr = pr
+	s.inf = inf
+	s.mu.Unlock()
+
+	s.session.SetFromJID(jd)
+
+	if err := s.bindC2S(ctx); err != nil {
+		return err
+	}
+	s.setState(inBinded)
+	s.flags.setBinded()
+
+	// run binded C2S hook
+	_, err := s.runHook(ctx, hook.C2SStreamBinded, &hook.C2SStreamInfo{
+		ID:  s.ID().String(),
+		JID: s.JID(),
+	})
+	return err
+}
+
+func (s *inC2S) bindC2S(ctx context.Context) error {
+	// update rate limiter
+	if err := s.updateRateLimiter(); err != nil {
+		return err
+	}
+	// bind and register cluster resource
+	if err := s.router.C2S().Bind(s.ID()); err != nil {
+		return err
+	}
+	return s.resMng.PutResource(ctx, s.getResource())
+}
+
 func (s *inC2S) Done() <-chan struct{} {
 	return s.doneCh
 }
@@ -241,7 +305,7 @@ func (s *inC2S) start() error {
 	}
 	// run registered C2S hook
 	ctx, cancel := s.requestContext()
-	_, err := s.runHook(ctx, hook.C2SStreamRegistered, &hook.C2SStreamInfo{
+	_, err := s.runHook(ctx, hook.C2SStreamConnected, &hook.C2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -262,8 +326,14 @@ func (s *inC2S) readLoop() {
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
+	authTm := time.AfterFunc(s.cfg.AuthenticateTimeout, s.connTimeout) // schedule authenticate timeout
+	defer authTm.Stop()
+
 	for {
-		if s.getState() == inDisconnected {
+		switch s.getState() {
+		case inAuthenticated:
+			authTm.Stop()
+		case inDisconnected, inTerminated:
 			return
 		}
 		if sErr == xmppparser.ErrNoElement {
@@ -279,9 +349,9 @@ func (s *inC2S) readLoop() {
 }
 
 func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
-	doneCh := make(chan struct{})
+	handledCh := make(chan struct{})
 	s.rq.Run(func() {
-		defer close(doneCh)
+		defer close(handledCh)
 
 		ctx, cancel := s.requestContext()
 		defer cancel()
@@ -298,7 +368,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 			s.handleSessionError(ctx, sErr)
 		}
 	})
-	<-doneCh
+	<-handledCh
 }
 
 func (s *inC2S) connTimeout() {
@@ -312,9 +382,10 @@ func (s *inC2S) connTimeout() {
 func (s *inC2S) handleElement(ctx context.Context, elem stravaganza.Element) error {
 	// run received element hook
 	hInf := &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: elem,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  elem,
 	}
 	halted, err := s.runHook(ctx, hook.C2SStreamElementReceived, hInf)
 	if halted {
@@ -455,9 +526,10 @@ func (s *inC2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// run iq received hook
 	_, err := s.runHook(ctx, hook.C2SStreamIQReceived, &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: iq,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  iq,
 	})
 	if err != nil {
 		return err
@@ -477,9 +549,10 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	// run will route iq hook
 	hInf := &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: iq,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  iq,
 	}
 	halted, err := s.runHook(ctx, hook.C2SStreamWillRouteElement, hInf)
 	if halted {
@@ -505,10 +578,11 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 	case nil:
 		_, err := s.runHook(ctx, hook.C2SStreamIQRouted, &hook.C2SStreamInfo{
-			ID:      s.ID().String(),
-			JID:     s.JID(),
-			Targets: targets,
-			Element: iq,
+			ID:       s.ID().String(),
+			JID:      s.JID(),
+			Presence: s.Presence(),
+			Targets:  targets,
+			Element:  iq,
 		})
 		return err
 	}
@@ -518,9 +592,10 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// run presence received hook
 	_, err := s.runHook(ctx, hook.C2SStreamPresenceReceived, &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: presence,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  presence,
 	})
 	if err != nil {
 		return err
@@ -529,9 +604,10 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 	if presence.ToJID().IsFullWithUser() {
 		// run will route presence hook
 		hInf := &hook.C2SStreamInfo{
-			ID:      s.ID().String(),
-			JID:     s.JID(),
-			Element: presence,
+			ID:       s.ID().String(),
+			JID:      s.JID(),
+			Presence: s.Presence(),
+			Element:  presence,
 		}
 		halted, err := s.runHook(ctx, hook.C2SStreamWillRouteElement, hInf)
 		if halted {
@@ -569,9 +645,10 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// run message received hook
 	_, err := s.runHook(ctx, hook.C2SStreamMessageReceived, &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: message,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  message,
 	})
 	if err != nil {
 		return err
@@ -581,9 +658,10 @@ func (s *inC2S) processMessage(ctx context.Context, message *stravaganza.Message
 sendMsg:
 	// run will route Message hook
 	hInf := &hook.C2SStreamInfo{
-		ID:      s.ID().String(),
-		JID:     s.JID(),
-		Element: msg,
+		ID:       s.ID().String(),
+		JID:      s.JID(),
+		Presence: s.Presence(),
+		Element:  msg,
 	}
 	halted, err := s.runHook(ctx, hook.C2SStreamWillRouteElement, hInf)
 	if halted {
@@ -620,10 +698,11 @@ sendMsg:
 
 	case nil:
 		_, err = s.runHook(ctx, hook.C2SStreamMessageRouted, &hook.C2SStreamInfo{
-			ID:      s.ID().String(),
-			JID:     s.JID(),
-			Targets: targets,
-			Element: msg,
+			ID:       s.ID().String(),
+			JID:      s.JID(),
+			Presence: s.Presence(),
+			Targets:  targets,
+			Element:  msg,
 		})
 		return err
 
@@ -633,14 +712,10 @@ sendMsg:
 }
 
 func (s *inC2S) handleSessionError(ctx context.Context, err error) {
-	switch err {
-	case xmppparser.ErrStreamClosedByPeer:
+	if errors.Is(err, xmppparser.ErrStreamClosedByPeer) {
 		_ = s.session.Close(ctx)
-		fallthrough
-
-	default:
-		_ = s.close(ctx)
 	}
+	_ = s.close(ctx, err)
 }
 
 func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
@@ -849,10 +924,10 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	return nil
 }
 
-func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error {
-	bind := bindIQ.ChildNamespace("bind", bindNamespace)
-	if bindIQ.Attribute(stravaganza.Type) != stravaganza.SetType || bind == nil {
-		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, bindIQ).Element())
+func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
+	bind := iq.ChildNamespace("bind", bindNamespace)
+	if iq.Attribute(stravaganza.Type) != stravaganza.SetType || bind == nil {
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.NotAllowed, iq).Element())
 	}
 	// fetch active resources
 	rss, err := s.resMng.GetResources(ctx, s.Username())
@@ -897,7 +972,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 
 			// disallow resource binding
 			case Disallow:
-				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, bindIQ).Element())
+				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, iq).Element())
 			}
 			break
 		}
@@ -908,7 +983,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	// set stream jid and presence
 	userJID, err := jid.New(s.Username(), s.Domain(), res, false)
 	if err != nil {
-		return s.sendElement(ctx, stanzaerror.E(stanzaerror.BadRequest, bindIQ).Element())
+		return s.sendElement(ctx, stanzaerror.E(stanzaerror.BadRequest, iq).Element())
 	}
 	s.setJID(userJID)
 	s.session.SetFromJID(userJID)
@@ -920,15 +995,7 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 		BuildPresence()
 	s.setPresence(pr)
 
-	// update rate limiter
-	if err := s.updateRateLimiter(); err != nil {
-		return err
-	}
-	// bind and register cluster resource
-	if err := s.router.C2S().Bind(s.ID()); err != nil {
-		return err
-	}
-	if err = s.resMng.PutResource(ctx, s.getResource()); err != nil {
+	if err := s.bindC2S(ctx); err != nil {
 		return err
 	}
 	s.setState(inBinded)
@@ -944,22 +1011,16 @@ func (s *inC2S) bindResource(ctx context.Context, bindIQ *stravaganza.IQ) error 
 	}
 
 	// notify successful binding
-	resIQ := bindIQ.ResultBuilder().
-		WithChild(
-			stravaganza.NewBuilder("bind").
-				WithAttribute(stravaganza.Namespace, bindNamespace).
-				WithChild(
-					stravaganza.NewBuilder("jid").
-						WithText(s.JID().String()).
-						Build(),
-				).
-				Build(),
-		).
-		Build()
-
-	log.Infow("Binded C2S stream", "id", s.id,
-		"username", s.Username(),
-		"resource", s.Resource())
+	resIQ := xmpputil.MakeResultIQ(iq,
+		stravaganza.NewBuilder("bind").
+			WithAttribute(stravaganza.Namespace, bindNamespace).
+			WithChild(
+				stravaganza.NewBuilder("jid").
+					WithText(s.JID().String()).
+					Build(),
+			).
+			Build(),
+	)
 	return s.sendElement(ctx, resIQ)
 }
 
@@ -975,31 +1036,50 @@ func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) er
 	// close stream session and wait for the other entity to close its stream
 	_ = s.session.Close(ctx)
 
-	if s.getState() != inConnecting && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
+	if s.getState() == inBinded && streamErr != nil && streamErr.Reason == streamerror.ConnectionTimeout {
 		s.discTm = time.AfterFunc(disconnectTimeout, func() {
 			s.rq.Run(func() {
-				ctx, cancel := s.requestContext()
+				fnCtx, cancel := s.requestContext()
 				defer cancel()
-				_ = s.close(ctx)
+				_ = s.close(fnCtx, streamErr)
 			})
 		})
 		s.sendDisabled = true // avoid sending anymore stanzas while closing
 		return nil
 	}
-	return s.close(ctx)
+	return s.close(ctx, streamErr)
 }
 
-func (s *inC2S) close(ctx context.Context) error {
-	if s.getState() == inDisconnected {
-		return nil // already disconnected
+func (s *inC2S) close(ctx context.Context, disconnectErr error) error {
+	switch s.getState() {
+	case inDisconnected:
+		return s.terminate(ctx) // disconnected... terminate stream
+	case inTerminated:
+		return nil // terminated... we're done here
+	default:
+		break
 	}
-	defer close(s.doneCh)
-
 	s.setState(inDisconnected)
 
 	if s.discTm != nil {
 		s.discTm.Stop()
 	}
+	// run disconnected C2S hook
+	halted, err := s.runHook(ctx, hook.C2SStreamDisconnected, &hook.C2SStreamInfo{
+		ID:              s.ID().String(),
+		JID:             s.JID(),
+		DisconnectError: disconnectErr,
+	})
+	if halted {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return s.terminate(ctx)
+}
+
+func (s *inC2S) terminate(ctx context.Context) error {
 	// unregister C2S stream
 	if err := s.router.C2S().Unregister(s); err != nil {
 		return err
@@ -1008,18 +1088,21 @@ func (s *inC2S) close(ctx context.Context) error {
 	if err := s.resMng.DelResource(ctx, s.Username(), s.Resource()); err != nil {
 		return err
 	}
-	// run unregistered C2S hook
-	_, err := s.runHook(ctx, hook.C2SStreamUnregistered, &hook.C2SStreamInfo{
+	reportConnectionUnregistered()
+
+	// close underlying transport
+	_ = s.tr.Close()
+
+	_, err := s.runHook(ctx, hook.C2SStreamTerminated, &hook.C2SStreamInfo{
 		ID:  s.ID().String(),
 		JID: s.JID(),
 	})
 	if err != nil {
 		return err
 	}
-	reportConnectionUnregistered()
+	close(s.doneCh) // signal termination
 
-	// close underlying transport
-	_ = s.tr.Close()
+	s.setState(inTerminated)
 	return nil
 }
 
@@ -1049,15 +1132,14 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	return err
 }
 
-func (s *inC2S) getResource() *coremodel.Resource {
+func (s *inC2S) getResource() *c2smodel.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
-	rs := &coremodel.Resource{
+	rs := &c2smodel.Resource{
 		InstanceID: instance.ID(),
 		JID:        s.jd,
 		Presence:   s.pr,
-		Context:    s.sCtx,
+		Info:       s.inf,
 	}
 	return rs
 }
@@ -1081,11 +1163,15 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 }
 
 func (s *inC2S) setState(state inC2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = state
 }
 
 func (s *inC2S) getState() inC2SState {
-	return inC2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
 }
 
 func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook.C2SStreamInfo) (halt bool, err error) {

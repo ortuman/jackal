@@ -28,13 +28,13 @@ type Priority int32
 
 const (
 	// LowestPriority defines lowest hook execution priority.
-	LowestPriority = Priority(math.MinInt32)
+	LowestPriority = Priority(math.MinInt32 + 100)
 
 	// DefaultPriority defines default hook execution priority.
 	DefaultPriority = Priority(0)
 
 	// HighestPriority defines highest hook execution priority.
-	HighestPriority = Priority(math.MaxInt32)
+	HighestPriority = Priority(math.MaxInt32 - 100)
 )
 
 // Handler defines a generic hook handler function.

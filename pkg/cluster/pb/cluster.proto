@@ -50,14 +50,20 @@ message LocalRouteResponse {}
 
 // LocalDisconnectRequest is the parameter message for LocalRouter Disconnect rpc.
 message LocalDisconnectRequest {
+  // username is the JID node value for the session we wish to disconnect.
   string username = 1;
+
+  // resource is the JID resourcepart value for the session we wish to disconnect.
   string resource = 2;
+
+  // StreamError is disconnection stream error.
   StreamError stream_error = 3;
 }
 
 // LocalDisconnectResponse is the response returned by LocalRouter Disconnect rpc.
 message LocalDisconnectResponse {}
 
+// ComponentRouteRequest is the parameter message for ComponentRouter Route rpc.
 message ComponentRouteRequest {
   // stanza contains the routed XMPP stanza.
   stravaganza.PBElement stanza = 1;

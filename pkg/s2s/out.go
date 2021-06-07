@@ -20,10 +20,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"net"
-	"sync/atomic"
+	"sync"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -103,7 +103,8 @@ type outS2S struct {
 	hk       *hook.Hooks
 	rq       *runqueue.RunQueue
 
-	state        uint32
+	mu           sync.RWMutex
+	state        outS2SState
 	flags        flags
 	pendingQueue []stravaganza.Element
 }
@@ -132,7 +133,7 @@ func newOutS2S(
 		hk:      hk,
 		dialer:  newDialer(cfg.DialTimeout, tlsCfg),
 	}
-	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
+	stm.rq = runqueue.New(stm.ID().String())
 	return stm
 }
 
@@ -157,7 +158,7 @@ func newDialbackS2S(
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
 	}
-	stm.rq = runqueue.New(stm.ID().String(), log.Errorf)
+	stm.rq = runqueue.New(stm.ID().String())
 	return stm
 }
 
@@ -242,7 +243,7 @@ func (s *outS2S) start() error {
 		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
-	err := s.runHook(ctx, hook.S2SOutStreamRegistered, &hook.S2SStreamInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamConnected, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	cancel()
@@ -566,7 +567,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
-	err := s.runHook(ctx, hook.S2SOutStreamUnregistered, &hook.S2SStreamInfo{
+	err := s.runHook(ctx, hook.S2SOutStreamDisconnected, &hook.S2SStreamInfo{
 		ID: s.ID().String(),
 	})
 	if err != nil {
@@ -580,11 +581,15 @@ func (s *outS2S) close(ctx context.Context) error {
 }
 
 func (s *outS2S) setState(state outS2SState) {
-	atomic.StoreUint32(&s.state, uint32(state))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state = state
 }
 
 func (s *outS2S) getState() outS2SState {
-	return outS2SState(atomic.LoadUint32(&s.state))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
 }
 
 func (s *outS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) error {

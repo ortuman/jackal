@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	// S2SOutStreamRegistered hook runs when an outgoing S2S connection is registered.
-	S2SOutStreamRegistered = "s2s.out.stream.registered"
+	// S2SOutStreamConnected hook runs when an outgoing S2S connection is registered.
+	S2SOutStreamConnected = "s2s.out.stream.connected"
 
-	// S2SOutStreamUnregistered hook runs when an outgoing S2S connection is unregistered.
-	S2SOutStreamUnregistered = "s2s.out.stream.unregistered"
+	// S2SOutStreamDisconnected hook runs when an outgoing S2S connection is unregistered.
+	S2SOutStreamDisconnected = "s2s.out.stream.disconnected"
 
 	// S2SOutStreamElementSent hook runs whenever a XMPP element is sent over an outgoing S2S stream.
 	S2SOutStreamElementSent = "s2s.out.stream.element_sent"

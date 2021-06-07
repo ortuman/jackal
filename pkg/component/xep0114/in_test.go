@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
@@ -53,7 +53,8 @@ func TestInComponent_SendStanza(t *testing.T) {
 	}
 	s := &inComponent{
 		session: sessMock,
-		rq:      runqueue.New("in_component:test", nil),
+		rq:      runqueue.New("in_component:test"),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	s.sendStanza(testMessageStanza())
@@ -102,7 +103,8 @@ func TestInComponent_Shutdown(t *testing.T) {
 		extCompMng: extCompMngMock,
 		inHub:      newInHub(),
 		hk:         hook.NewHooks(),
-		rq:         runqueue.New("in_component:test", nil),
+		rq:         runqueue.New("in_component:test"),
+		doneCh:     make(chan struct{}),
 	}
 	// when
 	s.shutdown()
@@ -251,7 +253,8 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 					Secret:           "a-secret-1",
 				},
 				state:      uint32(tt.state),
-				rq:         runqueue.New(tt.name, nil),
+				rq:         runqueue.New(tt.name),
+				doneCh:     make(chan struct{}),
 				tr:         trMock,
 				session:    ssMock,
 				router:     routerMock,
@@ -342,9 +345,11 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 				cfg: Config{
 					KeepAliveTimeout: time.Minute,
 					RequestTimeout:   time.Minute,
-					MaxStanzaSize:    8192},
+					MaxStanzaSize:    8192,
+				},
 				state:      uint32(tt.state),
-				rq:         runqueue.New(tt.name, nil),
+				rq:         runqueue.New(tt.name),
+				doneCh:     make(chan struct{}),
 				tr:         trMock,
 				session:    ssMock,
 				router:     routerMock,

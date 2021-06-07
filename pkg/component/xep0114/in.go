@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -120,7 +120,7 @@ func newInComponent(
 		extCompMng: extCompMng,
 		ctx:        ctx,
 		cancelFn:   cancelFn,
-		rq:         runqueue.New(id.String(), log.Errorf),
+		rq:         runqueue.New(id.String()),
 		doneCh:     make(chan struct{}),
 		shapers:    shapers,
 		hk:         hk,

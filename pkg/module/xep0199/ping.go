@@ -106,8 +106,8 @@ func (p *Ping) AccountFeatures(_ context.Context) ([]string, error) {
 func (p *Ping) Start(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.hk.AddHook(hook.C2SStreamBinded, p.onBinded, hook.DefaultPriority)
-		p.hk.AddHook(hook.C2SStreamUnregistered, p.onUnregister, hook.DefaultPriority)
-		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.DefaultPriority)
+		p.hk.AddHook(hook.C2SStreamDisconnected, p.onDisconnect, hook.HighestPriority)
+		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.HighestPriority)
 	}
 	log.Infow("Started ping module", "xep", XEPNumber)
 	return nil
@@ -117,7 +117,7 @@ func (p *Ping) Start(_ context.Context) error {
 func (p *Ping) Stop(_ context.Context) error {
 	if p.cfg.SendPings {
 		p.hk.RemoveHook(hook.C2SStreamBinded, p.onBinded)
-		p.hk.RemoveHook(hook.C2SStreamUnregistered, p.onUnregister)
+		p.hk.RemoveHook(hook.C2SStreamDisconnected, p.onDisconnect)
 		p.hk.RemoveHook(hook.C2SStreamElementReceived, p.onRecvElement)
 	}
 	log.Infow("Stopped ping module", "xep", XEPNumber)
@@ -163,7 +163,7 @@ func (p *Ping) onRecvElement(_ context.Context, execCtx *hook.ExecutionContext) 
 	return nil
 }
 
-func (p *Ping) onUnregister(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (p *Ping) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	if jd := inf.JID; jd != nil {
 		p.cancelTimers(jd)

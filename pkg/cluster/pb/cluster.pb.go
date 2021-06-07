@@ -243,8 +243,11 @@ type LocalDisconnectRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Username    string       `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Resource    string       `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	// username is the JID node value for the session we wish to disconnect.
+	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	// resource is the JID resourcepart value for the session we wish to disconnect.
+	Resource string `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	// StreamError is disconnection stream error.
 	StreamError *StreamError `protobuf:"bytes,3,opt,name=stream_error,json=streamError,proto3" json:"stream_error,omitempty"`
 }
 
@@ -340,6 +343,7 @@ func (*LocalDisconnectResponse) Descriptor() ([]byte, []int) {
 	return file_cluster_proto_rawDescGZIP(), []int{3}
 }
 
+// ComponentRouteRequest is the parameter message for ComponentRouter Route rpc.
 type ComponentRouteRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

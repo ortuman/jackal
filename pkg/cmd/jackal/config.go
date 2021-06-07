@@ -99,35 +99,14 @@ type listenerConfig struct {
 			IsSecure bool   `fig:"is_secure"`
 		} `fig:"external"`
 	} `fig:"sasl"`
-	CompressionLevel string        `fig:"compression_level" default:"default"`
-	ResourceConflict string        `fig:"resource_conflict" default:"terminate_old"`
-	MaxStanzaSize    int           `fig:"max_stanza_size" default:"32768"`
-	Secret           string        `fig:"secret"`
-	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
-	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
-}
-
-type extModuleConfig struct {
-	Name           string        `fig:"name"`
-	Address        string        `fig:"address"`
-	IsSecure       bool          `fig:"is_secure"`
-	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
-
-	EventHandler struct {
-		Hooks []struct {
-			Name     string `fig:"name"`
-			Priority int32  `fig:"priority"`
-		} `fig:"hooks"`
-	} `fig:"event_handler"`
-
-	IQHandler struct {
-		Namespace struct {
-			In    []string `fig:"in"`
-			RegEx string   `fig:"reg_ex"`
-		} `fig:"namespace"`
-		TargetEntity string `fig:"target_entity"`
-	} `fig:"iq_handler"`
+	CompressionLevel    string        `fig:"compression_level" default:"default"`
+	ResourceConflict    string        `fig:"resource_conflict" default:"terminate_old"`
+	MaxStanzaSize       int           `fig:"max_stanza_size" default:"32768"`
+	Secret              string        `fig:"secret"`
+	ConnectTimeout      time.Duration `fig:"conn_timeout" default:"3s"`
+	AuthenticateTimeout time.Duration `fig:"auth_timeout" default:"10s"`
+	KeepAliveTimeout    time.Duration `fig:"keep_alive_timeout" default:"10m"`
+	RequestTimeout      time.Duration `fig:"req_timeout" default:"15s"`
 }
 
 type s2sOutConfig struct {
@@ -151,6 +130,14 @@ type modulesConfig struct {
 		ShowOS bool `fig:"show_os"`
 	} `fig:"version"`
 
+	// XEP-0198: Stream Management
+	Stream struct {
+		HibernateTime      time.Duration `fig:"hibernate_time" default:"3m"`
+		RequestAckInterval time.Duration `fig:"request_ack_interval" default:"2m"`
+		WaitForAckTimeout  time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
+		MaxQueueSize       int           `fig:"max_queue_size" default:"30"`
+	}
+
 	// XEP-0199: XMPP Ping
 	Ping struct {
 		AckTimeout    time.Duration `fig:"ack_timeout" default:"32s"`
@@ -158,8 +145,6 @@ type modulesConfig struct {
 		SendPings     bool          `fig:"send_pings"`
 		TimeoutAction string        `fig:"timeout_action" default:"none"`
 	} `fig:"ping"`
-
-	External []extModuleConfig `fig:"external"`
 }
 
 type componentsConfig struct {

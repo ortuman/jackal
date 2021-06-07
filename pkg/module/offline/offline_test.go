@@ -23,7 +23,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/hook"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +49,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 	hk := hook.NewHooks()
@@ -114,7 +114,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		return nil
 	}
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]coremodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
 		return nil, nil
 	}
 

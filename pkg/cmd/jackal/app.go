@@ -19,11 +19,16 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
+
+	"google.golang.org/grpc/keepalive"
+
+	"google.golang.org/grpc"
 
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -51,6 +56,7 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
+	"github.com/ortuman/jackal/pkg/util/crashreporter"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	tlsutil "github.com/ortuman/jackal/pkg/util/tls"
 	"github.com/ortuman/jackal/pkg/version"
@@ -129,8 +135,10 @@ type serverApp struct {
 }
 
 func run(output io.Writer, args []string) error {
-	var configFile string
-	var showVersion, showUsage bool
+	// Seed the math/rand RNG from crypto/rand.
+	rand.Seed(time.Now().UnixNano())
+
+	defer crashreporter.RecoverAndReportPanic()
 
 	a := &serverApp{
 		output:     output,
@@ -139,6 +147,9 @@ func run(output io.Writer, args []string) error {
 	}
 	fs := flag.NewFlagSet("jackal", flag.ExitOnError)
 	fs.SetOutput(a.output)
+
+	var configFile string
+	var showVersion, showUsage bool
 
 	fs.BoolVar(&showUsage, "help", false, "Show this message")
 	fs.BoolVar(&showVersion, "version", false, "Print version information.")
@@ -182,6 +193,7 @@ func run(output io.Writer, args []string) error {
 		zap.NewLogger(cfg.Logger.OutputPath),
 		cfg.Logger.Level,
 	)
+
 	log.Infow("Jackal is starting...",
 		"version", version.Version,
 		"go_ver", runtime.Version(),
@@ -258,19 +270,31 @@ func run(output io.Writer, args []string) error {
 }
 
 func (a *serverApp) initEtcd(cfg etcdConfig) error {
-	const etcdMemberListTimeout = time.Second * 5
-	cli, err := etcdv3.New(etcdv3.Config{
-		Endpoints:   cfg.Endpoints,
-		DialTimeout: cfg.DialTimeout,
-	})
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
-	defer cancel()
+	const (
+		dialKeepAliveTime    = 30 * time.Second
+		dialKeepAliveTimeout = 10 * time.Second
+		dialTimeout          = 20 * time.Second
 
-	// obtain memberlist to check cluster health
-	_, err = cli.MemberList(ctx)
+		keepAlive = time.Second * 10
+		timeout   = time.Minute * 20
+	)
+	dialOptions := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                keepAlive,
+			Timeout:             timeout,
+			PermitWithoutStream: true,
+		}),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+	}
+	cli, err := etcdv3.New(etcdv3.Config{
+		Endpoints:            cfg.Endpoints,
+		DialTimeout:          dialTimeout,
+		DialKeepAliveTime:    dialKeepAliveTime,
+		DialKeepAliveTimeout: dialKeepAliveTimeout,
+		DialOptions:          dialOptions,
+	})
 	if err != nil {
 		return err
 	}

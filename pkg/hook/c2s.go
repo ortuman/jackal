@@ -20,14 +20,17 @@ import (
 )
 
 const (
-	// C2SStreamRegistered hook runs when a C2S connection is registered.
-	C2SStreamRegistered = "c2s.stream.registered"
+	// C2SStreamConnected hook runs when a C2S connection is registered.
+	C2SStreamConnected = "c2s.stream.connected"
 
 	// C2SStreamBinded hook runs when C2S stream is bounded.
 	C2SStreamBinded = "c2s.stream.binded"
 
-	// C2SStreamUnregistered hook runs when a C2S connection is unregistered.
-	C2SStreamUnregistered = "c2s.stream.unregistered"
+	// C2SStreamDisconnected hook runs when a C2S connection is unregistered.
+	C2SStreamDisconnected = "c2s.stream.disconnected"
+
+	// C2SStreamTerminated hook runs when a C2S connection is terminated.
+	C2SStreamTerminated = "c2s.stream.terminated"
 
 	// C2SStreamElementReceived hook runs when a XMPP element is received over a C2S stream.
 	C2SStreamElementReceived = "c2s.stream.element_received"
@@ -65,9 +68,15 @@ type C2SStreamInfo struct {
 	// JID represents the event associated JID.
 	JID *jid.JID
 
-	// Targets contains all JIDs to which the event stanza was routed.
-	Targets []jid.JID
+	// Presence is current C2S resource presence.
+	Presence *stravaganza.Presence
 
 	// Element is the event associated XMPP element.
 	Element stravaganza.Element
+
+	// Targets contains all JIDs to which event stanza was routed.
+	Targets []jid.JID
+
+	// DisconnectError contains the original error that caused stream disconnection.
+	DisconnectError error
 }

@@ -12,41 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coremodel
+package c2smodel
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/version"
 )
 
-// ClusterMember represents a cluster instance address and port.
-type ClusterMember struct {
-	InstanceID string
-	Host       string
-	Port       int
-	APIVer     *version.SemanticVersion
+// Info represents C2S immutable info set.
+type Info struct {
+	M map[string]string
 }
 
-// String returns Member string representation.
-func (m *ClusterMember) String() string {
-	return fmt.Sprintf("%s:%d", m.Host, m.Port)
+// String returns string value associated to k key.
+func (i Info) String(k string) string {
+	return i.M[k]
 }
 
-// User represents a user entity.
-type User struct {
-	Username string
-	Scram    struct {
-		SHA1           string
-		SHA256         string
-		SHA512         string
-		SHA3512        string
-		Salt           string
-		IterationCount int
-		PepperID       string
-	}
+// Bool returns bool value associated to k key.
+func (i Info) Bool(k string) bool {
+	v, _ := strconv.ParseBool(i.M[k])
+	return v
+}
+
+// Int returns int value associated to k key.
+func (i Info) Int(k string) int {
+	v, _ := strconv.ParseInt(i.M[k], 10, strconv.IntSize)
+	return int(v)
+}
+
+// Float returns float64 value associated to k key.
+func (i Info) Float(k string) float64 {
+	v, _ := strconv.ParseFloat(i.M[k], 64)
+	return v
 }
 
 // Resource represents a resource entity.
@@ -54,7 +54,7 @@ type Resource struct {
 	InstanceID string
 	JID        *jid.JID
 	Presence   *stravaganza.Presence
-	Context    map[string]string
+	Info       Info
 }
 
 // IsAvailable returns presence available value.
@@ -71,9 +71,4 @@ func (r *Resource) Priority() int8 {
 		return r.Presence.Priority()
 	}
 	return 0
-}
-
-// Value returns resource context value associated to cKey.
-func (r *Resource) Value(cKey string) string {
-	return r.Context[cKey]
 }

@@ -24,13 +24,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/hook"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -59,7 +59,8 @@ func TestInC2S_SendElement(t *testing.T) {
 	}
 	s := &inC2S{
 		session: sessMock,
-		rq:      runqueue.New("in_c2s:test", nil),
+		rq:      runqueue.New("in_c2s:test"),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	stanza := stravaganza.NewBuilder("auth").
@@ -109,12 +110,13 @@ func TestInC2S_Disconnect(t *testing.T) {
 		return c2sRouterMock
 	}
 	s := &inC2S{
-		state:   uint32(inBinded),
+		state:   inBinded,
 		session: sessMock,
 		tr:      trMock,
 		router:  routerMock,
 		resMng:  rmMock,
-		rq:      runqueue.New("in_c2s:test", nil),
+		rq:      runqueue.New("in_c2s:test"),
+		doneCh:  make(chan struct{}),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -146,7 +148,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 		sessionResFn  func() (stravaganza.Element, error)
 		authProcessFn func(_ context.Context, _ stravaganza.Element) (stravaganza.Element, *auth.SASLError)
 		routeError    error
-		hubResources  []coremodel.Resource
+		hubResources  []c2smodel.Resource
 		flags         uint8
 
 		// expectations
@@ -259,7 +261,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					Build(), nil
 			},
 			expectedOutput: `<stream:error><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Connected/ServiceUnavailable",
@@ -297,7 +299,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					Build(), nil
 			},
 			expectedOutput: `<stream:error><unsupported-stanza-type xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Authenticating/Success",
@@ -381,7 +383,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			hubResources: []coremodel.Resource{
+			hubResources: []c2smodel.Resource{
 				{JID: jd0, InstanceID: "inst-2"},
 			},
 			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="bind_2"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>yard</resource></bind><error code="409" type="cancel"><conflict xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
@@ -408,13 +410,13 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			hubResources: []coremodel.Resource{ // default max allowed sessions (3)
+			hubResources: []c2smodel.Resource{ // default max allowed sessions (3)
 				{JID: jd1, InstanceID: "inst-2"},
 				{JID: jd2, InstanceID: "inst-2"},
 				{JID: jd2, InstanceID: "inst-3"},
 			},
 			expectedOutput: `<stream:error><policy-violation xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/><reached-max-session-count xmlns="urn:xmpp:errors"/></stream:error></stream:stream>`,
-			expectedState:  inDisconnected,
+			expectedState:  inTerminated,
 		},
 		{
 			name:  "Authenticated/CompressSuccess",
@@ -704,11 +706,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			// resourcemanager mock
 			var updatedRes bool
-			resMngMock.PutResourceFunc = func(_ context.Context, _ *coremodel.Resource) error {
+			resMngMock.PutResourceFunc = func(_ context.Context, _ *c2smodel.Resource) error {
 				updatedRes = true
 				return nil
 			}
-			resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]coremodel.Resource, error) {
+			resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
 				return tt.hubResources, nil
 			}
 			resMngMock.DelResourceFunc = func(ctx context.Context, username string, resource string) error {
@@ -724,9 +726,10 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					CompressionLevel: compress.DefaultCompression,
 					ResourceConflict: Disallow,
 				},
-				state:          uint32(tt.state),
+				state:          tt.state,
 				flags:          inC2SFlags{flg: tt.flags},
-				rq:             runqueue.New(tt.name, nil),
+				rq:             runqueue.New(tt.name),
+				doneCh:         make(chan struct{}),
 				jd:             userJID,
 				tr:             trMock,
 				hosts:          hMock,
@@ -816,8 +819,9 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 					RequestTimeout:   time.Minute,
 					MaxStanzaSize:    8192,
 				},
-				state:   uint32(tt.state),
-				rq:      runqueue.New(tt.name, nil),
+				state:   tt.state,
+				rq:      runqueue.New(tt.name),
+				doneCh:  make(chan struct{}),
 				tr:      trMock,
 				session: ssMock,
 				router:  routerMock,

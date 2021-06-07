@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -49,9 +49,9 @@ func TestOutS2S_SendElement(t *testing.T) {
 		return nil
 	}
 	s := &outS2S{
-		state:   uint32(outAuthenticated),
+		state:   outAuthenticated,
 		session: sessMock,
-		rq:      runqueue.New("out_s2s:test", nil),
+		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -90,10 +90,10 @@ func TestOutS2S_Disconnect(t *testing.T) {
 	sessMock.CloseFunc = func(ctx context.Context) error { return nil }
 
 	s := &outS2S{
-		state:   uint32(outAuthenticated),
+		state:   outAuthenticated,
 		session: sessMock,
 		tr:      trMock,
-		rq:      runqueue.New("out_s2s:test", nil),
+		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
 	}
 	// when
@@ -302,9 +302,9 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					MaxStanzaSize:    8192,
 				},
 				typ:     defaultType,
-				state:   uint32(tt.state),
+				state:   tt.state,
 				flags:   flags{fs: tt.flags},
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				kv:      kvMock,
@@ -410,9 +410,9 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 					Key:      "1234",
 				},
 				dbResCh: make(chan stream.DialbackResult, 1),
-				state:   uint32(tt.state),
+				state:   tt.state,
 				flags:   flags{fs: tt.flags},
-				rq:      runqueue.New(tt.name, nil),
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),
@@ -490,8 +490,8 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 					MaxStanzaSize:    8192,
 				},
 				typ:     defaultType,
-				state:   uint32(tt.state),
-				rq:      runqueue.New(tt.name, nil),
+				state:   tt.state,
+				rq:      runqueue.New(tt.name),
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),

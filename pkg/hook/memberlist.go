@@ -14,7 +14,9 @@
 
 package hook
 
-import coremodel "github.com/ortuman/jackal/pkg/model/core"
+import (
+	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
+)
 
 const (
 	// MemberListUpdated hook runs whenever cluster member list is updated.
@@ -24,7 +26,7 @@ const (
 // MemberListInfo contains all info associated to MemberListUpdated event.
 type MemberListInfo struct {
 	// Registered contains all new registered cluster members.
-	Registered []coremodel.ClusterMember
+	Registered []clustermodel.Member
 
 	// UnregisteredKeys contains unregistered cluster members keys.
 	UnregisteredKeys []string

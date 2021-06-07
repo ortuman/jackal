@@ -20,8 +20,9 @@ import (
 	"io"
 	"testing"
 
+	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
+
 	"github.com/ortuman/jackal/pkg/hook"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +47,7 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	// register cluster member
 	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
 		Info: &hook.MemberListInfo{
-			Registered: []coremodel.ClusterMember{
+			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
 		},
@@ -93,7 +94,7 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
 	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
 		Info: &hook.MemberListInfo{
-			Registered: []coremodel.ClusterMember{
+			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},
 		},

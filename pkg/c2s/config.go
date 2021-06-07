@@ -40,6 +40,9 @@ type Config struct {
 	// ConnectTimeout defines connection timeout.
 	ConnectTimeout time.Duration
 
+	// AuthenticateTimeout defines authentication timeout.
+	AuthenticateTimeout time.Duration
+
 	// KeepAliveTimeout defines the maximum amount of time that an inactive connection
 	// would be considered alive.
 	KeepAliveTimeout time.Duration

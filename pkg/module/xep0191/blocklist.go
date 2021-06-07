@@ -17,7 +17,8 @@ package xep0191
 import (
 	"context"
 	"fmt"
-	"strconv"
+
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -28,7 +29,6 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
@@ -282,7 +282,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
 	}
-	if err := stm.SetValue(ctx, blockListRequestedCtxKey, strconv.FormatBool(true)); err != nil {
+	if err := stm.SetInfoValue(ctx, blockListRequestedCtxKey, true); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
@@ -459,10 +459,9 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	return err
 }
 
-func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []coremodel.Resource) {
+func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []c2smodel.Resource) {
 	for _, res := range resources {
-		ok, _ := strconv.ParseBool(res.Value(blockListRequestedCtxKey)) // block list requested?
-		if !ok {
+		if !res.Info.Bool(blockListRequestedCtxKey) { // block list requested?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().
@@ -477,7 +476,7 @@ func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, re
 	}
 }
 
-func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
 	targets, err := m.getPresenceTargets(ctx, blockJIDs, username)
 	if err != nil {
 		return err
@@ -491,7 +490,7 @@ func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []ji
 	return nil
 }
 
-func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []coremodel.Resource, username string) error {
+func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
 	targets, err := m.getPresenceTargets(ctx, unblockJIDs, username)
 	if err != nil {
 		return err

@@ -17,7 +17,8 @@ package xep0280
 import (
 	"context"
 	"fmt"
-	"strconv"
+
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -26,7 +27,6 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -206,7 +206,7 @@ func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource stri
 	if stm == nil {
 		return errStreamNotFound(username, resource)
 	}
-	return stm.SetValue(ctx, carbonsEnabledCtxKey, strconv.FormatBool(enabled))
+	return stm.SetInfoValue(ctx, carbonsEnabledCtxKey, enabled)
 }
 
 func (p *Carbons) processMessage(ctx context.Context, msg *stravaganza.Message, ignoringTargets []jid.JID) error {
@@ -235,8 +235,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(carbonsEnabledCtxKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
@@ -250,8 +249,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		return err
 	}
 	for _, res := range rss {
-		enabled, _ := strconv.ParseBool(res.Value(carbonsEnabledCtxKey))
-		if !enabled {
+		if !res.Info.Bool(carbonsEnabledCtxKey) {
 			continue
 		}
 		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
@@ -259,7 +257,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 	return nil
 }
 
-func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]coremodel.Resource, error) {
+func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]c2smodel.Resource, error) {
 	rs, err := p.resMng.GetResources(ctx, username)
 	if err != nil {
 		return nil, err
@@ -268,7 +266,7 @@ func (p *Carbons) getFilteredResources(ctx context.Context, username string, ign
 	for _, j := range ignoringJIDs {
 		ignoredJIDs[j.String()] = struct{}{}
 	}
-	var ret []coremodel.Resource
+	var ret []c2smodel.Resource
 	for _, res := range rs {
 		_, ok := ignoredJIDs[res.JID.String()]
 		if ok {

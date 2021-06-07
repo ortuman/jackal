@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jackal-xmpp/runqueue"
+	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -224,7 +224,7 @@ func SetLogger(lg Logger, lgLevel string) {
 		lv = FatalLevel
 	}
 	mtx.Lock()
-	rq = runqueue.New("logger", nil)
+	rq = runqueue.New("logger")
 	inst = lg
 	level = lv
 	mtx.Unlock()
@@ -258,6 +258,9 @@ func logMessagef(level Level, msg string, args ...interface{}) {
 		}
 		loggedMessages.With(prometheus.Labels{"instance": instance.ID(), "level": level.String()})
 	})
+	if level == FatalLevel {
+		select {} // hang forever
+	}
 }
 
 func logMessagew(level Level, msg string, keysAndValues ...interface{}) {

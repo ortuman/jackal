@@ -18,7 +18,8 @@ import (
 	"context"
 	"time"
 
-	coremodel "github.com/ortuman/jackal/pkg/model/core"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
+
 	"github.com/ortuman/jackal/pkg/repository"
 )
 
@@ -26,7 +27,7 @@ type measuredUserRep struct {
 	rep repository.User
 }
 
-func (m *measuredUserRep) UpsertUser(ctx context.Context, user *coremodel.User) (err error) {
+func (m *measuredUserRep) UpsertUser(ctx context.Context, user *usermodel.User) (err error) {
 	t0 := time.Now()
 	err = m.rep.UpsertUser(ctx, user)
 	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
@@ -40,7 +41,7 @@ func (m *measuredUserRep) DeleteUser(ctx context.Context, username string) (err 
 	return
 }
 
-func (m *measuredUserRep) FetchUser(ctx context.Context, username string) (usr *coremodel.User, err error) {
+func (m *measuredUserRep) FetchUser(ctx context.Context, username string) (usr *usermodel.User, err error) {
 	t0 := time.Now()
 	usr, err = m.rep.FetchUser(ctx, username)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
