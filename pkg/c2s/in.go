@@ -1115,16 +1115,14 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	if s.sendDisabled {
 		return nil
 	}
-	err := s.session.Send(ctx, elem)
-	if err != nil {
-		return err
-	}
+	_ = s.session.Send(ctx, elem)
+
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
 	// run element sent hook
-	_, err = s.runHook(ctx, hook.C2SStreamElementSent, &hook.C2SStreamInfo{
+	_, err := s.runHook(ctx, hook.C2SStreamElementSent, &hook.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: elem,
