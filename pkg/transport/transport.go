@@ -74,6 +74,9 @@ type Transport interface {
 	// EnableCompression activates a compression mechanism on the transport.
 	EnableCompression(compress.Level)
 
+	// SupportsChannelBinding tells whether the underlying connection supports channel binding.
+	SupportsChannelBinding() bool
+
 	// ChannelBindingBytes returns current transport channel binding bytes.
 	ChannelBindingBytes(ChannelBindingMechanism) []byte
 

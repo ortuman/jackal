@@ -117,6 +117,19 @@ func (s *socketTransport) EnableCompression(level compress.Level) {
 	s.compressed = true
 }
 
+func (s *socketTransport) SupportsChannelBinding() bool {
+	conn, ok := s.conn.(tlsStateQueryable)
+	if !ok {
+		return false
+	}
+	connSt := conn.ConnectionState()
+	switch connSt.Version {
+	case tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12:
+		return true
+	}
+	return false
+}
+
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
 	conn, ok := s.conn.(tlsStateQueryable)
 	if !ok {
@@ -124,8 +137,8 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 	}
 	switch mechanism {
 	case TLSUnique:
-		st := conn.ConnectionState()
-		return st.TLSUnique
+		connSt := conn.ConnectionState()
+		return connSt.TLSUnique
 	default:
 		break
 	}
