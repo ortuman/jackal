@@ -122,12 +122,7 @@ func (s *socketTransport) SupportsChannelBinding() bool {
 	if !ok {
 		return false
 	}
-	connSt := conn.ConnectionState()
-	switch connSt.Version {
-	case tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12:
-		return true
-	}
-	return false
+	return conn.ConnectionState().Version < tls.VersionTLS13
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
