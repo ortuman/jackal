@@ -23,15 +23,20 @@ import (
 
 func TestParser_ErrTooLargeStanzaRead(t *testing.T) {
 	// given
-	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/><b/><c/>`
+	docSrc := `<a/><be/>`
 	p := New(strings.NewReader(docSrc), SocketStream, 4)
 
 	// when
-	elem, err := p.Parse()
+	a, err0 := p.Parse()
+	be, err1 := p.Parse()
 
 	// then
-	require.Nil(t, elem)
-	require.Equal(t, ErrTooLargeStanza, err)
+	require.Nil(t, err0)
+	require.NotNil(t, a)
+	require.Equal(t, "<a/>", a.String())
+
+	require.Nil(t, be)
+	require.Equal(t, ErrTooLargeStanza, err1)
 }
 
 func TestParser_ParseSpace(t *testing.T) {
