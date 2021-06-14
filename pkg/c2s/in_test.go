@@ -641,6 +641,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// transport mock
 			trMock.TypeFunc = func() transport.Type { return transport.Socket }
 			trMock.StartTLSFunc = func(cfg *tls.Config, asClient bool) {}
+			trMock.SupportsChannelBindingFunc = func() bool { return false }
 			trMock.EnableCompressionFunc = func(_ compress.Level) {}
 			trMock.SetReadRateLimiterFunc = func(rLim *rate.Limiter) error { return nil }
 			trMock.CloseFunc = func() error { return nil }
@@ -678,6 +679,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			authMock.ResetFunc = func() {}
 			authMock.UsernameFunc = func() string { return "ortuman" }
 			authMock.ProcessElementFunc = tt.authProcessFn
+			authMock.UsesChannelBindingFunc = func() bool { return false }
 
 			// session mock
 			outBuf := bytes.NewBuffer(nil)
