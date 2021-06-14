@@ -734,9 +734,14 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flags.isSecured())
 
 	if shouldOfferSASL && len(s.authenticators) > 0 {
+		supportsCb := s.tr.SupportsChannelBinding()
+
 		sb := stravaganza.NewBuilder("mechanisms")
 		sb.WithAttribute(stravaganza.Namespace, saslNamespace)
 		for _, authenticator := range s.authenticators {
+			if authenticator.UsesChannelBinding() && !supportsCb {
+				continue // transport doesn't support channel binding (eg. TLS 1.3)
+			}
 			sb.WithChild(
 				stravaganza.NewBuilder("mechanism").
 					WithText(authenticator.Mechanism()).
