@@ -193,29 +193,23 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 	if l.extAuth != nil {
 		res = append(res, l.extAuth)
 	}
-	supportsCb := tr.SupportsChannelBinding()
 	for _, mechanism := range l.saslMechanisms {
 		switch mechanism {
 		case scramSHA1Mechanism:
 			res = append(res, auth.NewScram(tr, auth.ScramSHA1, false, l.rep, l.peppers))
-			if supportsCb {
-				res = append(res, auth.NewScram(tr, auth.ScramSHA1, true, l.rep, l.peppers))
-			}
+			res = append(res, auth.NewScram(tr, auth.ScramSHA1, true, l.rep, l.peppers))
+
 		case scramSHA256Mechanism:
 			res = append(res, auth.NewScram(tr, auth.ScramSHA256, false, l.rep, l.peppers))
-			if supportsCb {
-				res = append(res, auth.NewScram(tr, auth.ScramSHA256, true, l.rep, l.peppers))
-			}
+			res = append(res, auth.NewScram(tr, auth.ScramSHA256, true, l.rep, l.peppers))
+
 		case scramSHA512Mechanism:
 			res = append(res, auth.NewScram(tr, auth.ScramSHA512, false, l.rep, l.peppers))
-			if supportsCb {
-				res = append(res, auth.NewScram(tr, auth.ScramSHA512, true, l.rep, l.peppers))
-			}
+			res = append(res, auth.NewScram(tr, auth.ScramSHA512, true, l.rep, l.peppers))
+
 		case scramSHA3512Mechanism:
 			res = append(res, auth.NewScram(tr, auth.ScramSHA3512, false, l.rep, l.peppers))
-			if supportsCb {
-				res = append(res, auth.NewScram(tr, auth.ScramSHA3512, true, l.rep, l.peppers))
-			}
+			res = append(res, auth.NewScram(tr, auth.ScramSHA3512, true, l.rep, l.peppers))
 		default:
 			log.Warnf("Unsupported authentication mechanism: %s", mechanism)
 		}
