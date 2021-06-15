@@ -60,7 +60,7 @@ const (
 	inTerminated
 )
 
-const maxAuthTries = 5
+const maxAuthAborted = 5
 
 var (
 	disconnectTimeout = time.Second * 5
@@ -72,7 +72,7 @@ type inC2S struct {
 	tr             transport.Transport
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
-	authTries      int
+	authAborted    int
 	hosts          hosts
 	router         router.Router
 	comps          components
@@ -478,16 +478,7 @@ func (s *inC2S) handleAuthenticating(ctx context.Context, elem stravaganza.Eleme
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
 	if elem.Name() == "abort" { // initiating entity aborted the handshake
-		s.authTries++
-		switch {
-		case s.authTries >= maxAuthTries:
-			return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
-		default:
-			s.activeAuth.Reset()
-			s.activeAuth = nil
-			s.setState(inConnected)
-			return nil
-		}
+		return s.abortAuthentication(ctx)
 	}
 	if err := s.continueAuthentication(ctx, elem); err != nil {
 		if saslErr, ok := err.(*auth.SASLError); ok {
@@ -904,6 +895,17 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 		Build()
 	if err := s.sendElement(ctx, failureElem); err != nil {
 		return err
+	}
+	s.activeAuth.Reset()
+	s.activeAuth = nil
+	s.setState(inConnected)
+	return nil
+}
+
+func (s *inC2S) abortAuthentication(ctx context.Context) error {
+	s.authAborted++
+	if s.authAborted >= maxAuthAborted {
+		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
 	}
 	s.activeAuth.Reset()
 	s.activeAuth = nil
