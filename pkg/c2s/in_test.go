@@ -683,14 +683,13 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			// session mock
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(ctx context.Context, featuresElem stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(ctx context.Context) error {
 				stmElem := stravaganza.NewBuilder("stream:stream").
 					WithAttribute(stravaganza.Namespace, "jabber:client").
 					WithAttribute(stravaganza.StreamNamespace, "http://etherx.jabber.org/streams").
 					WithAttribute(stravaganza.ID, "c2s1").
 					WithAttribute(stravaganza.From, "localhost").
 					WithAttribute(stravaganza.Version, "1.0").
-					WithChild(featuresElem).
 					Build()
 
 				outBuf.WriteString(`<?xml version="1.0"?>`)
@@ -789,7 +788,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 			resMngMock := &resourceManagerMock{}
 
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader("<stream:stream>"))
 				return err
 			}
