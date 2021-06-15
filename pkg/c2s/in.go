@@ -60,6 +60,8 @@ const (
 	inTerminated
 )
 
+const maxAuthTries = 5
+
 var (
 	disconnectTimeout = time.Second * 5
 )
@@ -70,6 +72,7 @@ type inC2S struct {
 	tr             transport.Transport
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
+	authTries      int
 	hosts          hosts
 	router         router.Router
 	comps          components
@@ -473,6 +476,18 @@ func (s *inC2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 func (s *inC2S) handleAuthenticating(ctx context.Context, elem stravaganza.Element) error {
 	if elem.Attribute(stravaganza.Namespace) != saslNamespace {
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
+	}
+	if elem.Name() == "abort" { // initiating entity aborted the handshake
+		s.authTries++
+		switch {
+		case s.authTries >= maxAuthTries:
+			return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
+		default:
+			s.activeAuth.Reset()
+			s.activeAuth = nil
+			s.setState(inConnected)
+			return nil
+		}
 	}
 	if err := s.continueAuthentication(ctx, elem); err != nil {
 		if saslErr, ok := err.(*auth.SASLError); ok {
