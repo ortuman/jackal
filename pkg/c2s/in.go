@@ -893,13 +893,7 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 		WithAttribute(stravaganza.Namespace, saslNamespace).
 		WithChild(saslErr.Element()).
 		Build()
-	if err := s.sendElement(ctx, failureElem); err != nil {
-		return err
-	}
-	s.activeAuth.Reset()
-	s.activeAuth = nil
-	s.setState(inConnected)
-	return nil
+	return s.sendElement(ctx, failureElem)
 }
 
 func (s *inC2S) abortAuthentication(ctx context.Context) error {
