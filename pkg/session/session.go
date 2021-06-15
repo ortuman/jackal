@@ -124,7 +124,7 @@ func (ss *Session) SetFromJID(jd *jid.JID) {
 }
 
 // OpenStream initializes a session session sending the proper XMPP payload.
-func (ss *Session) OpenStream(ctx context.Context, featuresElem stravaganza.Element) error {
+func (ss *Session) OpenStream(ctx context.Context) error {
 	if ss.typ != C2SSession && ss.typ != S2SSession {
 		return errInvalidSessionType
 	}
@@ -138,11 +138,12 @@ func (ss *Session) OpenStream(ctx context.Context, featuresElem stravaganza.Elem
 	case transport.Socket:
 		b = stravaganza.NewBuilder("stream:stream")
 		b.WithAttribute(stravaganza.Namespace, ss.namespace())
+		b.WithAttribute(stravaganza.Version, "1.0")
 		b.WithAttribute(stravaganza.StreamNamespace, streamNamespace)
 		if ss.typ == S2SSession {
 			b.WithAttribute("xmlns:db", dialbackNamespace)
 		}
-		buf.WriteString(`<?xml version="1.0"?>`)
+		buf.WriteString(`<?xml version='1.0'?>`)
 
 	default:
 		return errUnsupportedTransport
@@ -152,18 +153,13 @@ func (ss *Session) OpenStream(ctx context.Context, featuresElem stravaganza.Elem
 		b.WithAttribute(stravaganza.From, ss.hosts.DefaultHostName())
 		b.WithAttribute(stravaganza.To, ss.jd.Domain())
 	} else {
+		b.WithAttribute(stravaganza.From, ss.jd.Domain())
 		b.WithAttribute(stravaganza.ID, ss.streamID)
 	}
-	b.WithAttribute(stravaganza.Version, "1.0")
 
 	elem := b.Build()
 	if err := elem.ToXML(buf, false); err != nil {
 		return err
-	}
-	if featuresElem != nil {
-		if err := featuresElem.ToXML(buf, true); err != nil {
-			return err
-		}
 	}
 	if err := ss.sendString(ctx, buf.String()); err != nil {
 		return err

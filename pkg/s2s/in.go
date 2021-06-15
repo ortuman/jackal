@@ -256,12 +256,12 @@ func (s *inS2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 	s.jd, _ = jid.New("", s.sender, "", true)
 	s.session.SetFromJID(s.jd)
 
-	sb := stravaganza.NewBuilder("stream:features")
-	sb.WithAttribute("xmlns:stream", streamNamespace)
-	sb.WithAttribute("version", "1.0")
+	fb := stravaganza.NewBuilder("stream:features")
+	fb.WithAttribute("xmlns:stream", streamNamespace)
+	fb.WithAttribute("version", "1.0")
 
 	if !s.flags.isSecured() {
-		sb.WithChild(stravaganza.NewBuilder("starttls").
+		fb.WithChild(stravaganza.NewBuilder("starttls").
 			WithAttribute(stravaganza.Namespace, tlsNamespace).
 			WithChild(
 				stravaganza.NewBuilder("required").
@@ -270,10 +270,13 @@ func (s *inS2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 			Build(),
 		)
 		s.setState(inConnected)
-		return s.session.OpenStream(ctx, sb.Build())
+		if err := s.session.OpenStream(ctx); err != nil {
+			return err
+		}
+		return s.session.Send(ctx, fb.Build())
 	}
 	if !s.flags.isAuthenticated() {
-		sb.WithChild(stravaganza.NewBuilder("mechanisms").
+		fb.WithChild(stravaganza.NewBuilder("mechanisms").
 			WithAttribute(stravaganza.Namespace, saslNamespace).
 			WithChild(
 				stravaganza.NewBuilder("mechanism").
@@ -283,12 +286,15 @@ func (s *inS2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 			Build(),
 		)
 	}
-	sb.WithChild(stravaganza.NewBuilder("dialback").
+	fb.WithChild(stravaganza.NewBuilder("dialback").
 		WithAttribute(stravaganza.Namespace, dialbackNamespace).
 		Build(),
 	)
 	s.setState(inConnected)
-	return s.session.OpenStream(ctx, sb.Build())
+	if err := s.session.OpenStream(ctx); err != nil {
+		return err
+	}
+	return s.session.Send(ctx, fb.Build())
 }
 
 func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) error {
@@ -736,7 +742,7 @@ func (s *inS2S) updateRateLimiter() error {
 
 func (s *inS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
 	if s.getState() == inConnecting {
-		_ = s.session.OpenStream(ctx, nil)
+		_ = s.session.OpenStream(ctx)
 	}
 	if streamErr != nil {
 		if err := s.sendElement(ctx, streamErr.Element()); err != nil {

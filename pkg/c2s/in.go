@@ -426,23 +426,25 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 	// open stream session
 	s.session.SetFromJID(s.JID())
 
-	sb := stravaganza.NewBuilder("stream:features").
+	fb := stravaganza.NewBuilder("stream:features").
 		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
 		WithAttribute(stravaganza.Version, "1.0")
 
 	if !s.flags.isAuthenticated() {
-		sb.WithChildren(s.unauthenticatedFeatures()...)
+		fb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
 		authFeatures, err := s.authenticatedFeatures(ctx)
 		if err != nil {
 			return err
 		}
-		sb.WithChildren(authFeatures...)
+		fb.WithChildren(authFeatures...)
 		s.setState(inAuthenticated)
 	}
-	_ = s.session.OpenStream(ctx, sb.Build())
-	return nil
+	if err := s.session.OpenStream(ctx); err != nil {
+		return err
+	}
+	return s.session.Send(ctx, fb.Build())
 }
 
 func (s *inC2S) handleConnected(ctx context.Context, elem stravaganza.Element) error {
@@ -1031,7 +1033,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 
 func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
 	if s.getState() == inConnecting {
-		_ = s.session.OpenStream(ctx, nil)
+		_ = s.session.OpenStream(ctx)
 	}
 	if streamErr != nil {
 		if err := s.sendElement(ctx, streamErr.Element()); err != nil {

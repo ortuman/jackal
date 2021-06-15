@@ -234,7 +234,7 @@ func (s *outS2S) start() error {
 	s.restartSession()
 
 	ctx, cancel := s.requestContext()
-	_ = s.session.OpenStream(ctx, nil)
+	_ = s.session.OpenStream(ctx)
 
 	switch s.typ {
 	case defaultType:
@@ -427,7 +427,7 @@ func (s *outS2S) handleSecuring(ctx context.Context, elem stravaganza.Element) e
 	s.flags.setSecured()
 	s.restartSession()
 
-	return s.session.OpenStream(ctx, nil)
+	return s.session.OpenStream(ctx)
 }
 
 func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Element) error {
@@ -439,7 +439,7 @@ func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Elem
 		s.flags.setAuthenticated()
 
 		s.restartSession()
-		return s.session.OpenStream(ctx, nil)
+		return s.session.OpenStream(ctx)
 
 	case "failure":
 		return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
@@ -515,7 +515,7 @@ func (s *outS2S) restartSession() {
 
 func (s *outS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
 	if s.getState() == outConnecting {
-		_ = s.session.OpenStream(ctx, nil)
+		_ = s.session.OpenStream(ctx)
 	}
 	if streamErr != nil {
 		if err := s.sendElement(ctx, streamErr.Element()); err != nil {
