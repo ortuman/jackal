@@ -38,7 +38,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const iterationCount = 100_000
+const iterationCount = 10_000
 
 type usersService struct {
 	rep     repository.Repository
