@@ -335,7 +335,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return nil, &auth.SASLError{Reason: auth.IncorrectEncoding}
 			},
 			expectedOutput: `<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><incorrect-encoding/></failure>`,
-			expectedState:  inConnected,
+			expectedState:  inAuthenticating,
 		},
 		{
 			name:  "Authenticated/BindSuccess",
