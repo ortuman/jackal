@@ -115,7 +115,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state        outS2SState
+		state        outState
 		sender       string
 		target       string
 		sessionResFn func() (stravaganza.Element, error)
@@ -123,7 +123,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 
 		// expectations
 		expectedOutput string
-		expectedState  outS2SState
+		expectedState  outState
 		expectedFlags  uint8
 	}{
 		{
@@ -329,14 +329,14 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state        outS2SState
+		state        outState
 		sessionResFn func() (stravaganza.Element, error)
 		flags        uint8
 
 		// expectations
 		expectedOutput        string
 		expectedValidDialback bool
-		expectedState         outS2SState
+		expectedState         outState
 	}{
 		{
 			name:  "Connected/VerifyDialback",
@@ -439,7 +439,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 func TestOutS2S_HandleSessionError(t *testing.T) {
 	var tests = []struct {
 		name           string
-		state          outS2SState
+		state          outState
 		sErr           error
 		expectedOutput string
 		expectClosed   bool

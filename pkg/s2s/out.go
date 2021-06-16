@@ -57,10 +57,10 @@ func (t outType) String() string {
 	return "default"
 }
 
-type outS2SState uint32
+type outState uint32
 
 const (
-	outConnecting outS2SState = iota
+	outConnecting outState = iota
 	outConnected
 	outSecuring
 	outAuthenticating
@@ -104,7 +104,7 @@ type outS2S struct {
 	rq       *runqueue.RunQueue
 
 	mu           sync.RWMutex
-	state        outS2SState
+	state        outState
 	flags        flags
 	pendingQueue []stravaganza.Element
 }
@@ -580,13 +580,13 @@ func (s *outS2S) close(ctx context.Context) error {
 	return nil
 }
 
-func (s *outS2S) setState(state outS2SState) {
+func (s *outS2S) setState(state outState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state = state
 }
 
-func (s *outS2S) getState() outS2SState {
+func (s *outS2S) getState() outState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state

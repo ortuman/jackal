@@ -89,7 +89,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state            inS2SState
+		state            inState
 		sender           string
 		target           string
 		sessionResFn     func() (stravaganza.Element, error)
@@ -101,7 +101,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 		// expectations
 		expectedOutput string
 		expectRouted   bool
-		expectedState  inS2SState
+		expectedState  inState
 		expectedFlags  uint8
 	}{
 		{
@@ -454,7 +454,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 func TestInS2S_HandleSessionError(t *testing.T) {
 	var tests = []struct {
 		name           string
-		state          inS2SState
+		state          inState
 		sErr           error
 		expectedOutput string
 		expectClosed   bool

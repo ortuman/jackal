@@ -40,10 +40,10 @@ import (
 	"github.com/ortuman/jackal/pkg/transport"
 )
 
-type inS2SState uint32
+type inState uint32
 
 const (
-	inConnecting inS2SState = iota
+	inConnecting inState = iota
 	inConnected
 	inAuthorizingDialbackKey
 	inDisconnected
@@ -71,7 +71,7 @@ type inS2S struct {
 	sendDisabled bool
 
 	mu     sync.RWMutex
-	state  inS2SState
+	state  inState
 	flags  flags
 	jd     *jid.JID
 	target string
@@ -812,13 +812,13 @@ func (s *inS2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	return err
 }
 
-func (s *inS2S) setState(state inS2SState) {
+func (s *inS2S) setState(state inState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state = state
 }
 
-func (s *inS2S) getState() inS2SState {
+func (s *inS2S) getState() inState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state

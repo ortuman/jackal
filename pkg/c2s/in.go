@@ -48,10 +48,10 @@ import (
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 
-type inC2SState uint32
+type state uint32
 
 const (
-	inConnecting inC2SState = iota
+	inConnecting state = iota
 	inConnected
 	inAuthenticating
 	inAuthenticated
@@ -100,11 +100,11 @@ type inC2S struct {
 	sendDisabled bool
 
 	mu    sync.RWMutex
-	state inC2SState
+	state state
 	jd    *jid.JID
 	pr    *stravaganza.Presence
 	inf   c2smodel.Info
-	flags inC2SFlags
+	flags flags
 }
 
 func newInC2S(
@@ -1193,13 +1193,13 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 	s.pr = pr
 }
 
-func (s *inC2S) setState(state inC2SState) {
+func (s *inC2S) setState(state state) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state = state
 }
 
-func (s *inC2S) getState() inC2SState {
+func (s *inC2S) getState() state {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state
