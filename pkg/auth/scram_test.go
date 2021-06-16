@@ -29,10 +29,9 @@ import (
 	"strings"
 	"testing"
 
-	usermodel "github.com/ortuman/jackal/pkg/model/user"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/transport"
 	stringsutil "github.com/ortuman/jackal/pkg/util/strings"
 	"github.com/stretchr/testify/require"

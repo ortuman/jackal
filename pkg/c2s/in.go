@@ -60,7 +60,7 @@ const (
 	inTerminated
 )
 
-const maxAuthAborted = 5
+const maxAuthAttempts = 5
 
 var (
 	disconnectTimeout = time.Second * 5
@@ -72,7 +72,7 @@ type inC2S struct {
 	tr             transport.Transport
 	authenticators []auth.Authenticator
 	activeAuth     auth.Authenticator
-	authAborted    int
+	authAttempts   int
 	hosts          hosts
 	router         router.Router
 	comps          components
@@ -889,6 +889,10 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 	if saslErr.Err != nil {
 		log.Warnf("Authentication error: %v", saslErr.Err)
 	}
+	s.authAttempts++
+	if s.authAttempts >= maxAuthAttempts {
+		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
+	}
 	failureElem := stravaganza.NewBuilder("failure").
 		WithAttribute(stravaganza.Namespace, saslNamespace).
 		WithChild(saslErr.Element()).
@@ -897,8 +901,8 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 }
 
 func (s *inC2S) abortAuthentication(ctx context.Context) error {
-	s.authAborted++
-	if s.authAborted >= maxAuthAborted {
+	s.authAttempts++
+	if s.authAttempts >= maxAuthAttempts {
 		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
 	}
 	s.activeAuth.Reset()
