@@ -62,7 +62,7 @@ const (
 
 const (
 	maxAuthFailed  = 5
-	maxAuthAborted = 5
+	maxAuthAborted = 1
 )
 
 var (
@@ -74,6 +74,11 @@ type authState struct {
 	active         auth.Authenticator
 	failedTimes    int
 	abortTimes     int
+}
+
+func (a *authState) reset() {
+	a.active.Reset()
+	a.active = nil
 }
 
 type inC2S struct {
@@ -887,8 +892,7 @@ func (s *inC2S) finishAuthentication() error {
 	}
 	log.Infow("Authenticated C2S stream", "id", s.id, "username", username)
 
-	s.authSt.active.Reset()
-	s.authSt.active = nil
+	s.authSt.reset()
 	s.restartSession()
 	return nil
 }
@@ -913,8 +917,7 @@ func (s *inC2S) abortAuthentication(ctx context.Context) error {
 	if s.authSt.abortTimes >= maxAuthAborted {
 		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
 	}
-	s.authSt.active.Reset()
-	s.authSt.active = nil
+	s.authSt.reset()
 	s.setState(inConnected)
 	return nil
 }
