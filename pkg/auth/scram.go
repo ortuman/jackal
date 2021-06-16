@@ -26,7 +26,6 @@ import (
 	"hash"
 	"strings"
 
-	"github.com/ortuman/jackal/pkg/log"
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 
 	"github.com/google/uuid"
@@ -282,7 +281,6 @@ func (s *Scram) handleChallenged(elem stravaganza.Element) (stravaganza.Element,
 	serverSignature := s.hmac([]byte(authMessage), serverKey)
 
 	clientFinalMessage := clientFinalMessageBare + ",p=" + base64.StdEncoding.EncodeToString(clientProof)
-	log.Warnf("EXPECTED: %s, GOT: %s", clientFinalMessage, p)
 	if clientFinalMessage != p {
 		return nil, newSASLError(NotAuthorized, err)
 	}
