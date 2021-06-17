@@ -29,6 +29,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const readBufferSize = 2048
+
 var bufWriterPool = sync.Pool{
 	New: func() interface{} {
 		return bufio.NewWriter(nil)
@@ -50,7 +52,7 @@ func NewSocketTransport(conn net.Conn) Transport {
 	s := &socketTransport{
 		conn: conn,
 		lr:   lr,
-		rd:   lr,
+		rd:   bufio.NewReaderSize(lr, readBufferSize),
 		wr:   conn,
 	}
 	return s
@@ -115,7 +117,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 		lr.SetReadRateLimiter(rLim)
 	}
 	s.lr = lr
-	s.rd = lr
+	s.rd = bufio.NewReaderSize(lr, readBufferSize)
 	s.wr = s.conn
 }
 
