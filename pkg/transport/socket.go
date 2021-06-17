@@ -21,6 +21,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ortuman/jackal/pkg/transport/compress"
@@ -28,44 +29,49 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const writeBuffSize = 4096
-
-type readWriter struct {
-	io.Reader
-	io.Writer
+var bufWriterPool = sync.Pool{
+	New: func() interface{} {
+		return bufio.NewWriter(nil)
+	},
 }
 
 type socketTransport struct {
 	conn       net.Conn
 	lr         *ratelimiter.Reader
+	rd         io.Reader
+	wr         io.Writer
 	bw         *bufio.Writer
-	rw         io.ReadWriter
 	compressed bool
 }
 
 // NewSocketTransport creates a socket class stream transport.
 func NewSocketTransport(conn net.Conn) Transport {
 	lr := ratelimiter.NewReader(conn)
-	bw := bufio.NewWriterSize(conn, writeBuffSize)
 	s := &socketTransport{
 		conn: conn,
 		lr:   lr,
-		bw:   bw,
-		rw:   &readWriter{lr, bw},
+		rd:   lr,
+		wr:   conn,
 	}
 	return s
 }
 
 func (s *socketTransport) Read(p []byte) (n int, err error) {
-	return s.rw.Read(p)
+	return s.rd.Read(p)
 }
 
 func (s *socketTransport) Write(p []byte) (n int, err error) {
-	return s.rw.Write(p)
+	if s.bw == nil {
+		s.grabBuffWriter()
+	}
+	return s.bw.Write(p)
 }
 
 func (s *socketTransport) WriteString(str string) (int, error) {
-	n, err := io.Copy(s.rw, strings.NewReader(str))
+	if s.bw == nil {
+		s.grabBuffWriter()
+	}
+	n, err := io.Copy(s.bw, strings.NewReader(str))
 	return int(n), err
 }
 
@@ -78,7 +84,11 @@ func (s *socketTransport) Type() Type {
 }
 
 func (s *socketTransport) Flush() error {
-	return s.bw.Flush()
+	if err := s.bw.Flush(); err != nil {
+		return err
+	}
+	s.releaseBuffWriter()
+	return nil
 }
 
 func (s *socketTransport) SetWriteDeadline(d time.Time) error {
@@ -105,15 +115,17 @@ func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 		lr.SetReadRateLimiter(rLim)
 	}
 	s.lr = lr
-	s.bw = bufio.NewWriterSize(s.conn, writeBuffSize)
-	s.rw = &readWriter{s.lr, s.bw}
+	s.rd = lr
+	s.wr = s.conn
 }
 
 func (s *socketTransport) EnableCompression(level compress.Level) {
 	if s.compressed {
 		return
 	}
-	s.rw = compress.NewZlibCompressor(s.rw, s.rw, level)
+	rw := compress.NewZlibCompressor(s.rd, s.wr, level)
+	s.rd = rw
+	s.wr = rw
 	s.compressed = true
 }
 
@@ -147,4 +159,20 @@ func (s *socketTransport) PeerCertificates() []*x509.Certificate {
 	}
 	st := conn.ConnectionState()
 	return st.PeerCertificates
+}
+
+func (s *socketTransport) grabBuffWriter() {
+	if s.bw != nil {
+		return
+	}
+	s.bw = bufWriterPool.Get().(*bufio.Writer)
+	s.bw.Reset(s.wr)
+}
+
+func (s *socketTransport) releaseBuffWriter() {
+	if s.bw == nil {
+		return
+	}
+	bufWriterPool.Put(s.bw)
+	s.bw = nil
 }

@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
-	"io"
 	"net"
 	"os"
 	"strings"
@@ -279,7 +278,7 @@ func (ss *Session) sendString(ctx context.Context, str string) error {
 		log.Debugf("SEND(%s): %s", ss.id, str)
 	}
 	ss.setWriteDeadline(ctx)
-	_, err := io.Copy(ss.tr, strings.NewReader(str))
+	_, err := ss.tr.WriteString(str)
 	if err != nil {
 		return err
 	}
