@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io"
 	"net"
 	"strings"
@@ -30,6 +31,8 @@ import (
 )
 
 const readBufferSize = 2048
+
+var errNoWriteFlush = errors.New("transport: flushing buffer before writing")
 
 var bufWriterPool = sync.Pool{
 	New: func() interface{} {
@@ -86,6 +89,9 @@ func (s *socketTransport) Type() Type {
 }
 
 func (s *socketTransport) Flush() error {
+	if s.bw == nil {
+		return errNoWriteFlush
+	}
 	if err := s.bw.Flush(); err != nil {
 		return err
 	}
