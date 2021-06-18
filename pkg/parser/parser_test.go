@@ -15,7 +15,6 @@
 package xmppparser
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -24,15 +23,20 @@ import (
 
 func TestParser_ErrTooLargeStanzaRead(t *testing.T) {
 	// given
-	r := bytes.NewReader([]byte{1, 2, 3, 4, 5})
-	p := New(r, SocketStream, 4)
+	docSrc := `<a/><be/>`
+	p := New(strings.NewReader(docSrc), SocketStream, 4)
 
 	// when
-	elem, err := p.Parse()
+	a, err0 := p.Parse()
+	be, err1 := p.Parse()
 
 	// then
-	require.Nil(t, elem)
-	require.Equal(t, ErrTooLargeStanza, err)
+	require.Nil(t, err0)
+	require.NotNil(t, a)
+	require.Equal(t, "<a/>", a.String())
+
+	require.Nil(t, be)
+	require.Equal(t, ErrTooLargeStanza, err1)
 }
 
 func TestParser_ParseSpace(t *testing.T) {
@@ -60,11 +64,14 @@ func TestParser_ParseSeveralElements(t *testing.T) {
 	p := New(r, DefaultMode, 1024)
 
 	// when
+	_, err0 := p.Parse()
+
 	a, err1 := p.Parse()
 	b, err2 := p.Parse()
 	c, err3 := p.Parse()
 
 	// then
+	require.Equal(t, ErrNoElement, err0)
 	require.NotNil(t, a)
 	require.Nil(t, err1)
 

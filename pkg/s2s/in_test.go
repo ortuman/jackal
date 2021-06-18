@@ -89,7 +89,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state            inS2SState
+		state            inState
 		sender           string
 		target           string
 		sessionResFn     func() (stravaganza.Element, error)
@@ -101,7 +101,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 		// expectations
 		expectedOutput string
 		expectRouted   bool
-		expectedState  inS2SState
+		expectedState  inState
 		expectedFlags  uint8
 	}{
 		{
@@ -366,14 +366,13 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			ssMock.StreamIDFunc = func() string {
 				return "abc123"
 			}
-			ssMock.OpenStreamFunc = func(ctx context.Context, featuresElem stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(ctx context.Context) error {
 				stmElem := stravaganza.NewBuilder("stream:stream").
 					WithAttribute(stravaganza.Namespace, "jabber:server").
 					WithAttribute(stravaganza.StreamNamespace, "http://etherx.jabber.org/streams").
 					WithAttribute(stravaganza.ID, "s2s1").
 					WithAttribute(stravaganza.From, "localhost").
 					WithAttribute(stravaganza.Version, "1.0").
-					WithChild(featuresElem).
 					Build()
 
 				outBuf.WriteString(`<?xml version="1.0"?>`)
@@ -455,7 +454,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 func TestInS2S_HandleSessionError(t *testing.T) {
 	var tests = []struct {
 		name           string
-		state          inS2SState
+		state          inState
 		sErr           error
 		expectedOutput string
 		expectClosed   bool
@@ -483,7 +482,7 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 			routerMock := &routerMock{}
 
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader("<stream:stream>"))
 				return err
 			}

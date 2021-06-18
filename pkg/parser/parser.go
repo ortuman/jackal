@@ -15,7 +15,6 @@
 package xmppparser
 
 import (
-	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -53,68 +52,41 @@ var ErrNoElement = errors.New("parser: no elements")
 
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
-	mode              ParsingMode
-	r                 io.Reader
-	rdBuf             []byte
-	dec               *xml.Decoder
-	nextElement       stravaganza.Element
-	stack             []*stravaganza.Builder
-	index             int
-	inElement         bool
-	rootElementOffset int64
-	maxStanzaSize     int64
+	dec           *xml.Decoder
+	mode          ParsingMode
+	nextElement   stravaganza.Element
+	stack         []*stravaganza.Builder
+	pIndex        int
+	inElement     bool
+	lastOffset    int64
+	maxStanzaSize int64
 }
 
 // New creates an empty Parser instance.
 func New(reader io.Reader, mode ParsingMode, maxStanzaSize int) *Parser {
 	return &Parser{
 		mode:          mode,
-		r:             reader,
-		rdBuf:         make([]byte, maxStanzaSize+1),
-		index:         rootElementIndex,
+		dec:           xml.NewDecoder(reader),
+		pIndex:        rootElementIndex,
 		maxStanzaSize: int64(maxStanzaSize),
 	}
 }
 
 // Parse parses next available XML element from reader.
 func (p *Parser) Parse() (stravaganza.Element, error) {
-	if p.dec == nil {
-		n, err := p.r.Read(p.rdBuf)
-		switch {
-		case err != nil:
-			return nil, err
-		case n == 0:
-			return nil, ErrNoElement
-		case int64(n) > p.maxStanzaSize:
-			return nil, ErrTooLargeStanza
-		}
-		p.dec = xml.NewDecoder(bytes.NewReader(p.rdBuf[:n]))
+	t, err := p.dec.RawToken()
+	if err != nil {
+		return nil, err
 	}
-	// parse input buffer stream
 	for {
-		t, err := p.dec.RawToken()
-		if err != nil {
-			switch {
-			case errors.Is(err, io.EOF):
-				p.dec = nil
-				return nil, ErrNoElement
-
-			default:
-				return nil, err
-			}
-		}
-		if p.index != rootElementIndex && p.dec.InputOffset()-p.rootElementOffset > p.maxStanzaSize {
+		// check max stanza size limit
+		off := p.dec.InputOffset()
+		if p.maxStanzaSize > 0 && off-p.lastOffset > p.maxStanzaSize {
 			return nil, ErrTooLargeStanza
 		}
 		switch t1 := t.(type) {
 		case xml.ProcInst:
-			break
-
-		case xml.CharData:
-			if p.inElement {
-				p.setElementText(t1)
-			}
-			break
+			return nil, ErrNoElement
 
 		case xml.StartElement:
 			p.startElement(t1)
@@ -122,9 +94,14 @@ func (p *Parser) Parse() (stravaganza.Element, error) {
 				if err := p.closeElement(xmlName(t1.Name.Space, t1.Name.Local)); err != nil {
 					return nil, err
 				}
-				return p.popElement(), nil
+				goto done
 			}
-			break
+
+		case xml.CharData:
+			if !p.inElement {
+				return nil, ErrNoElement
+			}
+			p.setElementText(t1)
 
 		case xml.EndElement:
 			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {
@@ -133,12 +110,22 @@ func (p *Parser) Parse() (stravaganza.Element, error) {
 			if err := p.endElement(t1); err != nil {
 				return nil, err
 			}
-			if p.index == rootElementIndex {
-				return p.popElement(), nil
+			if p.pIndex == rootElementIndex {
+				goto done
 			}
-			break
+		}
+		t, err = p.dec.RawToken()
+		if err != nil {
+			return nil, err
 		}
 	}
+
+done:
+	p.lastOffset = p.dec.InputOffset()
+	elem := p.nextElement
+	p.nextElement = nil
+
+	return elem, nil
 }
 
 func (p *Parser) startElement(t xml.StartElement) {
@@ -152,15 +139,12 @@ func (p *Parser) startElement(t xml.StartElement) {
 	builder := stravaganza.NewBuilder(name).WithAttributes(attrs...)
 	p.stack = append(p.stack, builder)
 
-	if p.index == rootElementIndex {
-		p.rootElementOffset = p.dec.InputOffset()
-	}
-	p.index = len(p.stack) - 1
+	p.pIndex = len(p.stack) - 1
 	p.inElement = true
 }
 
 func (p *Parser) setElementText(t xml.CharData) {
-	p.stack[p.index] = p.stack[p.index].WithText(string(t))
+	p.stack[p.pIndex] = p.stack[p.pIndex].WithText(string(t))
 }
 
 func (p *Parser) endElement(t xml.EndElement) error {
@@ -168,32 +152,25 @@ func (p *Parser) endElement(t xml.EndElement) error {
 }
 
 func (p *Parser) closeElement(name string) error {
-	if p.index == rootElementIndex {
+	if p.pIndex == rootElementIndex {
 		return errUnexpectedEnd(name)
 	}
-	builder := p.stack[p.index]
-	p.stack = p.stack[:p.index]
+	builder := p.stack[p.pIndex]
+	p.stack = p.stack[:p.pIndex]
 
 	element := builder.Build()
 
 	if name != element.Name() {
 		return errUnexpectedEnd(name)
 	}
-	p.index = len(p.stack) - 1
-	if p.index == rootElementIndex {
+	p.pIndex = len(p.stack) - 1
+	if p.pIndex == rootElementIndex {
 		p.nextElement = element
-		p.rootElementOffset = 0
 	} else {
-		p.stack[p.index] = p.stack[p.index].WithChild(element)
+		p.stack[p.pIndex] = p.stack[p.pIndex].WithChild(element)
 	}
 	p.inElement = false
 	return nil
-}
-
-func (p *Parser) popElement() stravaganza.Element {
-	elem := p.nextElement
-	p.nextElement = nil
-	return elem
 }
 
 func xmlName(space, local string) string {

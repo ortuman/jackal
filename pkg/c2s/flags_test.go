@@ -22,7 +22,7 @@ import (
 
 func TestInC2SFlags_Set(t *testing.T) {
 	// given
-	var flgs inC2SFlags
+	var flgs flags
 
 	// then
 	require.False(t, flgs.isSecured())

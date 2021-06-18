@@ -57,10 +57,10 @@ func (t outType) String() string {
 	return "default"
 }
 
-type outS2SState uint32
+type outState uint32
 
 const (
-	outConnecting outS2SState = iota
+	outConnecting outState = iota
 	outConnected
 	outSecuring
 	outAuthenticating
@@ -104,7 +104,7 @@ type outS2S struct {
 	rq       *runqueue.RunQueue
 
 	mu           sync.RWMutex
-	state        outS2SState
+	state        outState
 	flags        flags
 	pendingQueue []stravaganza.Element
 }
@@ -234,7 +234,7 @@ func (s *outS2S) start() error {
 	s.restartSession()
 
 	ctx, cancel := s.requestContext()
-	_ = s.session.OpenStream(ctx, nil)
+	_ = s.session.OpenStream(ctx)
 
 	switch s.typ {
 	case defaultType:
@@ -427,7 +427,7 @@ func (s *outS2S) handleSecuring(ctx context.Context, elem stravaganza.Element) e
 	s.flags.setSecured()
 	s.restartSession()
 
-	return s.session.OpenStream(ctx, nil)
+	return s.session.OpenStream(ctx)
 }
 
 func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Element) error {
@@ -439,7 +439,7 @@ func (s *outS2S) handleAuthenticating(ctx context.Context, elem stravaganza.Elem
 		s.flags.setAuthenticated()
 
 		s.restartSession()
-		return s.session.OpenStream(ctx, nil)
+		return s.session.OpenStream(ctx)
 
 	case "failure":
 		return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
@@ -515,7 +515,7 @@ func (s *outS2S) restartSession() {
 
 func (s *outS2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
 	if s.getState() == outConnecting {
-		_ = s.session.OpenStream(ctx, nil)
+		_ = s.session.OpenStream(ctx)
 	}
 	if streamErr != nil {
 		if err := s.sendElement(ctx, streamErr.Element()); err != nil {
@@ -580,13 +580,13 @@ func (s *outS2S) close(ctx context.Context) error {
 	return nil
 }
 
-func (s *outS2S) setState(state outS2SState) {
+func (s *outS2S) setState(state outState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state = state
 }
 
-func (s *outS2S) getState() outS2SState {
+func (s *outS2S) getState() outState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state

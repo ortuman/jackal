@@ -24,66 +24,66 @@ const (
 	fSessionStarted       = 1 << 4
 )
 
-type inC2SFlags struct {
+type flags struct {
 	mtx sync.RWMutex
 	flg uint8
 }
 
-func (f *inC2SFlags) isSecured() bool {
+func (f *flags) isSecured() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	return f.flg&fSecured > 0
 }
 
-func (f *inC2SFlags) setSecured() {
+func (f *flags) setSecured() {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
 	f.flg = f.flg | fSecured
 }
 
-func (f *inC2SFlags) isAuthenticated() bool {
+func (f *flags) isAuthenticated() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	return f.flg&fAuthenticated > 0
 }
 
-func (f *inC2SFlags) setAuthenticated() {
+func (f *flags) setAuthenticated() {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
 	f.flg = f.flg | fAuthenticated
 }
 
-func (f *inC2SFlags) isCompressed() bool {
+func (f *flags) isCompressed() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	return f.flg&fCompressed > 0
 }
 
-func (f *inC2SFlags) setCompressed() {
+func (f *flags) setCompressed() {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
 	f.flg = f.flg | fCompressed
 }
 
-func (f *inC2SFlags) isBinded() bool {
+func (f *flags) isBinded() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	return f.flg&fBinded > 0
 }
 
-func (f *inC2SFlags) setBinded() {
+func (f *flags) setBinded() {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	f.flg = f.flg | fBinded
 }
 
-func (f *inC2SFlags) isSessionStarted() bool {
+func (f *flags) isSessionStarted() bool {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
 	return f.flg&fSessionStarted > 0
 }
 
-func (f *inC2SFlags) setSessionStarted() {
+func (f *flags) setSessionStarted() {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
 	f.flg = f.flg | fSessionStarted

@@ -63,7 +63,7 @@ type session interface {
 	Send(ctx context.Context, element stravaganza.Element) error
 	Receive() (stravaganza.Element, error)
 
-	OpenStream(ctx context.Context, featuresElem stravaganza.Element) error
+	OpenStream(ctx context.Context) error
 	Close(ctx context.Context) error
 
 	Reset(tr transport.Transport) error

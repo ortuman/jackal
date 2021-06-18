@@ -54,12 +54,12 @@ func TestSession_OpenStream(t *testing.T) {
 	}
 
 	// when
-	err := ss.OpenStream(context.Background(), testFeaturesElement())
+	err := ss.OpenStream(context.Background())
 
 	// then
 	require.Nil(t, err)
 
-	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/></stream:features>`
+	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns="jabber:client" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" from="jackal.im">`
 	require.Equal(t, expectedOutput, buf.String())
 }
 
@@ -119,12 +119,12 @@ func TestSession_OpenServer(t *testing.T) {
 	}
 
 	// when
-	err := ss.OpenStream(context.Background(), testFeaturesElement())
+	err := ss.OpenStream(context.Background())
 
 	// then
 	require.Nil(t, err)
 
-	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/></stream:features>`
+	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns="jabber:server" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im">`
 	require.Equal(t, expectedOutput, buf.String())
 }
 

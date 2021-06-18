@@ -34,6 +34,8 @@ services:
     ports:
       - 5222:5222
       - 15280:15280
+    environment:
+      - JACKAL_LOG_STANZAS=on
     depends_on:
       - etcd
       - pgsql

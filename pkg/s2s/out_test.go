@@ -115,7 +115,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state        outS2SState
+		state        outState
 		sender       string
 		target       string
 		sessionResFn func() (stravaganza.Element, error)
@@ -123,7 +123,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 
 		// expectations
 		expectedOutput string
-		expectedState  outS2SState
+		expectedState  outState
 		expectedFlags  uint8
 	}{
 		{
@@ -274,7 +274,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 
 			outBuf := bytes.NewBuffer(nil)
 			ssMock.StreamIDFunc = func() string { return "abc123" }
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`))
 				return err
 			}
@@ -329,14 +329,14 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state        outS2SState
+		state        outState
 		sessionResFn func() (stravaganza.Element, error)
 		flags        uint8
 
 		// expectations
 		expectedOutput        string
 		expectedValidDialback bool
-		expectedState         outS2SState
+		expectedState         outState
 	}{
 		{
 			name:  "Connected/VerifyDialback",
@@ -377,7 +377,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 
 			outBuf := bytes.NewBuffer(nil)
 			ssMock.StreamIDFunc = func() string { return "abc123" }
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`))
 				return err
 			}
@@ -439,7 +439,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 func TestOutS2S_HandleSessionError(t *testing.T) {
 	var tests = []struct {
 		name           string
-		state          outS2SState
+		state          outState
 		sErr           error
 		expectedOutput string
 		expectClosed   bool
@@ -466,7 +466,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 			trMock := &transportMock{}
 
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader("<stream:stream>"))
 				return err
 			}

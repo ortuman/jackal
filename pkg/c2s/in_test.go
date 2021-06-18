@@ -144,7 +144,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 		name string
 
 		// input
-		state         inC2SState
+		state         state
 		sessionResFn  func() (stravaganza.Element, error)
 		authProcessFn func(_ context.Context, _ stravaganza.Element) (stravaganza.Element, *auth.SASLError)
 		routeError    error
@@ -155,7 +155,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 		expectedOutput        string
 		expectRouted          bool
 		expectResourceUpdated bool
-		expectedState         inC2SState
+		expectedState         state
 	}{
 		{
 			name:  "Connecting/Unsecured",
@@ -335,7 +335,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return nil, &auth.SASLError{Reason: auth.IncorrectEncoding}
 			},
 			expectedOutput: `<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><incorrect-encoding/></failure>`,
-			expectedState:  inConnected,
+			expectedState:  inAuthenticating,
 		},
 		{
 			name:  "Authenticated/BindSuccess",
@@ -641,6 +641,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			// transport mock
 			trMock.TypeFunc = func() transport.Type { return transport.Socket }
 			trMock.StartTLSFunc = func(cfg *tls.Config, asClient bool) {}
+			trMock.SupportsChannelBindingFunc = func() bool { return false }
 			trMock.EnableCompressionFunc = func(_ compress.Level) {}
 			trMock.SetReadRateLimiterFunc = func(rLim *rate.Limiter) error { return nil }
 			trMock.CloseFunc = func() error { return nil }
@@ -678,17 +679,17 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			authMock.ResetFunc = func() {}
 			authMock.UsernameFunc = func() string { return "ortuman" }
 			authMock.ProcessElementFunc = tt.authProcessFn
+			authMock.UsesChannelBindingFunc = func() bool { return false }
 
 			// session mock
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(ctx context.Context, featuresElem stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(ctx context.Context) error {
 				stmElem := stravaganza.NewBuilder("stream:stream").
 					WithAttribute(stravaganza.Namespace, "jabber:client").
 					WithAttribute(stravaganza.StreamNamespace, "http://etherx.jabber.org/streams").
 					WithAttribute(stravaganza.ID, "c2s1").
 					WithAttribute(stravaganza.From, "localhost").
 					WithAttribute(stravaganza.Version, "1.0").
-					WithChild(featuresElem).
 					Build()
 
 				outBuf.WriteString(`<?xml version="1.0"?>`)
@@ -726,21 +727,23 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					CompressionLevel: compress.DefaultCompression,
 					ResourceConflict: Disallow,
 				},
-				state:          tt.state,
-				flags:          inC2SFlags{flg: tt.flags},
-				rq:             runqueue.New(tt.name),
-				doneCh:         make(chan struct{}),
-				jd:             userJID,
-				tr:             trMock,
-				hosts:          hMock,
-				router:         routerMock,
-				mods:           modsMock,
-				comps:          compsMock,
-				authenticators: []auth.Authenticator{authMock},
-				activeAuth:     authMock,
-				session:        ssMock,
-				resMng:         resMngMock,
-				hk:             hook.NewHooks(),
+				state:  tt.state,
+				flags:  flags{flg: tt.flags},
+				rq:     runqueue.New(tt.name),
+				doneCh: make(chan struct{}),
+				jd:     userJID,
+				tr:     trMock,
+				hosts:  hMock,
+				router: routerMock,
+				mods:   modsMock,
+				comps:  compsMock,
+				authSt: authState{
+					authenticators: []auth.Authenticator{authMock},
+					active:         authMock,
+				},
+				session: ssMock,
+				resMng:  resMngMock,
+				hk:      hook.NewHooks(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -757,7 +760,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 func TestInC2S_HandleSessionError(t *testing.T) {
 	var tests = []struct {
 		name           string
-		state          inC2SState
+		state          state
 		sErr           error
 		expectedOutput string
 		expectClosed   bool
@@ -787,7 +790,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 			resMngMock := &resourceManagerMock{}
 
 			outBuf := bytes.NewBuffer(nil)
-			ssMock.OpenStreamFunc = func(_ context.Context, _ stravaganza.Element) error {
+			ssMock.OpenStreamFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader("<stream:stream>"))
 				return err
 			}

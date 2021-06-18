@@ -48,10 +48,10 @@ import (
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 
-type inC2SState uint32
+type state uint32
 
 const (
-	inConnecting inC2SState = iota
+	inConnecting state = iota
 	inConnected
 	inAuthenticating
 	inAuthenticated
@@ -60,35 +60,51 @@ const (
 	inTerminated
 )
 
+const (
+	maxAuthFailed  = 5
+	maxAuthAborted = 1
+)
+
 var (
 	disconnectTimeout = time.Second * 5
 )
 
-type inC2S struct {
-	id             stream.C2SID
-	cfg            Config
-	tr             transport.Transport
+type authState struct {
 	authenticators []auth.Authenticator
-	activeAuth     auth.Authenticator
-	hosts          hosts
-	router         router.Router
-	comps          components
-	mods           modules
-	resMng         resourceManager
-	session        session
-	shapers        shaper.Shapers
-	hk             *hook.Hooks
-	rq             *runqueue.RunQueue
-	discTm         *time.Timer
-	doneCh         chan struct{}
-	sendDisabled   bool
+	active         auth.Authenticator
+	failedTimes    int
+	abortTimes     int
+}
+
+func (a *authState) reset() {
+	a.active.Reset()
+	a.active = nil
+}
+
+type inC2S struct {
+	id           stream.C2SID
+	cfg          Config
+	tr           transport.Transport
+	authSt       authState
+	hosts        hosts
+	router       router.Router
+	comps        components
+	mods         modules
+	resMng       resourceManager
+	session      session
+	shapers      shaper.Shapers
+	hk           *hook.Hooks
+	rq           *runqueue.RunQueue
+	discTm       *time.Timer
+	doneCh       chan struct{}
+	sendDisabled bool
 
 	mu    sync.RWMutex
-	state inC2SState
+	state state
 	jd    *jid.JID
 	pr    *stravaganza.Presence
 	inf   c2smodel.Info
-	flags inC2SFlags
+	flags flags
 }
 
 func newInC2S(
@@ -121,22 +137,22 @@ func newInC2S(
 	)
 	// init stream
 	stm := &inC2S{
-		id:             id,
-		cfg:            cfg,
-		inf:            c2smodel.Info{M: make(map[string]string)},
-		tr:             tr,
-		session:        session,
-		authenticators: authenticators,
-		hosts:          hosts,
-		router:         router,
-		comps:          comps,
-		mods:           mods,
-		resMng:         resMng,
-		shapers:        shapers,
-		rq:             runqueue.New(id.String()),
-		doneCh:         make(chan struct{}),
-		state:          inConnecting,
-		hk:             hk,
+		id:      id,
+		cfg:     cfg,
+		inf:     c2smodel.Info{M: make(map[string]string)},
+		tr:      tr,
+		session: session,
+		authSt:  authState{authenticators: authenticators},
+		hosts:   hosts,
+		router:  router,
+		comps:   comps,
+		mods:    mods,
+		resMng:  resMng,
+		shapers: shapers,
+		rq:      runqueue.New(id.String()),
+		doneCh:  make(chan struct{}),
+		state:   inConnecting,
+		hk:      hk,
 	}
 	if cfg.UseTLS {
 		stm.flags.setSecured() // stream already secured
@@ -426,23 +442,25 @@ func (s *inC2S) handleConnecting(ctx context.Context, elem stravaganza.Element) 
 	// open stream session
 	s.session.SetFromJID(s.JID())
 
-	sb := stravaganza.NewBuilder("stream:features").
+	fb := stravaganza.NewBuilder("stream:features").
 		WithAttribute(stravaganza.StreamNamespace, streamNamespace).
 		WithAttribute(stravaganza.Version, "1.0")
 
 	if !s.flags.isAuthenticated() {
-		sb.WithChildren(s.unauthenticatedFeatures()...)
+		fb.WithChildren(s.unauthenticatedFeatures()...)
 		s.setState(inConnected)
 	} else {
 		authFeatures, err := s.authenticatedFeatures(ctx)
 		if err != nil {
 			return err
 		}
-		sb.WithChildren(authFeatures...)
+		fb.WithChildren(authFeatures...)
 		s.setState(inAuthenticated)
 	}
-	_ = s.session.OpenStream(ctx, sb.Build())
-	return nil
+	if err := s.session.OpenStream(ctx); err != nil {
+		return err
+	}
+	return s.session.Send(ctx, fb.Build())
 }
 
 func (s *inC2S) handleConnected(ctx context.Context, elem stravaganza.Element) error {
@@ -472,13 +490,16 @@ func (s *inC2S) handleAuthenticating(ctx context.Context, elem stravaganza.Eleme
 	if elem.Attribute(stravaganza.Namespace) != saslNamespace {
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
+	if elem.Name() == "abort" { // initiating entity aborted the handshake
+		return s.abortAuthentication(ctx)
+	}
 	if err := s.continueAuthentication(ctx, elem); err != nil {
 		if saslErr, ok := err.(*auth.SASLError); ok {
 			return s.failAuthentication(ctx, saslErr)
 		}
 		return err
 	}
-	if s.activeAuth.Authenticated() {
+	if s.authSt.active.Authenticated() {
 		return s.finishAuthentication()
 	}
 	return nil
@@ -733,10 +754,15 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 	// attach SASL mechanisms
 	shouldOfferSASL := !isSocketTr || (isSocketTr && s.flags.isSecured())
 
-	if shouldOfferSASL && len(s.authenticators) > 0 {
+	if shouldOfferSASL && len(s.authSt.authenticators) > 0 {
+		supportsCb := s.tr.SupportsChannelBinding()
+
 		sb := stravaganza.NewBuilder("mechanisms")
 		sb.WithAttribute(stravaganza.Namespace, saslNamespace)
-		for _, authenticator := range s.authenticators {
+		for _, authenticator := range s.authSt.authenticators {
+			if authenticator.UsesChannelBinding() && !supportsCb {
+				continue // transport doesn't support channel binding (eg. TLS 1.3)
+			}
 			sb.WithChild(
 				stravaganza.NewBuilder("mechanism").
 					WithText(authenticator.Mechanism()).
@@ -820,18 +846,18 @@ func (s *inC2S) startAuthentication(ctx context.Context, elem stravaganza.Elemen
 		return s.disconnect(ctx, streamerror.E(streamerror.InvalidNamespace))
 	}
 	mechanism := elem.Attribute("mechanism")
-	for _, authenticator := range s.authenticators {
+	for _, authenticator := range s.authSt.authenticators {
 		if authenticator.Mechanism() != mechanism {
 			continue
 		}
-		s.activeAuth = authenticator
+		s.authSt.active = authenticator
 		if err := s.continueAuthentication(ctx, elem); err != nil {
 			if saslErr, ok := err.(*auth.SASLError); ok {
 				return s.failAuthentication(ctx, saslErr)
 			}
 			return err
 		}
-		if s.activeAuth.Authenticated() {
+		if s.authSt.active.Authenticated() {
 			return s.finishAuthentication()
 		}
 		s.setState(inAuthenticating)
@@ -846,7 +872,7 @@ func (s *inC2S) startAuthentication(ctx context.Context, elem stravaganza.Elemen
 }
 
 func (s *inC2S) continueAuthentication(ctx context.Context, elem stravaganza.Element) error {
-	elem, saslErr := s.activeAuth.ProcessElement(ctx, elem)
+	elem, saslErr := s.authSt.active.ProcessElement(ctx, elem)
 	if saslErr != nil {
 		return saslErr
 	}
@@ -854,7 +880,7 @@ func (s *inC2S) continueAuthentication(ctx context.Context, elem stravaganza.Ele
 }
 
 func (s *inC2S) finishAuthentication() error {
-	username := s.activeAuth.Username()
+	username := s.authSt.active.Username()
 
 	j, _ := jid.New(username, s.Domain(), "", true)
 	s.setJID(j)
@@ -866,8 +892,7 @@ func (s *inC2S) finishAuthentication() error {
 	}
 	log.Infow("Authenticated C2S stream", "id", s.id, "username", username)
 
-	s.activeAuth.Reset()
-	s.activeAuth = nil
+	s.authSt.reset()
 	s.restartSession()
 	return nil
 }
@@ -876,15 +901,23 @@ func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError)
 	if saslErr.Err != nil {
 		log.Warnf("Authentication error: %v", saslErr.Err)
 	}
+	s.authSt.failedTimes++
+	if s.authSt.failedTimes >= maxAuthFailed {
+		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
+	}
 	failureElem := stravaganza.NewBuilder("failure").
 		WithAttribute(stravaganza.Namespace, saslNamespace).
 		WithChild(saslErr.Element()).
 		Build()
-	if err := s.sendElement(ctx, failureElem); err != nil {
-		return err
+	return s.sendElement(ctx, failureElem)
+}
+
+func (s *inC2S) abortAuthentication(ctx context.Context) error {
+	s.authSt.abortTimes++
+	if s.authSt.abortTimes >= maxAuthAborted {
+		return s.disconnect(ctx, streamerror.E(streamerror.PolicyViolation))
 	}
-	s.activeAuth.Reset()
-	s.activeAuth = nil
+	s.authSt.reset()
 	s.setState(inConnected)
 	return nil
 }
@@ -1026,7 +1059,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 
 func (s *inC2S) disconnect(ctx context.Context, streamErr *streamerror.Error) error {
 	if s.getState() == inConnecting {
-		_ = s.session.OpenStream(ctx, nil)
+		_ = s.session.OpenStream(ctx)
 	}
 	if streamErr != nil {
 		if err := s.sendElement(ctx, streamErr.Element()); err != nil {
@@ -1115,16 +1148,14 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	if s.sendDisabled {
 		return nil
 	}
-	err := s.session.Send(ctx, elem)
-	if err != nil {
-		return err
-	}
+	_ = s.session.Send(ctx, elem)
+
 	reportOutgoingRequest(
 		elem.Name(),
 		elem.Attribute(stravaganza.Type),
 	)
 	// run element sent hook
-	_, err = s.runHook(ctx, hook.C2SStreamElementSent, &hook.C2SStreamInfo{
+	_, err := s.runHook(ctx, hook.C2SStreamElementSent, &hook.C2SStreamInfo{
 		ID:      s.ID().String(),
 		JID:     s.JID(),
 		Element: elem,
@@ -1162,13 +1193,13 @@ func (s *inC2S) setPresence(pr *stravaganza.Presence) {
 	s.pr = pr
 }
 
-func (s *inC2S) setState(state inC2SState) {
+func (s *inC2S) setState(state state) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state = state
 }
 
-func (s *inC2S) getState() inC2SState {
+func (s *inC2S) getState() state {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state

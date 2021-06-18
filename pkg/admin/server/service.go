@@ -25,12 +25,11 @@ import (
 	"fmt"
 	"hash"
 
-	usermodel "github.com/ortuman/jackal/pkg/model/user"
-
 	userspb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/repository"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
@@ -38,7 +37,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const iterationCount = 100_000
+const iterationCount = 15_000
 
 type usersService struct {
 	rep     repository.Repository
