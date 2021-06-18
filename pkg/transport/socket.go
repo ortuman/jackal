@@ -30,7 +30,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const readBufferSize = 2048
+const readBufferSize = 4096
 
 var errNoWriteFlush = errors.New("transport: flushing buffer before writing")
 
@@ -146,6 +146,9 @@ func (s *socketTransport) SupportsChannelBinding() bool {
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
+	if !s.SupportsChannelBinding() {
+		return nil
+	}
 	conn, ok := s.conn.(tlsStateQueryable)
 	if !ok {
 		return nil
