@@ -47,6 +47,7 @@ type socketTransport struct {
 	wr         io.Writer
 	bw         *bufio.Writer
 	compressed bool
+	supportsCb bool
 }
 
 // NewSocketTransport creates a socket class stream transport.
@@ -113,11 +114,15 @@ func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 	if !ok {
 		return
 	}
+	var tlsConn *tls.Conn
 	if asClient {
-		s.conn = tls.Client(s.conn, cfg)
+		tlsConn = tls.Client(s.conn, cfg)
 	} else {
-		s.conn = tls.Server(s.conn, cfg)
+		tlsConn = tls.Server(s.conn, cfg)
 	}
+	s.conn = tlsConn
+	s.supportsCb = tlsConn.ConnectionState().Version < tls.VersionTLS13
+
 	lr := ratelimiter.NewReader(s.conn)
 	if rLim := s.lr.ReadRateLimiter(); rLim != nil {
 		lr.SetReadRateLimiter(rLim)
@@ -138,15 +143,11 @@ func (s *socketTransport) EnableCompression(level compress.Level) {
 }
 
 func (s *socketTransport) SupportsChannelBinding() bool {
-	conn, ok := s.conn.(tlsStateQueryable)
-	if !ok {
-		return false
-	}
-	return conn.ConnectionState().Version < tls.VersionTLS13
+	return s.supportsCb
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
-	if !s.SupportsChannelBinding() {
+	if !s.supportsCb {
 		return nil
 	}
 	conn, ok := s.conn.(tlsStateQueryable)
