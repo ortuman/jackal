@@ -30,14 +30,17 @@ func TestPgSQLUser_Upsert(t *testing.T) {
 		WithArgs("ortuman", "v_sha_1", "v_sha_256", "v_sha_512", "v_sha3_512", "salt", 1024, "v1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	usr := usermodel.User{Username: "ortuman"}
-	usr.Scram.SHA1 = "v_sha_1"
-	usr.Scram.SHA256 = "v_sha_256"
-	usr.Scram.SHA512 = "v_sha_512"
-	usr.Scram.SHA3512 = "v_sha3_512"
+	usr := usermodel.User{
+		Username: "ortuman",
+		Scram:    &usermodel.Scram{},
+	}
+	usr.Scram.Sha1 = "v_sha_1"
+	usr.Scram.Sha256 = "v_sha_256"
+	usr.Scram.Sha512 = "v_sha_512"
+	usr.Scram.Sha3512 = "v_sha3_512"
 	usr.Scram.Salt = "salt"
 	usr.Scram.IterationCount = 1024
-	usr.Scram.PepperID = "v1"
+	usr.Scram.PepperId = "v1"
 
 	err := s.UpsertUser(context.Background(), &usr)
 	require.Nil(t, mock.ExpectationsWereMet())
@@ -69,13 +72,13 @@ func TestPgSQLUser_Fetch(t *testing.T) {
 	require.NotNil(t, usr)
 
 	require.Equal(t, "ortuman", usr.Username)
-	require.Equal(t, "v_sha_1", usr.Scram.SHA1)
-	require.Equal(t, "v_sha_256", usr.Scram.SHA256)
-	require.Equal(t, "v_sha_512", usr.Scram.SHA512)
-	require.Equal(t, "v_sha3_512", usr.Scram.SHA3512)
+	require.Equal(t, "v_sha_1", usr.Scram.Sha1)
+	require.Equal(t, "v_sha_256", usr.Scram.Sha256)
+	require.Equal(t, "v_sha_512", usr.Scram.Sha512)
+	require.Equal(t, "v_sha3_512", usr.Scram.Sha3512)
 	require.Equal(t, "salt", usr.Scram.Salt)
-	require.Equal(t, 1024, usr.Scram.IterationCount)
-	require.Equal(t, "v1", usr.Scram.PepperID)
+	require.Equal(t, int64(1024), usr.Scram.IterationCount)
+	require.Equal(t, "v1", usr.Scram.PepperId)
 }
 
 func TestPgSQLUser_Delete(t *testing.T) {

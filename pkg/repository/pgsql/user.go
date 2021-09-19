@@ -44,13 +44,13 @@ func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *usermodel.User) err
 	}
 	vals := []interface{}{
 		user.Username,
-		user.Scram.SHA1,
-		user.Scram.SHA256,
-		user.Scram.SHA512,
-		user.Scram.SHA3512,
+		user.Scram.Sha1,
+		user.Scram.Sha256,
+		user.Scram.Sha512,
+		user.Scram.Sha3512,
 		user.Scram.Salt,
 		user.Scram.IterationCount,
-		user.Scram.PepperID,
+		user.Scram.PepperId,
 	}
 	q := sq.Insert(usersTableName).
 		Columns(cols...).
@@ -70,7 +70,9 @@ func (r *pgSQLUserRep) DeleteUser(ctx context.Context, username string) error {
 }
 
 func (r *pgSQLUserRep) FetchUser(ctx context.Context, username string) (*usermodel.User, error) {
-	var usr usermodel.User
+	usr := usermodel.User{
+		Scram: &usermodel.Scram{},
+	}
 
 	cols := []string{
 		"username",
@@ -90,13 +92,13 @@ func (r *pgSQLUserRep) FetchUser(ctx context.Context, username string) (*usermod
 		QueryRowContext(ctx).
 		Scan(
 			&usr.Username,
-			&usr.Scram.SHA1,
-			&usr.Scram.SHA256,
-			&usr.Scram.SHA512,
-			&usr.Scram.SHA3512,
+			&usr.Scram.Sha1,
+			&usr.Scram.Sha256,
+			&usr.Scram.Sha512,
+			&usr.Scram.Sha3512,
 			&usr.Scram.Salt,
 			&usr.Scram.IterationCount,
-			&usr.Scram.PepperID,
+			&usr.Scram.PepperId,
 		)
 	switch err {
 	case nil:

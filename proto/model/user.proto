@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package model.v1;
-option go_package = "pkg/model/user";
+option go_package = "pkg/model/user;usermodel";
 
 // User represents a user entity.
 message User {

@@ -1,4 +1,4 @@
-.PHONY: check fmt vet lint generate test build install installctl dockerimage
+.PHONY: check fmt vet lint generate test build protomodel install installctl dockerimage
 
 generate:
 	@echo "Generating mock files..."
@@ -25,6 +25,11 @@ test: generate
 build:
 	@echo "Compiling jackal binary..."
 	@bash scripts/compile.sh
+
+protomodel:
+	@echo "Generating model proto files..."
+	@command -v protoc >/dev/null 2>&1 || { echo 'Please install protoc or use image that has it'; exit 1; }
+	@protoc --proto_path="${GOPATH}"/src --proto_path=. --go_out=. proto/model/*.proto
 
 install:
 	@echo "Installing jackal binary..."
