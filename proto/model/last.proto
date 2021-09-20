@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package model.v1;
+option go_package = "pkg/model/last;lastmodel";
+
+// Last represents a user last activity entity.
+message Last {
+  string username = 1;
+  int64 seconds = 2;
+  string status = 3;
+}
