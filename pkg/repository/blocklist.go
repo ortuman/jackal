@@ -29,7 +29,7 @@ type BlockList interface {
 	DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error
 
 	// FetchBlockListItems retrieves from storage all block list items associated to a user.
-	FetchBlockListItems(ctx context.Context, username string) ([]blocklistmodel.Item, error)
+	FetchBlockListItems(ctx context.Context, username string) ([]*blocklistmodel.Item, error)
 
 	// DeleteBlockListItems deletes all block list items associated to a user.
 	DeleteBlockListItems(ctx context.Context, username string) error

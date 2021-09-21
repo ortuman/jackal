@@ -199,7 +199,7 @@ func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganz
 		return err
 	}
 	for _, itm := range bli {
-		jd, _ := jid.NewWithString(itm.JID, true)
+		jd, _ := jid.NewWithString(itm.Jid, true)
 		if !jd.Matches(fromJID) {
 			continue
 		}
@@ -230,7 +230,7 @@ func (m *BlockList) processOutgoingStanza(ctx context.Context, stanza stravaganz
 		return err
 	}
 	for _, itm := range bli {
-		jd, _ := jid.NewWithString(itm.JID, true)
+		jd, _ := jid.NewWithString(itm.Jid, true)
 		if !jd.Matches(toJID) {
 			continue
 		}
@@ -266,7 +266,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	for _, itm := range bli {
 		sb.WithChild(
 			stravaganza.NewBuilder("item").
-				WithAttribute("jid", itm.JID).
+				WithAttribute("jid", itm.Jid).
 				Build(),
 		)
 	}
@@ -291,7 +291,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	// run hook
 	var allJIDs []jid.JID
 	for _, itm := range bli {
-		j, _ := jid.NewWithString(itm.JID, false)
+		j, _ := jid.NewWithString(itm.Jid, false)
 		allJIDs = append(allJIDs, *j)
 	}
 	_, err = m.hk.Run(ctx, hook.BlockListFetched, &hook.ExecutionContext{
@@ -321,7 +321,7 @@ func (m *BlockList) alterBlockList(ctx context.Context, iq *stravaganza.IQ) erro
 	}
 }
 
-func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block stravaganza.Element, blockList []blocklistmodel.Item) error {
+func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block stravaganza.Element, blockList []*blocklistmodel.Item) error {
 	// get JIDs
 	js, err := getItemJIDs(block)
 	if err != nil {
@@ -334,7 +334,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	for _, jd := range js {
 		var found bool
 		for _, bli := range blockList {
-			if jd.String() == bli.JID {
+			if jd.String() == bli.Jid {
 				found = true
 				break
 			}
@@ -348,7 +348,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 		for _, bj := range blockJIDs {
 			if err := tx.UpsertBlockListItem(ctx, &blocklistmodel.Item{
 				Username: username,
-				JID:      bj.String(),
+				Jid:      bj.String(),
 			}); err != nil {
 				return err
 			}
@@ -387,7 +387,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 	return err
 }
 
-func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []blocklistmodel.Item) error {
+func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock stravaganza.Element, blockList []*blocklistmodel.Item) error {
 	// get JIDs
 	js, err := getItemJIDs(unblock)
 	if err != nil {
@@ -400,7 +400,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 		for _, jd := range js {
 			var found bool
 			for _, blItm := range blockList {
-				if jd.String() == blItm.JID {
+				if jd.String() == blItm.Jid {
 					found = true
 					break
 				}
@@ -411,7 +411,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 		}
 	} else {
 		for _, bli := range blockList {
-			jd, _ := jid.NewWithString(bli.JID, true)
+			jd, _ := jid.NewWithString(bli.Jid, true)
 			unblockJIDs = append(unblockJIDs, *jd)
 		}
 	}
@@ -420,7 +420,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 		for _, uj := range unblockJIDs {
 			if err := tx.DeleteBlockListItem(ctx, &blocklistmodel.Item{
 				Username: username,
-				JID:      uj.String(),
+				Jid:      uj.String(),
 			}); err != nil {
 				return err
 			}

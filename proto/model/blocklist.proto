@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package model.v1;
+option go_package = "pkg/model/blocklist;blocklistmodel";
+
+// Item represents block list item entity.
+message Item {
+  string username = 1;
+  string jid = 2;
+}

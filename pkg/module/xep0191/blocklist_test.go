@@ -59,10 +59,10 @@ func TestBlockList_GetBlockList(t *testing.T) {
 		return c2sRouterMock
 	}
 
-	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
-		return []blocklistmodel.Item{
-			{Username: "ortuman", JID: "noelia@jackal.im"},
-			{Username: "ortuman", JID: "jabber.org"},
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
+		return []*blocklistmodel.Item{
+			{Username: "ortuman", Jid: "noelia@jackal.im"},
+			{Username: "ortuman", Jid: "jabber.org"},
 		}, nil
 	}
 	bl := &BlockList{
@@ -123,7 +123,7 @@ func TestBlockList_BlockItem(t *testing.T) {
 			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
 		}, nil
 	}
-	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
 		return nil, nil
 	}
 	rep.InTransactionFunc = func(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
@@ -214,9 +214,9 @@ func TestBlockList_UnblockItem(t *testing.T) {
 			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
 		}, nil
 	}
-	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
-		return []blocklistmodel.Item{
-			{Username: "ortuman", JID: "jabber.org"},
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
+		return []*blocklistmodel.Item{
+			{Username: "ortuman", Jid: "jabber.org"},
 		}, nil
 	}
 	rep.InTransactionFunc = func(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
@@ -373,9 +373,9 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 	hMock.IsLocalHostFunc = func(h string) bool {
 		return h == "jackal.im"
 	}
-	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
-		return []blocklistmodel.Item{
-			{Username: "ortuman", JID: "jabber.org/yard"},
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
+		return []*blocklistmodel.Item{
+			{Username: "ortuman", Jid: "jabber.org/yard"},
 		}, nil
 	}
 	hk := hook.NewHooks()
@@ -435,9 +435,9 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 	hMock.IsLocalHostFunc = func(h string) bool {
 		return h == "jackal.im"
 	}
-	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
-		return []blocklistmodel.Item{
-			{Username: "ortuman", JID: "jabber.org/yard"},
+	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
+		return []*blocklistmodel.Item{
+			{Username: "ortuman", Jid: "jabber.org/yard"},
 		}, nil
 	}
 	hk := hook.NewHooks()

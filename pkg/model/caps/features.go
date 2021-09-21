@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package blocklistmodel
+package capsmodel
 
-// Item represents block list item entity.
-type Item struct {
-	Username string
-	JID      string
+// HasFeature returns whether a Capabilities instance contains f feature.
+func (x *Capabilities) HasFeature(f string) bool {
+	for _, cf := range x.Features {
+		if cf == f {
+			return true
+		}
+	}
+	return false
 }

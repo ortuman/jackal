@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package model.v1;
+option go_package = "pkg/model/caps;capsmodel";
+
+// Capabilities represents presence capabilities info.
+message Capabilities {
+  string node = 1;
+  string ver = 2;
+  repeated string features = 3;
+}
