@@ -38,10 +38,10 @@ func TestRoster_SendRoster(t *testing.T) {
 	repMock.FetchRosterVersionFunc = func(ctx context.Context, username string) (int, error) {
 		return 1, nil
 	}
-	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
-		return []rostermodel.Item{
-			{Username: "ortuman", JID: "noelia@jackal.im", Groups: []string{"VIP"}},
-			{Username: "ortuman", JID: "shakespeare@jackal.im", Groups: []string{"Buddies"}},
+	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
+		return []*rostermodel.Item{
+			{Username: "ortuman", Jid: "noelia@jackal.im", Groups: []string{"VIP"}},
+			{Username: "ortuman", Jid: "shakespeare@jackal.im", Groups: []string{"Buddies"}},
 		}, nil
 	}
 
@@ -224,7 +224,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 		case username == "ortuman" && jid == "hamlet@jackal.im":
 			return &rostermodel.Item{
 				Username:     "ortuman",
-				JID:          "hamlet@jackal.im",
+				Jid:          "hamlet@jackal.im",
 				Subscription: "both",
 			}, nil
 		}
@@ -424,13 +424,13 @@ func TestRoster_Subscribed(t *testing.T) {
 		case username == "ortuman" && jid == "noelia@jackal.im":
 			return &rostermodel.Item{
 				Username:     "ortuman",
-				JID:          "noelia@jackal.im",
+				Jid:          "noelia@jackal.im",
 				Subscription: rostermodel.From,
 			}, nil
 		case username == "noelia" && jid == "ortuman@jackal.im":
 			return &rostermodel.Item{
 				Username:     "noelia",
-				JID:          "ortuman@jackal.im",
+				Jid:          "ortuman@jackal.im",
 				Subscription: rostermodel.To,
 			}, nil
 		}
@@ -536,13 +536,13 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		case username == "ortuman" && jid == "noelia@jackal.im":
 			return &rostermodel.Item{
 				Username:     "ortuman",
-				JID:          "noelia@jackal.im",
+				Jid:          "noelia@jackal.im",
 				Subscription: rostermodel.Both,
 			}, nil
 		case username == "noelia" && jid == "ortuman@jackal.im":
 			return &rostermodel.Item{
 				Username:     "noelia",
-				JID:          "ortuman@jackal.im",
+				Jid:          "ortuman@jackal.im",
 				Subscription: rostermodel.Both,
 			}, nil
 		}
@@ -645,13 +645,13 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		case username == "ortuman" && jid == "noelia@jackal.im":
 			return &rostermodel.Item{
 				Username:     "ortuman",
-				JID:          "noelia@jackal.im",
+				Jid:          "noelia@jackal.im",
 				Subscription: rostermodel.To,
 			}, nil
 		case username == "noelia" && jid == "ortuman@jackal.im":
 			return &rostermodel.Item{
 				Username:     "noelia",
-				JID:          "ortuman@jackal.im",
+				Jid:          "ortuman@jackal.im",
 				Subscription: rostermodel.From,
 			}, nil
 		}
@@ -758,7 +758,7 @@ func TestRoster_Probe(t *testing.T) {
 		case username == "ortuman":
 			return &rostermodel.Item{
 				Username:     "ortuman",
-				JID:          "noelia@jackal.im",
+				Jid:          "noelia@jackal.im",
 				Subscription: rostermodel.Both,
 			}, nil
 		}
@@ -834,20 +834,20 @@ func TestRoster_Available(t *testing.T) {
 	var mtx sync.RWMutex
 
 	repMock := &repositoryMock{}
-	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
+	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
 		switch {
 		case username == "ortuman":
-			return []rostermodel.Item{
+			return []*rostermodel.Item{
 				{
 					Username:     "ortuman",
-					JID:          "noelia@jackal.im",
+					Jid:          "noelia@jackal.im",
 					Subscription: rostermodel.Both,
 				},
 			}, nil
 		}
 		return nil, nil
 	}
-	repMock.FetchRosterNotificationsFunc = func(ctx context.Context, contact string) ([]rostermodel.Notification, error) {
+	repMock.FetchRosterNotificationsFunc = func(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
 		return nil, nil
 	}
 

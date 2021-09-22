@@ -69,7 +69,7 @@ func (r *pgSQLRosterRep) FetchRosterVersion(ctx context.Context, username string
 func (r *pgSQLRosterRep) UpsertRosterItem(ctx context.Context, ri *rostermodel.Item) error {
 	q := sq.Insert(rosterItemsTableName).
 		Columns("username", "jid", "name", "subscription", "groups", "ask").
-		Values(ri.Username, ri.JID, ri.Name, ri.Subscription, pq.Array(ri.Groups), ri.Ask).
+		Values(ri.Username, ri.Jid, ri.Name, ri.Subscription, pq.Array(ri.Groups), ri.Ask).
 		Suffix("ON CONFLICT (username, jid) DO UPDATE SET name = $3, subscription = $4, groups = $5, ask = $6")
 
 	_, err := q.RunWith(r.conn).ExecContext(ctx)
@@ -90,7 +90,7 @@ func (r *pgSQLRosterRep) DeleteRosterItems(ctx context.Context, username string)
 	return err
 }
 
-func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) ([]rostermodel.Item, error) {
+func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) ([]*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask").
 		From(rosterItemsTableName).
 		Where(sq.Eq{"username": username}).
@@ -105,7 +105,7 @@ func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) 
 	return scanRosterItems(rows)
 }
 
-func (r *pgSQLRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]rostermodel.Item, error) {
+func (r *pgSQLRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask").
 		From(rosterItemsTableName).
 		Where(sq.Expr("username = $1 AND groups @> $2", username, pq.Array(groups))).
@@ -180,7 +180,7 @@ func (r *pgSQLRosterRep) FetchRosterNotification(ctx context.Context, contact st
 	}
 }
 
-func (r *pgSQLRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]rostermodel.Notification, error) {
+func (r *pgSQLRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
 	q := sq.Select("contact", "jid", "presence").
 		From(rosterNotificationsTableName).
 		Where(sq.Eq{"contact": contact})
@@ -220,7 +220,7 @@ func scanRosterItem(scanner rowScanner) (*rostermodel.Item, error) {
 	var ri rostermodel.Item
 	err := scanner.Scan(
 		&ri.Username,
-		&ri.JID,
+		&ri.Jid,
 		&ri.Name,
 		&ri.Subscription,
 		pq.Array(&ri.Groups),
@@ -232,14 +232,14 @@ func scanRosterItem(scanner rowScanner) (*rostermodel.Item, error) {
 	return &ri, nil
 }
 
-func scanRosterItems(scanner rowsScanner) ([]rostermodel.Item, error) {
-	var ret []rostermodel.Item
+func scanRosterItems(scanner rowsScanner) ([]*rostermodel.Item, error) {
+	var ret []*rostermodel.Item
 	for scanner.Next() {
 		ri, err := scanRosterItem(scanner)
 		if err != nil {
 			return nil, err
 		}
-		ret = append(ret, *ri)
+		ret = append(ret, ri)
 	}
 	return ret, nil
 }
@@ -263,14 +263,14 @@ func scanRosterNotification(scanner rowScanner) (*rostermodel.Notification, erro
 	return &rn, nil
 }
 
-func scanRosterNotifications(scanner rowsScanner) ([]rostermodel.Notification, error) {
-	var ret []rostermodel.Notification
+func scanRosterNotifications(scanner rowsScanner) ([]*rostermodel.Notification, error) {
+	var ret []*rostermodel.Notification
 	for scanner.Next() {
 		ri, err := scanRosterNotification(scanner)
 		if err != nil {
 			return nil, err
 		}
-		ret = append(ret, *ri)
+		ret = append(ret, ri)
 	}
 	return ret, nil
 }

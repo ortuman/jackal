@@ -118,9 +118,9 @@ func TestBlockList_BlockItem(t *testing.T) {
 	txMock.UpsertBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
 		return nil
 	}
-	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
-		return []rostermodel.Item{
-			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
+	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
+		return []*rostermodel.Item{
+			{Username: "ortuman", Jid: "juliet@jabber.org", Subscription: rostermodel.Both},
 		}, nil
 	}
 	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
@@ -209,9 +209,9 @@ func TestBlockList_UnblockItem(t *testing.T) {
 	txMock.DeleteBlockListItemFunc = func(ctx context.Context, item *blocklistmodel.Item) error {
 		return nil
 	}
-	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
-		return []rostermodel.Item{
-			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
+	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
+		return []*rostermodel.Item{
+			{Username: "ortuman", Jid: "juliet@jabber.org", Subscription: rostermodel.Both},
 		}, nil
 	}
 	rep.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
@@ -485,16 +485,16 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 func TestBlockList_PresenceTargets(t *testing.T) {
 	// given
 	rep := &repositoryMock{}
-	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
-		return []rostermodel.Item{
-			{Username: "ortuman", JID: "juliet@jabber.org", Subscription: rostermodel.Both},
-			{Username: "ortuman", JID: "hamlet@jabber.org", Subscription: rostermodel.To},
-			{Username: "ortuman", JID: "hamlet@404.city", Subscription: rostermodel.Both},
-			{Username: "ortuman", JID: "macbeth@404.city", Subscription: rostermodel.Both},
-			{Username: "ortuman", JID: "witch@404.city", Subscription: rostermodel.To},
-			{Username: "ortuman", JID: "witch@jackal.im", Subscription: rostermodel.Both},
-			{Username: "ortuman", JID: "witch@jabber.net", Subscription: rostermodel.Both},
-			{Username: "ortuman", JID: "witch@jabber.org", Subscription: rostermodel.To},
+	rep.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
+		return []*rostermodel.Item{
+			{Username: "ortuman", Jid: "juliet@jabber.org", Subscription: rostermodel.Both},
+			{Username: "ortuman", Jid: "hamlet@jabber.org", Subscription: rostermodel.To},
+			{Username: "ortuman", Jid: "hamlet@404.city", Subscription: rostermodel.Both},
+			{Username: "ortuman", Jid: "macbeth@404.city", Subscription: rostermodel.Both},
+			{Username: "ortuman", Jid: "witch@404.city", Subscription: rostermodel.To},
+			{Username: "ortuman", Jid: "witch@jackal.im", Subscription: rostermodel.Both},
+			{Username: "ortuman", Jid: "witch@jabber.net", Subscription: rostermodel.Both},
+			{Username: "ortuman", Jid: "witch@jabber.org", Subscription: rostermodel.To},
 		}, nil
 	}
 	// when

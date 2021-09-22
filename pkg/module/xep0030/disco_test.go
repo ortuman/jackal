@@ -174,7 +174,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {
 		return &rostermodel.Item{
 			Username:     "ortuman",
-			JID:          "noelia@jackal.im",
+			Jid:          "noelia@jackal.im",
 			Subscription: rostermodel.To,
 		}, nil
 	}
@@ -240,7 +240,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {
 		return &rostermodel.Item{
 			Username:     "ortuman",
-			JID:          "noelia@jackal.im",
+			Jid:          "noelia@jackal.im",
 			Subscription: rostermodel.To,
 		}, nil
 	}

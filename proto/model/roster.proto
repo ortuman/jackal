@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package model.roster.v1;
+option go_package = "pkg/model/roster;rostermodel";
+
+// Item represents a roster item entity.
+message Item {
+  string username = 1;
+  string jid = 2;
+  string name = 3;
+  string subscription = 4;
+  bool ask = 5;
+  repeated string groups = 6;
+}
+

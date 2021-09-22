@@ -89,9 +89,9 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {
 		switch username {
 		case "noelia":
-			return &rostermodel.Item{Username: "noelia", JID: "ortuman@jackal.im", Subscription: rostermodel.From}, nil
+			return &rostermodel.Item{Username: "noelia", Jid: "ortuman@jackal.im", Subscription: rostermodel.From}, nil
 		case "romeo":
-			return &rostermodel.Item{Username: "romeo", JID: "ortuman@jackal.im", Subscription: rostermodel.Both}, nil
+			return &rostermodel.Item{Username: "romeo", Jid: "ortuman@jackal.im", Subscription: rostermodel.Both}, nil
 		}
 		return nil, nil
 	}

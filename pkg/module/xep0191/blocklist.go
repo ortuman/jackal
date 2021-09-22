@@ -516,7 +516,7 @@ func (m *BlockList) getPresenceTargets(ctx context.Context, blockListJIDs []jid.
 			if ri.Subscription != rostermodel.From && ri.Subscription != rostermodel.Both {
 				continue
 			}
-			rj, _ := jid.NewWithString(ri.JID, true)
+			rj, _ := jid.NewWithString(ri.Jid, true)
 			switch {
 			case bj.IsFullWithUser() && bj.MatchesWithOptions(rj, jid.MatchesBare):
 				targets = append(targets, bj)

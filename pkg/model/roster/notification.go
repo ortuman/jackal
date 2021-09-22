@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+package rostermodel
 
-package model.blocklist.v1;
-option go_package = "pkg/model/blocklist;blocklistmodel";
+import "github.com/jackal-xmpp/stravaganza/v2"
 
-// Item represents block list item entity.
-message Item {
-  string username = 1;
-  string jid = 2;
+// Notification represents a roster subscription pending notification.
+type Notification struct {
+	Contact  string
+	JID      string
+	Presence *stravaganza.Presence
 }

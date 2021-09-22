@@ -61,14 +61,14 @@ func (m *measuredRosterRep) DeleteRosterItems(ctx context.Context, username stri
 	return err
 }
 
-func (m *measuredRosterRep) FetchRosterItems(ctx context.Context, username string) ([]rostermodel.Item, error) {
+func (m *measuredRosterRep) FetchRosterItems(ctx context.Context, username string) ([]*rostermodel.Item, error) {
 	t0 := time.Now()
 	items, err := m.rep.FetchRosterItems(ctx, username)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
 	return items, err
 }
 
-func (m *measuredRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]rostermodel.Item, error) {
+func (m *measuredRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]*rostermodel.Item, error) {
 	t0 := time.Now()
 	items, err := m.rep.FetchRosterItemsInGroups(ctx, username, groups)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
@@ -110,7 +110,7 @@ func (m *measuredRosterRep) FetchRosterNotification(ctx context.Context, contact
 	return rn, err
 }
 
-func (m *measuredRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]rostermodel.Notification, error) {
+func (m *measuredRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
 	t0 := time.Now()
 	rns, err := m.rep.FetchRosterNotifications(ctx, contact)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)

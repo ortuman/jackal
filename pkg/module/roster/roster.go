@@ -214,7 +214,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	sb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, rosterNamespace)
 	for _, item := range items {
-		sb.WithChild(encodeRosterItem(&item))
+		sb.WithChild(encodeRosterItem(item))
 	}
 	queryEl := sb.Build()
 
@@ -292,7 +292,7 @@ func (r *Roster) processSubscribe(ctx context.Context, presence *stravaganza.Pre
 			// create roster item if not previously created
 			usrRi = &rostermodel.Item{
 				Username:     userJID.Node(),
-				JID:          contactJID.String(),
+				Jid:          contactJID.String(),
 				Subscription: rostermodel.None,
 				Ask:          true,
 			}
@@ -340,7 +340,7 @@ func (r *Roster) processSubscribed(ctx context.Context, presence *stravaganza.Pr
 			// create roster item if not previously created
 			cntRi = &rostermodel.Item{
 				Username:     contactJID.Node(),
-				JID:          userJID.String(),
+				Jid:          userJID.String(),
 				Subscription: rostermodel.From,
 				Ask:          false,
 			}
@@ -576,7 +576,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 		for _, item := range items {
 			switch item.Subscription {
 			case rostermodel.To, rostermodel.Both:
-				itemJID, _ := jid.NewWithString(item.JID, true)
+				itemJID, _ := jid.NewWithString(item.Jid, true)
 				if r.hosts.IsLocalHost(itemJID.Domain()) {
 					if err := r.routePresencesFrom(ctx, itemJID.Node(), fromJID, stravaganza.AvailableType); err != nil {
 						return err
@@ -598,7 +598,7 @@ broadcastPresence:
 	for _, item := range items {
 		switch item.Subscription {
 		case rostermodel.From, rostermodel.Both:
-			itemJID, _ := jid.NewWithString(item.JID, true)
+			itemJID, _ := jid.NewWithString(item.Jid, true)
 			p := xmpputil.MakePresence(presence.FromJID(), itemJID, presence.Type(), presence.AllChildren())
 			_, _ = r.router.Route(ctx, p)
 		}
@@ -612,7 +612,7 @@ broadcastPresence:
 }
 
 func (r *Roster) updateItem(ctx context.Context, ri *rostermodel.Item, username string) error {
-	usrRi, err := r.rep.FetchRosterItem(ctx, username, ri.JID)
+	usrRi, err := r.rep.FetchRosterItem(ctx, username, ri.Jid)
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func (r *Roster) updateItem(ctx context.Context, ri *rostermodel.Item, username 
 	} else {
 		usrRi = &rostermodel.Item{
 			Username:     username,
-			JID:          ri.JID,
+			Jid:          ri.Jid,
 			Name:         ri.Name,
 			Subscription: rostermodel.None,
 			Groups:       ri.Groups,
@@ -636,16 +636,16 @@ func (r *Roster) updateItem(ctx context.Context, ri *rostermodel.Item, username 
 	if err := r.upsertItem(ctx, usrRi); err != nil {
 		return err
 	}
-	log.Infow("Updated roster", "jid", ri.JID, "username", username, "xep", "roster")
+	log.Infow("Updated roster", "jid", ri.Jid, "username", username, "xep", "roster")
 	return nil
 }
 
 func (r *Roster) removeItem(ctx context.Context, ri *rostermodel.Item, userJID *jid.JID) error {
 	var unsubscribe, unsubscribed *stravaganza.Presence
 
-	contactJID, _ := jid.NewWithString(ri.JID, true)
+	contactJID, _ := jid.NewWithString(ri.Jid, true)
 
-	usrRi, err := r.rep.FetchRosterItem(ctx, userJID.Node(), ri.JID)
+	usrRi, err := r.rep.FetchRosterItem(ctx, userJID.Node(), ri.Jid)
 	if err != nil {
 		return err
 	}
@@ -732,7 +732,7 @@ func (r *Roster) upsertItem(ctx context.Context, ri *rostermodel.Item) error {
 	}
 	return r.runHook(ctx, hook.RosterItemUpdated, &hook.RosterInfo{
 		Username:     ri.Username,
-		JID:          ri.JID,
+		JID:          ri.Jid,
 		Subscription: ri.Subscription,
 	})
 }
@@ -743,7 +743,7 @@ func (r *Roster) deleteItem(ctx context.Context, ri *rostermodel.Item) error {
 		if err != nil {
 			return err
 		}
-		if err := tx.DeleteRosterItem(ctx, ri.Username, ri.JID); err != nil {
+		if err := tx.DeleteRosterItem(ctx, ri.Username, ri.Jid); err != nil {
 			return err
 		}
 		return r.pushItem(ctx, ri, ver)
@@ -753,7 +753,7 @@ func (r *Roster) deleteItem(ctx context.Context, ri *rostermodel.Item) error {
 	}
 	return r.runHook(ctx, hook.RosterItemUpdated, &hook.RosterInfo{
 		Username:     ri.Username,
-		JID:          ri.JID,
+		JID:          ri.Jid,
 		Subscription: rostermodel.Remove,
 	})
 }
@@ -851,7 +851,7 @@ func decodeRosterItem(elem stravaganza.Element) (*rostermodel.Item, error) {
 		if err != nil {
 			return nil, err
 		}
-		ri.JID = j.String()
+		ri.Jid = j.String()
 	} else {
 		return nil, errors.New("roster: item 'jid' attribute is required")
 	}
@@ -889,7 +889,7 @@ func decodeRosterItem(elem stravaganza.Element) (*rostermodel.Item, error) {
 func encodeRosterItem(ri *rostermodel.Item) stravaganza.Element {
 	b := stravaganza.NewBuilder("item").
 		WithAttribute("name", ri.Name).
-		WithAttribute("jid", ri.JID).
+		WithAttribute("jid", ri.Jid).
 		WithAttribute("subscription", ri.Subscription)
 	for _, group := range ri.Groups {
 		b.WithChild(stravaganza.NewBuilder("group").
