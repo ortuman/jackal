@@ -16,9 +16,11 @@ package rostermodel
 
 import "github.com/jackal-xmpp/stravaganza/v2"
 
-// Notification represents a roster subscription pending notification.
-type Notification struct {
-	Contact  string
-	JID      string
-	Presence *stravaganza.Presence
+// Presence returns the presence stanza bytes representation.
+func (x *Notification) Presence() (*stravaganza.Presence, error) {
+	b, err := stravaganza.NewBuilderFromBinary(x.GetBytes())
+	if err != nil {
+		return nil, err
+	}
+	return b.BuildPresence()
 }

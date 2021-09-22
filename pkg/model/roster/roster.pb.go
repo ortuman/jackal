@@ -108,6 +108,70 @@ func (x *Item) GetGroups() []string {
 	return nil
 }
 
+// Notification represents a roster subscription pending notification.
+type Notification struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Contact string `protobuf:"bytes,1,opt,name=contact,proto3" json:"contact,omitempty"`
+	Jid     string `protobuf:"bytes,2,opt,name=jid,proto3" json:"jid,omitempty"`
+	Bytes   []byte `protobuf:"bytes,3,opt,name=bytes,proto3" json:"bytes,omitempty"`
+}
+
+func (x *Notification) Reset() {
+	*x = Notification{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_roster_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Notification) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Notification) ProtoMessage() {}
+
+func (x *Notification) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_roster_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Notification.ProtoReflect.Descriptor instead.
+func (*Notification) Descriptor() ([]byte, []int) {
+	return file_proto_model_roster_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Notification) GetContact() string {
+	if x != nil {
+		return x.Contact
+	}
+	return ""
+}
+
+func (x *Notification) GetJid() string {
+	if x != nil {
+		return x.Jid
+	}
+	return ""
+}
+
+func (x *Notification) GetBytes() []byte {
+	if x != nil {
+		return x.Bytes
+	}
+	return nil
+}
+
 var File_proto_model_roster_proto protoreflect.FileDescriptor
 
 var file_proto_model_roster_proto_rawDesc = []byte{
@@ -123,9 +187,14 @@ var file_proto_model_roster_proto_rawDesc = []byte{
 	0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x10, 0x0a, 0x03, 0x61, 0x73,
 	0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x03, 0x61, 0x73, 0x6b, 0x12, 0x16, 0x0a, 0x06,
 	0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72,
-	0x6f, 0x75, 0x70, 0x73, 0x42, 0x1e, 0x5a, 0x1c, 0x70, 0x6b, 0x67, 0x2f, 0x6d, 0x6f, 0x64, 0x65,
-	0x6c, 0x2f, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x6d,
-	0x6f, 0x64, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x75, 0x70, 0x73, 0x22, 0x50, 0x0a, 0x0c, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x12, 0x10,
+	0x0a, 0x03, 0x6a, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6a, 0x69, 0x64,
+	0x12, 0x14, 0x0a, 0x05, 0x62, 0x79, 0x74, 0x65, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x05, 0x62, 0x79, 0x74, 0x65, 0x73, 0x42, 0x1e, 0x5a, 0x1c, 0x70, 0x6b, 0x67, 0x2f, 0x6d, 0x6f,
+	0x64, 0x65, 0x6c, 0x2f, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65,
+	0x72, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -140,9 +209,10 @@ func file_proto_model_roster_proto_rawDescGZIP() []byte {
 	return file_proto_model_roster_proto_rawDescData
 }
 
-var file_proto_model_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_proto_model_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_proto_model_roster_proto_goTypes = []interface{}{
-	(*Item)(nil), // 0: model.roster.v1.Item
+	(*Item)(nil),         // 0: model.roster.v1.Item
+	(*Notification)(nil), // 1: model.roster.v1.Notification
 }
 var file_proto_model_roster_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -170,6 +240,18 @@ func file_proto_model_roster_proto_init() {
 				return nil
 			}
 		}
+		file_proto_model_roster_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Notification); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -177,7 +259,7 @@ func file_proto_model_roster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_model_roster_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

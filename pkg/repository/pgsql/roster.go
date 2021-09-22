@@ -19,7 +19,6 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/lib/pq"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 )
@@ -137,16 +136,12 @@ func (r *pgSQLRosterRep) FetchRosterItem(ctx context.Context, username, jid stri
 }
 
 func (r *pgSQLRosterRep) UpsertRosterNotification(ctx context.Context, rn *rostermodel.Notification) error {
-	prBytes, err := rn.Presence.MarshalBinary()
-	if err != nil {
-		return err
-	}
 	q := sq.Insert(rosterNotificationsTableName).
 		Columns("contact", "jid", "presence").
-		Values(rn.Contact, rn.JID, prBytes).
+		Values(rn.Contact, rn.Jid, rn.Bytes).
 		Suffix("ON CONFLICT (contact, jid) DO UPDATE SET presence = $3")
 
-	_, err = q.RunWith(r.conn).ExecContext(ctx)
+	_, err := q.RunWith(r.conn).ExecContext(ctx)
 	return err
 }
 
@@ -247,19 +242,9 @@ func scanRosterItems(scanner rowsScanner) ([]*rostermodel.Item, error) {
 func scanRosterNotification(scanner rowScanner) (*rostermodel.Notification, error) {
 	var rn rostermodel.Notification
 
-	var prBytes []byte
-	if err := scanner.Scan(&rn.Contact, &rn.JID, &prBytes); err != nil {
+	if err := scanner.Scan(&rn.Contact, &rn.Jid, &rn.Bytes); err != nil {
 		return nil, err
 	}
-	b, err := stravaganza.NewBuilderFromBinary(prBytes)
-	if err != nil {
-		return nil, err
-	}
-	pr, err := b.BuildPresence()
-	if err != nil {
-		return nil, err
-	}
-	rn.Presence = pr
 	return &rn, nil
 }
 

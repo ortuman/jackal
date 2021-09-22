@@ -236,9 +236,9 @@ func TestPgSQLRoster_UpsertRosterNotification(t *testing.T) {
 
 	// when
 	err := s.UpsertRosterNotification(context.Background(), &rostermodel.Notification{
-		Contact:  "ortuman",
-		JID:      "noelia@jackal.im",
-		Presence: pr,
+		Contact: "ortuman",
+		Jid:     "noelia@jackal.im",
+		Bytes:   prBytes,
 	})
 
 	// then
@@ -307,7 +307,7 @@ func TestPgSQLRoster_FetchRosterNotification(t *testing.T) {
 	// then
 	require.Nil(t, err)
 	require.NotNil(t, rn)
-	require.Equal(t, "noelia@jackal.im", rn.JID)
+	require.Equal(t, "noelia@jackal.im", rn.Jid)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }

@@ -570,7 +570,11 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			return err
 		}
 		for _, rn := range rns {
-			_, _ = r.router.Route(ctx, rn.Presence)
+			pr, err := rn.Presence()
+			if err != nil {
+				return err
+			}
+			_, _ = r.router.Route(ctx, pr)
 		}
 		// deliver roster presences
 		for _, item := range items {
@@ -759,10 +763,14 @@ func (r *Roster) deleteItem(ctx context.Context, ri *rostermodel.Item) error {
 }
 
 func (r *Roster) upsertNotification(ctx context.Context, contact string, userJID *jid.JID, presence *stravaganza.Presence) error {
+	prBytes, err := presence.MarshalBinary()
+	if err != nil {
+		return err
+	}
 	rn := &rostermodel.Notification{
-		Contact:  contact,
-		JID:      userJID.String(),
-		Presence: presence,
+		Contact: contact,
+		Jid:     userJID.String(),
+		Bytes:   prBytes,
 	}
 	return r.rep.UpsertRosterNotification(ctx, rn)
 }

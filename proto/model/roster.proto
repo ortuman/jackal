@@ -13,3 +13,9 @@ message Item {
   repeated string groups = 6;
 }
 
+// Notification represents a roster subscription pending notification.
+message Notification {
+  string contact = 1;
+  string jid = 2;
+  bytes bytes = 3;
+}
