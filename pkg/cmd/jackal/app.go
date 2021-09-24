@@ -26,11 +26,8 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
-	"google.golang.org/grpc"
-
 	etcdv3 "github.com/coreos/etcd/clientv3"
+	"github.com/go-redis/redis/v8"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
@@ -60,6 +57,8 @@ import (
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	tlsutil "github.com/ortuman/jackal/pkg/util/tls"
 	"github.com/ortuman/jackal/pkg/version"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (
@@ -318,15 +317,23 @@ func (a *serverApp) initClusterConnManager() {
 	a.registerStartStopper(a.clusterConnMng)
 }
 
-func (a *serverApp) initRepository(sCfg storageConfig) error {
-	cfg := sCfg.PgSQL
+func (a *serverApp) initRepository(scfg storageConfig) error {
+	const (
+		pgSQLRepType   = "pgsql"
+		redisCacheType = "redis"
+	)
+	if scfg.Type != pgSQLRepType {
+		return fmt.Errorf("unsupported repository type: %s", scfg.Type)
+	}
+	cfg := scfg.PgSQL
 	opts := pgsqlrepository.Config{
 		MaxIdleConns:    cfg.MaxIdleConns,
 		MaxOpenConns:    cfg.MaxOpenConns,
 		ConnMaxIdleTime: cfg.ConnMaxIdleTime,
 		ConnMaxLifetime: cfg.ConnMaxLifetime,
 	}
-	pgRep := pgsqlrepository.New(
+	var rep repository.Repository
+	rep = pgsqlrepository.New(
 		cfg.Host,
 		cfg.User,
 		cfg.Password,
@@ -334,7 +341,16 @@ func (a *serverApp) initRepository(sCfg storageConfig) error {
 		cfg.SSLMode,
 		opts,
 	)
-	a.rep = measuredrepository.New(pgRep)
+	if scfg.Cache != nil {
+		if scfg.Cache.Type != redisCacheType {
+			return fmt.Errorf("unsupported repository cache type: %s", scfg.Cache.Type)
+		}
+		_ = redis.NewClient(&redis.Options{
+			Addr: scfg.Cache.Host,
+		})
+		// TODO(ortuman): instantiate cached repository class
+	}
+	a.rep = measuredrepository.New(rep)
 	a.registerStartStopper(a.rep)
 	return nil
 }

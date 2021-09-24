@@ -32,6 +32,10 @@ storage:
     database: jackal
     max_open_conns: 16
 
+  cache:
+    type: redis
+    host: 127.0.0.1:6379
+
 cluster:
   etcd:
     endpoints:

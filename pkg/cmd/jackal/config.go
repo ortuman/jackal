@@ -61,6 +61,11 @@ type storageConfig struct {
 		ConnMaxLifetime time.Duration `fig:"conn_max_lifetime"`
 		ConnMaxIdleTime time.Duration `fig:"conn_max_idle_time"`
 	} `fig:"pgsql"`
+
+	Cache *struct {
+		Type string `fig:"type"  default:"redis"`
+		Host string `fig:"host"`
+	} `fig:"cache"`
 }
 
 type shaperConfig struct {
