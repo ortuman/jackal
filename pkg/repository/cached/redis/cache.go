@@ -31,9 +31,9 @@ func New(rdb *redis.Client) *Cache {
 	return &Cache{rdb: rdb}
 }
 
-// Get returns the bytes value associated to k.
-// If k element is not present, the returned payload will be nil.
-func (c *Cache) Get(ctx context.Context, k string) ([]byte, error) {
+// Fetch returns the bytes value associated to k.
+// If k element is not present the returned payload will be nil.
+func (c *Cache) Fetch(ctx context.Context, k string) ([]byte, error) {
 	b, err := c.rdb.Get(ctx, k).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -44,8 +44,8 @@ func (c *Cache) Get(ctx context.Context, k string) ([]byte, error) {
 	return b, nil
 }
 
-// Set stores a new element in the memory cache, overwriting it if it was already present.
-func (c *Cache) Set(ctx context.Context, k string, b []byte) error {
+// Store stores a new element in the memory cache, overwriting it if already present.
+func (c *Cache) Store(ctx context.Context, k string, b []byte) error {
 	return c.rdb.Set(ctx, k, b, 0).Err()
 }
 
@@ -54,8 +54,8 @@ func (c *Cache) Del(ctx context.Context, k string) error {
 	return c.rdb.Del(ctx, k).Err()
 }
 
-// KeyExists returns true in case k element is present in the cache.
-func (c *Cache) KeyExists(ctx context.Context, k string) (bool, error) {
+// Exists returns true in case k element is present in the cache.
+func (c *Cache) Exists(ctx context.Context, k string) (bool, error) {
 	val, err := c.rdb.Exists(ctx, k).Result()
 	if err != nil {
 		return false, err

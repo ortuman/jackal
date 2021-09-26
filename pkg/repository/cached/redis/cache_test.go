@@ -87,3 +87,19 @@ func TestRedisCache_Del(t *testing.T) {
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }
+
+func TestRedisCache_Exists(t *testing.T) {
+	// given
+	db, mock := redismock.NewClientMock()
+
+	// when
+	mock.ExpectDel("k0").SetVal(1)
+
+	c := New(db)
+	err := c.Del(context.Background(), "k0")
+
+	// then
+	require.Nil(t, err)
+
+	require.Nil(t, mock.ExpectationsWereMet())
+}

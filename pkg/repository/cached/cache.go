@@ -20,16 +20,16 @@ import (
 
 // Cache defines an interface to fetch and store repository cached elements.
 type Cache interface {
-	// Get returns the bytes value associated to k.
-	// If k element is not present, the returned payload will be nil.
-	Get(ctx context.Context, k string) ([]byte, error)
+	// Fetch returns the bytes value associated to k key.
+	// If the element is not present the returned payload will be nil.
+	Fetch(ctx context.Context, k string) ([]byte, error)
 
-	// Set stores a new element in the memory cache, overwriting it if it was already present.
-	Set(ctx context.Context, k string, b []byte) error
+	// Store stores a new element in the memory cache, overwriting it if already present.
+	Store(ctx context.Context, k string, b []byte) error
 
 	// Del removes k associated element from the memory cache.
 	Del(ctx context.Context, k string) error
 
-	// KeyExists returns true in case k element is present in the cache.
-	KeyExists(ctx context.Context, k string) (bool, error)
+	// Exists returns true in case k element is present in the cache.
+	Exists(ctx context.Context, k string) (bool, error)
 }
