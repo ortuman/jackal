@@ -48,3 +48,8 @@ func (c *Cache) Get(ctx context.Context, k string) ([]byte, error) {
 func (c *Cache) Set(ctx context.Context, k string, b []byte) error {
 	return c.rdb.Set(ctx, k, b, 0).Err()
 }
+
+// Del removes k associated element from the memory cache.
+func (c *Cache) Del(ctx context.Context, k string) error {
+	return c.rdb.Del(ctx, k).Err()
+}

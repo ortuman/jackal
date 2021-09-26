@@ -26,4 +26,7 @@ type Cache interface {
 
 	// Set stores a new element in the memory cache, overwriting it if it was already present.
 	Set(ctx context.Context, k string, b []byte) error
+
+	// Del removes k associated element from the memory cache.
+	Del(ctx context.Context, k string) error
 }
