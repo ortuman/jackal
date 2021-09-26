@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCache_GetHit(t *testing.T) {
+func TestRedisCache_GetHit(t *testing.T) {
 	// given
 	db, mock := redismock.NewClientMock()
 
@@ -39,7 +39,7 @@ func TestCache_GetHit(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
-func TestCache_GetMiss(t *testing.T) {
+func TestRedisCache_GetMiss(t *testing.T) {
 	// given
 	db, mock := redismock.NewClientMock()
 
@@ -56,7 +56,7 @@ func TestCache_GetMiss(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
-func TestCache_Set(t *testing.T) {
+func TestRedisCache_Set(t *testing.T) {
 	// given
 	db, mock := redismock.NewClientMock()
 
@@ -72,7 +72,7 @@ func TestCache_Set(t *testing.T) {
 	require.Nil(t, mock.ExpectationsWereMet())
 }
 
-func TestCache_Del(t *testing.T) {
+func TestRedisCache_Del(t *testing.T) {
 	// given
 	db, mock := redismock.NewClientMock()
 
