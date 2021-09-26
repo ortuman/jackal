@@ -30,11 +30,17 @@ type cachedUserRepository struct {
 }
 
 func (c *cachedUserRepository) UpsertUser(ctx context.Context, user *usermodel.User) error {
-	return nil
+	if err := c.c.Del(ctx, getKey(user.Username)); err != nil {
+		return err
+	}
+	return c.baseRep.UpsertUser(ctx, user)
 }
 
 func (c *cachedUserRepository) DeleteUser(ctx context.Context, username string) error {
-	return nil
+	if err := c.c.Del(ctx, getKey(username)); err != nil {
+		return err
+	}
+	return c.baseRep.DeleteUser(ctx, username)
 }
 
 func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (*usermodel.User, error) {
@@ -42,7 +48,14 @@ func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (
 }
 
 func (c *cachedUserRepository) UserExists(ctx context.Context, username string) (bool, error) {
-	return false, nil
+	exists, err := c.c.KeyExists(ctx, getKey(username))
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		return true, nil
+	}
+	return c.baseRep.UserExists(ctx, username)
 }
 
 func getKey(k string) string {

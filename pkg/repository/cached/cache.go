@@ -29,4 +29,7 @@ type Cache interface {
 
 	// Del removes k associated element from the memory cache.
 	Del(ctx context.Context, k string) error
+
+	// KeyExists returns true in case k element is present in the cache.
+	KeyExists(ctx context.Context, k string) (bool, error)
 }

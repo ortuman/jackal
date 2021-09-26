@@ -53,3 +53,12 @@ func (c *Cache) Set(ctx context.Context, k string, b []byte) error {
 func (c *Cache) Del(ctx context.Context, k string) error {
 	return c.rdb.Del(ctx, k).Err()
 }
+
+// KeyExists returns true in case k element is present in the cache.
+func (c *Cache) KeyExists(ctx context.Context, k string) (bool, error) {
+	val, err := c.rdb.Exists(ctx, k).Result()
+	if err != nil {
+		return false, err
+	}
+	return val == 1, nil
+}
