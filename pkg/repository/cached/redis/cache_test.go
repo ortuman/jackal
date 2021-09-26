@@ -30,7 +30,7 @@ func TestRedisCache_GetHit(t *testing.T) {
 	mock.ExpectGet("k0").SetVal("1234")
 
 	c := New(db)
-	b, err := c.Get(context.Background(), "k0")
+	b, err := c.Fetch(context.Background(), "k0")
 
 	// then
 	require.Nil(t, err)
@@ -47,7 +47,7 @@ func TestRedisCache_GetMiss(t *testing.T) {
 	mock.ExpectGet("k0").RedisNil()
 
 	c := New(db)
-	b, err := c.Get(context.Background(), "k0")
+	b, err := c.Fetch(context.Background(), "k0")
 
 	// then
 	require.Nil(t, err)
@@ -64,7 +64,7 @@ func TestRedisCache_Set(t *testing.T) {
 	mock.ExpectSet("k0", []byte("1234"), 0).SetVal("OK")
 
 	c := New(db)
-	err := c.Set(context.Background(), "k0", []byte("1234"))
+	err := c.Store(context.Background(), "k0", []byte("1234"))
 
 	// then
 	require.Nil(t, err)
