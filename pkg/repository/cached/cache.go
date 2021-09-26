@@ -18,7 +18,7 @@ import (
 	"context"
 )
 
-// Cache defines an interface to fetch and retrieve elements associated to a given key from a cache.
+// Cache defines an interface to fetch and store repository cached elements.
 type Cache interface {
 	// Get returns the bytes value associated to k.
 	// If k element is not present, the returned payload will be nil.
