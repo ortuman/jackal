@@ -16,6 +16,7 @@ package cachedrepository
 
 import "github.com/ortuman/jackal/pkg/repository"
 
+// Transaction represents a CachedRepository transaction type.
 type Transaction struct {
 	baseTx repository.Transaction
 }

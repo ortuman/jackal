@@ -26,6 +26,7 @@ type CachedRepository struct {
 	rep repository.Repository
 }
 
+// New returns an initialized CachedRepository instance.
 func New(cache Cache, rep repository.Repository) *CachedRepository {
 	return &CachedRepository{
 		c:   cache,
