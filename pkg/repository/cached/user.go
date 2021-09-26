@@ -16,12 +16,16 @@ package cachedrepository
 
 import (
 	"context"
+	"fmt"
 
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/repository"
 )
 
+const keyPrefix = "usr:"
+
 type cachedUserRepository struct {
+	c       Cache
 	baseRep repository.User
 }
 
@@ -39,4 +43,8 @@ func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (
 
 func (c *cachedUserRepository) UserExists(ctx context.Context, username string) (bool, error) {
 	return false, nil
+}
+
+func getKey(k string) string {
+	return fmt.Sprintf("%s:%s", keyPrefix, k)
 }
