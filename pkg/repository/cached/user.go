@@ -31,39 +31,49 @@ type cachedUserRepository struct {
 }
 
 func (c *cachedUserRepository) UpsertUser(ctx context.Context, user *usermodel.User) error {
-	if err := c.baseRep.UpsertUser(ctx, user); err != nil {
-		return err
+	op := writeOp{
+		c:   c.c,
+		key: getUserKey(user.Username),
+		fn: func(ctx context.Context) error {
+			return c.baseRep.UpsertUser(ctx, user)
+		},
 	}
-	return c.c.Del(ctx, getKey(user.Username))
+	return op.perform(ctx)
 }
 
 func (c *cachedUserRepository) DeleteUser(ctx context.Context, username string) error {
-	if err := c.baseRep.DeleteUser(ctx, username); err != nil {
-		return err
+	op := &writeOp{
+		c:   c.c,
+		key: getUserKey(username),
+		fn: func(ctx context.Context) error {
+			return c.baseRep.DeleteUser(ctx, username)
+		},
 	}
-	return c.c.Del(ctx, getKey(username))
+	return op.perform(ctx)
 }
 
-func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (usr *usermodel.User, err error) {
-	usr, err = c.fetchUser(ctx, username)
-	if err != nil {
+func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (*usermodel.User, error) {
+	var usr usermodel.User
+
+	op := &readOp{
+		c:   c.c,
+		key: getUserKey(username),
+		fn: func(ctx context.Context) (proto.Message, error) {
+			return c.baseRep.FetchUser(ctx, username)
+		},
+		obj: &usr,
+	}
+	if err := op.perform(ctx); err != nil {
 		return nil, err
 	}
-	if usr != nil {
-		return usr, nil
+	if !op.fetched {
+		return nil, nil
 	}
-	usr, err = c.baseRep.FetchUser(ctx, username)
-	if err != nil {
-		return nil, err
-	}
-	if err := c.storeUser(ctx, usr); err != nil {
-		return nil, err
-	}
-	return usr, err
+	return op.obj.(*usermodel.User), nil
 }
 
 func (c *cachedUserRepository) UserExists(ctx context.Context, username string) (bool, error) {
-	exists, err := c.c.Exists(ctx, getKey(username))
+	exists, err := c.c.Exists(ctx, getUserKey(username))
 	if err != nil {
 		return false, err
 	}
@@ -73,29 +83,6 @@ func (c *cachedUserRepository) UserExists(ctx context.Context, username string) 
 	return c.baseRep.UserExists(ctx, username)
 }
 
-func (c *cachedUserRepository) fetchUser(ctx context.Context, username string) (*usermodel.User, error) {
-	b, err := c.c.Fetch(ctx, getKey(username))
-	if err != nil {
-		return nil, err
-	}
-	if len(b) == 0 {
-		return nil, nil
-	}
-	var usr usermodel.User
-	if err := proto.Unmarshal(b, &usr); err != nil {
-		return nil, err
-	}
-	return &usr, nil
-}
-
-func (c *cachedUserRepository) storeUser(ctx context.Context, usr *usermodel.User) error {
-	b, err := proto.Marshal(usr)
-	if err != nil {
-		return err
-	}
-	return c.c.Store(ctx, getKey(usr.Username), b)
-}
-
-func getKey(k string) string {
+func getUserKey(k string) string {
 	return fmt.Sprintf("%s:%s", keyPrefix, k)
 }
