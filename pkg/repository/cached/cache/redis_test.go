@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rediscache
+package repositorycache
 
 import (
 	"context"
@@ -29,7 +29,7 @@ func TestRedisCache_GetHit(t *testing.T) {
 	// when
 	mock.ExpectGet("k0").SetVal("1234")
 
-	c := New(db)
+	c := NewRedisCache(db)
 	b, err := c.Fetch(context.Background(), "k0")
 
 	// then
@@ -46,7 +46,7 @@ func TestRedisCache_GetMiss(t *testing.T) {
 	// when
 	mock.ExpectGet("k0").RedisNil()
 
-	c := New(db)
+	c := NewRedisCache(db)
 	b, err := c.Fetch(context.Background(), "k0")
 
 	// then
@@ -63,7 +63,7 @@ func TestRedisCache_Set(t *testing.T) {
 	// when
 	mock.ExpectSet("k0", []byte("1234"), 0).SetVal("OK")
 
-	c := New(db)
+	c := NewRedisCache(db)
 	err := c.Store(context.Background(), "k0", []byte("1234"))
 
 	// then
@@ -79,7 +79,7 @@ func TestRedisCache_Del(t *testing.T) {
 	// when
 	mock.ExpectDel("k0").SetVal(1)
 
-	c := New(db)
+	c := NewRedisCache(db)
 	err := c.Del(context.Background(), "k0")
 
 	// then
@@ -95,7 +95,7 @@ func TestRedisCache_Exists(t *testing.T) {
 	// when
 	mock.ExpectDel("k0").SetVal(1)
 
-	c := New(db)
+	c := NewRedisCache(db)
 	err := c.Del(context.Background(), "k0")
 
 	// then

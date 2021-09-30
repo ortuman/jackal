@@ -73,14 +73,17 @@ func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (
 }
 
 func (c *cachedUserRepository) UserExists(ctx context.Context, username string) (bool, error) {
-	exists, err := c.c.Exists(ctx, getUserKey(username))
-	if err != nil {
+	op := &existsOp{
+		c:   c.c,
+		key: getUserKey(username),
+		fn: func(ctx context.Context) (bool, error) {
+			return c.baseRep.UserExists(ctx, username)
+		},
+	}
+	if err := op.perform(ctx); err != nil {
 		return false, err
 	}
-	if exists {
-		return true, nil
-	}
-	return c.baseRep.UserExists(ctx, username)
+	return op.exists, nil
 }
 
 func getUserKey(k string) string {

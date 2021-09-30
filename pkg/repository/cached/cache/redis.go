@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rediscache
+package repositorycache
 
 import (
 	"context"
@@ -21,19 +21,19 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-// Cache represents a Redis cache type.
-type Cache struct {
+// RedisCache represents a Redis cache type.
+type RedisCache struct {
 	rdb *redis.Client
 }
 
-// New returns an initialized Cache instance.
-func New(rdb *redis.Client) *Cache {
-	return &Cache{rdb: rdb}
+// NewRedisCache returns an initialized Cache instance.
+func NewRedisCache(rdb *redis.Client) *RedisCache {
+	return &RedisCache{rdb: rdb}
 }
 
 // Fetch returns the bytes value associated to k.
 // If k element is not present the returned payload will be nil.
-func (c *Cache) Fetch(ctx context.Context, k string) ([]byte, error) {
+func (c *RedisCache) Fetch(ctx context.Context, k string) ([]byte, error) {
 	b, err := c.rdb.Get(ctx, k).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -45,17 +45,17 @@ func (c *Cache) Fetch(ctx context.Context, k string) ([]byte, error) {
 }
 
 // Store stores a new element in the memory cache, overwriting it if already present.
-func (c *Cache) Store(ctx context.Context, k string, b []byte) error {
+func (c *RedisCache) Store(ctx context.Context, k string, b []byte) error {
 	return c.rdb.Set(ctx, k, b, 0).Err()
 }
 
 // Del removes k associated element from the memory cache.
-func (c *Cache) Del(ctx context.Context, k string) error {
+func (c *RedisCache) Del(ctx context.Context, k string) error {
 	return c.rdb.Del(ctx, k).Err()
 }
 
 // Exists returns true in case k element is present in the cache.
-func (c *Cache) Exists(ctx context.Context, k string) (bool, error) {
+func (c *RedisCache) Exists(ctx context.Context, k string) (bool, error) {
 	val, err := c.rdb.Exists(ctx, k).Result()
 	if err != nil {
 		return false, err

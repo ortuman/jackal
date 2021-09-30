@@ -17,7 +17,7 @@ package cachedrepository
 import (
 	"context"
 
-	"google.golang.org/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 type writeOp struct {
@@ -34,10 +34,10 @@ func (op *writeOp) perform(ctx context.Context) error {
 }
 
 type readOp struct {
-	c      Cache
-	key    string
-	fn     func(context.Context) (proto.Message, error)
-	result proto.Message
+	c   Cache
+	key string
+	fn  func(context.Context) (proto.Message, error)
+	obj proto.Message
 
 	fetched bool
 }
@@ -56,7 +56,7 @@ func (op *readOp) perform(ctx context.Context) error {
 	if obj == nil {
 		return nil
 	}
-	op.result = obj
+	op.obj = obj
 	op.fetched = true
 	return op.storeCached(ctx)
 }
@@ -69,7 +69,7 @@ func (op *readOp) fetchCached(ctx context.Context) error {
 	if len(b) == 0 {
 		return nil
 	}
-	if err := proto.Unmarshal(b, op.result); err != nil {
+	if err := proto.Unmarshal(b, op.obj); err != nil {
 		return err
 	}
 	op.fetched = true
@@ -77,9 +77,34 @@ func (op *readOp) fetchCached(ctx context.Context) error {
 }
 
 func (op *readOp) storeCached(ctx context.Context) error {
-	b, err := proto.Marshal(op.result)
+	b, err := proto.Marshal(op.obj)
 	if err != nil {
 		return err
 	}
 	return op.c.Store(ctx, op.key, b)
+}
+
+type existsOp struct {
+	c   Cache
+	key string
+	fn  func(context.Context) (bool, error)
+
+	exists bool
+}
+
+func (op *existsOp) perform(ctx context.Context) error {
+	exists, err := op.c.Exists(ctx, op.key)
+	if err != nil {
+		return err
+	}
+	if exists {
+		op.exists = true
+		return nil
+	}
+	exists, err = op.fn(ctx)
+	if err != nil {
+		return err
+	}
+	op.exists = exists
+	return nil
 }
