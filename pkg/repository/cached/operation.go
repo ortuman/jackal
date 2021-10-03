@@ -16,9 +16,12 @@ package cachedrepository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/golang/protobuf/proto"
 )
+
+var errInvalidObject = errors.New("invalid cacheable object")
 
 type writeOp struct {
 	c   Cache
@@ -36,8 +39,8 @@ func (op *writeOp) perform(ctx context.Context) error {
 type readOp struct {
 	c   Cache
 	key string
-	fn  func(context.Context) (proto.Message, error)
-	obj proto.Message
+	fn  func(context.Context) (interface{}, error)
+	obj interface{}
 
 	fetched bool
 }
@@ -69,7 +72,11 @@ func (op *readOp) fetchCached(ctx context.Context) error {
 	if len(b) == 0 {
 		return nil
 	}
-	if err := proto.Unmarshal(b, op.obj); err != nil {
+	m, ok := op.obj.(proto.Message)
+	if !ok {
+		return errInvalidObject
+	}
+	if err := proto.Unmarshal(b, m); err != nil {
 		return err
 	}
 	op.fetched = true
@@ -77,7 +84,11 @@ func (op *readOp) fetchCached(ctx context.Context) error {
 }
 
 func (op *readOp) storeCached(ctx context.Context) error {
-	b, err := proto.Marshal(op.obj)
+	m, ok := op.obj.(proto.Message)
+	if !ok {
+		return errInvalidObject
+	}
+	b, err := proto.Marshal(m)
 	if err != nil {
 		return err
 	}

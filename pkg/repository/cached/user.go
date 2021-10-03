@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/repository"
 )
@@ -31,7 +30,7 @@ type cachedUserRepository struct {
 }
 
 func (c *cachedUserRepository) UpsertUser(ctx context.Context, user *usermodel.User) error {
-	op := writeOp{
+	op := &writeOp{
 		c:   c.c,
 		key: getUserKey(user.Username),
 		fn: func(ctx context.Context) error {
@@ -58,7 +57,7 @@ func (c *cachedUserRepository) FetchUser(ctx context.Context, username string) (
 	op := &readOp{
 		c:   c.c,
 		key: getUserKey(username),
-		fn: func(ctx context.Context) (proto.Message, error) {
+		fn: func(ctx context.Context) (interface{}, error) {
 			return c.baseRep.FetchUser(ctx, username)
 		},
 		obj: &usr,
