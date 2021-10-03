@@ -22,6 +22,15 @@ import (
 
 // CachedRepository is a Redis specifica cached repository type.
 type CachedRepository struct {
+	repository.User
+	repository.VCard
+	repository.Last
+	repository.Capabilities
+	repository.Offline
+	repository.BlockList
+	repository.Private
+	repository.Roster
+
 	c   Cache
 	rep repository.Repository
 }
@@ -29,6 +38,15 @@ type CachedRepository struct {
 // New returns an initialized CachedRepository instance.
 func New(cache Cache, rep repository.Repository) *CachedRepository {
 	return &CachedRepository{
+		User:         &cachedUserRepository{c: cache, baseRep: rep},
+		VCard:        rep,
+		Last:         rep,
+		Capabilities: rep,
+		Offline:      rep,
+		BlockList:    rep,
+		Private:      rep,
+		Roster:       rep,
+
 		c:   cache,
 		rep: rep,
 	}
@@ -41,4 +59,14 @@ func (c *CachedRepository) InTransaction(ctx context.Context, f func(ctx context
 		return f(ctx, newCachedTx(tx))
 	})
 	return err
+}
+
+// Start initializes repository.
+func (c *CachedRepository) Start(ctx context.Context) error {
+	return c.rep.Start(ctx)
+}
+
+// Stop releases all underlying repository resources.
+func (c *CachedRepository) Stop(ctx context.Context) error {
+	return c.rep.Stop(ctx)
 }
