@@ -37,5 +37,8 @@ func New(cache Cache, rep repository.Repository) *CachedRepository {
 // InTransaction generates a repository transaction and completes it after it's being used by f function.
 // In case f returns no error tx transaction will be committed.
 func (c *CachedRepository) InTransaction(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
-	return c.rep.InTransaction(ctx, f)
+	err := c.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
+		return f(ctx, newCachedTx(tx))
+	})
+	return err
 }

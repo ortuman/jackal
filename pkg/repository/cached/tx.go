@@ -16,7 +16,26 @@ package cachedrepository
 
 import "github.com/ortuman/jackal/pkg/repository"
 
-// Transaction represents a CachedRepository transaction type.
-type Transaction struct {
-	baseTx repository.Transaction
+type cachedTransaction struct {
+	repository.User
+	repository.VCard
+	repository.Last
+	repository.Capabilities
+	repository.Offline
+	repository.BlockList
+	repository.Private
+	repository.Roster
+}
+
+func newCachedTx(baseTx repository.Transaction) *cachedTransaction {
+	return &cachedTransaction{
+		User:         &cachedUserRepository{baseRep: baseTx},
+		VCard:        baseTx,
+		Last:         baseTx,
+		Capabilities: baseTx,
+		Offline:      baseTx,
+		BlockList:    baseTx,
+		Private:      baseTx,
+		Roster:       baseTx,
+	}
 }
