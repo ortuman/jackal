@@ -26,6 +26,9 @@ import (
 	"syscall"
 	"time"
 
+	cachedrepository "github.com/ortuman/jackal/pkg/repository/cached"
+	repositorycache "github.com/ortuman/jackal/pkg/repository/cached/cache"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	"github.com/go-redis/redis/v8"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -342,13 +345,17 @@ func (a *serverApp) initRepository(scfg storageConfig) error {
 		opts,
 	)
 	if scfg.Cache != nil {
+		// initialize cached repository
 		if scfg.Cache.Type != redisCacheType {
 			return fmt.Errorf("unsupported repository cache type: %s", scfg.Cache.Type)
 		}
-		_ = redis.NewClient(&redis.Options{
+		rdb := redis.NewClient(&redis.Options{
 			Addr: scfg.Cache.Host,
 		})
-		// TODO(ortuman): instantiate cached repository class
+		rep = cachedrepository.New(
+			repositorycache.NewRedisCache(rdb),
+			rep,
+		)
 	}
 	a.rep = measuredrepository.New(rep)
 	a.registerStartStopper(a.rep)

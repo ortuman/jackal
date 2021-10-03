@@ -17,6 +17,8 @@ package cachedrepository
 import (
 	"context"
 
+	"github.com/ortuman/jackal/pkg/log"
+
 	"github.com/ortuman/jackal/pkg/repository"
 )
 
@@ -63,10 +65,12 @@ func (c *CachedRepository) InTransaction(ctx context.Context, f func(ctx context
 
 // Start initializes repository.
 func (c *CachedRepository) Start(ctx context.Context) error {
+	log.Infow("Started cached repository", "cache_type", c.c.Type())
 	return c.rep.Start(ctx)
 }
 
 // Stop releases all underlying repository resources.
 func (c *CachedRepository) Stop(ctx context.Context) error {
+	log.Infow("Stopped cached repository", "cache_type", c.c.Type())
 	return c.rep.Stop(ctx)
 }

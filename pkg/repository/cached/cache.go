@@ -32,4 +32,7 @@ type Cache interface {
 
 	// Exists returns true in case k element is present in the cache.
 	Exists(ctx context.Context, k string) (bool, error)
+
+	// Type returns a human-readable cache type name.
+	Type() string
 }

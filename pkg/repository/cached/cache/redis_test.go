@@ -103,3 +103,14 @@ func TestRedisCache_Exists(t *testing.T) {
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }
+
+func TestRedisCache_Type(t *testing.T) {
+	// given
+	c := NewRedisCache(nil)
+
+	// when
+	tn := c.Type()
+
+	// then
+	require.Equal(t, redisCacheTypeName, tn)
+}

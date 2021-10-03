@@ -21,6 +21,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+const redisCacheTypeName = "redis"
+
 // RedisCache represents a Redis cache type.
 type RedisCache struct {
 	rdb *redis.Client
@@ -61,4 +63,9 @@ func (c *RedisCache) Exists(ctx context.Context, k string) (bool, error) {
 		return false, err
 	}
 	return val == 1, nil
+}
+
+// Type returns a human-readable cache type name.
+func (c *RedisCache) Type() string {
+	return redisCacheTypeName
 }
