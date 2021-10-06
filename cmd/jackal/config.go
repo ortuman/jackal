@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/storage"
+
 	"github.com/kkyr/fig"
 )
 
@@ -46,21 +48,6 @@ type clusterConfig struct {
 	Etcd     etcdConfig `fig:"etcd"`
 	BindAddr string     `fig:"bind_addr"`
 	Port     int        `fig:"port" default:"14369"`
-}
-
-type storageConfig struct {
-	Type  string `fig:"type" default:"pgsql"`
-	PgSQL struct {
-		Host            string        `fig:"host"`
-		User            string        `fig:"user"`
-		Password        string        `fig:"password"`
-		Database        string        `fig:"database"`
-		SSLMode         string        `fig:"ssl_mode" default:"disable"`
-		MaxOpenConns    int           `fig:"max_open_conns"`
-		MaxIdleConns    int           `fig:"max_idle_conns"`
-		ConnMaxLifetime time.Duration `fig:"conn_max_lifetime"`
-		ConnMaxIdleTime time.Duration `fig:"conn_max_idle_time"`
-	} `fig:"pgsql"`
 }
 
 type shaperConfig struct {
@@ -156,7 +143,7 @@ type serverConfig struct {
 	Logger     loggerConfig     `fig:"logger"`
 	Admin      adminConfig      `fig:"admin"`
 	Cluster    clusterConfig    `fig:"cluster"`
-	Storage    storageConfig    `fig:"storage"`
+	Storage    storage.Config   `fig:"storage"`
 	Hosts      []hostConfig     `fig:"hosts"`
 	Listeners  []listenerConfig `fig:"listeners"`
 	Shapers    []shaperConfig   `fig:"shapers"`

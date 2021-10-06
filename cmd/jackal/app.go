@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/storage"
+
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -49,8 +51,6 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
-	measuredrepository "github.com/ortuman/jackal/pkg/storage/measured"
-	pgsqlrepository "github.com/ortuman/jackal/pkg/storage/pgsql"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/util/crashreporter"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
@@ -316,23 +316,12 @@ func (a *serverApp) initClusterConnManager() {
 	a.registerStartStopper(a.clusterConnMng)
 }
 
-func (a *serverApp) initRepository(sCfg storageConfig) error {
-	cfg := sCfg.PgSQL
-	opts := pgsqlrepository.Config{
-		MaxIdleConns:    cfg.MaxIdleConns,
-		MaxOpenConns:    cfg.MaxOpenConns,
-		ConnMaxIdleTime: cfg.ConnMaxIdleTime,
-		ConnMaxLifetime: cfg.ConnMaxLifetime,
+func (a *serverApp) initRepository(cfg storage.Config) error {
+	rep, err := storage.New(cfg)
+	if err != nil {
+		return err
 	}
-	pgRep := pgsqlrepository.New(
-		cfg.Host,
-		cfg.User,
-		cfg.Password,
-		cfg.Database,
-		cfg.SSLMode,
-		opts,
-	)
-	a.rep = measuredrepository.New(pgRep)
+	a.rep = rep
 	a.registerStartStopper(a.rep)
 	return nil
 }
