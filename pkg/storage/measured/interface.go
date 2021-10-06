@@ -14,7 +14,7 @@
 
 package measuredrepository
 
-import "github.com/ortuman/jackal/pkg/repository"
+import "github.com/ortuman/jackal/pkg/storage/repository"
 
 //go:generate moq -out repository.mock_test.go . c2sRepository:repositoryMock
 type c2sRepository interface {

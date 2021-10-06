@@ -25,9 +25,9 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/transport"
 )
 

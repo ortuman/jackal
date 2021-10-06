@@ -24,7 +24,7 @@ import (
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type accountProvider struct {

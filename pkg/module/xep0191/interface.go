@@ -19,9 +19,9 @@ import (
 
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock

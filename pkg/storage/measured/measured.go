@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	"github.com/ortuman/jackal/pkg/cluster/instance"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

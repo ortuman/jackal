@@ -30,7 +30,7 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/grpc/codes"

@@ -25,9 +25,9 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )

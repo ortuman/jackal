@@ -16,7 +16,7 @@ package auth
 
 import (
 	authpb "github.com/ortuman/jackal/pkg/auth/pb"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/transport"
 )
 

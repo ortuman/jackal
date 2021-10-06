@@ -19,7 +19,7 @@ import (
 	"time"
 
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type measuredLastRep struct {

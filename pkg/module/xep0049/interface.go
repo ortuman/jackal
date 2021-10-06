@@ -15,8 +15,8 @@
 package xep0049
 
 import (
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 //go:generate moq -out repository.mock_test.go . privateRepository:repositoryMock

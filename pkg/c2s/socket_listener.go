@@ -30,9 +30,9 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/shaper"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/transport"
 )
 

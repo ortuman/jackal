@@ -26,10 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
-	"google.golang.org/grpc"
-
 	etcdv3 "github.com/coreos/etcd/clientv3"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -50,16 +46,18 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/log/zap"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/repository"
-	measuredrepository "github.com/ortuman/jackal/pkg/repository/measured"
-	pgsqlrepository "github.com/ortuman/jackal/pkg/repository/pgsql"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
+	measuredrepository "github.com/ortuman/jackal/pkg/storage/measured"
+	pgsqlrepository "github.com/ortuman/jackal/pkg/storage/pgsql"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/util/crashreporter"
 	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	tlsutil "github.com/ortuman/jackal/pkg/util/tls"
 	"github.com/ortuman/jackal/pkg/version"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (

@@ -28,8 +28,8 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 

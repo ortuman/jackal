@@ -30,8 +30,8 @@ import (
 	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
 

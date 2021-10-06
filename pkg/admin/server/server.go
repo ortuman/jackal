@@ -25,7 +25,7 @@ import (
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"google.golang.org/grpc"
 )
 

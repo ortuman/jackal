@@ -18,38 +18,39 @@ import (
 	"context"
 	"time"
 
-	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
-	"github.com/ortuman/jackal/pkg/repository"
+	usermodel "github.com/ortuman/jackal/pkg/model/user"
+
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
-type measuredBlockListRep struct {
-	rep repository.BlockList
+type measuredUserRep struct {
+	rep repository.User
 }
 
-func (m *measuredBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) (err error) {
+func (m *measuredUserRep) UpsertUser(ctx context.Context, user *usermodel.User) (err error) {
 	t0 := time.Now()
-	err = m.rep.UpsertBlockListItem(ctx, item)
+	err = m.rep.UpsertUser(ctx, user)
 	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
 	return
 }
 
-func (m *measuredBlockListRep) DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) (err error) {
+func (m *measuredUserRep) DeleteUser(ctx context.Context, username string) (err error) {
 	t0 := time.Now()
-	err = m.rep.DeleteBlockListItem(ctx, item)
+	err = m.rep.DeleteUser(ctx, username)
 	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
 	return
 }
 
-func (m *measuredBlockListRep) FetchBlockListItems(ctx context.Context, username string) (blockList []blocklistmodel.Item, err error) {
+func (m *measuredUserRep) FetchUser(ctx context.Context, username string) (usr *usermodel.User, err error) {
 	t0 := time.Now()
-	blockList, err = m.rep.FetchBlockListItems(ctx, username)
+	usr, err = m.rep.FetchUser(ctx, username)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
 	return
 }
 
-func (m *measuredBlockListRep) DeleteBlockListItems(ctx context.Context, username string) (err error) {
+func (m *measuredUserRep) UserExists(ctx context.Context, username string) (ok bool, err error) {
 	t0 := time.Now()
-	err = m.rep.DeleteBlockListItems(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	ok, err = m.rep.UserExists(ctx, username)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
 	return
 }

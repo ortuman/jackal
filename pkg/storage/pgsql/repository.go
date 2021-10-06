@@ -23,7 +23,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 func init() {
