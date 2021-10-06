@@ -200,7 +200,7 @@ func run(output io.Writer, args []string) error {
 	)
 
 	// init pepper keys
-	peppers, err := pepper.NewKeys(cfg.Peppers.Keys, cfg.Peppers.UseID)
+	peppers, err := pepper.NewKeys(cfg.Peppers)
 	if err != nil {
 		return err
 	}

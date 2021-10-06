@@ -27,7 +27,7 @@ const pgSQLRepositoryType = "pgsql"
 
 func New(cfg Config) (repository.Repository, error) {
 	if cfg.Type != pgSQLRepositoryType {
-		return nil, fmt.Errorf("unrecognized repository type: %s", cfg.Type)
+		return nil, fmt.Errorf("storage: unrecognized repository type: %s", cfg.Type)
 	}
 	rep := pgsqlrepository.New(cfg.PgSQL)
 	return measuredrepository.New(rep), nil

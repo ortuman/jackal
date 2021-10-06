@@ -26,11 +26,14 @@ func init() {
 
 func TestKeys_Get(t *testing.T) {
 	// given
-	ks, _ := NewKeys(map[string]string{
-		"v1": "k1",
-		"v2": "k2",
-		"v3": "k3",
-	}, "v2")
+	ks, _ := NewKeys(Config{
+		Keys: map[string]string{
+			"v1": "k1",
+			"v2": "k2",
+			"v3": "k3",
+		},
+		UseID: "v2",
+	})
 
 	// then
 	require.Equal(t, "k2", ks.GetActiveKey())
@@ -42,13 +45,18 @@ func TestKeys_Get(t *testing.T) {
 
 func TestKeys_Error(t *testing.T) {
 	// given
-	_, err1 := NewKeys(map[string]string{
-		"v1": "k1",
-		"v2": "k2",
-		"v3": "k3",
-	}, "v4")
+	_, err1 := NewKeys(Config{
+		Keys: map[string]string{
+			"v1": "k1",
+			"v2": "k2",
+			"v3": "k3",
+		}, UseID: "v4",
+	})
 
-	_, err2 := NewKeys(map[string]string{}, "v4")
+	_, err2 := NewKeys(Config{
+		Keys:  map[string]string{},
+		UseID: "v4",
+	})
 
 	// then
 	require.NotNil(t, err1)

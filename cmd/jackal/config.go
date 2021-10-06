@@ -18,15 +18,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/auth/pepper"
+
 	"github.com/ortuman/jackal/pkg/storage"
 
 	"github.com/kkyr/fig"
 )
-
-type peppersConfig struct {
-	Keys  map[string]string `fig:"keys"`
-	UseID string            `fig:"use"`
-}
 
 type loggerConfig struct {
 	Level      string `fig:"level" default:"debug"`
@@ -139,7 +136,7 @@ type componentsConfig struct {
 
 type serverConfig struct {
 	HTTPPort   int              `fig:"http_port" default:"6060"`
-	Peppers    peppersConfig    `fig:"peppers"`
+	Peppers    pepper.Config    `fig:"peppers"`
 	Logger     loggerConfig     `fig:"logger"`
 	Admin      adminConfig      `fig:"admin"`
 	Cluster    clusterConfig    `fig:"cluster"`
