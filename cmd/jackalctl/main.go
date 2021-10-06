@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ortuman/jackal/pkg/cmd/jackalctl/ctlv1"
+	"github.com/ortuman/jackal/cmd/jackalctl/ctlv1"
 )
 
 const (

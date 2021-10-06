@@ -19,7 +19,7 @@ package ctlv1
 import (
 	"time"
 
-	"github.com/ortuman/jackal/pkg/cmd/jackalctl/ctlv1/command"
+	"github.com/ortuman/jackal/cmd/jackalctl/ctlv1/command"
 	"github.com/spf13/cobra"
 )
 
