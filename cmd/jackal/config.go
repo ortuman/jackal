@@ -18,34 +18,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/auth/pepper"
-
-	"github.com/ortuman/jackal/pkg/storage"
+	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 
 	"github.com/kkyr/fig"
+	"github.com/ortuman/jackal/pkg/cluster/etcd"
+
+	adminserver "github.com/ortuman/jackal/pkg/admin/server"
+	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/host"
+	"github.com/ortuman/jackal/pkg/storage"
 )
-
-type loggerConfig struct {
-	Level      string `fig:"level" default:"debug"`
-	OutputPath string `fig:"output_path"`
-}
-
-type adminConfig struct {
-	BindAddr string `fig:"bind_addr"`
-	Port     int    `fig:"port" default:"15280"`
-	Disabled bool   `fig:"disabled"`
-}
-
-type etcdConfig struct {
-	Endpoints   []string      `fig:"endpoints" default:"[http://localhost:2379]"`
-	DialTimeout time.Duration `fig:"dial_timeout" default:"5s"`
-}
-
-type clusterConfig struct {
-	Etcd     etcdConfig `fig:"etcd"`
-	BindAddr string     `fig:"bind_addr"`
-	Port     int        `fig:"port" default:"14369"`
-}
 
 type shaperConfig struct {
 	Name        string `fig:"name"`
@@ -60,14 +42,6 @@ type shaperConfig struct {
 			RegEx string   `fig:"regex"`
 		}
 	} `fig:"matching"`
-}
-
-type hostConfig struct {
-	Domain string `fig:"domain"`
-	TLS    struct {
-		CertFile       string `fig:"cert_file"`
-		PrivateKeyFile string `fig:"privkey_file"`
-	} `fig:"tls"`
 }
 
 type listenerConfig struct {
@@ -135,18 +109,27 @@ type componentsConfig struct {
 }
 
 type serverConfig struct {
-	HTTPPort   int              `fig:"http_port" default:"6060"`
-	Peppers    pepper.Config    `fig:"peppers"`
-	Logger     loggerConfig     `fig:"logger"`
-	Admin      adminConfig      `fig:"admin"`
-	Cluster    clusterConfig    `fig:"cluster"`
-	Storage    storage.Config   `fig:"storage"`
-	Hosts      []hostConfig     `fig:"hosts"`
-	Listeners  []listenerConfig `fig:"listeners"`
-	Shapers    []shaperConfig   `fig:"shapers"`
-	S2SOut     s2sOutConfig     `fig:"s2s_out"`
-	Modules    modulesConfig    `fig:"modules"`
-	Components componentsConfig `fig:"components"`
+	Logger struct {
+		Level      string `fig:"level" default:"debug"`
+		OutputPath string `fig:"output_path"`
+	} `fig:"logger"`
+
+	Cluster struct {
+		Etcd   etcd.Config          `fig:"etcd"`
+		Server clusterserver.Config `fig:"server"`
+	} `fig:"cluster"`
+
+	HTTPPort int `fig:"http_port" default:"6060"`
+
+	Peppers    pepper.Config      `fig:"peppers"`
+	Admin      adminserver.Config `fig:"admin"`
+	Storage    storage.Config     `fig:"storage"`
+	Hosts      []host.Config      `fig:"hosts"`
+	Listeners  []listenerConfig   `fig:"listeners"`
+	Shapers    []shaperConfig     `fig:"shapers"`
+	S2SOut     s2sOutConfig       `fig:"s2s_out"`
+	Modules    modulesConfig      `fig:"modules"`
+	Components componentsConfig   `fig:"components"`
 }
 
 func loadConfig(configFile string) (*serverConfig, error) {

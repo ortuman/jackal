@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdlocker
+package etcd
 
 import (
 	"context"
@@ -29,17 +29,18 @@ type etcdLock struct {
 
 func (m *etcdLock) Release(ctx context.Context) error { return m.mu.Unlock(ctx) }
 
-type etcdLocker struct {
+type Locker struct {
+	cfg Config
 	cli *etcdv3.Client
 	ss  *concurrency.Session
 }
 
-// New returns a new initialized etcd locker.
-func New(cli *etcdv3.Client) locker.Locker {
-	return &etcdLocker{cli: cli}
+// NewLocker returns a new initialized etcd locker.
+func NewLocker(cfg Config) *Locker {
+	return &Locker{cfg: cfg}
 }
 
-func (l *etcdLocker) AcquireLock(ctx context.Context, lockID string) (locker.Lock, error) {
+func (l *Locker) AcquireLock(ctx context.Context, lockID string) (locker.Lock, error) {
 	mu := concurrency.NewMutex(l.ss, lockID)
 	if err := mu.Lock(ctx); err != nil {
 		return nil, err
@@ -47,7 +48,14 @@ func (l *etcdLocker) AcquireLock(ctx context.Context, lockID string) (locker.Loc
 	return &etcdLock{mu: mu}, nil
 }
 
-func (l *etcdLocker) Start(_ context.Context) error {
+func (l *Locker) Start(_ context.Context) error {
+	// perform dialing
+	cli, err := dial(l.cfg)
+	if err != nil {
+		return err
+	}
+	l.cli = cli
+
 	ss, err := concurrency.NewSession(l.cli)
 	if err != nil {
 		return err
@@ -57,8 +65,11 @@ func (l *etcdLocker) Start(_ context.Context) error {
 	return nil
 }
 
-func (l *etcdLocker) Stop(_ context.Context) error {
+func (l *Locker) Stop(_ context.Context) error {
 	if err := l.ss.Close(); err != nil {
+		return err
+	}
+	if err := l.cli.Close(); err != nil {
 		return err
 	}
 	log.Infof("Stopped etcd locker")

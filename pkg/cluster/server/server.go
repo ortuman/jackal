@@ -32,8 +32,7 @@ var netListen = net.Listen
 
 // Server represents cluster server type.
 type Server struct {
-	bindAddr    string
-	port        int
+	cfg         Config
 	ln          net.Listener
 	srv         *grpc.Server
 	active      int32
@@ -41,11 +40,15 @@ type Server struct {
 	comps       *component.Components
 }
 
+type Config struct {
+	BindAddr string `fig:"bind_addr"`
+	Port     int    `fig:"port" default:"14369"`
+}
+
 // New returns a new initialized Server instance.
-func New(bindAddr string, port int, localRouter *c2s.LocalRouter, comps *component.Components) *Server {
+func New(cfg Config, localRouter *c2s.LocalRouter, comps *component.Components) *Server {
 	return &Server{
-		bindAddr:    bindAddr,
-		port:        port,
+		cfg:         cfg,
 		localRouter: localRouter,
 		comps:       comps,
 	}
@@ -91,5 +94,5 @@ func (s *Server) Stop(_ context.Context) error {
 }
 
 func (s *Server) getAddress() string {
-	return s.bindAddr + ":" + strconv.Itoa(s.port)
+	return s.cfg.BindAddr + ":" + strconv.Itoa(s.cfg.Port)
 }

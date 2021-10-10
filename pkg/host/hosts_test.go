@@ -23,7 +23,9 @@ import (
 
 func TestHosts_Default(t *testing.T) {
 	// given
-	h := New()
+	h := &Hosts{
+		hosts: make(map[string]tls.Certificate),
+	}
 
 	// when
 	cer := tls.Certificate{}
@@ -36,7 +38,9 @@ func TestHosts_Default(t *testing.T) {
 
 func TestHosts_Domains(t *testing.T) {
 	// given
-	h := New()
+	h := &Hosts{
+		hosts: make(map[string]tls.Certificate),
+	}
 
 	// when
 	c1 := tls.Certificate{}

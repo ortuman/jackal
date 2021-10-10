@@ -18,7 +18,19 @@ import (
 	"crypto/tls"
 	"sort"
 	"sync"
+
+	tlsutil "github.com/ortuman/jackal/pkg/util/tls"
 )
+
+const defaultDomain = "localhost"
+
+type Config struct {
+	Domain string `fig:"domain"`
+	TLS    struct {
+		CertFile       string `fig:"cert_file"`
+		PrivateKeyFile string `fig:"privkey_file"`
+	} `fig:"tls"`
+}
 
 // Hosts type represents all local domains set.
 type Hosts struct {
@@ -27,11 +39,31 @@ type Hosts struct {
 	hosts       map[string]tls.Certificate
 }
 
-// New creates and returns an empty Hosts instance.
-func New() *Hosts {
-	return &Hosts{
+// NewHost creates and initializes a Hosts instance.
+func NewHost(configs []Config) (*Hosts, error) {
+	hs := &Hosts{
 		hosts: make(map[string]tls.Certificate),
 	}
+	if len(configs) == 0 {
+		cer, err := tlsutil.LoadCertificate("", "", defaultDomain)
+		if err != nil {
+			return nil, err
+		}
+		hs.RegisterDefaultHost(defaultDomain, cer)
+		return hs, nil
+	}
+	for i, config := range configs {
+		cer, err := tlsutil.LoadCertificate(config.TLS.PrivateKeyFile, config.TLS.CertFile, config.Domain)
+		if err != nil {
+			return nil, err
+		}
+		if i == 0 {
+			hs.RegisterDefaultHost(config.Domain, cer)
+		} else {
+			hs.RegisterHost(config.Domain, cer)
+		}
+	}
+	return hs, nil
 }
 
 // RegisterDefaultHost registers default host value along with its certificate.

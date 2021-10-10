@@ -27,8 +27,10 @@ import (
 func TestServer_Listen(t *testing.T) {
 	// given
 	s := &Server{
-		bindAddr: "127.0.0.1",
-		port:     56000,
+		cfg: Config{
+			BindAddr: "127.0.0.1",
+			Port:     56000,
+		},
 	}
 
 	// when
