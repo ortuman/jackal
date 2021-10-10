@@ -18,31 +18,16 @@ import (
 	"path/filepath"
 	"time"
 
-	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
+	"github.com/ortuman/jackal/pkg/shaper"
 
 	"github.com/kkyr/fig"
-	"github.com/ortuman/jackal/pkg/cluster/etcd"
-
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/cluster/etcd"
+	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/storage"
 )
-
-type shaperConfig struct {
-	Name        string `fig:"name"`
-	MaxSessions int    `fig:"max_sessions" default:"10"`
-	Rate        struct {
-		Limit int `fig:"limit" default:"1000"`
-		Burst int `fig:"burst" default:"0"`
-	} `fig:"rate"`
-	Matching struct {
-		JID struct {
-			In    []string `fig:"in"`
-			RegEx string   `fig:"regex"`
-		}
-	} `fig:"matching"`
-}
 
 type listenerConfig struct {
 	Type      string `fig:"type" default:"c2s"`
@@ -126,7 +111,7 @@ type serverConfig struct {
 	Storage    storage.Config     `fig:"storage"`
 	Hosts      []host.Config      `fig:"hosts"`
 	Listeners  []listenerConfig   `fig:"listeners"`
-	Shapers    []shaperConfig     `fig:"shapers"`
+	Shapers    []shaper.Config    `fig:"shapers"`
 	S2SOut     s2sOutConfig       `fig:"s2s_out"`
 	Modules    modulesConfig      `fig:"modules"`
 	Components componentsConfig   `fig:"components"`

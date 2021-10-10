@@ -52,7 +52,6 @@ import (
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/util/crashreporter"
-	"github.com/ortuman/jackal/pkg/util/stringmatcher"
 	"github.com/ortuman/jackal/pkg/version"
 )
 
@@ -293,23 +292,14 @@ func (a *serverApp) initHosts(configs []host.Config) error {
 	return nil
 }
 
-func (a *serverApp) initShapers(cfgs []shaperConfig) error {
+func (a *serverApp) initShapers(configs []shaper.Config) error {
 	a.shapers = make(shaper.Shapers, 0)
-	for _, cfg := range cfgs {
-		var sm stringmatcher.Matcher
-		switch {
-		case len(cfg.Matching.JID.In) > 0:
-			sm = stringmatcher.NewStringMatcher(cfg.Matching.JID.In)
-		case len(cfg.Matching.JID.RegEx) > 0:
-			var err error
-			sm, err = stringmatcher.NewRegExMatcher(cfg.Matching.JID.RegEx)
-			if err != nil {
-				return err
-			}
-		default:
-			sm = stringmatcher.Any
+	for _, cfg := range configs {
+		shp, err := shaper.New(cfg)
+		if err != nil {
+			return err
 		}
-		a.shapers = append(a.shapers, shaper.New(cfg.MaxSessions, cfg.Rate.Limit, cfg.Rate.Burst, sm))
+		a.shapers = append(a.shapers, shp)
 
 		log.Infow(fmt.Sprintf("Registered '%s' shaper configuration", cfg.Name),
 			"name", cfg.Name,
