@@ -21,15 +21,16 @@ import (
 
 var minKeyLength = 24
 
-type Config struct {
-	Keys  map[string]string `fig:"keys"`
-	UseID string            `fig:"use"`
-}
-
 // Keys contains all configured pepper keys.
 type Keys struct {
 	ks    map[string]string
 	useID string
+}
+
+// Config contains Keys configuration parameters.
+type Config struct {
+	Keys  map[string]string `fig:"keys"`
+	UseID string            `fig:"use"`
 }
 
 // NewKeys returns an initialized set of pepper keys.

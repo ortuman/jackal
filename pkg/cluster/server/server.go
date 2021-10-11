@@ -40,6 +40,7 @@ type Server struct {
 	comps       *component.Components
 }
 
+// Config contains Server configuration parameters.
 type Config struct {
 	BindAddr string `fig:"bind_addr"`
 	Port     int    `fig:"port" default:"14369"`

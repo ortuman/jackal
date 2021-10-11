@@ -25,6 +25,13 @@ import (
 
 const pgSQLRepositoryType = "pgsql"
 
+// Config contains generic storage configuration.
+type Config struct {
+	Type  string                 `fig:"type" default:"pgsql"`
+	PgSQL pgsqlrepository.Config `fig:"pgsql"`
+}
+
+// New returns an initialized repository.Repository derived from cfg configuration.
 func New(cfg Config) (repository.Repository, error) {
 	if cfg.Type != pgSQLRepositoryType {
 		return nil, fmt.Errorf("storage: unrecognized repository type: %s", cfg.Type)

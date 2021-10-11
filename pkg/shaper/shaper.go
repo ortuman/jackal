@@ -69,6 +69,7 @@ type Shaper struct {
 	jidMatcher       stringmatcher.Matcher
 }
 
+// Config contains Shaper configuration parameters.
 type Config struct {
 	Name        string `fig:"name"`
 	MaxSessions int    `fig:"max_sessions" default:"10"`

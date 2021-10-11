@@ -43,6 +43,7 @@ type Server struct {
 	hk      *hook.Hooks
 }
 
+// Config contains Server configuration parameters.
 type Config struct {
 	BindAddr string `fig:"bind_addr"`
 	Port     int    `fig:"port" default:"15280"`

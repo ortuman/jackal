@@ -29,6 +29,7 @@ type etcdLock struct {
 
 func (m *etcdLock) Release(ctx context.Context) error { return m.mu.Unlock(ctx) }
 
+// Locker defines etcd locker.Locker implementation.
 type Locker struct {
 	cfg Config
 	cli *etcdv3.Client
@@ -40,6 +41,7 @@ func NewLocker(cfg Config) *Locker {
 	return &Locker{cfg: cfg}
 }
 
+// AcquireLock acquires and returns an etcd locker.
 func (l *Locker) AcquireLock(ctx context.Context, lockID string) (locker.Lock, error) {
 	mu := concurrency.NewMutex(l.ss, lockID)
 	if err := mu.Lock(ctx); err != nil {
@@ -48,6 +50,7 @@ func (l *Locker) AcquireLock(ctx context.Context, lockID string) (locker.Lock, e
 	return &etcdLock{mu: mu}, nil
 }
 
+// Start starts etcd locker.
 func (l *Locker) Start(_ context.Context) error {
 	// perform dialing
 	cli, err := dial(l.cfg)
@@ -65,6 +68,7 @@ func (l *Locker) Start(_ context.Context) error {
 	return nil
 }
 
+// Stop stops etcd locker.
 func (l *Locker) Stop(_ context.Context) error {
 	if err := l.ss.Close(); err != nil {
 		return err

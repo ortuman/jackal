@@ -24,19 +24,20 @@ import (
 
 const defaultDomain = "localhost"
 
+// Hosts type represents all local domains set.
+type Hosts struct {
+	mu          sync.RWMutex
+	defaultHost string
+	hosts       map[string]tls.Certificate
+}
+
+// Config contains host configuration parameters.
 type Config struct {
 	Domain string `fig:"domain"`
 	TLS    struct {
 		CertFile       string `fig:"cert_file"`
 		PrivateKeyFile string `fig:"privkey_file"`
 	} `fig:"tls"`
-}
-
-// Hosts type represents all local domains set.
-type Hosts struct {
-	mu          sync.RWMutex
-	defaultHost string
-	hosts       map[string]tls.Certificate
 }
 
 // NewHost creates and initializes a Hosts instance.
