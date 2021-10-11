@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type measuredPrivateRep struct {

@@ -27,9 +27,9 @@ import (
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type c2sRouter struct {

@@ -50,16 +50,13 @@ const (
 // Config contains ping module configuration options.
 type Config struct {
 	// AckTimeout tells how long should we wait until considering a client to be disconnected.
-	AckTimeout time.Duration
-
+	AckTimeout time.Duration `fig:"ack_timeout" default:"32s"`
 	// Interval tells how often pings should be sent to clients.
-	Interval time.Duration
-
-	// SendPings tells whether or not server pings should be sent.
-	SendPings bool
-
+	Interval time.Duration `fig:"interval" default:"1m"`
+	// SendPings tells whether server pings should be sent.
+	SendPings bool `fig:"send_pings"`
 	// TimeoutAction specifies the action to be taken when a client is considered as disconnected.
-	TimeoutAction string
+	TimeoutAction string `fig:"timeout_action" default:"none"`
 }
 
 // Ping represents ping (XEP-0199) module type.
@@ -74,7 +71,7 @@ type Ping struct {
 }
 
 // New returns a new initialized ping instance.
-func New(router router.Router, hk *hook.Hooks, cfg Config) *Ping {
+func New(cfg Config, router router.Router, hk *hook.Hooks) *Ping {
 	return &Ping{
 		cfg:        cfg,
 		router:     router,

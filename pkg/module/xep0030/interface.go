@@ -21,8 +21,8 @@ import (
 
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/module"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 //go:generate moq -out roster_repository.mock_test.go . rosterRepository

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcdkv
+package etcd
 
 import (
 	"context"
@@ -31,6 +31,7 @@ const (
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
+	cfg      Config
 	cli      *etcdv3.Client
 	leaseID  etcdv3.LeaseID
 	ctx      context.Context
@@ -39,11 +40,11 @@ type KV struct {
 	done     int32
 }
 
-// New returns a new etcd key-value store instance.
-func New(cli *etcdv3.Client) *KV {
+// NewKV returns a new etcd key-value store instance.
+func NewKV(cfg Config) *KV {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &KV{
-		cli:      cli,
+		cfg:      cfg,
 		ctx:      ctx,
 		cancelFn: cancel,
 	}
@@ -111,6 +112,13 @@ func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan 
 
 // Start initializes etcd key-value store.
 func (k *KV) Start(ctx context.Context) error {
+	// perform dialing
+	cli, err := dial(k.cfg)
+	if err != nil {
+		return err
+	}
+	k.cli = cli
+
 	// create shared KV lease
 	resp, err := k.cli.Grant(ctx, leaseTTLInSeconds)
 	if err != nil {
@@ -137,6 +145,9 @@ func (k *KV) Stop(ctx context.Context) error {
 
 	_, err := k.cli.Revoke(ctx, k.leaseID)
 	if err != nil {
+		return err
+	}
+	if err := k.cli.Close(); err != nil {
 		return err
 	}
 	log.Infow("Stopped etcd KV store")

@@ -17,7 +17,7 @@ package pgsqlrepository
 import (
 	"database/sql"
 
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type repTx struct {

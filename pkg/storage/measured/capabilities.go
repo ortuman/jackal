@@ -19,7 +19,7 @@ import (
 	"time"
 
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type measuredCapabilitiesRep struct {

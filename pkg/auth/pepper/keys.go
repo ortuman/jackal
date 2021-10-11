@@ -27,21 +27,27 @@ type Keys struct {
 	useID string
 }
 
+// Config contains Keys configuration parameters.
+type Config struct {
+	Keys  map[string]string `fig:"keys"`
+	UseID string            `fig:"use"`
+}
+
 // NewKeys returns an initialized set of pepper keys.
-func NewKeys(keys map[string]string, useID string) (*Keys, error) {
-	if len(keys) == 0 {
+func NewKeys(cfg Config) (*Keys, error) {
+	if len(cfg.Keys) == 0 {
 		return nil, errors.New("pepper: no pepper keys defined")
 	}
-	for keyID, k := range keys {
+	for keyID, k := range cfg.Keys {
 		if len(k) < minKeyLength {
 			return nil, fmt.Errorf("pepper: key %s must be at least %d characters", keyID, minKeyLength)
 		}
 	}
-	_, ok := keys[useID]
+	_, ok := cfg.Keys[cfg.UseID]
 	if !ok {
-		return nil, fmt.Errorf("pepper: active key not found: %s", useID)
+		return nil, fmt.Errorf("pepper: active key not found: %s", cfg.UseID)
 	}
-	return &Keys{ks: keys, useID: useID}, nil
+	return &Keys{ks: cfg.Keys, useID: cfg.UseID}, nil
 }
 
 // GetKey returns pepper associated to an identifier.

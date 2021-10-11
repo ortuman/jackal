@@ -23,19 +23,24 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 func init() {
 	sq.StatementBuilder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 }
 
-// Config contais PgSQL configuration value.
+// Config contains PgSQL configuration value.
 type Config struct {
-	MaxIdleConns    int
-	MaxOpenConns    int
-	ConnMaxIdleTime time.Duration
-	ConnMaxLifetime time.Duration
+	Host            string        `fig:"host"`
+	User            string        `fig:"user"`
+	Password        string        `fig:"password"`
+	Database        string        `fig:"database"`
+	SSLMode         string        `fig:"ssl_mode" default:"disable"`
+	MaxOpenConns    int           `fig:"max_open_conns"`
+	MaxIdleConns    int           `fig:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `fig:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `fig:"conn_max_idle_time"`
 }
 
 // Repository represents a PgSQL repository implementation.
@@ -57,10 +62,10 @@ type Repository struct {
 }
 
 // New creates and returns an initialized PgSQL Repository instance.
-func New(host, username, password, database, sslMode string, cfg Config) *Repository {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", username, password, host, database, sslMode)
+func New(cfg Config) *Repository {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", cfg.User, cfg.Password, cfg.Host, cfg.Database, cfg.SSLMode)
 	return &Repository{
-		host: host,
+		host: cfg.Host,
 		dsn:  dsn,
 		cfg:  cfg,
 	}

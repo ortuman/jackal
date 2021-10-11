@@ -29,7 +29,7 @@ func TestSocketListener_Listen(t *testing.T) {
 	var handledConn uint32
 
 	s := &SocketListener{
-		addr:   ":1123",
+		addr:   ":51123",
 		stmHub: newInHub(),
 		connHandlerFn: func(_ net.Conn) {
 			atomic.StoreUint32(&handledConn, 1)
@@ -40,7 +40,7 @@ func TestSocketListener_Listen(t *testing.T) {
 	err := s.Start(context.Background())
 	require.Nil(t, err)
 
-	_, err = net.Dial("tcp", ":1123")
+	_, err = net.Dial("tcp", ":51123")
 	require.Nil(t, err)
 
 	time.Sleep(time.Second) // wait to accept

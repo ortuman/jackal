@@ -413,7 +413,10 @@ func testUser() *usermodel.User {
 }
 
 func testPeppers() *pepper.Keys {
-	ks, _ := pepper.NewKeys(map[string]string{"v1": pepperKey}, "v1")
+	ks, _ := pepper.NewKeys(pepper.Config{
+		Keys:  map[string]string{"v1": pepperKey},
+		UseID: "v1",
+	})
 	return ks
 }
 

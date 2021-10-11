@@ -25,7 +25,13 @@ import (
 
 func TestShaper_RateLimiter(t *testing.T) {
 	// given
-	s := New(5, 2000, 1000, stringmatcher.Any)
+	s := Shaper{
+		Name:        "foo",
+		MaxSessions: 5,
+		rateLimit:   2000,
+		burst:       1000,
+		jidMatcher:  stringmatcher.Any,
+	}
 
 	// when
 	rLim := s.RateLimiter()
@@ -38,7 +44,13 @@ func TestShaper_RateLimiter(t *testing.T) {
 func TestShapers_MatchingJID(t *testing.T) {
 	// given
 	var ss Shapers
-	ss = append(ss, New(5, 2000, 1000, stringmatcher.Any))
+	ss = append(ss, Shaper{
+		Name:        "foo",
+		MaxSessions: 5,
+		rateLimit:   2000,
+		burst:       1000,
+		jidMatcher:  stringmatcher.Any,
+	})
 
 	j, _ := jid.NewWithString("ortuman@gmail.com", true)
 

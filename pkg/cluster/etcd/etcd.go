@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package measuredrepository
+package etcd
 
-import "github.com/ortuman/jackal/pkg/repository"
+import "time"
 
-//go:generate moq -out repository.mock_test.go . c2sRepository:repositoryMock
-type c2sRepository interface {
-	repository.Repository
+// Config contains etcd configuration parameters.
+type Config struct {
+	Endpoints            []string      `fig:"endpoints" default:"[http://localhost:2379]"`
+	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
+	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
+	DialKeepAliveTimeout time.Duration `fig:"dial_keep_alive_timeout" default:"10s"`
+	KeepAliveTime        time.Duration `fig:"keep_alive" default:"10s"`
+	Timeout              time.Duration `fig:"keep_alive" default:"20m"`
 }

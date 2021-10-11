@@ -59,21 +59,54 @@ func (ss Shapers) DefaultS2S() *Shaper {
 
 // Shaper represents a connection traffic constraint set.
 type Shaper struct {
-	// MaxSessions represens maximum sessions count.
+	// Name is the shaper name.
+	Name string
+
+	// MaxSessions represents maximum sessions count.
 	MaxSessions int
 
 	rateLimit, burst int
 	jidMatcher       stringmatcher.Matcher
 }
 
+// Config contains Shaper configuration parameters.
+type Config struct {
+	Name        string `fig:"name"`
+	MaxSessions int    `fig:"max_sessions" default:"10"`
+	Rate        struct {
+		Limit int `fig:"limit" default:"1000"`
+		Burst int `fig:"burst" default:"0"`
+	} `fig:"rate"`
+	Matching struct {
+		JID struct {
+			In    []string `fig:"in"`
+			RegEx string   `fig:"regex"`
+		}
+	} `fig:"matching"`
+}
+
 // New returns a new Shaper given a configuration.
-func New(maxSessions int, rateLimit int, burst int, jidMatcher stringmatcher.Matcher) Shaper {
-	return Shaper{
-		MaxSessions: maxSessions,
-		rateLimit:   rateLimit,
-		burst:       burst,
-		jidMatcher:  jidMatcher,
+func New(cfg Config) (Shaper, error) {
+	var jidMatcher stringmatcher.Matcher
+	switch {
+	case len(cfg.Matching.JID.In) > 0:
+		jidMatcher = stringmatcher.NewStringMatcher(cfg.Matching.JID.In)
+	case len(cfg.Matching.JID.RegEx) > 0:
+		var err error
+		jidMatcher, err = stringmatcher.NewRegExMatcher(cfg.Matching.JID.RegEx)
+		if err != nil {
+			return Shaper{}, err
+		}
+	default:
+		jidMatcher = stringmatcher.Any
 	}
+	return Shaper{
+		Name:        cfg.Name,
+		MaxSessions: cfg.MaxSessions,
+		rateLimit:   cfg.Rate.Limit,
+		burst:       cfg.Rate.Burst,
+		jidMatcher:  jidMatcher,
+	}, nil
 }
 
 // RateLimiter returns a new rate limiter configured with shaper parameters.

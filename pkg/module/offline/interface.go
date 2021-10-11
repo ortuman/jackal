@@ -20,8 +20,8 @@ import (
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/ortuman/jackal/pkg/cluster/locker"
-	"github.com/ortuman/jackal/pkg/repository"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 //go:generate moq -out repository.mock_test.go . offlineRepository:repositoryMock

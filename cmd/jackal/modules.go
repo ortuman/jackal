@@ -55,9 +55,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return offline.New(a.router, a.hosts, a.resMng, a.rep, a.locker, a.hk, offline.Config{
-			QueueSize: cfg.Offline.QueueSize,
-		})
+		return offline.New(cfg.Offline, a.router, a.hosts, a.resMng, a.rep, a.locker, a.hk)
 	},
 	// XEP-0012: Last Activity
 	// (https://xmpp.org/extensions/xep-0012.html)
@@ -82,9 +80,7 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0092: Software Version
 	// (https://xmpp.org/extensions/xep-0092.html)
 	xep0092.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return xep0092.New(a.router, xep0092.Config{
-			ShowOS: cfg.Version.ShowOS,
-		})
+		return xep0092.New(cfg.Version, a.router)
 	},
 	// XEP-0115: Entity Capabilities
 	// (https://xmpp.org/extensions/xep-0115.html)
@@ -99,22 +95,12 @@ var modFns = map[string]func(a *serverApp, cfg modulesConfig) module.Module{
 	// XEP-0198: Stream Management
 	// (https://xmpp.org/extensions/xep-0198.html)
 	xep0198.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return xep0198.New(a.router, a.hosts, a.resMng, a.hk, xep0198.Config{
-			HibernateTime:      cfg.Stream.HibernateTime,
-			RequestAckInterval: cfg.Stream.RequestAckInterval,
-			WaitForAckTimeout:  cfg.Stream.WaitForAckTimeout,
-			MaxQueueSize:       cfg.Stream.MaxQueueSize,
-		})
+		return xep0198.New(cfg.Stream, a.router, a.hosts, a.resMng, a.hk)
 	},
 	// XEP-0199: XMPP Ping
 	// (https://xmpp.org/extensions/xep-0199.html)
 	xep0199.ModuleName: func(a *serverApp, cfg modulesConfig) module.Module {
-		return xep0199.New(a.router, a.hk, xep0199.Config{
-			AckTimeout:    cfg.Ping.AckTimeout,
-			Interval:      cfg.Ping.Interval,
-			SendPings:     cfg.Ping.SendPings,
-			TimeoutAction: cfg.Ping.TimeoutAction,
-		})
+		return xep0199.New(cfg.Ping, a.router, a.hk)
 	},
 	// XEP-0202: Entity Time
 	// (https://xmpp.org/extensions/xep-0202.html)

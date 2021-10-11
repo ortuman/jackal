@@ -25,7 +25,7 @@ import (
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/repository"
+	"github.com/ortuman/jackal/pkg/storage/repository"
 	"google.golang.org/grpc"
 )
 
@@ -43,17 +43,26 @@ type Server struct {
 	hk      *hook.Hooks
 }
 
+// Config contains Server configuration parameters.
+type Config struct {
+	BindAddr string `fig:"bind_addr"`
+	Port     int    `fig:"port" default:"15280"`
+	Disabled bool   `fig:"disabled"`
+}
+
 // New returns a new initialized admin server.
 func New(
-	bindAddr string,
-	port int,
+	cfg Config,
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	hk *hook.Hooks,
 ) *Server {
+	if cfg.Disabled {
+		return nil
+	}
 	return &Server{
-		bindAddr: bindAddr,
-		port:     port,
+		bindAddr: cfg.BindAddr,
+		port:     cfg.Port,
 		rep:      rep,
 		peppers:  peppers,
 		hk:       hk,

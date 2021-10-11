@@ -8,7 +8,7 @@ rm -rf build/
 mkdir build
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo \
-  -ldflags "-s -w" -o "build/jackal" "github.com/ortuman/jackal/pkg/cmd/jackal"
+  -ldflags "-s -w" -o "build/jackal" "github.com/ortuman/jackal/cmd/jackal"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo \
-  -ldflags "-s -w" -o "build/jackalctl" "github.com/ortuman/jackal/pkg/cmd/jackalctl"
+  -ldflags "-s -w" -o "build/jackalctl" "github.com/ortuman/jackal/cmd/jackalctl"
 docker build -f dockerfiles/Dockerfile -t ortuman/jackal .
