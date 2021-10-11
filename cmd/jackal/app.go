@@ -320,7 +320,7 @@ func (a *serverApp) initListeners(configs []listenerConfig) error {
 	for _, cfg := range configs {
 		lnFn, ok := lnFns[cfg.Type]
 		if !ok {
-			return fmt.Errorf("main: unrecognized listener: %s", cfg.Type)
+			return fmt.Errorf("main: unrecognized listener type: %s", cfg.Type)
 		}
 		ln := lnFn(a, cfg)
 		a.registerStartStopper(ln)

@@ -63,20 +63,20 @@ const (
 
 // Config contains stream management module configuration options.
 type Config struct {
-	// HibernateTime defines defines the amount of time a stream
+	// HibernateTime defines the amount of time a stream
 	// can stay in disconnected state before being terminated.
-	HibernateTime time.Duration
+	HibernateTime time.Duration `fig:"hibernate_time" default:"3m"`
 
 	// RequestAckInterval defines the period of stream inactivity
 	// that should be waited before requesting acknowledgement.
-	RequestAckInterval time.Duration
+	RequestAckInterval time.Duration `fig:"request_ack_interval" default:"2m"`
 
 	// WaitForAckTimeout defines stanza acknowledgement timeout.
-	WaitForAckTimeout time.Duration
+	WaitForAckTimeout time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
 
 	// MaxQueueSize defines maximum number of unacknowledged stanzas.
 	// When the limit is reached the c2s stream is terminated.
-	MaxQueueSize int
+	MaxQueueSize int `fig:"max_queue_size" default:"30"`
 }
 
 // Stream represents a stream (XEP-0198) module type.
@@ -94,11 +94,11 @@ type Stream struct {
 
 // New returns a new initialized Stream instance.
 func New(
+	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
-	cfg Config,
 ) *Stream {
 	return &Stream{
 		cfg:     cfg,

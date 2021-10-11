@@ -39,7 +39,7 @@ func TestPing_Pong(t *testing.T) {
 		_ = stanza.ToXML(outBuf, true)
 		return nil, nil
 	}
-	p := New(routerMock, &hook.Hooks{}, Config{})
+	p := New(Config{}, routerMock, &hook.Hooks{})
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -72,10 +72,10 @@ func TestPing_SendPing(t *testing.T) {
 		return nil, nil
 	}
 	hk := hook.NewHooks()
-	p := New(routerMock, hk, Config{
+	p := New(Config{
 		Interval:  time.Millisecond * 500,
 		SendPings: true,
-	})
+	}, routerMock, hk)
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	// when
@@ -116,12 +116,12 @@ func TestPing_Timeout(t *testing.T) {
 	}
 
 	hk := hook.NewHooks()
-	p := New(routerMock, hk, Config{
+	p := New(Config{
 		Interval:      time.Millisecond * 500,
 		AckTimeout:    time.Millisecond * 250,
 		SendPings:     true,
 		TimeoutAction: killAction,
-	})
+	}, routerMock, hk)
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	// when

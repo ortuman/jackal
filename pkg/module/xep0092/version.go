@@ -45,7 +45,7 @@ const (
 // Config contains version module configuration options.
 type Config struct {
 	// ShowOS tells whether OS info should be revealed or not.
-	ShowOS bool
+	ShowOS bool `fig:"show_os"`
 }
 
 // Version represents a version (XEP-0092) module type.
@@ -56,7 +56,7 @@ type Version struct {
 }
 
 // New returns a new initialized version instance.
-func New(router router.Router, cfg Config) *Version {
+func New(cfg Config, router router.Router) *Version {
 	return &Version{
 		router: router,
 		cfg:    cfg,

@@ -43,7 +43,7 @@ const ModuleName = "offline"
 // Config contains offline module configuration value.
 type Config struct {
 	// QueueSize defines maximum offline queue size.
-	QueueSize int
+	QueueSize int `fig:"queue_size" default:"200"`
 }
 
 // Offline represents offline module type.
@@ -59,13 +59,13 @@ type Offline struct {
 
 // New creates and initializes a new Offline instance.
 func New(
+	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	rep repository.Offline,
 	locker locker.Locker,
 	hk *hook.Hooks,
-	cfg Config,
 ) *Offline {
 	return &Offline{
 		cfg:    cfg,

@@ -18,6 +18,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/module/offline"
+
+	"github.com/ortuman/jackal/pkg/module/xep0092"
+
+	"github.com/ortuman/jackal/pkg/module/xep0198"
+
+	"github.com/ortuman/jackal/pkg/module/xep0199"
+
 	"github.com/ortuman/jackal/pkg/shaper"
 
 	"github.com/kkyr/fig"
@@ -64,34 +72,19 @@ type s2sOutConfig struct {
 type modulesConfig struct {
 	Enabled []string `fig:"enabled"`
 
-	Offline struct {
-		QueueSize int `fig:"queue_size" default:"200"`
-	} `fig:"offline"`
+	Offline offline.Config `fig:"offline"`
 
 	// XEP-0092: Software Version
-	Version struct {
-		ShowOS bool `fig:"show_os"`
-	} `fig:"version"`
+	Version xep0092.Config `fig:"version"`
 
 	// XEP-0198: Stream Management
-	Stream struct {
-		HibernateTime      time.Duration `fig:"hibernate_time" default:"3m"`
-		RequestAckInterval time.Duration `fig:"request_ack_interval" default:"2m"`
-		WaitForAckTimeout  time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
-		MaxQueueSize       int           `fig:"max_queue_size" default:"30"`
-	}
+	Stream xep0198.Config `fig:"stream"`
 
 	// XEP-0199: XMPP Ping
-	Ping struct {
-		AckTimeout    time.Duration `fig:"ack_timeout" default:"32s"`
-		Interval      time.Duration `fig:"interval" default:"1m"`
-		SendPings     bool          `fig:"send_pings"`
-		TimeoutAction string        `fig:"timeout_action" default:"none"`
-	} `fig:"ping"`
+	Ping xep0199.Config `fig:"ping"`
 }
 
-type componentsConfig struct {
-}
+type componentsConfig struct{}
 
 type serverConfig struct {
 	Logger struct {
@@ -110,8 +103,8 @@ type serverConfig struct {
 	Admin      adminserver.Config `fig:"admin"`
 	Storage    storage.Config     `fig:"storage"`
 	Hosts      []host.Config      `fig:"hosts"`
-	Listeners  []listenerConfig   `fig:"listeners"`
 	Shapers    []shaper.Config    `fig:"shapers"`
+	Listeners  []listenerConfig   `fig:"listeners"`
 	S2SOut     s2sOutConfig       `fig:"s2s_out"`
 	Modules    modulesConfig      `fig:"modules"`
 	Components componentsConfig   `fig:"components"`
