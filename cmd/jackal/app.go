@@ -26,15 +26,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/cluster/etcd"
-
-	"github.com/ortuman/jackal/pkg/storage"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
+	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/cluster/memberlist"
@@ -50,6 +47,7 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
+	"github.com/ortuman/jackal/pkg/storage"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/util/crashreporter"
 	"github.com/ortuman/jackal/pkg/version"
