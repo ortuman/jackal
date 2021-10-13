@@ -2,7 +2,7 @@
 
 An XMPP server written in Go.
 
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fortuman%2Fjackal%2Fbadge&style=flat)](https://actions-badge.atrox.dev/ortuman/jackal/goto)
+![CI Status](https://github.com/ortuman/jackal/workflows/CI/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ortuman/jackal?style=flat-square)](https://goreportcard.com/report/github.com/ortuman/jackal)
 [![Godoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/ortuman/jackal)
 [![Releases](https://img.shields.io/github/release/ortuman/jackal/all.svg?style=flat-square)](https://github.com/ortuman/jackal/releases)
