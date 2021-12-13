@@ -52,6 +52,7 @@ const (
 // Transport represents a stream transport mechanism.
 type Transport interface {
 	io.ReadWriteCloser
+	io.ByteReader
 
 	// Type returns transport type value.
 	Type() Type
