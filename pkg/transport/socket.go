@@ -66,6 +66,19 @@ func (s *socketTransport) Read(p []byte) (n int, err error) {
 	return s.rd.Read(p)
 }
 
+func (s *socketTransport) ReadByte() (byte, error) {
+	var p [1]byte
+	n, err := s.rd.Read(p[:])
+	switch {
+	case n == 1 && err == nil:
+		return p[0], nil
+	case err != nil:
+		return 0, err
+	default:
+		return 0, nil
+	}
+}
+
 func (s *socketTransport) Write(p []byte) (n int, err error) {
 	if s.bw == nil {
 		s.grabBuffWriter()
