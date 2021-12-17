@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s_new
+package c2s
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func TestSocketListener_Listen(t *testing.T) {
 	// given
 	var handledConn uint32
 
-	s := &socketListener{
+	s := &SocketListener{
 		cfg: ListenerConfig{BindAddr: "", Port: 51124},
 		connHandlerFn: func(_ net.Conn) {
 			atomic.StoreUint32(&handledConn, 1)

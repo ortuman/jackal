@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s_new
+package c2s
 
 import (
 	"context"
@@ -58,8 +58,8 @@ var resConflictMap = map[string]resourceConflict{
 	"terminate_old": terminateOld,
 }
 
-// socketListener represents a C2S socket listener type.
-type socketListener struct {
+// SocketListener represents a C2S socket listener type.
+type SocketListener struct {
 	cfg     ListenerConfig
 	extAuth *auth.External
 	hosts   *host.Hosts
@@ -79,6 +79,38 @@ type socketListener struct {
 	active uint32
 }
 
+// NewListeners creates and initializes a set of C2S listeners based of cfg configuration.
+func NewListeners(
+	cfg ListenersConfig,
+	hosts *host.Hosts,
+	router router.Router,
+	comps *component.Components,
+	mods *module.Modules,
+	resMng *ResourceManager,
+	rep repository.Repository,
+	peppers *pepper.Keys,
+	shapers shaper.Shapers,
+	hk *hook.Hooks,
+) []*SocketListener {
+	var listeners []*SocketListener
+	for _, lnCfg := range cfg {
+		ln := newSocketListener(
+			lnCfg,
+			hosts,
+			router,
+			comps,
+			mods,
+			resMng,
+			rep,
+			peppers,
+			shapers,
+			hk,
+		)
+		listeners = append(listeners, ln)
+	}
+	return listeners
+}
+
 func newSocketListener(
 	cfg ListenerConfig,
 	hosts *host.Hosts,
@@ -90,7 +122,7 @@ func newSocketListener(
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-) *socketListener {
+) *SocketListener {
 	var extAuth *auth.External
 	if len(cfg.SASL.External.Address) > 0 {
 		extAuth = auth.NewExternal(
@@ -98,7 +130,7 @@ func newSocketListener(
 			cfg.SASL.External.IsSecure,
 		)
 	}
-	ln := &socketListener{
+	ln := &SocketListener{
 		cfg:     cfg,
 		extAuth: extAuth,
 		hosts:   hosts,
@@ -115,7 +147,7 @@ func newSocketListener(
 	return ln
 }
 
-func (l *socketListener) Start(ctx context.Context) error {
+func (l *SocketListener) Start(ctx context.Context) error {
 	if l.extAuth != nil {
 		// dial external authenticator
 		if err := l.extAuth.Start(ctx); err != nil {
@@ -163,7 +195,7 @@ func (l *socketListener) Start(ctx context.Context) error {
 	return nil
 }
 
-func (l *socketListener) Stop(ctx context.Context) error {
+func (l *SocketListener) Stop(ctx context.Context) error {
 	atomic.StoreUint32(&l.active, 0)
 	if err := l.ln.Close(); err != nil {
 		return err
@@ -178,7 +210,7 @@ func (l *socketListener) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (l *socketListener) handleConn(conn net.Conn) {
+func (l *SocketListener) handleConn(conn net.Conn) {
 	tr := transport.NewSocketTransport(conn)
 	stm, err := newInC2S(
 		l.getInConfig(),
@@ -203,7 +235,7 @@ func (l *socketListener) handleConn(conn net.Conn) {
 	}
 }
 
-func (l *socketListener) getAuthenticators(tr transport.Transport) []auth.Authenticator {
+func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authenticator {
 	var res []auth.Authenticator
 	if l.extAuth != nil {
 		res = append(res, l.extAuth)
@@ -232,7 +264,7 @@ func (l *socketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 	return res
 }
 
-func (l *socketListener) getInConfig() inCfg {
+func (l *SocketListener) getInConfig() inCfg {
 	return inCfg{
 		connectTimeout:      l.cfg.ConnectTimeout,
 		authenticateTimeout: l.cfg.AuthenticateTimeout,
@@ -246,6 +278,6 @@ func (l *socketListener) getInConfig() inCfg {
 	}
 }
 
-func (l *socketListener) getAddress() string {
+func (l *SocketListener) getAddress() string {
 	return l.cfg.BindAddr + ":" + strconv.Itoa(l.cfg.Port)
 }

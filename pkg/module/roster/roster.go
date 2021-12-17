@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ortuman/jackal/pkg/c2s_new"
+	"github.com/ortuman/jackal/pkg/c2s"
 
 	"github.com/ortuman/jackal/pkg/router/stream"
 
@@ -62,7 +62,7 @@ type Roster struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s_new.ResourceManager,
+	resMng *c2s.ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 ) *Roster {

@@ -21,7 +21,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s_new"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
@@ -60,7 +60,7 @@ type Carbons struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s_new.ResourceManager,
+	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
 ) *Carbons {
 	return &Carbons{

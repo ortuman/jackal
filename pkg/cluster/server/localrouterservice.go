@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-	"github.com/ortuman/jackal/pkg/c2s_new"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,7 +47,7 @@ type localRouterService struct {
 	r localRouter
 }
 
-func newLocalRouterService(r *c2s_new.LocalRouter) *localRouterService {
+func newLocalRouterService(r *c2s.LocalRouter) *localRouterService {
 	return &localRouterService{r: r}
 }
 

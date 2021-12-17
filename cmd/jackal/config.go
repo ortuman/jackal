@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/c2s_new"
+	"github.com/ortuman/jackal/pkg/c2s"
 
 	"github.com/ortuman/jackal/pkg/module/offline"
 
@@ -101,16 +101,20 @@ type serverConfig struct {
 
 	HTTPPort int `fig:"http_port" default:"6060"`
 
-	Peppers    pepper.Config      `fig:"peppers"`
-	Admin      adminserver.Config `fig:"admin"`
-	Storage    storage.Config     `fig:"storage"`
-	Hosts      []host.Config      `fig:"hosts"`
-	Shapers    []shaper.Config    `fig:"shapers"`
-	C2S        c2s_new.Config     `fig:"c2s"`
-	Listeners  []listenerConfig   `fig:"listeners"`
-	S2SOut     s2sOutConfig       `fig:"s2s_out"`
-	Modules    modulesConfig      `fig:"modules"`
-	Components componentsConfig   `fig:"components"`
+	Peppers pepper.Config      `fig:"peppers"`
+	Admin   adminserver.Config `fig:"admin"`
+	Storage storage.Config     `fig:"storage"`
+	Hosts   []host.Config      `fig:"hosts"`
+	Shapers []shaper.Config    `fig:"shapers"`
+
+	C2S struct {
+		Listeners c2s.ListenersConfig `fig:"listeners"`
+	} `fig:"c2s"`
+
+	Listeners  []listenerConfig `fig:"listeners"`
+	S2SOut     s2sOutConfig     `fig:"s2s_out"`
+	Modules    modulesConfig    `fig:"modules"`
+	Components componentsConfig `fig:"components"`
 }
 
 func loadConfig(configFile string) (*serverConfig, error) {
