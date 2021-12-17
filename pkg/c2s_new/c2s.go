@@ -52,8 +52,9 @@ func New(
 func (c *C2S) Start(ctx context.Context) error {
 	eGroup, egCtx := errgroup.WithContext(ctx)
 	for i := 0; i < len(c.listeners); i++ {
+		idx := i
 		eGroup.Go(func() error {
-			ln := c.listeners[i]
+			ln := c.listeners[idx]
 			return ln.Start(egCtx)
 		})
 	}
@@ -63,8 +64,9 @@ func (c *C2S) Start(ctx context.Context) error {
 func (c *C2S) Stop(ctx context.Context) error {
 	eGroup, egCtx := errgroup.WithContext(ctx)
 	for i := 0; i < len(c.listeners); i++ {
+		idx := i
 		eGroup.Go(func() error {
-			ln := c.listeners[i]
+			ln := c.listeners[idx]
 			return ln.Stop(egCtx)
 		})
 	}
