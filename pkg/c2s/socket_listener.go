@@ -147,6 +147,7 @@ func newSocketListener(
 	return ln
 }
 
+// Start starts listening on a TCP network address to handle incoming C2S connections.
 func (l *SocketListener) Start(ctx context.Context) error {
 	if l.extAuth != nil {
 		// dial external authenticator
@@ -195,6 +196,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop stops handling incoming C2S connections and closes underlying TCP listener.
 func (l *SocketListener) Stop(ctx context.Context) error {
 	atomic.StoreUint32(&l.active, 0)
 	if err := l.ln.Close(); err != nil {
