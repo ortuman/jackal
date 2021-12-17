@@ -4,7 +4,7 @@ import "time"
 
 // Config defines C2S subsystem configuration.
 type Config struct {
-	Listeners []ListenerConfig `fig:"listener"`
+	Listeners []ListenerConfig `fig:"listeners"`
 }
 
 // ListenerConfig contains a C2S listener configuration.

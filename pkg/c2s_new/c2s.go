@@ -11,7 +11,6 @@ import (
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/storage/repository"
-	"golang.org/x/sync/errgroup"
 )
 
 type C2S struct {
@@ -50,25 +49,19 @@ func New(
 }
 
 func (c *C2S) Start(ctx context.Context) error {
-	eGroup, egCtx := errgroup.WithContext(ctx)
-	for i := 0; i < len(c.listeners); i++ {
-		idx := i
-		eGroup.Go(func() error {
-			ln := c.listeners[idx]
-			return ln.Start(egCtx)
-		})
+	for _, ln := range c.listeners {
+		if err := ln.Start(ctx); err != nil {
+			return err
+		}
 	}
-	return eGroup.Wait()
+	return nil
 }
 
 func (c *C2S) Stop(ctx context.Context) error {
-	eGroup, egCtx := errgroup.WithContext(ctx)
-	for i := 0; i < len(c.listeners); i++ {
-		idx := i
-		eGroup.Go(func() error {
-			ln := c.listeners[idx]
-			return ln.Stop(egCtx)
-		})
+	for _, ln := range c.listeners {
+		if err := ln.Stop(ctx); err != nil {
+			return err
+		}
 	}
-	return eGroup.Wait()
+	return nil
 }
