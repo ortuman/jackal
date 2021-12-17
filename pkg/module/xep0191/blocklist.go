@@ -18,17 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/c2s_new"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
@@ -65,7 +64,7 @@ type BlockList struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng *c2s_new.ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 ) *BlockList {

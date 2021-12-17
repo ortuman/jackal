@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/c2s_new"
+
 	"github.com/ortuman/jackal/pkg/module/offline"
 
 	"github.com/ortuman/jackal/pkg/module/xep0092"
@@ -104,6 +106,7 @@ type serverConfig struct {
 	Storage    storage.Config     `fig:"storage"`
 	Hosts      []host.Config      `fig:"hosts"`
 	Shapers    []shaper.Config    `fig:"shapers"`
+	C2S        c2s_new.Config     `fig:"c2s"`
 	Listeners  []listenerConfig   `fig:"listeners"`
 	S2SOut     s2sOutConfig       `fig:"s2s_out"`
 	Modules    modulesConfig      `fig:"modules"`

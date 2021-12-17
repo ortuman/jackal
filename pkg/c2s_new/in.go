@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s
+package c2s_new
 
 import (
 	"context"
@@ -69,6 +69,26 @@ var (
 	disconnectTimeout = time.Second * 5
 )
 
+type resourceConflict int8
+
+const (
+	override resourceConflict = iota
+	disallow
+	terminateOld
+)
+
+type inCfg struct {
+	connectTimeout      time.Duration
+	authenticateTimeout time.Duration
+	keepAliveTimeout    time.Duration
+	reqTimeout          time.Duration
+	maxStanzaSize       int
+	compressionLevel    compress.Level
+	resConflict         resourceConflict
+	useTLS              bool
+	tlsConfig           *tls.Config
+}
+
 type authState struct {
 	authenticators []auth.Authenticator
 	active         auth.Authenticator
@@ -83,7 +103,7 @@ func (a *authState) reset() {
 
 type inC2S struct {
 	id           stream.C2SID
-	cfg          Config
+	cfg          inCfg
 	tr           transport.Transport
 	authSt       authState
 	hosts        hosts
@@ -108,6 +128,7 @@ type inC2S struct {
 }
 
 func newInC2S(
+	cfg inCfg,
 	tr transport.Transport,
 	authenticators []auth.Authenticator,
 	hosts *host.Hosts,
@@ -117,7 +138,6 @@ func newInC2S(
 	resMng *ResourceManager,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
 ) (*inC2S, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultC2S().RateLimiter()
@@ -132,7 +152,7 @@ func newInC2S(
 		tr,
 		hosts,
 		xmppsession.Config{
-			MaxStanzaSize: cfg.MaxStanzaSize,
+			MaxStanzaSize: cfg.maxStanzaSize,
 		},
 	)
 	// init stream
@@ -154,7 +174,7 @@ func newInC2S(
 		state:   inConnecting,
 		hk:      hk,
 	}
-	if cfg.UseTLS {
+	if cfg.useTLS {
 		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
@@ -338,11 +358,11 @@ func (s *inC2S) start() error {
 func (s *inC2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
-	authTm := time.AfterFunc(s.cfg.AuthenticateTimeout, s.connTimeout) // schedule authenticate timeout
+	authTm := time.AfterFunc(s.cfg.authenticateTimeout, s.connTimeout) // schedule authenticate timeout
 	defer authTm.Stop()
 
 	for {
@@ -358,7 +378,7 @@ func (s *inC2S) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -780,7 +800,7 @@ func (s *inC2S) authenticatedFeatures(ctx context.Context) ([]stravaganza.Elemen
 	isSocketTr := s.tr.Type() == transport.Socket
 
 	// compression feature
-	compressionAvailable := isSocketTr && s.cfg.CompressionLevel != compress.NoCompression
+	compressionAvailable := isSocketTr && s.cfg.compressionLevel != compress.NoCompression
 
 	if !s.flags.isCompressed() && compressionAvailable {
 		compressionElem := stravaganza.NewBuilder("compression").
@@ -948,7 +968,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 		return err
 	}
 	// compress transport
-	s.tr.EnableCompression(s.cfg.CompressionLevel)
+	s.tr.EnableCompression(s.cfg.compressionLevel)
 	s.flags.setCompressed()
 
 	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
@@ -986,14 +1006,14 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 			if rs.JID.Resource() != res {
 				continue
 			}
-			switch s.cfg.ResourceConflict {
+			switch s.cfg.resConflict {
 			// replace by a server generated resourcepart
-			case Override:
+			case override:
 				res = uuid.New().String()
 				break
 
 			// disconnect previously connected resource
-			case TerminateOld:
+			case terminateOld:
 				se := streamerror.E(streamerror.PolicyViolation)
 				se.ApplicationElement = stravaganza.NewBuilder("resource-conflict").
 					WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
@@ -1004,7 +1024,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 				break
 
 			// disallow resource binding
-			case Disallow:
+			case disallow:
 				return s.sendElement(ctx, stanzaerror.E(stanzaerror.Conflict, iq).Element())
 			}
 			break
@@ -1213,7 +1233,7 @@ func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook.C2SStrea
 }
 
 func (s *inC2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.reqTimeout)
 }
 
 var currentID uint64

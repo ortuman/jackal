@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s
+package c2s_new
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	resourcemanagerpb "github.com/ortuman/jackal/pkg/c2s/pb"
+	resourcemanagerpb "github.com/ortuman/jackal/pkg/c2s_new/pb"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )

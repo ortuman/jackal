@@ -31,6 +31,8 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
+require golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect

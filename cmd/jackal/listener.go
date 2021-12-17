@@ -17,15 +17,12 @@ package main
 import (
 	"crypto/tls"
 
-	"github.com/ortuman/jackal/pkg/auth"
-	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/transport/compress"
 )
 
 const (
-	c2sListener       = "c2s"
 	s2sListener       = "s2s"
 	componentListener = "component"
 )
@@ -36,51 +33,7 @@ var cmpLevelMap = map[string]compress.Level{
 	"speed":   compress.SpeedCompression,
 }
 
-var resConflictMap = map[string]c2s.ResourceConflict{
-	"override":      c2s.Override,
-	"disallow":      c2s.Disallow,
-	"terminate_old": c2s.TerminateOld,
-}
-
 var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
-	c2sListener: func(a *serverApp, cfg listenerConfig) startStopper {
-		var extAuth *auth.External
-		if len(cfg.SASL.External.Address) > 0 {
-			extAuth = auth.NewExternal(
-				cfg.SASL.External.Address,
-				cfg.SASL.External.IsSecure,
-			)
-		}
-		return c2s.NewSocketListener(
-			cfg.BindAddr,
-			cfg.Port,
-			cfg.SASL.Mechanisms,
-			extAuth,
-			a.hosts,
-			a.router,
-			a.comps,
-			a.mods,
-			a.resMng,
-			a.rep,
-			a.peppers,
-			a.shapers,
-			a.hk,
-			c2s.Config{
-				ConnectTimeout:      cfg.ConnectTimeout,
-				AuthenticateTimeout: cfg.AuthenticateTimeout,
-				KeepAliveTimeout:    cfg.KeepAliveTimeout,
-				RequestTimeout:      cfg.RequestTimeout,
-				MaxStanzaSize:       cfg.MaxStanzaSize,
-				CompressionLevel:    cmpLevelMap[cfg.CompressionLevel],
-				ResourceConflict:    resConflictMap[cfg.ResourceConflict],
-				UseTLS:              cfg.DirectTLS,
-				TLSConfig: &tls.Config{
-					Certificates: a.hosts.Certificates(),
-					MinVersion:   tls.VersionTLS12,
-				},
-			},
-		)
-	},
 	s2sListener: func(a *serverApp, cfg listenerConfig) startStopper {
 		return s2s.NewSocketListener(
 			cfg.BindAddr,

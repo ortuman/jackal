@@ -26,10 +26,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/c2s_new"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
-	"github.com/ortuman/jackal/pkg/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -104,12 +105,14 @@ type serverApp struct {
 
 	rep        repository.Repository
 	memberList *memberlist.MemberList
-	resMng     *c2s.ResourceManager
+	resMng     *c2s_new.ResourceManager
 
 	shapers        shaper.Shapers
 	hosts          *host.Hosts
 	clusterConnMng *clusterconnmanager.Manager
-	localRouter    *c2s.LocalRouter
+	c2s            *c2s_new.C2S
+
+	localRouter    *c2s_new.LocalRouter
 	clusterRouter  *clusterrouter.Router
 	s2sOutProvider *s2s.OutProvider
 	s2sInHub       *s2s.InHub
@@ -241,6 +244,8 @@ func run(output io.Writer, args []string) error {
 	a.initMemberList(cfg.Cluster.Server.Port)
 
 	// init C2S/S2S listeners
+	a.initC2S(cfg.C2S)
+
 	if err := a.initListeners(cfg.Listeners); err != nil {
 		return err
 	}
@@ -341,15 +346,31 @@ func (a *serverApp) initS2S(cfg s2sOutConfig) {
 	a.registerStartStopper(a.s2sInHub)
 }
 
+func (a *serverApp) initC2S(cfg c2s_new.Config) {
+	a.c2s = c2s_new.New(
+		cfg,
+		a.hosts,
+		a.router,
+		a.comps,
+		a.mods,
+		a.resMng,
+		a.rep,
+		a.peppers,
+		a.shapers,
+		a.hk,
+	)
+	a.registerStartStopper(a.c2s)
+}
+
 func (a *serverApp) initRouters() {
 	// init shared resource hub
-	a.resMng = c2s.NewResourceManager(a.kv)
+	a.resMng = c2s_new.NewResourceManager(a.kv)
 
 	// init C2S router
-	a.localRouter = c2s.NewLocalRouter(a.hosts)
+	a.localRouter = c2s_new.NewLocalRouter(a.hosts)
 	a.clusterRouter = clusterrouter.New(a.clusterConnMng)
 
-	c2sRouter := c2s.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.hk)
+	c2sRouter := c2s_new.NewRouter(a.localRouter, a.clusterRouter, a.resMng, a.rep, a.hk)
 	s2sRouter := s2s.NewRouter(a.s2sOutProvider)
 
 	// init global router

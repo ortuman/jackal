@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s
+package c2s_new
 
 import (
 	"bytes"
@@ -720,12 +720,12 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			userJID, _ := jid.NewWithString("ortuman@localhost", true)
 			stm := &inC2S{
-				cfg: Config{
-					KeepAliveTimeout: time.Minute,
-					RequestTimeout:   time.Minute,
-					MaxStanzaSize:    8192,
-					CompressionLevel: compress.DefaultCompression,
-					ResourceConflict: Disallow,
+				cfg: inCfg{
+					keepAliveTimeout: time.Minute,
+					reqTimeout:       time.Minute,
+					maxStanzaSize:    8192,
+					compressionLevel: compress.DefaultCompression,
+					resConflict:      disallow,
 				},
 				state:  tt.state,
 				flags:  flags{flg: tt.flags},
@@ -817,10 +817,10 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inC2S{
-				cfg: Config{
-					KeepAliveTimeout: time.Minute,
-					RequestTimeout:   time.Minute,
-					MaxStanzaSize:    8192,
+				cfg: inCfg{
+					keepAliveTimeout: time.Minute,
+					reqTimeout:       time.Minute,
+					maxStanzaSize:    8192,
 				},
 				state:   tt.state,
 				rq:      runqueue.New(tt.name),

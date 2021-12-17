@@ -21,7 +21,7 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/c2s_new"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
@@ -62,7 +62,7 @@ func New(
 	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng *c2s_new.ResourceManager,
 	rep repository.Offline,
 	locker locker.Locker,
 	hk *hook.Hooks,

@@ -20,8 +20,9 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/ortuman/jackal/pkg/c2s_new"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/ortuman/jackal/pkg/c2s"
 	clusterpb "github.com/ortuman/jackal/pkg/cluster/pb"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/log"
@@ -36,7 +37,7 @@ type Server struct {
 	ln          net.Listener
 	srv         *grpc.Server
 	active      int32
-	localRouter *c2s.LocalRouter
+	localRouter *c2s_new.LocalRouter
 	comps       *component.Components
 }
 
@@ -47,7 +48,7 @@ type Config struct {
 }
 
 // New returns a new initialized Server instance.
-func New(cfg Config, localRouter *c2s.LocalRouter, comps *component.Components) *Server {
+func New(cfg Config, localRouter *c2s_new.LocalRouter, comps *component.Components) *Server {
 	return &Server{
 		cfg:         cfg,
 		localRouter: localRouter,
