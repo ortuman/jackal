@@ -56,9 +56,17 @@ const (
 
 var disconnectTimeout = time.Second * 5
 
+type inConfig struct {
+	connectTimeout   time.Duration
+	keepAliveTimeout time.Duration
+	reqTimeout       time.Duration
+	maxStanzaSize    int
+	secret           string
+}
+
 type inComponent struct {
 	id           inComponentID
-	cfg          Config
+	cfg          inConfig
 	tr           transport.Transport
 	shapers      shaper.Shapers
 	session      session
@@ -88,7 +96,7 @@ func newInComponent(
 	router router.Router,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
+	cfg inConfig,
 ) (*inComponent, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultS2S().RateLimiter()
@@ -104,7 +112,7 @@ func newInComponent(
 		tr,
 		hosts,
 		xmppsession.Config{
-			MaxStanzaSize: cfg.MaxStanzaSize,
+			MaxStanzaSize: cfg.maxStanzaSize,
 		},
 	)
 	// init stream
@@ -173,7 +181,7 @@ func (s *inComponent) done() <-chan struct{} {
 func (s *inComponent) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -187,7 +195,7 @@ func (s *inComponent) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -282,7 +290,7 @@ func (s *inComponent) handleHandshaking(ctx context.Context, elem stravaganza.El
 	}
 	// compute handshake
 	h := sha1.New()
-	h.Write([]byte(s.session.StreamID() + s.cfg.Secret))
+	h.Write([]byte(s.session.StreamID() + s.cfg.secret))
 	hs := hex.EncodeToString(h.Sum(nil))
 
 	if elem.Text() != hs {
@@ -453,7 +461,7 @@ func (s *inComponent) runHook(ctx context.Context, hookName string, inf *hook.Ex
 }
 
 func (s *inComponent) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.reqTimeout)
 }
 
 var currentID uint64

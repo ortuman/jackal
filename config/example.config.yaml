@@ -89,10 +89,6 @@ listeners:
     req_timeout: 60s
     max_stanza_size: 131072
 
-  - type: component
-    port: 5275
-    secret: hqcUrfHtgE73FktcXwfrP
-
 s2s_out:
   dialback_secret: s3cr3tf0rd14lb4ck
   dial_timeout: 5s
@@ -128,4 +124,7 @@ modules:
 #    timeout_action: kill
 
 components:
+  listeners:
+    - port: 5275
+      secret: hqcUrfHtgE73FktcXwfrP
 

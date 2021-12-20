@@ -26,11 +26,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/c2s"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -40,6 +39,7 @@ import (
 	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
+	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
@@ -225,7 +225,7 @@ func run(output io.Writer, args []string) error {
 	a.initRouters()
 
 	// init components & modules
-	a.initComponents(cfg.Components)
+	a.initComponents()
 
 	if err := a.initModules(cfg.Modules); err != nil {
 		return err
@@ -243,7 +243,7 @@ func run(output io.Writer, args []string) error {
 	a.initMemberList(cfg.Cluster.Server.Port)
 
 	// init C2S/S2S listeners
-	if err := a.initListeners(cfg.C2S.Listeners, cfg.Listeners); err != nil {
+	if err := a.initListeners(cfg.C2S.Listeners, cfg.Components.Listeners, cfg.Listeners); err != nil {
 		return err
 	}
 
@@ -316,8 +316,12 @@ func (a *serverApp) initMemberList(clusterPort int) {
 	return
 }
 
-func (a *serverApp) initListeners(c2sListenersConfig c2s.ListenersConfig, configs []listenerConfig) error {
-	lns := c2s.NewListeners(
+func (a *serverApp) initListeners(
+	c2sListenersConfig c2s.ListenersConfig,
+	cmpListenersConfig xep0114.ListenersConfig,
+	configs []listenerConfig,
+) error {
+	c2sListeners := c2s.NewListeners(
 		c2sListenersConfig,
 		a.hosts,
 		a.router,
@@ -329,7 +333,20 @@ func (a *serverApp) initListeners(c2sListenersConfig c2s.ListenersConfig, config
 		a.shapers,
 		a.hk,
 	)
-	for _, ln := range lns {
+	for _, ln := range c2sListeners {
+		a.registerStartStopper(ln)
+	}
+
+	cmpListeners := xep0114.NewListeners(
+		cmpListenersConfig,
+		a.hosts,
+		a.comps,
+		a.extCompMng,
+		a.router,
+		a.shapers,
+		a.hk,
+	)
+	for _, ln := range cmpListeners {
 		a.registerStartStopper(ln)
 	}
 
@@ -377,7 +394,7 @@ func (a *serverApp) initRouters() {
 	return
 }
 
-func (a *serverApp) initComponents(_ componentsConfig) {
+func (a *serverApp) initComponents() {
 	a.comps = component.NewComponents(nil, a.hk)
 	a.extCompMng = extcomponentmanager.New(a.kv, a.clusterConnMng, a.comps)
 

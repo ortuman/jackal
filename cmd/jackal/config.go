@@ -18,24 +18,19 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/c2s"
-
-	"github.com/ortuman/jackal/pkg/module/offline"
-
-	"github.com/ortuman/jackal/pkg/module/xep0092"
-
-	"github.com/ortuman/jackal/pkg/module/xep0198"
-
-	"github.com/ortuman/jackal/pkg/module/xep0199"
-
-	"github.com/ortuman/jackal/pkg/shaper"
-
 	"github.com/kkyr/fig"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
+	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/host"
+	"github.com/ortuman/jackal/pkg/module/offline"
+	"github.com/ortuman/jackal/pkg/module/xep0092"
+	"github.com/ortuman/jackal/pkg/module/xep0198"
+	"github.com/ortuman/jackal/pkg/module/xep0199"
+	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/storage"
 )
 
@@ -86,8 +81,6 @@ type modulesConfig struct {
 	Ping xep0199.Config `fig:"ping"`
 }
 
-type componentsConfig struct{}
-
 type serverConfig struct {
 	Logger struct {
 		Level      string `fig:"level" default:"debug"`
@@ -111,10 +104,13 @@ type serverConfig struct {
 		Listeners c2s.ListenersConfig `fig:"listeners"`
 	} `fig:"c2s"`
 
-	Listeners  []listenerConfig `fig:"listeners"`
-	S2SOut     s2sOutConfig     `fig:"s2s_out"`
-	Modules    modulesConfig    `fig:"modules"`
-	Components componentsConfig `fig:"components"`
+	Components struct {
+		Listeners xep0114.ListenersConfig `fig:"listeners"`
+	} `fig:"components"`
+
+	Listeners []listenerConfig `fig:"listeners"`
+	S2SOut    s2sOutConfig     `fig:"s2s_out"`
+	Modules   modulesConfig    `fig:"modules"`
 }
 
 func loadConfig(configFile string) (*serverConfig, error) {

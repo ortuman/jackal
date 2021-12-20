@@ -36,29 +36,9 @@ const (
 	listenKeepAlive = time.Second * 15
 )
 
-// Config defines component connection configuration.
-type Config struct {
-	// ConnectTimeout defines connection timeout.
-	ConnectTimeout time.Duration
-
-	// KeepAliveTimeout defines the maximum amount of time that an inactive connection
-	// would be considered alive.
-	KeepAliveTimeout time.Duration
-
-	// RequestTimeout defines component stream request timeout.
-	RequestTimeout time.Duration
-
-	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
-	MaxStanzaSize int
-
-	// Secret is the external component shared secret.
-	Secret string
-}
-
 // SocketListener represents a component socket listener type.
 type SocketListener struct {
-	addr          string
-	cfg           Config
+	cfg           ListenerConfig
 	hosts         *host.Hosts
 	comps         *component.Components
 	router        router.Router
@@ -72,20 +52,42 @@ type SocketListener struct {
 	active uint32
 }
 
-// NewSocketListener returns a new external component socket listener.
-func NewSocketListener(
-	bindAddr string,
-	port int,
+// NewListeners creates and initializes a set of component listeners based of cfg configuration.
+func NewListeners(
+	cfg ListenersConfig,
 	hosts *host.Hosts,
 	comps *component.Components,
 	extCompMng *extcomponentmanager.Manager,
 	router router.Router,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
+) []*SocketListener {
+	var listeners []*SocketListener
+	for _, lnCfg := range cfg {
+		ln := newSocketListener(
+			lnCfg,
+			hosts,
+			comps,
+			extCompMng,
+			router,
+			shapers,
+			hk,
+		)
+		listeners = append(listeners, ln)
+	}
+	return listeners
+}
+
+func newSocketListener(
+	cfg ListenerConfig,
+	hosts *host.Hosts,
+	comps *component.Components,
+	extCompMng *extcomponentmanager.Manager,
+	router router.Router,
+	shapers shaper.Shapers,
+	hk *hook.Hooks,
 ) *SocketListener {
 	ln := &SocketListener{
-		addr:       getAddress(bindAddr, port),
 		hosts:      hosts,
 		comps:      comps,
 		router:     router,
@@ -106,7 +108,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	lc := net.ListenConfig{
 		KeepAlive: listenKeepAlive,
 	}
-	ln, err := lc.Listen(ctx, "tcp", l.addr)
+	ln, err := lc.Listen(ctx, "tcp", l.getAddress())
 	if err != nil {
 		return err
 	}
@@ -120,13 +122,13 @@ func (l *SocketListener) Start(ctx context.Context) error {
 				continue
 			}
 			log.Infow(
-				fmt.Sprintf("Received component incoming connection at %s", l.addr),
+				fmt.Sprintf("Received component incoming connection at %s", l.getAddress()),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting external component connections at %s", l.addr)
+	log.Infof("Accepting external component connections at %s", l.getAddress())
 	return nil
 }
 
@@ -138,7 +140,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 	}
 	l.stmHub.stop(ctx)
 
-	log.Infof("Stopped external component listener at %s", l.addr)
+	log.Infof("Stopped external component listener at %s", l.getAddress())
 	return nil
 }
 
@@ -153,7 +155,13 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.router,
 		l.shapers,
 		l.hk,
-		l.cfg,
+		inConfig{
+			connectTimeout:   l.cfg.ConnectTimeout,
+			keepAliveTimeout: l.cfg.KeepAliveTimeout,
+			reqTimeout:       l.cfg.RequestTimeout,
+			maxStanzaSize:    l.cfg.MaxStanzaSize,
+			secret:           l.cfg.Secret,
+		},
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize component stream: %v", err)
@@ -166,6 +174,6 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 	}
 }
 
-func getAddress(bindAddr string, port int) string {
-	return bindAddr + ":" + strconv.Itoa(port)
+func (l *SocketListener) getAddress() string {
+	return l.cfg.BindAddr + ":" + strconv.Itoa(l.cfg.Port)
 }

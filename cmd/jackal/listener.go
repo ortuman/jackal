@@ -17,21 +17,12 @@ package main
 import (
 	"crypto/tls"
 
-	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/s2s"
-	"github.com/ortuman/jackal/pkg/transport/compress"
 )
 
 const (
-	s2sListener       = "s2s"
-	componentListener = "component"
+	s2sListener = "s2s"
 )
-
-var cmpLevelMap = map[string]compress.Level{
-	"default": compress.DefaultCompression,
-	"best":    compress.BestCompression,
-	"speed":   compress.SpeedCompression,
-}
 
 var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 	s2sListener: func(a *serverApp, cfg listenerConfig) startStopper {
@@ -58,25 +49,6 @@ var lnFns = map[string]func(a *serverApp, cfg listenerConfig) startStopper{
 					ClientAuth:   tls.RequireAndVerifyClientCert,
 					MinVersion:   tls.VersionTLS12,
 				},
-			},
-		)
-	},
-	componentListener: func(a *serverApp, cfg listenerConfig) startStopper {
-		return xep0114.NewSocketListener(
-			cfg.BindAddr,
-			cfg.Port,
-			a.hosts,
-			a.comps,
-			a.extCompMng,
-			a.router,
-			a.shapers,
-			a.hk,
-			xep0114.Config{
-				ConnectTimeout:   cfg.ConnectTimeout,
-				KeepAliveTimeout: cfg.KeepAliveTimeout,
-				RequestTimeout:   cfg.RequestTimeout,
-				MaxStanzaSize:    cfg.MaxStanzaSize,
-				Secret:           cfg.Secret,
 			},
 		)
 	},
