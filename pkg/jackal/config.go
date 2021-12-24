@@ -64,10 +64,10 @@ type ComponentsConfig struct {
 
 // ModulesConfig defines application modules configuration.
 type ModulesConfig struct {
-	// Enabled defines total set of enabled modules
+	// Enabled specifies total set of enabled modules
 	Enabled []string `fig:"enabled"`
 
-	// Offline offline storage
+	// Offline: offline storage
 	Offline offline.Config `fig:"offline"`
 
 	// XEP-0092: Software Version
