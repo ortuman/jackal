@@ -16,7 +16,6 @@ package main
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/kkyr/fig"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
@@ -30,41 +29,10 @@ import (
 	"github.com/ortuman/jackal/pkg/module/xep0092"
 	"github.com/ortuman/jackal/pkg/module/xep0198"
 	"github.com/ortuman/jackal/pkg/module/xep0199"
+	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/storage"
 )
-
-type listenerConfig struct {
-	Type      string `fig:"type" default:"c2s"`
-	BindAddr  string `fig:"bind_addr"`
-	Port      int    `fig:"port" default:"5222"`
-	Transport string `fig:"transport" default:"socket"`
-	DirectTLS bool   `fig:"direct_tls"`
-	SASL      struct {
-		Mechanisms []string `fig:"mechanisms" default:"[scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]"`
-		External   struct {
-			Address  string `fig:"address"`
-			IsSecure bool   `fig:"is_secure"`
-		} `fig:"external"`
-	} `fig:"sasl"`
-	CompressionLevel    string        `fig:"compression_level" default:"default"`
-	ResourceConflict    string        `fig:"resource_conflict" default:"terminate_old"`
-	MaxStanzaSize       int           `fig:"max_stanza_size" default:"32768"`
-	Secret              string        `fig:"secret"`
-	ConnectTimeout      time.Duration `fig:"conn_timeout" default:"3s"`
-	AuthenticateTimeout time.Duration `fig:"auth_timeout" default:"10s"`
-	KeepAliveTimeout    time.Duration `fig:"keep_alive_timeout" default:"10m"`
-	RequestTimeout      time.Duration `fig:"req_timeout" default:"15s"`
-}
-
-type s2sOutConfig struct {
-	DialTimeout      time.Duration `fig:"dial_timeout" default:"5s"`
-	DialbackSecret   string        `fig:"secret"`
-	ConnectTimeout   time.Duration `fig:"conn_timeout" default:"3s"`
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"120s"`
-	RequestTimeout   time.Duration `fig:"req_timeout" default:"15s"`
-	MaxStanzaSize    int           `fig:"max_stanza_size" default:"131072"`
-}
 
 type modulesConfig struct {
 	Enabled []string `fig:"enabled"`
@@ -104,13 +72,17 @@ type serverConfig struct {
 		Listeners c2s.ListenersConfig `fig:"listeners"`
 	} `fig:"c2s"`
 
+	S2S struct {
+		Listeners      s2s.ListenersConfig `fig:"listeners"`
+		Out            s2s.OutConfig       `fig:"out"`
+		DialbackSecret string              `fig:"dialback_secret"`
+	} `fig:"s2s"`
+
 	Components struct {
 		Listeners xep0114.ListenersConfig `fig:"listeners"`
 	} `fig:"components"`
 
-	Listeners []listenerConfig `fig:"listeners"`
-	S2SOut    s2sOutConfig     `fig:"s2s_out"`
-	Modules   modulesConfig    `fig:"modules"`
+	Modules modulesConfig `fig:"modules"`
 }
 
 func loadConfig(configFile string) (*serverConfig, error) {

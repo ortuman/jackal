@@ -29,7 +29,7 @@ func TestSocketListener_Listen(t *testing.T) {
 	var handledConn uint32
 
 	s := &SocketListener{
-		addr: ":51125",
+		cfg: ListenerConfig{Port: 51125},
 		connHandlerFn: func(_ net.Conn) {
 			atomic.StoreUint32(&handledConn, 1)
 		},

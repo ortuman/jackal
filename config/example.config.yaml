@@ -77,23 +77,23 @@ c2s:
       sasl:
         mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
 
-listeners:
-  - type: s2s
-    port: 5269
+s2s:
+  listeners:
+    - port: 5269
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+    - port: 5270
+      direct_tls: true
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+  out:
+    dial_timeout: 5s
     req_timeout: 60s
     max_stanza_size: 131072
 
-  - type: s2s
-    port: 5270
-    direct_tls: true
-    req_timeout: 60s
-    max_stanza_size: 131072
-
-s2s_out:
   dialback_secret: s3cr3tf0rd14lb4ck
-  dial_timeout: 5s
-  req_timeout: 60s
-  max_stanza_size: 131072
 
 modules:
 #  enabled:

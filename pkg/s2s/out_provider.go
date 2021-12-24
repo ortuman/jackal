@@ -32,11 +32,12 @@ import (
 
 // OutProvider is an outgoing S2S stream provider.
 type OutProvider struct {
-	hosts   *host.Hosts
-	cfg     Config
-	kv      kv.KV
-	shapers shaper.Shapers
-	hk      *hook.Hooks
+	cfg      OutConfig
+	dbSecret string
+	hosts    *host.Hosts
+	kv       kv.KV
+	shapers  shaper.Shapers
+	hk       *hook.Hooks
 
 	mu         sync.RWMutex
 	outStreams map[string]s2sOut
@@ -48,18 +49,20 @@ type OutProvider struct {
 
 // NewOutProvider creates and initializes a new OutProvider instance.
 func NewOutProvider(
+	cfg OutConfig,
+	dbSecret string,
 	hosts *host.Hosts,
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
 ) *OutProvider {
 	op := &OutProvider{
+		cfg:        cfg,
+		dbSecret:   dbSecret,
 		hosts:      hosts,
 		shapers:    shapers,
 		kv:         kv,
 		hk:         hk,
-		cfg:        cfg,
 		outStreams: make(map[string]s2sOut),
 		doneCh:     make(chan chan struct{}),
 	}
@@ -189,23 +192,35 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		target,
 		p.tlsConfig(target),
 		p.hosts,
-		p.cfg,
 		p.kv,
 		p.shapers,
 		p.hk,
 		p.unregister,
+		outConfig{
+			dbSecret:         p.dbSecret,
+			dialTimeout:      p.cfg.DialTimeout,
+			keepAliveTimeout: p.cfg.KeepAliveTimeout,
+			reqTimeout:       p.cfg.RequestTimeout,
+			maxStanzaSize:    p.cfg.MaxStanzaSize,
+		},
 	)
 }
 
-func (p *OutProvider) newDialbackS2S(sender, target string, dbParam DialbackParams) s2sDialback {
+func (p *OutProvider) newDialbackS2S(sender, target string, dbParams DialbackParams) s2sDialback {
 	return newDialbackS2S(
 		sender,
 		target,
 		p.tlsConfig(target),
 		p.hosts,
-		p.cfg,
-		dbParam,
 		p.shapers,
+		outConfig{
+			dbSecret:         p.dbSecret,
+			dialTimeout:      p.cfg.DialTimeout,
+			keepAliveTimeout: p.cfg.KeepAliveTimeout,
+			reqTimeout:       p.cfg.RequestTimeout,
+			maxStanzaSize:    p.cfg.MaxStanzaSize,
+		},
+		dbParams,
 	)
 }
 

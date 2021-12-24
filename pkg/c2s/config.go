@@ -64,7 +64,7 @@ type ListenerConfig struct {
 
 	// KeepAliveTimeout defines the maximum amount of time that an inactive connection
 	// would be considered alive.
-	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"2m"`
 
 	// RequestTimeout defines C2S stream request timeout.
 	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
