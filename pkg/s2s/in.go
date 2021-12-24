@@ -52,7 +52,6 @@ const (
 var inDisconnectTimeout = time.Second * 5
 
 type inConfig struct {
-	dbSecret         string
 	connectTimeout   time.Duration
 	keepAliveTimeout time.Duration
 	reqTimeout       time.Duration
@@ -672,7 +671,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		return err
 	}
 	expectedKey := dbKey(
-		s.cfg.dbSecret,
+		s.outProvider.DialbackSecret(),
 		sender,
 		target,
 		streamID,

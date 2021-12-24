@@ -41,7 +41,6 @@ const (
 // SocketListener represents a S2S socket listener type.
 type SocketListener struct {
 	cfg           ListenerConfig
-	dbSecret      string
 	hosts         *host.Hosts
 	router        router.Router
 	comps         *component.Components
@@ -60,7 +59,6 @@ type SocketListener struct {
 // NewListeners creates and initializes a set of S2S listeners based of cfg configuration.
 func NewListeners(
 	cfg ListenersConfig,
-	dbSecret string,
 	hosts *host.Hosts,
 	router router.Router,
 	comps *component.Components,
@@ -75,7 +73,6 @@ func NewListeners(
 	for _, lnCfg := range cfg {
 		ln := newSocketListener(
 			lnCfg,
-			dbSecret,
 			hosts,
 			router,
 			comps,
@@ -93,7 +90,6 @@ func NewListeners(
 
 func newSocketListener(
 	cfg ListenerConfig,
-	dbSecret string,
 	hosts *host.Hosts,
 	router router.Router,
 	comps *component.Components,
@@ -106,7 +102,6 @@ func newSocketListener(
 ) *SocketListener {
 	ln := &SocketListener{
 		cfg:         cfg,
-		dbSecret:    dbSecret,
 		hosts:       hosts,
 		router:      router,
 		comps:       comps,
@@ -184,7 +179,6 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.shapers,
 		l.hk,
 		inConfig{
-			dbSecret:         l.dbSecret,
 			connectTimeout:   l.cfg.ConnectTimeout,
 			keepAliveTimeout: l.cfg.KeepAliveTimeout,
 			reqTimeout:       l.cfg.RequestTimeout,

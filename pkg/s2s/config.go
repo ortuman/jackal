@@ -46,6 +46,9 @@ type ListenerConfig struct {
 }
 
 type OutConfig struct {
+	// DialbackSecret defines S2S dialback secret key.
+	DialbackSecret string `fig:"dialback_secret"`
+
 	// DialTimeout defines S2S out dialer timeout.
 	DialTimeout time.Duration `fig:"dial_timeout" default:"5s"`
 

@@ -220,7 +220,7 @@ func run(output io.Writer, args []string) error {
 	if err := a.initShapers(cfg.Shapers); err != nil {
 		return err
 	}
-	a.initS2SOut(cfg.S2S.Out, cfg.S2S.DialbackSecret)
+	a.initS2SOut(cfg.S2S.Out)
 	a.initRouters()
 
 	// init components & modules
@@ -242,12 +242,7 @@ func run(output io.Writer, args []string) error {
 	a.initMemberList(cfg.Cluster.Server.Port)
 
 	// init C2S/S2S listeners
-	if err := a.initListeners(
-		cfg.C2S.Listeners,
-		cfg.S2S.Listeners,
-		cfg.S2S.DialbackSecret,
-		cfg.Components.Listeners,
-	); err != nil {
+	if err := a.initListeners(cfg.C2S.Listeners, cfg.S2S.Listeners, cfg.Components.Listeners); err != nil {
 		return err
 	}
 
@@ -323,7 +318,6 @@ func (a *serverApp) initMemberList(clusterPort int) {
 func (a *serverApp) initListeners(
 	c2sListenersCfg c2s.ListenersConfig,
 	s2sListenersCfg s2s.ListenersConfig,
-	s2sDialbackSecret string,
 	cmpListenersCfg xep0114.ListenersConfig,
 ) error {
 	// c2s listeners
@@ -349,7 +343,6 @@ func (a *serverApp) initListeners(
 
 	s2sListeners := s2s.NewListeners(
 		s2sListenersCfg,
-		s2sDialbackSecret,
 		a.hosts,
 		a.router,
 		a.comps,
@@ -381,8 +374,8 @@ func (a *serverApp) initListeners(
 	return nil
 }
 
-func (a *serverApp) initS2SOut(cfg s2s.OutConfig, dialbackSecret string) {
-	a.s2sOutProvider = s2s.NewOutProvider(cfg, dialbackSecret, a.hosts, a.kv, a.shapers, a.hk)
+func (a *serverApp) initS2SOut(cfg s2s.OutConfig) {
+	a.s2sOutProvider = s2s.NewOutProvider(cfg, a.hosts, a.kv, a.shapers, a.hk)
 	a.registerStartStopper(a.s2sOutProvider)
 }
 

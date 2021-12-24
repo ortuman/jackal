@@ -73,9 +73,8 @@ type serverConfig struct {
 	} `fig:"c2s"`
 
 	S2S struct {
-		Listeners      s2s.ListenersConfig `fig:"listeners"`
-		Out            s2s.OutConfig       `fig:"out"`
-		DialbackSecret string              `fig:"dialback_secret"`
+		Listeners s2s.ListenersConfig `fig:"listeners"`
+		Out       s2s.OutConfig       `fig:"out"`
 	} `fig:"s2s"`
 
 	Components struct {

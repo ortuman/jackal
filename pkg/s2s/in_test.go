@@ -403,13 +403,15 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 			// Out provider mock
 			outProviderMock := &outProviderMock{}
+			outProviderMock.DialbackSecretFunc = func() string {
+				return "adialbacksecret"
+			}
 			outProviderMock.GetDialbackFunc = func(ctx context.Context, sender string, target string, params DialbackParams) (stream.S2SDialback, error) {
 				return dbStreamMock, nil
 			}
 
 			stm := &inS2S{
 				cfg: inConfig{
-					dbSecret:         "adialbacksecret",
 					keepAliveTimeout: time.Minute,
 					reqTimeout:       time.Minute,
 					maxStanzaSize:    8192,

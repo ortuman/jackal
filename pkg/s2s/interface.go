@@ -83,6 +83,7 @@ type modules interface {
 
 //go:generate moq -out outprovider.mock_test.go . outProvider
 type outProvider interface {
+	DialbackSecret() string
 	GetOut(ctx context.Context, sender, target string) (stream.S2SOut, error)
 	GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error)
 }

@@ -32,12 +32,11 @@ import (
 
 // OutProvider is an outgoing S2S stream provider.
 type OutProvider struct {
-	cfg      OutConfig
-	dbSecret string
-	hosts    *host.Hosts
-	kv       kv.KV
-	shapers  shaper.Shapers
-	hk       *hook.Hooks
+	cfg     OutConfig
+	hosts   *host.Hosts
+	kv      kv.KV
+	shapers shaper.Shapers
+	hk      *hook.Hooks
 
 	mu         sync.RWMutex
 	outStreams map[string]s2sOut
@@ -50,7 +49,6 @@ type OutProvider struct {
 // NewOutProvider creates and initializes a new OutProvider instance.
 func NewOutProvider(
 	cfg OutConfig,
-	dbSecret string,
 	hosts *host.Hosts,
 	kv kv.KV,
 	shapers shaper.Shapers,
@@ -58,7 +56,6 @@ func NewOutProvider(
 ) *OutProvider {
 	op := &OutProvider{
 		cfg:        cfg,
-		dbSecret:   dbSecret,
 		hosts:      hosts,
 		shapers:    shapers,
 		kv:         kv,
@@ -69,6 +66,11 @@ func NewOutProvider(
 	op.newOutFn = op.newOutS2S
 	op.newDbFn = op.newDialbackS2S
 	return op
+}
+
+// DialbackSecret returns dialback secret value.
+func (p *OutProvider) DialbackSecret() string {
+	return p.cfg.DialbackSecret
 }
 
 // GetOut returns associated outgoing S2S stream given a sender-target pair domain.
@@ -197,7 +199,7 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		p.hk,
 		p.unregister,
 		outConfig{
-			dbSecret:         p.dbSecret,
+			dbSecret:         p.cfg.DialbackSecret,
 			dialTimeout:      p.cfg.DialTimeout,
 			keepAliveTimeout: p.cfg.KeepAliveTimeout,
 			reqTimeout:       p.cfg.RequestTimeout,
@@ -214,7 +216,7 @@ func (p *OutProvider) newDialbackS2S(sender, target string, dbParams DialbackPar
 		p.hosts,
 		p.shapers,
 		outConfig{
-			dbSecret:         p.dbSecret,
+			dbSecret:         p.cfg.DialbackSecret,
 			dialTimeout:      p.cfg.DialTimeout,
 			keepAliveTimeout: p.cfg.KeepAliveTimeout,
 			reqTimeout:       p.cfg.RequestTimeout,
