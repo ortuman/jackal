@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package jackal
 
 import (
 	"path/filepath"
@@ -34,9 +34,34 @@ import (
 	"github.com/ortuman/jackal/pkg/storage"
 )
 
-type modulesConfig struct {
+type LoggerConfig struct {
+	Level      string `fig:"level" default:"debug"`
+	OutputPath string `fig:"output_path"`
+}
+
+type ClusterConfig struct {
+	Etcd   etcd.Config          `fig:"etcd"`
+	Server clusterserver.Config `fig:"server"`
+}
+
+type C2SConfig struct {
+	Listeners c2s.ListenersConfig `fig:"listeners"`
+}
+
+type S2SConfig struct {
+	Listeners s2s.ListenersConfig `fig:"listeners"`
+	Out       s2s.OutConfig       `fig:"out"`
+}
+
+type ComponentsConfig struct {
+	Listeners xep0114.ListenersConfig `fig:"listeners"`
+}
+
+type ModulesConfig struct {
+	// Enabled defines total set of enabled modules
 	Enabled []string `fig:"enabled"`
 
+	// Offline offline storage
 	Offline offline.Config `fig:"offline"`
 
 	// XEP-0092: Software Version
@@ -49,16 +74,9 @@ type modulesConfig struct {
 	Ping xep0199.Config `fig:"ping"`
 }
 
-type serverConfig struct {
-	Logger struct {
-		Level      string `fig:"level" default:"debug"`
-		OutputPath string `fig:"output_path"`
-	} `fig:"logger"`
-
-	Cluster struct {
-		Etcd   etcd.Config          `fig:"etcd"`
-		Server clusterserver.Config `fig:"server"`
-	} `fig:"cluster"`
+type Config struct {
+	Logger  LoggerConfig  `fig:"logger"`
+	Cluster ClusterConfig `fig:"cluster"`
 
 	HTTPPort int `fig:"http_port" default:"6060"`
 
@@ -68,24 +86,14 @@ type serverConfig struct {
 	Hosts   []host.Config      `fig:"hosts"`
 	Shapers []shaper.Config    `fig:"shapers"`
 
-	C2S struct {
-		Listeners c2s.ListenersConfig `fig:"listeners"`
-	} `fig:"c2s"`
-
-	S2S struct {
-		Listeners s2s.ListenersConfig `fig:"listeners"`
-		Out       s2s.OutConfig       `fig:"out"`
-	} `fig:"s2s"`
-
-	Components struct {
-		Listeners xep0114.ListenersConfig `fig:"listeners"`
-	} `fig:"components"`
-
-	Modules modulesConfig `fig:"modules"`
+	C2S        C2SConfig        `fig:"c2s"`
+	S2S        S2SConfig        `fig:"s2s"`
+	Components ComponentsConfig `fig:"components"`
+	Modules    ModulesConfig    `fig:"modules"`
 }
 
-func loadConfig(configFile string) (*serverConfig, error) {
-	var cfg serverConfig
+func loadConfig(configFile string) (*Config, error) {
+	var cfg Config
 	file := filepath.Base(configFile)
 	dir := filepath.Dir(configFile)
 
