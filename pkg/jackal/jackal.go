@@ -289,8 +289,8 @@ func (j *Jackal) initRepository(cfg storage.Config) error {
 	return nil
 }
 
-func (j *Jackal) initHosts(configs []host.Config) error {
-	h, err := host.NewHost(configs)
+func (j *Jackal) initHosts(configs host.Configs) error {
+	h, err := host.NewHosts(configs)
 	if err != nil {
 		return err
 	}

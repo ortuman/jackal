@@ -31,6 +31,9 @@ type Hosts struct {
 	hosts       map[string]tls.Certificate
 }
 
+// Configs contains a set of host configurations.
+type Configs []Config
+
 // Config contains host configuration parameters.
 type Config struct {
 	Domain string `fig:"domain"`
@@ -40,12 +43,12 @@ type Config struct {
 	} `fig:"tls"`
 }
 
-// NewHost creates and initializes a Hosts instance.
-func NewHost(configs []Config) (*Hosts, error) {
+// NewHosts creates and initializes a Hosts instance.
+func NewHosts(cfg Configs) (*Hosts, error) {
 	hs := &Hosts{
 		hosts: make(map[string]tls.Certificate),
 	}
-	if len(configs) == 0 {
+	if len(cfg) == 0 {
 		cer, err := tlsutil.LoadCertificate("", "", defaultDomain)
 		if err != nil {
 			return nil, err
@@ -53,7 +56,7 @@ func NewHost(configs []Config) (*Hosts, error) {
 		hs.RegisterDefaultHost(defaultDomain, cer)
 		return hs, nil
 	}
-	for i, config := range configs {
+	for i, config := range cfg {
 		cer, err := tlsutil.LoadCertificate(config.TLS.PrivateKeyFile, config.TLS.CertFile, config.Domain)
 		if err != nil {
 			return nil, err

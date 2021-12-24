@@ -90,7 +90,7 @@ type Config struct {
 	Peppers pepper.Config      `fig:"peppers"`
 	Admin   adminserver.Config `fig:"admin"`
 	Storage storage.Config     `fig:"storage"`
-	Hosts   []host.Config      `fig:"hosts"`
+	Hosts   host.Configs       `fig:"hosts"`
 	Shapers []shaper.Config    `fig:"shapers"`
 
 	C2S        C2SConfig        `fig:"c2s"`
