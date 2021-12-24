@@ -89,11 +89,10 @@ s2s:
       max_stanza_size: 131072
 
   out:
+    dialback_secret: s3cr3tf0rd14lb4ck
     dial_timeout: 5s
     req_timeout: 60s
     max_stanza_size: 131072
-
-  dialback_secret: s3cr3tf0rd14lb4ck
 
 modules:
 #  enabled:

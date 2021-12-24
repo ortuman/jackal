@@ -338,23 +338,25 @@ func (a *serverApp) initListeners(
 	}
 
 	// s2s listeners
-	s2sInHub := s2s.NewInHub()
-	a.registerStartStopper(s2sInHub)
+	if len(s2sListenersCfg) > 0 {
+		s2sInHub := s2s.NewInHub()
+		a.registerStartStopper(s2sInHub)
 
-	s2sListeners := s2s.NewListeners(
-		s2sListenersCfg,
-		a.hosts,
-		a.router,
-		a.comps,
-		a.mods,
-		a.s2sOutProvider,
-		s2sInHub,
-		a.kv,
-		a.shapers,
-		a.hk,
-	)
-	for _, ln := range s2sListeners {
-		a.registerStartStopper(ln)
+		s2sListeners := s2s.NewListeners(
+			s2sListenersCfg,
+			a.hosts,
+			a.router,
+			a.comps,
+			a.mods,
+			a.s2sOutProvider,
+			s2sInHub,
+			a.kv,
+			a.shapers,
+			a.hk,
+		)
+		for _, ln := range s2sListeners {
+			a.registerStartStopper(ln)
+		}
 	}
 
 	// external component listeners
@@ -370,7 +372,6 @@ func (a *serverApp) initListeners(
 	for _, ln := range cmpListeners {
 		a.registerStartStopper(ln)
 	}
-
 	return nil
 }
 
