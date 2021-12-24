@@ -34,29 +34,35 @@ import (
 	"github.com/ortuman/jackal/pkg/storage"
 )
 
+// LoggerConfig defines logger configuration.
 type LoggerConfig struct {
 	Level      string `fig:"level" default:"debug"`
 	OutputPath string `fig:"output_path"`
 }
 
+// ClusterConfig defines cluster configuration.
 type ClusterConfig struct {
 	Etcd   etcd.Config          `fig:"etcd"`
 	Server clusterserver.Config `fig:"server"`
 }
 
+// C2SConfig defines C2S subsystem configuration.
 type C2SConfig struct {
 	Listeners c2s.ListenersConfig `fig:"listeners"`
 }
 
+// S2SConfig defines S2S subsystem configuration.
 type S2SConfig struct {
 	Listeners s2s.ListenersConfig `fig:"listeners"`
 	Out       s2s.OutConfig       `fig:"out"`
 }
 
+// ComponentsConfig defines application components configuration.
 type ComponentsConfig struct {
 	Listeners xep0114.ListenersConfig `fig:"listeners"`
 }
 
+// ModulesConfig defines application modules configuration.
 type ModulesConfig struct {
 	// Enabled defines total set of enabled modules
 	Enabled []string `fig:"enabled"`
@@ -74,6 +80,7 @@ type ModulesConfig struct {
 	Ping xep0199.Config `fig:"ping"`
 }
 
+// Config defines jackal application configuration.
 type Config struct {
 	Logger  LoggerConfig  `fig:"logger"`
 	Cluster ClusterConfig `fig:"cluster"`
