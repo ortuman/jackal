@@ -45,6 +45,7 @@ type ListenerConfig struct {
 	DirectTLS bool `fig:"direct_tls"`
 }
 
+// OutConfig defines S2S out configuration.
 type OutConfig struct {
 	// DialbackSecret defines S2S dialback secret key.
 	DialbackSecret string `fig:"dialback_secret"`
