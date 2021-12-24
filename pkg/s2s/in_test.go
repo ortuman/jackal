@@ -403,16 +403,18 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			}
 			// Out provider mock
 			outProviderMock := &outProviderMock{}
+			outProviderMock.DialbackSecretFunc = func() string {
+				return "adialbacksecret"
+			}
 			outProviderMock.GetDialbackFunc = func(ctx context.Context, sender string, target string, params DialbackParams) (stream.S2SDialback, error) {
 				return dbStreamMock, nil
 			}
 
 			stm := &inS2S{
-				cfg: Config{
-					DialbackSecret:   "adialbacksecret",
-					KeepAliveTimeout: time.Minute,
-					RequestTimeout:   time.Minute,
-					MaxStanzaSize:    8192,
+				cfg: inConfig{
+					keepAliveTimeout: time.Minute,
+					reqTimeout:       time.Minute,
+					maxStanzaSize:    8192,
 				},
 				state:       tt.state,
 				flags:       flags{fs: tt.flags},
@@ -500,10 +502,10 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inS2S{
-				cfg: Config{
-					KeepAliveTimeout: time.Minute,
-					RequestTimeout:   time.Minute,
-					MaxStanzaSize:    8192,
+				cfg: inConfig{
+					keepAliveTimeout: time.Minute,
+					reqTimeout:       time.Minute,
+					maxStanzaSize:    8192,
 				},
 				state:   tt.state,
 				rq:      runqueue.New(tt.name),

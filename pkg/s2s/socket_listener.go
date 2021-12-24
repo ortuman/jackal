@@ -40,27 +40,25 @@ const (
 
 // SocketListener represents a S2S socket listener type.
 type SocketListener struct {
-	addr          string
+	cfg           ListenerConfig
 	hosts         *host.Hosts
 	router        router.Router
 	comps         *component.Components
 	mods          *module.Modules
 	outProvider   *OutProvider
-	inHub         *InHub
+	inHUB         *InHub
 	kv            kv.KV
 	shapers       shaper.Shapers
 	hk            *hook.Hooks
-	cfg           Config
 	connHandlerFn func(conn net.Conn)
 
 	ln     net.Listener
 	active uint32
 }
 
-// NewSocketListener returns a new S2S socket listener.
-func NewSocketListener(
-	bindAddr string,
-	port int,
+// NewListeners creates and initializes a set of S2S listeners based of cfg configuration.
+func NewListeners(
+	cfg ListenersConfig,
 	hosts *host.Hosts,
 	router router.Router,
 	comps *component.Components,
@@ -70,19 +68,47 @@ func NewSocketListener(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
+) []*SocketListener {
+	var listeners []*SocketListener
+	for _, lnCfg := range cfg {
+		ln := newSocketListener(
+			lnCfg,
+			hosts,
+			router,
+			comps,
+			mods,
+			outProvider,
+			kv,
+			inHub,
+			shapers,
+			hk,
+		)
+		listeners = append(listeners, ln)
+	}
+	return listeners
+}
+
+func newSocketListener(
+	cfg ListenerConfig,
+	hosts *host.Hosts,
+	router router.Router,
+	comps *component.Components,
+	mods *module.Modules,
+	outProvider *OutProvider,
+	kv kv.KV,
+	hub *InHub,
+	shapers shaper.Shapers,
+	hk *hook.Hooks,
 ) *SocketListener {
-	addr := getAddress(bindAddr, port)
 	ln := &SocketListener{
-		addr:        addr,
 		cfg:         cfg,
 		hosts:       hosts,
 		router:      router,
 		comps:       comps,
 		mods:        mods,
 		outProvider: outProvider,
-		inHub:       inHub,
 		kv:          kv,
+		inHUB:       hub,
 		shapers:     shapers,
 		hk:          hk,
 	}
@@ -98,12 +124,12 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	lc := net.ListenConfig{
 		KeepAlive: listenKeepAlive,
 	}
-	ln, err = lc.Listen(ctx, "tcp", l.addr)
+	ln, err = lc.Listen(ctx, "tcp", l.getAddress())
 	if err != nil {
 		return err
 	}
 	if l.cfg.DirectTLS {
-		ln = tls.NewListener(ln, l.cfg.TLSConfig)
+		ln = tls.NewListener(ln, l.getTLSConfig())
 	}
 	l.ln = ln
 	l.active = 1
@@ -115,7 +141,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 				continue
 			}
 			log.Infow(
-				fmt.Sprintf("Received S2S incoming connection at %s", l.addr),
+				fmt.Sprintf("Received S2S incoming connection at %s", l.getAddress()),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 
@@ -123,19 +149,19 @@ func (l *SocketListener) Start(ctx context.Context) error {
 		}
 	}()
 	log.Infow(
-		fmt.Sprintf("Accepting S2S socket connections at %s", l.addr),
+		fmt.Sprintf("Accepting S2S socket connections at %s", l.getAddress()),
 		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
 }
 
 // Stop stops handling incoming S2S connections and closes underlying TCP listener.
-func (l *SocketListener) Stop(_ context.Context) error {
+func (l *SocketListener) Stop(ctx context.Context) error {
 	atomic.StoreUint32(&l.active, 0)
 	if err := l.ln.Close(); err != nil {
 		return err
 	}
-	log.Infof("Stopped S2S listener at %s", l.addr)
+	log.Infof("Stopped S2S listener at %s", l.getAddress())
 	return nil
 }
 
@@ -148,11 +174,18 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.comps,
 		l.mods,
 		l.outProvider,
-		l.inHub,
+		l.inHUB,
 		l.kv,
 		l.shapers,
 		l.hk,
-		l.cfg,
+		inConfig{
+			connectTimeout:   l.cfg.ConnectTimeout,
+			keepAliveTimeout: l.cfg.KeepAliveTimeout,
+			reqTimeout:       l.cfg.RequestTimeout,
+			maxStanzaSize:    l.cfg.MaxStanzaSize,
+			directTLS:        l.cfg.DirectTLS,
+			tlsConfig:        l.getTLSConfig(),
+		},
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize incoming S2S stream: %v", err)
@@ -165,6 +198,14 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 	}
 }
 
-func getAddress(bindAddr string, port int) string {
-	return bindAddr + ":" + strconv.Itoa(port)
+func (l *SocketListener) getTLSConfig() *tls.Config {
+	return &tls.Config{
+		Certificates: l.hosts.Certificates(),
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+}
+
+func (l *SocketListener) getAddress() string {
+	return l.cfg.BindAddr + ":" + strconv.Itoa(l.cfg.Port)
 }

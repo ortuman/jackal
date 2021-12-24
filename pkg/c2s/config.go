@@ -14,56 +14,58 @@
 
 package c2s
 
-import (
-	"crypto/tls"
-	"time"
+import "time"
 
-	"github.com/ortuman/jackal/pkg/transport/compress"
-)
+// ListenersConfig defines a set of C2S listener configurations.
+type ListenersConfig []ListenerConfig
 
-// ResourceConflict represents a resource conflict policy.
-type ResourceConflict int8
+// ListenerConfig contains a C2S listener configuration.
+type ListenerConfig struct {
+	// BindAddr defines listener incoming connections address.
+	BindAddr string `fig:"bind_addr"`
 
-const (
-	// Override represents 'override' resource conflict policy.
-	Override ResourceConflict = iota
+	// Port defines listener incoming connections port.
+	Port int `fig:"port" default:"5222"`
 
-	// Disallow represents 'disallow' resource conflict policy.
-	Disallow
+	// Transport specifies the type of transport used for incoming connections.
+	Transport string `fig:"transport" default:"socket"`
 
-	// TerminateOld represents 'terminate_old' resource conflict policy.
-	TerminateOld
-)
+	// DirectTLS, if true, tls.Listen will be used as network listener.
+	DirectTLS bool `fig:"direct_tls"`
 
-// Config defines C2S connection configuration.
-type Config struct {
-	// ConnectTimeout defines connection timeout.
-	ConnectTimeout time.Duration
+	// SASL contains authentication related configuration.
+	SASL struct {
+		// Mechanisms contains enabled SASL mechanisms.
+		Mechanisms []string `fig:"mechanisms" default:"[scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]"`
 
-	// AuthenticateTimeout defines authentication timeout.
-	AuthenticateTimeout time.Duration
-
-	// KeepAliveTimeout defines the maximum amount of time that an inactive connection
-	// would be considered alive.
-	KeepAliveTimeout time.Duration
-
-	// RequestTimeout defines C2S stream request timeout.
-	RequestTimeout time.Duration
-
-	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
-	MaxStanzaSize int
+		// External contains external authenticator configuration.
+		External struct {
+			Address  string `fig:"address"`
+			IsSecure bool   `fig:"is_secure"`
+		} `fig:"external"`
+	} `fig:"sasl"`
 
 	// CompressionLevel is the compression level that may be applied to the stream.
 	// Valid values are 'default', 'best', 'speed' and 'no_compression'.
-	CompressionLevel compress.Level
+	CompressionLevel string `fig:"compression_level" default:"default"`
 
 	// ResourceConflict defines the which rule should be applied in a resource conflict is detected.
 	// Valid values are `override`, `disallow` and `terminate_old`.
-	ResourceConflict ResourceConflict
+	ResourceConflict string `fig:"resource_conflict" default:"terminate_old"`
 
-	// UseTLS, if true, tls.Listen will be used as network listener.
-	UseTLS bool
+	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
+	MaxStanzaSize int `fig:"max_stanza_size" default:"32768"`
 
-	// TLSConfig contains configuration to be used when TLS listener is enabled.
-	TLSConfig *tls.Config
+	// ConnectTimeout defines connection timeout.
+	ConnectTimeout time.Duration `fig:"conn_timeout" default:"3s"`
+
+	// AuthenticateTimeout defines authentication timeout.
+	AuthenticateTimeout time.Duration `fig:"auth_timeout" default:"10s"`
+
+	// KeepAliveTimeout defines the maximum amount of time that an inactive connection
+	// would be considered alive.
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"2m"`
+
+	// RequestTimeout defines C2S stream request timeout.
+	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 }

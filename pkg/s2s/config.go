@@ -15,33 +15,50 @@
 package s2s
 
 import (
-	"crypto/tls"
 	"time"
 )
 
-// Config defines S2S connection configuration.
-type Config struct {
-	// DialTimeout defines S2S out dialer timeout.
-	DialTimeout time.Duration
+// ListenersConfig defines a set of S2S listener configurations.
+type ListenersConfig []ListenerConfig
 
-	// DialbackSecret defines S2S dialback secret key.
-	DialbackSecret string
+// ListenerConfig defines S2S listener configuration.
+type ListenerConfig struct {
+	// BindAddr defines listener incoming connections address.
+	BindAddr string `fig:"bind_addr"`
+
+	// Port defines listener incoming connections port.
+	Port int `fig:"port" default:"5269"`
 
 	// ConnectTimeout defines connection timeout.
-	ConnectTimeout time.Duration
+	ConnectTimeout time.Duration `fig:"conn_timeout" default:"3s"`
 
 	// KeepAliveTimeout defines stream read timeout.
-	KeepAliveTimeout time.Duration
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
 
 	// RequestTimeout defines S2S stream request timeout.
-	RequestTimeout time.Duration
+	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
-	MaxStanzaSize int
+	MaxStanzaSize int `fig:"max_stanza_size" default:"131072"`
 
 	// DirectTLS, if true, tls.Listen will be used as network listener.
-	DirectTLS bool
+	DirectTLS bool `fig:"direct_tls"`
+}
 
-	// TLSConfig contains configuration to be used when TLS listener is enabled.
-	TLSConfig *tls.Config
+// OutConfig defines S2S out configuration.
+type OutConfig struct {
+	// DialbackSecret defines S2S dialback secret key.
+	DialbackSecret string `fig:"dialback_secret"`
+
+	// DialTimeout defines S2S out dialer timeout.
+	DialTimeout time.Duration `fig:"dial_timeout" default:"5s"`
+
+	// KeepAliveTimeout defines stream read timeout.
+	KeepAliveTimeout time.Duration `fig:"keep_alive_timeout" default:"10m"`
+
+	// RequestTimeout defines S2S stream request timeout.
+	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
+
+	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
+	MaxStanzaSize int `fig:"max_stanza_size" default:"131072"`
 }

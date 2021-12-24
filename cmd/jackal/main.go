@@ -17,10 +17,13 @@ package main
 import (
 	"log"
 	"os"
+
+	"github.com/ortuman/jackal/pkg/jackal"
 )
 
 func main() {
-	if err := run(os.Stdout, os.Args); err != nil {
+	j := jackal.New(os.Stdout, os.Args)
+	if err := j.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

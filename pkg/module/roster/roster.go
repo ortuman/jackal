@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ortuman/jackal/pkg/c2s"
+
 	"github.com/ortuman/jackal/pkg/router/stream"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"

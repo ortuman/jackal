@@ -25,14 +25,10 @@ cluster:
     endpoints:
       - 'http://etcd:2379'
 
-listeners:
-  - type: c2s
-    port: 5222
-    req_timeout: 60s
-    transport: socket
-    sasl:
-      mechanisms:
-        - scram_sha_1
-        - scram_sha_256
-        - scram_sha_512
-        - scram_sha3_512
+c2s:
+  listeners:
+    - port: 5222
+      req_timeout: 60s
+      transport: socket
+      sasl:
+        mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]

@@ -51,9 +51,18 @@ const (
 
 var inDisconnectTimeout = time.Second * 5
 
+type inConfig struct {
+	connectTimeout   time.Duration
+	keepAliveTimeout time.Duration
+	reqTimeout       time.Duration
+	maxStanzaSize    int
+	directTLS        bool
+	tlsConfig        *tls.Config
+}
+
 type inS2S struct {
 	id           stream.S2SInID
-	cfg          Config
+	cfg          inConfig
 	tr           transport.Transport
 	session      session
 	hosts        hosts
@@ -89,7 +98,7 @@ func newInS2S(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
+	cfg inConfig,
 ) (*inS2S, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultS2S().RateLimiter()
@@ -104,7 +113,7 @@ func newInS2S(
 		tr,
 		hosts,
 		xmppsession.Config{
-			MaxStanzaSize: cfg.MaxStanzaSize,
+			MaxStanzaSize: cfg.maxStanzaSize,
 		},
 	)
 	// init stream
@@ -126,7 +135,7 @@ func newInS2S(
 		doneCh:      make(chan struct{}),
 		state:       inConnecting,
 	}
-	if cfg.DirectTLS {
+	if cfg.directTLS {
 		stm.flags.setSecured() // stream already secured
 	}
 	return stm, nil
@@ -174,7 +183,7 @@ func (s *inS2S) start() error {
 func (s *inS2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.ConnectTimeout, s.connTimeout) // schedule connect timeout
+	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
 	elem, sErr := s.session.Receive()
 	tm.Stop()
 
@@ -188,7 +197,7 @@ func (s *inS2S) readLoop() {
 		s.handleSessionResult(elem, sErr)
 
 	doRead:
-		tm := time.AfterFunc(s.cfg.KeepAliveTimeout, s.connTimeout) // schedule read timeout
+		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
 		tm.Stop()
 	}
@@ -662,7 +671,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		return err
 	}
 	expectedKey := dbKey(
-		s.cfg.DialbackSecret,
+		s.outProvider.DialbackSecret(),
 		sender,
 		target,
 		streamID,
@@ -832,7 +841,7 @@ func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStrea
 }
 
 func (s *inS2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.reqTimeout)
 }
 
 var currentID uint64

@@ -56,48 +56,43 @@ shapers:
       limit: 65536
       burst: 32768
 
-listeners:
-  - type: c2s
-    port: 5222
-    req_timeout: 60s
-    transport: socket
-    sasl:
-      mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
+c2s:
+  listeners:
+    - port: 5222
+      req_timeout: 60s
+      transport: socket
+      sasl:
+        mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
 
-      # Authentication gateway
-      # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
-      external:
-        address: 127.0.0.1:4567
-        is_secure: false
+        # Authentication gateway
+        # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
+        external:
+          address: 127.0.0.1:4567
+          is_secure: false
 
-  - type: c2s
-    port: 5223
-    direct_tls: true
-    req_timeout: 60s
-    transport: socket
-    sasl:
-      mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
+    - port: 5223
+      direct_tls: true
+      req_timeout: 60s
+      transport: socket
+      sasl:
+        mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
 
-  - type: s2s
-    port: 5269
+s2s:
+  listeners:
+    - port: 5269
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+    - port: 5270
+      direct_tls: true
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+  out:
+    dialback_secret: s3cr3tf0rd14lb4ck
+    dial_timeout: 5s
     req_timeout: 60s
     max_stanza_size: 131072
-
-  - type: s2s
-    port: 5270
-    direct_tls: true
-    req_timeout: 60s
-    max_stanza_size: 131072
-
-  - type: component
-    port: 5275
-    secret: hqcUrfHtgE73FktcXwfrP
-
-s2s_out:
-  dialback_secret: s3cr3tf0rd14lb4ck
-  dial_timeout: 5s
-  req_timeout: 60s
-  max_stanza_size: 131072
 
 modules:
 #  enabled:
@@ -128,4 +123,7 @@ modules:
 #    timeout_action: kill
 
 components:
+  listeners:
+    - port: 5275
+      secret: hqcUrfHtgE73FktcXwfrP
 

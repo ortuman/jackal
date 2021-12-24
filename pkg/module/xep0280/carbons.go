@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -27,6 +25,7 @@ import (
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )

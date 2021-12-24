@@ -34,6 +34,7 @@ import (
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"github.com/ortuman/jackal/pkg/transport"
+	"github.com/ortuman/jackal/pkg/transport/compress"
 )
 
 const (
@@ -45,33 +46,42 @@ const (
 	scramSHA3512Mechanism = "scram_sha3_512"
 )
 
+var cmpLevelMap = map[string]compress.Level{
+	"default": compress.DefaultCompression,
+	"best":    compress.BestCompression,
+	"speed":   compress.SpeedCompression,
+}
+
+var resConflictMap = map[string]resourceConflict{
+	"override":      override,
+	"disallow":      disallow,
+	"terminate_old": terminateOld,
+}
+
 // SocketListener represents a C2S socket listener type.
 type SocketListener struct {
-	addr           string
-	cfg            Config
-	saslMechanisms []string
-	extAuth        *auth.External
-	hosts          *host.Hosts
-	router         router.Router
-	comps          *component.Components
-	mods           *module.Modules
-	resMng         *ResourceManager
-	rep            repository.Repository
-	peppers        *pepper.Keys
-	shapers        shaper.Shapers
-	hk             *hook.Hooks
-	connHandlerFn  func(conn net.Conn)
+	cfg     ListenerConfig
+	extAuth *auth.External
+	hosts   *host.Hosts
+	router  router.Router
+	comps   *component.Components
+	mods    *module.Modules
+	resMng  *ResourceManager
+	rep     repository.Repository
+	peppers *pepper.Keys
+	shapers shaper.Shapers
+	hk      *hook.Hooks
+
+	tlsCfg        *tls.Config
+	connHandlerFn func(conn net.Conn)
 
 	ln     net.Listener
 	active uint32
 }
 
-// NewSocketListener returns a new C2S socket listener.
-func NewSocketListener(
-	bindAddr string,
-	port int,
-	saslMechanisms []string,
-	extAuth *auth.External,
+// NewListeners creates and initializes a set of C2S listeners based of cfg configuration.
+func NewListeners(
+	cfg ListenersConfig,
 	hosts *host.Hosts,
 	router router.Router,
 	comps *component.Components,
@@ -81,28 +91,63 @@ func NewSocketListener(
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
-	cfg Config,
+) []*SocketListener {
+	var listeners []*SocketListener
+	for _, lnCfg := range cfg {
+		ln := newSocketListener(
+			lnCfg,
+			hosts,
+			router,
+			comps,
+			mods,
+			resMng,
+			rep,
+			peppers,
+			shapers,
+			hk,
+		)
+		listeners = append(listeners, ln)
+	}
+	return listeners
+}
+
+func newSocketListener(
+	cfg ListenerConfig,
+	hosts *host.Hosts,
+	router router.Router,
+	comps *component.Components,
+	mods *module.Modules,
+	resMng *ResourceManager,
+	rep repository.Repository,
+	peppers *pepper.Keys,
+	shapers shaper.Shapers,
+	hk *hook.Hooks,
 ) *SocketListener {
+	var extAuth *auth.External
+	if len(cfg.SASL.External.Address) > 0 {
+		extAuth = auth.NewExternal(
+			cfg.SASL.External.Address,
+			cfg.SASL.External.IsSecure,
+		)
+	}
 	ln := &SocketListener{
-		addr:           getAddress(bindAddr, port),
-		saslMechanisms: saslMechanisms,
-		extAuth:        extAuth,
-		cfg:            cfg,
-		hosts:          hosts,
-		router:         router,
-		comps:          comps,
-		mods:           mods,
-		resMng:         resMng,
-		rep:            rep,
-		peppers:        peppers,
-		shapers:        shapers,
-		hk:             hk,
+		cfg:     cfg,
+		extAuth: extAuth,
+		hosts:   hosts,
+		router:  router,
+		comps:   comps,
+		mods:    mods,
+		resMng:  resMng,
+		rep:     rep,
+		peppers: peppers,
+		shapers: shapers,
+		hk:      hk,
 	}
 	ln.connHandlerFn = ln.handleConn
 	return ln
 }
 
-// Start starts listening on the TCP network address bindAddr to handle incoming C2S connections.
+// Start starts listening on a TCP network address to handle incoming C2S connections.
 func (l *SocketListener) Start(ctx context.Context) error {
 	if l.extAuth != nil {
 		// dial external authenticator
@@ -116,12 +161,16 @@ func (l *SocketListener) Start(ctx context.Context) error {
 	lc := net.ListenConfig{
 		KeepAlive: listenKeepAlive,
 	}
-	ln, err = lc.Listen(ctx, "tcp", l.addr)
+	ln, err = lc.Listen(ctx, "tcp", l.getAddress())
 	if err != nil {
 		return err
 	}
-	if l.cfg.UseTLS {
-		ln = tls.NewListener(ln, l.cfg.TLSConfig)
+	if l.cfg.DirectTLS {
+		l.tlsCfg = &tls.Config{
+			Certificates: l.hosts.Certificates(),
+			MinVersion:   tls.VersionTLS12,
+		}
+		ln = tls.NewListener(ln, l.tlsCfg)
 	}
 	l.ln = ln
 	l.active = 1
@@ -133,7 +182,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 				continue
 			}
 			log.Infow(
-				fmt.Sprintf("Received C2S incoming connection at %s", l.addr),
+				fmt.Sprintf("Received C2S incoming connection at %s", l.getAddress()),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 
@@ -141,8 +190,8 @@ func (l *SocketListener) Start(ctx context.Context) error {
 		}
 	}()
 	log.Infow(
-		fmt.Sprintf("Accepting C2S socket connections at %s", l.addr),
-		"direct_tls", l.cfg.UseTLS,
+		fmt.Sprintf("Accepting C2S socket connections at %s", l.getAddress()),
+		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
 }
@@ -159,13 +208,14 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 			return err
 		}
 	}
-	log.Infof("Stopped C2S listener at %s", l.addr)
+	log.Infof("Stopped C2S listener at %s", l.getAddress())
 	return nil
 }
 
 func (l *SocketListener) handleConn(conn net.Conn) {
 	tr := transport.NewSocketTransport(conn)
 	stm, err := newInC2S(
+		l.getInConfig(),
 		tr,
 		l.getAuthenticators(tr),
 		l.hosts,
@@ -175,7 +225,6 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.resMng,
 		l.shapers,
 		l.hk,
-		l.cfg,
 	)
 	if err != nil {
 		log.Warnf("Failed to initialize C2S stream: %v", err)
@@ -193,7 +242,7 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 	if l.extAuth != nil {
 		res = append(res, l.extAuth)
 	}
-	for _, mechanism := range l.saslMechanisms {
+	for _, mechanism := range l.cfg.SASL.Mechanisms {
 		switch mechanism {
 		case scramSHA1Mechanism:
 			res = append(res, auth.NewScram(tr, auth.ScramSHA1, false, l.rep, l.peppers))
@@ -217,6 +266,20 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 	return res
 }
 
-func getAddress(bindAddr string, port int) string {
-	return bindAddr + ":" + strconv.Itoa(port)
+func (l *SocketListener) getInConfig() inCfg {
+	return inCfg{
+		connectTimeout:      l.cfg.ConnectTimeout,
+		authenticateTimeout: l.cfg.AuthenticateTimeout,
+		keepAliveTimeout:    l.cfg.KeepAliveTimeout,
+		reqTimeout:          l.cfg.RequestTimeout,
+		maxStanzaSize:       l.cfg.MaxStanzaSize,
+		compressionLevel:    cmpLevelMap[l.cfg.CompressionLevel],
+		resConflict:         resConflictMap[l.cfg.ResourceConflict],
+		useTLS:              l.cfg.DirectTLS,
+		tlsConfig:           l.tlsCfg,
+	}
+}
+
+func (l *SocketListener) getAddress() string {
+	return l.cfg.BindAddr + ":" + strconv.Itoa(l.cfg.Port)
 }

@@ -20,8 +20,9 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/ortuman/jackal/pkg/c2s"
+
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	clusterpb "github.com/ortuman/jackal/pkg/cluster/pb"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/log"
