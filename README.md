@@ -160,7 +160,7 @@ docker run --name=jackal \
 Alternatively, and with the purpose of facilitating service mounting, you can make use of `docker-compose` as follows:
 
 ```sh
-make dockerimage && docker-compose -f dockerfiles/docker-compose.yml up
+docker-compose -f dockerfiles/docker-compose.yml up
 ```
 
 This command will spin up a `jackal` server along with its dependencies on a docker network and start listening for incoming connections on port `5222`.
