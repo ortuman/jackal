@@ -1003,7 +1003,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 
 		// check if another stream with same resource value did already connect
 		for _, rs := range rss {
-			if rs.JID.Resource() != res {
+			if rs.JID().Resource() != res {
 				continue
 			}
 			switch s.cfg.resConflict {
@@ -1018,7 +1018,7 @@ func (s *inC2S) bindResource(ctx context.Context, iq *stravaganza.IQ) error {
 				se.ApplicationElement = stravaganza.NewBuilder("resource-conflict").
 					WithAttribute(stravaganza.Namespace, "urn:xmpp:errors").
 					Build()
-				if err := s.router.C2S().Disconnect(ctx, &rs, se); err != nil {
+				if err := s.router.C2S().Disconnect(ctx, rs, se); err != nil {
 					return err
 				}
 				break
@@ -1183,16 +1183,15 @@ func (s *inC2S) sendElement(ctx context.Context, elem stravaganza.Element) error
 	return err
 }
 
-func (s *inC2S) getResource() *c2smodel.Resource {
+func (s *inC2S) getResource() c2smodel.ResourceDesc {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	rs := &c2smodel.Resource{
-		InstanceID: instance.ID(),
-		JID:        s.jd,
-		Presence:   s.pr,
-		Info:       s.inf,
-	}
-	return rs
+	return c2smodel.NewResourceDesc(
+		instance.ID(),
+		s.jd,
+		s.pr,
+		s.inf,
+	)
 }
 
 func (s *inC2S) updateRateLimiter() error {

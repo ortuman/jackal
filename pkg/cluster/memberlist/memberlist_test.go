@@ -64,8 +64,9 @@ func TestMemberList_Leave(t *testing.T) {
 	// given
 	kvMock := &kvMock{}
 
+	wCh := make(chan kv.WatchResp)
 	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kv.WatchResp {
-		return make(chan kv.WatchResp)
+		return wCh
 	}
 	kvMock.PutFunc = func(ctx context.Context, key string, value string) error {
 		return nil
@@ -81,6 +82,7 @@ func TestMemberList_Leave(t *testing.T) {
 	// when
 	_ = ml.Start(context.Background())
 
+	close(wCh)
 	err := ml.Stop(context.Background())
 
 	// then

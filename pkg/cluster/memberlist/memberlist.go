@@ -44,6 +44,7 @@ type MemberList struct {
 	hk        *hook.Hooks
 	mu        sync.RWMutex
 	members   map[string]clustermodel.Member
+	stopCh    chan struct{}
 }
 
 // New will create a new MemberList instance using the given configuration.
@@ -56,6 +57,7 @@ func New(kv kv.KV, localPort int, hk *hook.Hooks) *MemberList {
 		ctx:       ctx,
 		ctxCancel: cancelFn,
 		hk:        hk,
+		stopCh:    make(chan struct{}),
 	}
 }
 
@@ -77,6 +79,7 @@ func (ml *MemberList) Start(ctx context.Context) error {
 func (ml *MemberList) Stop(ctx context.Context) error {
 	// stop watching changes...
 	ml.ctxCancel()
+	<-ml.stopCh
 
 	// unregister local instance
 	if err := ml.kv.Del(ctx, localMemberKey()); err != nil {
@@ -149,10 +152,11 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 				continue
 			}
 			// process changes
-			if err := ml.processKVEvents(ctx, wResp.Events); err != nil {
+			if err := ml.processKVEvents(ml.ctx, wResp.Events); err != nil {
 				log.Warnf("Failed to process memberlist changes: %v", err)
 			}
 		}
+		close(ml.stopCh) // signal stop
 	}()
 	return <-ch
 }

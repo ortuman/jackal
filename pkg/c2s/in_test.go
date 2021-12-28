@@ -148,7 +148,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 		sessionResFn  func() (stravaganza.Element, error)
 		authProcessFn func(_ context.Context, _ stravaganza.Element) (stravaganza.Element, *auth.SASLError)
 		routeError    error
-		hubResources  []c2smodel.Resource
+		hubResources  []c2smodel.ResourceDesc
 		flags         uint8
 
 		// expectations
@@ -383,8 +383,8 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			hubResources: []c2smodel.Resource{
-				{JID: jd0, InstanceID: "inst-2"},
+			hubResources: []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("inst-2", jd0, nil, c2smodel.Info{}),
 			},
 			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="bind_2"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>yard</resource></bind><error code="409" type="cancel"><conflict xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
 			expectedState:  inAuthenticated,
@@ -410,10 +410,10 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			hubResources: []c2smodel.Resource{ // default max allowed sessions (3)
-				{JID: jd1, InstanceID: "inst-2"},
-				{JID: jd2, InstanceID: "inst-2"},
-				{JID: jd2, InstanceID: "inst-3"},
+			hubResources: []c2smodel.ResourceDesc{ // default max allowed sessions (3)
+				c2smodel.NewResourceDesc("inst-2", jd1, nil, c2smodel.Info{}),
+				c2smodel.NewResourceDesc("inst-2", jd2, nil, c2smodel.Info{}),
+				c2smodel.NewResourceDesc("inst-3", jd2, nil, c2smodel.Info{}),
 			},
 			expectedOutput: `<stream:error><policy-violation xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/><reached-max-session-count xmlns="urn:xmpp:errors"/></stream:error></stream:stream>`,
 			expectedState:  inTerminated,
@@ -707,11 +707,11 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			// resourcemanager mock
 			var updatedRes bool
-			resMngMock.PutResourceFunc = func(_ context.Context, _ *c2smodel.Resource) error {
+			resMngMock.PutResourceFunc = func(_ context.Context, _ c2smodel.ResourceDesc) error {
 				updatedRes = true
 				return nil
 			}
-			resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
+			resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.ResourceDesc, error) {
 				return tt.hubResources, nil
 			}
 			resMngMock.DelResourceFunc = func(ctx context.Context, username string, resource string) error {

@@ -19,11 +19,10 @@ import (
 	"sync"
 	"testing"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -148,19 +147,10 @@ func TestRoster_UpdateItem(t *testing.T) {
 	jd0, _ := jid.New("ortuman", "jackal.im", "yard", true)
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{
-				JID:        jd0,
-				InstanceID: "i0",
-				Info: c2smodel.Info{
-					M: map[string]string{rosterRequestedCtxKey: "true"},
-				},
-			},
-			{
-				JID:        jd1,
-				InstanceID: "i1",
-			},
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
 		}, nil
 	}
 
@@ -262,10 +252,10 @@ func TestRoster_RemoveItem(t *testing.T) {
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{JID: jd0, InstanceID: "i0", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
-			{JID: jd1, InstanceID: "i1"},
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
 		}, nil
 	}
 
@@ -373,10 +363,10 @@ func TestRoster_Subscribe(t *testing.T) {
 	jd1, _ := jid.New("ortuman", "jackal.im", "balcony", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{JID: jd0, InstanceID: "i0", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
-			{JID: jd1, InstanceID: "i1"},
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
 		}, nil
 	}
 
@@ -467,15 +457,15 @@ func TestRoster_Subscribed(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		switch {
 		case username == "ortuman":
-			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		case username == "noelia":
-			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		}
 		return nil, nil
@@ -576,15 +566,15 @@ func TestRoster_Unsubscribe(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		switch {
 		case username == "ortuman":
-			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		case username == "noelia":
-			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		}
 		return nil, nil
@@ -688,15 +678,15 @@ func TestRoster_Unsubscribed(t *testing.T) {
 	jd1, _ := jid.New("noelia", "jackal.im", "yard", true)
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		switch {
 		case username == "ortuman":
-			return []c2smodel.Resource{
-				{JID: jd0, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		case username == "noelia":
-			return []c2smodel.Resource{
-				{JID: jd1, InstanceID: "i1", Info: c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
 			}, nil
 		}
 		return nil, nil
@@ -782,16 +772,16 @@ func TestRoster_Probe(t *testing.T) {
 
 	resMngMock := &resourceManagerMock{}
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		switch {
 		case username == "ortuman":
-			return []c2smodel.Resource{
-				{
-					JID:        jd0,
-					InstanceID: "i1",
-					Presence:   xmpputil.MakePresence(jd0.ToBareJID(), jd0.ToBareJID(), stravaganza.AvailableType, nil),
-					Info:       c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
-				},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc(
+					"i1",
+					jd0,
+					xmpputil.MakePresence(jd0.ToBareJID(), jd0.ToBareJID(), stravaganza.AvailableType, nil),
+					c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
+				),
 			}, nil
 		}
 		return nil, nil
@@ -890,16 +880,16 @@ func TestRoster_Available(t *testing.T) {
 
 	resMngMock := &resourceManagerMock{}
 
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		switch {
 		case username == "noelia":
-			return []c2smodel.Resource{
-				{
-					JID:        jd1,
-					InstanceID: "i1",
-					Presence:   xmpputil.MakePresence(jd1.ToBareJID(), jd1.ToBareJID(), stravaganza.AvailableType, nil),
-					Info:       c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
-				},
+			return []c2smodel.ResourceDesc{
+				c2smodel.NewResourceDesc(
+					"i1",
+					jd1,
+					xmpputil.MakePresence(jd1.ToBareJID(), jd1.ToBareJID(), stravaganza.AvailableType, nil),
+					c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
+				),
 			}, nil
 		}
 		return nil, nil

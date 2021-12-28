@@ -60,8 +60,8 @@ func (p *accountProvider) Items(ctx context.Context, toJID, fromJID *jid.JID, _ 
 	var items []discomodel.Item
 	for _, res := range rss {
 		items = append(items, discomodel.Item{
-			Name: res.JID.Node(),
-			Jid:  res.JID.String(),
+			Name: res.JID().Node(),
+			Jid:  res.JID().String(),
 		})
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].Jid < items[j].Jid })

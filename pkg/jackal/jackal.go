@@ -390,6 +390,7 @@ func (j *Jackal) initS2SOut(cfg s2s.OutConfig) {
 func (j *Jackal) initRouters() {
 	// init shared resource hub
 	j.resMng = c2s.NewResourceManager(j.kv)
+	j.registerStartStopper(j.resMng)
 
 	// init C2S router
 	j.localRouter = c2s.NewLocalRouter(j.hosts)
@@ -400,7 +401,6 @@ func (j *Jackal) initRouters() {
 
 	// init global router
 	j.router = router.New(j.hosts, c2sRouter, s2sRouter)
-
 	j.registerStartStopper(j.router)
 	return
 }

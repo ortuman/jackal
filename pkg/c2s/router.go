@@ -77,11 +77,13 @@ func (r *c2sRouter) Route(ctx context.Context, stanza stravaganza.Stanza, routin
 	return r.route(ctx, stanza, rss)
 }
 
-func (r *c2sRouter) Disconnect(ctx context.Context, res *c2smodel.Resource, streamErr *streamerror.Error) error {
-	if instance.ID() == res.InstanceID {
-		return r.local.Disconnect(res.JID.Node(), res.JID.Resource(), streamErr)
+func (r *c2sRouter) Disconnect(ctx context.Context, res c2smodel.ResourceDesc, streamErr *streamerror.Error) error {
+	var username, resource = res.JID().Node(), res.JID().Resource()
+
+	if instance.ID() == res.InstanceID() {
+		return r.local.Disconnect(username, resource, streamErr)
 	}
-	return r.cluster.Disconnect(ctx, res.JID.Node(), res.JID.Resource(), streamErr, res.InstanceID)
+	return r.cluster.Disconnect(ctx, username, resource, streamErr, res.InstanceID())
 }
 
 func (r *c2sRouter) Register(stm stream.C2S) error {
@@ -129,7 +131,7 @@ func (r *c2sRouter) Stop(ctx context.Context) error {
 	return r.local.Stop(ctx)
 }
 
-func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []c2smodel.Resource) ([]jid.JID, error) {
+func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resources []c2smodel.ResourceDesc) ([]jid.JID, error) {
 	if len(resources) == 0 {
 		return nil, router.ErrUserNotAvailable
 	}
@@ -139,13 +141,13 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	if toJID.IsFullWithUser() {
 		// route to full resource
 		for _, res := range resources {
-			if res.JID.Resource() != toJID.Resource() {
+			if res.JID().Resource() != toJID.Resource() {
 				continue
 			}
-			if err := r.routeTo(ctx, stanza, &res); err != nil {
+			if err := r.routeTo(ctx, stanza, res); err != nil {
 				return nil, err
 			}
-			return []jid.JID{*res.JID}, nil
+			return []jid.JID{*res.JID()}, nil
 		}
 		return nil, router.ErrResourceNotFound
 	}
@@ -162,10 +164,10 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 			if res.Priority() < 0 || res.Priority() != p0 {
 				break
 			}
-			if err := r.routeTo(ctx, stanza, &res); err != nil {
+			if err := r.routeTo(ctx, stanza, res); err != nil {
 				return nil, err
 			}
-			targets = append(targets, *res.JID)
+			targets = append(targets, *res.JID())
 			routed = true
 		}
 		if !routed {
@@ -175,17 +177,19 @@ func (r *c2sRouter) route(ctx context.Context, stanza stravaganza.Stanza, resour
 	}
 	// broadcast to all resources
 	for _, res := range resources {
-		if err := r.routeTo(ctx, stanza, &res); err != nil {
+		if err := r.routeTo(ctx, stanza, res); err != nil {
 			return nil, err
 		}
-		targets = append(targets, *res.JID)
+		targets = append(targets, *res.JID())
 	}
 	return targets, nil
 }
 
-func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes *c2smodel.Resource) error {
-	if toRes.InstanceID == instance.ID() {
-		return r.local.Route(stanza, toRes.JID.Node(), toRes.JID.Resource())
+func (r *c2sRouter) routeTo(ctx context.Context, stanza stravaganza.Stanza, toRes c2smodel.ResourceDesc) error {
+	var username, resource = toRes.JID().Node(), toRes.JID().Resource()
+
+	if toRes.InstanceID() == instance.ID() {
+		return r.local.Route(stanza, username, resource)
 	}
-	return r.cluster.Route(ctx, stanza, toRes.JID.Node(), toRes.JID.Resource(), toRes.InstanceID)
+	return r.cluster.Route(ctx, stanza, username, resource, toRes.InstanceID())
 }

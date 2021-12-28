@@ -35,7 +35,7 @@ func testMessageStanza() *stravaganza.Message {
 	return msg
 }
 
-func testResource(instanceID string, priority int8) c2smodel.Resource {
+func testResource(instanceID string, priority int8, username, resource string) c2smodel.ResourceDesc {
 	pr, _ := stravaganza.NewPresenceBuilder().
 		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
 		WithAttribute(stravaganza.To, "ortuman@jackal.im").
@@ -46,11 +46,6 @@ func testResource(instanceID string, priority int8) c2smodel.Resource {
 		).
 		BuildPresence()
 
-	jd, _ := jid.New("ortuman", "jackal.im", "yard", true)
-	return c2smodel.Resource{
-		InstanceID: instanceID,
-		JID:        jd,
-		Presence:   pr,
-		Info:       c2smodel.Info{M: map[string]string{"k1": "v1", "k2": "v2"}},
-	}
+	jd, _ := jid.New(username, "jackal.im", resource, true)
+	return c2smodel.NewResourceDesc(instanceID, jd, pr, c2smodel.Info{M: map[string]string{"k1": "v1", "k2": "v2"}})
 }

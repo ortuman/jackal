@@ -522,10 +522,10 @@ func (r *Roster) processProbe(ctx context.Context, presence *stravaganza.Presenc
 		return err
 	}
 	for _, res := range rss {
-		if !res.Presence.IsAvailable() {
+		if !res.Presence().IsAvailable() {
 			continue
 		}
-		p := xmpputil.MakePresence(res.JID, userJID, stravaganza.AvailableType, res.Presence.AllChildren())
+		p := xmpputil.MakePresence(res.JID(), userJID, stravaganza.AvailableType, res.Presence().AllChildren())
 		_, _ = r.router.Route(ctx, p)
 	}
 	log.Infow("Processed 'probe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
@@ -562,7 +562,7 @@ func (r *Roster) processAvailability(ctx context.Context, presence *stravaganza.
 			return err
 		}
 		for _, res := range rss {
-			pr := xmpputil.MakePresence(fromJID, res.JID, stravaganza.AvailableType, presence.AllChildren())
+			pr := xmpputil.MakePresence(fromJID, res.JID(), stravaganza.AvailableType, presence.AllChildren())
 			_, _ = r.router.Route(ctx, pr)
 		}
 		// deliver pending notifications
@@ -788,14 +788,14 @@ func (r *Roster) pushItem(ctx context.Context, ri *rostermodel.Item, ver int) er
 		return err
 	}
 	for _, rs := range rss {
-		if !rs.Info.Bool(rosterRequestedCtxKey) { // did request roster?
+		if !rs.Info().Bool(rosterRequestedCtxKey) { // did request roster?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().
 			WithAttribute(stravaganza.ID, uuid.New().String()).
 			WithAttribute(stravaganza.Type, stravaganza.SetType).
-			WithAttribute(stravaganza.From, rs.JID.ToBareJID().String()).
-			WithAttribute(stravaganza.To, rs.JID.String()).
+			WithAttribute(stravaganza.From, rs.JID().ToBareJID().String()).
+			WithAttribute(stravaganza.To, rs.JID().String()).
 			WithChild(
 				stravaganza.NewBuilder("query").
 					WithAttribute(stravaganza.Namespace, rosterNamespace).
@@ -817,10 +817,10 @@ func (r *Roster) routePresencesFrom(ctx context.Context, username string, toJID 
 	}
 	for _, res := range rss {
 		var children []stravaganza.Element
-		if pr := res.Presence; pr != nil && pr.IsAvailable() {
+		if pr := res.Presence(); pr != nil && pr.IsAvailable() {
 			children = pr.AllChildren()
 		}
-		p := xmpputil.MakePresence(res.JID, toJID, presenceType, children)
+		p := xmpputil.MakePresence(res.JID(), toJID, presenceType, children)
 		_, _ = r.router.Route(ctx, p)
 	}
 	return nil

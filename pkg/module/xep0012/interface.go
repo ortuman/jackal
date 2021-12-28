@@ -35,7 +35,7 @@ type globalRouter interface {
 
 //go:generate moq -out resource_manager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]c2smodel.Resource, error)
+	GetResources(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error)
 }
 
 //go:generate moq -out hosts.mock_test.go . hosts
