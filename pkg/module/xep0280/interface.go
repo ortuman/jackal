@@ -45,5 +45,5 @@ type hosts interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]c2smodel.Resource, error)
+	GetResources(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error)
 }

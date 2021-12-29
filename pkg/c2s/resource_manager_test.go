@@ -16,111 +16,98 @@ package c2s
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/ortuman/jackal/pkg/cluster/instance"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/stretchr/testify/require"
 )
 
 func TestResourceManager_SetResource(t *testing.T) {
 	// given
-	var r0, r1 c2smodel.Resource
-	r0 = testResource("megaman-2", 10)
+	var r0, r1 c2smodel.ResourceDesc
 
 	kvmock := &kvMock{}
 
-	h := &ResourceManager{kv: kvmock}
+	h := NewResourceManager(kvmock)
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error {
 		r, _ := decodeResource(key, []byte(value))
-		r1 = *r
+		r1 = r
 		return nil
 	}
 
 	// when
-	err := h.PutResource(context.Background(), &r0)
+	r0 = testResource("megaman-2", 10, "ortuman", "yard")
+	err := h.PutResource(context.Background(), r0)
 
 	// then
 	require.Nil(t, err)
-	require.Equal(t, r0.InstanceID, r1.InstanceID)
-	require.Equal(t, r0.JID.Domain(), r1.JID.Domain())
-	require.Equal(t, r0.JID.Resource(), r1.JID.Resource())
-	require.Equal(t, r0.Info, r1.Info)
-	require.True(t, reflect.DeepEqual(r0.Presence.String(), r1.Presence.String()))
+	require.Equal(t, r0.InstanceID(), r1.InstanceID())
+	require.Equal(t, r0.JID().Domain(), r1.JID().Domain())
+	require.Equal(t, r0.JID().Resource(), r1.JID().Resource())
+	require.Equal(t, r0.Info(), r1.Info())
+	require.True(t, reflect.DeepEqual(r0.Presence().String(), r1.Presence().String()))
 }
 
 func TestResourceManager_GetResource(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
+	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := &ResourceManager{kv: kvmock}
-
-	var expectedKey string
-	kvmock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
-		expectedKey = prefix
-
-		res := testResource("inst-1", 100)
-		b, _ := resourceVal(&res)
-
-		return map[string][]byte{"r://ortuman@balcony": b}, nil
-	}
+	h := NewResourceManager(kvmock)
 
 	// when
-	res, err := h.GetResource(context.Background(), "ortuman", "balcony")
+	r0 := testResource("megaman-2", 10, "ortuman", "yard")
+	_ = h.PutResource(context.Background(), r0)
+
+	res, err := h.GetResource(context.Background(), "ortuman", "yard")
 
 	// then
 	require.Nil(t, err)
+	require.NotNil(t, res)
 
-	require.Equal(t, "r://ortuman@balcony", expectedKey)
-
-	require.Equal(t, "ortuman", res.JID.Node())
-	require.Equal(t, "jackal.im", res.JID.Domain())
-	require.Equal(t, "balcony", res.JID.Resource())
+	require.Equal(t, "ortuman", res.JID().Node())
+	require.Equal(t, "jackal.im", res.JID().Domain())
+	require.Equal(t, "yard", res.JID().Resource())
 	require.Equal(t, true, res.IsAvailable())
-	require.Equal(t, int8(100), res.Priority())
-	require.Equal(t, "inst-1", res.InstanceID)
+	require.Equal(t, int8(10), res.Priority())
+	require.Equal(t, "megaman-2", res.InstanceID())
 }
 
 func TestResourceManager_GetResources(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
+	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := &ResourceManager{kv: kvmock}
+	h := NewResourceManager(kvmock)
 
-	var expectedKey string
-	kvmock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
-		expectedKey = prefix
+	r0 := testResource("abc1234", 100, "ortuman", "yard")
+	r1 := testResource("bcd1234", 50, "ortuman", "balcony")
+	r2 := testResource("cde1234", 50, "ortuman", "chamber")
 
-		r0 := testResource("abc1234", 100)
-		r1 := testResource("bcd1234", 50)
-		r2 := testResource("cde1234", 50)
-
-		b0, _ := resourceVal(&r0)
-		b1, _ := resourceVal(&r1)
-		b2, _ := resourceVal(&r2)
-
-		return map[string][]byte{
-			"r://ortuman@balcony": b0,
-			"r://ortuman@yard":    b1,
-			"r://ortuman@hall":    b2,
-		}, nil
-	}
+	_ = h.PutResource(context.Background(), r0)
+	_ = h.PutResource(context.Background(), r1)
+	_ = h.PutResource(context.Background(), r2)
 
 	// when
 	res, err := h.GetResources(context.Background(), "ortuman")
 
 	// then
 	require.Nil(t, err)
-
-	require.Equal(t, "r://ortuman", expectedKey)
 	require.Len(t, res, 3)
 }
 
 func TestResourceManager_DelResource(t *testing.T) {
 	// given
 	kvmock := &kvMock{}
+	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := &ResourceManager{kv: kvmock}
+	h := NewResourceManager(kvmock)
+
+	r0 := testResource("megaman-2", 10, "ortuman", "yard")
+	_ = h.PutResource(context.Background(), r0)
 
 	var expectedKey string
 	kvmock.DelFunc = func(ctx context.Context, key string) error {
@@ -131,6 +118,10 @@ func TestResourceManager_DelResource(t *testing.T) {
 	// when
 	_ = h.DelResource(context.Background(), "ortuman", "yard")
 
+	r1, _ := h.GetResource(context.Background(), "ortuman", "yard")
+
 	// then
-	require.Equal(t, "r://ortuman@yard", expectedKey)
+	require.Equal(t, fmt.Sprintf("r://ortuman@yard/%s", instance.ID()), expectedKey)
+
+	require.Nil(t, r1)
 }

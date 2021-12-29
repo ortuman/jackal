@@ -376,7 +376,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	m.mu.Unlock()
 
 	// resume stream and send unacknowledged stanzas
-	if err := stm.Resume(ctx, res.JID, res.Presence, res.Info); err != nil {
+	if err := stm.Resume(ctx, res.JID(), res.Presence(), res.Info()); err != nil {
 		return err
 	}
 	stm.SendElement(stravaganza.NewBuilder("resumed").

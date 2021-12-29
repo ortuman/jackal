@@ -234,10 +234,10 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		return err
 	}
 	for _, res := range rss {
-		if !res.Info.Bool(carbonsEnabledCtxKey) {
+		if !res.Info().Bool(carbonsEnabledCtxKey) {
 			continue
 		}
-		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID))
+		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID()))
 	}
 	return nil
 }
@@ -248,15 +248,15 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		return err
 	}
 	for _, res := range rss {
-		if !res.Info.Bool(carbonsEnabledCtxKey) {
+		if !res.Info().Bool(carbonsEnabledCtxKey) {
 			continue
 		}
-		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID))
+		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID()))
 	}
 	return nil
 }
 
-func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]c2smodel.Resource, error) {
+func (p *Carbons) getFilteredResources(ctx context.Context, username string, ignoringJIDs []jid.JID) ([]c2smodel.ResourceDesc, error) {
 	rs, err := p.resMng.GetResources(ctx, username)
 	if err != nil {
 		return nil, err
@@ -265,9 +265,9 @@ func (p *Carbons) getFilteredResources(ctx context.Context, username string, ign
 	for _, j := range ignoringJIDs {
 		ignoredJIDs[j.String()] = struct{}{}
 	}
-	var ret []c2smodel.Resource
+	var ret []c2smodel.ResourceDesc
 	for _, res := range rs {
-		_, ok := ignoredJIDs[res.JID.String()]
+		_, ok := ignoredJIDs[res.JID().String()]
 		if ok {
 			continue
 		}

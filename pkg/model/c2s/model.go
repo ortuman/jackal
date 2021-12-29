@@ -49,26 +49,70 @@ func (i Info) Float(k string) float64 {
 	return v
 }
 
-// Resource represents a resource entity.
-type Resource struct {
-	InstanceID string
-	JID        *jid.JID
-	Presence   *stravaganza.Presence
-	Info       Info
+// ResourceDesc represents read-only a resource description.
+type ResourceDesc interface {
+	// InstanceID specifies the instance identifier that registered the resource.
+	InstanceID() string
+
+	// JID returns the resource associated JID value.
+	JID() *jid.JID
+
+	// Presence returns the resource associated presence stanza.
+	Presence() *stravaganza.Presence
+
+	// Info returns resource registered info.
+	Info() Info
+
+	// IsAvailable returns presence available value.
+	IsAvailable() bool
+
+	// Priority returns resource presence priority.
+	Priority() int8
 }
 
-// IsAvailable returns presence available value.
-func (r *Resource) IsAvailable() bool {
-	if r.Presence != nil {
-		return r.Presence.IsAvailable()
+// NewResourceDesc initializes and returns a read-only resource description.
+func NewResourceDesc(instanceID string, jd *jid.JID, pr *stravaganza.Presence, inf Info) ResourceDesc {
+	return &resourceDesc{
+		instanceID: instanceID,
+		jd:         jd,
+		presence:   pr,
+		info:       inf,
+	}
+}
+
+type resourceDesc struct {
+	instanceID string
+	jd         *jid.JID
+	presence   *stravaganza.Presence
+	info       Info
+}
+
+func (r *resourceDesc) InstanceID() string {
+	return r.instanceID
+}
+
+func (r *resourceDesc) JID() *jid.JID {
+	return r.jd
+}
+
+func (r *resourceDesc) Presence() *stravaganza.Presence {
+	return r.presence
+}
+
+func (r *resourceDesc) Info() Info {
+	return r.info
+}
+
+func (r *resourceDesc) IsAvailable() bool {
+	if r.presence != nil {
+		return r.presence.IsAvailable()
 	}
 	return false
 }
 
-// Priority returns resource presence priority.
-func (r *Resource) Priority() int8 {
-	if r.Presence != nil {
-		return r.Presence.Priority()
+func (r *resourceDesc) Priority() int8 {
+	if r.presence != nil {
+		return r.presence.Priority()
 	}
 	return 0
 }

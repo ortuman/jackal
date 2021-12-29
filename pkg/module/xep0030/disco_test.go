@@ -246,12 +246,9 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	}
 	jd0, _ := jid.NewWithString("noelia@jackal.im/chamber", true)
 	resMng := &resourceManagerMock{}
-	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{
-				InstanceID: "inst-1",
-				JID:        jd0,
-			},
+	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("inst-1", jd0, nil, c2smodel.Info{}),
 		}, nil
 	}
 	hk := hook.NewHooks()

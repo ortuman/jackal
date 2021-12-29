@@ -34,5 +34,5 @@ type c2sStream interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResource(ctx context.Context, username, resource string) (*c2smodel.Resource, error)
+	GetResource(ctx context.Context, username, resource string) (c2smodel.ResourceDesc, error)
 }

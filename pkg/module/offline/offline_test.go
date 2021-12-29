@@ -49,7 +49,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return nil, nil
 	}
 	hk := hook.NewHooks()
@@ -114,7 +114,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		return nil
 	}
 	resManagerMock := &resourceManagerMock{}
-	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return nil, nil
 	}
 

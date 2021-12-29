@@ -52,9 +52,7 @@ func TestResource_Presence(t *testing.T) {
 			Build(),
 	})
 
-	r := &Resource{
-		Presence: pr,
-	}
+	r := NewResourceDesc("i0", nil, pr, Info{})
 
 	// when
 	avail := r.IsAvailable()

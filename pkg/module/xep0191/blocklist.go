@@ -458,14 +458,14 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 	return err
 }
 
-func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []c2smodel.Resource) {
+func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, resources []c2smodel.ResourceDesc) {
 	for _, res := range resources {
-		if !res.Info.Bool(blockListRequestedCtxKey) { // block list requested?
+		if !res.Info().Bool(blockListRequestedCtxKey) { // block list requested?
 			continue
 		}
 		pushIQ, _ := stravaganza.NewIQBuilder().
-			WithAttribute(stravaganza.From, res.JID.ToBareJID().String()).
-			WithAttribute(stravaganza.To, res.JID.String()).
+			WithAttribute(stravaganza.From, res.JID().ToBareJID().String()).
+			WithAttribute(stravaganza.To, res.JID().String()).
 			WithAttribute(stravaganza.Type, stravaganza.SetType).
 			WithAttribute(stravaganza.ID, uuid.New().String()).
 			WithChild(pushed).
@@ -475,28 +475,28 @@ func (m *BlockList) sendPush(ctx context.Context, pushed stravaganza.Element, re
 	}
 }
 
-func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
+func (m *BlockList) sendUnavailablePresences(ctx context.Context, blockJIDs []jid.JID, resources []c2smodel.ResourceDesc, username string) error {
 	targets, err := m.getPresenceTargets(ctx, blockJIDs, username)
 	if err != nil {
 		return err
 	}
 	for _, res := range resources {
 		for _, target := range targets {
-			pr := xmpputil.MakePresence(res.JID, &target, stravaganza.UnavailableType, nil)
+			pr := xmpputil.MakePresence(res.JID(), &target, stravaganza.UnavailableType, nil)
 			_, _ = m.router.Route(ctx, pr)
 		}
 	}
 	return nil
 }
 
-func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []c2smodel.Resource, username string) error {
+func (m *BlockList) sendAvailablePresences(ctx context.Context, unblockJIDs []jid.JID, resources []c2smodel.ResourceDesc, username string) error {
 	targets, err := m.getPresenceTargets(ctx, unblockJIDs, username)
 	if err != nil {
 		return err
 	}
 	for _, res := range resources {
 		for _, target := range targets {
-			pr := xmpputil.MakePresence(res.JID, &target, stravaganza.AvailableType, res.Presence.AllChildren())
+			pr := xmpputil.MakePresence(res.JID(), &target, stravaganza.AvailableType, res.Presence().AllChildren())
 			_, _ = m.router.Route(ctx, pr)
 		}
 	}

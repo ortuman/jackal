@@ -109,12 +109,12 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 
 	jd0, _ := jid.NewWithString("noelia@jackal.im/yard", true)
-	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		if username != "noelia" {
 			return nil, nil
 		}
-		return []c2smodel.Resource{
-			{JID: jd0},
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{}),
 		}, nil
 	}
 

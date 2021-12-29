@@ -523,15 +523,15 @@ func TestStream_Resume(t *testing.T) {
 	}
 
 	resMngMock := &resourceManagerMock{}
-	resMngMock.GetResourceFunc = func(ctx context.Context, username string, resource string) (*c2smodel.Resource, error) {
-		return &c2smodel.Resource{
-			InstanceID: uuid.New().String(),
-			JID:        jd,
-			Presence:   xmpputil.MakePresence(jd, jd.ToBareJID(), stravaganza.AvailableType, nil),
-			Info: c2smodel.Info{
+	resMngMock.GetResourceFunc = func(ctx context.Context, username string, resource string) (c2smodel.ResourceDesc, error) {
+		return c2smodel.NewResourceDesc(
+			uuid.New().String(),
+			jd,
+			xmpputil.MakePresence(jd, jd.ToBareJID(), stravaganza.AvailableType, nil),
+			c2smodel.Info{
 				M: map[string]string{enabledInfoKey: "true"},
 			},
-		}, nil
+		), nil
 	}
 
 	hk := hook.NewHooks()

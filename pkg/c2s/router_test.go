@@ -69,7 +69,7 @@ func (s *routerSuite) TestRouter_NotAuthenticated() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return nil, nil
 	}
 
@@ -88,9 +88,9 @@ func (s *routerSuite) TestRouter_ResourceNotFound() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{InstanceID: instance.ID(), JID: jd},
+	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.Info{}),
 		}, nil
 	}
 
@@ -109,9 +109,9 @@ func (s *routerSuite) TestRouter_LocalRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{InstanceID: instance.ID(), JID: jd},
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.Info{}),
 		}, nil
 	}
 	var routed bool
@@ -136,9 +136,9 @@ func (s *routerSuite) TestRouter_ClusterRoute() {
 	s.repositoryMock.UserExistsFunc = func(_ context.Context, _ string) (bool, error) {
 		return false, nil
 	}
-	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.Resource, error) {
-		return []c2smodel.Resource{
-			{InstanceID: "abcd1234", JID: jd},
+	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.ResourceDesc, error) {
+		return []c2smodel.ResourceDesc{
+			c2smodel.NewResourceDesc("abcd1234", jd, nil, c2smodel.Info{}),
 		}, nil
 	}
 	var routed bool

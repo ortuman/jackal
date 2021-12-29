@@ -61,7 +61,7 @@ type C2SRouter interface {
 	Route(ctx context.Context, stanza stravaganza.Stanza, routingOpts RoutingOptions) (targets []jid.JID, err error)
 
 	// Disconnect performs disconnection over an available resource.
-	Disconnect(ctx context.Context, res *c2smodel.Resource, streamErr *streamerror.Error) error
+	Disconnect(ctx context.Context, res c2smodel.ResourceDesc, streamErr *streamerror.Error) error
 
 	// Register registers a new stream.
 	Register(stm stream.C2S) error
