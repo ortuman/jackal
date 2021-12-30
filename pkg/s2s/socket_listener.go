@@ -173,7 +173,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 }
 
 func (l *SocketListener) handleConn(conn net.Conn) {
-	tr := transport.NewSocketTransport(conn)
+	tr := transport.NewSocketTransport(conn, l.cfg.ConnectTimeout, l.cfg.KeepAliveTimeout)
 	stm, err := newInS2S(
 		tr,
 		l.hosts,

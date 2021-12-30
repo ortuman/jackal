@@ -188,7 +188,8 @@ func (s *inS2S) start() error {
 func (s *inS2S) readLoop() {
 	s.restartSession()
 
-	// TODO(ortuman): configure connect and keep-alive deadline handlers
+	s.tr.SetConnectDeadlineHandler(s.connTimeout)
+	s.tr.SetKeepAliveDeadlineHandler(s.connTimeout)
 
 	elem, sErr := s.session.Receive()
 	for {

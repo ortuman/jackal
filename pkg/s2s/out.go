@@ -218,7 +218,7 @@ func (s *outS2S) dial(ctx context.Context) error {
 	}
 	level.Info(s.logger).Log("msg", "dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
 
-	s.tr = transport.NewSocketTransport(conn)
+	s.tr = transport.NewSocketTransport(conn, 0, 0)
 
 	// set default rate limiter
 	rLim := s.shapers.DefaultS2S().RateLimiter()
@@ -274,8 +274,6 @@ func (s *outS2S) start() error {
 }
 
 func (s *outS2S) readLoop() {
-	// TODO(ortuman) configure connect and keep-alive deadline handlers
-
 	elem, sErr := s.session.Receive()
 	for {
 		if s.getState() == outDisconnected {

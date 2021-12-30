@@ -14,22 +14,55 @@
 
 package transport
 
-import "net"
+import (
+	"net"
+	"time"
+)
 
 type deadlineConn struct {
 	net.Conn
+	connected       bool
+	connTimeout     time.Duration
+	rdTimeout       time.Duration
+	connDeadlineHnd func()
+	rdDeadlineHnd   func()
 }
 
-func newDeadlineConn(conn net.Conn) *deadlineConn {
+func newDeadlineConn(conn net.Conn, connTimeout time.Duration, readTimeout time.Duration) *deadlineConn {
 	return &deadlineConn{
-		Conn: conn,
+		Conn:        conn,
+		connTimeout: connTimeout,
+		rdTimeout:   readTimeout,
 	}
 }
 
 func (c *deadlineConn) Read(b []byte) (n int, err error) {
-	return c.Conn.Read(b)
+	switch {
+	case !c.connected && c.connDeadlineHnd != nil:
+		tm := time.AfterFunc(c.connTimeout, c.connDeadlineHnd)
+		n, err = c.Conn.Read(b)
+		tm.Stop()
+		c.connected = true
+
+	case c.rdDeadlineHnd != nil:
+		tm := time.AfterFunc(c.rdTimeout, c.rdDeadlineHnd)
+		n, err = c.Conn.Read(b)
+		tm.Stop()
+
+	default:
+		n, err = c.Conn.Read(b)
+	}
+	return
 }
 
-func (c *deadlineConn) UnderlyingConn() net.Conn {
+func (c *deadlineConn) setConnectDeadlineHandler(hnd func()) {
+	c.connDeadlineHnd = hnd
+}
+
+func (c *deadlineConn) setReadDeadlineHandler(hnd func()) {
+	c.rdDeadlineHnd = hnd
+}
+
+func (c *deadlineConn) underlyingConn() net.Conn {
 	return c.Conn
 }

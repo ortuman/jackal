@@ -186,7 +186,8 @@ func (s *inComponent) done() <-chan struct{} {
 func (s *inComponent) readLoop() {
 	s.restartSession()
 
-	// TODO(ortuman): configure connect and keep-alive deadline handlers
+	s.tr.SetConnectDeadlineHandler(s.connTimeout)
+	s.tr.SetKeepAliveDeadlineHandler(s.connTimeout)
 
 	elem, sErr := s.session.Receive()
 	for {

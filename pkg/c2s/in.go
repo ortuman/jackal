@@ -363,7 +363,8 @@ func (s *inC2S) start() error {
 func (s *inC2S) readLoop() {
 	s.restartSession()
 
-	// TODO(ortuman): configure connect and keep-alive deadline handlers
+	s.tr.SetConnectDeadlineHandler(s.connTimeout)
+	s.tr.SetKeepAliveDeadlineHandler(s.connTimeout)
 
 	authTm := time.AfterFunc(s.cfg.authenticateTimeout, s.connTimeout) // schedule authenticate timeout
 	elem, sErr := s.session.Receive()
