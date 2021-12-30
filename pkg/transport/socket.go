@@ -41,7 +41,7 @@ var bufWriterPool = sync.Pool{
 }
 
 type socketTransport struct {
-	conn       net.Conn
+	conn       *deadlineConn
 	lr         *ratelimiter.Reader
 	rd         io.Reader
 	wr         io.Writer
@@ -52,9 +52,10 @@ type socketTransport struct {
 
 // NewSocketTransport creates a socket class stream transport.
 func NewSocketTransport(conn net.Conn) Transport {
-	lr := ratelimiter.NewReader(conn)
+	dConn := newDeadlineConn(conn)
+	lr := ratelimiter.NewReader(dConn)
 	s := &socketTransport{
-		conn: conn,
+		conn: dConn,
 		lr:   lr,
 		rd:   bufio.NewReaderSize(lr, readBufferSize),
 		wr:   conn,
@@ -123,7 +124,7 @@ func (s *socketTransport) SetReadRateLimiter(rLim *rate.Limiter) error {
 }
 
 func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
-	_, ok := s.conn.(*net.TCPConn)
+	_, ok := s.conn.UnderlyingConn().(*net.TCPConn)
 	if !ok {
 		return
 	}
@@ -133,7 +134,7 @@ func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 	} else {
 		tlsConn = tls.Server(s.conn, cfg)
 	}
-	s.conn = tlsConn
+	s.conn = newDeadlineConn(tlsConn)
 	s.supportsCb = tlsConn.ConnectionState().Version < tls.VersionTLS13
 
 	lr := ratelimiter.NewReader(s.conn)
@@ -163,7 +164,7 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 	if !s.supportsCb {
 		return nil
 	}
-	conn, ok := s.conn.(tlsStateQueryable)
+	conn, ok := s.conn.UnderlyingConn().(tlsStateQueryable)
 	if !ok {
 		return nil
 	}
@@ -178,7 +179,7 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 }
 
 func (s *socketTransport) PeerCertificates() []*x509.Certificate {
-	conn, ok := s.conn.(tlsStateQueryable)
+	conn, ok := s.conn.UnderlyingConn().(tlsStateQueryable)
 	if !ok {
 		return nil
 	}

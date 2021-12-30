@@ -187,12 +187,10 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.hk,
 		l.logger,
 		inConfig{
-			connectTimeout:   l.cfg.ConnectTimeout,
-			keepAliveTimeout: l.cfg.KeepAliveTimeout,
-			reqTimeout:       l.cfg.RequestTimeout,
-			maxStanzaSize:    l.cfg.MaxStanzaSize,
-			directTLS:        l.cfg.DirectTLS,
-			tlsConfig:        l.getTLSConfig(),
+			reqTimeout:    l.cfg.RequestTimeout,
+			maxStanzaSize: l.cfg.MaxStanzaSize,
+			directTLS:     l.cfg.DirectTLS,
+			tlsConfig:     l.getTLSConfig(),
 		},
 	)
 	if err != nil {

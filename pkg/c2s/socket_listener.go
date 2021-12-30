@@ -276,9 +276,7 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 
 func (l *SocketListener) getInConfig() inCfg {
 	return inCfg{
-		connectTimeout:      l.cfg.ConnectTimeout,
 		authenticateTimeout: l.cfg.AuthenticateTimeout,
-		keepAliveTimeout:    l.cfg.KeepAliveTimeout,
 		reqTimeout:          l.cfg.RequestTimeout,
 		maxStanzaSize:       l.cfg.MaxStanzaSize,
 		compressionLevel:    cmpLevelMap[l.cfg.CompressionLevel],

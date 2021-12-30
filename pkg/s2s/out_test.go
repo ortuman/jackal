@@ -301,9 +301,8 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 				sender: "jackal.im",
 				target: "jabber.org",
 				cfg: outConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				typ:     defaultType,
 				state:   tt.state,
@@ -403,9 +402,8 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 
 			stm := &outS2S{
 				cfg: outConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				typ: dialbackType,
 				dbParams: DialbackParams{
@@ -491,9 +489,8 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 
 			stm := &outS2S{
 				cfg: outConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				typ:     defaultType,
 				state:   tt.state,

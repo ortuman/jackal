@@ -39,23 +39,6 @@ func TestParser_ErrTooLargeStanzaRead(t *testing.T) {
 	require.Equal(t, ErrTooLargeStanza, err1)
 }
 
-func TestParser_ParseSpace(t *testing.T) {
-	// given
-	docSrc := `\n`
-
-	r := strings.NewReader(docSrc)
-	p := New(r, DefaultMode, 1024)
-
-	// when
-	elem, err := p.Parse()
-
-	// then
-	require.Nil(t, elem)
-	require.NotNil(t, err)
-
-	require.Equal(t, ErrNoElement, err)
-}
-
 func TestParser_ParseSeveralElements(t *testing.T) {
 	// given
 	docSrc := `<?xml version="1.0" encoding="UTF-8"?><a/><b/><c/>`
@@ -64,14 +47,11 @@ func TestParser_ParseSeveralElements(t *testing.T) {
 	p := New(r, DefaultMode, 1024)
 
 	// when
-	_, err0 := p.Parse()
-
 	a, err1 := p.Parse()
 	b, err2 := p.Parse()
 	c, err3 := p.Parse()
 
 	// then
-	require.Equal(t, ErrNoElement, err0)
 	require.NotNil(t, a)
 	require.Nil(t, err1)
 

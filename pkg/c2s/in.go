@@ -81,9 +81,7 @@ const (
 )
 
 type inCfg struct {
-	connectTimeout      time.Duration
 	authenticateTimeout time.Duration
-	keepAliveTimeout    time.Duration
 	reqTimeout          time.Duration
 	maxStanzaSize       int
 	compressionLevel    compress.Level
@@ -365,11 +363,10 @@ func (s *inC2S) start() error {
 func (s *inC2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
-	elem, sErr := s.session.Receive()
-	tm.Stop()
+	// TODO(ortuman): configure connect and keep-alive deadline handlers
 
 	authTm := time.AfterFunc(s.cfg.authenticateTimeout, s.connTimeout) // schedule authenticate timeout
+	elem, sErr := s.session.Receive()
 	defer authTm.Stop()
 
 	for {
@@ -379,15 +376,8 @@ func (s *inC2S) readLoop() {
 		case inDisconnected, inTerminated:
 			return
 		}
-		if sErr == xmppparser.ErrNoElement {
-			goto doRead // continue reading
-		}
 		s.handleSessionResult(elem, sErr)
-
-	doRead:
-		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
-		tm.Stop()
 	}
 }
 

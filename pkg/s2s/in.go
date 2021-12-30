@@ -55,12 +55,10 @@ const (
 var inDisconnectTimeout = time.Second * 5
 
 type inConfig struct {
-	connectTimeout   time.Duration
-	keepAliveTimeout time.Duration
-	reqTimeout       time.Duration
-	maxStanzaSize    int
-	directTLS        bool
-	tlsConfig        *tls.Config
+	reqTimeout    time.Duration
+	maxStanzaSize int
+	directTLS     bool
+	tlsConfig     *tls.Config
 }
 
 type inS2S struct {
@@ -190,23 +188,15 @@ func (s *inS2S) start() error {
 func (s *inS2S) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
-	elem, sErr := s.session.Receive()
-	tm.Stop()
+	// TODO(ortuman): configure connect and keep-alive deadline handlers
 
+	elem, sErr := s.session.Receive()
 	for {
 		if s.getState() == inDisconnected {
 			return
 		}
-		if sErr == xmppparser.ErrNoElement {
-			goto doRead // continue reading
-		}
 		s.handleSessionResult(elem, sErr)
-
-	doRead:
-		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
-		tm.Stop()
 	}
 }
 

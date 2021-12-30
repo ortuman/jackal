@@ -47,9 +47,6 @@ var ErrTooLargeStanza = errors.New("parser: too large stanza")
 // ErrStreamClosedByPeer will be returned by Parse when stream closed element is parsed.
 var ErrStreamClosedByPeer = errors.New("parser: stream closed by peer")
 
-// ErrNoElement will be returned by Parse when no elements are available to be parsed in the reader buffer stream.
-var ErrNoElement = errors.New("parser: no elements")
-
 // Parser parses arbitrary XML input and builds an array with the structure of all tag and data elements.
 type Parser struct {
 	dec           *xml.Decoder
@@ -85,9 +82,6 @@ func (p *Parser) Parse() (stravaganza.Element, error) {
 			return nil, ErrTooLargeStanza
 		}
 		switch t1 := t.(type) {
-		case xml.ProcInst:
-			return nil, ErrNoElement
-
 		case xml.StartElement:
 			p.startElement(t1)
 			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {
@@ -98,10 +92,9 @@ func (p *Parser) Parse() (stravaganza.Element, error) {
 			}
 
 		case xml.CharData:
-			if !p.inElement {
-				return nil, ErrNoElement
+			if p.inElement {
+				p.setElementText(t1)
 			}
-			p.setElementText(t1)
 
 		case xml.EndElement:
 			if p.mode == SocketStream && t1.Name.Local == streamName && t1.Name.Space == streamName {

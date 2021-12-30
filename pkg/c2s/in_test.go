@@ -722,7 +722,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			userJID, _ := jid.NewWithString("ortuman@localhost", true)
 			stm := &inC2S{
 				cfg: inCfg{
-					keepAliveTimeout: time.Minute,
 					reqTimeout:       time.Minute,
 					maxStanzaSize:    8192,
 					compressionLevel: compress.DefaultCompression,
@@ -820,9 +819,8 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 
 			stm := &inC2S{
 				cfg: inCfg{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				state:   tt.state,
 				rq:      runqueue.New(tt.name),

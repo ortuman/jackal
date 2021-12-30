@@ -89,11 +89,10 @@ type DialbackParams struct {
 }
 
 type outConfig struct {
-	dbSecret         string
-	dialTimeout      time.Duration
-	keepAliveTimeout time.Duration
-	reqTimeout       time.Duration
-	maxStanzaSize    int
+	dbSecret      string
+	dialTimeout   time.Duration
+	reqTimeout    time.Duration
+	maxStanzaSize int
 }
 
 type outS2S struct {
@@ -275,28 +274,15 @@ func (s *outS2S) start() error {
 }
 
 func (s *outS2S) readLoop() {
-	tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout)
-	elem, sErr := s.session.Receive()
-	tm.Stop()
+	// TODO(ortuman) configure connect and keep-alive deadline handlers
 
+	elem, sErr := s.session.Receive()
 	for {
 		if s.getState() == outDisconnected {
 			return
 		}
-		if sErr == xmppparser.ErrNoElement {
-			goto doRead // continue reading
-		}
 		s.handleSessionResult(elem, sErr)
-
-	doRead:
-		if s.getState() != outAuthenticated {
-			tm = time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
-		}
 		elem, sErr = s.session.Receive()
-		if tm != nil {
-			tm.Stop()
-			tm = nil
-		}
 	}
 }
 
