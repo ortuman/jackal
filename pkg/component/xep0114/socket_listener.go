@@ -164,11 +164,9 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.hk,
 		l.logger,
 		inConfig{
-			connectTimeout:   l.cfg.ConnectTimeout,
-			keepAliveTimeout: l.cfg.KeepAliveTimeout,
-			reqTimeout:       l.cfg.RequestTimeout,
-			maxStanzaSize:    l.cfg.MaxStanzaSize,
-			secret:           l.cfg.Secret,
+			reqTimeout:    l.cfg.RequestTimeout,
+			maxStanzaSize: l.cfg.MaxStanzaSize,
+			secret:        l.cfg.Secret,
 		},
 	)
 	if err != nil {

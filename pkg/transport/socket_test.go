@@ -79,11 +79,11 @@ func TestSocket(t *testing.T) {
 	st.EnableCompression(compress.BestCompression)
 	require.True(t, st2.compressed)
 
-	st.(*socketTransport).conn = &net.TCPConn{}
+	st.(*socketTransport).conn = newDeadlineConn(&net.TCPConn{})
 	st.StartTLS(&tls.Config{}, false)
-	_, ok := st2.conn.(*tls.Conn)
+	_, ok := st2.conn.UnderlyingConn().(*tls.Conn)
 	require.True(t, ok)
-	st.(*socketTransport).conn = conn
+	st.(*socketTransport).conn = newDeadlineConn(conn)
 
 	require.Nil(t, st2.ChannelBindingBytes(ChannelBindingMechanism(99)))
 	require.Nil(t, st2.ChannelBindingBytes(TLSUnique))
