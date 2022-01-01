@@ -47,5 +47,5 @@ func testResource(instanceID string, priority int8, username, resource string) c
 		BuildPresence()
 
 	jd, _ := jid.New(username, "jackal.im", resource, true)
-	return c2smodel.NewResourceDesc(instanceID, jd, pr, c2smodel.Info{M: map[string]string{"k1": "v1", "k2": "v2"}})
+	return c2smodel.NewResourceDesc(instanceID, jd, pr, c2smodel.NewInfoMapFromMap(map[string]string{"k1": "v1", "k2": "v2"}))
 }

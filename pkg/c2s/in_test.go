@@ -385,7 +385,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			hubResources: []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("inst-2", jd0, nil, c2smodel.Info{}),
+				c2smodel.NewResourceDesc("inst-2", jd0, nil, c2smodel.NewInfoMap()),
 			},
 			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="bind_2"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>yard</resource></bind><error code="409" type="cancel"><conflict xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
 			expectedState:  inAuthenticated,
@@ -412,9 +412,9 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			hubResources: []c2smodel.ResourceDesc{ // default max allowed sessions (3)
-				c2smodel.NewResourceDesc("inst-2", jd1, nil, c2smodel.Info{}),
-				c2smodel.NewResourceDesc("inst-2", jd2, nil, c2smodel.Info{}),
-				c2smodel.NewResourceDesc("inst-3", jd2, nil, c2smodel.Info{}),
+				c2smodel.NewResourceDesc("inst-2", jd1, nil, c2smodel.NewInfoMap()),
+				c2smodel.NewResourceDesc("inst-2", jd2, nil, c2smodel.NewInfoMap()),
+				c2smodel.NewResourceDesc("inst-3", jd2, nil, c2smodel.NewInfoMap()),
 			},
 			expectedOutput: `<stream:error><policy-violation xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/><reached-max-session-count xmlns="urn:xmpp:errors"/></stream:error></stream:stream>`,
 			expectedState:  inTerminated,
@@ -734,6 +734,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				doneCh: make(chan struct{}),
 				jd:     userJID,
 				tr:     trMock,
+				inf:    c2smodel.NewInfoMap(),
 				hosts:  hMock,
 				router: routerMock,
 				mods:   modsMock,

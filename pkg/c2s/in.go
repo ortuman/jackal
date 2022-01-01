@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -127,7 +126,7 @@ type inC2S struct {
 	state state
 	jd    *jid.JID
 	pr    *stravaganza.Presence
-	inf   c2smodel.Info
+	inf   *c2smodel.InfoMap
 	flags flags
 }
 
@@ -165,8 +164,8 @@ func newInC2S(
 	stm := &inC2S{
 		id:      id,
 		cfg:     cfg,
-		inf:     c2smodel.Info{M: make(map[string]string)},
 		tr:      tr,
+		inf:     c2smodel.NewInfoMap(),
 		session: session,
 		authSt:  authState{authenticators: authenticators},
 		hosts:   hosts,
@@ -192,34 +191,20 @@ func (s *inC2S) ID() stream.C2SID {
 }
 
 func (s *inC2S) SetInfoValue(ctx context.Context, k string, val interface{}) error {
-	var vStr string
-
+	s.mu.Lock()
 	switch v := val.(type) {
 	case string:
-		vStr = v
+		s.inf.SetString(k, v)
 	case bool:
-		vStr = strconv.FormatBool(v)
+		s.inf.SetBool(k, v)
 	case int:
-		vStr = strconv.Itoa(v)
+		s.inf.SetInt(k, v)
 	case float64:
-		vStr = strconv.FormatFloat(v, 'E', -1, 64)
+		s.inf.SetFloat(k, v)
 	default:
 		s.mu.Unlock()
 		return fmt.Errorf("c2s: unsupported info value: %T", val)
 	}
-	s.mu.Lock()
-	mv, ok := s.inf.M[k]
-	if ok && mv == vStr {
-		s.mu.Unlock()
-		return nil // already present
-	}
-	// create info copy
-	nm := make(map[string]string)
-	for ik, iv := range s.inf.M {
-		nm[ik] = iv
-	}
-	nm[k] = vStr
-	s.inf = c2smodel.Info{M: nm}
 	s.mu.Unlock()
 
 	return s.resMng.PutResource(ctx, s.getResource())
@@ -306,7 +291,7 @@ func (s *inC2S) Resume(ctx context.Context, jd *jid.JID, pr *stravaganza.Presenc
 	s.mu.Lock()
 	s.jd = jd
 	s.pr = pr
-	s.inf = inf
+	s.inf = c2smodel.NewInfoMapFromInfo(inf)
 	s.mu.Unlock()
 
 	s.session.SetFromJID(jd)
@@ -1197,7 +1182,7 @@ func (s *inC2S) getResource() c2smodel.ResourceDesc {
 		instance.ID(),
 		s.jd,
 		s.pr,
-		s.inf,
+		s.inf.ReadOnly(),
 	)
 }
 

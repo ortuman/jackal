@@ -152,8 +152,8 @@ func TestRoster_UpdateItem(t *testing.T) {
 
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
-			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 
@@ -258,8 +258,8 @@ func TestRoster_RemoveItem(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
-			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 
@@ -370,8 +370,8 @@ func TestRoster_Subscribe(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
-			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
+			c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 
@@ -467,11 +467,11 @@ func TestRoster_Subscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		case username == "noelia":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		}
 		return nil, nil
@@ -577,11 +577,11 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		case username == "noelia":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		}
 		return nil, nil
@@ -690,11 +690,11 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		switch {
 		case username == "ortuman":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		case username == "noelia":
 			return []c2smodel.ResourceDesc{
-				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}}),
+				c2smodel.NewResourceDesc("i1", jd1, nil, c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"})),
 			}, nil
 		}
 		return nil, nil
@@ -789,7 +789,7 @@ func TestRoster_Probe(t *testing.T) {
 					"i1",
 					jd0,
 					xmpputil.MakePresence(jd0.ToBareJID(), jd0.ToBareJID(), stravaganza.AvailableType, nil),
-					c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
+					c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"}),
 				),
 			}, nil
 		}
@@ -863,7 +863,7 @@ func TestRoster_Available(t *testing.T) {
 		return nil
 	}
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{}
+		return c2smodel.NewInfoMap()
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -898,7 +898,7 @@ func TestRoster_Available(t *testing.T) {
 					"i1",
 					jd1,
 					xmpputil.MakePresence(jd1.ToBareJID(), jd1.ToBareJID(), stravaganza.AvailableType, nil),
-					c2smodel.Info{M: map[string]string{rosterRequestedCtxKey: "true"}},
+					c2smodel.NewInfoMapFromMap(map[string]string{rosterRequestedCtxKey: "true"}),
 				),
 			}, nil
 		}

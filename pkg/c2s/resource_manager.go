@@ -289,7 +289,7 @@ func decodeResource(key string, val []byte) (c2smodel.ResourceDesc, error) {
 	resource := ss1[0]
 
 	jd, _ := jid.New(username, resInf.Domain, resource, true)
-	inf := c2smodel.Info{M: resInf.Info}
+	inf := c2smodel.NewInfoMapFromMap(resInf.Info)
 
 	var pr *stravaganza.Presence
 	if resInf.Presence != nil {
@@ -326,7 +326,7 @@ func resourceVal(res c2smodel.ResourceDesc) ([]byte, error) {
 	resInf := resourcemanagerpb.ResourceInfo{
 		InstanceId: res.InstanceID(),
 		Domain:     res.JID().Domain(),
-		Info:       res.Info().M,
+		Info:       res.Info().Map(),
 		Presence:   pbPresence,
 	}
 	return proto.Marshal(&resInf)

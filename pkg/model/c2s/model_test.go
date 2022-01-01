@@ -33,7 +33,7 @@ func TestInfo_Get(t *testing.T) {
 	}
 
 	// when
-	i := Info{M: m}
+	i := infoMap{m: m}
 
 	// then
 	require.Equal(t, "v1", i.String("k1"))
@@ -52,7 +52,7 @@ func TestResource_Presence(t *testing.T) {
 			Build(),
 	})
 
-	r := NewResourceDesc("i0", nil, pr, Info{})
+	r := NewResourceDesc("i0", nil, pr, NewInfoMap())
 
 	// when
 	avail := r.IsAvailable()

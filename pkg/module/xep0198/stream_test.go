@@ -87,7 +87,7 @@ func TestStream_Enable(t *testing.T) {
 		return nil
 	}
 	stmMock.IsBindedFunc = func() bool { return true }
-	stmMock.InfoFunc = func() c2smodel.Info { return c2smodel.Info{M: map[string]string{}} }
+	stmMock.InfoFunc = func() c2smodel.Info { return c2smodel.NewInfoMap() }
 
 	var sentEl stravaganza.Element
 	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
@@ -139,9 +139,9 @@ func TestStream_InStanza(t *testing.T) {
 	stmMock := &c2sStreamMock{}
 	stmMock.JIDFunc = func() *jid.JID { return jd }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 
 	hk := hook.NewHooks()
@@ -194,9 +194,9 @@ func TestStream_OutStanza(t *testing.T) {
 	stmMock := &c2sStreamMock{}
 	stmMock.JIDFunc = func() *jid.JID { return jd }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 
 	hk := hook.NewHooks()
@@ -254,9 +254,9 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	stmMock.UsernameFunc = func() string { return jd.Node() }
 	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 	var streamErr *streamerror.Error
 	stmMock.DisconnectFunc = func(sErr *streamerror.Error) <-chan error {
@@ -323,9 +323,9 @@ func TestStream_SendR(t *testing.T) {
 	stmMock.UsernameFunc = func() string { return jd.Node() }
 	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 	sendCh := make(chan stravaganza.Element, 1)
 	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
@@ -374,9 +374,9 @@ func TestStream_HandleR(t *testing.T) {
 	stmMock.UsernameFunc = func() string { return jd.Node() }
 	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 	var sentEl stravaganza.Element
 	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
@@ -432,9 +432,9 @@ func TestStream_HandleA(t *testing.T) {
 	stmMock.UsernameFunc = func() string { return jd.Node() }
 	stmMock.ResourceFunc = func() string { return jd.Resource() }
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{
-			M: map[string]string{enabledInfoKey: "true"},
-		}
+		return c2smodel.NewInfoMapFromMap(
+			map[string]string{enabledInfoKey: "true"},
+		)
 	}
 	var sentEl stravaganza.Element
 	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
@@ -537,9 +537,9 @@ func TestStream_Resume(t *testing.T) {
 			uuid.New().String(),
 			jd,
 			xmpputil.MakePresence(jd, jd.ToBareJID(), stravaganza.AvailableType, nil),
-			c2smodel.Info{
-				M: map[string]string{enabledInfoKey: "true"},
-			},
+			c2smodel.NewInfoMapFromMap(
+				map[string]string{enabledInfoKey: "true"},
+			),
 		), nil
 	}
 
