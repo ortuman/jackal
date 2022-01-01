@@ -17,10 +17,10 @@ package etcd
 import (
 	"context"
 
-	etcdv3 "github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/log"
+	etcdv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 type etcdLock struct {
