@@ -138,7 +138,7 @@ func (m *Stream) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamDisconnected, m.onDisconnect, hook.LowestPriority)
 	m.hk.AddHook(hook.C2SStreamTerminated, m.onTerminate, hook.LowestPriority)
 
-	log.Infow("Started stream module", "xep", XEPNumber)
+	log.Infow("started stream module", "xep", XEPNumber)
 	return nil
 }
 
@@ -149,7 +149,7 @@ func (m *Stream) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamDisconnected, m.onDisconnect)
 	m.hk.RemoveHook(hook.C2SStreamTerminated, m.onTerminate)
 
-	log.Infow("Stopped stream module", "xep", XEPNumber)
+	log.Infow("stopped stream module", "xep", XEPNumber)
 	return nil
 }
 
@@ -197,7 +197,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if sq.len() >= m.cfg.MaxQueueSize { // max queue size reached
 		_ = sq.stream().Disconnect(streamerror.E(streamerror.PolicyViolation))
 
-		log.Infow("Max queue size reached",
+		log.Infow("max queue size reached",
 			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 		)
 	}
@@ -230,13 +230,13 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	m.termTms[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(nil)
 
-		log.Infow("Hibernated stream terminated",
+		log.Infow("hibernated stream terminated",
 			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 		)
 	})
 	m.mu.Unlock()
 
-	log.Infow("Scheduled stream termination",
+	log.Infow("scheduled stream termination",
 		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return hook.ErrStopped
@@ -328,7 +328,7 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		WithAttribute("resume", "true").
 		Build(),
 	)
-	log.Infow("Enabled stream management",
+	log.Infow("enabled stream management",
 		"smID", smID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
@@ -389,7 +389,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	sq.sendPending()
 	sq.scheduleR()
 
-	log.Infow("Resumed stream",
+	log.Infow("resumed stream",
 		"smID", prevSMID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	return nil
@@ -404,13 +404,13 @@ func (m *Stream) handleA(stm stream.C2S, h uint32) {
 	}
 	sq.acknowledge(h)
 
-	log.Infow("Received stanza ack",
+	log.Infow("received stanza ack",
 		"ack_h", h, "h", sq.outboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	if sq.len() == 0 {
 		return // done here
 	}
-	log.Infow("Resending pending stanzas...",
+	log.Infow("resending pending stanzas...",
 		"len", sq.len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	sq.sendPending()
@@ -424,7 +424,7 @@ func (m *Stream) handleR(stm stream.C2S) {
 	if sq == nil {
 		return
 	}
-	log.Infow("Stanza ack requested",
+	log.Infow("stanza ack requested",
 		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
 	)
 	a := stravaganza.NewBuilder("a").

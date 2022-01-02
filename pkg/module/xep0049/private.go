@@ -104,7 +104,7 @@ func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *Private) Start(_ context.Context) error {
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started private module", "xep", XEPNumber)
+	log.Infow("started private module", "xep", XEPNumber)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (m *Private) Start(_ context.Context) error {
 func (m *Private) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped private module", "xep", XEPNumber)
+	log.Infow("stopped private module", "xep", XEPNumber)
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+	log.Infow("fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
 	qb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, privateNamespace)
@@ -182,7 +182,7 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
-		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+		log.Infow("saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
 
 		// run private updated hook
 		_, err := m.hk.Run(ctx, hook.PrivateUpdated, &hook.ExecutionContext{

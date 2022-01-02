@@ -128,7 +128,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting external component connections at %s", l.getAddress())
+	log.Infof("accepting external component connections at %s", l.getAddress())
 	return nil
 }
 
@@ -140,7 +140,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 	}
 	l.stmHub.stop(ctx)
 
-	log.Infof("Stopped external component listener at %s", l.getAddress())
+	log.Infof("stopped external component listener at %s", l.getAddress())
 	return nil
 }
 

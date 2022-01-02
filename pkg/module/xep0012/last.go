@@ -113,7 +113,7 @@ func (m *Last) Start(_ context.Context) error {
 
 	m.startedAt = time.Now().Unix()
 
-	log.Infow("Started last module", "xep", XEPNumber)
+	log.Infow("started last module", "xep", XEPNumber)
 	return nil
 }
 
@@ -124,7 +124,7 @@ func (m *Last) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped last module", "xep", XEPNumber)
+	log.Infow("stopped last module", "xep", XEPNumber)
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (m *Last) processC2SPresence(ctx context.Context, pr *stravaganza.Presence)
 	if err != nil {
 		return err
 	}
-	log.Infow("Last activity registered", "username", username, "xep", XEPNumber)
+	log.Infow("last activity registered", "username", username, "xep", XEPNumber)
 	return nil
 }
 
@@ -206,7 +206,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 	// reply with server uptime
 	m.sendReply(ctx, iq, time.Now().Unix()-m.startedAt, "")
 
-	log.Infow("Sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
+	log.Infow("sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
 
 	_, err := m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{
@@ -249,7 +249,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 	}
 	m.sendReply(ctx, iq, time.Now().Unix()-lst.Seconds, lst.Status)
 
-	log.Infow("Sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
+	log.Infow("sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
 
 	_, err = m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{

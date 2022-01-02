@@ -102,7 +102,7 @@ func (m *Offline) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started offline module", "xep", ModuleName)
+	log.Infow("started offline module", "xep", ModuleName)
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped offline module", "xep", ModuleName)
+	log.Infow("stopped offline module", "xep", ModuleName)
 	return nil
 }
 
@@ -193,7 +193,7 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	for _, msg := range ms {
 		_, _ = m.router.Route(ctx, msg)
 	}
-	log.Infow("Delivered offline messages", "queue_size", len(ms), "username", username, "xep", "offline")
+	log.Infow("delivered offline messages", "queue_size", len(ms), "username", username, "xep", "offline")
 
 	return nil
 }
@@ -233,7 +233,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err != nil {
 		return err
 	}
-	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
+	log.Infow("archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
 
 	return hook.ErrStopped // already handled
 }

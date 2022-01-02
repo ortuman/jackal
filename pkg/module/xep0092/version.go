@@ -103,13 +103,13 @@ func (v *Version) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 // Start starts version module.
 func (v *Version) Start(ctx context.Context) error {
 	v.osInfo = getOSInfo(ctx)
-	log.Infow("Started version module", "xep", XEPNumber)
+	log.Infow("started version module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops version module.
 func (v *Version) Stop(_ context.Context) error {
-	log.Infow("Stopped version module", "xep", XEPNumber)
+	log.Infow("stopped version module", "xep", XEPNumber)
 	return nil
 }
 
@@ -141,6 +141,6 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	_, _ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
 
-	log.Infow("Sent software version", "username", iq.FromJID().Node(), "resource", iq.FromJID().Resource(), "xep", XEPNumber)
+	log.Infow("sent software version", "username", iq.FromJID().Node(), "resource", iq.FromJID().Resource(), "xep", XEPNumber)
 	return nil
 }

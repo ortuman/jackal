@@ -54,7 +54,7 @@ func (h *httpServer) Start(_ context.Context) error {
 	}
 	go func() {
 		if err := h.srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			log.Errorf("Failed to serve HTTP: %v", err)
+			log.Errorf("failed to serve HTTP: %v", err)
 		}
 	}()
 	log.Infof("HTTP server listening at :%d", h.port)
@@ -65,6 +65,6 @@ func (h *httpServer) Stop(ctx context.Context) error {
 	if err := h.srv.Shutdown(ctx); err != nil {
 		return err
 	}
-	log.Infof("Closed HTTP server at :%d", h.port)
+	log.Infof("closed HTTP server at :%d", h.port)
 	return nil
 }

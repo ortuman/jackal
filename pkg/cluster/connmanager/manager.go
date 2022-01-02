@@ -79,7 +79,7 @@ func (m *Manager) Start(_ context.Context) error {
 
 	m.hk.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, hook.DefaultPriority)
 
-	log.Infof("Started cluster connection manager")
+	log.Infof("started cluster connection manager")
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	}
 	m.hk.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
 
-	log.Infof("Stopped cluster connection manager... (%d total connections)", count)
+	log.Infof("stopped cluster connection manager... (%d total connections)", count)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 	for _, instanceID := range inf.UnregisteredKeys {
 		cl := m.conns[instanceID]
 		if err := cl.close(); err != nil {
-			log.Warnf("Failed to close cluster client conn: %s", err)
+			log.Warnf("failed to close cluster client conn: %s", err)
 		}
 		delete(m.conns, instanceID)
 	}
@@ -120,10 +120,10 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 	for _, member := range inf.Registered {
 		cl := newConn(member.Host, member.Port, member.APIVer)
 		if err := cl.dialContext(ctx); err != nil {
-			log.Warnf("Failed to dial cluster conn: %s", err)
+			log.Warnf("failed to dial cluster conn: %s", err)
 			continue
 		}
-		log.Infof("Dialed cluster router connection at %s:%d", member.Host, member.Port)
+		log.Infof("dialed cluster router connection at %s:%d", member.Host, member.Port)
 
 		m.conns[member.InstanceID] = cl
 	}

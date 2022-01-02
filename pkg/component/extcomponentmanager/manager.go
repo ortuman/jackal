@@ -72,7 +72,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	if err := m.refreshExternalComponents(ctx); err != nil {
 		return err
 	}
-	log.Infof("Started external component manager")
+	log.Infof("started external component manager")
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	// stop watching changes...
 	m.ctxCancel()
 
-	log.Infof("Stopped external component manager")
+	log.Infof("stopped external component manager")
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (m *Manager) refreshExternalComponents(ctx context.Context) error {
 		}
 		for _, ec := range ecs {
 			if err := m.comps.RegisterComponent(ctx, &ec); err != nil {
-				log.Warnf("Failed to register external component: %v", err)
+				log.Warnf("failed to register external component: %v", err)
 			}
 		}
 		close(ch) // signal update
@@ -106,13 +106,13 @@ func (m *Manager) refreshExternalComponents(ctx context.Context) error {
 		// watch changes
 		for wResp := range wCh {
 			if err := wResp.Err; err != nil {
-				log.Warnf("Error occurred watching external components: %v", err)
+				log.Warnf("error occurred watching external components: %v", err)
 				continue
 			}
 			// process change events
 			ctx, cancelFn := context.WithTimeout(context.Background(), processEventsTimeout)
 			if err := m.processKVEvents(ctx, wResp.Events); err != nil {
-				log.Warnf("Failed to process external component changes: %v", err)
+				log.Warnf("failed to process external component changes: %v", err)
 			}
 			cancelFn()
 		}
@@ -133,7 +133,7 @@ func (m *Manager) getExtComponents(ctx context.Context) ([]extComponent, error) 
 		}
 		ec, err := m.decodeExtComponent(k, strVal)
 		if err != nil {
-			log.Warnf("Failed to decode external component: %v", err)
+			log.Warnf("failed to decode external component: %v", err)
 			continue
 		}
 		if ec == nil {

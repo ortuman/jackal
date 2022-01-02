@@ -80,7 +80,7 @@ func (r *Repository) InTransaction(ctx context.Context, f func(ctx context.Conte
 	repTx := newRepTx(tx)
 	if err := f(ctx, repTx); err != nil {
 		if err := tx.Rollback(); err != nil {
-			log.Warnf("Failed to rollback PgSQL transaction: %v", err)
+			log.Warnf("failed to rollback PgSQL transaction: %v", err)
 		}
 		return err
 	}
@@ -103,7 +103,7 @@ func (r *Repository) Start(ctx context.Context) error {
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("pgsqlrepository: unable to verify PgSQL connection: %v", err)
 	}
-	log.Infow("Dialed PgSQL connection", "host", r.host)
+	log.Infow("dialed PgSQL connection", "host", r.host)
 
 	r.User = &pgSQLUserRep{conn: db}
 	r.Last = &pgSQLLastRep{conn: db}
@@ -121,12 +121,12 @@ func (r *Repository) Stop(_ context.Context) error {
 	if err := r.db.Close(); err != nil {
 		return fmt.Errorf("pgsqlrepository: failed to close PgSQL connection: %v", err)
 	}
-	log.Infow("Closed PgSQL connection", "host", r.host)
+	log.Infow("closed PgSQL connection", "host", r.host)
 	return nil
 }
 
 func closeRows(rows *sql.Rows) {
 	if err := rows.Close(); err != nil {
-		log.Warnf("Failed to close SQL rows: %v", err)
+		log.Warnf("failed to close SQL rows: %v", err)
 	}
 }

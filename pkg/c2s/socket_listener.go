@@ -190,7 +190,7 @@ func (l *SocketListener) Start(ctx context.Context) error {
 		}
 	}()
 	log.Infow(
-		fmt.Sprintf("Accepting C2S socket connections at %s", l.getAddress()),
+		fmt.Sprintf("accepting C2S socket connections at %s", l.getAddress()),
 		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
@@ -208,7 +208,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 			return err
 		}
 	}
-	log.Infof("Stopped C2S listener at %s", l.getAddress())
+	log.Infof("stopped C2S listener at %s", l.getAddress())
 	return nil
 }
 

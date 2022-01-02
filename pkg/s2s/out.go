@@ -209,7 +209,7 @@ func (s *outS2S) dial(ctx context.Context) error {
 		}
 		return err
 	}
-	log.Infow("Dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
+	log.Infow("dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
 
 	s.tr = transport.NewSocketTransport(conn)
 
@@ -246,9 +246,9 @@ func (s *outS2S) start() error {
 
 	switch s.typ {
 	case defaultType:
-		log.Infow("Registered S2S out stream", "sender", s.sender, "target", s.target)
+		log.Infow("registered S2S out stream", "sender", s.sender, "target", s.target)
 	case dialbackType:
-		log.Infow("Registered S2S dialback stream", "sender", s.sender, "target", s.target)
+		log.Infow("registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
 	err := s.runHook(ctx, hook.S2SOutStreamConnected, &hook.S2SStreamInfo{
@@ -303,7 +303,7 @@ func (s *outS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("Failed to process outgoing S2S session element", "error", err, "id", s.ID())
+				log.Warnw("failed to process outgoing S2S session element", "error", err, "id", s.ID())
 				_ = s.close(ctx)
 				return
 			}
@@ -466,7 +466,7 @@ func (s *outS2S) handleVerifyingDialbackKey(ctx context.Context, elem stravaganz
 			return s.finishAuthentication(ctx)
 
 		default:
-			log.Infow("Failed to verify S2S dialback key", "from", s.sender, "to", s.target)
+			log.Infow("failed to verify S2S dialback key", "from", s.sender, "to", s.target)
 			return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
 		}
 
@@ -572,7 +572,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		close(s.dbResCh)
 	}
 	if s.typ == defaultType {
-		log.Infow("Unregistered S2S out stream", "sender", s.sender, "target", s.target)
+		log.Infow("unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
 	err := s.runHook(ctx, hook.S2SOutStreamDisconnected, &hook.S2SStreamInfo{

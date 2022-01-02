@@ -42,7 +42,7 @@ func NewInHub() *InHub {
 // Start starts InHub instance.
 func (h *InHub) Start(_ context.Context) error {
 	go h.reportMetrics()
-	log.Infow("Started S2S in hub")
+	log.Infow("started S2S in hub")
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (h *InHub) Stop(ctx context.Context) error {
 	default:
 		break
 	}
-	log.Infow("Stopped S2S in hub")
+	log.Infow("stopped S2S in hub")
 	return err
 }
 

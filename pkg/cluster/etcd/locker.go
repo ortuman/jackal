@@ -64,7 +64,7 @@ func (l *Locker) Start(_ context.Context) error {
 		return err
 	}
 	l.ss = ss
-	log.Infof("Started etcd locker")
+	log.Infof("started etcd locker")
 	return nil
 }
 
@@ -76,6 +76,6 @@ func (l *Locker) Stop(_ context.Context) error {
 	if err := l.cli.Close(); err != nil {
 		return err
 	}
-	log.Infof("Stopped etcd locker")
+	log.Infof("stopped etcd locker")
 	return nil
 }

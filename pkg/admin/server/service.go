@@ -70,7 +70,7 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 	if err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("User %s created", username), "username", username)
+	log.Infow(fmt.Sprintf("user %s created", username), "username", username)
 	return &userspb.CreateUserResponse{}, nil
 }
 
@@ -82,7 +82,7 @@ func (s *usersService) ChangeUserPassword(ctx context.Context, req *userspb.Chan
 	if err := s.upsertUser(ctx, username, req.GetNewPassword()); err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("Password updated for user %s", username), "username", username)
+	log.Infow(fmt.Sprintf("password updated for user %s", username), "username", username)
 
 	return &userspb.ChangeUserPasswordResponse{}, nil
 }
@@ -104,7 +104,7 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 	if err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("User %s deleted", username), "username", username)
+	log.Infow(fmt.Sprintf("user %s deleted", username), "username", username)
 
 	return &userspb.DeleteUserResponse{}, nil
 }

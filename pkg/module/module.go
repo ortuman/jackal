@@ -94,7 +94,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		}
 		modNames = append(modNames, mod.Name())
 	}
-	log.Infow("Started modules",
+	log.Infow("started modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
@@ -117,7 +117,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		}
 		modNames = append(modNames, mod.Name())
 	}
-	log.Infow("Stopped modules",
+	log.Infow("stopped modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)

@@ -132,7 +132,7 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	go k.keepAliveLease()
 
-	log.Infow("Started etcd KV store")
+	log.Infow("started etcd KV store")
 	return nil
 }
 
@@ -150,7 +150,7 @@ func (k *KV) Stop(ctx context.Context) error {
 	if err := k.cli.Close(); err != nil {
 		return err
 	}
-	log.Infow("Stopped etcd KV store")
+	log.Infow("stopped etcd KV store")
 	return nil
 }
 
@@ -170,11 +170,11 @@ func (k *KV) keepAliveLease() {
 				retries = 0
 
 			default:
-				log.Warnw(fmt.Sprintf("Failed to perform lease keepalive: %v", err), "lease_id", k.leaseID)
+				log.Warnw(fmt.Sprintf("failed to perform lease keepalive: %v", err), "lease_id", k.leaseID)
 
 				retries++
 				if retries == maxKeepAliveRetries {
-					log.Errorw(fmt.Sprintf("Unable to refresh lease TTL: max retries reached: %d", maxKeepAliveRetries), "lease_id", k.leaseID)
+					log.Errorw(fmt.Sprintf("unable to refresh lease TTL: max retries reached: %d", maxKeepAliveRetries), "lease_id", k.leaseID)
 
 					// shutdown process to avoid split-brain scenario
 					shutdown()

@@ -98,7 +98,7 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		p.mu.Lock()
 		delete(p.outStreams, domainPair)
 		p.mu.Unlock()
-		log.Warnw(fmt.Sprintf("Failed to dial outgoing S2S stream: %v", err),
+		log.Warnw(fmt.Sprintf("failed to dial outgoing S2S stream: %v", err),
 			"sender", sender, "target", target,
 		)
 		return nil, err
@@ -108,7 +108,7 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 			p.mu.Lock()
 			delete(p.outStreams, domainPair)
 			p.mu.Unlock()
-			log.Warnw(fmt.Sprintf("Failed to start outgoing S2S stream: %v", err),
+			log.Warnw(fmt.Sprintf("failed to start outgoing S2S stream: %v", err),
 				"sender", sender, "target", target,
 			)
 			return
@@ -121,14 +121,14 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error) {
 	outStm := p.newDbFn(sender, target, params)
 	if err := outStm.dial(ctx); err != nil {
-		log.Warnw(fmt.Sprintf("Failed to dial S2S dialback stream: %v", err),
+		log.Warnw(fmt.Sprintf("failed to dial S2S dialback stream: %v", err),
 			"sender", sender, "target", target,
 		)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
-			log.Warnw(fmt.Sprintf("Failed to start S2S dialback stream: %v", err),
+			log.Warnw(fmt.Sprintf("failed to start S2S dialback stream: %v", err),
 				"sender", sender, "target", target,
 			)
 			return
@@ -140,7 +140,7 @@ func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, pa
 // Start starts S2S out provider.
 func (p *OutProvider) Start(_ context.Context) error {
 	go p.reportMetrics()
-	log.Infow("Started S2S out provider")
+	log.Infow("started S2S out provider")
 	return nil
 }
 
@@ -176,7 +176,7 @@ func (p *OutProvider) Stop(ctx context.Context) error {
 	}
 	wg.Wait()
 
-	log.Infow("Stopped S2S out provider", "total_connections", len(stms))
+	log.Infow("stopped S2S out provider", "total_connections", len(stms))
 	return nil
 }
 

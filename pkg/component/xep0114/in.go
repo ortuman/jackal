@@ -137,7 +137,7 @@ func newInComponent(
 
 func (s *inComponent) start() error {
 	s.inHub.register(s)
-	log.Infow("Registered external component stream", "id", s.id)
+	log.Infow("registered external component stream", "id", s.id)
 
 	ctx, cancel := s.requestContext()
 	_, err := s.runHook(ctx, hook.ExternalComponentRegistered, &hook.ExternalComponentInfo{
@@ -223,7 +223,7 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("Failed to process incoming component session element", "error", err, "id", s.id)
+				log.Warnw("failed to process incoming component session element", "error", err, "id", s.id)
 				return
 			}
 		}
@@ -369,7 +369,7 @@ func (s *inComponent) close(ctx context.Context) error {
 		cHost = s.getJID().String()
 	}
 	s.inHub.unregister(s)
-	log.Infow("Unregistered external component stream", "id", s.id)
+	log.Infow("unregistered external component stream", "id", s.id)
 
 	_, err := s.runHook(ctx, hook.ExternalComponentUnregistered, &hook.ExternalComponentInfo{
 		ID:   s.id.String(),
@@ -410,7 +410,7 @@ func (s *inComponent) registerComponent(ctx context.Context) error {
 	if err := s.extCompMng.RegisterComponentHost(ctx, cHost); err != nil {
 		return err
 	}
-	log.Infow("Registered external component", "component_host", cHost)
+	log.Infow("registered external component", "component_host", cHost)
 	return nil
 }
 
@@ -422,7 +422,7 @@ func (s *inComponent) unregisterComponent(ctx context.Context) error {
 	if err := s.extCompMng.UnregisterComponentHost(ctx, cHost); err != nil {
 		return err
 	}
-	log.Infow("Unregistered external component", "component_host", cHost)
+	log.Infow("unregistered external component", "component_host", cHost)
 	return nil
 }
 

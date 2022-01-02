@@ -150,7 +150,7 @@ func (m *Capabilities) Start(_ context.Context) error {
 	m.hk.AddHook(hook.S2SInStreamIQReceived, m.onS2SIQRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.DiscoProvidersStarted, m.onDiscoProvidersStarted, hook.DefaultPriority)
 
-	log.Infow("Started capabilities module", "xep", XEPNumber)
+	log.Infow("started capabilities module", "xep", XEPNumber)
 	return nil
 }
 
@@ -162,7 +162,7 @@ func (m *Capabilities) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.S2SInStreamIQReceived, m.onS2SIQRecv)
 	m.hk.RemoveHook(hook.DiscoProvidersStarted, m.onDiscoProvidersStarted)
 
-	log.Infow("Stopped capabilities module", "xep", XEPNumber)
+	log.Infow("stopped capabilities module", "xep", XEPNumber)
 	return nil
 }
 
@@ -208,7 +208,7 @@ func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Pres
 	}
 	h := caps.Attribute("hash")
 	if hashFn[h] == nil {
-		log.Warnw(fmt.Sprintf("Unrecognized hashing algorithm: %s", h), "xep", XEPNumber)
+		log.Warnw(fmt.Sprintf("unrecognized hashing algorithm: %s", h), "xep", XEPNumber)
 		return nil
 	}
 	ci := capsInfo{
@@ -245,7 +245,7 @@ func (m *Capabilities) processIQ(ctx context.Context, iq *stravaganza.IQ) error 
 	m.mu.Unlock()
 
 	if err := m.processDiscoInfo(ctx, iq, nv); err != nil {
-		log.Warnw(fmt.Sprintf("Failed to verify disco info: %v", err), "xep", XEPNumber)
+		log.Warnw(fmt.Sprintf("failed to verify disco info: %v", err), "xep", XEPNumber)
 	}
 	return nil
 }
@@ -330,7 +330,7 @@ func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ,
 	if err != nil {
 		return err
 	}
-	log.Infow("Entity capabilities globally cached", "node", ci.node, "ver", ci.ver, "xep", XEPNumber)
+	log.Infow("entity capabilities globally cached", "node", ci.node, "ver", ci.ver, "xep", XEPNumber)
 	return nil
 }
 

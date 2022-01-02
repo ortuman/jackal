@@ -131,7 +131,7 @@ func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *Disco) Start(_ context.Context) error {
 	m.hk.AddHook(hook.ModulesStarted, m.onModulesStarted, hook.DefaultPriority)
 
-	log.Infow("Started disco module", "xep", XEPNumber)
+	log.Infow("started disco module", "xep", XEPNumber)
 	return nil
 }
 
@@ -139,7 +139,7 @@ func (m *Disco) Start(_ context.Context) error {
 func (m *Disco) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
 
-	log.Infow("Stopped disco module", "xep", XEPNumber)
+	log.Infow("stopped disco module", "xep", XEPNumber)
 	return nil
 }
 

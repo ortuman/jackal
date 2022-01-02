@@ -80,7 +80,7 @@ func (s *Server) Start(_ context.Context) error {
 	s.ln = ln
 	s.active = 1
 
-	log.Infof("Started admin server at %s", addr)
+	log.Infof("started admin server at %s", addr)
 
 	go func() {
 		grpcServer := grpc.NewServer(
@@ -90,7 +90,7 @@ func (s *Server) Start(_ context.Context) error {
 		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.hk))
 		if err := grpcServer.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
-				log.Errorf("Admin server error: %s", err)
+				log.Errorf("admin server error: %s", err)
 			}
 		}
 	}()
@@ -103,7 +103,7 @@ func (s *Server) Stop(_ context.Context) error {
 	if err := s.ln.Close(); err != nil {
 		return err
 	}
-	log.Infof("Closed admin server at %s", s.getAddress())
+	log.Infof("closed admin server at %s", s.getAddress())
 	return nil
 }
 

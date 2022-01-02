@@ -192,7 +192,7 @@ func (j *Jackal) Run() error {
 		cfg.Logger.Level,
 	)
 
-	log.Infow("Jackal is starting...",
+	log.Infow("jackal is starting...",
 		"version", version.Version,
 		"go_ver", runtime.Version(),
 		"go_os", runtime.GOOS,
@@ -258,7 +258,7 @@ func (j *Jackal) Run() error {
 	}
 	// ...wait for stop signal to shut down
 	sig := j.waitForStopSignal()
-	log.Infof("Received %s signal... shutting down...", sig.String())
+	log.Infof("received %s signal... shutting down...", sig.String())
 
 	return j.shutdown()
 }
@@ -307,7 +307,7 @@ func (j *Jackal) initShapers(configs []shaper.Config) error {
 		}
 		j.shapers = append(j.shapers, shp)
 
-		log.Infow(fmt.Sprintf("Registered '%s' shaper configuration", cfg.Name),
+		log.Infow(fmt.Sprintf("registered '%s' shaper configuration", cfg.Name),
 			"name", cfg.Name,
 			"max_sessions", cfg.MaxSessions,
 			"limit", cfg.Rate.Limit,

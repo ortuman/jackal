@@ -396,7 +396,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("Failed to process incoming C2S session element", "error", err, "id", s.id)
+				log.Warnw("failed to process incoming C2S session element", "error", err, "id", s.id)
 				return
 			}
 

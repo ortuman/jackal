@@ -128,7 +128,7 @@ func (m *BlockList) Start(_ context.Context) error {
 	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, hook.HighestPriority)
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started blocklist module", "xep", XEPNumber)
+	log.Infow("started blocklist module", "xep", XEPNumber)
 	return nil
 }
 
@@ -140,7 +140,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped blocklist module", "xep", XEPNumber)
+	log.Infow("stopped blocklist module", "xep", XEPNumber)
 	return nil
 }
 
@@ -285,7 +285,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("Fetched blocklist", "username", username, "xep", XEPNumber)
+	log.Infow("fetched blocklist", "username", username, "xep", XEPNumber)
 
 	// run hook
 	var allJIDs []jid.JID
@@ -351,7 +351,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 			}); err != nil {
 				return err
 			}
-			log.Infow("Blocked JID", "username", username, "jid", bj.String(), "xep", XEPNumber)
+			log.Infow("blocked JID", "username", username, "jid", bj.String(), "xep", XEPNumber)
 		}
 		return nil
 	})
@@ -423,7 +423,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 			}); err != nil {
 				return err
 			}
-			log.Infow("Unblocked JID", "username", username, "jid", uj.String(), "xep", XEPNumber)
+			log.Infow("unblocked JID", "username", username, "jid", uj.String(), "xep", XEPNumber)
 		}
 		return nil
 	})

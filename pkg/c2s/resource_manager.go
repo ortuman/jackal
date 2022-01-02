@@ -126,7 +126,7 @@ func (m *ResourceManager) Start(ctx context.Context) error {
 	if err := m.watchKVResources(ctx); err != nil {
 		return err
 	}
-	log.Infow("Started C2S resource manager")
+	log.Infow("started C2S resource manager")
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (m *ResourceManager) Stop(_ context.Context) error {
 	m.ctxCancel()
 	<-m.stopCh
 
-	log.Infow("Stopped C2S resource manager")
+	log.Infow("stopped C2S resource manager")
 	return nil
 }
 

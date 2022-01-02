@@ -116,7 +116,7 @@ func (r *Roster) Start(_ context.Context) error {
 	r.hk.AddHook(hook.S2SInStreamPresenceReceived, r.onPresenceRecv, hook.DefaultPriority)
 	r.hk.AddHook(hook.UserDeleted, r.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started roster module", "xep", "roster")
+	log.Infow("started roster module", "xep", "roster")
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (r *Roster) Stop(_ context.Context) error {
 	r.hk.RemoveHook(hook.S2SInStreamPresenceReceived, r.onPresenceRecv)
 	r.hk.RemoveHook(hook.UserDeleted, r.onUserDeleted)
 
-	log.Infow("Stopped roster module", "xep", "roster")
+	log.Infow("stopped roster module", "xep", "roster")
 	return nil
 }
 
@@ -222,7 +222,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// route roster
 	_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, queryEl))
 
-	log.Infow("Fetched user roster", "jid", usrJID.String(), "xep", "roster")
+	log.Infow("fetched user roster", "jid", usrJID.String(), "xep", "roster")
 
 	err = r.runHook(ctx, hook.RosterRequested, &hook.RosterInfo{
 		Username: usrJID.Node(),
@@ -311,7 +311,7 @@ func (r *Roster) processSubscribe(ctx context.Context, presence *stravaganza.Pre
 			return err
 		}
 	}
-	log.Infow("Processed 'subscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("processed 'subscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 
 	_, _ = r.router.Route(ctx, p)
 	return nil
@@ -373,7 +373,7 @@ func (r *Roster) processSubscribed(ctx context.Context, presence *stravaganza.Pr
 			}
 		}
 	}
-	log.Infow("Processed 'subscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("processed 'subscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 
 	_, _ = r.router.Route(ctx, p)
 	return r.routePresencesFrom(ctx, contactJID.Node(), userJID, stravaganza.AvailableType)
@@ -430,7 +430,7 @@ func (r *Roster) processUnsubscribe(ctx context.Context, presence *stravaganza.P
 			return err
 		}
 	}
-	log.Infow("Processed 'unsubscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("processed 'unsubscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	return nil
 }
 
@@ -498,7 +498,7 @@ routePresence:
 			return err
 		}
 	}
-	log.Infow("Processed 'unsubscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("processed 'unsubscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	return nil
 }
 
@@ -528,7 +528,7 @@ func (r *Roster) processProbe(ctx context.Context, presence *stravaganza.Presenc
 		p := xmpputil.MakePresence(res.JID(), userJID, stravaganza.AvailableType, res.Presence().AllChildren())
 		_, _ = r.router.Route(ctx, p)
 	}
-	log.Infow("Processed 'probe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("processed 'probe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	return nil
 }
 
@@ -605,9 +605,9 @@ broadcastPresence:
 		}
 	}
 	if isAvailable {
-		log.Infow("Processed 'available' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+		log.Infow("processed 'available' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	} else {
-		log.Infow("Processed 'unavailable' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+		log.Infow("processed 'unavailable' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	}
 	return nil
 }
@@ -637,7 +637,7 @@ func (r *Roster) updateItem(ctx context.Context, ri *rostermodel.Item, username 
 	if err := r.upsertItem(ctx, usrRi); err != nil {
 		return err
 	}
-	log.Infow("Updated roster", "jid", ri.JID, "username", username, "xep", "roster")
+	log.Infow("updated roster", "jid", ri.JID, "username", username, "xep", "roster")
 	return nil
 }
 
@@ -713,7 +713,7 @@ func (r *Roster) removeItem(ctx context.Context, ri *rostermodel.Item, userJID *
 			return err
 		}
 	}
-	log.Infow("Removed roster item", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	log.Infow("removed roster item", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
 	return nil
 }
 

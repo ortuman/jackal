@@ -106,7 +106,7 @@ func (p *Ping) Start(_ context.Context) error {
 		p.hk.AddHook(hook.C2SStreamDisconnected, p.onDisconnect, hook.HighestPriority)
 		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.HighestPriority)
 	}
-	log.Infow("Started ping module", "xep", XEPNumber)
+	log.Infow("started ping module", "xep", XEPNumber)
 	return nil
 }
 
@@ -117,7 +117,7 @@ func (p *Ping) Stop(_ context.Context) error {
 		p.hk.RemoveHook(hook.C2SStreamDisconnected, p.onDisconnect)
 		p.hk.RemoveHook(hook.C2SStreamElementReceived, p.onRecvElement)
 	}
-	log.Infow("Stopped ping module", "xep", XEPNumber)
+	log.Infow("stopped ping module", "xep", XEPNumber)
 	return nil
 }
 
@@ -202,7 +202,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 	})
 	p.mu.Unlock()
 
-	log.Infow("Sent ping", "jid", jd.String(), "xep", XEPNumber)
+	log.Infow("sent ping", "jid", jd.String(), "xep", XEPNumber)
 }
 
 func (p *Ping) timeout(jd *jid.JID) {
@@ -213,7 +213,7 @@ func (p *Ping) timeout(jd *jid.JID) {
 			_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 		}
 	}
-	log.Infow("Stream timeout", "jid", jd.String(), "xep", XEPNumber)
+	log.Infow("stream timeout", "jid", jd.String(), "xep", XEPNumber)
 }
 
 func (p *Ping) cancelTimers(jd *jid.JID) {

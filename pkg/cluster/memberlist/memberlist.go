@@ -70,7 +70,7 @@ func (ml *MemberList) Start(ctx context.Context) error {
 	if err := ml.refreshMemberList(ctx); err != nil {
 		return err
 	}
-	log.Infow("Registered local instance", "port", ml.localPort)
+	log.Infow("registered local instance", "port", ml.localPort)
 
 	return nil
 }
@@ -85,7 +85,7 @@ func (ml *MemberList) Stop(ctx context.Context) error {
 	if err := ml.kv.Del(ctx, localMemberKey()); err != nil {
 		return err
 	}
-	log.Infow("Unregistered local instance", "port", ml.localPort)
+	log.Infow("unregistered local instance", "port", ml.localPort)
 
 	return nil
 }
@@ -148,12 +148,12 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 		// watch changes
 		for wResp := range wCh {
 			if err := wResp.Err; err != nil {
-				log.Warnf("Error occurred watching memberlist: %v", err)
+				log.Warnf("error occurred watching memberlist: %v", err)
 				continue
 			}
 			// process changes
 			if err := ml.processKVEvents(ml.ctx, wResp.Events); err != nil {
-				log.Warnf("Failed to process memberlist changes: %v", err)
+				log.Warnf("failed to process memberlist changes: %v", err)
 			}
 		}
 		close(ml.stopCh) // signal stop
@@ -173,7 +173,7 @@ func (ml *MemberList) getMembers(ctx context.Context) ([]clustermodel.Member, er
 		}
 		m, err := decodeClusterMember(k, string(val))
 		if err != nil {
-			log.Warnf("Failed to decode cluster member: %v", err)
+			log.Warnf("failed to decode cluster member: %v", err)
 			continue
 		}
 		if m == nil {
@@ -211,14 +211,14 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 			ml.members[m.InstanceID] = *m
 			putMembers = append(putMembers, *m)
 
-			log.Infow("Registered cluster member", "instance_id", m.InstanceID, "address", m.String(), "cluster_api_ver", m.APIVer.String())
+			log.Infow("registered cluster member", "instance_id", m.InstanceID, "address", m.String(), "cluster_api_ver", m.APIVer.String())
 
 		case kv.Del:
 			memberKey := strings.TrimPrefix(ev.Key, memberKeyPrefix)
 			delete(ml.members, memberKey)
 			delMemberKeys = append(delMemberKeys, memberKey)
 
-			log.Infow("Unregistered cluster member", "instance_id", memberKey)
+			log.Infow("unregistered cluster member", "instance_id", memberKey)
 		}
 	}
 	ml.mu.Unlock()

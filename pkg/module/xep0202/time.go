@@ -71,13 +71,13 @@ func (m *Time) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts time module.
 func (m *Time) Start(_ context.Context) error {
-	log.Infow("Started time module", "xep", XEPNumber)
+	log.Infow("started time module", "xep", XEPNumber)
 	return nil
 }
 
 // Stop stops time module.
 func (m *Time) Stop(_ context.Context) error {
-	log.Infow("Stopped time module", "xep", XEPNumber)
+	log.Infow("stopped time module", "xep", XEPNumber)
 	return nil
 }
 

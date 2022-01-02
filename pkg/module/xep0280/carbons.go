@@ -96,7 +96,7 @@ func (p *Carbons) Start(_ context.Context) error {
 	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.DefaultPriority)
 	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.DefaultPriority)
 
-	log.Infow("Started carbons module", "xep", XEPNumber)
+	log.Infow("started carbons module", "xep", XEPNumber)
 	return nil
 }
 
@@ -107,7 +107,7 @@ func (p *Carbons) Stop(_ context.Context) error {
 	p.hk.RemoveHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted)
 	p.hk.RemoveHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted)
 
-	log.Infow("Stopped carbons module", "xep", XEPNumber)
+	log.Infow("stopped carbons module", "xep", XEPNumber)
 	return nil
 }
 
@@ -183,13 +183,13 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), true); err != nil {
 			return err
 		}
-		log.Infow("Enabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+		log.Infow("enabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
 
 	case iq.ChildNamespace("disable", carbonsNamespace) != nil:
 		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), false); err != nil {
 			return err
 		}
-		log.Infow("Disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+		log.Infow("disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
 
 	default:
 		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))

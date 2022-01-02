@@ -94,7 +94,7 @@ func (m *VCard) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *VCard) Start(_ context.Context) error {
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started vCard module", "xep", XEPNumber)
+	log.Infow("started vCard module", "xep", XEPNumber)
 	return nil
 }
 
@@ -102,7 +102,7 @@ func (m *VCard) Start(_ context.Context) error {
 func (m *VCard) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped vCard module", "xep", XEPNumber)
+	log.Infow("stopped vCard module", "xep", XEPNumber)
 	return nil
 }
 
@@ -132,7 +132,7 @@ func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 			WithAttribute(stravaganza.Namespace, vCardNamespace).
 			Build())
 	}
-	log.Infow("Fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
+	log.Infow("fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
 
 	_, _ = m.router.Route(ctx, resIQ)
 
@@ -166,7 +166,7 @@ func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("Saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
+	log.Infow("saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
 
 	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 

@@ -162,7 +162,7 @@ func (s *inS2S) Done() <-chan struct{} {
 func (s *inS2S) start() error {
 	s.inHub.register(s)
 
-	log.Infow("Registered S2S incoming stream", "id", s.id)
+	log.Infow("registered S2S incoming stream", "id", s.id)
 
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
@@ -215,7 +215,7 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("Failed to process incoming S2S session element", "error", err, "id", s.id)
+				log.Warnw("failed to process incoming S2S session element", "error", err, "id", s.id)
 				return
 			}
 
@@ -556,7 +556,7 @@ func (s *inS2S) authenticate(ctx context.Context, elem stravaganza.Element) erro
 }
 
 func (s *inS2S) failAuthentication(ctx context.Context, reason, text string) error {
-	log.Infow("Failed S2S incoming stream authentication",
+	log.Infow("failed S2S incoming stream authentication",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target,
@@ -580,7 +580,7 @@ func (s *inS2S) finishAuthentication(ctx context.Context) error {
 	if err := s.updateRateLimiter(); err != nil {
 		return err
 	}
-	log.Infow("Authenticated S2S incoming stream",
+	log.Infow("authenticated S2S incoming stream",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target)
@@ -639,7 +639,7 @@ func (s *inS2S) handleDialbackResult(ctx context.Context, from, to string, dbRes
 		if err := s.updateRateLimiter(); err != nil {
 			return err
 		}
-		log.Infow("Authorized S2S dialback key",
+		log.Infow("authorized S2S dialback key",
 			"id", s.id,
 			"sender", s.sender,
 			"target", s.target,
@@ -690,7 +690,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		sb.WithAttribute("type", "valid")
 
 	} else {
-		log.Infow("Failed to verify S2S dialback key",
+		log.Infow("failed to verify S2S dialback key",
 			"id", s.id,
 			"sender", s.sender,
 			"target", s.target,
@@ -722,7 +722,7 @@ func (s *inS2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 	}, false)
 	s.flags.setSecured()
 
-	log.Infow("Secured S2S incoming stream", "id", s.id, "sender", s.sender, "target", s.target)
+	log.Infow("secured S2S incoming stream", "id", s.id, "sender", s.sender, "target", s.target)
 
 	s.restartSession()
 	return nil
@@ -789,7 +789,7 @@ func (s *inS2S) close(ctx context.Context) error {
 	// unregister S2S stream
 	s.inHub.unregister(s)
 
-	log.Infow("Unregistered S2S incoming stream",
+	log.Infow("unregistered S2S incoming stream",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target,

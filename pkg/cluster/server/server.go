@@ -67,7 +67,7 @@ func (s *Server) Start(_ context.Context) error {
 	s.ln = ln
 	s.active = 1
 
-	log.Infof("Started cluster server at %s", addr)
+	log.Infof("started cluster server at %s", addr)
 
 	s.srv = grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
@@ -79,7 +79,7 @@ func (s *Server) Start(_ context.Context) error {
 	go func() {
 		if err := s.srv.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
-				log.Errorf("Cluster server error: %s", err)
+				log.Errorf("cluster server error: %s", err)
 			}
 		}
 	}()
@@ -91,7 +91,7 @@ func (s *Server) Stop(_ context.Context) error {
 	atomic.StoreInt32(&s.active, 0)
 	s.srv.GracefulStop()
 
-	log.Infof("Closed cluster server at %s", s.getAddress())
+	log.Infof("closed cluster server at %s", s.getAddress())
 	return nil
 }
 
