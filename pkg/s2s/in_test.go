@@ -81,7 +81,7 @@ func TestInS2S_Disconnect(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<stream:error><system-shutdown xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error>`, sendBuf.String())
+	require.Equal(t, `<stream:error><system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error>`, sendBuf.String())
 	require.Len(t, sessMock.CloseCalls(), 1)
 	require.Len(t, trMock.CloseCalls(), 1)
 }
@@ -117,7 +117,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" id="s2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' id='s2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -132,7 +132,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" id="s2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>EXTERNAL</mechanism></mechanisms><dialback xmlns="urn:xmpp:features:dialback"/></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' id='s2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><mechanism>EXTERNAL</mechanism></mechanisms><dialback xmlns='urn:xmpp:features:dialback'/></stream:features>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -147,7 +147,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" id="s2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><dialback xmlns="urn:xmpp:features:dialback"/></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' id='s2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><dialback xmlns='urn:xmpp:features:dialback'/></stream:features>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -158,7 +158,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, tlsNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`,
+			expectedOutput: `<proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -174,7 +174,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithText("=").
 					Build(), nil
 			},
-			expectedOutput: `<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`,
+			expectedOutput: `<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -190,7 +190,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithText("=").
 					Build(), nil
 			},
-			expectedOutput: `<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><bad-protocol/><text>Failed to get peer certificate</text></failure>`,
+			expectedOutput: `<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><bad-protocol/><text>Failed to get peer certificate</text></failure>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -210,7 +210,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 			kvGetFn: func(ctx context.Context, key string) ([]byte, error) {
 				return []byte("jabber.org jackal.im"), nil
 			},
-			expectedOutput: `<db:verify from="jackal.im" to="jabber.org" id="abc1234" type="valid"/>`,
+			expectedOutput: `<db:verify from='jackal.im' to='jabber.org' id='abc1234' type='valid'/>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -228,7 +228,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					Build(), nil
 			},
 			waitBeforeAssert: time.Second * 2,
-			expectedOutput:   `<db:result from="jackal.im" to="jabber.org" type="valid"/>`,
+			expectedOutput:   `<db:result from='jackal.im' to='jabber.org' type='valid'/>`,
 			expectedState:    inConnected,
 			expectedFlags:    fSecured | fAuthenticated | fDialbackKeyAuthorized,
 		},
@@ -272,7 +272,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			routeError:     router.ErrResourceNotFound,
-			expectedOutput: `<iq from="noelia@jackal.im/hall" to="ortuman@jabber.org/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq from='noelia@jackal.im/hall' to='ortuman@jabber.org/yard' type='error' id='iq_1'><ping xmlns='urn:xmpp:ping'/><error code='503' type='cancel'><service-unavailable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -377,7 +377,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build()
 
-				outBuf.WriteString(`<?xml version="1.0"?>`)
+				outBuf.WriteString(`<?xml version='1.0'?>`)
 				return stmElem.ToXML(outBuf, false)
 			}
 			ssMock.CloseFunc = func(_ context.Context) error {

@@ -190,7 +190,7 @@ func (ss *Session) OpenComponent(ctx context.Context) error {
 		WithAttribute(stravaganza.ID, ss.streamID).
 		Build()
 
-	buf.WriteString(`<?xml version="1.0"?>`)
+	buf.WriteString(`<?xml version='1.0'?>`)
 	if err := elem.ToXML(buf, false); err != nil {
 		return err
 	}

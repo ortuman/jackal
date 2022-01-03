@@ -67,7 +67,7 @@ func TestInComponent_SendStanza(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<message from="noelia@jackal.im/yard" to="ortuman@jackal.im/balcony"><body>I&#39;ll give thee a wind.</body></message>`, sendBuf.String())
+	require.Equal(t, `<message from='noelia@jackal.im/yard' to='ortuman@jackal.im/balcony'><body>I&#39;ll give thee a wind.</body></message>`, sendBuf.String())
 }
 
 func TestInComponent_Shutdown(t *testing.T) {
@@ -118,7 +118,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<stream:error><system-shutdown xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error>`, sendBuf.String())
+	require.Equal(t, `<stream:error><system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error>`, sendBuf.String())
 	require.Len(t, sessMock.CloseCalls(), 1)
 	require.Len(t, trMock.CloseCalls(), 1)
 }
@@ -159,7 +159,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "upload.localhost").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:component:accept" xmlns:stream="http://etherx.jabber.org/streams" from="upload.localhost" id="comp-1">`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='upload.localhost' id='comp-1'>`,
 			expectedState:  handshaking,
 		},
 		{
@@ -181,7 +181,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 					WithText("foo").
 					Build(), nil
 			},
-			expectedOutput: `<stream:error><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error></stream:stream>`,
 			expectedState:  disconnected,
 		},
 		{
@@ -210,7 +210,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 
 			outBuf := bytes.NewBuffer(nil)
 
-			openStr := `<?xml version="1.0"?><stream:stream xmlns="jabber:component:accept" xmlns:stream="http://etherx.jabber.org/streams" from="upload.localhost" id="comp-1">`
+			openStr := `<?xml version='1.0'?><stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='upload.localhost' id='comp-1'>`
 			ssMock.OpenComponentFunc = func(_ context.Context) error {
 				_, err := io.Copy(outBuf, strings.NewReader(openStr))
 				return err

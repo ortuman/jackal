@@ -59,7 +59,7 @@ func TestSession_OpenStream(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns="jabber:client" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" from="jackal.im">`
+	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns='jabber:client' version='1.0' xmlns:stream='http://etherx.jabber.org/streams' from='jackal.im'>`
 	require.Equal(t, expectedOutput, buf.String())
 }
 
@@ -92,7 +92,7 @@ func TestSession_OpenComponent(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	expectedOutput := `<?xml version="1.0"?><stream:stream xmlns="jabber:component:accept" xmlns:stream="http://etherx.jabber.org/streams" from="upload.jackal.im" id="stm-1">`
+	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='upload.jackal.im' id='stm-1'>`
 	require.Equal(t, expectedOutput, buf.String())
 }
 
@@ -124,7 +124,7 @@ func TestSession_OpenServer(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns="jabber:server" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im">`
+	expectedOutput := `<?xml version='1.0'?><stream:stream xmlns='jabber:server' version='1.0' xmlns:stream='http://etherx.jabber.org/streams' xmlns:db='jabber:server:dialback' from='jackal.im'>`
 	require.Equal(t, expectedOutput, buf.String())
 }
 
@@ -395,16 +395,4 @@ func TestSession_ReceiveUnsupportedStanza(t *testing.T) {
 
 	require.True(t, ok)
 	require.Equal(t, stanzaerror.BadRequest, se.Reason)
-}
-
-func testFeaturesElement() stravaganza.Element {
-	return stravaganza.NewBuilder("stream:features").
-		WithAttribute("xmlns:stream", "http://etherx.jabber.org/streams").
-		WithAttribute("version", "1.0").
-		WithChild(
-			stravaganza.NewBuilder("starttls").
-				WithAttribute(stravaganza.Namespace, "urn:ietf:params:xml:ns:xmpp-tls").
-				Build(),
-		).
-		Build()
 }

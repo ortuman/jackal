@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
@@ -159,7 +158,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	require.Len(t, repMock.CountOfflineMessagesCalls(), 1)
 	require.Len(t, repMock.InsertOfflineMessageCalls(), 0)
 
-	require.Equal(t, `<message from="ortuman@jackal.im/balcony" to="noelia@jackal.im/yard" type="error"><body>I&#39;ll give thee a wind.</body><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></message>`, output.String())
+	require.Equal(t, `<message from='ortuman@jackal.im/balcony' to='noelia@jackal.im/yard' type='error'><body>I&#39;ll give thee a wind.</body><error code='503' type='cancel'><service-unavailable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></message>`, output.String())
 }
 
 func TestOffline_DeliverOfflineMessages(t *testing.T) {
@@ -232,5 +231,5 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	require.Len(t, repMock.FetchOfflineMessagesCalls(), 1)
 	require.Len(t, repMock.DeleteOfflineMessagesCalls(), 1)
 
-	require.Equal(t, `<message from="noelia@jackal.im/yard" to="ortuman@jackal.im/balcony"><body>I&#39;ll give thee a wind.</body></message>`, output.String())
+	require.Equal(t, `<message from='noelia@jackal.im/yard' to='ortuman@jackal.im/balcony'><body>I&#39;ll give thee a wind.</body></message>`, output.String())
 }

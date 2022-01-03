@@ -215,8 +215,8 @@ github.com/iris-contrib/i18n v0.0.0-20171121225848-987a633949d0/go.mod h1:pMCz62
 github.com/iris-contrib/schema v0.0.1/go.mod h1:urYA3uvUNG1TIIjOSCzHr9/LmbQo8LrOcOqfqxa4hXw=
 github.com/jackal-xmpp/runqueue/v2 v2.0.0 h1:QfvOfL6zF5yK1LN5TKabpj+VBuELMwtR8Xpkz0CrjoI=
 github.com/jackal-xmpp/runqueue/v2 v2.0.0/go.mod h1:tXZARVqBMGeV8BTc/qDPg0qXILTUWmER7wlYbN9Xcac=
-github.com/jackal-xmpp/stravaganza/v2 v2.0.0 h1:rR6miLtdGR7P+UE7jgD2DyKhV6GiGOyR+KLxz/ibkCw=
-github.com/jackal-xmpp/stravaganza/v2 v2.0.0/go.mod h1:DY23vJqFaG7lC2MAeedORYZL2D2TTaSsmdYXUq7oNMM=
+github.com/jackal-xmpp/stravaganza/v2 v2.1.0 h1:2OJjcWU4WyOZY0wxJSPRG/mRK2wbxseg3CdCJHWVcr8=
+github.com/jackal-xmpp/stravaganza/v2 v2.1.0/go.mod h1:DY23vJqFaG7lC2MAeedORYZL2D2TTaSsmdYXUq7oNMM=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=

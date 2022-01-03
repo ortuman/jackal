@@ -76,7 +76,7 @@ func TestInC2S_SendElement(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`, sendBuf.String())
+	require.Equal(t, `<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`, sendBuf.String())
 }
 
 func TestInC2S_Disconnect(t *testing.T) {
@@ -129,7 +129,7 @@ func TestInC2S_Disconnect(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<stream:error><system-shutdown xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error>`, sendBuf.String())
+	require.Equal(t, `<stream:error><system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error>`, sendBuf.String())
 	require.Len(t, sessMock.CloseCalls(), 1)
 	require.Len(t, trMock.CloseCalls(), 1)
 	require.Len(t, c2sRouterMock.UnregisterCalls(), 1)
@@ -169,7 +169,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"><required/></starttls></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' id='c2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -184,7 +184,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><mechanism>PLAIN</mechanism></mechanisms></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' id='c2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><mechanism>PLAIN</mechanism></mechanisms></stream:features>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -199,7 +199,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams" id="c2s1" from="localhost" version="1.0"><stream:features xmlns:stream="http://etherx.jabber.org/streams" version="1.0"><compression xmlns="http://jabber.org/features/compress"><method>zlib</method></compression><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><required/></bind><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></stream:features>`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' id='c2s1' from='localhost' version='1.0'><stream:features xmlns:stream='http://etherx.jabber.org/streams' version='1.0'><compression xmlns='http://jabber.org/features/compress'><method>zlib</method></compression><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><required/></bind><session xmlns='urn:ietf:params:xml:ns:xmpp-session'/></stream:features>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -210,7 +210,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, tlsNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<proceed xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`,
+			expectedOutput: `<proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -229,7 +229,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, saslNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`,
+			expectedOutput: `<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -242,7 +242,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute("mechanism", "FOO-AUTH-MECHANISM").
 					Build(), nil
 			},
-			expectedOutput: `<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><invalid-mechanism/></failure>`,
+			expectedOutput: `<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><invalid-mechanism/></failure>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -261,7 +261,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<stream:error><not-authorized xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error></stream:stream>`,
 			expectedState:  inTerminated,
 		},
 		{
@@ -280,7 +280,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<iq xmlns="jabber:client" id="c2s20" type="error"><query xmlns="jabber:iq:auth"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq xmlns='jabber:client' id='c2s20' type='error'><query xmlns='jabber:iq:auth'/><error code='503' type='cancel'><service-unavailable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inConnected,
 		},
 		{
@@ -299,7 +299,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<stream:error><unsupported-stanza-type xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><unsupported-stanza-type xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error></stream:stream>`,
 			expectedState:  inTerminated,
 		},
 		{
@@ -318,7 +318,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, saslNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<success xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`,
+			expectedOutput: `<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -335,7 +335,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			authProcessFn: func(_ context.Context, _ stravaganza.Element) (stravaganza.Element, *auth.SASLError) {
 				return nil, &auth.SASLError{Reason: auth.IncorrectEncoding}
 			},
-			expectedOutput: `<failure xmlns="urn:ietf:params:xml:ns:xmpp-sasl"><incorrect-encoding/></failure>`,
+			expectedOutput: `<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><incorrect-encoding/></failure>`,
 			expectedState:  inAuthenticating,
 		},
 		{
@@ -359,7 +359,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			expectedOutput:        `<iq id="bind_2" type="result" from="ortuman@localhost" to="ortuman@localhost"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><jid>ortuman@localhost/yard</jid></bind></iq>`,
+			expectedOutput:        `<iq id='bind_2' type='result' from='ortuman@localhost' to='ortuman@localhost'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><jid>ortuman@localhost/yard</jid></bind></iq>`,
 			expectedState:         inBinded,
 			expectResourceUpdated: true,
 		},
@@ -387,7 +387,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 			hubResources: []c2smodel.ResourceDesc{
 				c2smodel.NewResourceDesc("inst-2", jd0, nil, c2smodel.Info{}),
 			},
-			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="bind_2"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"><resource>yard</resource></bind><error code="409" type="cancel"><conflict xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq from='ortuman@localhost' to='ortuman@localhost' type='error' id='bind_2'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>yard</resource></bind><error code='409' type='cancel'><conflict xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -416,7 +416,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				c2smodel.NewResourceDesc("inst-2", jd2, nil, c2smodel.Info{}),
 				c2smodel.NewResourceDesc("inst-3", jd2, nil, c2smodel.Info{}),
 			},
-			expectedOutput: `<stream:error><policy-violation xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/><reached-max-session-count xmlns="urn:xmpp:errors"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><policy-violation xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/><reached-max-session-count xmlns='urn:xmpp:errors'/></stream:error></stream:stream>`,
 			expectedState:  inTerminated,
 		},
 		{
@@ -433,7 +433,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<compressed xmlns="http://jabber.org/protocol/compress"/>`,
+			expectedOutput: `<compressed xmlns='http://jabber.org/protocol/compress'/>`,
 			expectedState:  inConnecting,
 		},
 		{
@@ -445,7 +445,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, compressNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<failure xmlns="http://jabber.org/protocol/compress"><setup-failed/></failure>`,
+			expectedOutput: `<failure xmlns='http://jabber.org/protocol/compress'><setup-failed/></failure>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -462,7 +462,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<failure xmlns="http://jabber.org/protocol/compress"><unsupported-method/></failure>`,
+			expectedOutput: `<failure xmlns='http://jabber.org/protocol/compress'><unsupported-method/></failure>`,
 			expectedState:  inAuthenticated,
 		},
 		{
@@ -483,7 +483,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			expectedOutput: `<iq id="session_2" type="result" from="ortuman@localhost" to="ortuman@localhost"/>`,
+			expectedOutput: `<iq id='session_2' type='result' from='ortuman@localhost' to='ortuman@localhost'/>`,
 			expectedState:  inBinded,
 		},
 		{
@@ -504,7 +504,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					BuildIQ()
 				return iq, nil
 			},
-			expectedOutput: `<iq from="ortuman@localhost" to="ortuman@localhost" type="error" id="session_2"><session xmlns="urn:ietf:params:xml:ns:xmpp-session"/><error code="405" type="cancel"><not-allowed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq from='ortuman@localhost' to='ortuman@localhost' type='error' id='session_2'><session xmlns='urn:ietf:params:xml:ns:xmpp-session'/><error code='405' type='cancel'><not-allowed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inBinded,
 		},
 		{
@@ -547,7 +547,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			routeError:     router.ErrResourceNotFound,
-			expectedOutput: `<iq from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="503" type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq from='noelia@localhost/hall' to='ortuman@localhost/yard' type='error' id='iq_1'><ping xmlns='urn:xmpp:ping'/><error code='503' type='cancel'><service-unavailable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inBinded,
 		},
 		{
@@ -569,7 +569,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				return iq, nil
 			},
 			routeError:     router.ErrRemoteServerNotFound,
-			expectedOutput: `<iq from="noelia@localhost/hall" to="ortuman@localhost/yard" type="error" id="iq_1"><ping xmlns="urn:xmpp:ping"/><error code="404" type="cancel"><remote-server-not-found xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>`,
+			expectedOutput: `<iq from='noelia@localhost/hall' to='ortuman@localhost/yard' type='error' id='iq_1'><ping xmlns='urn:xmpp:ping'/><error code='404' type='cancel'><remote-server-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></iq>`,
 			expectedState:  inBinded,
 		},
 		{
@@ -693,7 +693,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Version, "1.0").
 					Build()
 
-				outBuf.WriteString(`<?xml version="1.0"?>`)
+				outBuf.WriteString(`<?xml version='1.0'?>`)
 				return stmElem.ToXML(outBuf, false)
 			}
 			ssMock.CloseFunc = func(_ context.Context) error {
