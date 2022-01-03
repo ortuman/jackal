@@ -28,11 +28,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
@@ -84,6 +87,7 @@ type Capabilities struct {
 	router router.Router
 	rep    repository.Capabilities
 	hk     *hook.Hooks
+	logger kitlog.Logger
 
 	mu      sync.RWMutex
 	reqs    map[string]capsInfo
@@ -96,11 +100,13 @@ func New(
 	router router.Router,
 	rep repository.Capabilities,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Capabilities {
 	return &Capabilities{
 		router: router,
 		rep:    rep,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -150,7 +156,7 @@ func (m *Capabilities) Start(_ context.Context) error {
 	m.hk.AddHook(hook.S2SInStreamIQReceived, m.onS2SIQRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.DiscoProvidersStarted, m.onDiscoProvidersStarted, hook.DefaultPriority)
 
-	log.Infow("Started capabilities module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started capabilities module")
 	return nil
 }
 
@@ -162,7 +168,7 @@ func (m *Capabilities) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.S2SInStreamIQReceived, m.onS2SIQRecv)
 	m.hk.RemoveHook(hook.DiscoProvidersStarted, m.onDiscoProvidersStarted)
 
-	log.Infow("Stopped capabilities module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped capabilities module")
 	return nil
 }
 
@@ -208,7 +214,7 @@ func (m *Capabilities) processPresence(ctx context.Context, pr *stravaganza.Pres
 	}
 	h := caps.Attribute("hash")
 	if hashFn[h] == nil {
-		log.Warnw(fmt.Sprintf("Unrecognized hashing algorithm: %s", h), "xep", XEPNumber)
+		level.Warn(m.logger).Log("msg", "unrecognized hashing algorithm", "alg", h)
 		return nil
 	}
 	ci := capsInfo{
@@ -245,7 +251,7 @@ func (m *Capabilities) processIQ(ctx context.Context, iq *stravaganza.IQ) error 
 	m.mu.Unlock()
 
 	if err := m.processDiscoInfo(ctx, iq, nv); err != nil {
-		log.Warnw(fmt.Sprintf("Failed to verify disco info: %v", err), "xep", XEPNumber)
+		level.Warn(m.logger).Log("msg", "failed to verify disco info", "err", err)
 	}
 	return nil
 }
@@ -330,7 +336,7 @@ func (m *Capabilities) processDiscoInfo(ctx context.Context, iq *stravaganza.IQ,
 	if err != nil {
 		return err
 	}
-	log.Infow("Entity capabilities globally cached", "node", ci.node, "ver", ci.ver, "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "entity capabilities globally cached", "node", ci.node, "ver", ci.ver)
 	return nil
 }
 

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	sq "github.com/Masterminds/squirrel"
+	kitlog "github.com/go-kit/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 )
 
@@ -26,7 +27,8 @@ const (
 )
 
 type pgSQLBlockListRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
@@ -57,7 +59,7 @@ func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username st
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	return scanBlockListItems(rows)
 }

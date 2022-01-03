@@ -21,8 +21,10 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/cockroachdb/errors"
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
@@ -58,16 +60,18 @@ type Repository struct {
 	dsn  string
 	cfg  Config
 
-	db *sql.DB
+	db     *sql.DB
+	logger kitlog.Logger
 }
 
 // New creates and returns an initialized PgSQL Repository instance.
-func New(cfg Config) *Repository {
+func New(cfg Config, logger kitlog.Logger) *Repository {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", cfg.User, cfg.Password, cfg.Host, cfg.Database, cfg.SSLMode)
 	return &Repository{
-		host: cfg.Host,
-		dsn:  dsn,
-		cfg:  cfg,
+		host:   cfg.Host,
+		dsn:    dsn,
+		cfg:    cfg,
+		logger: logger,
 	}
 }
 
@@ -80,7 +84,7 @@ func (r *Repository) InTransaction(ctx context.Context, f func(ctx context.Conte
 	repTx := newRepTx(tx)
 	if err := f(ctx, repTx); err != nil {
 		if err := tx.Rollback(); err != nil {
-			log.Warnf("Failed to rollback PgSQL transaction: %v", err)
+			level.Warn(r.logger).Log("msg", "failed to rollback PgSQL transaction", "err", err)
 		}
 		return err
 	}
@@ -91,7 +95,7 @@ func (r *Repository) InTransaction(ctx context.Context, f func(ctx context.Conte
 func (r *Repository) Start(ctx context.Context) error {
 	db, err := sql.Open("postgres", r.dsn)
 	if err != nil {
-		return fmt.Errorf("pgsqlrepository: failed to start PgSQL connection: %v", err)
+		return errors.Wrap(err, "failed to start PgSQL connection")
 	}
 	r.db = db
 
@@ -101,32 +105,32 @@ func (r *Repository) Start(ctx context.Context) error {
 	db.SetConnMaxLifetime(r.cfg.ConnMaxLifetime)
 
 	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("pgsqlrepository: unable to verify PgSQL connection: %v", err)
+		return errors.Wrap(err, "unable to verify PgSQL connection")
 	}
-	log.Infow("Dialed PgSQL connection", "host", r.host)
+	level.Info(r.logger).Log("msg", "dialed PgSQL connection", "host", r.host)
 
-	r.User = &pgSQLUserRep{conn: db}
-	r.Last = &pgSQLLastRep{conn: db}
-	r.Capabilities = &pgSQLCapabilitiesRep{conn: db}
-	r.Offline = &pgSQLOfflineRep{conn: db}
-	r.BlockList = &pgSQLBlockListRep{conn: db}
-	r.Private = &pgSQLPrivateRep{conn: db}
-	r.Roster = &pgSQLRosterRep{conn: db}
-	r.VCard = &pgSQLVCardRep{conn: db}
+	r.User = &pgSQLUserRep{conn: db, logger: r.logger}
+	r.Last = &pgSQLLastRep{conn: db, logger: r.logger}
+	r.Capabilities = &pgSQLCapabilitiesRep{conn: db, logger: r.logger}
+	r.Offline = &pgSQLOfflineRep{conn: db, logger: r.logger}
+	r.BlockList = &pgSQLBlockListRep{conn: db, logger: r.logger}
+	r.Private = &pgSQLPrivateRep{conn: db, logger: r.logger}
+	r.Roster = &pgSQLRosterRep{conn: db, logger: r.logger}
+	r.VCard = &pgSQLVCardRep{conn: db, logger: r.logger}
 	return nil
 }
 
 // Stop closes PgSQL database and prevents new queries from starting.
 func (r *Repository) Stop(_ context.Context) error {
 	if err := r.db.Close(); err != nil {
-		return fmt.Errorf("pgsqlrepository: failed to close PgSQL connection: %v", err)
+		return errors.Wrap(err, "failed to close PgSQL connection")
 	}
-	log.Infow("Closed PgSQL connection", "host", r.host)
+	level.Info(r.logger).Log("msg", "closed PgSQL connection", "host", r.host)
 	return nil
 }
 
-func closeRows(rows *sql.Rows) {
+func closeRows(rows *sql.Rows, logger kitlog.Logger) {
 	if err := rows.Close(); err != nil {
-		log.Warnf("Failed to close SQL rows: %v", err)
+		level.Warn(logger).Log("msg", "failed to close SQL rows", "err", err)
 	}
 }

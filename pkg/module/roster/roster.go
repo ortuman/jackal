@@ -20,19 +20,18 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ortuman/jackal/pkg/c2s"
-
-	"github.com/ortuman/jackal/pkg/router/stream"
-
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -56,6 +55,7 @@ type Roster struct {
 	router router.Router
 	hosts  hosts
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New returns a new initialized Roster instance.
@@ -65,6 +65,7 @@ func New(
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Roster {
 	return &Roster{
 		router: router,
@@ -72,6 +73,7 @@ func New(
 		resMng: resMng,
 		hosts:  hosts,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName),
 	}
 }
 
@@ -116,7 +118,7 @@ func (r *Roster) Start(_ context.Context) error {
 	r.hk.AddHook(hook.S2SInStreamPresenceReceived, r.onPresenceRecv, hook.DefaultPriority)
 	r.hk.AddHook(hook.UserDeleted, r.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started roster module", "xep", "roster")
+	level.Info(r.logger).Log("msg", "started roster module")
 	return nil
 }
 
@@ -126,7 +128,7 @@ func (r *Roster) Stop(_ context.Context) error {
 	r.hk.RemoveHook(hook.S2SInStreamPresenceReceived, r.onPresenceRecv)
 	r.hk.RemoveHook(hook.UserDeleted, r.onUserDeleted)
 
-	log.Infow("Stopped roster module", "xep", "roster")
+	level.Info(r.logger).Log("msg", "stopped roster module")
 	return nil
 }
 
@@ -222,7 +224,7 @@ func (r *Roster) sendRoster(ctx context.Context, iq *stravaganza.IQ) error {
 	// route roster
 	_, _ = r.router.Route(ctx, xmpputil.MakeResultIQ(iq, queryEl))
 
-	log.Infow("Fetched user roster", "jid", usrJID.String(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "fetched user roster", "jid", usrJID.String())
 
 	err = r.runHook(ctx, hook.RosterRequested, &hook.RosterInfo{
 		Username: usrJID.Node(),
@@ -311,7 +313,7 @@ func (r *Roster) processSubscribe(ctx context.Context, presence *stravaganza.Pre
 			return err
 		}
 	}
-	log.Infow("Processed 'subscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "processed 'subscribe' presence", "jid", contactJID, "username", userJID.Node())
 
 	_, _ = r.router.Route(ctx, p)
 	return nil
@@ -373,7 +375,7 @@ func (r *Roster) processSubscribed(ctx context.Context, presence *stravaganza.Pr
 			}
 		}
 	}
-	log.Infow("Processed 'subscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "processed 'subscribed' presence", "jid", contactJID, "username", userJID.Node())
 
 	_, _ = r.router.Route(ctx, p)
 	return r.routePresencesFrom(ctx, contactJID.Node(), userJID, stravaganza.AvailableType)
@@ -430,7 +432,7 @@ func (r *Roster) processUnsubscribe(ctx context.Context, presence *stravaganza.P
 			return err
 		}
 	}
-	log.Infow("Processed 'unsubscribe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "processed 'unsubscribe' presence", "jid", contactJID, "username", userJID.Node())
 	return nil
 }
 
@@ -498,7 +500,7 @@ routePresence:
 			return err
 		}
 	}
-	log.Infow("Processed 'unsubscribed' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "processed 'unsubscribed' presence", "jid", contactJID, "username", userJID.Node())
 	return nil
 }
 
@@ -528,7 +530,7 @@ func (r *Roster) processProbe(ctx context.Context, presence *stravaganza.Presenc
 		p := xmpputil.MakePresence(res.JID(), userJID, stravaganza.AvailableType, res.Presence().AllChildren())
 		_, _ = r.router.Route(ctx, p)
 	}
-	log.Infow("Processed 'probe' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "processed 'probe' presence", "jid", contactJID, "username", userJID.Node())
 	return nil
 }
 
@@ -605,9 +607,9 @@ broadcastPresence:
 		}
 	}
 	if isAvailable {
-		log.Infow("Processed 'available' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+		level.Info(r.logger).Log("msg", "processed 'available' presence", "jid", contactJID, "username", userJID.Node())
 	} else {
-		log.Infow("Processed 'unavailable' presence", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+		level.Info(r.logger).Log("msg", "processed 'unavailable' presence", "jid", contactJID, "username", userJID.Node())
 	}
 	return nil
 }
@@ -637,7 +639,7 @@ func (r *Roster) updateItem(ctx context.Context, ri *rostermodel.Item, username 
 	if err := r.upsertItem(ctx, usrRi); err != nil {
 		return err
 	}
-	log.Infow("Updated roster", "jid", ri.JID, "username", username, "xep", "roster")
+	level.Info(r.logger).Log("msg", "updated roster", "jid", ri.JID, "username", username)
 	return nil
 }
 
@@ -713,7 +715,7 @@ func (r *Roster) removeItem(ctx context.Context, ri *rostermodel.Item, userJID *
 			return err
 		}
 	}
-	log.Infow("Removed roster item", "jid", contactJID, "username", userJID.Node(), "xep", "roster")
+	level.Info(r.logger).Log("msg", "removed roster item", "jid", contactJID, "username", userJID.Node())
 	return nil
 }
 

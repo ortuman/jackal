@@ -20,11 +20,14 @@ import (
 	"strings"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/component"
-	"github.com/ortuman/jackal/pkg/log"
 )
 
 const (
@@ -42,10 +45,11 @@ type Manager struct {
 	comps          components
 	ctx            context.Context
 	ctxCancel      context.CancelFunc
+	logger         kitlog.Logger
 }
 
 // New returns a new initialized Manager instance.
-func New(kv kv.KV, clusterConnMng *clusterconnmanager.Manager, comps *component.Components) *Manager {
+func New(kv kv.KV, clusterConnMng *clusterconnmanager.Manager, comps *component.Components, logger kitlog.Logger) *Manager {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	return &Manager{
 		kv:             kv,
@@ -53,6 +57,7 @@ func New(kv kv.KV, clusterConnMng *clusterconnmanager.Manager, comps *component.
 		comps:          comps,
 		ctx:            ctx,
 		ctxCancel:      cancelFn,
+		logger:         logger,
 	}
 }
 
@@ -72,7 +77,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	if err := m.refreshExternalComponents(ctx); err != nil {
 		return err
 	}
-	log.Infof("Started external component manager")
+	level.Info(m.logger).Log("msg", "started external component manager")
 	return nil
 }
 
@@ -81,7 +86,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	// stop watching changes...
 	m.ctxCancel()
 
-	log.Infof("Stopped external component manager")
+	level.Info(m.logger).Log("msg", "stopped external component manager")
 	return nil
 }
 
@@ -98,7 +103,7 @@ func (m *Manager) refreshExternalComponents(ctx context.Context) error {
 		}
 		for _, ec := range ecs {
 			if err := m.comps.RegisterComponent(ctx, &ec); err != nil {
-				log.Warnf("Failed to register external component: %v", err)
+				level.Warn(m.logger).Log("msg", "failed to register external component", "err", err)
 			}
 		}
 		close(ch) // signal update
@@ -106,13 +111,13 @@ func (m *Manager) refreshExternalComponents(ctx context.Context) error {
 		// watch changes
 		for wResp := range wCh {
 			if err := wResp.Err; err != nil {
-				log.Warnf("Error occurred watching external components: %v", err)
+				level.Warn(m.logger).Log("msg", "error occurred watching external components", "err", err)
 				continue
 			}
 			// process change events
 			ctx, cancelFn := context.WithTimeout(context.Background(), processEventsTimeout)
 			if err := m.processKVEvents(ctx, wResp.Events); err != nil {
-				log.Warnf("Failed to process external component changes: %v", err)
+				level.Warn(m.logger).Log("msg", "failed to process external component changes", "err", err)
 			}
 			cancelFn()
 		}
@@ -133,7 +138,7 @@ func (m *Manager) getExtComponents(ctx context.Context) ([]extComponent, error) 
 		}
 		ec, err := m.decodeExtComponent(k, strVal)
 		if err != nil {
-			log.Warnf("Failed to decode external component: %v", err)
+			level.Warn(m.logger).Log("msg", "failed to decode external component", "err", err)
 			continue
 		}
 		if ec == nil {

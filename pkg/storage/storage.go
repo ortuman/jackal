@@ -17,6 +17,8 @@ package storage
 import (
 	"fmt"
 
+	kitlog "github.com/go-kit/log"
+
 	measuredrepository "github.com/ortuman/jackal/pkg/storage/measured"
 	pgsqlrepository "github.com/ortuman/jackal/pkg/storage/pgsql"
 
@@ -32,10 +34,10 @@ type Config struct {
 }
 
 // New returns an initialized repository.Repository derived from cfg configuration.
-func New(cfg Config) (repository.Repository, error) {
+func New(cfg Config, logger kitlog.Logger) (repository.Repository, error) {
 	if cfg.Type != pgSQLRepositoryType {
-		return nil, fmt.Errorf("storage: unrecognized repository type: %s", cfg.Type)
+		return nil, fmt.Errorf("unrecognized repository type: %s", cfg.Type)
 	}
-	rep := pgsqlrepository.New(cfg.PgSQL)
+	rep := pgsqlrepository.New(cfg.PgSQL, logger)
 	return measuredrepository.New(rep), nil
 }

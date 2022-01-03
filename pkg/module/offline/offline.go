@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -55,6 +56,7 @@ type Offline struct {
 	rep    repository.Offline
 	locker locker.Locker
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New creates and initializes a new Offline instance.
@@ -66,6 +68,7 @@ func New(
 	rep repository.Offline,
 	locker locker.Locker,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Offline {
 	return &Offline{
 		cfg:    cfg,
@@ -75,6 +78,7 @@ func New(
 		rep:    rep,
 		locker: locker,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName),
 	}
 }
 
@@ -102,7 +106,7 @@ func (m *Offline) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started offline module", "xep", ModuleName)
+	level.Info(m.logger).Log("msg", "started offline module")
 	return nil
 }
 
@@ -114,7 +118,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped offline module", "xep", ModuleName)
+	level.Info(m.logger).Log("msg", "stopped offline module")
 	return nil
 }
 
@@ -193,7 +197,7 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	for _, msg := range ms {
 		_, _ = m.router.Route(ctx, msg)
 	}
-	log.Infow("Delivered offline messages", "queue_size", len(ms), "username", username, "xep", "offline")
+	level.Info(m.logger).Log("msg", "delivered offline messages", "queue_size", len(ms), "username", username)
 
 	return nil
 }
@@ -233,7 +237,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err != nil {
 		return err
 	}
-	log.Infow("Archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username, "xep", "offline")
+	level.Info(m.logger).Log("msg", "archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username)
 
 	return hook.ErrStopped // already handled
 }

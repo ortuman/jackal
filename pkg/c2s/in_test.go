@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -744,6 +745,7 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 				session: ssMock,
 				resMng:  resMngMock,
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -830,6 +832,7 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 				router:  routerMock,
 				resMng:  resMngMock,
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

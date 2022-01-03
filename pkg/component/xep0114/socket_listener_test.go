@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,6 +36,7 @@ func TestSocketListener_Listen(t *testing.T) {
 		connHandlerFn: func(_ net.Conn) {
 			atomic.StoreUint32(&handledConn, 1)
 		},
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when

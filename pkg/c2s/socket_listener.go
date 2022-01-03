@@ -17,18 +17,20 @@ package c2s
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
 
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/shaper"
@@ -71,6 +73,7 @@ type SocketListener struct {
 	peppers *pepper.Keys
 	shapers shaper.Shapers
 	hk      *hook.Hooks
+	logger  kitlog.Logger
 
 	tlsCfg        *tls.Config
 	connHandlerFn func(conn net.Conn)
@@ -91,6 +94,7 @@ func NewListeners(
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) []*SocketListener {
 	var listeners []*SocketListener
 	for _, lnCfg := range cfg {
@@ -105,6 +109,7 @@ func NewListeners(
 			peppers,
 			shapers,
 			hk,
+			logger,
 		)
 		listeners = append(listeners, ln)
 	}
@@ -122,6 +127,7 @@ func newSocketListener(
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *SocketListener {
 	var extAuth *auth.External
 	if len(cfg.SASL.External.Address) > 0 {
@@ -142,6 +148,7 @@ func newSocketListener(
 		peppers: peppers,
 		shapers: shapers,
 		hk:      hk,
+		logger:  logger,
 	}
 	ln.connHandlerFn = ln.handleConn
 	return ln
@@ -181,16 +188,16 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			log.Infow(
-				fmt.Sprintf("Received C2S incoming connection at %s", l.getAddress()),
+			level.Info(l.logger).Log("msg", "received C2S incoming connection",
+				"bind_addr", l.getAddress(),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infow(
-		fmt.Sprintf("Accepting C2S socket connections at %s", l.getAddress()),
+	level.Info(l.logger).Log("msg", "accepting C2S socket connections",
+		"bind_addr", l.getAddress(),
 		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
@@ -208,7 +215,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 			return err
 		}
 	}
-	log.Infof("Stopped C2S listener at %s", l.getAddress())
+	level.Info(l.logger).Log("msg", "stopped C2S listener", "bind_addr", l.getAddress())
 	return nil
 }
 
@@ -225,14 +232,15 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.resMng,
 		l.shapers,
 		l.hk,
+		l.logger,
 	)
 	if err != nil {
-		log.Warnf("Failed to initialize C2S stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to initialize C2S stream", "err", err)
 		return
 	}
 	// start reading stream
 	if err := stm.start(); err != nil {
-		log.Warnf("Failed to start C2S stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to start C2S stream", "err", err)
 		return
 	}
 }
@@ -260,7 +268,7 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 			res = append(res, auth.NewScram(tr, auth.ScramSHA3512, false, l.rep, l.peppers))
 			res = append(res, auth.NewScram(tr, auth.ScramSHA3512, true, l.rep, l.peppers))
 		default:
-			log.Warnf("Unsupported authentication mechanism: %s", mechanism)
+			level.Warn(l.logger).Log("msg", "unsupported authentication mechanism", "mechanism", mechanism)
 		}
 	}
 	return res

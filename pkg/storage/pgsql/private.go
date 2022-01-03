@@ -19,13 +19,15 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 const privateStorageTableName = "private_storage"
 
 type pgSQLPrivateRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLPrivateRep) FetchPrivate(ctx context.Context, namespace, username string) (stravaganza.Element, error) {

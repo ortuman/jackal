@@ -18,9 +18,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -39,15 +42,18 @@ const (
 type Time struct {
 	router router.Router
 	tmFn   func() time.Time
+	logger kitlog.Logger
 }
 
 // New returns a new initialized Time instance.
 func New(
 	router router.Router,
+	logger kitlog.Logger,
 ) *Time {
 	return &Time{
 		router: router,
 		tmFn:   time.Now,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -71,13 +77,13 @@ func (m *Time) AccountFeatures(_ context.Context) ([]string, error) {
 
 // Start starts time module.
 func (m *Time) Start(_ context.Context) error {
-	log.Infow("Started time module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started time module")
 	return nil
 }
 
 // Stop stops time module.
 func (m *Time) Stop(_ context.Context) error {
-	log.Infow("Stopped time module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped time module")
 	return nil
 }
 

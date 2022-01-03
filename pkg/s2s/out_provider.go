@@ -17,15 +17,17 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"sync"
 	"time"
+
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
 
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/shaper"
 )
@@ -37,6 +39,7 @@ type OutProvider struct {
 	kv      kv.KV
 	shapers shaper.Shapers
 	hk      *hook.Hooks
+	logger  kitlog.Logger
 
 	mu         sync.RWMutex
 	outStreams map[string]s2sOut
@@ -53,6 +56,7 @@ func NewOutProvider(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *OutProvider {
 	op := &OutProvider{
 		cfg:        cfg,
@@ -60,6 +64,7 @@ func NewOutProvider(
 		shapers:    shapers,
 		kv:         kv,
 		hk:         hk,
+		logger:     logger,
 		outStreams: make(map[string]s2sOut),
 		doneCh:     make(chan chan struct{}),
 	}
@@ -98,8 +103,8 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 		p.mu.Lock()
 		delete(p.outStreams, domainPair)
 		p.mu.Unlock()
-		log.Warnw(fmt.Sprintf("Failed to dial outgoing S2S stream: %v", err),
-			"sender", sender, "target", target,
+		level.Warn(p.logger).Log("msg", "failed to dial outgoing S2S stream",
+			"err", err, "sender", sender, "target", target,
 		)
 		return nil, err
 	}
@@ -108,8 +113,8 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 			p.mu.Lock()
 			delete(p.outStreams, domainPair)
 			p.mu.Unlock()
-			log.Warnw(fmt.Sprintf("Failed to start outgoing S2S stream: %v", err),
-				"sender", sender, "target", target,
+			level.Warn(p.logger).Log("msg", "failed to start outgoing S2S stream",
+				"err", err, "sender", sender, "target", target,
 			)
 			return
 		}
@@ -121,15 +126,15 @@ func (p *OutProvider) GetOut(ctx context.Context, sender, target string) (stream
 func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, params DialbackParams) (stream.S2SDialback, error) {
 	outStm := p.newDbFn(sender, target, params)
 	if err := outStm.dial(ctx); err != nil {
-		log.Warnw(fmt.Sprintf("Failed to dial S2S dialback stream: %v", err),
-			"sender", sender, "target", target,
+		level.Warn(p.logger).Log("msg", "failed to dial S2S dialback stream",
+			"err", err, "sender", sender, "target", target,
 		)
 		return nil, err
 	}
 	go func() {
 		if err := outStm.start(); err != nil {
-			log.Warnw(fmt.Sprintf("Failed to start S2S dialback stream: %v", err),
-				"sender", sender, "target", target,
+			level.Warn(p.logger).Log("msg", "failed to start S2S dialback stream",
+				"err", err, "sender", sender, "target", target,
 			)
 			return
 		}
@@ -140,7 +145,7 @@ func (p *OutProvider) GetDialback(ctx context.Context, sender, target string, pa
 // Start starts S2S out provider.
 func (p *OutProvider) Start(_ context.Context) error {
 	go p.reportMetrics()
-	log.Infow("Started S2S out provider")
+	level.Info(p.logger).Log("msg", "started S2S out provider")
 	return nil
 }
 
@@ -176,7 +181,7 @@ func (p *OutProvider) Stop(ctx context.Context) error {
 	}
 	wg.Wait()
 
-	log.Infow("Stopped S2S out provider", "total_connections", len(stms))
+	level.Info(p.logger).Log("msg", "stopped S2S out provider", "total_connections", len(stms))
 	return nil
 }
 
@@ -197,6 +202,7 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		p.kv,
 		p.shapers,
 		p.hk,
+		p.logger,
 		p.unregister,
 		outConfig{
 			dbSecret:         p.cfg.DialbackSecret,
@@ -215,6 +221,7 @@ func (p *OutProvider) newDialbackS2S(sender, target string, dbParams DialbackPar
 		p.tlsConfig(target),
 		p.hosts,
 		p.shapers,
+		p.logger,
 		outConfig{
 			dbSecret:         p.cfg.DialbackSecret,
 			dialTimeout:      p.cfg.DialTimeout,

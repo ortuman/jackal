@@ -20,8 +20,11 @@ import (
 	"fmt"
 	"sync"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/version"
 )
 
@@ -42,16 +45,18 @@ type Conn interface {
 
 // Manager is the cluster connection manager.
 type Manager struct {
-	mu    sync.RWMutex
-	conns map[string]*clusterConn
-	hk    *hook.Hooks
+	mu     sync.RWMutex
+	conns  map[string]*clusterConn
+	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // NewManager returns a new initialized cluster connection manager.
-func NewManager(hk *hook.Hooks) *Manager {
+func NewManager(hk *hook.Hooks, logger kitlog.Logger) *Manager {
 	return &Manager{
-		hk:    hk,
-		conns: make(map[string]*clusterConn),
+		hk:     hk,
+		conns:  make(map[string]*clusterConn),
+		logger: logger,
 	}
 }
 
@@ -79,7 +84,7 @@ func (m *Manager) Start(_ context.Context) error {
 
 	m.hk.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, hook.DefaultPriority)
 
-	log.Infof("Started cluster connection manager")
+	level.Info(m.logger).Log("msg", "started cluster connection manager")
 	return nil
 }
 
@@ -98,7 +103,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	}
 	m.hk.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
 
-	log.Infof("Stopped cluster connection manager... (%d total connections)", count)
+	level.Info(m.logger).Log("msg", "stopped cluster connection manager...", "total_connections", count)
 	return nil
 }
 
@@ -112,7 +117,7 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 	for _, instanceID := range inf.UnregisteredKeys {
 		cl := m.conns[instanceID]
 		if err := cl.close(); err != nil {
-			log.Warnf("Failed to close cluster client conn: %s", err)
+			level.Warn(m.logger).Log("msg", "failed to close cluster client conn", "err", err)
 		}
 		delete(m.conns, instanceID)
 	}
@@ -120,10 +125,10 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 	for _, member := range inf.Registered {
 		cl := newConn(member.Host, member.Port, member.APIVer)
 		if err := cl.dialContext(ctx); err != nil {
-			log.Warnf("Failed to dial cluster conn: %s", err)
+			level.Warn(m.logger).Log("msg", "failed to dial cluster conn", "err", err)
 			continue
 		}
-		log.Infof("Dialed cluster router connection at %s:%d", member.Host, member.Port)
+		level.Info(m.logger).Log("msg", "dialed cluster router connection", "remote_addr", fmt.Sprintf("%s:%d", member.Host, member.Port))
 
 		m.conns[member.InstanceID] = cl
 	}

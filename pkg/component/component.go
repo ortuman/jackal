@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"sync"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 )
 
 // ErrComponentNotFound will be returned by ProcessStanza in case the receiver component is not registered.
@@ -48,19 +51,22 @@ type Component interface {
 
 // Components is the global component hub.
 type Components struct {
-	mtx   sync.RWMutex
-	comps map[string]Component
-	hk    *hook.Hooks
+	mtx    sync.RWMutex
+	comps  map[string]Component
+	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // NewComponents returns a new initialized Components instance.
 func NewComponents(
 	components []Component,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Components {
 	cs := &Components{
-		comps: make(map[string]Component),
-		hk:    hk,
+		comps:  make(map[string]Component),
+		hk:     hk,
+		logger: logger,
 	}
 	for _, comp := range components {
 		cs.comps[comp.Host()] = comp
@@ -151,7 +157,7 @@ func (c *Components) Start(ctx context.Context) error {
 		}
 		hosts = append(hosts, comp.Host())
 	}
-	log.Infow("Started components", "components", len(c.comps))
+	level.Info(c.logger).Log("msg", "started components", "total_components", len(c.comps))
 
 	_, err := c.hk.Run(ctx, hook.ComponentsStarted, &hook.ExecutionContext{
 		Info: &hook.ComponentsInfo{
@@ -175,7 +181,7 @@ func (c *Components) Stop(ctx context.Context) error {
 		}
 		hosts = append(hosts, comp.Host())
 	}
-	log.Infow("Stopped components", "components", len(c.comps))
+	level.Info(c.logger).Log("msg", "stopped components", "total_components", len(c.comps))
 
 	_, err := c.hk.Run(ctx, hook.ComponentsStopped, &hook.ExecutionContext{
 		Info: &hook.ComponentsInfo{

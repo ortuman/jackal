@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -42,7 +44,7 @@ func TestMemberList_Join(t *testing.T) {
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks())
+	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	err := ml.Start(context.Background())
@@ -77,7 +79,7 @@ func TestMemberList_Leave(t *testing.T) {
 	kvMock.DelFunc = func(r context.Context, key string) error {
 		return nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks())
+	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	_ = ml.Start(context.Background())
@@ -116,7 +118,7 @@ func TestMemberList_WatchChanges(t *testing.T) {
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks())
+	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	_ = ml.Start(context.Background())

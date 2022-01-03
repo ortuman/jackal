@@ -22,10 +22,13 @@ import (
 	"strings"
 	"sync"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
 	"github.com/ortuman/jackal/pkg/version"
 )
@@ -42,13 +45,14 @@ type MemberList struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 	hk        *hook.Hooks
+	logger    kitlog.Logger
 	mu        sync.RWMutex
 	members   map[string]clustermodel.Member
 	stopCh    chan struct{}
 }
 
 // New will create a new MemberList instance using the given configuration.
-func New(kv kv.KV, localPort int, hk *hook.Hooks) *MemberList {
+func New(kv kv.KV, localPort int, hk *hook.Hooks, logger kitlog.Logger) *MemberList {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	return &MemberList{
 		localPort: localPort,
@@ -57,6 +61,7 @@ func New(kv kv.KV, localPort int, hk *hook.Hooks) *MemberList {
 		ctx:       ctx,
 		ctxCancel: cancelFn,
 		hk:        hk,
+		logger:    logger,
 		stopCh:    make(chan struct{}),
 	}
 }
@@ -70,7 +75,7 @@ func (ml *MemberList) Start(ctx context.Context) error {
 	if err := ml.refreshMemberList(ctx); err != nil {
 		return err
 	}
-	log.Infow("Registered local instance", "port", ml.localPort)
+	level.Info(ml.logger).Log("msg", "registered local instance", "port", ml.localPort)
 
 	return nil
 }
@@ -85,7 +90,7 @@ func (ml *MemberList) Stop(ctx context.Context) error {
 	if err := ml.kv.Del(ctx, localMemberKey()); err != nil {
 		return err
 	}
-	log.Infow("Unregistered local instance", "port", ml.localPort)
+	level.Info(ml.logger).Log("msg", "unregistered local instance", "port", ml.localPort)
 
 	return nil
 }
@@ -148,12 +153,12 @@ func (ml *MemberList) refreshMemberList(ctx context.Context) error {
 		// watch changes
 		for wResp := range wCh {
 			if err := wResp.Err; err != nil {
-				log.Warnf("Error occurred watching memberlist: %v", err)
+				level.Warn(ml.logger).Log("msg", "error occurred watching memberlist", "err", err)
 				continue
 			}
 			// process changes
 			if err := ml.processKVEvents(ml.ctx, wResp.Events); err != nil {
-				log.Warnf("Failed to process memberlist changes: %v", err)
+				level.Warn(ml.logger).Log("msg", "failed to process memberlist changes", "err", err)
 			}
 		}
 		close(ml.stopCh) // signal stop
@@ -173,7 +178,7 @@ func (ml *MemberList) getMembers(ctx context.Context) ([]clustermodel.Member, er
 		}
 		m, err := decodeClusterMember(k, string(val))
 		if err != nil {
-			log.Warnf("Failed to decode cluster member: %v", err)
+			level.Warn(ml.logger).Log("msg", "failed to decode cluster member", "err", err)
 			continue
 		}
 		if m == nil {
@@ -211,14 +216,14 @@ func (ml *MemberList) processKVEvents(ctx context.Context, kvEvents []kv.WatchEv
 			ml.members[m.InstanceID] = *m
 			putMembers = append(putMembers, *m)
 
-			log.Infow("Registered cluster member", "instance_id", m.InstanceID, "address", m.String(), "cluster_api_ver", m.APIVer.String())
+			level.Info(ml.logger).Log("msg", "registered cluster member", "instance_id", m.InstanceID, "address", m.String(), "cluster_api_ver", m.APIVer.String())
 
 		case kv.Del:
 			memberKey := strings.TrimPrefix(ev.Key, memberKeyPrefix)
 			delete(ml.members, memberKey)
 			delMemberKeys = append(delMemberKeys, memberKey)
 
-			log.Infow("Unregistered cluster member", "instance_id", memberKey)
+			level.Info(ml.logger).Log("msg", "unregistered cluster member", "instance_id", memberKey)
 		}
 	}
 	ml.mu.Unlock()

@@ -18,13 +18,15 @@ import (
 	"context"
 
 	sq "github.com/Masterminds/squirrel"
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
 const offlineMessagesTableName = "offline_messages"
 
 type pgSQLOfflineRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLOfflineRep) InsertOfflineMessage(ctx context.Context, message *stravaganza.Message, username string) error {
@@ -63,7 +65,7 @@ func (r *pgSQLOfflineRep) FetchOfflineMessages(ctx context.Context, username str
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	var ms []*stravaganza.Message
 	for rows.Next() {

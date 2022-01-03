@@ -20,12 +20,15 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/c2s"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	clusterpb "github.com/ortuman/jackal/pkg/cluster/pb"
 	"github.com/ortuman/jackal/pkg/component"
-	"github.com/ortuman/jackal/pkg/log"
 	"google.golang.org/grpc"
 )
 
@@ -39,6 +42,7 @@ type Server struct {
 	active      int32
 	localRouter *c2s.LocalRouter
 	comps       *component.Components
+	logger      kitlog.Logger
 }
 
 // Config contains Server configuration parameters.
@@ -48,11 +52,12 @@ type Config struct {
 }
 
 // New returns a new initialized Server instance.
-func New(cfg Config, localRouter *c2s.LocalRouter, comps *component.Components) *Server {
+func New(cfg Config, localRouter *c2s.LocalRouter, comps *component.Components, logger kitlog.Logger) *Server {
 	return &Server{
 		cfg:         cfg,
 		localRouter: localRouter,
 		comps:       comps,
+		logger:      logger,
 	}
 }
 
@@ -67,7 +72,7 @@ func (s *Server) Start(_ context.Context) error {
 	s.ln = ln
 	s.active = 1
 
-	log.Infof("Started cluster server at %s", addr)
+	level.Info(s.logger).Log("msg", "started cluster server", "bind_addr", addr)
 
 	s.srv = grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
@@ -79,7 +84,7 @@ func (s *Server) Start(_ context.Context) error {
 	go func() {
 		if err := s.srv.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
-				log.Errorf("Cluster server error: %s", err)
+				level.Error(s.logger).Log("msg", "cluster server error", "err", err)
 			}
 		}
 	}()
@@ -91,7 +96,7 @@ func (s *Server) Stop(_ context.Context) error {
 	atomic.StoreInt32(&s.active, 0)
 	s.srv.GracefulStop()
 
-	log.Infof("Closed cluster server at %s", s.getAddress())
+	level.Info(s.logger).Log("msg", "closed cluster server", "bind_addr", s.getAddress())
 	return nil
 }
 

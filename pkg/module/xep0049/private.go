@@ -18,10 +18,11 @@ import (
 	"context"
 	"strings"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -42,6 +43,7 @@ type Private struct {
 	router router.Router
 	rep    repository.Private
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New returns a new initialized Private instance.
@@ -49,11 +51,13 @@ func New(
 	router router.Router,
 	rep repository.Private,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Private {
 	return &Private{
 		rep:    rep,
 		router: router,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -104,7 +108,7 @@ func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *Private) Start(_ context.Context) error {
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started private module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started private module")
 	return nil
 }
 
@@ -112,7 +116,7 @@ func (m *Private) Start(_ context.Context) error {
 func (m *Private) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped private module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped private module")
 	return nil
 }
 
@@ -141,7 +145,7 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("Fetched private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "fetched private XML", "username", username, "namespace", ns)
 
 	qb := stravaganza.NewBuilder("query").
 		WithAttribute(stravaganza.Namespace, privateNamespace)
@@ -182,7 +186,7 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 			return err
 		}
-		log.Infow("Saved private XML", "username", username, "namespace", ns, "xep", XEPNumber)
+		level.Info(m.logger).Log("msg", "saved private XML", "username", username, "namespace", ns)
 
 		// run private updated hook
 		_, err := m.hk.Run(ctx, hook.PrivateUpdated, &hook.ExecutionContext{

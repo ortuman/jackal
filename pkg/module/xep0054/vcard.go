@@ -17,10 +17,11 @@ package xep0054
 import (
 	"context"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -41,6 +42,7 @@ type VCard struct {
 	rep    repository.VCard
 	router router.Router
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New returns a new initialized VCard instance.
@@ -48,11 +50,13 @@ func New(
 	router router.Router,
 	rep repository.Repository,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *VCard {
 	return &VCard{
 		router: router,
 		rep:    rep,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -94,7 +98,7 @@ func (m *VCard) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *VCard) Start(_ context.Context) error {
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("Started vCard module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started vCard module")
 	return nil
 }
 
@@ -102,7 +106,7 @@ func (m *VCard) Start(_ context.Context) error {
 func (m *VCard) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("Stopped vCard module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped vCard module")
 	return nil
 }
 
@@ -132,7 +136,7 @@ func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 			WithAttribute(stravaganza.Namespace, vCardNamespace).
 			Build())
 	}
-	log.Infow("Fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node(), "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "fetched vCard", "username", iq.FromJID().Node(), "vcard", toJID.Node())
 
 	_, _ = m.router.Route(ctx, resIQ)
 
@@ -166,7 +170,7 @@ func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("Saved vCard", "vcard", toJID.Node(), "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "saved vCard", "vcard", toJID.Node())
 
 	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 

@@ -18,6 +18,8 @@ import (
 	"context"
 	"database/sql"
 
+	kitlog "github.com/go-kit/log"
+
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 
 	sq "github.com/Masterminds/squirrel"
@@ -28,7 +30,8 @@ const (
 )
 
 type pgSQLUserRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *usermodel.User) error {

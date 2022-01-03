@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -67,8 +68,9 @@ func TestInS2S_Disconnect(t *testing.T) {
 		tr:      trMock,
 		rq:      runqueue.New("in_s2s:test"),
 		doneCh:  make(chan struct{}),
-		inHub:   NewInHub(),
+		inHub:   NewInHub(kitlog.NewNopLogger()),
 		hk:      hook.NewHooks(),
+		logger:  kitlog.NewNopLogger(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -431,6 +433,7 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 				session:     ssMock,
 				outProvider: outProviderMock,
 				hk:          hook.NewHooks(),
+				logger:      kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -513,8 +516,9 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 				tr:      trMock,
 				session: ssMock,
 				router:  routerMock,
-				inHub:   NewInHub(),
+				inHub:   NewInHub(kitlog.NewNopLogger()),
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

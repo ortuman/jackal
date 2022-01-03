@@ -18,6 +18,8 @@ import (
 	"context"
 	"database/sql"
 
+	kitlog "github.com/go-kit/log"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/lib/pq"
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
@@ -28,7 +30,8 @@ const (
 )
 
 type pgSQLCapabilitiesRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {

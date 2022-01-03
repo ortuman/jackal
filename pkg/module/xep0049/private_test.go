@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -53,6 +55,7 @@ func TestPrivate_GetPrivate(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).
@@ -105,6 +108,7 @@ func TestPrivate_SetPrivate(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.SetType).
@@ -153,6 +157,7 @@ func TestPrivate_ForbiddenRequest(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	reqIQ, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.Type, stravaganza.GetType).

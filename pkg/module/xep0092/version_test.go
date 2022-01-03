@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/version"
@@ -52,6 +54,7 @@ func TestVersion_GetVersion(t *testing.T) {
 	v := &Version{
 		cfg:    Config{ShowOS: true},
 		router: routerMock,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when

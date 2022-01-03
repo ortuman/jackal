@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -49,6 +51,7 @@ func TestCapabilities_RequestDiscoInfo(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}
@@ -100,6 +103,7 @@ func TestCapabilities_ProcessDiscoInfo(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 		reqs:   make(map[string]capsInfo),
 		clrTms: make(map[string]*time.Timer),
 	}

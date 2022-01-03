@@ -25,6 +25,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -32,7 +36,6 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -86,6 +89,7 @@ type Stream struct {
 	hosts  *host.Hosts
 	resMng resourceManager
 	hk     *hook.Hooks
+	logger kitlog.Logger
 
 	mu      sync.RWMutex
 	queues  map[string]*queue
@@ -99,6 +103,7 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Stream {
 	return &Stream{
 		cfg:     cfg,
@@ -106,6 +111,7 @@ func New(
 		hosts:   hosts,
 		resMng:  resMng,
 		hk:      hk,
+		logger:  kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 		queues:  make(map[string]*queue),
 		termTms: make(map[string]*time.Timer),
 	}
@@ -138,7 +144,7 @@ func (m *Stream) Start(_ context.Context) error {
 	m.hk.AddHook(hook.C2SStreamDisconnected, m.onDisconnect, hook.LowestPriority)
 	m.hk.AddHook(hook.C2SStreamTerminated, m.onTerminate, hook.LowestPriority)
 
-	log.Infow("Started stream module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started stream module")
 	return nil
 }
 
@@ -149,7 +155,7 @@ func (m *Stream) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamDisconnected, m.onDisconnect)
 	m.hk.RemoveHook(hook.C2SStreamTerminated, m.onTerminate)
 
-	log.Infow("Stopped stream module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped stream module")
 	return nil
 }
 
@@ -197,8 +203,8 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	if sq.len() >= m.cfg.MaxQueueSize { // max queue size reached
 		_ = sq.stream().Disconnect(streamerror.E(streamerror.PolicyViolation))
 
-		log.Infow("Max queue size reached",
-			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		level.Info(m.logger).Log("msg", "max queue size reached",
+			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 		)
 	}
 	return nil
@@ -230,14 +236,14 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	m.termTms[inf.ID] = time.AfterFunc(m.cfg.HibernateTime, func() {
 		_ = stm.Disconnect(nil)
 
-		log.Infow("Hibernated stream terminated",
-			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+		level.Info(m.logger).Log("msg", "hibernated stream terminated",
+			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 		)
 	})
 	m.mu.Unlock()
 
-	log.Infow("Scheduled stream termination",
-		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "scheduled stream termination",
+		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	return hook.ErrStopped
 }
@@ -328,8 +334,8 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		WithAttribute("resume", "true").
 		Build(),
 	)
-	log.Infow("Enabled stream management",
-		"smID", smID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "enabled stream management",
+		"smID", smID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	return nil
 }
@@ -389,8 +395,8 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	sq.sendPending()
 	sq.scheduleR()
 
-	log.Infow("Resumed stream",
-		"smID", prevSMID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "resumed stream",
+		"smID", prevSMID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	return nil
 }
@@ -404,14 +410,14 @@ func (m *Stream) handleA(stm stream.C2S, h uint32) {
 	}
 	sq.acknowledge(h)
 
-	log.Infow("Received stanza ack",
-		"ack_h", h, "h", sq.outboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "received stanza ack",
+		"ack_h", h, "h", sq.outboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	if sq.len() == 0 {
 		return // done here
 	}
-	log.Infow("Resending pending stanzas...",
-		"len", sq.len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "resending pending stanzas...",
+		"len", sq.len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	sq.sendPending()
 }
@@ -424,8 +430,8 @@ func (m *Stream) handleR(stm stream.C2S) {
 	if sq == nil {
 		return
 	}
-	log.Infow("Stanza ack requested",
-		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(), "xep", XEPNumber,
+	level.Info(m.logger).Log("msg", "stanza ack requested",
+		"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).

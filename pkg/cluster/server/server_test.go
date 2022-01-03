@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -31,6 +33,7 @@ func TestServer_Listen(t *testing.T) {
 			BindAddr: "127.0.0.1",
 			Port:     56000,
 		},
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when

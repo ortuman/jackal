@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -66,6 +68,7 @@ func TestCarbons_Enable(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -133,6 +136,7 @@ func TestCarbons_Disable(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	setID := uuid.New().String()
@@ -192,6 +196,7 @@ func TestCarbons_SentCC(t *testing.T) {
 		resMng: resManagerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -263,6 +268,7 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 		resMng: resManagerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -303,7 +309,8 @@ func TestCarbons_InterceptStanza(t *testing.T) {
 	// given
 	hk := hook.NewHooks()
 	c := &Carbons{
-		hk: hk,
+		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	b := stravaganza.NewMessageBuilder()

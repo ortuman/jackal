@@ -16,12 +16,14 @@ package etcd
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync/atomic"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/log"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -32,6 +34,7 @@ const (
 // KV represents an etcd key-value store implementation.
 type KV struct {
 	cfg      Config
+	logger   kitlog.Logger
 	cli      *etcdv3.Client
 	leaseID  etcdv3.LeaseID
 	ctx      context.Context
@@ -41,10 +44,11 @@ type KV struct {
 }
 
 // NewKV returns a new etcd key-value store instance.
-func NewKV(cfg Config) *KV {
+func NewKV(cfg Config, logger kitlog.Logger) *KV {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &KV{
 		cfg:      cfg,
+		logger:   logger,
 		ctx:      ctx,
 		cancelFn: cancel,
 	}
@@ -132,7 +136,7 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	go k.keepAliveLease()
 
-	log.Infow("Started etcd KV store")
+	level.Info(k.logger).Log("msg", "started etcd KV store")
 	return nil
 }
 
@@ -150,7 +154,7 @@ func (k *KV) Stop(ctx context.Context) error {
 	if err := k.cli.Close(); err != nil {
 		return err
 	}
-	log.Infow("Stopped etcd KV store")
+	level.Info(k.logger).Log("msg", "stopped etcd KV store")
 	return nil
 }
 
@@ -170,11 +174,11 @@ func (k *KV) keepAliveLease() {
 				retries = 0
 
 			default:
-				log.Warnw(fmt.Sprintf("Failed to perform lease keepalive: %v", err), "lease_id", k.leaseID)
+				level.Warn(k.logger).Log("msg", "failed to perform lease keepalive", "err", err, "lease_id", k.leaseID)
 
 				retries++
 				if retries == maxKeepAliveRetries {
-					log.Errorw(fmt.Sprintf("Unable to refresh lease TTL: max retries reached: %d", maxKeepAliveRetries), "lease_id", k.leaseID)
+					level.Error(k.logger).Log("msg", "unable to refresh lease TTL: max retries reached", "max_retries", maxKeepAliveRetries, "lease_id", k.leaseID)
 
 					// shutdown process to avoid split-brain scenario
 					shutdown()

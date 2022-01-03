@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -55,6 +56,7 @@ func TestInComponent_SendStanza(t *testing.T) {
 		session: sessMock,
 		rq:      runqueue.New("in_component:test"),
 		hk:      hook.NewHooks(),
+		logger:  kitlog.NewNopLogger(),
 	}
 	// when
 	s.sendStanza(testMessageStanza())
@@ -103,6 +105,7 @@ func TestInComponent_Shutdown(t *testing.T) {
 		extCompMng: extCompMngMock,
 		inHub:      newInHub(),
 		hk:         hook.NewHooks(),
+		logger:     kitlog.NewNopLogger(),
 		rq:         runqueue.New("in_component:test"),
 		doneCh:     make(chan struct{}),
 	}
@@ -262,6 +265,7 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
 				hk:         hook.NewHooks(),
+				logger:     kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -357,6 +361,7 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 				extCompMng: extCompMngMock,
 				inHub:      newInHub(),
 				hk:         hook.NewHooks(),
+				logger:     kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

@@ -21,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 
 	"github.com/golang/protobuf/proto"
@@ -28,7 +31,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/pkg/c2s/pb"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/log"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )
 
@@ -41,6 +43,7 @@ const clearActiveKeyTimeout = time.Minute
 // ResourceManager type is in charge of keeping track of all cluster resources.
 type ResourceManager struct {
 	kv        kv.KV
+	logger    kitlog.Logger
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 
@@ -52,10 +55,11 @@ type ResourceManager struct {
 }
 
 // NewResourceManager creates a new resource manager given a KV storage instance.
-func NewResourceManager(kv kv.KV) *ResourceManager {
+func NewResourceManager(kv kv.KV, logger kitlog.Logger) *ResourceManager {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	return &ResourceManager{
 		kv:        kv,
+		logger:    logger,
 		ctx:       ctx,
 		ctxCancel: ctxCancel,
 		store:     make(map[string][]c2smodel.ResourceDesc),
@@ -126,7 +130,7 @@ func (m *ResourceManager) Start(ctx context.Context) error {
 	if err := m.watchKVResources(ctx); err != nil {
 		return err
 	}
-	log.Infow("Started C2S resource manager")
+	level.Info(m.logger).Log("msg", "started C2S resource manager")
 	return nil
 }
 
@@ -136,7 +140,7 @@ func (m *ResourceManager) Stop(_ context.Context) error {
 	m.ctxCancel()
 	<-m.stopCh
 
-	log.Infow("Stopped C2S resource manager")
+	level.Info(m.logger).Log("msg", "stopped C2S resource manager")
 	return nil
 }
 
@@ -159,12 +163,12 @@ func (m *ResourceManager) watchKVResources(ctx context.Context) error {
 		// watch changes
 		for wResp := range wCh {
 			if err := wResp.Err; err != nil {
-				log.Warnf("Error occurred watching resources: %v", err)
+				level.Warn(m.logger).Log("msg", "error occurred watching resources", "err", err)
 				continue
 			}
 			// process changes
 			if err := m.processKVEvents(wResp.Events); err != nil {
-				log.Warnf("Failed to process resources changes: %v", err)
+				level.Warn(m.logger).Log("msg", "failed to process resources changes", "err", err)
 			}
 		}
 		close(m.stopCh) // signal stop

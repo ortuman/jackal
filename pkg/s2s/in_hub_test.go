@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/stretchr/testify/require"
@@ -42,6 +44,7 @@ func TestInHub_StartStop(t *testing.T) {
 	h := &InHub{
 		streams: make(map[stream.S2SInID]stream.S2SIn),
 		doneCh:  make(chan chan struct{}),
+		logger:  kitlog.NewNopLogger(),
 	}
 
 	// when

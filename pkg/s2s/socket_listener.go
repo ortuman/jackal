@@ -17,17 +17,19 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/shaper"
@@ -50,6 +52,7 @@ type SocketListener struct {
 	kv            kv.KV
 	shapers       shaper.Shapers
 	hk            *hook.Hooks
+	logger        kitlog.Logger
 	connHandlerFn func(conn net.Conn)
 
 	ln     net.Listener
@@ -68,6 +71,7 @@ func NewListeners(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) []*SocketListener {
 	var listeners []*SocketListener
 	for _, lnCfg := range cfg {
@@ -82,6 +86,7 @@ func NewListeners(
 			inHub,
 			shapers,
 			hk,
+			logger,
 		)
 		listeners = append(listeners, ln)
 	}
@@ -99,6 +104,7 @@ func newSocketListener(
 	hub *InHub,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *SocketListener {
 	ln := &SocketListener{
 		cfg:         cfg,
@@ -111,6 +117,7 @@ func newSocketListener(
 		inHUB:       hub,
 		shapers:     shapers,
 		hk:          hk,
+		logger:      logger,
 	}
 	ln.connHandlerFn = ln.handleConn
 	return ln
@@ -140,16 +147,16 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			log.Infow(
-				fmt.Sprintf("Received S2S incoming connection at %s", l.getAddress()),
+			level.Info(l.logger).Log("msg", "received S2S incoming connection",
+				"bind_addr", l.getAddress(),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infow(
-		fmt.Sprintf("Accepting S2S socket connections at %s", l.getAddress()),
+	level.Info(l.logger).Log("msg", "accepting S2S socket connections",
+		"bind_addr", l.getAddress(),
 		"direct_tls", l.cfg.DirectTLS,
 	)
 	return nil
@@ -161,7 +168,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 	if err := l.ln.Close(); err != nil {
 		return err
 	}
-	log.Infof("Stopped S2S listener at %s", l.getAddress())
+	level.Info(l.logger).Log("msg", "stopped S2S listener", "bind_addr", l.getAddress())
 	return nil
 }
 
@@ -178,6 +185,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.kv,
 		l.shapers,
 		l.hk,
+		l.logger,
 		inConfig{
 			connectTimeout:   l.cfg.ConnectTimeout,
 			keepAliveTimeout: l.cfg.KeepAliveTimeout,
@@ -188,12 +196,12 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		},
 	)
 	if err != nil {
-		log.Warnf("Failed to initialize incoming S2S stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to initialize incoming S2S stream", "err", err)
 		return
 	}
 	// start reading stream
 	if err := stm.start(); err != nil {
-		log.Warnf("Failed to start incoming S2S stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to start incoming S2S stream", "err", err)
 		return
 	}
 }

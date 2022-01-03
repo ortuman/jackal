@@ -16,17 +16,19 @@ package xep0114
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/shaper"
 	"github.com/ortuman/jackal/pkg/transport"
@@ -44,6 +46,7 @@ type SocketListener struct {
 	router        router.Router
 	shapers       shaper.Shapers
 	hk            *hook.Hooks
+	logger        kitlog.Logger
 	extCompMng    *extcomponentmanager.Manager
 	stmHub        *inHub
 	connHandlerFn func(conn net.Conn)
@@ -61,6 +64,7 @@ func NewListeners(
 	router router.Router,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) []*SocketListener {
 	var listeners []*SocketListener
 	for _, lnCfg := range cfg {
@@ -72,6 +76,7 @@ func NewListeners(
 			router,
 			shapers,
 			hk,
+			logger,
 		)
 		listeners = append(listeners, ln)
 	}
@@ -86,6 +91,7 @@ func newSocketListener(
 	router router.Router,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *SocketListener {
 	ln := &SocketListener{
 		hosts:      hosts,
@@ -93,6 +99,7 @@ func newSocketListener(
 		router:     router,
 		shapers:    shapers,
 		hk:         hk,
+		logger:     logger,
 		cfg:        cfg,
 		stmHub:     newInHub(),
 		extCompMng: extCompMng,
@@ -121,14 +128,14 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			log.Infow(
-				fmt.Sprintf("Received component incoming connection at %s", l.getAddress()),
+			level.Info(l.logger).Log("msg", "received component incoming connection",
+				"bind_addr", l.getAddress(),
 				"remote_address", conn.RemoteAddr().String(),
 			)
 			go l.connHandlerFn(conn)
 		}
 	}()
-	log.Infof("Accepting external component connections at %s", l.getAddress())
+	level.Info(l.logger).Log("msg", "accepting external component connections", "bind_addr", l.getAddress())
 	return nil
 }
 
@@ -140,7 +147,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 	}
 	l.stmHub.stop(ctx)
 
-	log.Infof("Stopped external component listener at %s", l.getAddress())
+	level.Info(l.logger).Log("msg", "stopped external component listener", "bind_addr", l.getAddress())
 	return nil
 }
 
@@ -155,6 +162,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.router,
 		l.shapers,
 		l.hk,
+		l.logger,
 		inConfig{
 			connectTimeout:   l.cfg.ConnectTimeout,
 			keepAliveTimeout: l.cfg.KeepAliveTimeout,
@@ -164,12 +172,12 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		},
 	)
 	if err != nil {
-		log.Warnf("Failed to initialize component stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to initialize component stream", "err", err)
 		return
 	}
 	// start reading stream
 	if err := stm.start(); err != nil {
-		log.Warnf("Failed to start component stream: %v", err)
+		level.Warn(l.logger).Log("msg", "failed to start component stream", "err", err)
 		return
 	}
 }

@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -98,6 +100,7 @@ func TestStream_Enable(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -146,6 +149,7 @@ func TestStream_InStanza(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	sq := newQueue(
 		stmMock, nil, time.Second, time.Minute,
@@ -200,6 +204,7 @@ func TestStream_OutStanza(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	sq := newQueue(
 		stmMock, nil, time.Second, time.Minute,
@@ -267,6 +272,7 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 		cfg:    cfg,
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
@@ -332,6 +338,7 @@ func TestStream_SendR(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	sq := newQueue(
 		stmMock, nil, time.Millisecond*500, time.Minute,
@@ -382,6 +389,7 @@ func TestStream_HandleR(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	sq := newQueue(
 		stmMock, nil, time.Second, time.Minute,
@@ -439,6 +447,7 @@ func TestStream_HandleA(t *testing.T) {
 		cfg:    testSMConfig(),
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	sq := newQueue(
 		stmMock, nil, time.Second, time.Minute,
@@ -540,6 +549,7 @@ func TestStream_Resume(t *testing.T) {
 		resMng: resMngMock,
 		queues: make(map[string]*queue),
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	var streamErr *streamerror.Error
 	oldStmMock := &c2sStreamMock{}

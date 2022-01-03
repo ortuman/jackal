@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -69,6 +71,7 @@ func TestBlockList_GetBlockList(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -143,6 +146,7 @@ func TestBlockList_BlockItem(t *testing.T) {
 		rep:    rep,
 		resMng: resMngMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -237,6 +241,7 @@ func TestBlockList_UnblockItem(t *testing.T) {
 		rep:    rep,
 		resMng: resMngMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -301,6 +306,7 @@ func TestBlockList_Forbidden(t *testing.T) {
 	bl := &BlockList{
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -332,8 +338,9 @@ func TestBlockList_UserDeleted(t *testing.T) {
 
 	hk := hook.NewHooks()
 	bl := &BlockList{
-		rep: rep,
-		hk:  hk,
+		rep:    rep,
+		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	_ = bl.Start(context.Background())
@@ -374,6 +381,7 @@ func TestBlockList_InterceptIncomingStanza(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	b := stravaganza.NewMessageBuilder()
@@ -436,6 +444,7 @@ func TestBlockList_InterceptOutgoingStanza(t *testing.T) {
 		router: routerMock,
 		rep:    rep,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/balcony")
