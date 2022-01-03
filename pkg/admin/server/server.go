@@ -20,11 +20,14 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminpb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"google.golang.org/grpc"
 )
@@ -41,6 +44,7 @@ type Server struct {
 	rep     repository.Repository
 	peppers *pepper.Keys
 	hk      *hook.Hooks
+	logger  kitlog.Logger
 }
 
 // Config contains Server configuration parameters.
@@ -56,6 +60,7 @@ func New(
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Server {
 	if cfg.Disabled {
 		return nil
@@ -66,6 +71,7 @@ func New(
 		rep:      rep,
 		peppers:  peppers,
 		hk:       hk,
+		logger:   logger,
 	}
 }
 
@@ -80,17 +86,17 @@ func (s *Server) Start(_ context.Context) error {
 	s.ln = ln
 	s.active = 1
 
-	log.Infof("started admin server at %s", addr)
+	level.Info(s.logger).Log("msg", "started admin server", "bind_addr", addr)
 
 	go func() {
 		grpcServer := grpc.NewServer(
 			grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 			grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 		)
-		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.hk))
+		adminpb.RegisterUsersServer(grpcServer, newUsersService(s.rep, s.peppers, s.hk, s.logger))
 		if err := grpcServer.Serve(s.ln); err != nil {
 			if atomic.LoadInt32(&s.active) == 1 {
-				log.Errorf("admin server error: %s", err)
+				level.Error(s.logger).Log("msg", "admin server error", "err", err)
 			}
 		}
 	}()
@@ -103,7 +109,7 @@ func (s *Server) Stop(_ context.Context) error {
 	if err := s.ln.Close(); err != nil {
 		return err
 	}
-	log.Infof("closed admin server at %s", s.getAddress())
+	level.Info(s.logger).Log("msg", "closed admin server", "bind_addr", s.getAddress())
 	return nil
 }
 

@@ -21,18 +21,20 @@ import (
 	"net/http"
 	"net/http/pprof"
 
-	"github.com/ortuman/jackal/pkg/log"
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type httpServer struct {
-	port int
-	srv  *http.Server
+	port   int
+	srv    *http.Server
+	logger kitlog.Logger
 }
 
-func newHTTPServer(port int) *httpServer {
-	return &httpServer{port: port}
+func newHTTPServer(port int, logger kitlog.Logger) *httpServer {
+	return &httpServer{port: port, logger: logger}
 }
 
 func (h *httpServer) Start(_ context.Context) error {
@@ -54,10 +56,10 @@ func (h *httpServer) Start(_ context.Context) error {
 	}
 	go func() {
 		if err := h.srv.Serve(ln); err != nil && err != http.ErrServerClosed {
-			log.Errorf("failed to serve HTTP: %v", err)
+			level.Error(h.logger).Log("msg", "failed to serve HTTP", "err", err)
 		}
 	}()
-	log.Infof("HTTP server listening at :%d", h.port)
+	level.Info(h.logger).Log("msg", "HTTP server listening", "port", h.port)
 	return nil
 }
 
@@ -65,6 +67,6 @@ func (h *httpServer) Stop(ctx context.Context) error {
 	if err := h.srv.Shutdown(ctx); err != nil {
 		return err
 	}
-	log.Infof("closed HTTP server at :%d", h.port)
+	level.Info(h.logger).Log("msg", "closed HTTP server", "port", h.port)
 	return nil
 }

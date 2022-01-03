@@ -18,9 +18,14 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
+
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
 
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -28,7 +33,6 @@ import (
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/transport"
 	"github.com/ortuman/jackal/pkg/util/ratelimiter"
@@ -83,12 +87,13 @@ type Config struct {
 
 // Session represents an XMPP session between two peers.
 type Session struct {
-	id    string
-	typ   Type
-	cfg   Config
-	hosts hosts
-	tr    transport.Transport
-	pr    xmppParser
+	id     string
+	typ    Type
+	cfg    Config
+	hosts  hosts
+	tr     transport.Transport
+	pr     xmppParser
+	logger kitlog.Logger
 
 	streamID string
 	jd       jid.JID
@@ -97,14 +102,15 @@ type Session struct {
 }
 
 // New creates a new session instance.
-func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts, cfg Config) *Session {
+func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts, cfg Config, logger kitlog.Logger) *Session {
 	ss := &Session{
-		typ:   typ,
-		id:    identifier,
-		cfg:   cfg,
-		hosts: hosts,
-		tr:    tr,
-		pr:    getParser(tr, cfg.MaxStanzaSize),
+		typ:    typ,
+		id:     identifier,
+		cfg:    cfg,
+		hosts:  hosts,
+		tr:     tr,
+		pr:     getParser(tr, cfg.MaxStanzaSize),
+		logger: logger,
 	}
 	if !ss.cfg.IsOut {
 		ss.streamID = uuid.New().String()
@@ -219,7 +225,7 @@ func (ss *Session) Close(ctx context.Context) error {
 // Send writes an XML element to the underlying session transport.
 func (ss *Session) Send(ctx context.Context, elem stravaganza.Element) error {
 	if logStanzas {
-		log.Debugf("SND(%s): %v", ss.id, elem)
+		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND(%s): %v", ss.id, elem))
 	}
 	ss.setWriteDeadline(ctx)
 	if err := elem.ToXML(ss.tr, true); err != nil {
@@ -237,7 +243,7 @@ func (ss *Session) Receive() (stravaganza.Element, error) {
 	switch {
 	case elem != nil:
 		if logStanzas {
-			log.Debugf("RCV(%s): %v", ss.id, elem)
+			level.Debug(ss.logger).Log("msg", fmt.Sprintf("RCV(%s): %v", ss.id, elem))
 		}
 		if elem.Name() == "stream:error" {
 			return nil, nil // ignore stream error incoming element
@@ -275,7 +281,7 @@ func (ss *Session) Reset(tr transport.Transport) error {
 
 func (ss *Session) sendString(ctx context.Context, str string) error {
 	if logStanzas {
-		log.Debugf("SND(%s): %s", ss.id, str)
+		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND(%s): %v", ss.id, str))
 	}
 	ss.setWriteDeadline(ctx)
 	_, err := ss.tr.WriteString(str)

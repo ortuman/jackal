@@ -18,6 +18,9 @@ import (
 	"context"
 	"sort"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -26,7 +29,6 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
@@ -38,6 +40,7 @@ type c2sRouter struct {
 	resMng  resourceManager
 	rep     repository.Repository
 	hk      *hook.Hooks
+	logger  kitlog.Logger
 }
 
 // NewRouter creates and returns an initialized C2S router.
@@ -47,6 +50,7 @@ func NewRouter(
 	resMng *ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) router.C2SRouter {
 	return &c2sRouter{
 		local:   localRouter,
@@ -54,6 +58,7 @@ func NewRouter(
 		resMng:  resMng,
 		rep:     rep,
 		hk:      hk,
+		logger:  logger,
 	}
 }
 
@@ -90,7 +95,7 @@ func (r *c2sRouter) Register(stm stream.C2S) error {
 	if err := r.local.Register(stm); err != nil {
 		return err
 	}
-	log.Infow("Registered C2S stream", "id", stm.ID())
+	level.Info(r.logger).Log("msg", "registered C2S stream", "id", stm.ID())
 	return nil
 }
 
@@ -99,7 +104,7 @@ func (r *c2sRouter) Bind(id stream.C2SID) error {
 	if err != nil {
 		return err
 	}
-	log.Infow("Binded C2S stream", "id", id,
+	level.Info(r.logger).Log("msg", "binded C2S stream", "id", id,
 		"username", stm.Username(),
 		"resource", stm.Resource())
 	return nil
@@ -109,7 +114,7 @@ func (r *c2sRouter) Unregister(stm stream.C2S) error {
 	if err := r.local.Unregister(stm); err != nil {
 		return err
 	}
-	log.Infow("Unregistered C2S stream", "id", stm.ID())
+	level.Info(r.logger).Log("msg", "unregistered C2S stream", "id", stm.ID())
 	return nil
 }
 

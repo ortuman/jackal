@@ -19,13 +19,14 @@ import (
 	"errors"
 	"sync"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
 	"github.com/ortuman/jackal/pkg/module/xep0004"
 	"github.com/ortuman/jackal/pkg/router"
@@ -70,6 +71,7 @@ type Disco struct {
 	rosRep     repository.Roster
 	resMng     resourceManager
 	hk         *hook.Hooks
+	logger     kitlog.Logger
 
 	mu      sync.RWMutex
 	srvProv InfoProvider
@@ -83,6 +85,7 @@ func New(
 	rosRep repository.Roster,
 	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Disco {
 	return &Disco{
 		router:     router,
@@ -90,6 +93,7 @@ func New(
 		rosRep:     rosRep,
 		resMng:     resMng,
 		hk:         hk,
+		logger:     kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -131,7 +135,7 @@ func (m *Disco) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 func (m *Disco) Start(_ context.Context) error {
 	m.hk.AddHook(hook.ModulesStarted, m.onModulesStarted, hook.DefaultPriority)
 
-	log.Infow("started disco module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started disco module")
 	return nil
 }
 
@@ -139,7 +143,7 @@ func (m *Disco) Start(_ context.Context) error {
 func (m *Disco) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.ModulesStarted, m.onModulesStarted)
 
-	log.Infow("stopped disco module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped disco module")
 	return nil
 }
 

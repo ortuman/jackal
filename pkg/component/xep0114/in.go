@@ -23,6 +23,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -31,7 +35,6 @@ import (
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	xmppsession "github.com/ortuman/jackal/pkg/session"
@@ -75,6 +78,7 @@ type inComponent struct {
 	extCompMng   externalComponentManager
 	inHub        *inHub
 	hk           *hook.Hooks
+	logger       kitlog.Logger
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -96,6 +100,7 @@ func newInComponent(
 	router router.Router,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 	cfg inConfig,
 ) (*inComponent, error) {
 	// set default rate limiter
@@ -114,6 +119,7 @@ func newInComponent(
 		xmppsession.Config{
 			MaxStanzaSize: cfg.maxStanzaSize,
 		},
+		logger,
 	)
 	// init stream
 	ctx, cancelFn := context.WithCancel(context.Background())
@@ -132,12 +138,13 @@ func newInComponent(
 		doneCh:     make(chan struct{}),
 		shapers:    shapers,
 		hk:         hk,
+		logger:     logger,
 	}, nil
 }
 
 func (s *inComponent) start() error {
 	s.inHub.register(s)
-	log.Infow("registered external component stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "registered external component stream", "id", s.id)
 
 	ctx, cancel := s.requestContext()
 	_, err := s.runHook(ctx, hook.ExternalComponentRegistered, &hook.ExternalComponentInfo{
@@ -223,7 +230,7 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("failed to process incoming component session element", "error", err, "id", s.id)
+				level.Warn(s.logger).Log("msg", "failed to process incoming component session element", "err", err, "id", s.id)
 				return
 			}
 		}
@@ -369,7 +376,7 @@ func (s *inComponent) close(ctx context.Context) error {
 		cHost = s.getJID().String()
 	}
 	s.inHub.unregister(s)
-	log.Infow("unregistered external component stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "unregistered external component stream", "id", s.id)
 
 	_, err := s.runHook(ctx, hook.ExternalComponentUnregistered, &hook.ExternalComponentInfo{
 		ID:   s.id.String(),
@@ -410,7 +417,7 @@ func (s *inComponent) registerComponent(ctx context.Context) error {
 	if err := s.extCompMng.RegisterComponentHost(ctx, cHost); err != nil {
 		return err
 	}
-	log.Infow("registered external component", "component_host", cHost)
+	level.Info(s.logger).Log("msg", "registered external component", "component_host", cHost)
 	return nil
 }
 
@@ -422,7 +429,7 @@ func (s *inComponent) unregisterComponent(ctx context.Context) error {
 	if err := s.extCompMng.UnregisterComponentHost(ctx, cHost); err != nil {
 		return err
 	}
-	log.Infow("unregistered external component", "component_host", cHost)
+	level.Info(s.logger).Log("msg", "unregistered external component", "component_host", cHost)
 	return nil
 }
 

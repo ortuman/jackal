@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
@@ -34,6 +36,7 @@ func TestModules_StartStop(t *testing.T) {
 		mods:         []Module{iqPrMock},
 		iqProcessors: []IQProcessor{iqPrMock},
 		hk:           hook.NewHooks(),
+		logger:       kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -66,6 +69,7 @@ func TestModules_ProcessIQ(t *testing.T) {
 		iqProcessors: []IQProcessor{iqPrMock},
 		hosts:        hMock,
 		hk:           hook.NewHooks(),
+		logger:       kitlog.NewNopLogger(),
 	}
 
 	// when

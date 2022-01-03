@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
@@ -39,7 +41,7 @@ func TestPing_Pong(t *testing.T) {
 		_ = stanza.ToXML(outBuf, true)
 		return nil, nil
 	}
-	p := New(Config{}, routerMock, &hook.Hooks{})
+	p := New(Config{}, routerMock, &hook.Hooks{}, kitlog.NewNopLogger())
 
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -75,7 +77,7 @@ func TestPing_SendPing(t *testing.T) {
 	p := New(Config{
 		Interval:  time.Millisecond * 500,
 		SendPings: true,
-	}, routerMock, hk)
+	}, routerMock, hk, kitlog.NewNopLogger())
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	// when
@@ -121,7 +123,7 @@ func TestPing_Timeout(t *testing.T) {
 		AckTimeout:    time.Millisecond * 250,
 		SendPings:     true,
 		TimeoutAction: killAction,
-	}, routerMock, hk)
+	}, routerMock, hk, kitlog.NewNopLogger())
 	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
 
 	// when

@@ -18,13 +18,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -54,6 +57,7 @@ type Carbons struct {
 	router router.Router
 	resMng resourceManager
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New returns a new initialized carbons instance.
@@ -62,12 +66,14 @@ func New(
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Carbons {
 	return &Carbons{
 		hosts:  hosts,
 		router: router,
 		resMng: resMng,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -96,7 +102,7 @@ func (p *Carbons) Start(_ context.Context) error {
 	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.DefaultPriority)
 	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.DefaultPriority)
 
-	log.Infow("started carbons module", "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "started carbons module")
 	return nil
 }
 
@@ -107,7 +113,7 @@ func (p *Carbons) Stop(_ context.Context) error {
 	p.hk.RemoveHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted)
 	p.hk.RemoveHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted)
 
-	log.Infow("stopped carbons module", "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "stopped carbons module")
 	return nil
 }
 
@@ -183,13 +189,13 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), true); err != nil {
 			return err
 		}
-		log.Infow("enabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+		level.Info(p.logger).Log("msg", "enabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
 
 	case iq.ChildNamespace("disable", carbonsNamespace) != nil:
 		if err := p.setCarbonsEnabled(ctx, fromJID.Node(), fromJID.Resource(), false); err != nil {
 			return err
 		}
-		log.Infow("disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
+		level.Info(p.logger).Log("msg", "disabled carbons copy", "username", fromJID.Node(), "resource", fromJID.Resource())
 
 	default:
 		_, _ = p.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))

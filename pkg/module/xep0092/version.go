@@ -19,9 +19,10 @@ import (
 	"os/exec"
 	"strings"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/ortuman/jackal/pkg/version"
@@ -53,13 +54,15 @@ type Version struct {
 	router router.Router
 	osInfo string
 	cfg    Config
+	logger kitlog.Logger
 }
 
 // New returns a new initialized version instance.
-func New(cfg Config, router router.Router) *Version {
+func New(cfg Config, router router.Router, logger kitlog.Logger) *Version {
 	return &Version{
 		router: router,
 		cfg:    cfg,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -103,13 +106,13 @@ func (v *Version) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 // Start starts version module.
 func (v *Version) Start(ctx context.Context) error {
 	v.osInfo = getOSInfo(ctx)
-	log.Infow("started version module", "xep", XEPNumber)
+	level.Info(v.logger).Log("msg", "started version module")
 	return nil
 }
 
 // Stop stops version module.
 func (v *Version) Stop(_ context.Context) error {
-	log.Infow("stopped version module", "xep", XEPNumber)
+	level.Info(v.logger).Log("msg", "stopped version module")
 	return nil
 }
 
@@ -141,6 +144,6 @@ func (v *Version) getVersion(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	_, _ = v.router.Route(ctx, xmpputil.MakeResultIQ(iq, qb.Build()))
 
-	log.Infow("sent software version", "username", iq.FromJID().Node(), "resource", iq.FromJID().Resource(), "xep", XEPNumber)
+	level.Info(v.logger).Log("msg", "sent software version", "username", iq.FromJID().Node(), "resource", iq.FromJID().Resource())
 	return nil
 }

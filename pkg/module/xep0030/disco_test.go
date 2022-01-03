@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/component"
@@ -45,6 +47,7 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	d := &Disco{
 		router: routerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -114,6 +117,7 @@ func TestDisco_GetServerItems(t *testing.T) {
 		router:     routerMock,
 		components: compsMock,
 		hk:         hk,
+		logger:     kitlog.NewNopLogger(),
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -184,6 +188,7 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 		router: routerMock,
 		rosRep: repMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()
@@ -257,6 +262,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 		rosRep: repMock,
 		resMng: resMng,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	_ = d.Start(context.Background())
 	defer func() { _ = d.Stop(context.Background()) }()

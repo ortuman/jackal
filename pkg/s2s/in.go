@@ -21,6 +21,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -30,7 +34,6 @@ import (
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
@@ -74,6 +77,7 @@ type inS2S struct {
 	kv           kv.KV
 	shapers      shaper.Shapers
 	hk           *hook.Hooks
+	logger       kitlog.Logger
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -98,6 +102,7 @@ func newInS2S(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 	cfg inConfig,
 ) (*inS2S, error) {
 	// set default rate limiter
@@ -115,6 +120,7 @@ func newInS2S(
 		xmppsession.Config{
 			MaxStanzaSize: cfg.maxStanzaSize,
 		},
+		logger,
 	)
 	// init stream
 	stm := &inS2S{
@@ -131,6 +137,7 @@ func newInS2S(
 		kv:          kv,
 		shapers:     shapers,
 		hk:          hk,
+		logger:      logger,
 		rq:          runqueue.New(id.String()),
 		doneCh:      make(chan struct{}),
 		state:       inConnecting,
@@ -162,7 +169,7 @@ func (s *inS2S) Done() <-chan struct{} {
 func (s *inS2S) start() error {
 	s.inHub.register(s)
 
-	log.Infow("registered S2S incoming stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "registered S2S incoming stream", "id", s.id)
 
 	// post registered incoming S2S event
 	ctx, cancel := s.requestContext()
@@ -215,7 +222,7 @@ func (s *inS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("failed to process incoming S2S session element", "error", err, "id", s.id)
+				level.Warn(s.logger).Log("msg", "failed to process incoming S2S session element", "err", err, "id", s.id)
 				return
 			}
 
@@ -556,7 +563,7 @@ func (s *inS2S) authenticate(ctx context.Context, elem stravaganza.Element) erro
 }
 
 func (s *inS2S) failAuthentication(ctx context.Context, reason, text string) error {
-	log.Infow("failed S2S incoming stream authentication",
+	level.Info(s.logger).Log("msg", "failed S2S incoming stream authentication",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target,
@@ -580,7 +587,7 @@ func (s *inS2S) finishAuthentication(ctx context.Context) error {
 	if err := s.updateRateLimiter(); err != nil {
 		return err
 	}
-	log.Infow("authenticated S2S incoming stream",
+	level.Info(s.logger).Log("msg", "authenticated S2S incoming stream",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target)
@@ -609,7 +616,7 @@ func (s *inS2S) authorizeDialbackKey(ctx context.Context, elem stravaganza.Eleme
 	}
 	dbOut, err := s.outProvider.GetDialback(ctx, s.hosts.DefaultHostName(), elem.Attribute(stravaganza.From), dbParams)
 	if err != nil {
-		log.Errorf("Failed to obtain S2S dialback connection: %v", err)
+		level.Error(s.logger).Log("msg", "failed to obtain S2S dialback connection", "err", err)
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, elem).Element())
 	}
 	go func() {
@@ -620,7 +627,7 @@ func (s *inS2S) authorizeDialbackKey(ctx context.Context, elem stravaganza.Eleme
 
 			err := s.handleDialbackResult(ctx, elemFrom, elemTo, dbRes)
 			if err != nil {
-				log.Errorf("Failed to process S2S dialback response: %v", err)
+				level.Error(s.logger).Log("msg", "failed to process S2S dialback response", "err", err)
 			}
 		})
 	}()
@@ -639,7 +646,7 @@ func (s *inS2S) handleDialbackResult(ctx context.Context, from, to string, dbRes
 		if err := s.updateRateLimiter(); err != nil {
 			return err
 		}
-		log.Infow("authorized S2S dialback key",
+		level.Info(s.logger).Log("msg", "authorized S2S dialback key",
 			"id", s.id,
 			"sender", s.sender,
 			"target", s.target,
@@ -681,7 +688,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		if err := unregisterDbRequest(ctx, streamID, s.kv); err != nil {
 			return err
 		}
-		log.Infow("S2S dialback key successfully verified",
+		level.Info(s.logger).Log("msg", "S2S dialback key successfully verified",
 			"id", s.id,
 			"sender", s.sender,
 			"target", s.target,
@@ -690,7 +697,7 @@ func (s *inS2S) verifyDialbackKey(ctx context.Context, elem stravaganza.Element)
 		sb.WithAttribute("type", "valid")
 
 	} else {
-		log.Infow("failed to verify S2S dialback key",
+		level.Info(s.logger).Log("msg", "failed to verify S2S dialback key",
 			"id", s.id,
 			"sender", s.sender,
 			"target", s.target,
@@ -722,7 +729,7 @@ func (s *inS2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 	}, false)
 	s.flags.setSecured()
 
-	log.Infow("secured S2S incoming stream", "id", s.id, "sender", s.sender, "target", s.target)
+	level.Info(s.logger).Log("msg", "secured S2S incoming stream", "id", s.id, "sender", s.sender, "target", s.target)
 
 	s.restartSession()
 	return nil
@@ -789,7 +796,7 @@ func (s *inS2S) close(ctx context.Context) error {
 	// unregister S2S stream
 	s.inHub.unregister(s)
 
-	log.Infow("unregistered S2S incoming stream",
+	level.Info(s.logger).Log("msg", "unregistered S2S incoming stream",
 		"id", s.id,
 		"sender", s.sender,
 		"target", s.target,

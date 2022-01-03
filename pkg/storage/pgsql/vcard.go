@@ -19,6 +19,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
 )
 
@@ -27,7 +28,8 @@ const (
 )
 
 type pgSQLVCardRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Element, username string) error {

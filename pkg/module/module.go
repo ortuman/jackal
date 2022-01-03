@@ -17,11 +17,14 @@ package module
 import (
 	"context"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 )
 
@@ -65,6 +68,7 @@ type Modules struct {
 	hosts        hosts
 	router       router.Router
 	hk           *hook.Hooks
+	logger       kitlog.Logger
 }
 
 // NewModules returns a new initialized Modules instance.
@@ -73,12 +77,14 @@ func NewModules(
 	hosts *host.Hosts,
 	router router.Router,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Modules {
 	m := &Modules{
 		mods:   mods,
 		hosts:  hosts,
 		router: router,
 		hk:     hk,
+		logger: logger,
 	}
 	m.setupModules()
 	return m
@@ -94,7 +100,7 @@ func (m *Modules) Start(ctx context.Context) error {
 		}
 		modNames = append(modNames, mod.Name())
 	}
-	log.Infow("started modules",
+	level.Info(m.logger).Log("msg", "started modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
@@ -117,7 +123,7 @@ func (m *Modules) Stop(ctx context.Context) error {
 		}
 		modNames = append(modNames, mod.Name())
 	}
-	log.Infow("stopped modules",
+	level.Info(m.logger).Log("msg", "stopped modules",
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)

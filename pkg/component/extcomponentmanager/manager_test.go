@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
@@ -106,6 +108,7 @@ func TestManager_RegisterExternalComponent(t *testing.T) {
 		kv:             kvMock,
 		clusterConnMng: clConnMngMock,
 		comps:          compsMock,
+		logger:         kitlog.NewNopLogger(),
 	}
 	// when
 	_ = m.Start(context.Background())
@@ -165,6 +168,7 @@ func TestManager_UnregisterExternalComponent(t *testing.T) {
 		kv:             kvMock,
 		clusterConnMng: clConnMngMock,
 		comps:          compsMock,
+		logger:         kitlog.NewNopLogger(),
 	}
 	// when
 	_ = m.Start(context.Background())

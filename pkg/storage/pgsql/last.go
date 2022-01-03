@@ -18,6 +18,8 @@ import (
 	"context"
 	"database/sql"
 
+	kitlog "github.com/go-kit/log"
+
 	sq "github.com/Masterminds/squirrel"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 )
@@ -27,7 +29,8 @@ const (
 )
 
 type pgSQLLastRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {

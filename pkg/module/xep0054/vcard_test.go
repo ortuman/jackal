@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -62,6 +64,7 @@ func TestVCard_GetVCard(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -110,6 +113,7 @@ func TestVCard_SetVCard(t *testing.T) {
 		rep:    repMock,
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().

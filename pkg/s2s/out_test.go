@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -53,6 +55,7 @@ func TestOutS2S_SendElement(t *testing.T) {
 		session: sessMock,
 		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
+		logger:  kitlog.NewNopLogger(),
 	}
 	// when
 	stanza := stravaganza.NewBuilder("auth").
@@ -95,6 +98,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 		tr:      trMock,
 		rq:      runqueue.New("out_s2s:test"),
 		hk:      hook.NewHooks(),
+		logger:  kitlog.NewNopLogger(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -309,6 +313,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 				session: ssMock,
 				kv:      kvMock,
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -416,6 +421,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(tt.sessionResFn())
@@ -495,6 +501,7 @@ func TestOutS2S_HandleSessionError(t *testing.T) {
 				tr:      trMock,
 				session: ssMock,
 				hk:      hook.NewHooks(),
+				logger:  kitlog.NewNopLogger(),
 			}
 			// when
 			stm.handleSessionResult(nil, tt.sErr)

@@ -18,6 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
@@ -25,7 +29,6 @@ import (
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -58,6 +61,7 @@ type BlockList struct {
 	router router.Router
 	resMng resourceManager
 	hk     *hook.Hooks
+	logger kitlog.Logger
 }
 
 // New returns a new initialized BlockList instance.
@@ -67,6 +71,7 @@ func New(
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *BlockList {
 	return &BlockList{
 		rep:    rep,
@@ -74,6 +79,7 @@ func New(
 		hosts:  hosts,
 		resMng: resMng,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -128,7 +134,7 @@ func (m *BlockList) Start(_ context.Context) error {
 	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute, hook.HighestPriority)
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
 
-	log.Infow("started blocklist module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started blocklist module")
 	return nil
 }
 
@@ -140,7 +146,7 @@ func (m *BlockList) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onS2SElementWillRoute)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("stopped blocklist module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped blocklist module")
 	return nil
 }
 
@@ -285,7 +291,7 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
-	log.Infow("fetched blocklist", "username", username, "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "fetched blocklist", "username", username)
 
 	// run hook
 	var allJIDs []jid.JID
@@ -351,7 +357,7 @@ func (m *BlockList) blockJIDs(ctx context.Context, iq *stravaganza.IQ, block str
 			}); err != nil {
 				return err
 			}
-			log.Infow("blocked JID", "username", username, "jid", bj.String(), "xep", XEPNumber)
+			level.Info(m.logger).Log("msg", "blocked JID", "username", username, "jid", bj.String())
 		}
 		return nil
 	})
@@ -423,7 +429,7 @@ func (m *BlockList) unblockJIDs(ctx context.Context, iq *stravaganza.IQ, unblock
 			}); err != nil {
 				return err
 			}
-			log.Infow("unblocked JID", "username", username, "jid", uj.String(), "xep", XEPNumber)
+			level.Info(m.logger).Log("msg", "unblocked JID", "username", username, "jid", uj.String())
 		}
 		return nil
 	})

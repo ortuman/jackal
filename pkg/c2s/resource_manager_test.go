@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/stretchr/testify/require"
@@ -31,7 +33,7 @@ func TestResourceManager_SetResource(t *testing.T) {
 
 	kvmock := &kvMock{}
 
-	h := NewResourceManager(kvmock)
+	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error {
 		r, _ := decodeResource(key, []byte(value))
 		r1 = r
@@ -56,7 +58,7 @@ func TestResourceManager_GetResource(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock)
+	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
 
 	// when
 	r0 := testResource("megaman-2", 10, "ortuman", "yard")
@@ -81,7 +83,7 @@ func TestResourceManager_GetResources(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock)
+	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
 
 	r0 := testResource("abc1234", 100, "ortuman", "yard")
 	r1 := testResource("bcd1234", 50, "ortuman", "balcony")
@@ -104,7 +106,7 @@ func TestResourceManager_DelResource(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock)
+	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
 
 	r0 := testResource("megaman-2", 10, "ortuman", "yard")
 	_ = h.PutResource(context.Background(), r0)

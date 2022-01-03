@@ -23,6 +23,10 @@ import (
 	"sync"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
@@ -30,7 +34,6 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	xmppsession "github.com/ortuman/jackal/pkg/session"
@@ -109,6 +112,7 @@ type outS2S struct {
 	dbResCh  chan stream.DialbackResult
 	shapers  shaper.Shapers
 	hk       *hook.Hooks
+	logger   kitlog.Logger
 	rq       *runqueue.RunQueue
 
 	mu           sync.RWMutex
@@ -125,6 +129,7 @@ func newOutS2S(
 	kv kv.KV,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 	onClose func(s *outS2S),
 	cfg outConfig,
 ) *outS2S {
@@ -139,6 +144,7 @@ func newOutS2S(
 		kv:      kv,
 		shapers: shapers,
 		hk:      hk,
+		logger:  logger,
 		dialer:  newDialer(cfg.dialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String())
@@ -151,6 +157,7 @@ func newDialbackS2S(
 	tlsCfg *tls.Config,
 	hosts *host.Hosts,
 	shapers shaper.Shapers,
+	logger kitlog.Logger,
 	cfg outConfig,
 	dbParams DialbackParams,
 ) *outS2S {
@@ -165,6 +172,7 @@ func newDialbackS2S(
 		dialer:   newDialer(cfg.dialTimeout, tlsCfg),
 		dbResCh:  make(chan stream.DialbackResult, 1),
 		shapers:  shapers,
+		logger:   logger,
 	}
 	stm.rq = runqueue.New(stm.ID().String())
 	return stm
@@ -209,7 +217,7 @@ func (s *outS2S) dial(ctx context.Context) error {
 		}
 		return err
 	}
-	log.Infow("dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
+	level.Info(s.logger).Log("msg", "dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
 
 	s.tr = transport.NewSocketTransport(conn)
 
@@ -227,6 +235,7 @@ func (s *outS2S) dial(ctx context.Context) error {
 			MaxStanzaSize: s.cfg.maxStanzaSize,
 			IsOut:         true,
 		},
+		s.logger,
 	)
 	// set target domain JID
 	jd, _ := jid.New("", s.target, "", true)
@@ -246,9 +255,9 @@ func (s *outS2S) start() error {
 
 	switch s.typ {
 	case defaultType:
-		log.Infow("registered S2S out stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "registered S2S out stream", "sender", s.sender, "target", s.target)
 	case dialbackType:
-		log.Infow("registered S2S dialback stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "registered S2S dialback stream", "sender", s.sender, "target", s.target)
 	}
 	// post registered S2S event
 	err := s.runHook(ctx, hook.S2SOutStreamConnected, &hook.S2SStreamInfo{
@@ -303,7 +312,7 @@ func (s *outS2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("failed to process outgoing S2S session element", "error", err, "id", s.ID())
+				level.Warn(s.logger).Log("msg", "failed to process outgoing S2S session element", "err", err, "id", s.ID())
 				_ = s.close(ctx)
 				return
 			}
@@ -462,11 +471,11 @@ func (s *outS2S) handleVerifyingDialbackKey(ctx context.Context, elem stravaganz
 	case "db:result":
 		switch elem.Attribute(stravaganza.Type) {
 		case "valid":
-			log.Infow("S2S dialback key successfully verified", "from", s.sender, "to", s.target)
+			level.Info(s.logger).Log("msg", "S2S dialback key successfully verified", "from", s.sender, "to", s.target)
 			return s.finishAuthentication(ctx)
 
 		default:
-			log.Infow("failed to verify S2S dialback key", "from", s.sender, "to", s.target)
+			level.Info(s.logger).Log("msg", "failed to verify S2S dialback key", "from", s.sender, "to", s.target)
 			return s.disconnect(ctx, streamerror.E(streamerror.RemoteConnectionFailed))
 		}
 
@@ -572,7 +581,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		close(s.dbResCh)
 	}
 	if s.typ == defaultType {
-		log.Infow("unregistered S2S out stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "unregistered S2S out stream", "sender", s.sender, "target", s.target)
 	}
 	// run unregistered S2S hook
 	err := s.runHook(ctx, hook.S2SOutStreamDisconnected, &hook.S2SStreamInfo{

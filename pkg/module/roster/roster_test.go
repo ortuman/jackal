@@ -19,6 +19,8 @@ import (
 	"sync"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
@@ -80,6 +82,7 @@ func TestRoster_SendRoster(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -160,6 +163,7 @@ func TestRoster_UpdateItem(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -265,6 +269,7 @@ func TestRoster_RemoveItem(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	iq, _ := stravaganza.NewIQBuilder().
@@ -377,6 +382,7 @@ func TestRoster_Subscribe(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
@@ -478,6 +484,7 @@ func TestRoster_Subscribed(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("noelia@jackal.im/yard", true)
@@ -587,6 +594,7 @@ func TestRoster_Unsubscribe(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)
@@ -699,6 +707,7 @@ func TestRoster_Unsubscribed(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("noelia@jackal.im/yard", true)
@@ -794,6 +803,7 @@ func TestRoster_Probe(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("noelia@jackal.im/yard", true)
@@ -902,6 +912,7 @@ func TestRoster_Available(t *testing.T) {
 		router: routerMock,
 		hosts:  hMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	fromJID, _ := jid.NewWithString("ortuman@jackal.im/balcony", true)

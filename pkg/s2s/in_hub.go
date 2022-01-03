@@ -19,8 +19,11 @@ import (
 	"sync"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
@@ -29,20 +32,22 @@ type InHub struct {
 	mu      sync.RWMutex
 	streams map[stream.S2SInID]stream.S2SIn
 	doneCh  chan chan struct{}
+	logger  kitlog.Logger
 }
 
 // NewInHub creates and initializes a new InHub instance.
-func NewInHub() *InHub {
+func NewInHub(logger kitlog.Logger) *InHub {
 	return &InHub{
 		streams: make(map[stream.S2SInID]stream.S2SIn),
 		doneCh:  make(chan chan struct{}),
+		logger:  logger,
 	}
 }
 
 // Start starts InHub instance.
 func (h *InHub) Start(_ context.Context) error {
 	go h.reportMetrics()
-	log.Infow("started S2S in hub")
+	level.Info(h.logger).Log("msg", "started S2S in hub")
 	return nil
 }
 
@@ -86,7 +91,7 @@ func (h *InHub) Stop(ctx context.Context) error {
 	default:
 		break
 	}
-	log.Infow("stopped S2S in hub")
+	level.Info(h.logger).Log("msg", "stopped S2S in hub")
 	return err
 }
 

@@ -20,6 +20,8 @@ import (
 	"io"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
 
 	"github.com/ortuman/jackal/pkg/hook"
@@ -39,7 +41,7 @@ func TestConnections_UpdateMembers(t *testing.T) {
 		return lrMock, crMock, ccMock, nil
 	}
 	hk := hook.NewHooks()
-	connMng := NewManager(hk)
+	connMng := NewManager(hk, kitlog.NewNopLogger())
 
 	// when
 	_ = connMng.Start(context.Background())
@@ -86,7 +88,7 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 		return lrMock, crMock, ccMock, nil
 	}
 	hk := hook.NewHooks()
-	connMng := NewManager(hk)
+	connMng := NewManager(hk, kitlog.NewNopLogger())
 
 	// when
 	_ = connMng.Start(context.Background())

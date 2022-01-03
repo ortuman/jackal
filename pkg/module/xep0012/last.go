@@ -19,13 +19,14 @@ import (
 	"strconv"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/router"
@@ -50,6 +51,7 @@ type Last struct {
 	resMng    resourceManager
 	rep       repository.Repository
 	hk        *hook.Hooks
+	logger    kitlog.Logger
 	startedAt int64
 }
 
@@ -60,6 +62,7 @@ func New(
 	resMng *c2s.ResourceManager,
 	rep repository.Repository,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) *Last {
 	return &Last{
 		router: router,
@@ -67,6 +70,7 @@ func New(
 		resMng: resMng,
 		rep:    rep,
 		hk:     hk,
+		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -113,7 +117,7 @@ func (m *Last) Start(_ context.Context) error {
 
 	m.startedAt = time.Now().Unix()
 
-	log.Infow("started last module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "started last module")
 	return nil
 }
 
@@ -124,7 +128,7 @@ func (m *Last) Stop(_ context.Context) error {
 	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
 
-	log.Infow("stopped last module", "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "stopped last module")
 	return nil
 }
 
@@ -191,7 +195,7 @@ func (m *Last) processC2SPresence(ctx context.Context, pr *stravaganza.Presence)
 	if err != nil {
 		return err
 	}
-	log.Infow("last activity registered", "username", username, "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "last activity registered", "username", username)
 	return nil
 }
 
@@ -206,7 +210,7 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 	// reply with server uptime
 	m.sendReply(ctx, iq, time.Now().Unix()-m.startedAt, "")
 
-	log.Infow("sent server uptime", "username", iq.FromJID().Node(), "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "sent server uptime", "username", iq.FromJID().Node())
 
 	_, err := m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{
@@ -249,7 +253,7 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 	}
 	m.sendReply(ctx, iq, time.Now().Unix()-lst.Seconds, lst.Status)
 
-	log.Infow("sent last activity", "username", fromJID.Node(), "target", toJID.Node(), "xep", XEPNumber)
+	level.Info(m.logger).Log("msg", "sent last activity", "username", fromJID.Node(), "target", toJID.Node())
 
 	_, err = m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{

@@ -25,10 +25,13 @@ import (
 	"fmt"
 	"hash"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	userspb "github.com/ortuman/jackal/pkg/admin/pb"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	"golang.org/x/crypto/pbkdf2"
@@ -43,13 +46,15 @@ type usersService struct {
 	rep     repository.Repository
 	peppers *pepper.Keys
 	hk      *hook.Hooks
+	logger  kitlog.Logger
 }
 
-func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook.Hooks) userspb.UsersServer {
+func newUsersService(rep repository.Repository, peppers *pepper.Keys, hk *hook.Hooks, logger kitlog.Logger) userspb.UsersServer {
 	return &usersService{
 		rep:     rep,
 		peppers: peppers,
 		hk:      hk,
+		logger:  logger,
 	}
 }
 
@@ -70,7 +75,7 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 	if err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("user %s created", username), "username", username)
+	level.Info(s.logger).Log("msg", "user created", "username", username)
 	return &userspb.CreateUserResponse{}, nil
 }
 
@@ -82,7 +87,7 @@ func (s *usersService) ChangeUserPassword(ctx context.Context, req *userspb.Chan
 	if err := s.upsertUser(ctx, username, req.GetNewPassword()); err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("password updated for user %s", username), "username", username)
+	level.Info(s.logger).Log("msg", "password updated", "username", username)
 
 	return &userspb.ChangeUserPasswordResponse{}, nil
 }
@@ -104,7 +109,7 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 	if err != nil {
 		return nil, err
 	}
-	log.Infow(fmt.Sprintf("user %s deleted", username), "username", username)
+	level.Info(s.logger).Log("msg", "user deleted", "username", username)
 
 	return &userspb.DeleteUserResponse{}, nil
 }

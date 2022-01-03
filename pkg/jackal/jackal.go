@@ -26,33 +26,33 @@ import (
 	"syscall"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
-	"github.com/ortuman/jackal/pkg/cluster/etcd"
-	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
-	"github.com/ortuman/jackal/pkg/component/xep0114"
-	"github.com/ortuman/jackal/pkg/log"
-	"github.com/ortuman/jackal/pkg/log/zap"
-	"github.com/ortuman/jackal/pkg/storage"
-	"github.com/ortuman/jackal/pkg/util/crashreporter"
-	"github.com/ortuman/jackal/pkg/version"
-
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
+	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/cluster/memberlist"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
+	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/component/extcomponentmanager"
+	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
+	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"
+	"github.com/ortuman/jackal/pkg/storage"
 	"github.com/ortuman/jackal/pkg/storage/repository"
+	"github.com/ortuman/jackal/pkg/util/crashreporter"
+	"github.com/ortuman/jackal/pkg/version"
 )
 
 const (
@@ -125,6 +125,8 @@ type Jackal struct {
 	stoppers []stopper
 
 	waitStopCh chan os.Signal
+
+	logger kitlog.Logger
 }
 
 // New makes a new Jackal.
@@ -187,12 +189,9 @@ func (j *Jackal) Run() error {
 		return err
 	}
 	// init logger
-	log.SetLogger(
-		zap.NewLogger(cfg.Logger.OutputPath),
-		cfg.Logger.Level,
-	)
+	j.logger = log.NewDefaultLogger(cfg.Logger.Level, cfg.Logger.Format)
 
-	log.Infow("jackal is starting...",
+	level.Info(j.logger).Log("msg", "jackal is starting...",
 		"version", version.Version,
 		"go_ver", runtime.Version(),
 		"go_os", runtime.GOOS,
@@ -237,7 +236,7 @@ func (j *Jackal) Run() error {
 		return err
 	}
 	// init HTTP server
-	j.registerStartStopper(newHTTPServer(cfg.HTTPPort))
+	j.registerStartStopper(newHTTPServer(cfg.HTTPPort, j.logger))
 
 	// init admin server
 	j.initAdminServer(cfg.Admin)
@@ -258,29 +257,31 @@ func (j *Jackal) Run() error {
 	}
 	// ...wait for stop signal to shut down
 	sig := j.waitForStopSignal()
-	log.Infof("received %s signal... shutting down...", sig.String())
+	level.Info(j.logger).Log("msg", "received stop signal... shutting down...",
+		"signal", sig.String(),
+	)
 
 	return j.shutdown()
 }
 
 func (j *Jackal) initLocker(cfg etcd.Config) {
-	j.locker = etcd.NewLocker(cfg)
+	j.locker = etcd.NewLocker(cfg, j.logger)
 	j.registerStartStopper(j.locker)
 }
 
 func (j *Jackal) initKVStore(cfg etcd.Config) {
-	etcdKV := etcd.NewKV(cfg)
+	etcdKV := etcd.NewKV(cfg, j.logger)
 	j.kv = kv.NewMeasured(etcdKV)
 	j.registerStartStopper(j.kv)
 }
 
 func (j *Jackal) initClusterConnManager() {
-	j.clusterConnMng = clusterconnmanager.NewManager(j.hk)
+	j.clusterConnMng = clusterconnmanager.NewManager(j.hk, j.logger)
 	j.registerStartStopper(j.clusterConnMng)
 }
 
 func (j *Jackal) initRepository(cfg storage.Config) error {
-	rep, err := storage.New(cfg)
+	rep, err := storage.New(cfg, j.logger)
 	if err != nil {
 		return err
 	}
@@ -307,17 +308,18 @@ func (j *Jackal) initShapers(configs []shaper.Config) error {
 		}
 		j.shapers = append(j.shapers, shp)
 
-		log.Infow(fmt.Sprintf("registered '%s' shaper configuration", cfg.Name),
+		level.Info(j.logger).Log("msg", "registered shaper configuration",
 			"name", cfg.Name,
 			"max_sessions", cfg.MaxSessions,
 			"limit", cfg.Rate.Limit,
-			"burst", cfg.Rate.Burst)
+			"burst", cfg.Rate.Burst,
+		)
 	}
 	return nil
 }
 
 func (j *Jackal) initMemberList(clusterPort int) {
-	j.memberList = memberlist.New(j.kv, clusterPort, j.hk)
+	j.memberList = memberlist.New(j.kv, clusterPort, j.hk, j.logger)
 	j.registerStartStopper(j.memberList)
 	return
 }
@@ -339,6 +341,7 @@ func (j *Jackal) initListeners(
 		j.peppers,
 		j.shapers,
 		j.hk,
+		j.logger,
 	)
 	for _, ln := range c2sListeners {
 		j.registerStartStopper(ln)
@@ -346,7 +349,7 @@ func (j *Jackal) initListeners(
 
 	// s2s listeners
 	if len(s2sListenersCfg) > 0 {
-		s2sInHub := s2s.NewInHub()
+		s2sInHub := s2s.NewInHub(j.logger)
 		j.registerStartStopper(s2sInHub)
 
 		s2sListeners := s2s.NewListeners(
@@ -360,6 +363,7 @@ func (j *Jackal) initListeners(
 			j.kv,
 			j.shapers,
 			j.hk,
+			j.logger,
 		)
 		for _, ln := range s2sListeners {
 			j.registerStartStopper(ln)
@@ -375,6 +379,7 @@ func (j *Jackal) initListeners(
 		j.router,
 		j.shapers,
 		j.hk,
+		j.logger,
 	)
 	for _, ln := range cmpListeners {
 		j.registerStartStopper(ln)
@@ -383,20 +388,20 @@ func (j *Jackal) initListeners(
 }
 
 func (j *Jackal) initS2SOut(cfg s2s.OutConfig) {
-	j.s2sOutProvider = s2s.NewOutProvider(cfg, j.hosts, j.kv, j.shapers, j.hk)
+	j.s2sOutProvider = s2s.NewOutProvider(cfg, j.hosts, j.kv, j.shapers, j.hk, j.logger)
 	j.registerStartStopper(j.s2sOutProvider)
 }
 
 func (j *Jackal) initRouters() {
 	// init shared resource hub
-	j.resMng = c2s.NewResourceManager(j.kv)
+	j.resMng = c2s.NewResourceManager(j.kv, j.logger)
 	j.registerStartStopper(j.resMng)
 
 	// init C2S router
 	j.localRouter = c2s.NewLocalRouter(j.hosts)
 	j.clusterRouter = clusterrouter.New(j.clusterConnMng)
 
-	c2sRouter := c2s.NewRouter(j.localRouter, j.clusterRouter, j.resMng, j.rep, j.hk)
+	c2sRouter := c2s.NewRouter(j.localRouter, j.clusterRouter, j.resMng, j.rep, j.hk, j.logger)
 	s2sRouter := s2s.NewRouter(j.s2sOutProvider)
 
 	// init global router
@@ -406,8 +411,8 @@ func (j *Jackal) initRouters() {
 }
 
 func (j *Jackal) initComponents() {
-	j.comps = component.NewComponents(nil, j.hk)
-	j.extCompMng = extcomponentmanager.New(j.kv, j.clusterConnMng, j.comps)
+	j.comps = component.NewComponents(nil, j.hk, j.logger)
+	j.extCompMng = extcomponentmanager.New(j.kv, j.clusterConnMng, j.comps, j.logger)
 
 	j.registerStartStopper(j.comps)
 	j.registerStartStopper(j.extCompMng)
@@ -428,18 +433,18 @@ func (j *Jackal) initModules(cfg ModulesConfig) error {
 		}
 		mods = append(mods, fn(j, &cfg))
 	}
-	j.mods = module.NewModules(mods, j.hosts, j.router, j.hk)
+	j.mods = module.NewModules(mods, j.hosts, j.router, j.hk, j.logger)
 	j.registerStartStopper(j.mods)
 	return nil
 }
 
 func (j *Jackal) initAdminServer(cfg adminserver.Config) {
-	adminSrv := adminserver.New(cfg, j.rep, j.peppers, j.hk)
+	adminSrv := adminserver.New(cfg, j.rep, j.peppers, j.hk, j.logger)
 	j.registerStartStopper(adminSrv)
 }
 
 func (j *Jackal) initClusterServer(cfg clusterserver.Config) {
-	clusterSrv := clusterserver.New(cfg, j.localRouter, j.comps)
+	clusterSrv := clusterserver.New(cfg, j.localRouter, j.comps, j.logger)
 	j.registerStartStopper(clusterSrv)
 	return
 }
@@ -490,7 +495,6 @@ func (j *Jackal) shutdown() error {
 				return
 			}
 		}
-		log.Close()
 		errCh <- nil
 	}()
 	select {

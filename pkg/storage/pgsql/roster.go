@@ -19,6 +19,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
+	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/lib/pq"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -31,7 +32,8 @@ const (
 )
 
 type pgSQLRosterRep struct {
-	conn conn
+	conn   conn
+	logger kitlog.Logger
 }
 
 func (r *pgSQLRosterRep) TouchRosterVersion(ctx context.Context, username string) (int, error) {
@@ -100,7 +102,7 @@ func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) 
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	return scanRosterItems(rows)
 }
@@ -115,7 +117,7 @@ func (r *pgSQLRosterRep) FetchRosterItemsInGroups(ctx context.Context, username 
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	return scanRosterItems(rows)
 }
@@ -189,7 +191,7 @@ func (r *pgSQLRosterRep) FetchRosterNotifications(ctx context.Context, contact s
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	return scanRosterNotifications(rows)
 }
@@ -203,7 +205,7 @@ func (r *pgSQLRosterRep) FetchRosterGroups(ctx context.Context, username string)
 	if err != nil {
 		return nil, err
 	}
-	defer closeRows(rows)
+	defer closeRows(rows, r.logger)
 
 	var groups []string
 	for rows.Next() {

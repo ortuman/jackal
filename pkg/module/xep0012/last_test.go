@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 
 	"github.com/google/uuid"
@@ -43,6 +45,7 @@ func TestLast_GetServerUptime(t *testing.T) {
 	m := &Last{
 		router: routerMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -124,6 +127,7 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 		hosts:  hMock,
 		resMng: resMngMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -194,6 +198,7 @@ func TestLast_Forbidden(t *testing.T) {
 		rep:    repMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -243,6 +248,7 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 		rep:    repMock,
 		hosts:  hMock,
 		hk:     hook.NewHooks(),
+		logger: kitlog.NewNopLogger(),
 	}
 	iq, _ := stravaganza.NewIQBuilder().
 		WithAttribute(stravaganza.ID, uuid.New().String()).
@@ -290,8 +296,9 @@ func TestLast_ProcessPresence(t *testing.T) {
 
 	hk := hook.NewHooks()
 	m := &Last{
-		rep: rep,
-		hk:  hk,
+		rep:    rep,
+		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	// when
 	_ = m.Start(context.Background())

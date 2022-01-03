@@ -24,6 +24,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+
+	"github.com/go-kit/log/level"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -35,7 +39,6 @@ import (
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	"github.com/ortuman/jackal/pkg/log"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/module"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
@@ -114,6 +117,7 @@ type inC2S struct {
 	session      session
 	shapers      shaper.Shapers
 	hk           *hook.Hooks
+	logger       kitlog.Logger
 	rq           *runqueue.RunQueue
 	discTm       *time.Timer
 	doneCh       chan struct{}
@@ -138,6 +142,7 @@ func newInC2S(
 	resMng *ResourceManager,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
+	logger kitlog.Logger,
 ) (*inC2S, error) {
 	// set default rate limiter
 	rLim := shapers.DefaultC2S().RateLimiter()
@@ -154,6 +159,7 @@ func newInC2S(
 		xmppsession.Config{
 			MaxStanzaSize: cfg.maxStanzaSize,
 		},
+		logger,
 	)
 	// init stream
 	stm := &inC2S{
@@ -173,6 +179,7 @@ func newInC2S(
 		doneCh:  make(chan struct{}),
 		state:   inConnecting,
 		hk:      hk,
+		logger:  logger,
 	}
 	if cfg.useTLS {
 		stm.flags.setSecured() // stream already secured
@@ -396,7 +403,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				log.Warnw("failed to process incoming C2S session element", "error", err, "id", s.id)
+				level.Warn(s.logger).Log("msg", "failed to process incoming C2S session element", "err", err, "id", s.id)
 				return
 			}
 
@@ -855,7 +862,7 @@ func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 		Certificates: s.hosts.Certificates(),
 	}, false)
 
-	log.Infow("Secured C2S stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "secured C2S stream", "id", s.id)
 
 	s.restartSession()
 	return nil
@@ -910,7 +917,7 @@ func (s *inC2S) finishAuthentication() error {
 	if err := s.updateRateLimiter(); err != nil {
 		return err
 	}
-	log.Infow("Authenticated C2S stream", "id", s.id, "username", username)
+	level.Info(s.logger).Log("msg", "authenticated C2S stream", "id", s.id, "username", username)
 
 	s.authSt.reset()
 	s.restartSession()
@@ -919,7 +926,7 @@ func (s *inC2S) finishAuthentication() error {
 
 func (s *inC2S) failAuthentication(ctx context.Context, saslErr *auth.SASLError) error {
 	if saslErr.Err != nil {
-		log.Warnf("Authentication error: %v", saslErr.Err)
+		level.Warn(s.logger).Log("msg", "authentication error", "err", saslErr.Err)
 	}
 	s.authSt.failedTimes++
 	if s.authSt.failedTimes >= maxAuthFailed {
@@ -971,7 +978,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	s.tr.EnableCompression(s.cfg.compressionLevel)
 	s.flags.setCompressed()
 
-	log.Infow("Compressed C2S stream", "id", s.id, "username", s.Username())
+	level.Info(s.logger).Log("msg", "compressed C2S stream", "id", s.id, "username", s.Username())
 
 	s.restartSession()
 	return nil

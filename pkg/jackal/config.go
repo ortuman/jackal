@@ -36,8 +36,8 @@ import (
 
 // LoggerConfig defines logger configuration.
 type LoggerConfig struct {
-	Level      string `fig:"level" default:"debug"`
-	OutputPath string `fig:"output_path"`
+	Level  string `fig:"level" default:"debug"`
+	Format string `fig:"format"`
 }
 
 // ClusterConfig defines cluster configuration.

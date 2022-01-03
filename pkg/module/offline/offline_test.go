@@ -19,6 +19,8 @@ import (
 	"context"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
@@ -60,6 +62,7 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 		rep:    repMock,
 		locker: lockerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -127,6 +130,7 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		rep:    repMock,
 		locker: lockerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -207,6 +211,7 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 		rep:    repMock,
 		locker: lockerMock,
 		hk:     hk,
+		logger: kitlog.NewNopLogger(),
 	}
 
 	// when

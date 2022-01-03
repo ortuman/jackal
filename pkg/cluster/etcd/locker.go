@@ -17,8 +17,9 @@ package etcd
 import (
 	"context"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/ortuman/jackal/pkg/cluster/locker"
-	"github.com/ortuman/jackal/pkg/log"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
@@ -31,14 +32,15 @@ func (m *etcdLock) Release(ctx context.Context) error { return m.mu.Unlock(ctx) 
 
 // Locker defines etcd locker.Locker implementation.
 type Locker struct {
-	cfg Config
-	cli *etcdv3.Client
-	ss  *concurrency.Session
+	cfg    Config
+	logger kitlog.Logger
+	cli    *etcdv3.Client
+	ss     *concurrency.Session
 }
 
 // NewLocker returns a new initialized etcd locker.
-func NewLocker(cfg Config) *Locker {
-	return &Locker{cfg: cfg}
+func NewLocker(cfg Config, logger kitlog.Logger) *Locker {
+	return &Locker{cfg: cfg, logger: logger}
 }
 
 // AcquireLock acquires and returns an etcd locker.
@@ -64,7 +66,7 @@ func (l *Locker) Start(_ context.Context) error {
 		return err
 	}
 	l.ss = ss
-	log.Infof("started etcd locker")
+	level.Info(l.logger).Log("msg", "started etcd locker")
 	return nil
 }
 
@@ -76,6 +78,6 @@ func (l *Locker) Stop(_ context.Context) error {
 	if err := l.cli.Close(); err != nil {
 		return err
 	}
-	log.Infof("stopped etcd locker")
+	level.Info(l.logger).Log("msg", "stopped etcd locker")
 	return nil
 }

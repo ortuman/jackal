@@ -19,13 +19,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/log/level"
+
+	kitlog "github.com/go-kit/log"
+
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
-	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -64,6 +67,7 @@ type Ping struct {
 	cfg    Config
 	router router.Router
 	hk     *hook.Hooks
+	logger kitlog.Logger
 
 	mu         sync.RWMutex
 	pingTimers map[string]*time.Timer
@@ -71,11 +75,12 @@ type Ping struct {
 }
 
 // New returns a new initialized ping instance.
-func New(cfg Config, router router.Router, hk *hook.Hooks) *Ping {
+func New(cfg Config, router router.Router, hk *hook.Hooks, logger kitlog.Logger) *Ping {
 	return &Ping{
 		cfg:        cfg,
 		router:     router,
 		hk:         hk,
+		logger:     kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 		pingTimers: make(map[string]*time.Timer),
 		ackTimers:  make(map[string]*time.Timer),
 	}
@@ -106,7 +111,7 @@ func (p *Ping) Start(_ context.Context) error {
 		p.hk.AddHook(hook.C2SStreamDisconnected, p.onDisconnect, hook.HighestPriority)
 		p.hk.AddHook(hook.C2SStreamElementReceived, p.onRecvElement, hook.HighestPriority)
 	}
-	log.Infow("started ping module", "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "started ping module")
 	return nil
 }
 
@@ -117,7 +122,7 @@ func (p *Ping) Stop(_ context.Context) error {
 		p.hk.RemoveHook(hook.C2SStreamDisconnected, p.onDisconnect)
 		p.hk.RemoveHook(hook.C2SStreamElementReceived, p.onRecvElement)
 	}
-	log.Infow("stopped ping module", "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "stopped ping module")
 	return nil
 }
 
@@ -202,7 +207,7 @@ func (p *Ping) sendPing(jd *jid.JID) {
 	})
 	p.mu.Unlock()
 
-	log.Infow("sent ping", "jid", jd.String(), "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "sent ping", "jid", jd.String())
 }
 
 func (p *Ping) timeout(jd *jid.JID) {
@@ -213,7 +218,7 @@ func (p *Ping) timeout(jd *jid.JID) {
 			_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 		}
 	}
-	log.Infow("stream timeout", "jid", jd.String(), "xep", XEPNumber)
+	level.Info(p.logger).Log("msg", "stream timeout", "jid", jd.String())
 }
 
 func (p *Ping) cancelTimers(jd *jid.JID) {
