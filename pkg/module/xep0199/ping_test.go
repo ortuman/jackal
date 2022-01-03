@@ -58,7 +58,7 @@ func TestPing_Pong(t *testing.T) {
 	_ = p.ProcessIQ(context.Background(), iq)
 
 	// then
-	require.Equal(t, `<iq id="s2s1" type="result" from="jackal.im" to="jabber.org"/>`, outBuf.String())
+	require.Equal(t, `<iq id='s2s1' type='result' from='jackal.im' to='jabber.org'/>`, outBuf.String())
 }
 
 func TestPing_SendPing(t *testing.T) {

@@ -70,7 +70,7 @@ func TestOutS2S_SendElement(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>`, sendBuf.String())
+	require.Equal(t, `<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>`, sendBuf.String())
 }
 
 func TestOutS2S_Disconnect(t *testing.T) {
@@ -109,7 +109,7 @@ func TestOutS2S_Disconnect(t *testing.T) {
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	require.Equal(t, `<stream:error><system-shutdown xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error>`, sendBuf.String())
+	require.Equal(t, `<stream:error><system-shutdown xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error>`, sendBuf.String())
 	require.Len(t, sessMock.CloseCalls(), 1)
 	require.Len(t, trMock.CloseCalls(), 1)
 }
@@ -157,7 +157,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>`,
+			expectedOutput: `<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>`,
 			expectedState:  outSecuring,
 		},
 		{
@@ -168,7 +168,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, tlsNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' xmlns:db='jabber:server:dialback' from='jackal.im' to='jabber.org' version='1.0'>`,
 			expectedState:  outConnecting,
 			expectedFlags:  fSecured,
 		},
@@ -191,7 +191,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="EXTERNAL">amFja2FsLmlt</auth>`,
+			expectedOutput: `<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='EXTERNAL'>amFja2FsLmlt</auth>`,
 			expectedState:  outAuthenticating,
 		},
 		{
@@ -203,7 +203,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, saslNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`,
+			expectedOutput: `<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' xmlns:db='jabber:server:dialback' from='jackal.im' to='jabber.org' version='1.0'>`,
 			expectedFlags:  fSecured | fAuthenticated,
 			expectedState:  outConnecting,
 		},
@@ -216,7 +216,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.Namespace, saslNamespace).
 					Build(), nil
 			},
-			expectedOutput: `<stream:error><remote-connection-failed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><remote-connection-failed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error></stream:stream>`,
 			expectedState:  outDisconnected,
 		},
 		{
@@ -233,7 +233,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<db:result from="jackal.im" to="jabber.org">21bd4eb62f7d70d22b545f38a40a023ad6fa385905f36d889612fcb4cdb4966c</db:result>`,
+			expectedOutput: `<db:result from='jackal.im' to='jabber.org'>21bd4eb62f7d70d22b545f38a40a023ad6fa385905f36d889612fcb4cdb4966c</db:result>`,
 			expectedState:  outVerifyingDialbackKey,
 		},
 		{
@@ -261,7 +261,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 					WithAttribute(stravaganza.To, "jackal.im").
 					Build(), nil
 			},
-			expectedOutput: `<stream:error><remote-connection-failed xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></stream:error></stream:stream>`,
+			expectedOutput: `<stream:error><remote-connection-failed xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></stream:error></stream:stream>`,
 			expectedState:  outDisconnected,
 		},
 	}
@@ -279,7 +279,7 @@ func TestOutS2S_HandleSessionElement(t *testing.T) {
 			outBuf := bytes.NewBuffer(nil)
 			ssMock.StreamIDFunc = func() string { return "abc123" }
 			ssMock.OpenStreamFunc = func(_ context.Context) error {
-				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`))
+				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' xmlns:db='jabber:server:dialback' from='jackal.im' to='jabber.org' version='1.0'>`))
 				return err
 			}
 			ssMock.CloseFunc = func(_ context.Context) error {
@@ -357,7 +357,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 					).
 					Build(), nil
 			},
-			expectedOutput: `<db:verify id="abc123" from="jabber.org" to="jackal.im">1234</db:verify>`,
+			expectedOutput: `<db:verify id='abc123' from='jabber.org' to='jackal.im'>1234</db:verify>`,
 			expectedState:  outAuthorizingDialbackKey,
 		},
 		{
@@ -383,7 +383,7 @@ func TestDialbackS2S_HandleSessionElement(t *testing.T) {
 			outBuf := bytes.NewBuffer(nil)
 			ssMock.StreamIDFunc = func() string { return "abc123" }
 			ssMock.OpenStreamFunc = func(_ context.Context) error {
-				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version="1.0"?><stream:stream xmlns="jabber:server" xmlns:stream="http://etherx.jabber.org/streams" xmlns:db="jabber:server:dialback" from="jackal.im" to="jabber.org" version="1.0">`))
+				_, err := io.Copy(outBuf, strings.NewReader(`<?xml version='1.0'?><stream:stream xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams' xmlns:db='jabber:server:dialback' from='jackal.im' to='jabber.org' version='1.0'>`))
 				return err
 			}
 			ssMock.CloseFunc = func(_ context.Context) error {
