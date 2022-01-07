@@ -61,7 +61,7 @@ func (a fakeAddr) String() string  { return "str" }
 func TestSocket(t *testing.T) {
 	buff := make([]byte, 4096)
 	conn := newFakeSocketConn()
-	st := NewSocketTransport(conn)
+	st := NewSocketTransport(conn, time.Minute, time.Minute)
 	st2 := st.(*socketTransport)
 
 	str := `<elem xmlns="exodus:ns"/>`
@@ -79,11 +79,11 @@ func TestSocket(t *testing.T) {
 	st.EnableCompression(compress.BestCompression)
 	require.True(t, st2.compressed)
 
-	st.(*socketTransport).conn = &net.TCPConn{}
+	st.(*socketTransport).conn = newDeadlineConn(&net.TCPConn{}, time.Minute, time.Minute)
 	st.StartTLS(&tls.Config{}, false)
-	_, ok := st2.conn.(*tls.Conn)
+	_, ok := st2.conn.underlyingConn().(*tls.Conn)
 	require.True(t, ok)
-	st.(*socketTransport).conn = conn
+	st.(*socketTransport).conn = newDeadlineConn(conn, time.Minute, time.Minute)
 
 	require.Nil(t, st2.ChannelBindingBytes(ChannelBindingMechanism(99)))
 	require.Nil(t, st2.ChannelBindingBytes(TLSUnique))

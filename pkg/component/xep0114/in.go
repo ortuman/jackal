@@ -60,11 +60,9 @@ const (
 var disconnectTimeout = time.Second * 5
 
 type inConfig struct {
-	connectTimeout   time.Duration
-	keepAliveTimeout time.Duration
-	reqTimeout       time.Duration
-	maxStanzaSize    int
-	secret           string
+	reqTimeout    time.Duration
+	maxStanzaSize int
+	secret        string
 }
 
 type inComponent struct {
@@ -189,23 +187,16 @@ func (s *inComponent) done() <-chan struct{} {
 func (s *inComponent) readLoop() {
 	s.restartSession()
 
-	tm := time.AfterFunc(s.cfg.connectTimeout, s.connTimeout) // schedule connect timeout
-	elem, sErr := s.session.Receive()
-	tm.Stop()
+	s.tr.SetConnectDeadlineHandler(s.connTimeout)
+	s.tr.SetKeepAliveDeadlineHandler(s.connTimeout)
 
+	elem, sErr := s.session.Receive()
 	for {
 		if s.getState() == disconnected {
 			return
 		}
-		if sErr == xmppparser.ErrNoElement {
-			goto doRead // continue reading
-		}
 		s.handleSessionResult(elem, sErr)
-
-	doRead:
-		tm := time.AfterFunc(s.cfg.keepAliveTimeout, s.connTimeout) // schedule read timeout
 		elem, sErr = s.session.Receive()
-		tm.Stop()
 	}
 }
 

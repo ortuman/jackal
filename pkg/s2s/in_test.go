@@ -414,9 +414,8 @@ func TestInS2S_HandleSessionElement(t *testing.T) {
 
 			stm := &inS2S{
 				cfg: inConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				state:       tt.state,
 				flags:       flags{fs: tt.flags},
@@ -506,9 +505,8 @@ func TestInS2S_HandleSessionError(t *testing.T) {
 
 			stm := &inS2S{
 				cfg: inConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				state:   tt.state,
 				rq:      runqueue.New(tt.name),

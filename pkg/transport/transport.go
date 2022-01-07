@@ -63,11 +63,17 @@ type Transport interface {
 	// Flush writes any buffered data to the underlying io.Writer.
 	Flush() error
 
+	// SetReadRateLimiter sets transport read rate limiter.
+	SetReadRateLimiter(rLim *rate.Limiter) error
+
 	// SetWriteDeadline sets the deadline for future write calls.
 	SetWriteDeadline(d time.Time) error
 
-	// SetReadRateLimiter sets transport read rate limiter.
-	SetReadRateLimiter(rLim *rate.Limiter) error
+	// SetConnectDeadlineHandler establishes transport connect deadline handler.
+	SetConnectDeadlineHandler(hnd func())
+
+	// SetKeepAliveDeadlineHandler establishes transport keep-alive deadline handler.
+	SetKeepAliveDeadlineHandler(hnd func())
 
 	// StartTLS secures the transport using SSL/TLS
 	StartTLS(cfg *tls.Config, asClient bool)

@@ -205,11 +205,10 @@ func (p *OutProvider) newOutS2S(sender, target string) s2sOut {
 		p.logger,
 		p.unregister,
 		outConfig{
-			dbSecret:         p.cfg.DialbackSecret,
-			dialTimeout:      p.cfg.DialTimeout,
-			keepAliveTimeout: p.cfg.KeepAliveTimeout,
-			reqTimeout:       p.cfg.RequestTimeout,
-			maxStanzaSize:    p.cfg.MaxStanzaSize,
+			dbSecret:      p.cfg.DialbackSecret,
+			dialTimeout:   p.cfg.DialTimeout,
+			reqTimeout:    p.cfg.RequestTimeout,
+			maxStanzaSize: p.cfg.MaxStanzaSize,
 		},
 	)
 }
@@ -223,11 +222,10 @@ func (p *OutProvider) newDialbackS2S(sender, target string, dbParams DialbackPar
 		p.shapers,
 		p.logger,
 		outConfig{
-			dbSecret:         p.cfg.DialbackSecret,
-			dialTimeout:      p.cfg.DialTimeout,
-			keepAliveTimeout: p.cfg.KeepAliveTimeout,
-			reqTimeout:       p.cfg.RequestTimeout,
-			maxStanzaSize:    p.cfg.MaxStanzaSize,
+			dbSecret:      p.cfg.DialbackSecret,
+			dialTimeout:   p.cfg.DialTimeout,
+			reqTimeout:    p.cfg.RequestTimeout,
+			maxStanzaSize: p.cfg.MaxStanzaSize,
 		},
 		dbParams,
 	)

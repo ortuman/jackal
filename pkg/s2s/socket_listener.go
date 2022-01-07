@@ -173,7 +173,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 }
 
 func (l *SocketListener) handleConn(conn net.Conn) {
-	tr := transport.NewSocketTransport(conn)
+	tr := transport.NewSocketTransport(conn, l.cfg.ConnectTimeout, l.cfg.KeepAliveTimeout)
 	stm, err := newInS2S(
 		tr,
 		l.hosts,
@@ -187,12 +187,10 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		l.hk,
 		l.logger,
 		inConfig{
-			connectTimeout:   l.cfg.ConnectTimeout,
-			keepAliveTimeout: l.cfg.KeepAliveTimeout,
-			reqTimeout:       l.cfg.RequestTimeout,
-			maxStanzaSize:    l.cfg.MaxStanzaSize,
-			directTLS:        l.cfg.DirectTLS,
-			tlsConfig:        l.getTLSConfig(),
+			reqTimeout:    l.cfg.RequestTimeout,
+			maxStanzaSize: l.cfg.MaxStanzaSize,
+			directTLS:     l.cfg.DirectTLS,
+			tlsConfig:     l.getTLSConfig(),
 		},
 	)
 	if err != nil {

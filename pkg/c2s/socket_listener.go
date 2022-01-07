@@ -220,7 +220,7 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 }
 
 func (l *SocketListener) handleConn(conn net.Conn) {
-	tr := transport.NewSocketTransport(conn)
+	tr := transport.NewSocketTransport(conn, l.cfg.ConnectTimeout, l.cfg.KeepAliveTimeout)
 	stm, err := newInC2S(
 		l.getInConfig(),
 		tr,
@@ -276,9 +276,7 @@ func (l *SocketListener) getAuthenticators(tr transport.Transport) []auth.Authen
 
 func (l *SocketListener) getInConfig() inCfg {
 	return inCfg{
-		connectTimeout:      l.cfg.ConnectTimeout,
 		authenticateTimeout: l.cfg.AuthenticateTimeout,
-		keepAliveTimeout:    l.cfg.KeepAliveTimeout,
 		reqTimeout:          l.cfg.RequestTimeout,
 		maxStanzaSize:       l.cfg.MaxStanzaSize,
 		compressionLevel:    cmpLevelMap[l.cfg.CompressionLevel],

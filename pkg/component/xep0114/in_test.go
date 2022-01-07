@@ -250,10 +250,9 @@ func TestInComponent_HandleSessionElement(t *testing.T) {
 
 			stm := &inComponent{
 				cfg: inConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
-					secret:           "a-secret-1",
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
+					secret:        "a-secret-1",
 				},
 				state:      uint32(tt.state),
 				rq:         runqueue.New(tt.name),
@@ -347,9 +346,8 @@ func TestInComponent_HandleSessionError(t *testing.T) {
 
 			stm := &inComponent{
 				cfg: inConfig{
-					keepAliveTimeout: time.Minute,
-					reqTimeout:       time.Minute,
-					maxStanzaSize:    8192,
+					reqTimeout:    time.Minute,
+					maxStanzaSize: 8192,
 				},
 				state:      uint32(tt.state),
 				rq:         runqueue.New(tt.name),
