@@ -114,6 +114,7 @@ func New(typ Type, identifier string, tr transport.Transport, hosts *host.Hosts,
 	}
 	if !ss.cfg.IsOut {
 		ss.streamID = uuid.New().String()
+		ss.logger = kitlog.With(ss.logger, "stream_id", ss.streamID)
 	}
 	return ss
 }
@@ -225,7 +226,7 @@ func (ss *Session) Close(ctx context.Context) error {
 // Send writes an XML element to the underlying session transport.
 func (ss *Session) Send(ctx context.Context, elem stravaganza.Element) error {
 	if logStanzas {
-		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND(%s): %v", ss.id, elem))
+		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND: %v", elem))
 	}
 	ss.setWriteDeadline(ctx)
 	if err := elem.ToXML(ss.tr, true); err != nil {
@@ -243,7 +244,7 @@ func (ss *Session) Receive() (stravaganza.Element, error) {
 	switch {
 	case elem != nil:
 		if logStanzas {
-			level.Debug(ss.logger).Log("msg", fmt.Sprintf("RCV(%s): %v", ss.id, elem))
+			level.Debug(ss.logger).Log("msg", fmt.Sprintf("RCV: %v", elem))
 		}
 		if elem.Name() == "stream:error" {
 			return nil, nil // ignore stream error incoming element
@@ -281,7 +282,7 @@ func (ss *Session) Reset(tr transport.Transport) error {
 
 func (ss *Session) sendString(ctx context.Context, str string) error {
 	if logStanzas {
-		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND(%s): %v", ss.id, str))
+		level.Debug(ss.logger).Log("msg", fmt.Sprintf("SND: %v", str))
 	}
 	ss.setWriteDeadline(ctx)
 	_, err := ss.tr.WriteString(str)

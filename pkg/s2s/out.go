@@ -144,7 +144,7 @@ func newOutS2S(
 		kv:      kv,
 		shapers: shapers,
 		hk:      hk,
-		logger:  logger,
+		logger:  kitlog.With(logger, "sender", sender, "target", target),
 		dialer:  newDialer(cfg.dialTimeout, tlsCfg),
 	}
 	stm.rq = runqueue.New(stm.ID().String())
@@ -217,7 +217,7 @@ func (s *outS2S) dial(ctx context.Context) error {
 		}
 		return err
 	}
-	level.Info(s.logger).Log("msg", "dialed S2S remote connection", "target", s.target, "direct_tls", usesTLS)
+	level.Info(s.logger).Log("msg", "dialed S2S remote connection", "direct_tls", usesTLS)
 
 	s.tr = transport.NewSocketTransport(conn)
 
@@ -255,9 +255,9 @@ func (s *outS2S) start() error {
 
 	switch s.typ {
 	case defaultType:
-		level.Info(s.logger).Log("msg", "registered S2S out stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "registered S2S out stream")
 	case dialbackType:
-		level.Info(s.logger).Log("msg", "registered S2S dialback stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "registered S2S dialback stream")
 	}
 	// post registered S2S event
 	err := s.runHook(ctx, hook.S2SOutStreamConnected, &hook.S2SStreamInfo{
@@ -581,7 +581,7 @@ func (s *outS2S) close(ctx context.Context) error {
 		close(s.dbResCh)
 	}
 	if s.typ == defaultType {
-		level.Info(s.logger).Log("msg", "unregistered S2S out stream", "sender", s.sender, "target", s.target)
+		level.Info(s.logger).Log("msg", "unregistered S2S out stream")
 	}
 	// run unregistered S2S hook
 	err := s.runHook(ctx, hook.S2SOutStreamDisconnected, &hook.S2SStreamInfo{
