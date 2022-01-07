@@ -151,6 +151,8 @@ func newInC2S(
 	}
 	// create session
 	id := nextStreamID()
+
+	sLogger := kitlog.With(logger, "id", id)
 	session := xmppsession.New(
 		xmppsession.C2SSession,
 		id.String(),
@@ -159,7 +161,7 @@ func newInC2S(
 		xmppsession.Config{
 			MaxStanzaSize: cfg.maxStanzaSize,
 		},
-		logger,
+		sLogger,
 	)
 	// init stream
 	stm := &inC2S{
@@ -179,7 +181,7 @@ func newInC2S(
 		doneCh:  make(chan struct{}),
 		state:   inConnecting,
 		hk:      hk,
-		logger:  logger,
+		logger:  sLogger,
 	}
 	if cfg.useTLS {
 		stm.flags.setSecured() // stream already secured
@@ -403,7 +405,7 @@ func (s *inC2S) handleSessionResult(elem stravaganza.Element, sErr error) {
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				level.Warn(s.logger).Log("msg", "failed to process incoming C2S session element", "err", err, "id", s.id)
+				level.Warn(s.logger).Log("msg", "failed to process incoming C2S session element", "err", err)
 				return
 			}
 
@@ -862,7 +864,7 @@ func (s *inC2S) proceedStartTLS(ctx context.Context, elem stravaganza.Element) e
 		Certificates: s.hosts.Certificates(),
 	}, false)
 
-	level.Info(s.logger).Log("msg", "secured C2S stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "secured C2S stream")
 
 	s.restartSession()
 	return nil
@@ -917,7 +919,7 @@ func (s *inC2S) finishAuthentication() error {
 	if err := s.updateRateLimiter(); err != nil {
 		return err
 	}
-	level.Info(s.logger).Log("msg", "authenticated C2S stream", "id", s.id, "username", username)
+	level.Info(s.logger).Log("msg", "authenticated C2S stream", "username", username)
 
 	s.authSt.reset()
 	s.restartSession()
@@ -978,7 +980,7 @@ func (s *inC2S) compress(ctx context.Context, elem stravaganza.Element) error {
 	s.tr.EnableCompression(s.cfg.compressionLevel)
 	s.flags.setCompressed()
 
-	level.Info(s.logger).Log("msg", "compressed C2S stream", "id", s.id, "username", s.Username())
+	level.Info(s.logger).Log("msg", "compressed C2S stream", "username", s.Username())
 
 	s.restartSession()
 	return nil

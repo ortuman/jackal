@@ -111,6 +111,7 @@ func newInComponent(
 	// create session
 	id := nextStreamID()
 
+	sLogger := kitlog.With(logger, "id", id)
 	session := xmppsession.New(
 		xmppsession.ComponentSession,
 		id.String(),
@@ -119,7 +120,7 @@ func newInComponent(
 		xmppsession.Config{
 			MaxStanzaSize: cfg.maxStanzaSize,
 		},
-		logger,
+		sLogger,
 	)
 	// init stream
 	ctx, cancelFn := context.WithCancel(context.Background())
@@ -138,13 +139,13 @@ func newInComponent(
 		doneCh:     make(chan struct{}),
 		shapers:    shapers,
 		hk:         hk,
-		logger:     logger,
+		logger:     sLogger,
 	}, nil
 }
 
 func (s *inComponent) start() error {
 	s.inHub.register(s)
-	level.Info(s.logger).Log("msg", "registered external component stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "registered external component stream")
 
 	ctx, cancel := s.requestContext()
 	_, err := s.runHook(ctx, hook.ExternalComponentRegistered, &hook.ExternalComponentInfo{
@@ -230,7 +231,7 @@ func (s *inComponent) handleSessionResult(elem stravaganza.Element, sErr error) 
 		case sErr == nil && elem != nil:
 			err := s.handleElement(ctx, elem)
 			if err != nil {
-				level.Warn(s.logger).Log("msg", "failed to process incoming component session element", "err", err, "id", s.id)
+				level.Warn(s.logger).Log("msg", "failed to process incoming component session element", "err", err)
 				return
 			}
 		}
@@ -376,7 +377,7 @@ func (s *inComponent) close(ctx context.Context) error {
 		cHost = s.getJID().String()
 	}
 	s.inHub.unregister(s)
-	level.Info(s.logger).Log("msg", "unregistered external component stream", "id", s.id)
+	level.Info(s.logger).Log("msg", "unregistered external component stream")
 
 	_, err := s.runHook(ctx, hook.ExternalComponentUnregistered, &hook.ExternalComponentInfo{
 		ID:   s.id.String(),
