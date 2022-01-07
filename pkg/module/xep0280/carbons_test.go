@@ -42,7 +42,7 @@ func TestCarbons_Enable(t *testing.T) {
 		return nil
 	}
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{}
+		return c2smodel.NewInfoMap()
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -110,7 +110,7 @@ func TestCarbons_Disable(t *testing.T) {
 		return nil
 	}
 	stmMock.InfoFunc = func() c2smodel.Info {
-		return c2smodel.Info{}
+		return c2smodel.NewInfoMap()
 	}
 	c2sRouterMock := &c2sRouterMock{}
 	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
@@ -181,7 +181,7 @@ func TestCarbons_SentCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}),
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{carbonsEnabledCtxKey: "true"})),
 		}, nil
 	}
 
@@ -251,9 +251,9 @@ func TestCarbons_ReceivedCC(t *testing.T) {
 	resManagerMock := &resourceManagerMock{}
 	resManagerMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}),
-			c2smodel.NewResourceDesc("i0", jd1, nil, c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "false"}}),
-			c2smodel.NewResourceDesc("i0", jd2, nil, c2smodel.Info{M: map[string]string{carbonsEnabledCtxKey: "true"}}),
+			c2smodel.NewResourceDesc("i0", jd0, nil, c2smodel.NewInfoMapFromMap(map[string]string{carbonsEnabledCtxKey: "true"})),
+			c2smodel.NewResourceDesc("i0", jd1, nil, c2smodel.NewInfoMapFromMap(map[string]string{carbonsEnabledCtxKey: "false"})),
+			c2smodel.NewResourceDesc("i0", jd2, nil, c2smodel.NewInfoMapFromMap(map[string]string{carbonsEnabledCtxKey: "true"})),
 		}, nil
 	}
 

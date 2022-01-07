@@ -90,7 +90,7 @@ func (s *routerSuite) TestRouter_ResourceNotFound() {
 	}
 	s.resMngMock.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 
@@ -111,7 +111,7 @@ func (s *routerSuite) TestRouter_LocalRoute() {
 	}
 	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc(instance.ID(), jd, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 	var routed bool
@@ -138,7 +138,7 @@ func (s *routerSuite) TestRouter_ClusterRoute() {
 	}
 	s.resMngMock.GetResourcesFunc = func(_ context.Context, _ string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("abcd1234", jd, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("abcd1234", jd, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 	var routed bool

@@ -117,7 +117,7 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 			return nil, nil
 		}
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("i1", jd0, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 

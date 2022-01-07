@@ -253,7 +253,7 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	resMng := &resourceManagerMock{}
 	resMng.GetResourcesFunc = func(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 		return []c2smodel.ResourceDesc{
-			c2smodel.NewResourceDesc("inst-1", jd0, nil, c2smodel.Info{}),
+			c2smodel.NewResourceDesc("inst-1", jd0, nil, c2smodel.NewInfoMap()),
 		}, nil
 	}
 	hk := hook.NewHooks()
