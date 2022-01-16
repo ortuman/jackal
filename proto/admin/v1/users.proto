@@ -16,7 +16,7 @@ syntax="proto3";
 
 package admin.v1;
 
-option go_package = "./;pb";
+option go_package = "pkg/admin/pb";
 
 service Users {
   // CreateUser creates a new user given a username and password.

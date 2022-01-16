@@ -26,6 +26,7 @@ import (
 )
 
 type componentRouterService struct {
+	pb.UnimplementedComponentRouterServer
 	comps components
 }
 

@@ -43,6 +43,7 @@ import (
 const iterationCount = 15_000
 
 type usersService struct {
+	userspb.UnimplementedUsersServer
 	rep     repository.Repository
 	peppers *pepper.Keys
 	hk      *hook.Hooks
