@@ -44,6 +44,7 @@ var errReasonMap = map[pb.StreamErrorReason]streamerror.Reason{
 }
 
 type localRouterService struct {
+	pb.UnimplementedLocalRouterServer
 	r localRouter
 }
 

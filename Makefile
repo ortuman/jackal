@@ -1,4 +1,4 @@
-.PHONY: check fmt vet lint generate test build install installctl dockerimage
+.PHONY: check fmt vet lint generate test proto build install installctl dockerimage
 
 generate:
 	@echo "Generating mock files..."
@@ -21,6 +21,10 @@ check: generate fmt vet lint
 test: generate
 	@echo "Running tests..."
 	@bash scripts/test.sh
+
+proto:
+	@echo "Generating proto code..."
+	@bash scripts/genproto.sh
 
 build:
 	@echo "Compiling jackal binary..."

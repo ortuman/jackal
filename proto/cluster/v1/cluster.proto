@@ -18,7 +18,7 @@ import "github.com/jackal-xmpp/stravaganza/stravaganza.proto";
 
 package cluster.v1;
 
-option go_package = "./;pb";
+option go_package = "pkg/cluster/pb";
 
 service LocalRouter {
   // Route method routes a stanza to a local available resource.

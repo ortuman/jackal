@@ -16,9 +16,9 @@ syntax = "proto3";
 
 import "github.com/jackal-xmpp/stravaganza/stravaganza.proto";
 
-package resourcemanager.v1;
+package c2s.v1;
 
-option go_package = "./;pb";
+option go_package = "pkg/c2s/pb";
 
 // ResourceInfo represents resource associated info content.
 message ResourceInfo {
