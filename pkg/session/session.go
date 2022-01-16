@@ -304,13 +304,17 @@ func (ss *Session) validateStreamElement(elem stravaganza.Element) error {
 			return streamerror.E(streamerror.InvalidNamespace)
 		}
 	}
-	if ss.typ == ComponentSession {
+	switch ss.typ {
+	case ComponentSession:
 		return nil
+
+	case C2SSession:
+		to := elem.Attribute(stravaganza.To)
+		if len(to) > 0 && !ss.hosts.IsLocalHost(to) {
+			return streamerror.E(streamerror.HostUnknown)
+		}
 	}
-	to := elem.Attribute(stravaganza.To)
-	if len(to) > 0 && !ss.hosts.IsLocalHost(to) {
-		return streamerror.E(streamerror.HostUnknown)
-	}
+
 	if elem.Attribute(stravaganza.Version) != "1.0" {
 		return streamerror.E(streamerror.UnsupportedVersion)
 	}
