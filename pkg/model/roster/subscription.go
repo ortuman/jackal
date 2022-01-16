@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 // limitations under the License.
 
 package rostermodel
-
-import "github.com/jackal-xmpp/stravaganza/v2"
 
 const (
 	// None represents 'none' subscription type.
@@ -32,20 +30,3 @@ const (
 	// Remove represents 'remove' subscription type.
 	Remove = "remove"
 )
-
-// Item represents a roster item entity.
-type Item struct {
-	Username     string
-	JID          string
-	Name         string
-	Subscription string
-	Ask          bool
-	Groups       []string
-}
-
-// Notification represents a roster subscription pending notification.
-type Notification struct {
-	Contact  string
-	JID      string
-	Presence *stravaganza.Presence
-}

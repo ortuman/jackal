@@ -239,7 +239,7 @@ func (s *Scram) handleStart(ctx context.Context, elem stravaganza.Element) (stra
 		return nil, newSASLError(TemporaryAuthFailure, err)
 	}
 	buf := bytes.NewBuffer(saltBytes)
-	buf.WriteString(s.peppers.GetKey(user.Scram.PepperID))
+	buf.WriteString(s.peppers.GetKey(user.Scram.PepperId))
 
 	pepperedSaltB64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 
@@ -366,13 +366,13 @@ func (s *Scram) getScramPassword() ([]byte, error) {
 	var scramPass string
 	switch s.tp {
 	case ScramSHA1:
-		scramPass = s.user.Scram.SHA1
+		scramPass = s.user.Scram.Sha1
 	case ScramSHA256:
-		scramPass = s.user.Scram.SHA256
+		scramPass = s.user.Scram.Sha256
 	case ScramSHA512:
-		scramPass = s.user.Scram.SHA512
+		scramPass = s.user.Scram.Sha512
 	case ScramSHA3512:
-		scramPass = s.user.Scram.SHA3512
+		scramPass = s.user.Scram.Sha3512
 	}
 	return base64.RawURLEncoding.DecodeString(scramPass)
 }

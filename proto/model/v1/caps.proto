@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package blocklistmodel
+syntax="proto3";
 
-// Item represents block list item entity.
-type Item struct {
-	Username string
-	JID      string
+package model.caps.v1;
+
+option go_package = "pkg/model/caps/;capsmodel";
+
+// Capabilities represents presence capabilities info.
+message Capabilities {
+  string node = 1;
+  string ver = 2;
+  repeated string features = 3;
 }

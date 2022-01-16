@@ -40,7 +40,7 @@ func (m *measuredBlockListRep) DeleteBlockListItem(ctx context.Context, item *bl
 	return
 }
 
-func (m *measuredBlockListRep) FetchBlockListItems(ctx context.Context, username string) (blockList []blocklistmodel.Item, err error) {
+func (m *measuredBlockListRep) FetchBlockListItems(ctx context.Context, username string) (blockList []*blocklistmodel.Item, err error) {
 	t0 := time.Now()
 	blockList, err = m.rep.FetchBlockListItems(ctx, username)
 	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)

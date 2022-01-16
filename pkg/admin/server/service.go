@@ -155,13 +155,13 @@ func (s *usersService) upsertUser(ctx context.Context, username, password string
 	hSHA3512 := hashPassword([]byte(password), pepperedSalt, iterationCount, sha512.Size, sha3.New512)
 
 	usr := usermodel.User{Username: username}
-	usr.Scram.SHA1 = base64.RawURLEncoding.EncodeToString(hSHA1)
-	usr.Scram.SHA256 = base64.RawURLEncoding.EncodeToString(hSHA256)
-	usr.Scram.SHA512 = base64.RawURLEncoding.EncodeToString(hSHA512)
-	usr.Scram.SHA3512 = base64.RawURLEncoding.EncodeToString(hSHA3512)
+	usr.Scram.Sha1 = base64.RawURLEncoding.EncodeToString(hSHA1)
+	usr.Scram.Sha256 = base64.RawURLEncoding.EncodeToString(hSHA256)
+	usr.Scram.Sha512 = base64.RawURLEncoding.EncodeToString(hSHA512)
+	usr.Scram.Sha3512 = base64.RawURLEncoding.EncodeToString(hSHA3512)
 	usr.Scram.Salt = base64.RawURLEncoding.EncodeToString(salt)
 	usr.Scram.IterationCount = iterationCount
-	usr.Scram.PepperID = s.peppers.GetActiveID()
+	usr.Scram.PepperId = s.peppers.GetActiveID()
 
 	if err := s.rep.UpsertUser(ctx, &usr); err != nil {
 		return status.Error(codes.Internal, err.Error())
