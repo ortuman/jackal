@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package usermodel
+package capsmodel
 
-// User represents a user entity.
-type User struct {
-	Username string
-	Scram    struct {
-		SHA1           string
-		SHA256         string
-		SHA512         string
-		SHA3512        string
-		Salt           string
-		IterationCount int
-		PepperID       string
+// HasFeature returns whether a Capabilities instance contains f feature.
+func (c *Capabilities) HasFeature(f string) bool {
+	for _, cf := range c.Features {
+		if cf == f {
+			return true
+		}
 	}
+	return false
 }

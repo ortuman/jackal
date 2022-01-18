@@ -20,13 +20,11 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/hook"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -92,9 +90,9 @@ func TestLast_GetAccountLastActivityOnline(t *testing.T) {
 	repMock.FetchRosterItemFunc = func(ctx context.Context, username string, jid string) (*rostermodel.Item, error) {
 		switch username {
 		case "noelia":
-			return &rostermodel.Item{Username: "noelia", JID: "ortuman@jackal.im", Subscription: rostermodel.From}, nil
+			return &rostermodel.Item{Username: "noelia", Jid: "ortuman@jackal.im", Subscription: rostermodel.From}, nil
 		case "romeo":
-			return &rostermodel.Item{Username: "romeo", JID: "ortuman@jackal.im", Subscription: rostermodel.Both}, nil
+			return &rostermodel.Item{Username: "romeo", Jid: "ortuman@jackal.im", Subscription: rostermodel.Both}, nil
 		}
 		return nil, nil
 	}

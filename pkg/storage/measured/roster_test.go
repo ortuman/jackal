@@ -62,7 +62,7 @@ func TestMeasuredRosterRep_UpsertRosterItem(t *testing.T) {
 
 	// when
 	_ = m.UpsertRosterItem(context.Background(), &rostermodel.Item{
-		Username: "ortuman", JID: "noelia@jackal.im",
+		Username: "ortuman", Jid: "noelia@jackal.im",
 	})
 
 	// then
@@ -87,7 +87,7 @@ func TestMeasuredRosterRep_DeleteRosterItem(t *testing.T) {
 func TestMeasuredRosterRep_FetchRosterItems(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]rostermodel.Item, error) {
+	repMock.FetchRosterItemsFunc = func(ctx context.Context, username string) ([]*rostermodel.Item, error) {
 		return nil, nil
 	}
 	m := &measuredRosterRep{rep: repMock}
@@ -102,7 +102,7 @@ func TestMeasuredRosterRep_FetchRosterItems(t *testing.T) {
 func TestMeasuredRosterRep_FetchRosterItemsInGroups(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchRosterItemsInGroupsFunc = func(ctx context.Context, username string, groups []string) ([]rostermodel.Item, error) {
+	repMock.FetchRosterItemsInGroupsFunc = func(ctx context.Context, username string, groups []string) ([]*rostermodel.Item, error) {
 		return nil, nil
 	}
 	m := &measuredRosterRep{rep: repMock}
@@ -177,7 +177,7 @@ func TestMeasuredRosterRep_FetchRosterNotification(t *testing.T) {
 func TestMeasuredRosterRep_FetchRosterNotifications(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchRosterNotificationsFunc = func(ctx context.Context, contact string) ([]rostermodel.Notification, error) {
+	repMock.FetchRosterNotificationsFunc = func(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
 		return nil, nil
 	}
 	m := &measuredRosterRep{rep: repMock}

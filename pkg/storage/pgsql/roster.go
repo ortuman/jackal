@@ -18,6 +18,8 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/golang/protobuf/proto"
+
 	sq "github.com/Masterminds/squirrel"
 	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -71,7 +73,7 @@ func (r *pgSQLRosterRep) FetchRosterVersion(ctx context.Context, username string
 func (r *pgSQLRosterRep) UpsertRosterItem(ctx context.Context, ri *rostermodel.Item) error {
 	q := sq.Insert(rosterItemsTableName).
 		Columns("username", "jid", "name", "subscription", "groups", "ask").
-		Values(ri.Username, ri.JID, ri.Name, ri.Subscription, pq.Array(ri.Groups), ri.Ask).
+		Values(ri.Username, ri.Jid, ri.Name, ri.Subscription, pq.Array(ri.Groups), ri.Ask).
 		Suffix("ON CONFLICT (username, jid) DO UPDATE SET name = $3, subscription = $4, groups = $5, ask = $6")
 
 	_, err := q.RunWith(r.conn).ExecContext(ctx)
@@ -92,7 +94,7 @@ func (r *pgSQLRosterRep) DeleteRosterItems(ctx context.Context, username string)
 	return err
 }
 
-func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) ([]rostermodel.Item, error) {
+func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) ([]*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask").
 		From(rosterItemsTableName).
 		Where(sq.Eq{"username": username}).
@@ -107,7 +109,7 @@ func (r *pgSQLRosterRep) FetchRosterItems(ctx context.Context, username string) 
 	return scanRosterItems(rows)
 }
 
-func (r *pgSQLRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]rostermodel.Item, error) {
+func (r *pgSQLRosterRep) FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]*rostermodel.Item, error) {
 	q := sq.Select("username", "jid", "name", "subscription", "groups", "ask").
 		From(rosterItemsTableName).
 		Where(sq.Expr("username = $1 AND groups @> $2", username, pq.Array(groups))).
@@ -139,13 +141,13 @@ func (r *pgSQLRosterRep) FetchRosterItem(ctx context.Context, username, jid stri
 }
 
 func (r *pgSQLRosterRep) UpsertRosterNotification(ctx context.Context, rn *rostermodel.Notification) error {
-	prBytes, err := rn.Presence.MarshalBinary()
+	prBytes, err := proto.Marshal(rn.Presence)
 	if err != nil {
 		return err
 	}
 	q := sq.Insert(rosterNotificationsTableName).
 		Columns("contact", "jid", "presence").
-		Values(rn.Contact, rn.JID, prBytes).
+		Values(rn.Contact, rn.Jid, prBytes).
 		Suffix("ON CONFLICT (contact, jid) DO UPDATE SET presence = $3")
 
 	_, err = q.RunWith(r.conn).ExecContext(ctx)
@@ -182,7 +184,7 @@ func (r *pgSQLRosterRep) FetchRosterNotification(ctx context.Context, contact st
 	}
 }
 
-func (r *pgSQLRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]rostermodel.Notification, error) {
+func (r *pgSQLRosterRep) FetchRosterNotifications(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
 	q := sq.Select("contact", "jid", "presence").
 		From(rosterNotificationsTableName).
 		Where(sq.Eq{"contact": contact})
@@ -222,7 +224,7 @@ func scanRosterItem(scanner rowScanner) (*rostermodel.Item, error) {
 	var ri rostermodel.Item
 	err := scanner.Scan(
 		&ri.Username,
-		&ri.JID,
+		&ri.Jid,
 		&ri.Name,
 		&ri.Subscription,
 		pq.Array(&ri.Groups),
@@ -234,14 +236,14 @@ func scanRosterItem(scanner rowScanner) (*rostermodel.Item, error) {
 	return &ri, nil
 }
 
-func scanRosterItems(scanner rowsScanner) ([]rostermodel.Item, error) {
-	var ret []rostermodel.Item
+func scanRosterItems(scanner rowsScanner) ([]*rostermodel.Item, error) {
+	var ret []*rostermodel.Item
 	for scanner.Next() {
 		ri, err := scanRosterItem(scanner)
 		if err != nil {
 			return nil, err
 		}
-		ret = append(ret, *ri)
+		ret = append(ret, ri)
 	}
 	return ret, nil
 }
@@ -250,29 +252,25 @@ func scanRosterNotification(scanner rowScanner) (*rostermodel.Notification, erro
 	var rn rostermodel.Notification
 
 	var prBytes []byte
-	if err := scanner.Scan(&rn.Contact, &rn.JID, &prBytes); err != nil {
+	if err := scanner.Scan(&rn.Contact, &rn.Jid, &prBytes); err != nil {
 		return nil, err
 	}
-	b, err := stravaganza.NewBuilderFromBinary(prBytes)
-	if err != nil {
+	var prProto stravaganza.PBElement
+	if err := proto.Unmarshal(prBytes, &prProto); err != nil {
 		return nil, err
 	}
-	pr, err := b.BuildPresence()
-	if err != nil {
-		return nil, err
-	}
-	rn.Presence = pr
+	rn.Presence = &prProto
 	return &rn, nil
 }
 
-func scanRosterNotifications(scanner rowsScanner) ([]rostermodel.Notification, error) {
-	var ret []rostermodel.Notification
+func scanRosterNotifications(scanner rowsScanner) ([]*rostermodel.Notification, error) {
+	var ret []*rostermodel.Notification
 	for scanner.Next() {
-		ri, err := scanRosterNotification(scanner)
+		rn, err := scanRosterNotification(scanner)
 		if err != nil {
 			return nil, err
 		}
-		ret = append(ret, *ri)
+		ret = append(ret, rn)
 	}
 	return ret, nil
 }

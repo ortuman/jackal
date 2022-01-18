@@ -33,7 +33,7 @@ func TestPgSQLBlockList_Upsert(t *testing.T) {
 	// when
 	err := s.UpsertBlockListItem(context.Background(), &blocklistmodel.Item{
 		Username: "ortuman",
-		JID:      "noelia@jackal.im",
+		Jid:      "noelia@jackal.im",
 	})
 
 	// then
@@ -67,7 +67,7 @@ func TestPgSQLBlockList_DeleteItem(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// when
-	err := s.DeleteBlockListItem(context.Background(), &blocklistmodel.Item{Username: "ortuman", JID: "noelia@jackal.im"})
+	err := s.DeleteBlockListItem(context.Background(), &blocklistmodel.Item{Username: "ortuman", Jid: "noelia@jackal.im"})
 
 	// then
 	require.Nil(t, mock.ExpectationsWereMet())

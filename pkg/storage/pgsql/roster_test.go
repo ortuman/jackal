@@ -75,7 +75,7 @@ func TestPgSQLRoster_UpsertRosterItem(t *testing.T) {
 	// when
 	err := s.UpsertRosterItem(context.Background(), &rostermodel.Item{
 		Username:     "ortuman",
-		JID:          "noelia@jackal.im",
+		Jid:          "noelia@jackal.im",
 		Name:         "Noelia",
 		Subscription: "both",
 		Groups:       []string{"VIP", "Buddies"},
@@ -215,7 +215,7 @@ func TestPgSQLRoster_FetchRosterItem(t *testing.T) {
 	// then
 	require.Nil(t, err)
 	require.NotNil(t, ri)
-	require.Equal(t, "noelia@jackal.im", ri.JID)
+	require.Equal(t, "noelia@jackal.im", ri.Jid)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }
@@ -237,8 +237,8 @@ func TestPgSQLRoster_UpsertRosterNotification(t *testing.T) {
 	// when
 	err := s.UpsertRosterNotification(context.Background(), &rostermodel.Notification{
 		Contact:  "ortuman",
-		JID:      "noelia@jackal.im",
-		Presence: pr,
+		Jid:      "noelia@jackal.im",
+		Presence: pr.Proto(),
 	})
 
 	// then
@@ -307,7 +307,7 @@ func TestPgSQLRoster_FetchRosterNotification(t *testing.T) {
 	// then
 	require.Nil(t, err)
 	require.NotNil(t, rn)
-	require.Equal(t, "noelia@jackal.im", rn.JID)
+	require.Equal(t, "noelia@jackal.im", rn.Jid)
 
 	require.Nil(t, mock.ExpectationsWereMet())
 }

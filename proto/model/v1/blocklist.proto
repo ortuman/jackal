@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lastmodel
+syntax="proto3";
 
-// Last represents a user last activity entity.
-type Last struct {
-	Username string
-	Seconds  int64
-	Status   string
+package model.blocklist.v1;
+
+option go_package = "pkg/model/blocklist/;blocklistmodel";
+
+// Item represents block list item entity.
+message Item {
+  string username = 1;
+  string jid = 2;
 }

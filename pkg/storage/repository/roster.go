@@ -38,10 +38,10 @@ type Roster interface {
 	DeleteRosterItems(ctx context.Context, username string) error
 
 	// FetchRosterItems fetches from storage all roster item entities associated to a given user.
-	FetchRosterItems(ctx context.Context, username string) ([]rostermodel.Item, error)
+	FetchRosterItems(ctx context.Context, username string) ([]*rostermodel.Item, error)
 
 	// FetchRosterItemsInGroups fetches from repository all roster item entities associated to a given user and a set of groups.
-	FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]rostermodel.Item, error)
+	FetchRosterItemsInGroups(ctx context.Context, username string, groups []string) ([]*rostermodel.Item, error)
 
 	// FetchRosterItem fetches from repository a roster item entity.
 	FetchRosterItem(ctx context.Context, username, jid string) (*rostermodel.Item, error)
@@ -59,7 +59,7 @@ type Roster interface {
 	FetchRosterNotification(ctx context.Context, contact string, jid string) (*rostermodel.Notification, error)
 
 	// FetchRosterNotifications fetches from repository all roster notifications associated to a user.
-	FetchRosterNotifications(ctx context.Context, contact string) ([]rostermodel.Notification, error)
+	FetchRosterNotifications(ctx context.Context, contact string) ([]*rostermodel.Notification, error)
 
 	// FetchRosterGroups fetches all groups associated to a user roster.
 	FetchRosterGroups(ctx context.Context, username string) ([]string, error)

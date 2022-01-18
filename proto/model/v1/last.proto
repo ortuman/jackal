@@ -12,21 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package capsmodel
+syntax="proto3";
 
-// Capabilities represents presence capabilities info.
-type Capabilities struct {
-	Node     string
-	Ver      string
-	Features []string
-}
+package model.last.v1;
 
-// HasFeature returns whether or not a Capabilities instance contains f feature.
-func (c *Capabilities) HasFeature(f string) bool {
-	for _, cf := range c.Features {
-		if cf == f {
-			return true
-		}
-	}
-	return false
+option go_package = "pkg/model/last/;lastmodel";
+
+// Last represents a user last activity entity.
+message Last {
+  string username = 1;
+  int64 seconds = 2;
+  string status = 3;
 }

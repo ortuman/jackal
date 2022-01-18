@@ -34,7 +34,7 @@ type pgSQLBlockListRep struct {
 func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Insert(blockListsTableName).
 		Columns("username", "jid").
-		Values(item.Username, item.JID).
+		Values(item.Username, item.Jid).
 		Suffix("ON CONFLICT (username, jid) DO NOTHING").
 		RunWith(r.conn).
 		ExecContext(ctx)
@@ -43,13 +43,13 @@ func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *block
 
 func (r *pgSQLBlockListRep) DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Delete(blockListsTableName).
-		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.JID}}).
+		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.Jid}}).
 		RunWith(r.conn).
 		ExecContext(ctx)
 	return err
 }
 
-func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
+func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
 	q := sq.Select("username", "jid").
 		From(blockListsTableName).
 		Where(sq.Eq{"username": username}).
@@ -72,14 +72,14 @@ func (r *pgSQLBlockListRep) DeleteBlockListItems(ctx context.Context, username s
 	return err
 }
 
-func scanBlockListItems(scanner rowsScanner) ([]blocklistmodel.Item, error) {
-	var ret []blocklistmodel.Item
+func scanBlockListItems(scanner rowsScanner) ([]*blocklistmodel.Item, error) {
+	var ret []*blocklistmodel.Item
 	for scanner.Next() {
 		var it blocklistmodel.Item
-		if err := scanner.Scan(&it.Username, &it.JID); err != nil {
+		if err := scanner.Scan(&it.Username, &it.Jid); err != nil {
 			return nil, err
 		}
-		ret = append(ret, it)
+		ret = append(ret, &it)
 	}
 	return ret, nil
 }

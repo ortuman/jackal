@@ -401,14 +401,15 @@ func testScramAuthHash(b []byte, scramType ScramType) []byte {
 func testUser() *usermodel.User {
 	// password: 1234
 	var usr usermodel.User
+	usr.Scram = &usermodel.Scram{}
 	usr.Username = "ortuman"
-	usr.Scram.SHA1 = tScramSHA1Base64
-	usr.Scram.SHA256 = tScramSHA256Base64
-	usr.Scram.SHA512 = tScramSHA512Base64
-	usr.Scram.SHA3512 = tScramSHA3512Base64
+	usr.Scram.Sha1 = tScramSHA1Base64
+	usr.Scram.Sha256 = tScramSHA256Base64
+	usr.Scram.Sha512 = tScramSHA512Base64
+	usr.Scram.Sha3512 = tScramSHA3512Base64
 	usr.Scram.Salt = tSaltBase64
 	usr.Scram.IterationCount = tIterationCount
-	usr.Scram.PepperID = "v1"
+	usr.Scram.PepperId = "v1"
 	return &usr
 }
 

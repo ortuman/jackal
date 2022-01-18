@@ -40,8 +40,8 @@ func TestMeasuredBlockListRep_UpsertBlockListItem(t *testing.T) {
 func TestMeasuredBlockListRep_FetchBlockListItems(t *testing.T) {
 	// given
 	repMock := &repositoryMock{}
-	repMock.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]blocklistmodel.Item, error) {
-		return []blocklistmodel.Item{}, nil
+	repMock.FetchBlockListItemsFunc = func(ctx context.Context, username string) ([]*blocklistmodel.Item, error) {
+		return []*blocklistmodel.Item{}, nil
 	}
 	m := New(repMock)
 
