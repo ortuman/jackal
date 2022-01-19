@@ -16,13 +16,16 @@ package jackal
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -209,6 +212,9 @@ func (j *Jackal) Run() error {
 	j.hk = hook.NewHooks()
 
 	// init etcd
+	if err := j.checkEtcdHealth(cfg.Cluster.Etcd.Endpoints); err != nil {
+		return err
+	}
 	j.initLocker(cfg.Cluster.Etcd)
 	j.initKVStore(cfg.Cluster.Etcd)
 
@@ -262,6 +268,34 @@ func (j *Jackal) Run() error {
 	)
 
 	return j.shutdown()
+}
+
+func (j *Jackal) checkEtcdHealth(endpoints []string) error {
+	type healthResponse struct {
+		Health string `json:"health"`
+	}
+
+	var errHealthCheckFailedFn = func(err error) error {
+		return fmt.Errorf("etcd health check failed: %v", err)
+	}
+	for _, endpoint := range endpoints {
+		resp, err := http.Get(fmt.Sprintf("%s/health", endpoint))
+		if err != nil {
+			return errHealthCheckFailedFn(err)
+		}
+		var hResp healthResponse
+		if err := json.NewDecoder(resp.Body).Decode(&hResp); err != nil {
+			_ = resp.Body.Close()
+			return errHealthCheckFailedFn(err)
+		}
+		_ = resp.Body.Close()
+
+		healthy, _ := strconv.ParseBool(hResp.Health)
+		if !healthy {
+			return errHealthCheckFailedFn(fmt.Errorf("health = false, for endpoint %s", endpoint))
+		}
+	}
+	return nil
 }
 
 func (j *Jackal) initLocker(cfg etcd.Config) {
