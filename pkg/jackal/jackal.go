@@ -138,6 +138,8 @@ func New(output io.Writer, args []string) *Jackal {
 		output:     output,
 		args:       args,
 		waitStopCh: make(chan os.Signal, 1),
+		locker:     locker.NewNopLocker(),
+		kv:         kv.NewNopKV(),
 	}
 }
 
@@ -212,11 +214,13 @@ func (j *Jackal) Run() error {
 	j.hk = hook.NewHooks()
 
 	// init etcd
-	if err := j.checkEtcdHealth(cfg.Cluster.Etcd.Endpoints); err != nil {
-		return err
+	if len(cfg.Cluster.Etcd.Endpoints) > 0 {
+		if err := j.checkEtcdHealth(cfg.Cluster.Etcd.Endpoints); err != nil {
+			return err
+		}
+		j.initLocker(cfg.Cluster.Etcd)
+		j.initKVStore(cfg.Cluster.Etcd)
 	}
-	j.initLocker(cfg.Cluster.Etcd)
-	j.initKVStore(cfg.Cluster.Etcd)
 
 	// init cluster connection manager
 	j.initClusterConnManager()
