@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@ package locker
 
 import "context"
 
-// Locker defines distributed locking interface.
-type Locker interface {
-	// AcquireLock acquires lockID distributed lock.
-	AcquireLock(ctx context.Context, lockID string) (Lock, error)
+// NewNopLocker returns a Locker that doesn't do anything.
+func NewNopLocker() Locker { return &nopLocker{} }
 
-	// Start initializes locker.
-	Start(ctx context.Context) error
+type nopLocker struct{}
 
-	// Stop releases all locker underlying resources.
-	Stop(ctx context.Context) error
+func (l *nopLocker) AcquireLock(_ context.Context, _ string) (Lock, error) {
+	return &nopLock{}, nil
 }
 
-// Lock defines distributed lock object.
-type Lock interface {
-	// Release releases a previously acquired lock.
-	Release(ctx context.Context) error
-}
+func (l *nopLocker) Start(_ context.Context) error { return nil }
+func (l *nopLocker) Stop(_ context.Context) error  { return nil }
+
+type nopLock struct{}
+
+func (l *nopLock) Release(_ context.Context) error { return nil }

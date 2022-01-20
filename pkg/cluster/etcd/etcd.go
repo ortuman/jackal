@@ -18,7 +18,7 @@ import "time"
 
 // Config contains etcd configuration parameters.
 type Config struct {
-	Endpoints            []string      `fig:"endpoints" default:"[http://localhost:2379]"`
+	Endpoints            []string      `fig:"endpoints"`
 	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
 	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
 	DialKeepAliveTimeout time.Duration `fig:"dial_keep_alive_timeout" default:"10s"`

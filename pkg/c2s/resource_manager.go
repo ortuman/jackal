@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	kitlog "github.com/go-kit/log"
 
@@ -37,8 +36,6 @@ import (
 const (
 	resourceKeyPrefix = "r://"
 )
-
-const clearActiveKeyTimeout = time.Minute
 
 // ResourceManager type is in charge of keeping track of all cluster resources.
 type ResourceManager struct {
