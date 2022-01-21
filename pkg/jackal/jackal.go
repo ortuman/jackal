@@ -159,6 +159,7 @@ func (j *Jackal) Run() error {
 	fs.BoolVar(&showUsage, "help", false, "Show this message")
 	fs.BoolVar(&showVersion, "version", false, "Print version information.")
 	fs.StringVar(&configFile, "config", "config.yaml", "Configuration file path.")
+
 	fs.Usage = func() {
 		for i := range logoStr {
 			_, _ = fmt.Fprintf(j.output, "%s\n", logoStr[i])
@@ -186,13 +187,6 @@ func (j *Jackal) Run() error {
 	if err != nil {
 		return err
 	}
-	// enable gRPC prometheus histograms
-	grpc_prometheus.EnableHandlingTimeHistogram()
-
-	// set maximum opened files limit
-	if err := setRLimit(); err != nil {
-		return err
-	}
 	// init logger
 	j.logger = log.NewDefaultLogger(cfg.Logger.Level, cfg.Logger.Format)
 
@@ -202,6 +196,17 @@ func (j *Jackal) Run() error {
 		"go_os", runtime.GOOS,
 		"go_arch", runtime.GOARCH,
 	)
+	// Allocate a block of memory to alter GC behaviour. See https://github.com/golang/go/issues/23044
+	ballast := make([]byte, cfg.MemoryBallastSize)
+	runtime.KeepAlive(ballast)
+
+	// enable gRPC prometheus histograms
+	grpc_prometheus.EnableHandlingTimeHistogram()
+
+	// set maximum opened files limit
+	if err := setRLimit(); err != nil {
+		return err
+	}
 
 	// init pepper keys
 	peppers, err := pepper.NewKeys(cfg.Peppers)

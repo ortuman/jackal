@@ -82,6 +82,8 @@ type ModulesConfig struct {
 
 // Config defines jackal application configuration.
 type Config struct {
+	MemoryBallastSize int `fig:"memory_ballast_size" default:"134217728"`
+
 	Logger  LoggerConfig  `fig:"logger"`
 	Cluster ClusterConfig `fig:"cluster"`
 
