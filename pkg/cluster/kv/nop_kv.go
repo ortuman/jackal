@@ -19,6 +19,12 @@ import "context"
 // NewNopKV returns a KV that doesn't do anything.
 func NewNopKV() KV { return &nopKV{} }
 
+// IsNop tells whether kvs is nop KV.
+func IsNop(kv KV) bool {
+	_, ok := kv.(*nopKV)
+	return ok
+}
+
 type nopKV struct{}
 
 func (k *nopKV) Put(_ context.Context, _ string, _ string) error { return nil }

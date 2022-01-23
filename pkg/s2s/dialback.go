@@ -32,16 +32,19 @@ func dbKey(dbSecret, sender, target, streamID string) string {
 	return hex.EncodeToString(hm.Sum(nil))
 }
 
-func registerDbRequest(ctx context.Context, sender, target, streamID string, kv kv.KV) error {
-	return kv.Put(ctx, dbReqKey(streamID), dbReqVal(sender, target))
+func registerDbRequest(ctx context.Context, sender, target, streamID string, kvs kv.KV) error {
+	return kvs.Put(ctx, dbReqKey(streamID), dbReqVal(sender, target))
 }
 
-func unregisterDbRequest(ctx context.Context, streamID string, kv kv.KV) error {
-	return kv.Del(ctx, dbReqKey(streamID))
+func unregisterDbRequest(ctx context.Context, streamID string, kvs kv.KV) error {
+	return kvs.Del(ctx, dbReqKey(streamID))
 }
 
-func isDbRequestOn(ctx context.Context, sender, target, streamID string, kv kv.KV) (bool, error) {
-	val, err := kv.Get(ctx, dbReqKey(streamID))
+func isDbRequestOn(ctx context.Context, sender, target, streamID string, kvs kv.KV) (bool, error) {
+	if kv.IsNop(kvs) {
+		return true, nil
+	}
+	val, err := kvs.Get(ctx, dbReqKey(streamID))
 	if err != nil {
 		return false, err
 	}
