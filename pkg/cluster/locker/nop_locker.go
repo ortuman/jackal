@@ -19,6 +19,12 @@ import "context"
 // NewNopLocker returns a Locker that doesn't do anything.
 func NewNopLocker() Locker { return &nopLocker{} }
 
+// IsNop tells whether l is nop locker.
+func IsNop(l Locker) bool {
+	_, ok := l.(*nopLocker)
+	return ok
+}
+
 type nopLocker struct{}
 
 func (l *nopLocker) AcquireLock(_ context.Context, _ string) (Lock, error) {
