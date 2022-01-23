@@ -32,6 +32,11 @@ storage:
     database: jackal
     max_open_conns: 16
 
+  cache:
+    type: redis
+    redis:
+      addr: localhost:6379
+
 cluster:
   etcd:
     endpoints:
