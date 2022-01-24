@@ -23,33 +23,34 @@ import (
 )
 
 type measuredOfflineRep struct {
-	rep repository.Offline
+	rep  repository.Offline
+	inTx bool
 }
 
 func (m *measuredOfflineRep) InsertOfflineMessage(ctx context.Context, message *stravaganza.Message, username string) error {
 	t0 := time.Now()
 	err := m.rep.InsertOfflineMessage(ctx, message, username)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return err
 }
 
 func (m *measuredOfflineRep) CountOfflineMessages(ctx context.Context, username string) (int, error) {
 	t0 := time.Now()
 	count, err := m.rep.CountOfflineMessages(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return count, err
 }
 
 func (m *measuredOfflineRep) FetchOfflineMessages(ctx context.Context, username string) ([]*stravaganza.Message, error) {
 	t0 := time.Now()
 	ms, err := m.rep.FetchOfflineMessages(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return ms, err
 }
 
 func (m *measuredOfflineRep) DeleteOfflineMessages(ctx context.Context, username string) error {
 	t0 := time.Now()
 	err := m.rep.DeleteOfflineMessages(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return err
 }

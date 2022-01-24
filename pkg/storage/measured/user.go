@@ -24,33 +24,34 @@ import (
 )
 
 type measuredUserRep struct {
-	rep repository.User
+	rep  repository.User
+	inTx bool
 }
 
 func (m *measuredUserRep) UpsertUser(ctx context.Context, user *usermodel.User) (err error) {
 	t0 := time.Now()
 	err = m.rep.UpsertUser(ctx, user)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredUserRep) DeleteUser(ctx context.Context, username string) (err error) {
 	t0 := time.Now()
 	err = m.rep.DeleteUser(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredUserRep) FetchUser(ctx context.Context, username string) (usr *usermodel.User, err error) {
 	t0 := time.Now()
 	usr, err = m.rep.FetchUser(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredUserRep) UserExists(ctx context.Context, username string) (ok bool, err error) {
 	t0 := time.Now()
 	ok, err = m.rep.UserExists(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }

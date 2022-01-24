@@ -23,26 +23,27 @@ import (
 )
 
 type measuredCapabilitiesRep struct {
-	rep repository.Capabilities
+	rep  repository.Capabilities
+	inTx bool
 }
 
 func (m *measuredCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) (err error) {
 	t0 := time.Now()
 	err = m.rep.UpsertCapabilities(ctx, caps)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredCapabilitiesRep) CapabilitiesExist(ctx context.Context, node, ver string) (ok bool, err error) {
 	t0 := time.Now()
 	ok, err = m.rep.CapabilitiesExist(ctx, node, ver)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredCapabilitiesRep) FetchCapabilities(ctx context.Context, node, ver string) (caps *capsmodel.Capabilities, err error) {
 	t0 := time.Now()
 	caps, err = m.rep.FetchCapabilities(ctx, node, ver)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }

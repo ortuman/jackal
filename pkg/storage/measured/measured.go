@@ -60,7 +60,9 @@ func New(rep repository.Repository) repository.Repository {
 // InTransaction generates a repository transaction and completes it after it's being used by f function.
 // In case f returns no error tx transaction will be committed.
 func (m *Measured) InTransaction(ctx context.Context, f func(ctx context.Context, tx repository.Transaction) error) error {
-	return m.rep.InTransaction(ctx, f)
+	return m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
+		return f(ctx, newMeasuredTx(tx))
+	})
 }
 
 // Start initializes repository.
@@ -73,11 +75,12 @@ func (m *Measured) Stop(ctx context.Context) error {
 	return m.rep.Stop(ctx)
 }
 
-func reportOpMetric(opType string, durationInSecs float64, success bool) {
+func reportOpMetric(opType string, durationInSecs float64, success bool, inTx bool) {
 	metricLabel := prometheus.Labels{
 		"instance": instance.ID(),
 		"type":     opType,
 		"success":  strconv.FormatBool(success),
+		"tx":       strconv.FormatBool(inTx),
 	}
 	repOperations.With(metricLabel).Inc()
 	repOperationDurationBucket.With(metricLabel).Observe(durationInSecs)

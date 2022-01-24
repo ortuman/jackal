@@ -23,26 +23,27 @@ import (
 )
 
 type measuredLastRep struct {
-	rep repository.Last
+	rep  repository.Last
+	inTx bool
 }
 
 func (m *measuredLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {
 	t0 := time.Now()
 	err := m.rep.UpsertLast(ctx, last)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return err
 }
 
 func (m *measuredLastRep) FetchLast(ctx context.Context, username string) (last *lastmodel.Last, err error) {
 	t0 := time.Now()
 	last, err = m.rep.FetchLast(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredLastRep) DeleteLast(ctx context.Context, username string) error {
 	t0 := time.Now()
 	err := m.rep.DeleteLast(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return err
 }
