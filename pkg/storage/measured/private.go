@@ -23,26 +23,27 @@ import (
 )
 
 type measuredPrivateRep struct {
-	rep repository.Private
+	rep  repository.Private
+	inTx bool
 }
 
 func (m *measuredPrivateRep) FetchPrivate(ctx context.Context, namespace, username string) (private stravaganza.Element, err error) {
 	t0 := time.Now()
 	private, err = m.rep.FetchPrivate(ctx, namespace, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredPrivateRep) UpsertPrivate(ctx context.Context, private stravaganza.Element, namespace, username string) (err error) {
 	t0 := time.Now()
 	err = m.rep.UpsertPrivate(ctx, private, namespace, username)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
 
 func (m *measuredPrivateRep) DeletePrivates(ctx context.Context, username string) (err error) {
 	t0 := time.Now()
 	err = m.rep.DeletePrivates(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }

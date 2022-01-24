@@ -24,7 +24,7 @@ var (
 			Name:      "operations_total",
 			Help:      "The total number of repository operations.",
 		},
-		[]string{"instance", "type", "success"},
+		[]string{"instance", "type", "success", "tx"},
 	)
 	repOperationDurationBucket = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -34,7 +34,7 @@ var (
 			Help:      "Bucketed histogram of repository operation duration.",
 			Buckets:   prometheus.ExponentialBuckets(0.01, 2, 24),
 		},
-		[]string{"instance", "type", "success"},
+		[]string{"instance", "type", "success", "tx"},
 	)
 )
 

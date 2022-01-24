@@ -23,26 +23,27 @@ import (
 )
 
 type measuredVCardRep struct {
-	rep repository.VCard
+	rep  repository.VCard
+	inTx bool
 }
 
 func (m *measuredVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Element, username string) error {
 	t0 := time.Now()
 	err := m.rep.UpsertVCard(ctx, vCard, username)
-	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return err
 }
 
 func (m *measuredVCardRep) FetchVCard(ctx context.Context, username string) (stravaganza.Element, error) {
 	t0 := time.Now()
 	vc, err := m.rep.FetchVCard(ctx, username)
-	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(fetchOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return vc, err
 }
 
 func (m *measuredVCardRep) DeleteVCard(ctx context.Context, username string) (err error) {
 	t0 := time.Now()
 	err = m.rep.DeleteVCard(ctx, username)
-	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil)
+	reportOpMetric(deleteOp, time.Since(t0).Seconds(), err == nil, m.inTx)
 	return
 }
