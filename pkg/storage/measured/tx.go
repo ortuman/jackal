@@ -25,6 +25,7 @@ type measuredTx struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.Locker
 }
 
 func newMeasuredTx(tx repository.Transaction) *measuredTx {
@@ -37,5 +38,6 @@ func newMeasuredTx(tx repository.Transaction) *measuredTx {
 		Private:      &measuredPrivateRep{rep: tx, inTx: true},
 		Roster:       &measuredRosterRep{rep: tx, inTx: true},
 		VCard:        &measuredVCardRep{rep: tx, inTx: true},
+		Locker:       &measuredLocker{rep: tx, inTx: true},
 	}
 }

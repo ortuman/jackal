@@ -18,15 +18,13 @@ import (
 	"context"
 
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
-	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
-//go:generate moq -out repository.mock_test.go . offlineRepository:repositoryMock
-type offlineRepository interface {
-	repository.Offline
+//go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
+type globalRepository interface {
+	repository.Repository
 }
 
 //go:generate moq -out router.mock_test.go . globalRouter:routerMock
@@ -37,16 +35,6 @@ type globalRouter interface {
 //go:generate moq -out hosts.mock_test.go . hosts
 type hosts interface {
 	IsLocalHost(h string) bool
-}
-
-//go:generate moq -out locker.mock_test.go . clusterLocker:lockerMock
-type clusterLocker interface {
-	locker.Locker
-}
-
-//go:generate moq -out lock.mock_test.go . clusterLock:lockMock
-type clusterLock interface {
-	locker.Lock
 }
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager

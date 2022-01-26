@@ -24,7 +24,6 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/ortuman/jackal/pkg/c2s"
-	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/router"
@@ -53,8 +52,7 @@ type Offline struct {
 	hosts  hosts
 	router router.Router
 	resMng resourceManager
-	rep    repository.Offline
-	locker locker.Locker
+	rep    repository.Repository
 	hk     *hook.Hooks
 	logger kitlog.Logger
 }
@@ -65,8 +63,7 @@ func New(
 	router router.Router,
 	hosts *host.Hosts,
 	resMng *c2s.ResourceManager,
-	rep repository.Offline,
-	locker locker.Locker,
+	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,
 ) *Offline {
@@ -76,7 +73,6 @@ func New(
 		hosts:  hosts,
 		resMng: resMng,
 		rep:    rep,
-		locker: locker,
 		hk:     hk,
 		logger: kitlog.With(logger, "module", ModuleName),
 	}
@@ -166,21 +162,23 @@ func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook.Execution
 func (m *Offline) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
 
-	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(inf.Username))
-	if err != nil {
+	lockID := offlineQueueLockID(inf.Username)
+
+	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = lock.Release(ctx) }()
+	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
 
 	return m.rep.DeleteOfflineMessages(ctx, inf.Username)
 }
 
 func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) error {
-	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(username))
-	if err != nil {
+	lockID := offlineQueueLockID(username)
+
+	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = lock.Release(ctx) }()
+	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
 
 	ms, err := m.rep.FetchOfflineMessages(ctx, username)
 	if err != nil {
@@ -206,11 +204,12 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	toJID := msg.ToJID()
 	username := toJID.Node()
 
-	lock, err := m.locker.AcquireLock(ctx, offlineQueueLockID(username))
-	if err != nil {
+	lockID := offlineQueueLockID(username)
+
+	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = lock.Release(ctx) }()
+	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
@@ -253,5 +252,5 @@ func isMessageArchievable(msg *stravaganza.Message) bool {
 }
 
 func offlineQueueLockID(username string) string {
-	return fmt.Sprintf("offline:queue:%s", username)
+	return fmt.Sprintf("offline:lock:%s", username)
 }

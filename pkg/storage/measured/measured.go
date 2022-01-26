@@ -27,6 +27,7 @@ const (
 	upsertOp = "upsert"
 	fetchOp  = "fetch"
 	deleteOp = "delete"
+	lockOp   = "lock"
 )
 
 // Measured is measured Repository implementation.
@@ -39,6 +40,7 @@ type Measured struct {
 	measuredPrivateRep
 	measuredRosterRep
 	measuredVCardRep
+	measuredLocker
 	rep repository.Repository
 }
 
@@ -53,6 +55,7 @@ func New(rep repository.Repository) repository.Repository {
 		measuredPrivateRep:      measuredPrivateRep{rep: rep},
 		measuredRosterRep:       measuredRosterRep{rep: rep},
 		measuredVCardRep:        measuredVCardRep{rep: rep},
+		measuredLocker:          measuredLocker{rep: rep},
 		rep:                     rep,
 	}
 }

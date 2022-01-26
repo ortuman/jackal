@@ -46,4 +46,5 @@ type baseRepository interface {
 	Private
 	Roster
 	VCard
+	Locker
 }
