@@ -38,7 +38,6 @@ import (
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
-	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/cluster/memberlist"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
 	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
@@ -105,8 +104,7 @@ type Jackal struct {
 	peppers *pepper.Keys
 	hk      *hook.Hooks
 
-	locker locker.Locker
-	kv     kv.KV
+	kv kv.KV
 
 	rep        repository.Repository
 	memberList *memberlist.MemberList
@@ -138,7 +136,6 @@ func New(output io.Writer, args []string) *Jackal {
 		output:     output,
 		args:       args,
 		waitStopCh: make(chan os.Signal, 1),
-		locker:     locker.NewNopLocker(),
 		kv:         kv.NewNopKV(),
 	}
 }
@@ -223,7 +220,6 @@ func (j *Jackal) Run() error {
 		if err := j.checkEtcdHealth(cfg.Cluster.Etcd.Endpoints); err != nil {
 			return err
 		}
-		j.initLocker(cfg.Cluster.Etcd)
 		j.initKVStore(cfg.Cluster.Etcd)
 	}
 
@@ -305,11 +301,6 @@ func (j *Jackal) checkEtcdHealth(endpoints []string) error {
 		}
 	}
 	return nil
-}
-
-func (j *Jackal) initLocker(cfg etcd.Config) {
-	j.locker = etcd.NewLocker(cfg, j.logger)
-	j.registerStartStopper(j.locker)
 }
 
 func (j *Jackal) initKVStore(cfg etcd.Config) {

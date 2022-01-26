@@ -55,6 +55,7 @@ type Repository struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.Locker
 
 	host string
 	dsn  string
@@ -117,6 +118,7 @@ func (r *Repository) Start(ctx context.Context) error {
 	r.Private = &pgSQLPrivateRep{conn: db, logger: r.logger}
 	r.Roster = &pgSQLRosterRep{conn: db, logger: r.logger}
 	r.VCard = &pgSQLVCardRep{conn: db, logger: r.logger}
+	r.Locker = &pgSQLLocker{conn: db}
 	return nil
 }
 

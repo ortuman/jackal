@@ -55,7 +55,7 @@ var modFns = map[string]func(a *Jackal, cfg *ModulesConfig) module.Module{
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(j *Jackal, cfg *ModulesConfig) module.Module {
-		return offline.New(cfg.Offline, j.router, j.hosts, j.resMng, j.rep, j.locker, j.hk, j.logger)
+		return offline.New(cfg.Offline, j.router, j.hosts, j.resMng, j.rep, j.hk, j.logger)
 	},
 	// XEP-0012: Last Activity
 	// (https://xmpp.org/extensions/xep-0012.html)

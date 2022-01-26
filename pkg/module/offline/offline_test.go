@@ -22,7 +22,6 @@ import (
 	kitlog "github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/cluster/locker"
 	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
@@ -31,15 +30,10 @@ import (
 
 func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 	// given
-	lockMock := &lockMock{}
-	lockMock.ReleaseFunc = func(ctx context.Context) error {
-		return nil
-	}
-	lockerMock := &lockerMock{}
-	lockerMock.AcquireLockFunc = func(ctx context.Context, lockID string) (locker.Lock, error) {
-		return lockMock, nil
-	}
 	repMock := &repositoryMock{}
+	repMock.LockFunc = func(ctx context.Context, lockID string) error { return nil }
+	repMock.UnlockFunc = func(ctx context.Context, lockID string) error { return nil }
+
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 0, nil
 	}
@@ -59,7 +53,6 @@ func TestOffline_ArchiveOfflineMessage(t *testing.T) {
 		hosts:  hostsMock,
 		resMng: resManagerMock,
 		rep:    repMock,
-		locker: lockerMock,
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -100,15 +93,10 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 	hostsMock := &hostsMock{}
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
-	lockMock := &lockMock{}
-	lockMock.ReleaseFunc = func(ctx context.Context) error {
-		return nil
-	}
-	lockerMock := &lockerMock{}
-	lockerMock.AcquireLockFunc = func(ctx context.Context, lockID string) (locker.Lock, error) {
-		return lockMock, nil
-	}
 	repMock := &repositoryMock{}
+	repMock.LockFunc = func(ctx context.Context, lockID string) error { return nil }
+	repMock.UnlockFunc = func(ctx context.Context, lockID string) error { return nil }
+
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 100, nil
 	}
@@ -127,7 +115,6 @@ func TestOffline_ArchiveOfflineMessageQueueFull(t *testing.T) {
 		hosts:  hostsMock,
 		resMng: resManagerMock,
 		rep:    repMock,
-		locker: lockerMock,
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -173,15 +160,10 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 	hostsMock := &hostsMock{}
 	hostsMock.IsLocalHostFunc = func(h string) bool { return h == "jackal.im" }
 
-	lockMock := &lockMock{}
-	lockMock.ReleaseFunc = func(ctx context.Context) error {
-		return nil
-	}
-	lockerMock := &lockerMock{}
-	lockerMock.AcquireLockFunc = func(ctx context.Context, lockID string) (locker.Lock, error) {
-		return lockMock, nil
-	}
 	repMock := &repositoryMock{}
+	repMock.LockFunc = func(ctx context.Context, lockID string) error { return nil }
+	repMock.UnlockFunc = func(ctx context.Context, lockID string) error { return nil }
+
 	repMock.CountOfflineMessagesFunc = func(ctx context.Context, username string) (int, error) {
 		return 1, nil
 	}
@@ -208,7 +190,6 @@ func TestOffline_DeliverOfflineMessages(t *testing.T) {
 		router: routerMock,
 		hosts:  hostsMock,
 		rep:    repMock,
-		locker: lockerMock,
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}

@@ -29,6 +29,7 @@ type repTx struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.Locker
 }
 
 func newRepTx(tx *sql.Tx) *repTx {
@@ -41,5 +42,6 @@ func newRepTx(tx *sql.Tx) *repTx {
 		Private:      &pgSQLPrivateRep{conn: tx},
 		Roster:       &pgSQLRosterRep{conn: tx},
 		VCard:        &pgSQLVCardRep{conn: tx},
+		Locker:       &pgSQLLocker{conn: tx},
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package locker
+package repository
 
 import "context"
 
-// Locker defines distributed locking interface.
+// Locker defines repository locker interface.
 type Locker interface {
-	// AcquireLock acquires lockID distributed lock.
-	AcquireLock(ctx context.Context, lockID string) (Lock, error)
+	// Lock obtains an exclusive lock.
+	Lock(ctx context.Context, lockID string) error
 
-	// Start initializes locker.
-	Start(ctx context.Context) error
-
-	// Stop releases all locker underlying resources.
-	Stop(ctx context.Context) error
-}
-
-// Lock defines distributed lock object.
-type Lock interface {
-	// Release releases a previously acquired lock.
-	Release(ctx context.Context) error
+	// Unlock releases an exclusive lock.
+	Unlock(ctx context.Context, lockID string) error
 }

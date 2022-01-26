@@ -12,28 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package locker
+package measuredrepository
 
-import "context"
+import (
+	"context"
+	"time"
 
-// NewNopLocker returns a Locker that doesn't do anything.
-func NewNopLocker() Locker { return &nopLocker{} }
+	"github.com/ortuman/jackal/pkg/storage/repository"
+)
 
-// IsNop tells whether l is nop locker.
-func IsNop(l Locker) bool {
-	_, ok := l.(*nopLocker)
-	return ok
+type measuredLocker struct {
+	rep  repository.Locker
+	inTx bool
 }
 
-type nopLocker struct{}
-
-func (l *nopLocker) AcquireLock(_ context.Context, _ string) (Lock, error) {
-	return &nopLock{}, nil
+func (m *measuredLocker) Lock(ctx context.Context, lockID string) error {
+	t0 := time.Now()
+	err := m.rep.Lock(ctx, lockID)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
+	return err
 }
 
-func (l *nopLocker) Start(_ context.Context) error { return nil }
-func (l *nopLocker) Stop(_ context.Context) error  { return nil }
-
-type nopLock struct{}
-
-func (l *nopLock) Release(_ context.Context) error { return nil }
+func (m *measuredLocker) Unlock(ctx context.Context, lockID string) error {
+	t0 := time.Now()
+	err := m.rep.Unlock(ctx, lockID)
+	reportOpMetric(upsertOp, time.Since(t0).Seconds(), err == nil, m.inTx)
+	return err
+}
