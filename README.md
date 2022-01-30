@@ -28,6 +28,7 @@ jackal supports the following features:
 - Enforced SSL/TLS
 - Stream compression (zlib)
 - Database connectivity for storing offline messages and user settings (PostgreSQL 9.5+)
+- Caching (Redis 6.2+)
 - Clustering capabilities (etcd 3.4+)
 - Expose [prometheus](https://prometheus.io/) metrics
 - Cross-platform (OS X, Linux)
