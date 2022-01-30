@@ -18,7 +18,7 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
-type Tx struct {
+type cachedTx struct {
 	repository.User
 	repository.Last
 	repository.Capabilities
@@ -30,8 +30,8 @@ type Tx struct {
 	repository.Locker
 }
 
-func newCacheTx(c Cache, tx repository.Transaction) *Tx {
-	return &Tx{
+func newCacheTx(c Cache, tx repository.Transaction) *cachedTx {
+	return &cachedTx{
 		User:         &cachedUserRep{c: c, rep: tx},
 		Last:         tx,
 		Capabilities: tx,

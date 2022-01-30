@@ -79,9 +79,71 @@ func TestCachedUserRep_DeleteUser(t *testing.T) {
 }
 
 func TestCachedUserRep_FetchUser(t *testing.T) {
+	// given
+	cacheMock := &cacheMock{}
+	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+		return nil, nil
+	}
+	cacheMock.PutFunc = func(ctx context.Context, k string, val []byte) error {
+		return nil
+	}
 
+	repMock := &repositoryMock{}
+	repMock.FetchUserFunc = func(ctx context.Context, username string) (*usermodel.User, error) {
+		return &usermodel.User{Username: "u1"}, nil
+	}
+
+	// when
+	rep := cachedUserRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	usr, err := rep.FetchUser(context.Background(), "u1")
+
+	// then
+	require.NotNil(t, usr)
+	require.NoError(t, err)
+
+	require.Equal(t, "u1", usr.Username)
+
+	require.Len(t, cacheMock.GetCalls(), 1)
+	require.Len(t, cacheMock.PutCalls(), 1)
+	require.Len(t, repMock.FetchUserCalls(), 1)
 }
 
 func TestCachedUserRep_UserExists(t *testing.T) {
+	// given
+	cacheMock := &cacheMock{}
+	cacheMock.HasKeyFunc = func(ctx context.Context, k string) (bool, error) {
+		if k == userKey("u1") {
+			return true, nil
+		}
+		return false, nil
+	}
 
+	repMock := &repositoryMock{}
+	repMock.UserExistsFunc = func(ctx context.Context, username string) (bool, error) {
+		return username == "u2", nil
+	}
+
+	// when
+	rep := cachedUserRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	ok1, err1 := rep.UserExists(context.Background(), "u1")
+	ok2, err2 := rep.UserExists(context.Background(), "u2")
+	ok3, err3 := rep.UserExists(context.Background(), "u3")
+
+	// then
+	require.True(t, ok1)
+	require.NoError(t, err1)
+
+	require.True(t, ok2)
+	require.NoError(t, err2)
+
+	require.False(t, ok3)
+	require.NoError(t, err3)
+
+	require.Len(t, repMock.UserExistsCalls(), 2)
 }

@@ -104,6 +104,7 @@ func (c *CachedRepository) InTransaction(ctx context.Context, f func(ctx context
 	})
 }
 
+// Start starts cached repository component.
 func (c *CachedRepository) Start(ctx context.Context) error {
 	if err := c.cache.Start(ctx); err != nil {
 		return err
@@ -112,6 +113,7 @@ func (c *CachedRepository) Start(ctx context.Context) error {
 	return c.rep.Start(ctx)
 }
 
+// Stop stops cached repository component.
 func (c *CachedRepository) Stop(ctx context.Context) error {
 	if err := c.cache.Stop(ctx); err != nil {
 		return err
