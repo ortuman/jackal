@@ -71,6 +71,9 @@ func (op fetchOp) do(ctx context.Context) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+		if obj == nil {
+			return nil, nil
+		}
 		b, err = op.codec.encode(obj)
 		if err != nil {
 			return nil, err

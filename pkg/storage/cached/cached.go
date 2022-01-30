@@ -88,7 +88,7 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 		BlockList:    rep,
 		Private:      rep,
 		Roster:       rep,
-		VCard:        rep,
+		VCard:        &cachedVCardRep{c: c, rep: rep},
 		Locker:       rep,
 		rep:          rep,
 		cache:        c,
