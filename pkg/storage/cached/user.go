@@ -81,10 +81,13 @@ func (c *cachedUserRep) FetchUser(ctx context.Context, username string) (*usermo
 		},
 	}
 	v, err := op.do(ctx)
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, err
+	case v != nil:
+		return v.(*usermodel.User), nil
 	}
-	return v.(*usermodel.User), nil
+	return nil, nil
 }
 
 func (c *cachedUserRep) UserExists(ctx context.Context, username string) (bool, error) {
