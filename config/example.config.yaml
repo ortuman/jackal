@@ -35,7 +35,8 @@ storage:
   cache:
     type: redis
     redis:
-      addr: localhost:6379
+      addresses:
+        - localhost:6379
 
 cluster:
   etcd:
