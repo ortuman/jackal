@@ -33,7 +33,7 @@ type cachedTx struct {
 func newCacheTx(c Cache, tx repository.Transaction) *cachedTx {
 	return &cachedTx{
 		User:         &cachedUserRep{c: c, rep: tx},
-		Last:         tx,
+		Last:         &cachedLastRep{c: c, rep: tx},
 		Capabilities: tx,
 		Offline:      tx,
 		BlockList:    tx,

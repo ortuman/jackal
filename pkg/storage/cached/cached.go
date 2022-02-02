@@ -82,7 +82,7 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 
 	return &CachedRepository{
 		User:         &cachedUserRep{c: c, rep: rep},
-		Last:         rep,
+		Last:         &cachedLastRep{c: c, rep: rep},
 		Capabilities: rep,
 		Offline:      rep,
 		BlockList:    rep,

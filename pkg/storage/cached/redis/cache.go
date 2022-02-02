@@ -19,6 +19,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -27,7 +28,7 @@ const Type = "redis"
 
 // Config contains Redis cache configuration.
 type Config struct {
-	Addr         string        `fig:"addr"`
+	Addresses    []string      `fig:"addresses"`
 	Username     string        `fig:"username"`
 	Password     string        `fig:"password"`
 	DB           int           `fig:"db"`
@@ -39,25 +40,25 @@ type Config struct {
 
 // Cache is Redis cache implementation.
 type Cache struct {
-	rdb *redis.Client
-	ttl time.Duration
+	clients []*redis.Client
+	ttl     time.Duration
 }
 
 // New creates and returns an initialized Redis Cache instance.
 func New(cfg Config) *Cache {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:         cfg.Addr,
-		Username:     cfg.Username,
-		Password:     cfg.Password,
-		DB:           cfg.DB,
-		DialTimeout:  cfg.DialTimeout,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-	})
-	return &Cache{
-		rdb: rdb,
-		ttl: cfg.TTL,
+	rdc := &Cache{ttl: cfg.TTL}
+	for _, addr := range cfg.Addresses {
+		rdc.clients = append(rdc.clients, redis.NewClient(&redis.Options{
+			Addr:         addr,
+			Username:     cfg.Username,
+			Password:     cfg.Password,
+			DB:           cfg.DB,
+			DialTimeout:  cfg.DialTimeout,
+			ReadTimeout:  cfg.ReadTimeout,
+			WriteTimeout: cfg.WriteTimeout,
+		}))
 	}
+	return rdc
 }
 
 // Type satisfies Cache interface.
@@ -65,7 +66,7 @@ func (c *Cache) Type() string { return Type }
 
 // Get satisfies Cache interface.
 func (c *Cache) Get(ctx context.Context, k string) ([]byte, error) {
-	val, err := c.rdb.Get(ctx, k).Result()
+	val, err := c.pickClient(k).Get(ctx, k).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil
@@ -77,17 +78,17 @@ func (c *Cache) Get(ctx context.Context, k string) ([]byte, error) {
 
 // Put satisfies Cache interface.
 func (c *Cache) Put(ctx context.Context, k string, val []byte) error {
-	return c.rdb.Set(ctx, k, val, c.ttl).Err()
+	return c.pickClient(k).Set(ctx, k, val, c.ttl).Err()
 }
 
 // Del satisfies Cache interface.
 func (c *Cache) Del(ctx context.Context, k string) error {
-	return c.rdb.Del(ctx, k).Err()
+	return c.pickClient(k).Del(ctx, k).Err()
 }
 
 // HasKey satisfies Cache interface.
 func (c *Cache) HasKey(ctx context.Context, k string) (bool, error) {
-	v, err := c.rdb.Exists(ctx, k).Result()
+	v, err := c.pickClient(k).Exists(ctx, k).Result()
 	if err != nil {
 		return false, err
 	}
@@ -96,10 +97,29 @@ func (c *Cache) HasKey(ctx context.Context, k string) (bool, error) {
 
 // Start satisfies Cache interface.
 func (c *Cache) Start(ctx context.Context) error {
-	return c.rdb.Ping(ctx).Err()
+	for _, cl := range c.clients {
+		if err := cl.Ping(ctx).Err(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Stop satisfies Cache interface.
 func (c *Cache) Stop(_ context.Context) error {
-	return c.rdb.Close()
+	for _, cl := range c.clients {
+		if err := cl.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Cache) pickClient(k string) *redis.Client {
+	if len(c.clients) == 1 {
+		return c.clients[0]
+	}
+	cs := xxhash.Sum64String(k)
+	idx := jumpHash(cs, len(c.clients))
+	return c.clients[idx]
 }

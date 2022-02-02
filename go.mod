@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/bgentry/speakeasy v0.1.0
+	github.com/cespare/xxhash/v2 v2.1.2
 	github.com/cockroachdb/errors v1.8.4
 	github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2
 	github.com/go-kit/log v0.2.0
@@ -32,7 +33,6 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f // indirect
 	github.com/cockroachdb/redact v1.0.8 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
