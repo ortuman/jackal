@@ -23,6 +23,8 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
+const userKey = "usr"
+
 type userCodec struct {
 	val *usermodel.User
 }
@@ -51,8 +53,9 @@ type cachedUserRep struct {
 
 func (c *cachedUserRep) UpsertUser(ctx context.Context, user *usermodel.User) error {
 	op := updateOp{
-		c:   c.c,
-		key: userKey(user.Username),
+		c:           c.c,
+		namespace:   userNS(user.Username),
+		invalidKeys: []string{userKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertUser(ctx, user)
 		},
@@ -62,8 +65,9 @@ func (c *cachedUserRep) UpsertUser(ctx context.Context, user *usermodel.User) er
 
 func (c *cachedUserRep) DeleteUser(ctx context.Context, username string) error {
 	op := updateOp{
-		c:   c.c,
-		key: userKey(username),
+		c:           c.c,
+		namespace:   userNS(username),
+		invalidKeys: []string{userKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteUser(ctx, username)
 		},
@@ -73,9 +77,10 @@ func (c *cachedUserRep) DeleteUser(ctx context.Context, username string) error {
 
 func (c *cachedUserRep) FetchUser(ctx context.Context, username string) (*usermodel.User, error) {
 	op := fetchOp{
-		c:     c.c,
-		key:   userKey(username),
-		codec: &userCodec{},
+		c:         c.c,
+		namespace: userNS(username),
+		key:       userKey,
+		codec:     &userCodec{},
 		missFn: func(ctx context.Context) (interface{}, error) {
 			return c.rep.FetchUser(ctx, username)
 		},
@@ -92,8 +97,9 @@ func (c *cachedUserRep) FetchUser(ctx context.Context, username string) (*usermo
 
 func (c *cachedUserRep) UserExists(ctx context.Context, username string) (bool, error) {
 	op := existsOp{
-		c:   c.c,
-		key: userKey(username),
+		c:         c.c,
+		namespace: userNS(username),
+		key:       userKey,
 		missFn: func(ctx context.Context) (bool, error) {
 			return c.rep.UserExists(ctx, username)
 		},
@@ -101,6 +107,6 @@ func (c *cachedUserRep) UserExists(ctx context.Context, username string) (bool, 
 	return op.do(ctx)
 }
 
-func userKey(username string) string {
+func userNS(username string) string {
 	return fmt.Sprintf("usr:%s", username)
 }

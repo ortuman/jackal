@@ -23,6 +23,8 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
+const lastKey = "lst"
+
 type lastCodec struct {
 	val *lastmodel.Last
 }
@@ -51,8 +53,9 @@ type cachedLastRep struct {
 
 func (c *cachedLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {
 	op := updateOp{
-		c:   c.c,
-		key: lastKey(last.Username),
+		c:           c.c,
+		namespace:   lastNS(last.Username),
+		invalidKeys: []string{lastKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertLast(ctx, last)
 		},
@@ -62,9 +65,10 @@ func (c *cachedLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) er
 
 func (c *cachedLastRep) FetchLast(ctx context.Context, username string) (*lastmodel.Last, error) {
 	op := fetchOp{
-		c:     c.c,
-		key:   lastKey(username),
-		codec: &lastCodec{},
+		c:         c.c,
+		namespace: lastNS(username),
+		key:       lastKey,
+		codec:     &lastCodec{},
 		missFn: func(ctx context.Context) (interface{}, error) {
 			return c.rep.FetchLast(ctx, username)
 		},
@@ -81,8 +85,9 @@ func (c *cachedLastRep) FetchLast(ctx context.Context, username string) (*lastmo
 
 func (c *cachedLastRep) DeleteLast(ctx context.Context, username string) error {
 	op := updateOp{
-		c:   c.c,
-		key: lastKey(username),
+		c:           c.c,
+		namespace:   lastNS(username),
+		invalidKeys: []string{lastKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteLast(ctx, username)
 		},
@@ -90,6 +95,6 @@ func (c *cachedLastRep) DeleteLast(ctx context.Context, username string) error {
 	return op.do(ctx)
 }
 
-func lastKey(username string) string {
+func lastNS(username string) string {
 	return fmt.Sprintf("lst:%s", username)
 }

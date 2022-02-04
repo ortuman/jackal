@@ -1,4 +1,4 @@
-// Copyright 2022 The jackal Authors
+// Copyright 2021 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,18 +23,16 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
-const vCardKey = "vc"
-
-type vCardCodec struct {
+type privateCodec struct {
 	val stravaganza.Element
 }
 
-func (c *vCardCodec) encode(i interface{}) ([]byte, error) {
+func (c *privateCodec) encode(i interface{}) ([]byte, error) {
 	el := i.(stravaganza.Element)
 	return proto.Marshal(el.Proto())
 }
 
-func (c *vCardCodec) decode(b []byte) error {
+func (c *privateCodec) decode(b []byte) error {
 	sb, err := stravaganza.NewBuilderFromBinary(b)
 	if err != nil {
 		return err
@@ -43,35 +41,23 @@ func (c *vCardCodec) decode(b []byte) error {
 	return nil
 }
 
-func (c *vCardCodec) value() interface{} {
+func (c *privateCodec) value() interface{} {
 	return c.val
 }
 
-type cachedVCardRep struct {
+type cachedPrivateRep struct {
 	c   Cache
-	rep repository.VCard
+	rep repository.Private
 }
 
-func (c *cachedVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Element, username string) error {
-	op := updateOp{
-		c:           c.c,
-		namespace:   vCardNS(username),
-		invalidKeys: []string{vCardKey},
-		updateFn: func(ctx context.Context) error {
-			return c.rep.UpsertVCard(ctx, vCard, username)
-		},
-	}
-	return op.do(ctx)
-}
-
-func (c *cachedVCardRep) FetchVCard(ctx context.Context, username string) (stravaganza.Element, error) {
+func (c *cachedPrivateRep) FetchPrivate(ctx context.Context, namespace, username string) (stravaganza.Element, error) {
 	op := fetchOp{
 		c:         c.c,
-		namespace: vCardNS(username),
-		key:       vCardKey,
-		codec:     &vCardCodec{},
+		namespace: privateNS(username),
+		key:       namespace,
+		codec:     &privateCodec{},
 		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchVCard(ctx, username)
+			return c.rep.FetchPrivate(ctx, namespace, username)
 		},
 	}
 	v, err := op.do(ctx)
@@ -84,18 +70,29 @@ func (c *cachedVCardRep) FetchVCard(ctx context.Context, username string) (strav
 	return nil, nil
 }
 
-func (c *cachedVCardRep) DeleteVCard(ctx context.Context, username string) error {
+func (c *cachedPrivateRep) UpsertPrivate(ctx context.Context, private stravaganza.Element, namespace, username string) error {
 	op := updateOp{
 		c:           c.c,
-		namespace:   vCardNS(username),
-		invalidKeys: []string{vCardKey},
+		namespace:   privateNS(username),
+		invalidKeys: []string{namespace},
 		updateFn: func(ctx context.Context) error {
-			return c.rep.DeleteVCard(ctx, username)
+			return c.rep.UpsertPrivate(ctx, private, namespace, username)
 		},
 	}
 	return op.do(ctx)
 }
 
-func vCardNS(username string) string {
-	return fmt.Sprintf("vc:%s", username)
+func (c *cachedPrivateRep) DeletePrivates(ctx context.Context, username string) error {
+	op := updateOp{
+		c:         c.c,
+		namespace: privateNS(username),
+		updateFn: func(ctx context.Context) error {
+			return c.rep.DeletePrivates(ctx, username)
+		},
+	}
+	return op.do(ctx)
+}
+
+func privateNS(username string) string {
+	return fmt.Sprintf("prv:%s", username)
 }

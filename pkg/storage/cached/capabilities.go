@@ -23,6 +23,8 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
+const capsKey = "caps"
+
 type capsCodec struct {
 	val *capsmodel.Capabilities
 }
@@ -51,8 +53,9 @@ type cachedCapsRep struct {
 
 func (c *cachedCapsRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	op := updateOp{
-		c:   c.c,
-		key: capsKey(caps.Node, caps.Ver),
+		c:           c.c,
+		namespace:   capsNS(caps.Node, caps.Ver),
+		invalidKeys: []string{capsKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertCapabilities(ctx, caps)
 		},
@@ -62,8 +65,9 @@ func (c *cachedCapsRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.
 
 func (c *cachedCapsRep) CapabilitiesExist(ctx context.Context, node, ver string) (bool, error) {
 	op := existsOp{
-		c:   c.c,
-		key: capsKey(node, ver),
+		c:         c.c,
+		namespace: capsNS(node, ver),
+		key:       capsKey,
 		missFn: func(ctx context.Context) (bool, error) {
 			return c.rep.CapabilitiesExist(ctx, node, ver)
 		},
@@ -73,9 +77,10 @@ func (c *cachedCapsRep) CapabilitiesExist(ctx context.Context, node, ver string)
 
 func (c *cachedCapsRep) FetchCapabilities(ctx context.Context, node, ver string) (*capsmodel.Capabilities, error) {
 	op := fetchOp{
-		c:     c.c,
-		key:   capsKey(node, ver),
-		codec: &capsCodec{},
+		c:         c.c,
+		namespace: capsNS(node, ver),
+		key:       capsKey,
+		codec:     &capsCodec{},
 		missFn: func(ctx context.Context) (interface{}, error) {
 			return c.rep.FetchCapabilities(ctx, node, ver)
 		},
@@ -90,6 +95,6 @@ func (c *cachedCapsRep) FetchCapabilities(ctx context.Context, node, ver string)
 	return nil, nil
 }
 
-func capsKey(node, ver string) string {
+func capsNS(node, ver string) string {
 	return fmt.Sprintf("caps:%s:%s", node, ver)
 }

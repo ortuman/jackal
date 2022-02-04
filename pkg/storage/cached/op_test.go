@@ -26,8 +26,8 @@ import (
 func TestCachedRepository_ExistsOp(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.HasKeyFunc = func(ctx context.Context, k string) (bool, error) {
-		if k == "k0" {
+	cacheMock.HasKeyFunc = func(ctx context.Context, ns, k string) (bool, error) {
+		if ns == "n0" && k == "k0" {
 			return true, nil
 		}
 		return false, nil
@@ -37,8 +37,8 @@ func TestCachedRepository_ExistsOp(t *testing.T) {
 	}
 
 	// when
-	op0 := existsOp{c: cacheMock, key: "k0", missFn: missFn}
-	op1 := existsOp{c: cacheMock, key: "k1", missFn: missFn}
+	op0 := existsOp{c: cacheMock, namespace: "n0", key: "k0", missFn: missFn}
+	op1 := existsOp{c: cacheMock, namespace: "n1", key: "k1", missFn: missFn}
 
 	ok0, _ := op0.do(context.Background())
 	ok1, _ := op1.do(context.Background())
@@ -53,7 +53,7 @@ func TestCachedRepository_UpdateOp(t *testing.T) {
 	var output string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
 		output += "del"
 		return nil
 	}
@@ -63,7 +63,7 @@ func TestCachedRepository_UpdateOp(t *testing.T) {
 	}
 
 	// when
-	op := updateOp{c: cacheMock, key: "k0", updateFn: updateFn}
+	op := updateOp{c: cacheMock, invalidKeys: []string{"k0"}, updateFn: updateFn}
 	_ = op.do(context.Background())
 
 	// then
@@ -73,7 +73,7 @@ func TestCachedRepository_UpdateOp(t *testing.T) {
 func TestCachedRepository_FetchOpHit(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
 		return []byte{255}, nil
 	}
 
@@ -107,10 +107,10 @@ func TestCachedRepository_FetchOpHit(t *testing.T) {
 func TestCachedRepository_FetchOpMiss(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
 		return nil, nil
 	}
-	cacheMock.PutFunc = func(ctx context.Context, k string, val []byte) error {
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
 		return nil
 	}
 
