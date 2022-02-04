@@ -25,13 +25,14 @@ type codec interface {
 }
 
 type existsOp struct {
-	c      Cache
-	key    string
-	missFn func(context.Context) (bool, error)
+	c         Cache
+	namespace string
+	key       string
+	missFn    func(context.Context) (bool, error)
 }
 
 func (op existsOp) do(ctx context.Context) (bool, error) {
-	ok, err := op.c.HasKey(ctx, op.key)
+	ok, err := op.c.HasKey(ctx, op.namespace, op.key)
 	if err != nil {
 		return false, err
 	}
@@ -42,27 +43,37 @@ func (op existsOp) do(ctx context.Context) (bool, error) {
 }
 
 type updateOp struct {
-	c        Cache
-	key      string
-	updateFn func(context.Context) error
+	c           Cache
+	namespace   string
+	invalidKeys []string
+	updateFn    func(context.Context) error
 }
 
 func (op updateOp) do(ctx context.Context) error {
-	if err := op.c.Del(ctx, op.key); err != nil {
-		return err
+	switch {
+	case len(op.invalidKeys) > 0:
+		if err := op.c.Del(ctx, op.namespace, op.invalidKeys...); err != nil {
+			return err
+		}
+
+	default:
+		if err := op.c.DelNS(ctx, op.namespace); err != nil {
+			return err
+		}
 	}
 	return op.updateFn(ctx)
 }
 
 type fetchOp struct {
-	c      Cache
-	key    string
-	codec  codec
-	missFn func(context.Context) (interface{}, error)
+	c         Cache
+	namespace string
+	key       string
+	codec     codec
+	missFn    func(context.Context) (interface{}, error)
 }
 
 func (op fetchOp) do(ctx context.Context) (interface{}, error) {
-	b, err := op.c.Get(ctx, op.key)
+	b, err := op.c.Get(ctx, op.namespace, op.key)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +89,7 @@ func (op fetchOp) do(ctx context.Context) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := op.c.Put(ctx, op.key, b); err != nil {
+		if err := op.c.Put(ctx, op.namespace, op.key, b); err != nil {
 			return nil, err
 		}
 		return obj, nil

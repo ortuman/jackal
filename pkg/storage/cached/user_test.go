@@ -24,11 +24,12 @@ import (
 
 func TestCachedUserRep_UpsertUser(t *testing.T) {
 	// given
-	var cacheKey string
+	var cacheNS, cacheKey string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
-		cacheKey = k
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
+		cacheNS = ns
+		cacheKey = keys[0]
 		return nil
 	}
 
@@ -46,17 +47,19 @@ func TestCachedUserRep_UpsertUser(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, userKey("u1"), cacheKey)
+	require.Equal(t, userNS("u1"), cacheNS)
+	require.Equal(t, userKey, cacheKey)
 	require.Len(t, repMock.UpsertUserCalls(), 1)
 }
 
 func TestCachedUserRep_DeleteUser(t *testing.T) {
 	// given
-	var cacheKey string
+	var cacheNS, cacheKey string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
-		cacheKey = k
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
+		cacheNS = ns
+		cacheKey = keys[0]
 		return nil
 	}
 
@@ -74,17 +77,18 @@ func TestCachedUserRep_DeleteUser(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, userKey("u1"), cacheKey)
+	require.Equal(t, userNS("u1"), cacheNS)
+	require.Equal(t, userKey, cacheKey)
 	require.Len(t, repMock.DeleteUserCalls(), 1)
 }
 
 func TestCachedUserRep_FetchUser(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
 		return nil, nil
 	}
-	cacheMock.PutFunc = func(ctx context.Context, k string, val []byte) error {
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
 		return nil
 	}
 
@@ -114,8 +118,8 @@ func TestCachedUserRep_FetchUser(t *testing.T) {
 func TestCachedUserRep_UserExists(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.HasKeyFunc = func(ctx context.Context, k string) (bool, error) {
-		if k == userKey("u1") {
+	cacheMock.HasKeyFunc = func(ctx context.Context, ns, k string) (bool, error) {
+		if ns == userNS("u1") && k == userKey {
 			return true, nil
 		}
 		return false, nil

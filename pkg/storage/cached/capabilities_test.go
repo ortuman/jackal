@@ -24,11 +24,12 @@ import (
 
 func TestCachedCapsRep_UpsertCaps(t *testing.T) {
 	// given
-	var cacheKey string
+	var cacheNS, cacheKey string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
-		cacheKey = k
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
+		cacheNS = ns
+		cacheKey = keys[0]
 		return nil
 	}
 
@@ -50,15 +51,16 @@ func TestCachedCapsRep_UpsertCaps(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, capsKey("n1", "v1"), cacheKey)
+	require.Equal(t, capsNS("n1", "v1"), cacheNS)
+	require.Equal(t, capsKey, cacheKey)
 	require.Len(t, repMock.UpsertCapabilitiesCalls(), 1)
 }
 
 func TestCachedCapsRep_CapsExist(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.HasKeyFunc = func(ctx context.Context, k string) (bool, error) {
-		if k == capsKey("n1", "v1") {
+	cacheMock.HasKeyFunc = func(ctx context.Context, ns, k string) (bool, error) {
+		if ns == capsNS("n1", "v1") && k == capsKey {
 			return true, nil
 		}
 		return false, nil
@@ -94,10 +96,10 @@ func TestCachedCapsRep_CapsExist(t *testing.T) {
 func TestCachedCapsRep_FetchCaps(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
 		return nil, nil
 	}
-	cacheMock.PutFunc = func(ctx context.Context, k string, val []byte) error {
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
 		return nil
 	}
 

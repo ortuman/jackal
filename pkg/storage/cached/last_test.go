@@ -25,11 +25,12 @@ import (
 
 func TestCachedLastRep_UpsertLast(t *testing.T) {
 	// given
-	var cacheKey string
+	var cacheNS, cacheKey string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
-		cacheKey = k
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
+		cacheNS = ns
+		cacheKey = keys[0]
 		return nil
 	}
 
@@ -47,17 +48,19 @@ func TestCachedLastRep_UpsertLast(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, lastKey("u1"), cacheKey)
+	require.Equal(t, lastNS("u1"), cacheNS)
+	require.Equal(t, lastKey, cacheKey)
 	require.Len(t, repMock.UpsertLastCalls(), 1)
 }
 
 func TestCachedLastRep_DeleteLast(t *testing.T) {
 	// given
-	var cacheKey string
+	var cacheNS, cacheKey string
 
 	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, k string) error {
-		cacheKey = k
+	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
+		cacheNS = ns
+		cacheKey = keys[0]
 		return nil
 	}
 
@@ -75,17 +78,18 @@ func TestCachedLastRep_DeleteLast(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, lastKey("v1"), cacheKey)
+	require.Equal(t, lastNS("v1"), cacheNS)
+	require.Equal(t, lastKey, cacheKey)
 	require.Len(t, repMock.DeleteLastCalls(), 1)
 }
 
 func TestCachedLastRep_FetchLast(t *testing.T) {
 	// given
 	cacheMock := &cacheMock{}
-	cacheMock.GetFunc = func(ctx context.Context, k string) ([]byte, error) {
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
 		return nil, nil
 	}
-	cacheMock.PutFunc = func(ctx context.Context, k string, val []byte) error {
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
 		return nil
 	}
 

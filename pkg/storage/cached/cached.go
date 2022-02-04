@@ -37,16 +37,19 @@ type Cache interface {
 
 	// Get retrieves k value from the cache store.
 	// If not present nil will be returned.
-	Get(ctx context.Context, k string) ([]byte, error)
+	Get(ctx context.Context, ns, key string) ([]byte, error)
 
 	// Put stores a value into the cache store.
-	Put(ctx context.Context, k string, val []byte) error
+	Put(ctx context.Context, ns, key string, val []byte) error
 
 	// Del removes k value from the cache store.
-	Del(ctx context.Context, k string) error
+	Del(ctx context.Context, ns string, keys ...string) error
+
+	// DelNS removes all keys contained under a given namespace from the cache store.
+	DelNS(ctx context.Context, ns string) error
 
 	// HasKey tells whether k is present in the cache store.
-	HasKey(ctx context.Context, k string) (bool, error)
+	HasKey(ctx context.Context, ns, key string) (bool, error)
 
 	// Start starts Cache component.
 	Start(ctx context.Context) error
@@ -84,8 +87,8 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 		User:         &cachedUserRep{c: c, rep: rep},
 		Last:         &cachedLastRep{c: c, rep: rep},
 		Capabilities: &cachedCapsRep{c: c, rep: rep},
+		Private:      &cachedPrivateRep{c: c, rep: rep},
 		BlockList:    rep,
-		Private:      rep,
 		Roster:       rep,
 		VCard:        &cachedVCardRep{c: c, rep: rep},
 		Offline:      rep,
