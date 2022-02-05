@@ -18,6 +18,11 @@ import (
 	"context"
 	"os"
 	"sync/atomic"
+	"time"
+
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
 	kitlog "github.com/go-kit/log"
 
@@ -30,6 +35,16 @@ import (
 const (
 	leaseTTLInSeconds int64 = 10
 )
+
+// Config contains etcd configuration parameters.
+type Config struct {
+	Endpoints            []string      `fig:"endpoints"`
+	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
+	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
+	DialKeepAliveTimeout time.Duration `fig:"dial_keep_alive_timeout" default:"10s"`
+	KeepAliveTime        time.Duration `fig:"keep_alive" default:"10s"`
+	Timeout              time.Duration `fig:"keep_alive" default:"20m"`
+}
 
 // KV represents an etcd key-value store implementation.
 type KV struct {
@@ -220,4 +235,24 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 func shutdown() {
 	p, _ := os.FindProcess(os.Getpid())
 	_ = p.Signal(os.Interrupt)
+}
+
+func dial(cfg Config) (*etcdv3.Client, error) {
+	dialOptions := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                cfg.KeepAliveTime,
+			Timeout:             cfg.Timeout,
+			PermitWithoutStream: true,
+		}),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+	}
+	return etcdv3.New(etcdv3.Config{
+		Endpoints:            cfg.Endpoints,
+		DialTimeout:          cfg.DialTimeout,
+		DialKeepAliveTime:    cfg.DialKeepAliveTime,
+		DialKeepAliveTimeout: cfg.DialKeepAliveTimeout,
+		DialOptions:          dialOptions,
+	})
 }

@@ -23,3 +23,8 @@ message Item {
   string username = 1;
   string jid = 2;
 }
+
+// Items represent a set of block list items.
+message Items {
+  repeated Item items = 1;
+}

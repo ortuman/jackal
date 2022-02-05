@@ -36,7 +36,7 @@ func newCacheTx(c Cache, tx repository.Transaction) *cachedTx {
 		Last:         &cachedLastRep{c: c, rep: tx},
 		Capabilities: &cachedCapsRep{c: c, rep: tx},
 		Private:      &cachedPrivateRep{c: c, rep: tx},
-		BlockList:    tx,
+		BlockList:    &cachedBlockListRep{c: c, rep: tx},
 		Roster:       tx,
 		VCard:        &cachedVCardRep{c: c, rep: tx},
 		Offline:      tx,
