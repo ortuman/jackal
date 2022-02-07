@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ func TestCachedRepository_UpdateOp(t *testing.T) {
 	}
 
 	// when
-	op := updateOp{c: cacheMock, invalidKeys: []string{"k0"}, updateFn: updateFn}
+	op := updateOp{c: cacheMock, invalidateKeys: []string{"k0"}, updateFn: updateFn}
 	_ = op.do(context.Background())
 
 	// then

@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,16 +43,16 @@ func (op existsOp) do(ctx context.Context) (bool, error) {
 }
 
 type updateOp struct {
-	c           Cache
-	namespace   string
-	invalidKeys []string
-	updateFn    func(context.Context) error
+	c              Cache
+	namespace      string
+	invalidateKeys []string
+	updateFn       func(context.Context) error
 }
 
 func (op updateOp) do(ctx context.Context) error {
 	switch {
-	case len(op.invalidKeys) > 0:
-		if err := op.c.Del(ctx, op.namespace, op.invalidKeys...); err != nil {
+	case len(op.invalidateKeys) > 0:
+		if err := op.c.Del(ctx, op.namespace, op.invalidateKeys...); err != nil {
 			return err
 		}
 

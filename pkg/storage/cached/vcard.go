@@ -54,9 +54,9 @@ type cachedVCardRep struct {
 
 func (c *cachedVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Element, username string) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   vCardNS(username),
-		invalidKeys: []string{vCardKey},
+		c:              c.c,
+		namespace:      vCardNS(username),
+		invalidateKeys: []string{vCardKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertVCard(ctx, vCard, username)
 		},
@@ -86,9 +86,9 @@ func (c *cachedVCardRep) FetchVCard(ctx context.Context, username string) (strav
 
 func (c *cachedVCardRep) DeleteVCard(ctx context.Context, username string) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   vCardNS(username),
-		invalidKeys: []string{vCardKey},
+		c:              c.c,
+		namespace:      vCardNS(username),
+		invalidateKeys: []string{vCardKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteVCard(ctx, username)
 		},

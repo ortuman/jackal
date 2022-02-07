@@ -55,9 +55,9 @@ type cachedBlockListRep struct {
 
 func (c *cachedBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   blockListNS(item.Username),
-		invalidKeys: []string{blockListItems},
+		c:              c.c,
+		namespace:      blockListNS(item.Username),
+		invalidateKeys: []string{blockListItems},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertBlockListItem(ctx, item)
 		},
@@ -67,9 +67,9 @@ func (c *cachedBlockListRep) UpsertBlockListItem(ctx context.Context, item *bloc
 
 func (c *cachedBlockListRep) DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   blockListNS(item.Username),
-		invalidKeys: []string{blockListItems},
+		c:              c.c,
+		namespace:      blockListNS(item.Username),
+		invalidateKeys: []string{blockListItems},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteBlockListItem(ctx, item)
 		},

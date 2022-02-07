@@ -18,12 +18,10 @@ import (
 	"context"
 	"testing"
 
-	lastmodel "github.com/ortuman/jackal/pkg/model/last"
-
 	"github.com/stretchr/testify/require"
 )
 
-func TestCachedLastRep_UpsertLast(t *testing.T) {
+func TestCachedRosterRep_TouchVersion(t *testing.T) {
 	// given
 	var cacheNS, cacheKey string
 
@@ -35,58 +33,33 @@ func TestCachedLastRep_UpsertLast(t *testing.T) {
 	}
 
 	repMock := &repositoryMock{}
-	repMock.UpsertLastFunc = func(ctx context.Context, last *lastmodel.Last) error {
-		return nil
+	repMock.TouchRosterVersionFunc = func(ctx context.Context, username string) (int, error) {
+		return 5, nil
 	}
 
 	// when
-	rep := cachedLastRep{
+	rep := cachedRosterRep{
 		c:   cacheMock,
 		rep: repMock,
 	}
-	err := rep.UpsertLast(context.Background(), &lastmodel.Last{Username: "u1"})
+	ver, err := rep.TouchRosterVersion(context.Background(), "u1")
 
 	// then
 	require.NoError(t, err)
-	require.Equal(t, lastNS("u1"), cacheNS)
-	require.Equal(t, lastKey, cacheKey)
-	require.Len(t, repMock.UpsertLastCalls(), 1)
+	require.Equal(t, rosterItemsNS("u1"), cacheNS)
+	require.Equal(t, rosterVersionKey, cacheKey)
+	require.Equal(t, 5, ver)
+	require.Len(t, repMock.TouchRosterVersionCalls(), 1)
 }
 
-func TestCachedLastRep_DeleteLast(t *testing.T) {
+func TestCachedUserRep_FetchRosterVersion(t *testing.T) {
 	// given
 	var cacheNS, cacheKey string
 
-	cacheMock := &cacheMock{}
-	cacheMock.DelFunc = func(ctx context.Context, ns string, keys ...string) error {
-		cacheNS = ns
-		cacheKey = keys[0]
-		return nil
-	}
-
-	repMock := &repositoryMock{}
-	repMock.DeleteLastFunc = func(ctx context.Context, username string) error {
-		return nil
-	}
-
-	// when
-	rep := cachedLastRep{
-		c:   cacheMock,
-		rep: repMock,
-	}
-	err := rep.DeleteLast(context.Background(), "v1")
-
-	// then
-	require.NoError(t, err)
-	require.Equal(t, lastNS("v1"), cacheNS)
-	require.Equal(t, lastKey, cacheKey)
-	require.Len(t, repMock.DeleteLastCalls(), 1)
-}
-
-func TestCachedLastRep_FetchLast(t *testing.T) {
-	// given
 	cacheMock := &cacheMock{}
 	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
+		cacheNS = ns
+		cacheKey = k
 		return nil, nil
 	}
 	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
@@ -94,24 +67,24 @@ func TestCachedLastRep_FetchLast(t *testing.T) {
 	}
 
 	repMock := &repositoryMock{}
-	repMock.FetchLastFunc = func(ctx context.Context, username string) (*lastmodel.Last, error) {
-		return &lastmodel.Last{Username: "u1"}, nil
+	repMock.FetchRosterVersionFunc = func(ctx context.Context, username string) (int, error) {
+		return 5, nil
 	}
 
 	// when
-	rep := cachedLastRep{
+	rep := cachedRosterRep{
 		c:   cacheMock,
 		rep: repMock,
 	}
-	last, err := rep.FetchLast(context.Background(), "u1")
+	ver, err := rep.FetchRosterVersion(context.Background(), "u1")
 
 	// then
-	require.NotNil(t, last)
 	require.NoError(t, err)
+	require.Equal(t, 5, ver)
 
-	require.Equal(t, "u1", last.Username)
-
+	require.Equal(t, rosterItemsNS("u1"), cacheNS)
+	require.Equal(t, rosterVersionKey, cacheKey)
 	require.Len(t, cacheMock.GetCalls(), 1)
 	require.Len(t, cacheMock.PutCalls(), 1)
-	require.Len(t, repMock.FetchLastCalls(), 1)
+	require.Len(t, repMock.FetchRosterVersionCalls(), 1)
 }
