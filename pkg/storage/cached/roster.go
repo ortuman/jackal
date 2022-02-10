@@ -98,7 +98,7 @@ func (c *rosterItemCodec) decode(b []byte) error {
 }
 
 func (c *rosterItemCodec) value() interface{} {
-	return c.val.Groups
+	return c.val
 }
 
 type rosterItemsCodec struct {
@@ -403,6 +403,7 @@ func (c *cachedRosterRep) FetchRosterGroups(ctx context.Context, username string
 func rosterItemsNS(username string) string {
 	return fmt.Sprintf("ros:items:%s", username)
 }
+
 func rosterNotificationsNS(contact string) string {
 	return fmt.Sprintf("ros:notif:%s", contact)
 }
