@@ -17,6 +17,7 @@ package cachedrepository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gogo/protobuf/types"
@@ -409,5 +410,11 @@ func rosterNotificationsNS(contact string) string {
 }
 
 func rosterGroupsSliceKey(groups []string) string {
-	return fmt.Sprintf("groups:%s", strings.Join(groups, "|"))
+	sortedGroups := make([]string, len(groups))
+	copy(sortedGroups, groups)
+
+	sort.Slice(sortedGroups, func(i, j int) bool {
+		return sortedGroups[i] < sortedGroups[j]
+	})
+	return fmt.Sprintf("groups:%s", strings.Join(sortedGroups, "|"))
 }
