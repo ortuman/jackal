@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,4 +88,206 @@ func TestCachedUserRep_FetchRosterVersion(t *testing.T) {
 	require.Len(t, cacheMock.GetCalls(), 1)
 	require.Len(t, cacheMock.PutCalls(), 1)
 	require.Len(t, repMock.FetchRosterVersionCalls(), 1)
+}
+
+func TestCachedRosterRep_UpsertRosterNotification(t *testing.T) {
+	// given
+	var cacheNS string
+
+	cacheMock := &cacheMock{}
+	cacheMock.DelNSFunc = func(ctx context.Context, ns string) error {
+		cacheNS = ns
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.UpsertRosterNotificationFunc = func(ctx context.Context, rn *rostermodel.Notification) error {
+		return nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	err := rep.UpsertRosterNotification(context.Background(), &rostermodel.Notification{
+		Contact: "c1",
+		Jid:     "foo@jackal.im",
+	})
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, rosterNotificationsNS("c1"), cacheNS)
+	require.Len(t, repMock.UpsertRosterNotificationCalls(), 1)
+}
+
+func TestCachedRosterRep_DeleteRosterNotification(t *testing.T) {
+	// given
+	var cacheNS string
+
+	cacheMock := &cacheMock{}
+	cacheMock.DelNSFunc = func(ctx context.Context, ns string) error {
+		cacheNS = ns
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.DeleteRosterNotificationFunc = func(ctx context.Context, contact string, jid string) error {
+		return nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	err := rep.DeleteRosterNotification(context.Background(), "c1", "foo@jackal.im")
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, rosterNotificationsNS("c1"), cacheNS)
+	require.Len(t, repMock.DeleteRosterNotificationCalls(), 1)
+}
+
+func TestCachedRosterRep_DeleteRosterNotifications(t *testing.T) {
+	// given
+	var cacheNS string
+
+	cacheMock := &cacheMock{}
+	cacheMock.DelNSFunc = func(ctx context.Context, ns string) error {
+		cacheNS = ns
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.DeleteRosterNotificationsFunc = func(ctx context.Context, contact string) error {
+		return nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	err := rep.DeleteRosterNotifications(context.Background(), "c1")
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, rosterNotificationsNS("c1"), cacheNS)
+	require.Len(t, repMock.DeleteRosterNotificationsCalls(), 1)
+}
+
+func TestCachedRosterRep_FetchRosterNotification(t *testing.T) {
+	// given
+	var cacheNS, cacheKey string
+
+	cacheMock := &cacheMock{}
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
+		cacheNS = ns
+		cacheKey = k
+		return nil, nil
+	}
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.FetchRosterNotificationFunc = func(ctx context.Context, contact string, jid string) (*rostermodel.Notification, error) {
+		return &rostermodel.Notification{Contact: "c1", Jid: "foo@jackal.im"}, nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	not, err := rep.FetchRosterNotification(context.Background(), "c1", "foo@jackal.im")
+
+	// then
+	require.NoError(t, err)
+	require.NotNil(t, not)
+	require.Equal(t, "c1", not.Contact)
+
+	require.Equal(t, rosterNotificationsNS("c1"), cacheNS)
+	require.Equal(t, "foo@jackal.im", cacheKey)
+	require.Len(t, cacheMock.GetCalls(), 1)
+	require.Len(t, cacheMock.PutCalls(), 1)
+	require.Len(t, repMock.FetchRosterNotificationCalls(), 1)
+}
+
+func TestCachedRosterRep_FetchRosterNotifications(t *testing.T) {
+	// given
+	var cacheNS, cacheKey string
+
+	cacheMock := &cacheMock{}
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
+		cacheNS = ns
+		cacheKey = k
+		return nil, nil
+	}
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.FetchRosterNotificationsFunc = func(ctx context.Context, contact string) ([]*rostermodel.Notification, error) {
+		return []*rostermodel.Notification{
+			{Contact: "c1", Jid: "foo@jackal.im"},
+		}, nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	ns, err := rep.FetchRosterNotifications(context.Background(), "c1")
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, ns, 1)
+	require.Equal(t, "c1", ns[0].Contact)
+
+	require.Equal(t, rosterNotificationsNS("c1"), cacheNS)
+	require.Equal(t, rosterNotificationsKey, cacheKey)
+	require.Len(t, cacheMock.GetCalls(), 1)
+	require.Len(t, cacheMock.PutCalls(), 1)
+	require.Len(t, repMock.FetchRosterNotificationsCalls(), 1)
+}
+
+func TestCachedRosterRep_FetchRosterGroups(t *testing.T) {
+	// given
+	var cacheNS, cacheKey string
+
+	cacheMock := &cacheMock{}
+	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
+		cacheNS = ns
+		cacheKey = k
+		return nil, nil
+	}
+	cacheMock.PutFunc = func(ctx context.Context, ns, k string, val []byte) error {
+		return nil
+	}
+
+	repMock := &repositoryMock{}
+	repMock.FetchRosterGroupsFunc = func(ctx context.Context, username string) ([]string, error) {
+		return []string{"buddies"}, nil
+	}
+
+	// when
+	rep := cachedRosterRep{
+		c:   cacheMock,
+		rep: repMock,
+	}
+	groups, err := rep.FetchRosterGroups(context.Background(), "u1")
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, []string{"buddies"}, groups)
+
+	require.Equal(t, rosterItemsNS("u1"), cacheNS)
+	require.Equal(t, rosterGroupsKey, cacheKey)
+	require.Len(t, cacheMock.GetCalls(), 1)
+	require.Len(t, cacheMock.PutCalls(), 1)
+	require.Len(t, repMock.FetchRosterGroupsCalls(), 1)
 }
