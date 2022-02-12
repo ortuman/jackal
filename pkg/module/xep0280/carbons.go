@@ -18,14 +18,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-kit/log/level"
-
 	kitlog "github.com/go-kit/log"
-
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
@@ -55,7 +53,7 @@ const (
 type Carbons struct {
 	hosts  hosts
 	router router.Router
-	resMng resourceManager
+	resMng resourcemanager.Manager
 	hk     *hook.Hooks
 	logger kitlog.Logger
 }
@@ -64,7 +62,7 @@ type Carbons struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	hk *hook.Hooks,
 	logger kitlog.Logger,
 ) *Carbons {

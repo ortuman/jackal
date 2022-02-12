@@ -18,15 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-kit/log/level"
-
 	kitlog "github.com/go-kit/log"
-
+	"github.com/go-kit/log/level"
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
@@ -59,7 +57,7 @@ type BlockList struct {
 	rep    repository.Repository
 	hosts  hosts
 	router router.Router
-	resMng resourceManager
+	resMng resourcemanager.Manager
 	hk     *hook.Hooks
 	logger kitlog.Logger
 }
@@ -68,7 +66,7 @@ type BlockList struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,

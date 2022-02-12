@@ -24,7 +24,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	discomodel "github.com/ortuman/jackal/pkg/model/disco"
@@ -69,7 +69,7 @@ type Disco struct {
 	router     router.Router
 	components components
 	rosRep     repository.Roster
-	resMng     resourceManager
+	resMng     resourcemanager.Manager
 	hk         *hook.Hooks
 	logger     kitlog.Logger
 
@@ -83,7 +83,7 @@ func New(
 	router router.Router,
 	components *component.Components,
 	rosRep repository.Roster,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	hk *hook.Hooks,
 	logger kitlog.Logger,
 ) *Disco {

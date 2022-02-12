@@ -20,17 +20,30 @@ import (
 	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
 )
 
-// MemberList defines cluster memberlist interface.
-type MemberList interface {
-	// GetMember returns cluster member info associated to an identifier.
-	GetMember(instanceID string) (m clustermodel.Member, ok bool)
+// NewNop returns a memberlist that doesn't do anything.
+func NewNop() MemberList {
+	return &nopMemberList{
+		members: make(map[string]clustermodel.Member),
+	}
+}
 
-	// GetMembers returns all cluster registered members.
-	GetMembers() map[string]clustermodel.Member
+type nopMemberList struct {
+	members map[string]clustermodel.Member
+}
 
-	// Start initializes memberlist.
-	Start(ctx context.Context) error
+func (ml *nopMemberList) GetMember(instanceID string) (m clustermodel.Member, ok bool) {
+	m, ok = ml.members[instanceID]
+	return
+}
 
-	// Stop releases all underlying memberlist resources.
-	Stop(ctx context.Context) error
+func (ml *nopMemberList) GetMembers() map[string]clustermodel.Member {
+	return ml.members
+}
+
+func (ml *nopMemberList) Start(_ context.Context) error {
+	return nil
+}
+
+func (ml *nopMemberList) Stop(_ context.Context) error {
+	return nil
 }

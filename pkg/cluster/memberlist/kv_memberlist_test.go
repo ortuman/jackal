@@ -21,9 +21,8 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/ortuman/jackal/pkg/cluster/instance"
-	"github.com/ortuman/jackal/pkg/cluster/kv"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +31,8 @@ func TestMemberList_Join(t *testing.T) {
 	// given
 	kvMock := &kvMock{}
 
-	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kv.WatchResp {
-		return make(chan kv.WatchResp)
+	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
+		return make(chan kvtypes.WatchResp)
 	}
 	kvMock.PutFunc = func(ctx context.Context, key string, value string) error {
 		return nil
@@ -44,7 +43,7 @@ func TestMemberList_Join(t *testing.T) {
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
+	ml := NewKVMemberList(4312, kvMock, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	err := ml.Start(context.Background())
@@ -66,8 +65,8 @@ func TestMemberList_Leave(t *testing.T) {
 	// given
 	kvMock := &kvMock{}
 
-	wCh := make(chan kv.WatchResp)
-	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kv.WatchResp {
+	wCh := make(chan kvtypes.WatchResp)
+	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
 		return wCh
 	}
 	kvMock.PutFunc = func(ctx context.Context, key string, value string) error {
@@ -79,7 +78,7 @@ func TestMemberList_Leave(t *testing.T) {
 	kvMock.DelFunc = func(r context.Context, key string) error {
 		return nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
+	ml := NewKVMemberList(4312, kvMock, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	_ = ml.Start(context.Background())
@@ -97,13 +96,13 @@ func TestMemberList_WatchChanges(t *testing.T) {
 	// given
 	kvMock := &kvMock{}
 
-	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kv.WatchResp {
-		wCh := make(chan kv.WatchResp)
+	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
+		wCh := make(chan kvtypes.WatchResp)
 		go func() {
-			wCh <- kv.WatchResp{
-				Events: []kv.WatchEvent{
-					{Type: kv.Del, Key: "b3fd"},
-					{Type: kv.Put, Key: "c5gl", Val: []byte("a=192.168.0.14:4256 cv=v1.5.0")},
+			wCh <- kvtypes.WatchResp{
+				Events: []kvtypes.WatchEvent{
+					{Type: kvtypes.Del, Key: "b3fd"},
+					{Type: kvtypes.Put, Key: "c5gl", Val: []byte("a=192.168.0.14:4256 cv=v1.5.0")},
 				},
 			}
 		}()
@@ -118,7 +117,7 @@ func TestMemberList_WatchChanges(t *testing.T) {
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
-	ml := New(kvMock, 4312, hook.NewHooks(), kitlog.NewNopLogger())
+	ml := NewKVMemberList(4312, kvMock, hook.NewHooks(), kitlog.NewNopLogger())
 
 	// when
 	_ = ml.Start(context.Background())

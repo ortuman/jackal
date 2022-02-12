@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xep0198
+package kvtypes
 
-import (
-	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
-	"github.com/ortuman/jackal/pkg/router"
-	"github.com/ortuman/jackal/pkg/router/stream"
+// WatchEventType represents a key watch event type.
+type WatchEventType uint8
+
+const (
+	// Put represents a put key-value event type.
+	Put WatchEventType = iota
+
+	// Del represents a delete key-value event type.
+	Del
 )
 
-//go:generate moq -out router.mock_test.go . globalRouter:routerMock
-type globalRouter interface {
-	router.Router
+// WatchEvent represents a single watched event.
+type WatchEvent struct {
+	Type    WatchEventType
+	Key     string
+	Val     []byte
+	PrevVal []byte
 }
 
-//go:generate moq -out c2s_stream.mock_test.go . c2sStream
-type c2sStream interface {
-	stream.C2S
-}
-
-//go:generate moq -out resourcemanager.mock_test.go . resourceManager
-type resourceManager interface {
-	resourcemanager.Manager
+// WatchResp contains a watch operation response value.
+type WatchResp struct {
+	Events []WatchEvent
+	Err    error
 }

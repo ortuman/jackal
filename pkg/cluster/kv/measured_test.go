@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -84,7 +85,7 @@ func TestMeasuredKV_Del(t *testing.T) {
 func TestMeasuredKV_Watch(t *testing.T) {
 	// given
 	kvMock := &kvMock{}
-	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan WatchResp {
+	kvMock.WatchFunc = func(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
 		return nil
 	}
 	mkv := NewMeasured(kvMock)

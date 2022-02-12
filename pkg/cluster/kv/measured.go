@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ortuman/jackal/pkg/cluster/instance"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -73,7 +74,7 @@ func (m *Measured) Del(ctx context.Context, key string) error {
 }
 
 // Watch watches on a key or prefix.
-func (m *Measured) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan WatchResp {
+func (m *Measured) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
 	t0 := time.Now()
 	ch := m.kv.Watch(ctx, prefix, withPrevVal)
 	reportMetric(watchOpType, time.Since(t0).Seconds(), true)

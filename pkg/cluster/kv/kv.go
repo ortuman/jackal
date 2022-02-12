@@ -14,32 +14,16 @@
 
 package kv
 
-import "context"
+import (
+	"context"
+	"fmt"
 
-// WatchEventType represents a key watch event type.
-type WatchEventType uint8
-
-const (
-	// Put represents a put key-value event type.
-	Put WatchEventType = iota
-
-	// Del represents a delete key-value event type.
-	Del
+	kitlog "github.com/go-kit/log"
+	etcdkv "github.com/ortuman/jackal/pkg/cluster/kv/etcd"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 )
 
-// WatchEvent represents a single watched event.
-type WatchEvent struct {
-	Type    WatchEventType
-	Key     string
-	Val     []byte
-	PrevVal []byte
-}
-
-// WatchResp contains a watch operation response value.
-type WatchResp struct {
-	Events []WatchEvent
-	Err    error
-}
+const etcdKVType = "etcd"
 
 // KV represents a generic key-value store interface.
 type KV interface {
@@ -56,11 +40,28 @@ type KV interface {
 	Del(ctx context.Context, key string) error
 
 	// Watch watches on a key or prefix.
-	Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan WatchResp
+	Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp
 
 	// Start initializes key-value store.
 	Start(ctx context.Context) error
 
 	// Stop releases all underlying key-value store resources.
 	Stop(ctx context.Context) error
+}
+
+// Config defines cluster KV configuration.
+type Config struct {
+	Type string        `fig:"type"`
+	Etcd etcdkv.Config `fig:"etcd"`
+}
+
+// New returns a new initialized KV instance.
+func New(cfg Config, logger kitlog.Logger) (KV, error) {
+	switch cfg.Type {
+	case etcdKVType:
+		return etcdkv.New(cfg.Etcd, logger), nil
+
+	default:
+		return nil, fmt.Errorf("unrecognized cluster kv type: %s", cfg.Type)
+	}
 }

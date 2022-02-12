@@ -24,9 +24,7 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-
 	"github.com/google/uuid"
 	"github.com/jackal-xmpp/runqueue/v2"
 	"github.com/jackal-xmpp/stravaganza/v2"
@@ -35,6 +33,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
@@ -110,7 +109,7 @@ type inC2S struct {
 	router       router.Router
 	comps        components
 	mods         modules
-	resMng       resourceManager
+	resMng       resourcemanager.Manager
 	session      session
 	shapers      shaper.Shapers
 	hk           *hook.Hooks
@@ -136,7 +135,7 @@ func newInC2S(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *ResourceManager,
+	resMng resourcemanager.Manager,
 	shapers shaper.Shapers,
 	hk *hook.Hooks,
 	logger kitlog.Logger,

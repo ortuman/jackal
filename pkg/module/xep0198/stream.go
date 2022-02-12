@@ -25,15 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/log/level"
-
 	kitlog "github.com/go-kit/log"
-
+	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
@@ -87,7 +85,7 @@ type Stream struct {
 	cfg    Config
 	router router.Router
 	hosts  *host.Hosts
-	resMng resourceManager
+	resMng resourcemanager.Manager
 	hk     *hook.Hooks
 	logger kitlog.Logger
 
@@ -101,7 +99,7 @@ func New(
 	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	hk *hook.Hooks,
 	logger kitlog.Logger,
 ) *Stream {

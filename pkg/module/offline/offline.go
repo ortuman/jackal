@@ -23,7 +23,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/router"
@@ -51,7 +51,7 @@ type Offline struct {
 	cfg    Config
 	hosts  hosts
 	router router.Router
-	resMng resourceManager
+	resMng resourcemanager.Manager
 	rep    repository.Repository
 	hk     *hook.Hooks
 	logger kitlog.Logger
@@ -62,7 +62,7 @@ func New(
 	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,

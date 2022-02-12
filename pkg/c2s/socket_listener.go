@@ -23,11 +23,10 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/component"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
@@ -68,7 +67,7 @@ type SocketListener struct {
 	router  router.Router
 	comps   *component.Components
 	mods    *module.Modules
-	resMng  *ResourceManager
+	resMng  resourcemanager.Manager
 	rep     repository.Repository
 	peppers *pepper.Keys
 	shapers shaper.Shapers
@@ -89,7 +88,7 @@ func NewListeners(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,
@@ -122,7 +121,7 @@ func newSocketListener(
 	router router.Router,
 	comps *component.Components,
 	mods *module.Modules,
-	resMng *ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	peppers *pepper.Keys,
 	shapers shaper.Shapers,

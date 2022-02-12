@@ -39,9 +39,13 @@ storage:
         - localhost:6379
 
 cluster:
-  etcd:
-    endpoints:
-      - http://127.0.0.1:2379
+  type: kv
+  kv:
+    type: etcd
+    etcd:
+      endpoints:
+        - http://127.0.0.1:2379
+
   server:
     port: 14369
 

@@ -15,9 +15,7 @@
 package roster
 
 import (
-	"context"
-
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
@@ -55,5 +53,5 @@ type c2sStream interface {
 
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error)
+	resourcemanager.Manager
 }
