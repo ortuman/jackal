@@ -30,9 +30,24 @@ message Item {
   repeated string groups = 6;
 }
 
+// Items represent a set of roster items.
+message Items {
+  repeated Item items = 1;
+}
+
 // Notification represents a roster subscription pending notification.
 message Notification {
   string contact = 1;
   string jid = 2;
   stravaganza.PBElement presence = 3;
+}
+
+// Notifications represents a set of roster notifications.
+message Notifications {
+  repeated Notification notifications = 1;
+}
+
+// Groups represents a set of roster groups.
+message Groups {
+  repeated string groups = 1;
 }

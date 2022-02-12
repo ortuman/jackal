@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,9 +53,9 @@ type cachedCapsRep struct {
 
 func (c *cachedCapsRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   capsNS(caps.Node, caps.Ver),
-		invalidKeys: []string{capsKey},
+		c:              c.c,
+		namespace:      capsNS(caps.Node, caps.Ver),
+		invalidateKeys: []string{capsKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertCapabilities(ctx, caps)
 		},

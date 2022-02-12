@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,9 +53,9 @@ type cachedUserRep struct {
 
 func (c *cachedUserRep) UpsertUser(ctx context.Context, user *usermodel.User) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   userNS(user.Username),
-		invalidKeys: []string{userKey},
+		c:              c.c,
+		namespace:      userNS(user.Username),
+		invalidateKeys: []string{userKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertUser(ctx, user)
 		},
@@ -65,9 +65,9 @@ func (c *cachedUserRep) UpsertUser(ctx context.Context, user *usermodel.User) er
 
 func (c *cachedUserRep) DeleteUser(ctx context.Context, username string) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   userNS(username),
-		invalidKeys: []string{userKey},
+		c:              c.c,
+		namespace:      userNS(username),
+		invalidateKeys: []string{userKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteUser(ctx, username)
 		},

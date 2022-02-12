@@ -17,12 +17,11 @@ package router
 import (
 	"context"
 
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/host"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 
@@ -33,10 +32,10 @@ type Router interface {
 	// (https://xmpp.org/rfcs/rfc3921.html#rules)
 	Route(ctx context.Context, stanza stravaganza.Stanza) (targets []jid.JID, err error)
 
-	// C2SRouter returns the underlying C2S router.
+	// C2S returns the underlying C2S router.
 	C2S() C2SRouter
 
-	// S2SRouter returns the underlying S2S router.
+	// S2S returns the underlying S2S router.
 	S2S() S2SRouter
 
 	// Start starts global router subsystem.

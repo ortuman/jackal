@@ -18,10 +18,9 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/golang/protobuf/proto"
-
 	sq "github.com/Masterminds/squirrel"
 	kitlog "github.com/go-kit/log"
+	"github.com/golang/protobuf/proto"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/lib/pq"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"

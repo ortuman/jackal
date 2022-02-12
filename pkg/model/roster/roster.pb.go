@@ -124,6 +124,54 @@ func (x *Item) GetGroups() []string {
 	return nil
 }
 
+// Items represent a set of roster items.
+type Items struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Items []*Item `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+}
+
+func (x *Items) Reset() {
+	*x = Items{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_v1_roster_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Items) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Items) ProtoMessage() {}
+
+func (x *Items) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_v1_roster_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Items.ProtoReflect.Descriptor instead.
+func (*Items) Descriptor() ([]byte, []int) {
+	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Items) GetItems() []*Item {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 // Notification represents a roster subscription pending notification.
 type Notification struct {
 	state         protoimpl.MessageState
@@ -138,7 +186,7 @@ type Notification struct {
 func (x *Notification) Reset() {
 	*x = Notification{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_model_v1_roster_proto_msgTypes[1]
+		mi := &file_proto_model_v1_roster_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -151,7 +199,7 @@ func (x *Notification) String() string {
 func (*Notification) ProtoMessage() {}
 
 func (x *Notification) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_model_v1_roster_proto_msgTypes[1]
+	mi := &file_proto_model_v1_roster_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -164,7 +212,7 @@ func (x *Notification) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Notification.ProtoReflect.Descriptor instead.
 func (*Notification) Descriptor() ([]byte, []int) {
-	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{1}
+	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Notification) GetContact() string {
@@ -188,6 +236,102 @@ func (x *Notification) GetPresence() *stravaganza.PBElement {
 	return nil
 }
 
+// Notifications represents a set of roster notifications.
+type Notifications struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Notifications []*Notification `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
+}
+
+func (x *Notifications) Reset() {
+	*x = Notifications{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_v1_roster_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Notifications) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Notifications) ProtoMessage() {}
+
+func (x *Notifications) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_v1_roster_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Notifications.ProtoReflect.Descriptor instead.
+func (*Notifications) Descriptor() ([]byte, []int) {
+	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Notifications) GetNotifications() []*Notification {
+	if x != nil {
+		return x.Notifications
+	}
+	return nil
+}
+
+// Groups represents a set of roster groups.
+type Groups struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Groups []string `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+}
+
+func (x *Groups) Reset() {
+	*x = Groups{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_v1_roster_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Groups) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Groups) ProtoMessage() {}
+
+func (x *Groups) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_v1_roster_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Groups.ProtoReflect.Descriptor instead.
+func (*Groups) Descriptor() ([]byte, []int) {
+	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Groups) GetGroups() []string {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
 var File_proto_model_v1_roster_proto protoreflect.FileDescriptor
 
 var file_proto_model_v1_roster_proto_rawDesc = []byte{
@@ -206,17 +350,28 @@ var file_proto_model_v1_roster_proto_rawDesc = []byte{
 	0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x73, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
 	0x69, 0x6f, 0x6e, 0x12, 0x10, 0x0a, 0x03, 0x61, 0x73, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08,
 	0x52, 0x03, 0x61, 0x73, 0x6b, 0x12, 0x16, 0x0a, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x18,
-	0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x22, 0x6e, 0x0a,
-	0x0c, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a,
-	0x07, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
-	0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x6a, 0x69, 0x64, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6a, 0x69, 0x64, 0x12, 0x32, 0x0a, 0x08, 0x70, 0x72, 0x65,
-	0x73, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x73, 0x74,
-	0x72, 0x61, 0x76, 0x61, 0x67, 0x61, 0x6e, 0x7a, 0x61, 0x2e, 0x50, 0x42, 0x45, 0x6c, 0x65, 0x6d,
-	0x65, 0x6e, 0x74, 0x52, 0x08, 0x70, 0x72, 0x65, 0x73, 0x65, 0x6e, 0x63, 0x65, 0x42, 0x1f, 0x5a,
-	0x1d, 0x70, 0x6b, 0x67, 0x2f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x2f, 0x72, 0x6f, 0x73, 0x74, 0x65,
-	0x72, 0x2f, 0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x22, 0x34, 0x0a,
+	0x05, 0x49, 0x74, 0x65, 0x6d, 0x73, 0x12, 0x2b, 0x0a, 0x05, 0x69, 0x74, 0x65, 0x6d, 0x73, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x2e, 0x72, 0x6f,
+	0x73, 0x74, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x49, 0x74, 0x65, 0x6d, 0x52, 0x05, 0x69, 0x74,
+	0x65, 0x6d, 0x73, 0x22, 0x6e, 0x0a, 0x0c, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x63, 0x74, 0x12, 0x10, 0x0a,
+	0x03, 0x6a, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6a, 0x69, 0x64, 0x12,
+	0x32, 0x0a, 0x08, 0x70, 0x72, 0x65, 0x73, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x16, 0x2e, 0x73, 0x74, 0x72, 0x61, 0x76, 0x61, 0x67, 0x61, 0x6e, 0x7a, 0x61, 0x2e,
+	0x50, 0x42, 0x45, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x08, 0x70, 0x72, 0x65, 0x73, 0x65,
+	0x6e, 0x63, 0x65, 0x22, 0x54, 0x0a, 0x0d, 0x4e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x73, 0x12, 0x43, 0x0a, 0x0d, 0x6e, 0x6f, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x6d, 0x6f,
+	0x64, 0x65, 0x6c, 0x2e, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x2e, 0x76, 0x31, 0x2e, 0x4e, 0x6f,
+	0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0d, 0x6e, 0x6f, 0x74, 0x69,
+	0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x20, 0x0a, 0x06, 0x47, 0x72, 0x6f,
+	0x75, 0x70, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x42, 0x1f, 0x5a, 0x1d, 0x70,
+	0x6b, 0x67, 0x2f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x2f, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x2f,
+	0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -231,19 +386,24 @@ func file_proto_model_v1_roster_proto_rawDescGZIP() []byte {
 	return file_proto_model_v1_roster_proto_rawDescData
 }
 
-var file_proto_model_v1_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_model_v1_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_model_v1_roster_proto_goTypes = []interface{}{
 	(*Item)(nil),                  // 0: model.roster.v1.Item
-	(*Notification)(nil),          // 1: model.roster.v1.Notification
-	(*stravaganza.PBElement)(nil), // 2: stravaganza.PBElement
+	(*Items)(nil),                 // 1: model.roster.v1.Items
+	(*Notification)(nil),          // 2: model.roster.v1.Notification
+	(*Notifications)(nil),         // 3: model.roster.v1.Notifications
+	(*Groups)(nil),                // 4: model.roster.v1.Groups
+	(*stravaganza.PBElement)(nil), // 5: stravaganza.PBElement
 }
 var file_proto_model_v1_roster_proto_depIdxs = []int32{
-	2, // 0: model.roster.v1.Notification.presence:type_name -> stravaganza.PBElement
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 0: model.roster.v1.Items.items:type_name -> model.roster.v1.Item
+	5, // 1: model.roster.v1.Notification.presence:type_name -> stravaganza.PBElement
+	2, // 2: model.roster.v1.Notifications.notifications:type_name -> model.roster.v1.Notification
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_model_v1_roster_proto_init() }
@@ -265,7 +425,43 @@ func file_proto_model_v1_roster_proto_init() {
 			}
 		}
 		file_proto_model_v1_roster_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Items); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_model_v1_roster_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Notification); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_model_v1_roster_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Notifications); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_model_v1_roster_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Groups); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -283,7 +479,7 @@ func file_proto_model_v1_roster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_model_v1_roster_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

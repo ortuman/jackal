@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,9 +53,9 @@ type cachedLastRep struct {
 
 func (c *cachedLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   lastNS(last.Username),
-		invalidKeys: []string{lastKey},
+		c:              c.c,
+		namespace:      lastNS(last.Username),
+		invalidateKeys: []string{lastKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.UpsertLast(ctx, last)
 		},
@@ -85,9 +85,9 @@ func (c *cachedLastRep) FetchLast(ctx context.Context, username string) (*lastmo
 
 func (c *cachedLastRep) DeleteLast(ctx context.Context, username string) error {
 	op := updateOp{
-		c:           c.c,
-		namespace:   lastNS(username),
-		invalidKeys: []string{lastKey},
+		c:              c.c,
+		namespace:      lastNS(username),
+		invalidateKeys: []string{lastKey},
 		updateFn: func(ctx context.Context) error {
 			return c.rep.DeleteLast(ctx, username)
 		},

@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ type Cache interface {
 	// Put stores a value into the cache store.
 	Put(ctx context.Context, ns, key string, val []byte) error
 
-	// Del removes k value from the cache store.
+	// Del removes keys values from the cache store.
 	Del(ctx context.Context, ns string, keys ...string) error
 
 	// DelNS removes all keys contained under a given namespace from the cache store.
@@ -89,7 +89,7 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 		Capabilities: &cachedCapsRep{c: c, rep: rep},
 		Private:      &cachedPrivateRep{c: c, rep: rep},
 		BlockList:    &cachedBlockListRep{c: c, rep: rep},
-		Roster:       rep,
+		Roster:       &cachedRosterRep{c: c, rep: rep},
 		VCard:        &cachedVCardRep{c: c, rep: rep},
 		Offline:      rep,
 		Locker:       rep,
