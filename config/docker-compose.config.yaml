@@ -21,9 +21,12 @@ storage:
     max_open_conns: 16
 
 cluster:
-  etcd:
-    endpoints:
-      - 'http://etcd:2379'
+  type: kv
+  kv:
+    type: etcd
+    etcd:
+      endpoints:
+        - 'http://etcd:2379'
 
 c2s:
   listeners:

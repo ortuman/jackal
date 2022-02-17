@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s
+package resourcemanager
 
 import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"testing"
 
 	kitlog "github.com/go-kit/log"
-
+	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func TestResourceManager_SetResource(t *testing.T) {
 
 	kvmock := &kvMock{}
 
-	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
+	h := NewKVManager(kvmock, kitlog.NewNopLogger())
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error {
 		r, _ := decodeResource(key, []byte(value))
 		r1 = r
@@ -58,7 +60,7 @@ func TestResourceManager_GetResource(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
+	h := NewKVManager(kvmock, kitlog.NewNopLogger())
 
 	// when
 	r0 := testResource("megaman-2", 10, "ortuman", "yard")
@@ -83,7 +85,7 @@ func TestResourceManager_GetResources(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
+	h := NewKVManager(kvmock, kitlog.NewNopLogger())
 
 	r0 := testResource("abc1234", 100, "ortuman", "yard")
 	r1 := testResource("bcd1234", 50, "ortuman", "balcony")
@@ -106,7 +108,7 @@ func TestResourceManager_DelResource(t *testing.T) {
 	kvmock := &kvMock{}
 	kvmock.PutFunc = func(ctx context.Context, key string, value string) error { return nil }
 
-	h := NewResourceManager(kvmock, kitlog.NewNopLogger())
+	h := NewKVManager(kvmock, kitlog.NewNopLogger())
 
 	r0 := testResource("megaman-2", 10, "ortuman", "yard")
 	_ = h.PutResource(context.Background(), r0)
@@ -126,4 +128,19 @@ func TestResourceManager_DelResource(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("r://ortuman@yard/%s", instance.ID()), expectedKey)
 
 	require.Nil(t, r1)
+}
+
+func testResource(instanceID string, priority int8, username, resource string) c2smodel.ResourceDesc {
+	pr, _ := stravaganza.NewPresenceBuilder().
+		WithAttribute(stravaganza.From, "ortuman@jackal.im/yard").
+		WithAttribute(stravaganza.To, "ortuman@jackal.im").
+		WithChild(
+			stravaganza.NewBuilder("priority").
+				WithText(strconv.Itoa(int(priority))).
+				Build(),
+		).
+		BuildPresence()
+
+	jd, _ := jid.New(username, "jackal.im", resource, true)
+	return c2smodel.NewResourceDesc(instanceID, jd, pr, c2smodel.NewInfoMapFromMap(map[string]string{"k1": "v1", "k2": "v2"}))
 }

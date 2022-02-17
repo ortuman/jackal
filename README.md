@@ -118,11 +118,14 @@ Here's an example of how this section should look like:
 
 ```yaml
 cluster:
-  etcd:
-    endpoints:
-      - http://<etcd-host1>:<etcd-port1>
-      - http://<etcd-host2>:<etcd-port2>
-      ...
+  type: kv
+  kv:
+    type: etcd
+    etcd:
+      endpoints:
+        - http://<etcd-host1>:<etcd-port1>
+        - http://<etcd-host2>:<etcd-port2>
+        ...
   port: your-cluster-node-port # default is 14369
 ```
 

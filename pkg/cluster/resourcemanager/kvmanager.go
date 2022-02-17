@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package c2s
+package resourcemanager
 
 import (
 	"context"
@@ -21,24 +21,24 @@ import (
 	"sync"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-	"github.com/ortuman/jackal/pkg/cluster/instance"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/jackal-xmpp/stravaganza/v2"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	resourcemanagerpb "github.com/ortuman/jackal/pkg/c2s/pb"
+	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )
 
 const (
 	resourceKeyPrefix = "r://"
+
+	kvResourceManagerType = "kv"
 )
 
-// ResourceManager type is in charge of keeping track of all cluster resources.
-type ResourceManager struct {
+type kvManager struct {
 	kv        kv.KV
 	logger    kitlog.Logger
 	ctx       context.Context
@@ -51,10 +51,10 @@ type ResourceManager struct {
 	stopCh chan struct{}
 }
 
-// NewResourceManager creates a new resource manager given a KV storage instance.
-func NewResourceManager(kv kv.KV, logger kitlog.Logger) *ResourceManager {
+// NewKVManager creates a new resource manager given a KV storage instance.
+func NewKVManager(kv kv.KV, logger kitlog.Logger) Manager {
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	return &ResourceManager{
+	return &kvManager{
 		kv:        kv,
 		logger:    logger,
 		ctx:       ctx,
@@ -64,8 +64,7 @@ func NewResourceManager(kv kv.KV, logger kitlog.Logger) *ResourceManager {
 	}
 }
 
-// PutResource registers or updates a resource into the manager.
-func (m *ResourceManager) PutResource(ctx context.Context, res c2smodel.ResourceDesc) error {
+func (m *kvManager) PutResource(ctx context.Context, res c2smodel.ResourceDesc) error {
 	b, err := resourceVal(res)
 	if err != nil {
 		return err
@@ -80,8 +79,7 @@ func (m *ResourceManager) PutResource(ctx context.Context, res c2smodel.Resource
 	return nil
 }
 
-// GetResource returns a previously registered resource.
-func (m *ResourceManager) GetResource(_ context.Context, username, resource string) (c2smodel.ResourceDesc, error) {
+func (m *kvManager) GetResource(_ context.Context, username, resource string) (c2smodel.ResourceDesc, error) {
 	m.storeMu.RLock()
 	defer m.storeMu.RUnlock()
 
@@ -95,8 +93,7 @@ func (m *ResourceManager) GetResource(_ context.Context, username, resource stri
 	return nil, nil
 }
 
-// GetResources returns all user registered resources.
-func (m *ResourceManager) GetResources(_ context.Context, username string) ([]c2smodel.ResourceDesc, error) {
+func (m *kvManager) GetResources(_ context.Context, username string) ([]c2smodel.ResourceDesc, error) {
 	m.storeMu.RLock()
 	defer m.storeMu.RUnlock()
 
@@ -111,8 +108,7 @@ func (m *ResourceManager) GetResources(_ context.Context, username string) ([]c2
 	return retVal, nil
 }
 
-// DelResource removes a registered resource from the manager.
-func (m *ResourceManager) DelResource(ctx context.Context, username, resource string) error {
+func (m *kvManager) DelResource(ctx context.Context, username, resource string) error {
 	rKey := resourceKey(username, resource)
 
 	if err := m.kv.Del(ctx, rKey); err != nil {
@@ -122,26 +118,24 @@ func (m *ResourceManager) DelResource(ctx context.Context, username, resource st
 	return nil
 }
 
-// Start starts resource manager.
-func (m *ResourceManager) Start(ctx context.Context) error {
+func (m *kvManager) Start(ctx context.Context) error {
 	if err := m.watchKVResources(ctx); err != nil {
 		return err
 	}
-	level.Info(m.logger).Log("msg", "started C2S resource manager")
+	level.Info(m.logger).Log("msg", "started resource manager", "type", kvResourceManagerType)
 	return nil
 }
 
-// Stop stops resource manager.
-func (m *ResourceManager) Stop(_ context.Context) error {
+func (m *kvManager) Stop(_ context.Context) error {
 	// stop watching changes...
 	m.ctxCancel()
 	<-m.stopCh
 
-	level.Info(m.logger).Log("msg", "stopped C2S resource manager")
+	level.Info(m.logger).Log("msg", "stopped resource manager", "type", kvResourceManagerType)
 	return nil
 }
 
-func (m *ResourceManager) watchKVResources(ctx context.Context) error {
+func (m *kvManager) watchKVResources(ctx context.Context) error {
 	ch := make(chan error, 1)
 	go func() {
 		wCh := m.kv.Watch(m.ctx, resourceKeyPrefix, false)
@@ -173,7 +167,7 @@ func (m *ResourceManager) watchKVResources(ctx context.Context) error {
 	return <-ch
 }
 
-func (m *ResourceManager) getKVResources(ctx context.Context) ([]c2smodel.ResourceDesc, error) {
+func (m *kvManager) getKVResources(ctx context.Context) ([]c2smodel.ResourceDesc, error) {
 	vs, err := m.kv.GetPrefix(ctx, resourceKeyPrefix)
 	if err != nil {
 		return nil, err
@@ -181,20 +175,20 @@ func (m *ResourceManager) getKVResources(ctx context.Context) ([]c2smodel.Resour
 	return decodeKVResources(vs)
 }
 
-func (m *ResourceManager) processKVEvents(kvEvents []kv.WatchEvent) error {
+func (m *kvManager) processKVEvents(kvEvents []kvtypes.WatchEvent) error {
 	for _, ev := range kvEvents {
 		if isLocalKey(ev.Key) {
 			continue // discard local changes
 		}
 		switch ev.Type {
-		case kv.Put:
+		case kvtypes.Put:
 			res, err := decodeResource(ev.Key, ev.Val)
 			if err != nil {
 				return err
 			}
 			m.inMemPut(res)
 
-		case kv.Del:
+		case kvtypes.Del:
 			memberKey := strings.TrimPrefix(ev.Key, resourceKeyPrefix)
 			ss := strings.Split(memberKey, "@")
 			if len(ss) != 2 {
@@ -208,7 +202,7 @@ func (m *ResourceManager) processKVEvents(kvEvents []kv.WatchEvent) error {
 	return nil
 }
 
-func (m *ResourceManager) inMemPut(res c2smodel.ResourceDesc) {
+func (m *kvManager) inMemPut(res c2smodel.ResourceDesc) {
 	m.storeMu.Lock()
 	defer m.storeMu.Unlock()
 
@@ -233,7 +227,7 @@ func (m *ResourceManager) inMemPut(res c2smodel.ResourceDesc) {
 	return
 }
 
-func (m *ResourceManager) inMemDel(username, resource string) {
+func (m *kvManager) inMemDel(username, resource string) {
 	m.storeMu.Lock()
 	defer m.storeMu.Unlock()
 

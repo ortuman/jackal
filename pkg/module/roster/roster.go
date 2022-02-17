@@ -26,7 +26,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/v2"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
-	"github.com/ortuman/jackal/pkg/c2s"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
@@ -51,7 +51,7 @@ const (
 // Roster represents a roster module type.
 type Roster struct {
 	rep    repository.Repository
-	resMng resourceManager
+	resMng resourcemanager.Manager
 	router router.Router
 	hosts  hosts
 	hk     *hook.Hooks
@@ -62,7 +62,7 @@ type Roster struct {
 func New(
 	router router.Router,
 	hosts *host.Hosts,
-	resMng *c2s.ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,

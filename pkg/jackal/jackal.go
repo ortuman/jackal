@@ -16,16 +16,13 @@ package jackal
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -36,9 +33,9 @@ import (
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/c2s"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
-	"github.com/ortuman/jackal/pkg/cluster/etcd"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/cluster/memberlist"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
 	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 	"github.com/ortuman/jackal/pkg/component"
@@ -104,11 +101,11 @@ type Jackal struct {
 	peppers *pepper.Keys
 	hk      *hook.Hooks
 
-	kv kv.KV
+	kv         kv.KV
+	memberList memberlist.MemberList
+	resMng     resourcemanager.Manager
 
-	rep        repository.Repository
-	memberList *memberlist.MemberList
-	resMng     *c2s.ResourceManager
+	rep repository.Repository
 
 	shapers        shaper.Shapers
 	hosts          *host.Hosts
@@ -136,7 +133,8 @@ func New(output io.Writer, args []string) *Jackal {
 		output:     output,
 		args:       args,
 		waitStopCh: make(chan os.Signal, 1),
-		kv:         kv.NewNopKV(),
+		kv:         kv.NewNop(),
+		memberList: memberlist.NewNop(),
 	}
 }
 
@@ -215,16 +213,10 @@ func (j *Jackal) Run() error {
 	// init hooks
 	j.hk = hook.NewHooks()
 
-	// init etcd
-	if len(cfg.Cluster.Etcd.Endpoints) > 0 {
-		if err := j.checkEtcdHealth(cfg.Cluster.Etcd.Endpoints); err != nil {
-			return err
-		}
-		j.initKVStore(cfg.Cluster.Etcd)
+	// init cluster
+	if err := j.initCluster(cfg.Cluster); err != nil {
+		return err
 	}
-
-	// init cluster connection manager
-	j.initClusterConnManager()
 
 	// init repository
 	if err := j.initRepository(cfg.Storage); err != nil {
@@ -253,10 +245,9 @@ func (j *Jackal) Run() error {
 	j.initAdminServer(cfg.Admin)
 
 	// init cluster server
-	j.initClusterServer(cfg.Cluster.Server)
-
-	// init memberlist
-	j.initMemberList(cfg.Cluster.Server.Port)
+	if cfg.Cluster.IsEnabled() {
+		j.initClusterServer(cfg.Cluster.Server)
+	}
 
 	// init C2S/S2S listeners
 	if err := j.initListeners(cfg.C2S.Listeners, cfg.S2S.Listeners, cfg.Components.Listeners); err != nil {
@@ -271,47 +262,42 @@ func (j *Jackal) Run() error {
 	level.Info(j.logger).Log("msg", "received stop signal... shutting down...",
 		"signal", sig.String(),
 	)
-
 	return j.shutdown()
 }
 
-func (j *Jackal) checkEtcdHealth(endpoints []string) error {
-	type healthResponse struct {
-		Health string `json:"health"`
+func (j *Jackal) initCluster(cfg ClusterConfig) error {
+	if !cfg.IsEnabled() {
+		return nil
 	}
 
-	var errHealthCheckFailedFn = func(err error) error {
-		return fmt.Errorf("etcd health check failed: %v", err)
-	}
-	for _, endpoint := range endpoints {
-		resp, err := http.Get(fmt.Sprintf("%s/health", endpoint))
-		if err != nil {
-			return errHealthCheckFailedFn(err)
+	switch cfg.Type {
+	case kvClusterType:
+		if err := j.initKVStore(cfg.KV); err != nil {
+			return err
 		}
-		var hResp healthResponse
-		if err := json.NewDecoder(resp.Body).Decode(&hResp); err != nil {
-			_ = resp.Body.Close()
-			return errHealthCheckFailedFn(err)
-		}
-		_ = resp.Body.Close()
+		j.memberList = memberlist.NewKVMemberList(cfg.Server.Port, j.kv, j.hk, j.logger)
+		j.resMng = resourcemanager.NewKVManager(j.kv, j.logger)
 
-		healthy, _ := strconv.ParseBool(hResp.Health)
-		if !healthy {
-			return errHealthCheckFailedFn(fmt.Errorf("health = false, for endpoint %s", endpoint))
-		}
+	default:
+		return fmt.Errorf("unrecognized cluster type: %s", cfg.Type)
 	}
+	// init cluster connection manager
+	j.clusterConnMng = clusterconnmanager.NewManager(j.hk, j.logger)
+
+	j.registerStartStopper(j.clusterConnMng)
+	j.registerStartStopper(j.memberList)
+	j.registerStartStopper(j.resMng)
 	return nil
 }
 
-func (j *Jackal) initKVStore(cfg etcd.Config) {
-	etcdKV := etcd.NewKV(cfg, j.logger)
-	j.kv = kv.NewMeasured(etcdKV)
+func (j *Jackal) initKVStore(cfg kv.Config) error {
+	kvs, err := kv.New(cfg, j.logger)
+	if err != nil {
+		return err
+	}
+	j.kv = kv.NewMeasured(kvs)
 	j.registerStartStopper(j.kv)
-}
-
-func (j *Jackal) initClusterConnManager() {
-	j.clusterConnMng = clusterconnmanager.NewManager(j.hk, j.logger)
-	j.registerStartStopper(j.clusterConnMng)
+	return nil
 }
 
 func (j *Jackal) initRepository(cfg storage.Config) error {
@@ -350,12 +336,6 @@ func (j *Jackal) initShapers(configs []shaper.Config) error {
 		)
 	}
 	return nil
-}
-
-func (j *Jackal) initMemberList(clusterPort int) {
-	j.memberList = memberlist.New(j.kv, clusterPort, j.hk, j.logger)
-	j.registerStartStopper(j.memberList)
-	return
 }
 
 func (j *Jackal) initListeners(
@@ -427,10 +407,6 @@ func (j *Jackal) initS2SOut(cfg s2s.OutConfig) {
 }
 
 func (j *Jackal) initRouters() {
-	// init shared resource hub
-	j.resMng = c2s.NewResourceManager(j.kv, j.logger)
-	j.registerStartStopper(j.resMng)
-
 	// init C2S router
 	j.localRouter = c2s.NewLocalRouter(j.hosts)
 	j.clusterRouter = clusterrouter.New(j.clusterConnMng)

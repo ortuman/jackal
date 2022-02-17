@@ -21,7 +21,7 @@ import (
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	"github.com/ortuman/jackal/pkg/c2s"
-	"github.com/ortuman/jackal/pkg/cluster/etcd"
+	"github.com/ortuman/jackal/pkg/cluster/kv"
 	clusterserver "github.com/ortuman/jackal/pkg/cluster/server"
 	"github.com/ortuman/jackal/pkg/component/xep0114"
 	"github.com/ortuman/jackal/pkg/host"
@@ -34,6 +34,11 @@ import (
 	"github.com/ortuman/jackal/pkg/storage"
 )
 
+const (
+	kvClusterType   = "kv"
+	noneClusterType = "none"
+)
+
 // LoggerConfig defines logger configuration.
 type LoggerConfig struct {
 	Level  string `fig:"level" default:"debug"`
@@ -42,8 +47,14 @@ type LoggerConfig struct {
 
 // ClusterConfig defines cluster configuration.
 type ClusterConfig struct {
-	Etcd   etcd.Config          `fig:"etcd"`
+	Type   string               `fig:"type" default:"none"`
+	KV     kv.Config            `fig:"kv"`
 	Server clusterserver.Config `fig:"server"`
+}
+
+// IsEnabled tells whether cluster config is enabled.
+func (c ClusterConfig) IsEnabled() bool {
+	return c.Type != noneClusterType
 }
 
 // C2SConfig defines C2S subsystem configuration.

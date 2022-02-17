@@ -15,10 +15,7 @@
 package xep0012
 
 import (
-	"context"
-
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
@@ -35,7 +32,7 @@ type globalRouter interface {
 
 //go:generate moq -out resource_manager.mock_test.go . resourceManager
 type resourceManager interface {
-	GetResources(ctx context.Context, username string) ([]c2smodel.ResourceDesc, error)
+	resourcemanager.Manager
 }
 
 //go:generate moq -out hosts.mock_test.go . hosts

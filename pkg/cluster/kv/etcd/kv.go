@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd
+package etcdkv
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
+	etcdv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-
-	kitlog "github.com/go-kit/log"
-
-	"github.com/go-kit/log/level"
-
-	"github.com/ortuman/jackal/pkg/cluster/kv"
-	etcdv3 "go.etcd.io/etcd/client/v3"
 )
 
 const (
 	leaseTTLInSeconds int64 = 10
+
+	etcdKVType = "etcd"
 )
 
 // Config contains etcd configuration parameters.
@@ -58,8 +61,8 @@ type KV struct {
 	done     int32
 }
 
-// NewKV returns a new etcd key-value store instance.
-func NewKV(cfg Config, logger kitlog.Logger) *KV {
+// New returns a new etcd key-value store instance.
+func New(cfg Config, logger kitlog.Logger) *KV {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &KV{
 		cfg:      cfg,
@@ -110,8 +113,8 @@ func (k *KV) Del(ctx context.Context, key string) error {
 }
 
 // Watch watches on a key or prefix.
-func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan kv.WatchResp {
-	wCh := make(chan kv.WatchResp)
+func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan kvtypes.WatchResp {
+	wCh := make(chan kvtypes.WatchResp)
 
 	var opts = []etcdv3.OpOption{
 		etcdv3.WithPrefix(),
@@ -131,6 +134,9 @@ func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan 
 
 // Start initializes etcd key-value store.
 func (k *KV) Start(ctx context.Context) error {
+	if err := k.checkHealth(k.cfg.Endpoints); err != nil {
+		return err
+	}
 	// perform dialing
 	cli, err := dial(k.cfg)
 	if err != nil {
@@ -151,7 +157,7 @@ func (k *KV) Start(ctx context.Context) error {
 	}
 	go k.keepAliveLease()
 
-	level.Info(k.logger).Log("msg", "started etcd KV store")
+	level.Info(k.logger).Log("msg", "started kv store", "type", etcdKVType)
 	return nil
 }
 
@@ -169,7 +175,7 @@ func (k *KV) Stop(ctx context.Context) error {
 	if err := k.cli.Close(); err != nil {
 		return err
 	}
-	level.Info(k.logger).Log("msg", "stopped etcd KV store")
+	level.Info(k.logger).Log("msg", "stopped kv store", "type", etcdKVType)
 	return nil
 }
 
@@ -204,16 +210,44 @@ func (k *KV) keepAliveLease() {
 	}
 }
 
-func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
-	var events []kv.WatchEvent
+func (k *KV) checkHealth(endpoints []string) error {
+	type healthResponse struct {
+		Health string `json:"health"`
+	}
+
+	var errHealthCheckFailedFn = func(err error) error {
+		return fmt.Errorf("etcd health check failed: %v", err)
+	}
+	for _, endpoint := range endpoints {
+		resp, err := http.Get(fmt.Sprintf("%s/health", endpoint))
+		if err != nil {
+			return errHealthCheckFailedFn(err)
+		}
+		var hResp healthResponse
+		if err := json.NewDecoder(resp.Body).Decode(&hResp); err != nil {
+			_ = resp.Body.Close()
+			return errHealthCheckFailedFn(err)
+		}
+		_ = resp.Body.Close()
+
+		healthy, _ := strconv.ParseBool(hResp.Health)
+		if !healthy {
+			return errHealthCheckFailedFn(fmt.Errorf("health = false, for endpoint %s", endpoint))
+		}
+	}
+	return nil
+}
+
+func toWatchResp(wResp *etcdv3.WatchResponse) kvtypes.WatchResp {
+	var events []kvtypes.WatchEvent
 	for _, ev := range wResp.Events {
-		var kvEvent kv.WatchEvent
+		var kvEvent kvtypes.WatchEvent
 
 		switch ev.Type {
 		case etcdv3.EventTypePut:
-			kvEvent.Type = kv.Put
+			kvEvent.Type = kvtypes.Put
 		case etcdv3.EventTypeDelete:
-			kvEvent.Type = kv.Del
+			kvEvent.Type = kvtypes.Del
 		default:
 			continue // unrecognized event type
 		}
@@ -226,7 +260,7 @@ func toWatchResp(wResp *etcdv3.WatchResponse) kv.WatchResp {
 		}
 		events = append(events, kvEvent)
 	}
-	return kv.WatchResp{
+	return kvtypes.WatchResp{
 		Events: events,
 		Err:    wResp.Err(),
 	}

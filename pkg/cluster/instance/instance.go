@@ -32,8 +32,8 @@ var (
 )
 
 var (
-	readCachedResults = true
-	interfaceAddrs    = net.InterfaceAddrs
+	readCachedResults  = true
+	interfaceAddresses = net.InterfaceAddrs
 )
 
 func init() {
@@ -78,13 +78,13 @@ func getHostname() string {
 }
 
 func getLocalHostname() (string, error) {
-	addrs, err := interfaceAddrs()
+	addresses, err := interfaceAddresses()
 	if err != nil {
 		return "", err
 	}
 
-	for _, a := range addrs {
-		if ipNet, ok := a.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+	for _, addr := range addresses {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
 			if ipNet.IP.To4() != nil {
 				return ipNet.IP.String(), nil
 			}

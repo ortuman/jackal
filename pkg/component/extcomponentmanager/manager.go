@@ -21,12 +21,11 @@ import (
 	"time"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
 	"github.com/ortuman/jackal/pkg/component"
 )
 
@@ -162,14 +161,14 @@ func (m *Manager) decodeExtComponent(k, val string) (*extComponent, error) {
 	return newExtComponent(cHost, conn), nil
 }
 
-func (m *Manager) processKVEvents(ctx context.Context, kvEvents []kv.WatchEvent) error {
+func (m *Manager) processKVEvents(ctx context.Context, kvEvents []kvtypes.WatchEvent) error {
 	for _, ev := range kvEvents {
 		strVal := string(ev.Val)
 		if isLocalExtComponent(strVal) {
 			continue // ignore local external components
 		}
 		switch ev.Type {
-		case kv.Put:
+		case kvtypes.Put:
 			ec, err := m.decodeExtComponent(ev.Key, strVal)
 			if err != nil {
 				return err
@@ -178,7 +177,7 @@ func (m *Manager) processKVEvents(ctx context.Context, kvEvents []kv.WatchEvent)
 				return err
 			}
 
-		case kv.Del:
+		case kvtypes.Del:
 			cHost := strings.TrimPrefix(ev.Key, extComponentKeyPrefix)
 			if err := m.comps.UnregisterComponent(ctx, cHost); err != nil {
 				return err

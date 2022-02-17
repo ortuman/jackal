@@ -19,16 +19,15 @@ import (
 	"sort"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-
 	"github.com/jackal-xmpp/stravaganza/v2"
 	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/v2/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
+	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"
 	"github.com/ortuman/jackal/pkg/hook"
+	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
@@ -37,7 +36,7 @@ import (
 type c2sRouter struct {
 	local   localRouter
 	cluster clusterRouter
-	resMng  resourceManager
+	resMng  resourcemanager.Manager
 	rep     repository.Repository
 	hk      *hook.Hooks
 	logger  kitlog.Logger
@@ -47,7 +46,7 @@ type c2sRouter struct {
 func NewRouter(
 	localRouter *LocalRouter,
 	clusterRouter *clusterrouter.Router,
-	resMng *ResourceManager,
+	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,

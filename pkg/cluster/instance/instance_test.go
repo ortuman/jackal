@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	interfaceAddrs = func() ([]net.Addr, error) {
+	interfaceAddresses = func() ([]net.Addr, error) {
 		return []net.Addr{&net.IPNet{
 			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 13},
 			Mask: []byte{255, 255, 255, 0},
@@ -74,7 +74,7 @@ func TestIPHostname(t *testing.T) {
 	// given
 	_ = os.Setenv(envInstanceFQDN, "")
 
-	interfaceAddrs = func() ([]net.Addr, error) {
+	interfaceAddresses = func() ([]net.Addr, error) {
 		return []net.Addr{&net.IPNet{
 			IP:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 13},
 			Mask: []byte{255, 255, 255, 0},
@@ -93,7 +93,7 @@ func TestFallbackHostname(t *testing.T) {
 	// given
 	_ = os.Setenv(envInstanceFQDN, "")
 
-	interfaceAddrs = func() ([]net.Addr, error) {
+	interfaceAddresses = func() ([]net.Addr, error) {
 		return nil, errors.New("foo error")
 	}
 	readCachedResults = false

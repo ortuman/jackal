@@ -14,10 +14,14 @@
 
 package kv
 
-import "context"
+import (
+	"context"
 
-// NewNopKV returns a KV that doesn't do anything.
-func NewNopKV() KV { return &nopKV{} }
+	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
+)
+
+// NewNop returns a KV that doesn't do anything.
+func NewNop() KV { return &nopKV{} }
 
 // IsNop tells whether kvs is nop KV.
 func IsNop(kv KV) bool {
@@ -36,9 +40,9 @@ func (k *nopKV) GetPrefix(_ context.Context, _ string) (map[string][]byte, error
 
 func (k *nopKV) Del(_ context.Context, _ string) error { return nil }
 
-func (k *nopKV) Watch(_ context.Context, _ string, _ bool) <-chan WatchResp {
+func (k *nopKV) Watch(_ context.Context, _ string, _ bool) <-chan kvtypes.WatchResp {
 	// return an already closed channel
-	retCh := make(chan WatchResp)
+	retCh := make(chan kvtypes.WatchResp)
 	close(retCh)
 	return retCh
 }
