@@ -266,15 +266,14 @@ func (j *Jackal) Run() error {
 }
 
 func (j *Jackal) initCluster(cfg ClusterConfig) error {
-	if !cfg.IsEnabled() {
-		return nil
-	}
-
 	switch cfg.Type {
 	case kvClusterType:
 		if err := j.initKVStore(cfg.KV); err != nil {
 			return err
 		}
+		fallthrough
+
+	case noneClusterType:
 		j.memberList = memberlist.NewKVMemberList(cfg.Server.Port, j.kv, j.hk, j.logger)
 		j.resMng = resourcemanager.NewKVManager(j.kv, j.logger)
 
