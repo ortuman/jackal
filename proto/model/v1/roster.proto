@@ -51,3 +51,8 @@ message Notifications {
 message Groups {
   repeated string groups = 1;
 }
+
+// Version represents a roster version number.
+message Version {
+  int32 version = 1;
+}

@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"

@@ -29,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/transport"

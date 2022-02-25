@@ -14,7 +14,7 @@
 
 package hook
 
-import "github.com/jackal-xmpp/stravaganza/v2"
+import "github.com/jackal-xmpp/stravaganza"
 
 const (
 	// ExternalComponentRegistered hook runs when a external component connection is registered.

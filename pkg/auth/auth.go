@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 )
 
 const saslNamespace = "urn:ietf:params:xml:ns:xmpp-sasl"

@@ -17,7 +17,7 @@ package extcomponentmanager
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 )
 

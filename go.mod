@@ -16,7 +16,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackal-xmpp/runqueue/v2 v2.0.0
-	github.com/jackal-xmpp/stravaganza/v2 v2.1.0
+	github.com/jackal-xmpp/stravaganza v1.1.1
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
@@ -31,6 +31,8 @@ require (
 	google.golang.org/protobuf v1.26.0
 )
 
+require github.com/gogo/protobuf v1.3.2
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f // indirect
@@ -40,7 +42,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

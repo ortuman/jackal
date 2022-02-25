@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 

@@ -17,7 +17,7 @@ package clusterconnmanager
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	clusterpb "github.com/ortuman/jackal/pkg/cluster/pb"
 )
 

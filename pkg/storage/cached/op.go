@@ -16,13 +16,9 @@ package cachedrepository
 
 import (
 	"context"
-)
 
-type codec interface {
-	encode(i interface{}) ([]byte, error)
-	decode([]byte) error
-	value() interface{}
-}
+	"github.com/ortuman/jackal/pkg/model"
+)
 
 type existsOp struct {
 	c         Cache
@@ -68,34 +64,34 @@ type fetchOp struct {
 	c         Cache
 	namespace string
 	key       string
-	codec     codec
-	missFn    func(context.Context) (interface{}, error)
+	codec     model.Codec
+	missFn    func(context.Context) (model.Codec, error)
 }
 
-func (op fetchOp) do(ctx context.Context) (interface{}, error) {
+func (op fetchOp) do(ctx context.Context) (model.Codec, error) {
 	b, err := op.c.Get(ctx, op.namespace, op.key)
 	if err != nil {
 		return nil, err
 	}
 	if b == nil {
-		obj, err := op.missFn(ctx)
+		cdc, err := op.missFn(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if obj == nil {
+		if cdc == nil {
 			return nil, nil
 		}
-		b, err = op.codec.encode(obj)
+		b, err = cdc.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
 		if err := op.c.Put(ctx, op.namespace, op.key, b); err != nil {
 			return nil, err
 		}
-		return obj, nil
+		return cdc, nil
 	}
-	if err := op.codec.decode(b); err != nil {
+	if err := op.codec.UnmarshalBinary(b); err != nil {
 		return nil, err
 	}
-	return op.codec.value(), nil
+	return op.codec, nil
 }

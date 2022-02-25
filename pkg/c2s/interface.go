@@ -18,9 +18,9 @@ import (
 	"context"
 	"crypto/tls"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/auth"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"

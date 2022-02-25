@@ -18,35 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/ortuman/jackal/pkg/model"
+
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 const blockListItems = "items"
-
-type blockListItemsCodec struct {
-	val []*blocklistmodel.Item
-}
-
-func (c *blockListItemsCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(&blocklistmodel.Items{
-		Items: i.([]*blocklistmodel.Item),
-	})
-}
-
-func (c *blockListItemsCodec) decode(b []byte) error {
-	var items blocklistmodel.Items
-	if err := proto.Unmarshal(b, &items); err != nil {
-		return err
-	}
-	c.val = items.Items
-	return nil
-}
-
-func (c *blockListItemsCodec) value() interface{} {
-	return c.val
-}
 
 type cachedBlockListRep struct {
 	c   Cache
@@ -82,9 +60,13 @@ func (c *cachedBlockListRep) FetchBlockListItems(ctx context.Context, username s
 		c:         c.c,
 		namespace: blockListNS(username),
 		key:       blockListItems,
-		codec:     &blockListItemsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchBlockListItems(ctx, username)
+		codec:     &blocklistmodel.Items{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			items, err := c.rep.FetchBlockListItems(ctx, username)
+			if err != nil {
+				return nil, err
+			}
+			return &blocklistmodel.Items{Items: items}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -92,7 +74,7 @@ func (c *cachedBlockListRep) FetchBlockListItems(ctx context.Context, username s
 	case err != nil:
 		return nil, err
 	case v != nil:
-		return v.([]*blocklistmodel.Item), nil
+		return v.(*blocklistmodel.Items).Items, nil
 	}
 	return nil, nil
 }
