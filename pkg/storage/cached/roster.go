@@ -20,8 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/proto"
+	"github.com/ortuman/jackal/pkg/model"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
@@ -32,144 +31,6 @@ const (
 	rosterNotificationsKey = "notifications"
 	rosterGroupsKey        = "groups"
 )
-
-type rosterVersionCodec struct {
-	val *types.Int64Value
-}
-
-func (c *rosterVersionCodec) encode(i interface{}) ([]byte, error) {
-	val := &types.Int64Value{
-		Value: int64(i.(int)),
-	}
-	return proto.Marshal(val)
-}
-
-func (c *rosterVersionCodec) decode(b []byte) error {
-	var v types.Int64Value
-	if err := proto.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	c.val = &v
-	return nil
-}
-
-func (c *rosterVersionCodec) value() interface{} {
-	return int(c.val.Value)
-}
-
-type rosterGroupsCodec struct {
-	val *rostermodel.Groups
-}
-
-func (c *rosterGroupsCodec) encode(i interface{}) ([]byte, error) {
-	val := &rostermodel.Groups{
-		Groups: i.([]string),
-	}
-	return proto.Marshal(val)
-}
-
-func (c *rosterGroupsCodec) decode(b []byte) error {
-	var gr rostermodel.Groups
-	if err := proto.Unmarshal(b, &gr); err != nil {
-		return err
-	}
-	c.val = &gr
-	return nil
-}
-
-func (c *rosterGroupsCodec) value() interface{} {
-	return c.val.Groups
-}
-
-type rosterItemCodec struct {
-	val *rostermodel.Item
-}
-
-func (c *rosterItemCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(i.(*rostermodel.Item))
-}
-
-func (c *rosterItemCodec) decode(b []byte) error {
-	var itm rostermodel.Item
-	if err := proto.Unmarshal(b, &itm); err != nil {
-		return err
-	}
-	c.val = &itm
-	return nil
-}
-
-func (c *rosterItemCodec) value() interface{} {
-	return c.val
-}
-
-type rosterItemsCodec struct {
-	val *rostermodel.Items
-}
-
-func (c *rosterItemsCodec) encode(i interface{}) ([]byte, error) {
-	items := rostermodel.Items{
-		Items: i.([]*rostermodel.Item),
-	}
-	return proto.Marshal(&items)
-}
-
-func (c *rosterItemsCodec) decode(b []byte) error {
-	var items rostermodel.Items
-	if err := proto.Unmarshal(b, &items); err != nil {
-		return err
-	}
-	c.val = &items
-	return nil
-}
-
-func (c *rosterItemsCodec) value() interface{} {
-	return c.val.Items
-}
-
-type rosterNotificationCodec struct {
-	val *rostermodel.Notification
-}
-
-func (c *rosterNotificationCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(i.(*rostermodel.Notification))
-}
-
-func (c *rosterNotificationCodec) decode(b []byte) error {
-	var n rostermodel.Notification
-	if err := proto.Unmarshal(b, &n); err != nil {
-		return err
-	}
-	c.val = &n
-	return nil
-}
-
-func (c *rosterNotificationCodec) value() interface{} {
-	return c.val
-}
-
-type rosterNotificationsCodec struct {
-	val *rostermodel.Notifications
-}
-
-func (c *rosterNotificationsCodec) encode(i interface{}) ([]byte, error) {
-	ns := rostermodel.Notifications{
-		Notifications: i.([]*rostermodel.Notification),
-	}
-	return proto.Marshal(&ns)
-}
-
-func (c *rosterNotificationsCodec) decode(b []byte) error {
-	var ns rostermodel.Notifications
-	if err := proto.Unmarshal(b, &ns); err != nil {
-		return err
-	}
-	c.val = &ns
-	return nil
-}
-
-func (c *rosterNotificationsCodec) value() interface{} {
-	return c.val.Notifications
-}
 
 type cachedRosterRep struct {
 	c   Cache
@@ -200,9 +61,13 @@ func (c *cachedRosterRep) FetchRosterVersion(ctx context.Context, username strin
 		c:         c.c,
 		namespace: rosterItemsNS(username),
 		key:       rosterVersionKey,
-		codec:     &rosterVersionCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchRosterVersion(ctx, username)
+		codec:     &rostermodel.Version{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			ver, err := c.rep.FetchRosterVersion(ctx, username)
+			if err != nil {
+				return nil, err
+			}
+			return &rostermodel.Version{Version: int32(ver)}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -210,7 +75,7 @@ func (c *cachedRosterRep) FetchRosterVersion(ctx context.Context, username strin
 	case err != nil:
 		return 0, err
 	case v != nil:
-		return v.(int), nil
+		return int(v.(*rostermodel.Version).Version), nil
 	}
 	return 0, nil
 }
@@ -253,9 +118,13 @@ func (c *cachedRosterRep) FetchRosterItems(ctx context.Context, username string)
 		c:         c.c,
 		namespace: rosterItemsNS(username),
 		key:       rosterItemsKey,
-		codec:     &rosterItemsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchRosterItems(ctx, username)
+		codec:     &rostermodel.Items{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			items, err := c.rep.FetchRosterItems(ctx, username)
+			if err != nil {
+				return nil, err
+			}
+			return &rostermodel.Items{Items: items}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -263,7 +132,7 @@ func (c *cachedRosterRep) FetchRosterItems(ctx context.Context, username string)
 	case err != nil:
 		return nil, err
 	case v != nil:
-		return v.([]*rostermodel.Item), nil
+		return v.(*rostermodel.Items).Items, nil
 	}
 	return nil, nil
 }
@@ -273,9 +142,13 @@ func (c *cachedRosterRep) FetchRosterItemsInGroups(ctx context.Context, username
 		c:         c.c,
 		namespace: rosterItemsNS(username),
 		key:       rosterGroupsSliceKey(groups),
-		codec:     &rosterItemsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchRosterItemsInGroups(ctx, username, groups)
+		codec:     &rostermodel.Items{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			items, err := c.rep.FetchRosterItemsInGroups(ctx, username, groups)
+			if err != nil {
+				return nil, err
+			}
+			return &rostermodel.Items{Items: items}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -283,7 +156,7 @@ func (c *cachedRosterRep) FetchRosterItemsInGroups(ctx context.Context, username
 	case err != nil:
 		return nil, err
 	case v != nil:
-		return v.([]*rostermodel.Item), nil
+		return v.(*rostermodel.Items).Items, nil
 	}
 	return nil, nil
 }
@@ -293,8 +166,8 @@ func (c *cachedRosterRep) FetchRosterItem(ctx context.Context, username, jid str
 		c:         c.c,
 		namespace: rosterItemsNS(username),
 		key:       jid,
-		codec:     &rosterItemCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     &rostermodel.Item{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchRosterItem(ctx, username, jid)
 		},
 	}
@@ -346,8 +219,8 @@ func (c *cachedRosterRep) FetchRosterNotification(ctx context.Context, contact s
 		c:         c.c,
 		namespace: rosterNotificationsNS(contact),
 		key:       jid,
-		codec:     &rosterNotificationCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     &rostermodel.Notification{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchRosterNotification(ctx, contact, jid)
 		},
 	}
@@ -366,9 +239,13 @@ func (c *cachedRosterRep) FetchRosterNotifications(ctx context.Context, contact 
 		c:         c.c,
 		namespace: rosterNotificationsNS(contact),
 		key:       rosterNotificationsKey,
-		codec:     &rosterNotificationsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchRosterNotifications(ctx, contact)
+		codec:     &rostermodel.Notifications{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			ns, err := c.rep.FetchRosterNotifications(ctx, contact)
+			if err != nil {
+				return nil, err
+			}
+			return &rostermodel.Notifications{Notifications: ns}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -376,7 +253,7 @@ func (c *cachedRosterRep) FetchRosterNotifications(ctx context.Context, contact 
 	case err != nil:
 		return nil, err
 	case v != nil:
-		return v.([]*rostermodel.Notification), nil
+		return v.(*rostermodel.Notifications).Notifications, nil
 	}
 	return nil, nil
 }
@@ -386,9 +263,13 @@ func (c *cachedRosterRep) FetchRosterGroups(ctx context.Context, username string
 		c:         c.c,
 		namespace: rosterItemsNS(username),
 		key:       rosterGroupsKey,
-		codec:     &rosterGroupsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
-			return c.rep.FetchRosterGroups(ctx, username)
+		codec:     &rostermodel.Groups{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
+			grs, err := c.rep.FetchRosterGroups(ctx, username)
+			if err != nil {
+				return nil, err
+			}
+			return &rostermodel.Groups{Groups: grs}, nil
 		},
 	}
 	v, err := op.do(ctx)
@@ -396,7 +277,7 @@ func (c *cachedRosterRep) FetchRosterGroups(ctx context.Context, username string
 	case err != nil:
 		return nil, err
 	case v != nil:
-		return v.([]string), nil
+		return v.(*rostermodel.Groups).Groups, nil
 	}
 	return nil, nil
 }

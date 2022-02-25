@@ -17,7 +17,7 @@ package repository
 import (
 	"context"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 )
 
 // Offline defines user offline repository operations.

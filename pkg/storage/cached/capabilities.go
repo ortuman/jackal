@@ -18,33 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/ortuman/jackal/pkg/model"
+
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 const capsKey = "caps"
-
-type capsCodec struct {
-	val *capsmodel.Capabilities
-}
-
-func (c *capsCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(i.(*capsmodel.Capabilities))
-}
-
-func (c *capsCodec) decode(b []byte) error {
-	var caps capsmodel.Capabilities
-	if err := proto.Unmarshal(b, &caps); err != nil {
-		return err
-	}
-	c.val = &caps
-	return nil
-}
-
-func (c *capsCodec) value() interface{} {
-	return c.val
-}
 
 type cachedCapsRep struct {
 	c   Cache
@@ -80,8 +60,8 @@ func (c *cachedCapsRep) FetchCapabilities(ctx context.Context, node, ver string)
 		c:         c.c,
 		namespace: capsNS(node, ver),
 		key:       capsKey,
-		codec:     &capsCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     &capsmodel.Capabilities{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchCapabilities(ctx, node, ver)
 		},
 	}

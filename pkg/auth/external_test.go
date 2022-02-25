@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	authpb "github.com/ortuman/jackal/pkg/auth/pb"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"

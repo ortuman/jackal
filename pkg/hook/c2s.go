@@ -15,8 +15,8 @@
 package hook
 
 import (
-	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
 const (

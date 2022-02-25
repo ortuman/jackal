@@ -22,8 +22,8 @@ import (
 
 	kitlog "github.com/go-kit/log"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/ortuman/jackal/pkg/router"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )

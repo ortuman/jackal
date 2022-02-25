@@ -19,9 +19,8 @@ import (
 	"testing"
 
 	kitlog "github.com/go-kit/log"
-
-	"github.com/jackal-xmpp/stravaganza/v2"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/stretchr/testify/require"
 )

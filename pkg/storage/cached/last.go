@@ -18,33 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/ortuman/jackal/pkg/model"
+
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 const lastKey = "lst"
-
-type lastCodec struct {
-	val *lastmodel.Last
-}
-
-func (c *lastCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(i.(*lastmodel.Last))
-}
-
-func (c *lastCodec) decode(b []byte) error {
-	var last lastmodel.Last
-	if err := proto.Unmarshal(b, &last); err != nil {
-		return err
-	}
-	c.val = &last
-	return nil
-}
-
-func (c *lastCodec) value() interface{} {
-	return c.val
-}
 
 type cachedLastRep struct {
 	c   Cache
@@ -68,8 +48,8 @@ func (c *cachedLastRep) FetchLast(ctx context.Context, username string) (*lastmo
 		c:         c.c,
 		namespace: lastNS(username),
 		key:       lastKey,
-		codec:     &lastCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     &lastmodel.Last{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchLast(ctx, username)
 		},
 	}

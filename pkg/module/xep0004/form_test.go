@@ -17,7 +17,7 @@ package xep0004
 import (
 	"testing"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/stretchr/testify/require"
 )
 

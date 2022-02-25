@@ -18,33 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/ortuman/jackal/pkg/model"
+
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 const userKey = "usr"
-
-type userCodec struct {
-	val *usermodel.User
-}
-
-func (c *userCodec) encode(i interface{}) ([]byte, error) {
-	return proto.Marshal(i.(*usermodel.User))
-}
-
-func (c *userCodec) decode(b []byte) error {
-	var usr usermodel.User
-	if err := proto.Unmarshal(b, &usr); err != nil {
-		return err
-	}
-	c.val = &usr
-	return nil
-}
-
-func (c *userCodec) value() interface{} {
-	return c.val
-}
 
 type cachedUserRep struct {
 	c   Cache
@@ -80,8 +60,8 @@ func (c *cachedUserRep) FetchUser(ctx context.Context, username string) (*usermo
 		c:         c.c,
 		namespace: userNS(username),
 		key:       userKey,
-		codec:     &userCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     &usermodel.User{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchUser(ctx, username)
 		},
 	}

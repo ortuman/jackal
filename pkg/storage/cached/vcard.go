@@ -18,34 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/ortuman/jackal/pkg/model"
+
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 const vCardKey = "vc"
-
-type vCardCodec struct {
-	val stravaganza.Element
-}
-
-func (c *vCardCodec) encode(i interface{}) ([]byte, error) {
-	el := i.(stravaganza.Element)
-	return proto.Marshal(el.Proto())
-}
-
-func (c *vCardCodec) decode(b []byte) error {
-	sb, err := stravaganza.NewBuilderFromBinary(b)
-	if err != nil {
-		return err
-	}
-	c.val = sb.Build()
-	return nil
-}
-
-func (c *vCardCodec) value() interface{} {
-	return c.val
-}
 
 type cachedVCardRep struct {
 	c   Cache
@@ -69,8 +48,8 @@ func (c *cachedVCardRep) FetchVCard(ctx context.Context, username string) (strav
 		c:         c.c,
 		namespace: vCardNS(username),
 		key:       vCardKey,
-		codec:     &vCardCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     stravaganza.EmptyElement(),
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchVCard(ctx, username)
 		},
 	}

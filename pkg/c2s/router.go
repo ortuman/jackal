@@ -20,9 +20,9 @@ import (
 
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/jackal-xmpp/stravaganza/v2"
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
-	"github.com/jackal-xmpp/stravaganza/v2/jid"
+	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	clusterrouter "github.com/ortuman/jackal/pkg/cluster/router"

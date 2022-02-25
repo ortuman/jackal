@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/cluster/pb"
 	"github.com/ortuman/jackal/pkg/component"
 	"google.golang.org/grpc/codes"

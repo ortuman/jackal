@@ -19,6 +19,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
+
+	"github.com/ortuman/jackal/pkg/model"
+
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/stretchr/testify/require"
 )
@@ -72,25 +76,19 @@ func TestCachedRepository_UpdateOp(t *testing.T) {
 
 func TestCachedRepository_FetchOpHit(t *testing.T) {
 	// given
+	var usr usermodel.User
+	usr.Username = "ortuman"
+
 	cacheMock := &cacheMock{}
 	cacheMock.GetFunc = func(ctx context.Context, ns, k string) ([]byte, error) {
-		return []byte{255}, nil
-	}
-
-	c := &codecMock{}
-	c.decodeFunc = func(bytes []byte) error {
-		return nil
-	}
-	var usr usermodel.User
-	c.valueFunc = func() interface{} {
-		return &usr
+		return proto.Marshal(&usr)
 	}
 
 	var missed bool
 	op := fetchOp{
 		c:     cacheMock,
-		codec: c,
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec: &usr,
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			missed = true
 			return nil, nil
 		},
@@ -101,7 +99,7 @@ func TestCachedRepository_FetchOpHit(t *testing.T) {
 
 	// then
 	require.False(t, missed)
-	require.True(t, reflect.DeepEqual(v, &usr))
+	require.Equal(t, "ortuman", v.(*usermodel.User).Username)
 }
 
 func TestCachedRepository_FetchOpMiss(t *testing.T) {
@@ -114,16 +112,11 @@ func TestCachedRepository_FetchOpMiss(t *testing.T) {
 		return nil
 	}
 
-	c := &codecMock{}
-	c.encodeFunc = func(i interface{}) ([]byte, error) {
-		return []byte{255}, nil
-	}
-
 	var usr usermodel.User
 	op := fetchOp{
 		c:     cacheMock,
-		codec: c,
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec: &usermodel.User{},
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return &usr, nil
 		},
 	}

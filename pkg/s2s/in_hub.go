@@ -23,7 +23,7 @@ import (
 
 	"github.com/go-kit/log/level"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/v2/errors/stream"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/ortuman/jackal/pkg/router/stream"
 )
 

@@ -18,32 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
+	"github.com/ortuman/jackal/pkg/model"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
-
-type privateCodec struct {
-	val stravaganza.Element
-}
-
-func (c *privateCodec) encode(i interface{}) ([]byte, error) {
-	el := i.(stravaganza.Element)
-	return proto.Marshal(el.Proto())
-}
-
-func (c *privateCodec) decode(b []byte) error {
-	sb, err := stravaganza.NewBuilderFromBinary(b)
-	if err != nil {
-		return err
-	}
-	c.val = sb.Build()
-	return nil
-}
-
-func (c *privateCodec) value() interface{} {
-	return c.val
-}
 
 type cachedPrivateRep struct {
 	c   Cache
@@ -55,8 +33,8 @@ func (c *cachedPrivateRep) FetchPrivate(ctx context.Context, namespace, username
 		c:         c.c,
 		namespace: privateNS(username),
 		key:       namespace,
-		codec:     &privateCodec{},
-		missFn: func(ctx context.Context) (interface{}, error) {
+		codec:     stravaganza.EmptyElement(),
+		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchPrivate(ctx, namespace, username)
 		},
 	}

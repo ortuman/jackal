@@ -14,7 +14,7 @@
 
 package hook
 
-import "github.com/jackal-xmpp/stravaganza/v2"
+import "github.com/jackal-xmpp/stravaganza"
 
 const (
 	// PrivateFetched hook runs when a user private XML is fetched.

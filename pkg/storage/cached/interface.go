@@ -21,11 +21,6 @@ type cache interface {
 	Cache
 }
 
-//go:generate moq -out codec.mock_test.go . cacheCodec:codecMock
-type cacheCodec interface {
-	codec
-}
-
 //go:generate moq -out repository.mock_test.go . globalRepository:repositoryMock
 type globalRepository interface {
 	repository.Repository

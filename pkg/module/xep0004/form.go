@@ -17,7 +17,7 @@ package xep0004
 import (
 	"fmt"
 
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 )
 
 // FormNamespace specifies XEP-0004 namespace constant value.

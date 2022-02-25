@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hook
+package model
 
-import "github.com/jackal-xmpp/stravaganza"
+import "encoding"
 
-const (
-	// VCardFetched hook runs whenever a user vCard is fetched.
-	VCardFetched = "vcard.fetched"
-
-	// VCardUpdated hook runs whenever a user vCard is updated.
-	VCardUpdated = "vcard.updated"
-)
-
-// VCardInfo contains all information associated to a vCard event.
-type VCardInfo struct {
-	// Username is the name of the vCard user associated to this event.
-	Username string
-
-	// VCard is the vCard element associated to this event.
-	VCard stravaganza.Element
+// Codec defines the interface to serialize/deserialize model objects into and from binary format.
+type Codec interface {
+	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 }

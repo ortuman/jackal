@@ -15,7 +15,7 @@
 package session
 
 import (
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/transport"
 )
 

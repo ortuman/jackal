@@ -21,8 +21,8 @@ import (
 
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	"github.com/jackal-xmpp/stravaganza/v2"
-	stanzaerror "github.com/jackal-xmpp/stravaganza/v2/errors/stanza"
+	"github.com/jackal-xmpp/stravaganza"
+	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"

@@ -21,10 +21,8 @@ import (
 	"sync"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-
-	"github.com/jackal-xmpp/stravaganza/v2"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/hook"
 )
 

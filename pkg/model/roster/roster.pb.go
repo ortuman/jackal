@@ -21,12 +21,11 @@
 package rostermodel
 
 import (
-	reflect "reflect"
-	sync "sync"
-
-	stravaganza "github.com/jackal-xmpp/stravaganza/v2"
+	stravaganza "github.com/jackal-xmpp/stravaganza"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -332,6 +331,54 @@ func (x *Groups) GetGroups() []string {
 	return nil
 }
 
+// Version represents a roster version number.
+type Version struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+}
+
+func (x *Version) Reset() {
+	*x = Version{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_v1_roster_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Version) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Version) ProtoMessage() {}
+
+func (x *Version) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_v1_roster_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Version.ProtoReflect.Descriptor instead.
+func (*Version) Descriptor() ([]byte, []int) {
+	return file_proto_model_v1_roster_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Version) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 var File_proto_model_v1_roster_proto protoreflect.FileDescriptor
 
 var file_proto_model_v1_roster_proto_rawDesc = []byte{
@@ -368,10 +415,12 @@ var file_proto_model_v1_roster_proto_rawDesc = []byte{
 	0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0d, 0x6e, 0x6f, 0x74, 0x69,
 	0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x20, 0x0a, 0x06, 0x47, 0x72, 0x6f,
 	0x75, 0x70, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x18, 0x01, 0x20,
-	0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x42, 0x1f, 0x5a, 0x1d, 0x70,
-	0x6b, 0x67, 0x2f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x2f, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x2f,
-	0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x03, 0x28, 0x09, 0x52, 0x06, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x73, 0x22, 0x23, 0x0a, 0x07, 0x56,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e,
+	0x42, 0x1f, 0x5a, 0x1d, 0x70, 0x6b, 0x67, 0x2f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x2f, 0x72, 0x6f,
+	0x73, 0x74, 0x65, 0x72, 0x2f, 0x3b, 0x72, 0x6f, 0x73, 0x74, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65,
+	0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -386,18 +435,19 @@ func file_proto_model_v1_roster_proto_rawDescGZIP() []byte {
 	return file_proto_model_v1_roster_proto_rawDescData
 }
 
-var file_proto_model_v1_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_model_v1_roster_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_model_v1_roster_proto_goTypes = []interface{}{
 	(*Item)(nil),                  // 0: model.roster.v1.Item
 	(*Items)(nil),                 // 1: model.roster.v1.Items
 	(*Notification)(nil),          // 2: model.roster.v1.Notification
 	(*Notifications)(nil),         // 3: model.roster.v1.Notifications
 	(*Groups)(nil),                // 4: model.roster.v1.Groups
-	(*stravaganza.PBElement)(nil), // 5: stravaganza.PBElement
+	(*Version)(nil),               // 5: model.roster.v1.Version
+	(*stravaganza.PBElement)(nil), // 6: stravaganza.PBElement
 }
 var file_proto_model_v1_roster_proto_depIdxs = []int32{
 	0, // 0: model.roster.v1.Items.items:type_name -> model.roster.v1.Item
-	5, // 1: model.roster.v1.Notification.presence:type_name -> stravaganza.PBElement
+	6, // 1: model.roster.v1.Notification.presence:type_name -> stravaganza.PBElement
 	2, // 2: model.roster.v1.Notifications.notifications:type_name -> model.roster.v1.Notification
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
@@ -472,6 +522,18 @@ func file_proto_model_v1_roster_proto_init() {
 				return nil
 			}
 		}
+		file_proto_model_v1_roster_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Version); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -479,7 +541,7 @@ func file_proto_model_v1_roster_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_model_v1_roster_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
