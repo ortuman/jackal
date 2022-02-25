@@ -16,18 +16,22 @@ package blocklistmodel
 
 import "google.golang.org/protobuf/proto"
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Item) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Item) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Items) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Items) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }

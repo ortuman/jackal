@@ -16,6 +16,7 @@ package model
 
 import "encoding"
 
+// Codec defines the interface to serialize/deserialize model objects into and from binary format.
 type Codec interface {
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler

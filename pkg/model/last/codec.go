@@ -16,10 +16,12 @@ package lastmodel
 
 import "github.com/golang/protobuf/proto"
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Last) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Last) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }

@@ -16,50 +16,62 @@ package rostermodel
 
 import "github.com/golang/protobuf/proto"
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Item) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Item) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Items) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Items) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Notification) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Notification) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Notifications) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Notifications) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Groups) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Groups) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
 
+// MarshalBinary satisfies encoding.BinaryMarshaler interface.
 func (x *Version) MarshalBinary() (data []byte, err error) {
 	return proto.Marshal(x)
 }
 
+// UnmarshalBinary satisfies encoding.BinaryUnmarshaler interface.
 func (x *Version) UnmarshalBinary(data []byte) error {
 	return proto.Unmarshal(data, x)
 }
