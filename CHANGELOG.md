@@ -2,6 +2,8 @@
 
 ## jackal - main / unreleased
 
+* [FEATURE] Added BoltDB repository type. [#198](https://github.com/ortuman/jackal/pull/212)
+
 ## 0.57.0 (2022/02/12)
 
 * [ENHANCEMENT] Added memory ballast. [#198](https://github.com/ortuman/jackal/pull/198)
