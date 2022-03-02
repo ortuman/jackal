@@ -23,31 +23,31 @@ peppers:
 #      cert_file: ""
 #      privkey_file: ""
 
-storage:
-  type: pgsql
-  pgsql:
-    host: 127.0.0.1:5432
-    user: jackal
-    password: password
-    database: jackal
-    max_open_conns: 16
+#storage:
+#  type: pgsql
+#  pgsql:
+#    host: 127.0.0.1:5432
+#    user: jackal
+#    password: password
+#    database: jackal
+#    max_open_conns: 16
 
-  cache:
-    type: redis
-    redis:
-      addresses:
-        - localhost:6379
+#  cache:
+#    type: redis
+#    redis:
+#      addresses:
+#        - localhost:6379
 
-cluster:
-  type: kv
-  kv:
-    type: etcd
-    etcd:
-      endpoints:
-        - http://127.0.0.1:2379
-
-  server:
-    port: 14369
+#cluster:
+#  type: kv
+#  kv:
+#    type: etcd
+#    etcd:
+#      endpoints:
+#        - http://127.0.0.1:2379
+#
+#  server:
+#    port: 14369
 
 shapers:
   - name: super
@@ -136,4 +136,3 @@ components:
   listeners:
     - port: 5275
       secret: hqcUrfHtgE73FktcXwfrP
-

@@ -154,7 +154,10 @@ func (s *usersService) upsertUser(ctx context.Context, username, password string
 	hSHA512 := hashPassword([]byte(password), pepperedSalt, iterationCount, sha512.Size, sha512.New)
 	hSHA3512 := hashPassword([]byte(password), pepperedSalt, iterationCount, sha512.Size, sha3.New512)
 
-	usr := usermodel.User{Username: username}
+	usr := usermodel.User{
+		Username: username,
+		Scram:    &usermodel.Scram{},
+	}
 	usr.Scram.Sha1 = base64.RawURLEncoding.EncodeToString(hSHA1)
 	usr.Scram.Sha256 = base64.RawURLEncoding.EncodeToString(hSHA256)
 	usr.Scram.Sha512 = base64.RawURLEncoding.EncodeToString(hSHA512)

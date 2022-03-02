@@ -44,3 +44,6 @@ build
 
 # Mock files
 *.mock_test.go
+
+# BoltDB default database file
+.jackal.db

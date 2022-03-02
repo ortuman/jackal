@@ -18,29 +18,41 @@ import (
 	"fmt"
 
 	kitlog "github.com/go-kit/log"
+	"github.com/ortuman/jackal/pkg/storage/boltdb"
 	cachedrepository "github.com/ortuman/jackal/pkg/storage/cached"
 	measuredrepository "github.com/ortuman/jackal/pkg/storage/measured"
 	pgsqlrepository "github.com/ortuman/jackal/pkg/storage/pgsql"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
-const pgSQLRepositoryType = "pgsql"
+const (
+	boltDBRepositoryType = "boltdb"
+	pgSQLRepositoryType  = "pgsql"
+)
 
 // Config contains generic storage configuration.
 type Config struct {
-	Type  string                  `fig:"type" default:"pgsql"`
-	PgSQL pgsqlrepository.Config  `fig:"pgsql"`
-	Cache cachedrepository.Config `fig:"cache"`
+	Type   string                  `fig:"type" default:"boltdb"`
+	PgSQL  pgsqlrepository.Config  `fig:"pgsql"`
+	BoltDB boltdb.Config           `fig:"boltdb"`
+	Cache  cachedrepository.Config `fig:"cache"`
 }
 
 // New returns an initialized repository.Repository derived from cfg configuration.
 func New(cfg Config, logger kitlog.Logger) (repository.Repository, error) {
-	if cfg.Type != pgSQLRepositoryType {
-		return nil, fmt.Errorf("unrecognized repository type: %s", cfg.Type)
-	}
 	var rep repository.Repository
 
-	rep = pgsqlrepository.New(cfg.PgSQL, logger)
+	switch cfg.Type {
+	case pgSQLRepositoryType:
+		rep = pgsqlrepository.New(cfg.PgSQL, logger)
+
+	case boltDBRepositoryType:
+		rep = boltdb.New(cfg.BoltDB, logger)
+
+	default:
+		return nil, fmt.Errorf("unrecognized repository type: %s", cfg.Type)
+	}
+
 	if len(cfg.Cache.Type) > 0 {
 		var err error
 		rep, err = cachedrepository.New(cfg.Cache, rep, logger)
