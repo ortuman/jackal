@@ -28,6 +28,8 @@ import (
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
+const noLoadBalancePrefix = "/*NO LOAD BALANCE*/"
+
 func init() {
 	sq.StatementBuilder = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 }

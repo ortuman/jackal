@@ -28,7 +28,6 @@ import (
 	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
-	netutil "github.com/ortuman/jackal/pkg/util/net"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -42,11 +41,6 @@ const (
 
 // Config contains etcd configuration parameters.
 type Config struct {
-	DNSSrv struct {
-		Service string `fig:"service"`
-		Proto   string `fig:"proto"`
-		Target  string `fig:"target"`
-	} `fig:"dnssrv"`
 	Endpoints            []string      `fig:"endpoints"`
 	Username             string        `fig:"username"`
 	Password             string        `fig:"password"`
@@ -142,23 +136,6 @@ func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan 
 
 // Start initializes etcd key-value store.
 func (k *KV) Start(ctx context.Context) error {
-	var endpoints []string
-
-	if len(k.cfg.Endpoints) > 0 {
-		endpoints = k.cfg.Endpoints
-	} else {
-		rsv := netutil.NewSRVResolver()
-
-		addrs, err := rsv.Resolve(ctx, k.cfg.DNSSrv.Service, k.cfg.DNSSrv.Proto, k.cfg.DNSSrv.Target)
-		if err != nil {
-			return err
-		}
-		for _, addr := range addrs {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s", addr))
-		}
-		k.cfg.Endpoints = endpoints
-	}
-
 	if err := k.checkHealth(k.cfg.Endpoints); err != nil {
 		return err
 	}

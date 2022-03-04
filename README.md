@@ -59,6 +59,28 @@ or environment variable:
 $ env JACKAL_CONFIG_FILE=/your-custom-path/your-config.yaml jackal
 ```
 
+### Helm chart
+
+To make it easy to install jackal via Helm in Kubernetes a chart has been included into this repository.<br/> 
+
+After customizing your own [values.yaml](helm/values.yaml) file run the following command to install and configure all required components under `jackal` namespace.   
+
+```sh
+sh ./helm/scripts/install <your_custom_values>.yaml
+```
+
+In turn, an active chart can be updated by running the upgrade script as follows:
+
+```sh
+sh ./helm/scripts/upgrade <your_custom_values>.yaml
+```
+
+On the other hand, you can also remove the jackal chart from your Kubernetes cluster by running the uninstall script: 
+
+```sh
+sh ./helm/scripts/uninstall
+```
+
 ### PostgreSQL database creation
 
 Create a user and a database for that user:

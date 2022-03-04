@@ -1,0 +1,32 @@
+{{ if index .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: redis
+    heritage: {{ $.Release.Service }}
+    release: {{ $.Release.Name }}
+spec:
+  replicas: {{ .Values.redis.replicasCount }}
+  selector:
+    matchLabels:
+      app: redis
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ $.Values.redis.image.repository }}:{{ $.Values.redis.image.tag }}
+          imagePullPolicy: {{ $.Values.redis.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $.Values.redis.port }}
+              name: redis
+
+          resources:
+            {{- toYaml $.Values.redis.resources | nindent 12 }}
+{{ end }}

@@ -33,6 +33,7 @@ type pgSQLBlockListRep struct {
 
 func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Insert(blockListsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "jid").
 		Values(item.Username, item.Jid).
 		Suffix("ON CONFLICT (username, jid) DO NOTHING").
@@ -43,6 +44,7 @@ func (r *pgSQLBlockListRep) UpsertBlockListItem(ctx context.Context, item *block
 
 func (r *pgSQLBlockListRep) DeleteBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
 	_, err := sq.Delete(blockListsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.And{sq.Eq{"username": item.Username}, sq.Eq{"jid": item.Jid}}).
 		RunWith(r.conn).
 		ExecContext(ctx)
@@ -66,6 +68,7 @@ func (r *pgSQLBlockListRep) FetchBlockListItems(ctx context.Context, username st
 
 func (r *pgSQLBlockListRep) DeleteBlockListItems(ctx context.Context, username string) error {
 	_, err := sq.Delete(blockListsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).
 		ExecContext(ctx)

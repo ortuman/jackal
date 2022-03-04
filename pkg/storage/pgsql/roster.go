@@ -39,6 +39,7 @@ type pgSQLRosterRep struct {
 
 func (r *pgSQLRosterRep) TouchRosterVersion(ctx context.Context, username string) (int, error) {
 	b := sq.Insert(rosterVersionsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username").
 		Values(username).
 		Suffix("ON CONFLICT (username) DO UPDATE SET ver = roster_versions.ver + 1").
@@ -71,6 +72,7 @@ func (r *pgSQLRosterRep) FetchRosterVersion(ctx context.Context, username string
 
 func (r *pgSQLRosterRep) UpsertRosterItem(ctx context.Context, ri *rostermodel.Item) error {
 	q := sq.Insert(rosterItemsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "jid", "name", "subscription", "groups", "ask").
 		Values(ri.Username, ri.Jid, ri.Name, ri.Subscription, pq.Array(ri.Groups), ri.Ask).
 		Suffix("ON CONFLICT (username, jid) DO UPDATE SET name = $3, subscription = $4, groups = $5, ask = $6")
@@ -81,6 +83,7 @@ func (r *pgSQLRosterRep) UpsertRosterItem(ctx context.Context, ri *rostermodel.I
 
 func (r *pgSQLRosterRep) DeleteRosterItem(ctx context.Context, username, jid string) error {
 	_, err := sq.Delete(rosterItemsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.And{sq.Eq{"username": username}, sq.Eq{"jid": jid}}).
 		RunWith(r.conn).ExecContext(ctx)
 	return err
@@ -88,6 +91,7 @@ func (r *pgSQLRosterRep) DeleteRosterItem(ctx context.Context, username, jid str
 
 func (r *pgSQLRosterRep) DeleteRosterItems(ctx context.Context, username string) error {
 	_, err := sq.Delete(rosterItemsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).ExecContext(ctx)
 	return err
@@ -145,6 +149,7 @@ func (r *pgSQLRosterRep) UpsertRosterNotification(ctx context.Context, rn *roste
 		return err
 	}
 	q := sq.Insert(rosterNotificationsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("contact", "jid", "presence").
 		Values(rn.Contact, rn.Jid, prBytes).
 		Suffix("ON CONFLICT (contact, jid) DO UPDATE SET presence = $3")
@@ -155,6 +160,7 @@ func (r *pgSQLRosterRep) UpsertRosterNotification(ctx context.Context, rn *roste
 
 func (r *pgSQLRosterRep) DeleteRosterNotification(ctx context.Context, contact, jid string) error {
 	q := sq.Delete(rosterNotificationsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.And{sq.Eq{"contact": contact}, sq.Eq{"jid": jid}})
 	_, err := q.RunWith(r.conn).ExecContext(ctx)
 	return err
@@ -162,6 +168,7 @@ func (r *pgSQLRosterRep) DeleteRosterNotification(ctx context.Context, contact, 
 
 func (r *pgSQLRosterRep) DeleteRosterNotifications(ctx context.Context, contact string) error {
 	q := sq.Delete(rosterNotificationsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"contact": contact})
 	_, err := q.RunWith(r.conn).ExecContext(ctx)
 	return err

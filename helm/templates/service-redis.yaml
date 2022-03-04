@@ -1,0 +1,18 @@
+{{ if index .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: redis
+spec:
+  clusterIP: None
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - port: {{ .Values.redis.port }}
+      protocol: TCP
+      name: redis
+{{ end }}
