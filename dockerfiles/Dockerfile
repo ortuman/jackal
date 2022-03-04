@@ -1,4 +1,6 @@
-FROM debian:stable-slim
+FROM --platform=$BUILDPLATFORM debian:stable-slim
+
+ARG TARGETARCH
 
 WORKDIR /jackal
 
@@ -7,8 +9,8 @@ LABEL org.label-schema.name="jackal"
 LABEL org.label-schema.vendor="Miguel Ángel Ortuño"
 LABEL maintainer="Miguel Ángel Ortuño <ortuman@protonmail.com>"
 
-ADD build/jackal /jackal
-ADD build/jackalctl /jackal
+ADD build/$TARGETARCH/jackal /jackal
+ADD build/$TARGETARCH/jackalctl /jackal
 
 EXPOSE 5222
 
