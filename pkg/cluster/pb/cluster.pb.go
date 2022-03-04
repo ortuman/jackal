@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@
 package pb
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	stravaganza "github.com/jackal-xmpp/stravaganza"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (

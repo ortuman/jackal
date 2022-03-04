@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
+	netutil "github.com/ortuman/jackal/pkg/util/net"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -41,6 +42,7 @@ const (
 
 // Config contains etcd configuration parameters.
 type Config struct {
+	DNS                  string        `fig:"dns"`
 	Endpoints            []string      `fig:"endpoints"`
 	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
 	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
@@ -134,7 +136,21 @@ func (k *KV) Watch(ctx context.Context, prefix string, withPrevVal bool) <-chan 
 
 // Start initializes etcd key-value store.
 func (k *KV) Start(ctx context.Context) error {
-	if err := k.checkHealth(k.cfg.Endpoints); err != nil {
+	var endpoints []string
+
+	if len(k.cfg.Endpoints) > 0 {
+		endpoints = k.cfg.Endpoints
+	} else {
+		addrs, err := netutil.SRVResolve("tcp", "tcp", k.cfg.DNS)
+		if err != nil {
+			return err
+		}
+		for _, addr := range addrs {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s", addr))
+		}
+	}
+
+	if err := k.checkHealth(endpoints); err != nil {
 		return err
 	}
 	// perform dialing

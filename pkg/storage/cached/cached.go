@@ -81,7 +81,10 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 	if cfg.Type != rediscache.Type {
 		return nil, fmt.Errorf("unrecognized repository cache type: %s", cfg.Type)
 	}
-	c := rediscache.New(cfg.Redis)
+	c, err := rediscache.New(cfg.Redis)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CachedRepository{
 		User:         &cachedUserRep{c: c, rep: rep},

@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -238,8 +238,6 @@ func (j *Jackal) Run() error {
 	if err := j.initModules(cfg.Modules); err != nil {
 		return err
 	}
-	// init HTTP server
-	j.registerStartStopper(newHTTPServer(cfg.HTTPPort, j.logger))
 
 	// init admin server
 	j.initAdminServer(cfg.Admin)
@@ -250,9 +248,11 @@ func (j *Jackal) Run() error {
 	}
 
 	// init C2S/S2S listeners
-	if err := j.initListeners(cfg.C2S.Listeners, cfg.S2S.Listeners, cfg.Components.Listeners); err != nil {
+	if err := j.initListeners(cfg.C2S.Listeners, cfg.S2S.Listeners, cfg.Components.Listeners, cfg.Components.Secret); err != nil {
 		return err
 	}
+	// init HTTP server
+	j.registerStartStopper(newHTTPServer(cfg.HTTP.Port, j.logger))
 
 	if err := j.bootstrap(); err != nil {
 		return err
@@ -341,6 +341,7 @@ func (j *Jackal) initListeners(
 	c2sListenersCfg c2s.ListenersConfig,
 	s2sListenersCfg s2s.ListenersConfig,
 	cmpListenersCfg xep0114.ListenersConfig,
+	cmpSecretKey string,
 ) error {
 	// c2s listeners
 	c2sListeners := c2s.NewListeners(
@@ -386,6 +387,7 @@ func (j *Jackal) initListeners(
 	// external component listeners
 	cmpListeners := xep0114.NewListeners(
 		cmpListenersCfg,
+		cmpSecretKey,
 		j.hosts,
 		j.comps,
 		j.extCompMng,

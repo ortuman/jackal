@@ -47,3 +47,4 @@ build
 
 # BoltDB default database file
 .jackal.db
+

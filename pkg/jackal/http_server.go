@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ func (h *httpServer) Start(_ context.Context) error {
 	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 	mux.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 
+	mux.Handle("/healthz", http.HandlerFunc(h.healthCheck))
+
 	h.srv = &http.Server{Handler: mux}
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", h.port))
 	if err != nil {
@@ -69,4 +71,12 @@ func (h *httpServer) Stop(ctx context.Context) error {
 	}
 	level.Info(h.logger).Log("msg", "closed HTTP server", "port", h.port)
 	return nil
+}
+
+func (h *httpServer) healthCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+	w.WriteHeader(http.StatusOK)
+	return
 }

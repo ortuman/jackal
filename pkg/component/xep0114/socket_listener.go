@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ const (
 // SocketListener represents a component socket listener type.
 type SocketListener struct {
 	cfg           ListenerConfig
+	secretKey     string
 	hosts         *host.Hosts
 	comps         *component.Components
 	router        router.Router
@@ -58,6 +59,7 @@ type SocketListener struct {
 // NewListeners creates and initializes a set of component listeners based of cfg configuration.
 func NewListeners(
 	cfg ListenersConfig,
+	secretKey string,
 	hosts *host.Hosts,
 	comps *component.Components,
 	extCompMng *extcomponentmanager.Manager,
@@ -70,6 +72,7 @@ func NewListeners(
 	for _, lnCfg := range cfg {
 		ln := newSocketListener(
 			lnCfg,
+			secretKey,
 			hosts,
 			comps,
 			extCompMng,
@@ -85,6 +88,7 @@ func NewListeners(
 
 func newSocketListener(
 	cfg ListenerConfig,
+	secretKey string,
 	hosts *host.Hosts,
 	comps *component.Components,
 	extCompMng *extcomponentmanager.Manager,
@@ -166,7 +170,7 @@ func (l *SocketListener) handleConn(conn net.Conn) {
 		inConfig{
 			reqTimeout:    l.cfg.RequestTimeout,
 			maxStanzaSize: l.cfg.MaxStanzaSize,
-			secret:        l.cfg.Secret,
+			secret:        l.secretKey,
 		},
 	)
 	if err != nil {
