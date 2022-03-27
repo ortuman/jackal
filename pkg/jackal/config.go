@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,11 @@ type LoggerConfig struct {
 	Format string `fig:"format"`
 }
 
+// HTTPConfig defines HTTP configuration.
+type HTTPConfig struct {
+	Port int `fig:"port" default:"6060"`
+}
+
 // ClusterConfig defines cluster configuration.
 type ClusterConfig struct {
 	Type   string               `fig:"type" default:"none"`
@@ -71,6 +76,7 @@ type S2SConfig struct {
 // ComponentsConfig defines application components configuration.
 type ComponentsConfig struct {
 	Listeners xep0114.ListenersConfig `fig:"listeners"`
+	Secret    string                  `fig:"secret"`
 }
 
 // ModulesConfig defines application modules configuration.
@@ -98,7 +104,7 @@ type Config struct {
 	Logger  LoggerConfig  `fig:"logger"`
 	Cluster ClusterConfig `fig:"cluster"`
 
-	HTTPPort int `fig:"http_port" default:"6060"`
+	HTTP HTTPConfig `fig:"http"`
 
 	Peppers pepper.Config      `fig:"peppers"`
 	Admin   adminserver.Config `fig:"admin"`
@@ -117,7 +123,7 @@ func loadConfig(configFile string) (*Config, error) {
 	file := filepath.Base(configFile)
 	dir := filepath.Dir(configFile)
 
-	err := fig.Load(&cfg, fig.File(file), fig.Dirs(dir))
+	err := fig.Load(&cfg, fig.File(file), fig.Dirs(dir), fig.UseEnv("jackal"))
 	if err != nil {
 		return nil, err
 	}

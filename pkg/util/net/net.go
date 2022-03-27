@@ -12,17 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hook
+package net
 
-const (
-	// ModulesStarted hook runs after initializing all configured modules.
-	ModulesStarted = "modules.started"
-
-	// ModulesStopped hook runs after finishing all configured modules.
-	ModulesStopped = "modules.stopped"
+import (
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
 )
 
-// ModulesInfo contains all information associated to a modules event.
-type ModulesInfo struct {
-	ModuleNames []string
+// SRVResolve performs SRV resolution over dns.
+func SRVResolve(service, proto, remoteAddr string) ([]string, error) {
+	var retVal []string
+
+	_, addrs, err := net.LookupSRV(service, proto, remoteAddr)
+	if err != nil {
+		return nil, err
+	}
+	for _, addr := range addrs {
+		if addr.Target == "." {
+			continue
+		}
+		host := strings.TrimSuffix(addr.Target, ".")
+		port := strconv.Itoa(int(addr.Port))
+
+		retVal = append(retVal, fmt.Sprintf("%s:%s", host, port))
+	}
+	return retVal, nil
 }

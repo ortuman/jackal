@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 )
 
 // Version represents application version.
-var Version = NewVersion(0, 58, 0)
+var Version = NewVersion(0, 59, 0)
 
 // APIVersion represents admin API version.
 var APIVersion = NewVersion(1, 0, 0)

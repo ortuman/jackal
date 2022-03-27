@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/go-redis/redis/v8"
+	netutil "github.com/ortuman/jackal/pkg/util/net"
 )
 
 // Type is redis type identifier.
@@ -28,6 +29,7 @@ const Type = "redis"
 
 // Config contains Redis cache configuration.
 type Config struct {
+	DNS          string        `fig:"dns"`
 	Addresses    []string      `fig:"addresses"`
 	Username     string        `fig:"username"`
 	Password     string        `fig:"password"`
@@ -45,9 +47,20 @@ type Cache struct {
 }
 
 // New creates and returns an initialized Redis Cache instance.
-func New(cfg Config) *Cache {
+func New(cfg Config) (*Cache, error) {
 	rdc := &Cache{ttl: cfg.TTL}
-	for _, addr := range cfg.Addresses {
+
+	var addr []string
+	if len(cfg.Addresses) > 0 {
+		addr = cfg.Addresses
+	} else {
+		var err error
+		addr, err = netutil.SRVResolve("tcp", "tcp", cfg.DNS)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, addr := range addr {
 		rdc.clients = append(rdc.clients, redis.NewClient(&redis.Options{
 			Addr:         addr,
 			Username:     cfg.Username,
@@ -58,7 +71,7 @@ func New(cfg Config) *Cache {
 			WriteTimeout: cfg.WriteTimeout,
 		}))
 	}
-	return rdc
+	return rdc, nil
 }
 
 // Type satisfies Cache interface.
