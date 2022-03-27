@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/cespare/xxhash/v2"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -28,7 +27,7 @@ const Type = "redis"
 
 // Config contains Redis cache configuration.
 type Config struct {
-	Addresses    []string      `fig:"addresses"`
+	Address      string        `fig:"address"`
 	Username     string        `fig:"username"`
 	Password     string        `fig:"password"`
 	DB           int           `fig:"db"`
@@ -40,25 +39,14 @@ type Config struct {
 
 // Cache is Redis cache implementation.
 type Cache struct {
-	clients []*redis.Client
-	ttl     time.Duration
+	cfg    Config
+	client *redis.Client
+	ttl    time.Duration
 }
 
 // New creates and returns an initialized Redis Cache instance.
 func New(cfg Config) *Cache {
-	rdc := &Cache{ttl: cfg.TTL}
-	for _, addr := range cfg.Addresses {
-		rdc.clients = append(rdc.clients, redis.NewClient(&redis.Options{
-			Addr:         addr,
-			Username:     cfg.Username,
-			Password:     cfg.Password,
-			DB:           cfg.DB,
-			DialTimeout:  cfg.DialTimeout,
-			ReadTimeout:  cfg.ReadTimeout,
-			WriteTimeout: cfg.WriteTimeout,
-		}))
-	}
-	return rdc
+	return &Cache{cfg: cfg}
 }
 
 // Type satisfies Cache interface.
@@ -66,8 +54,7 @@ func (c *Cache) Type() string { return Type }
 
 // Get satisfies Cache interface.
 func (c *Cache) Get(ctx context.Context, ns, key string) ([]byte, error) {
-	cl := c.pickClient(ns)
-	val, err := cl.HGet(ctx, ns, key).Result()
+	val, err := c.client.HGet(ctx, ns, key).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil
@@ -79,29 +66,25 @@ func (c *Cache) Get(ctx context.Context, ns, key string) ([]byte, error) {
 
 // Put satisfies Cache interface.
 func (c *Cache) Put(ctx context.Context, ns, key string, val []byte) error {
-	cl := c.pickClient(ns)
-	if err := cl.HSet(ctx, ns, key, val).Err(); err != nil {
+	if err := c.client.HSet(ctx, ns, key, val).Err(); err != nil {
 		return err
 	}
-	return cl.Expire(ctx, ns, c.ttl).Err()
+	return c.client.Expire(ctx, ns, c.ttl).Err()
 }
 
 // Del satisfies Cache interface.
 func (c *Cache) Del(ctx context.Context, ns string, keys ...string) error {
-	cl := c.pickClient(ns)
-	return cl.HDel(ctx, ns, keys...).Err()
+	return c.client.HDel(ctx, ns, keys...).Err()
 }
 
 // DelNS removes all keys contained under a given namespace from the cache store.
 func (c *Cache) DelNS(ctx context.Context, ns string) error {
-	cl := c.pickClient(ns)
-	return cl.Del(ctx, ns).Err()
+	return c.client.Del(ctx, ns).Err()
 }
 
 // HasKey satisfies Cache interface.
 func (c *Cache) HasKey(ctx context.Context, ns, key string) (bool, error) {
-	cl := c.pickClient(ns)
-	res := cl.HExists(ctx, ns, key)
+	res := c.client.HExists(ctx, ns, key)
 	if err := res.Err(); err != nil {
 		return false, err
 	}
@@ -110,29 +93,19 @@ func (c *Cache) HasKey(ctx context.Context, ns, key string) (bool, error) {
 
 // Start satisfies Cache interface.
 func (c *Cache) Start(ctx context.Context) error {
-	for _, cl := range c.clients {
-		if err := cl.Ping(ctx).Err(); err != nil {
-			return err
-		}
-	}
-	return nil
+	c.client = redis.NewClient(&redis.Options{
+		Addr:         c.cfg.Address,
+		Username:     c.cfg.Username,
+		Password:     c.cfg.Password,
+		DB:           c.cfg.DB,
+		DialTimeout:  c.cfg.DialTimeout,
+		ReadTimeout:  c.cfg.ReadTimeout,
+		WriteTimeout: c.cfg.WriteTimeout,
+	})
+	return c.client.Ping(ctx).Err()
 }
 
 // Stop satisfies Cache interface.
 func (c *Cache) Stop(_ context.Context) error {
-	for _, cl := range c.clients {
-		if err := cl.Close(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *Cache) pickClient(ns string) *redis.Client {
-	if len(c.clients) == 1 {
-		return c.clients[0]
-	}
-	cs := xxhash.Sum64String(ns)
-	idx := jumpHash(cs, len(c.clients))
-	return c.clients[idx]
+	return c.client.Close()
 }

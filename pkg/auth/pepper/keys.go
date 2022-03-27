@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import (
 	"fmt"
 )
 
+const noneID = "none"
+
 var minKeyLength = 24
 
 // Keys contains all configured pepper keys.
@@ -36,7 +38,10 @@ type Config struct {
 // NewKeys returns an initialized set of pepper keys.
 func NewKeys(cfg Config) (*Keys, error) {
 	if len(cfg.Keys) == 0 {
-		return nil, errors.New("pepper: no pepper keys defined")
+		return &Keys{useID: noneID}, nil
+	}
+	if len(cfg.UseID) == 0 {
+		return nil, errors.New(`pepper: no active key defined (forgot to set "use" key?)`)
 	}
 	for keyID, k := range cfg.Keys {
 		if len(k) < minKeyLength {
@@ -52,12 +57,15 @@ func NewKeys(cfg Config) (*Keys, error) {
 
 // GetKey returns pepper associated to an identifier.
 func (k *Keys) GetKey(pepperID string) string {
+	if k.useID == noneID {
+		return ""
+	}
 	return k.ks[pepperID]
 }
 
 // GetActiveKey returns active pepper value.
 func (k *Keys) GetActiveKey() string {
-	return k.ks[k.useID]
+	return k.GetKey(k.useID)
 }
 
 // GetActiveID returns active pepper identifier.

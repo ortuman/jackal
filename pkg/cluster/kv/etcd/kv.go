@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ const (
 // Config contains etcd configuration parameters.
 type Config struct {
 	Endpoints            []string      `fig:"endpoints"`
+	Username             string        `fig:"username"`
+	Password             string        `fig:"password"`
 	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
 	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
 	DialKeepAliveTimeout time.Duration `fig:"dial_keep_alive_timeout" default:"10s"`
@@ -284,6 +286,8 @@ func dial(cfg Config) (*etcdv3.Client, error) {
 	}
 	return etcdv3.New(etcdv3.Config{
 		Endpoints:            cfg.Endpoints,
+		Username:             cfg.Username,
+		Password:             cfg.Password,
 		DialTimeout:          cfg.DialTimeout,
 		DialKeepAliveTime:    cfg.DialKeepAliveTime,
 		DialKeepAliveTimeout: cfg.DialKeepAliveTimeout,

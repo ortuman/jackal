@@ -1,4 +1,4 @@
-// Copyright 2020 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,16 @@ func TestKeys_Get(t *testing.T) {
 	require.Equal(t, "v2", ks.GetActiveID())
 }
 
+func TestKeys_None(t *testing.T) {
+	// given
+	k, err := NewKeys(Config{})
+
+	// then
+	require.NoError(t, err)
+	require.Equal(t, noneID, k.GetActiveID())
+	require.Equal(t, "", k.GetActiveKey())
+}
+
 func TestKeys_Error(t *testing.T) {
 	// given
 	_, err1 := NewKeys(Config{
@@ -54,8 +64,8 @@ func TestKeys_Error(t *testing.T) {
 	})
 
 	_, err2 := NewKeys(Config{
-		Keys:  map[string]string{},
-		UseID: "v4",
+		Keys:  map[string]string{"v1": "k1"},
+		UseID: "",
 	})
 
 	// then

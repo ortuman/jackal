@@ -1,4 +1,4 @@
-// Copyright 2021 The jackal Authors
+// Copyright 2022 The jackal Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,7 +39,4 @@ type ListenerConfig struct {
 
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
 	MaxStanzaSize int
-
-	// Secret is the external component's shared secret.
-	Secret string
 }

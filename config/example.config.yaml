@@ -2,17 +2,18 @@
 ###                example configuration file                ###
 ###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~###
 
-peppers:
-  keys:
-    v1: m7FFfnHf2g3KsPRPvVjjEiu6uss8tAHg # <-- WARNING: please, use your custom key here!
-  use: v1
+#peppers:
+#  keys:
+#    v1: a-super-secret-key
+#  use: v1
 
 #logger:
 #  level: "debug"
 #  output_path: "jackal.log"
 
-# Prometheus metrics and pprof
-#http_port: 6060
+# Prometheus metrics, pprof & health check
+#http:
+#  port: 6060
 
 #admin:
 #  port: 15280
@@ -31,12 +32,11 @@ peppers:
 #    password: password
 #    database: jackal
 #    max_open_conns: 16
-
+#
 #  cache:
 #    type: redis
 #    redis:
-#      addresses:
-#        - localhost:6379
+#      address: localhost:6379
 
 #cluster:
 #  type: kv
@@ -57,7 +57,6 @@ shapers:
       burst: 65536
     matching:
       jid:
-        # in: [ortuman@localhost]
         regex: ^(ortuman|noelia).+
 
   - name: normal
@@ -72,7 +71,11 @@ c2s:
       req_timeout: 60s
       transport: socket
       sasl:
-        mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
+        mechanisms:
+        - scram_sha_1
+        - scram_sha_256
+        - scram_sha_512
+        - scram_sha3_512]
 
         # Authentication gateway
         # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
@@ -85,7 +88,11 @@ c2s:
       req_timeout: 60s
       transport: socket
       sasl:
-        mechanisms: [scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512]
+        mechanisms:
+        - scram_sha_1
+        - scram_sha_256
+        - scram_sha_512
+        - scram_sha3_512
 
 s2s:
   listeners:
@@ -99,7 +106,7 @@ s2s:
       max_stanza_size: 131072
 
   out:
-    dialback_secret: s3cr3tf0rd14lb4ck
+    dialback_secret: a-super-secret-key
     dial_timeout: 5s
     req_timeout: 60s
     max_stanza_size: 131072
@@ -133,6 +140,6 @@ modules:
 #    timeout_action: kill
 
 components:
+  secret: a-super-secret-key
   listeners:
     - port: 5275
-      secret: hqcUrfHtgE73FktcXwfrP
