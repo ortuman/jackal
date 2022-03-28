@@ -29,7 +29,11 @@ const Type = "redis"
 
 // Config contains Redis cache configuration.
 type Config struct {
-	DNS          string        `fig:"dns"`
+	DNSSrv struct {
+		Service string `fig:"service"`
+		Proto   string `fig:"proto"`
+		Target  string `fig:"target"`
+	} `fig:"dnssrv"`
 	Addresses    []string      `fig:"addresses"`
 	Username     string        `fig:"username"`
 	Password     string        `fig:"password"`
@@ -55,7 +59,7 @@ func New(cfg Config) (*Cache, error) {
 		addr = cfg.Addresses
 	} else {
 		var err error
-		addr, err = netutil.SRVResolve("tcp", "tcp", cfg.DNS)
+		addr, err = netutil.SRVResolve(cfg.DNSSrv.Service, cfg.DNSSrv.Proto, cfg.DNSSrv.Target)
 		if err != nil {
 			return nil, err
 		}

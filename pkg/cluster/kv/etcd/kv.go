@@ -42,7 +42,11 @@ const (
 
 // Config contains etcd configuration parameters.
 type Config struct {
-	DNS                  string        `fig:"dns"`
+	DNSSrv struct {
+		Service string `fig:"service"`
+		Proto   string `fig:"proto"`
+		Target  string `fig:"target"`
+	} `fig:"dnssrv"`
 	Endpoints            []string      `fig:"endpoints"`
 	DialTimeout          time.Duration `fig:"dial_timeout" default:"20s"`
 	DialKeepAliveTime    time.Duration `fig:"dial_keep_alive_time" default:"30s"`
@@ -141,7 +145,7 @@ func (k *KV) Start(ctx context.Context) error {
 	if len(k.cfg.Endpoints) > 0 {
 		endpoints = k.cfg.Endpoints
 	} else {
-		addrs, err := netutil.SRVResolve("tcp", "tcp", k.cfg.DNS)
+		addrs, err := netutil.SRVResolve(k.cfg.DNSSrv.Service, k.cfg.DNSSrv.Proto, k.cfg.DNSSrv.Target)
 		if err != nil {
 			return err
 		}
