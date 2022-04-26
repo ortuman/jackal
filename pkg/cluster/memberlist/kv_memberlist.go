@@ -72,7 +72,7 @@ func (ml *KVMemberList) Start(ctx context.Context) error {
 	if err := ml.join(ctx); err != nil {
 		return err
 	}
-	level.Info(ml.logger).Log("msg", "registered local instance", "port", ml.localPort)
+	level.Info(ml.logger).Log("msg", "registered local instance", "port", ml.localPort, "instance_id", instance.ID())
 
 	// fetch current member list
 	if err := ml.refreshMemberList(ctx); err != nil {
