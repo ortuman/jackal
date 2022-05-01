@@ -23,12 +23,12 @@ import (
 )
 
 const (
-	envInstanceID   = "JACKAL_INSTANCE_ID"
-	envInstanceFQDN = "JACKAL_INSTANCE_FQDN"
+	envInstanceID = "JACKAL_INSTANCE_ID"
+	envHostName   = "JACKAL_HOSTNAME"
 )
 
 var (
-	instID, hostName string
+	instID, hostIP string
 )
 
 var (
@@ -38,7 +38,7 @@ var (
 
 func init() {
 	instID = getID()
-	hostName = getHostname()
+	hostIP = getHostname()
 }
 
 // ID returns local instance identifier.
@@ -52,7 +52,7 @@ func ID() string {
 // Hostname returns local instance host name.
 func Hostname() string {
 	if readCachedResults {
-		return hostName
+		return hostIP
 	}
 	return getHostname()
 }
@@ -66,7 +66,7 @@ func getID() string {
 }
 
 func getHostname() string {
-	fqdn := os.Getenv(envInstanceFQDN)
+	fqdn := os.Getenv(envHostName)
 	if len(fqdn) > 0 {
 		return fqdn
 	}
@@ -74,7 +74,7 @@ func getHostname() string {
 	if err == nil && len(hn) > 0 {
 		return hn
 	}
-	return "localhost" // fallback to 'localhost' name
+	return "localhost" // fallback to 'localhost' ip
 }
 
 func getLocalHostname() (string, error) {

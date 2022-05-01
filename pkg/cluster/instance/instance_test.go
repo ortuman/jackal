@@ -60,7 +60,7 @@ func TestRandomIdentifier(t *testing.T) {
 
 func TestFQDNHostname(t *testing.T) {
 	// given
-	_ = os.Setenv(envInstanceFQDN, "xmpp1.jackal.im")
+	_ = os.Setenv(envHostName, "xmpp1.jackal.im")
 	readCachedResults = false
 
 	// when
@@ -72,7 +72,7 @@ func TestFQDNHostname(t *testing.T) {
 
 func TestIPHostname(t *testing.T) {
 	// given
-	_ = os.Setenv(envInstanceFQDN, "")
+	_ = os.Setenv(envHostName, "")
 
 	interfaceAddresses = func() ([]net.Addr, error) {
 		return []net.Addr{&net.IPNet{
@@ -91,7 +91,7 @@ func TestIPHostname(t *testing.T) {
 
 func TestFallbackHostname(t *testing.T) {
 	// given
-	_ = os.Setenv(envInstanceFQDN, "")
+	_ = os.Setenv(envHostName, "")
 
 	interfaceAddresses = func() ([]net.Addr, error) {
 		return nil, errors.New("foo error")
