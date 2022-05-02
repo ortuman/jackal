@@ -22,8 +22,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	contextutil "github.com/ortuman/jackal/pkg/util/context"
-
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/ortuman/jackal/pkg/auth"
@@ -63,7 +61,6 @@ var resConflictMap = map[string]resourceConflict{
 
 // SocketListener represents a C2S socket listener type.
 type SocketListener struct {
-	ctx     context.Context
 	cfg     ListenerConfig
 	extAuth *auth.External
 	hosts   *host.Hosts
@@ -139,7 +136,6 @@ func newSocketListener(
 		)
 	}
 	ln := &SocketListener{
-		ctx:     contextutil.InjectListenerPort(context.Background(), cfg.Port),
 		cfg:     cfg,
 		extAuth: extAuth,
 		hosts:   hosts,
@@ -225,7 +221,6 @@ func (l *SocketListener) Stop(ctx context.Context) error {
 func (l *SocketListener) handleConn(conn net.Conn) {
 	tr := transport.NewSocketTransport(conn, l.cfg.ConnectTimeout, l.cfg.KeepAliveTimeout)
 	stm, err := newInC2S(
-		l.ctx,
 		l.getInConfig(),
 		tr,
 		l.getAuthenticators(tr),

@@ -39,7 +39,7 @@ func TestMemberList_Join(t *testing.T) {
 	}
 	kvMock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
 		return map[string][]byte{
-			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", instance.Hostname())),
+			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", "10.106.0.5")),
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}
@@ -113,7 +113,7 @@ func TestMemberList_WatchChanges(t *testing.T) {
 	}
 	kvMock.GetPrefixFunc = func(ctx context.Context, prefix string) (map[string][]byte, error) {
 		return map[string][]byte{
-			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", instance.Hostname())),
+			fmt.Sprintf("i://%s", instance.ID()): []byte(fmt.Sprintf("a=%s:4312 cv=v1.0.0", "10.106.0.5")),
 			"i://b3fd":                           []byte("a=192.168.0.12:1456 cv=v1.0.0"),
 		}, nil
 	}

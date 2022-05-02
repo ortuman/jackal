@@ -101,8 +101,6 @@ func (a *authState) reset() {
 }
 
 type inC2S struct {
-	ctx          context.Context
-	cancelFn     context.CancelFunc
 	id           stream.C2SID
 	cfg          inCfg
 	tr           transport.Transport
@@ -130,7 +128,6 @@ type inC2S struct {
 }
 
 func newInC2S(
-	ctx context.Context,
 	cfg inCfg,
 	tr transport.Transport,
 	authenticators []auth.Authenticator,
@@ -162,29 +159,25 @@ func newInC2S(
 		},
 		sLogger,
 	)
-	ctx, cancelFn := context.WithCancel(ctx)
-
 	// init stream
 	stm := &inC2S{
-		ctx:      ctx,
-		cancelFn: cancelFn,
-		id:       id,
-		cfg:      cfg,
-		tr:       tr,
-		inf:      c2smodel.NewInfoMap(),
-		session:  session,
-		authSt:   authState{authenticators: authenticators},
-		hosts:    hosts,
-		router:   router,
-		comps:    comps,
-		mods:     mods,
-		resMng:   resMng,
-		shapers:  shapers,
-		rq:       runqueue.New(id.String()),
-		doneCh:   make(chan struct{}),
-		state:    inConnecting,
-		hk:       hk,
-		logger:   sLogger,
+		id:      id,
+		cfg:     cfg,
+		tr:      tr,
+		inf:     c2smodel.NewInfoMap(),
+		session: session,
+		authSt:  authState{authenticators: authenticators},
+		hosts:   hosts,
+		router:  router,
+		comps:   comps,
+		mods:    mods,
+		resMng:  resMng,
+		shapers: shapers,
+		rq:      runqueue.New(id.String()),
+		doneCh:  make(chan struct{}),
+		state:   inConnecting,
+		hk:      hk,
+		logger:  sLogger,
 	}
 	if cfg.useTLS {
 		stm.flags.setSecured() // stream already secured
@@ -1144,7 +1137,6 @@ func (s *inC2S) terminate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.cancelFn()
 	close(s.doneCh) // signal termination
 
 	s.setState(inTerminated)
@@ -1224,7 +1216,7 @@ func (s *inC2S) runHook(ctx context.Context, hookName string, inf *hook.C2SStrea
 }
 
 func (s *inC2S) requestContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(s.ctx, s.cfg.reqTimeout)
+	return context.WithTimeout(context.Background(), s.cfg.reqTimeout)
 }
 
 var currentID uint64
