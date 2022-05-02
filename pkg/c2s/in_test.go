@@ -59,11 +59,9 @@ func TestInC2S_SendElement(t *testing.T) {
 		return nil
 	}
 	s := &inC2S{
-		ctx:      context.Background(),
-		cancelFn: func() {},
-		session:  sessMock,
-		rq:       runqueue.New("in_c2s:test"),
-		hk:       hook.NewHooks(),
+		session: sessMock,
+		rq:      runqueue.New("in_c2s:test"),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	stanza := stravaganza.NewBuilder("auth").
@@ -113,16 +111,14 @@ func TestInC2S_Disconnect(t *testing.T) {
 		return c2sRouterMock
 	}
 	s := &inC2S{
-		ctx:      context.Background(),
-		cancelFn: func() {},
-		state:    inBinded,
-		session:  sessMock,
-		tr:       trMock,
-		router:   routerMock,
-		resMng:   rmMock,
-		rq:       runqueue.New("in_c2s:test"),
-		doneCh:   make(chan struct{}),
-		hk:       hook.NewHooks(),
+		state:   inBinded,
+		session: sessMock,
+		tr:      trMock,
+		router:  routerMock,
+		resMng:  rmMock,
+		rq:      runqueue.New("in_c2s:test"),
+		doneCh:  make(chan struct{}),
+		hk:      hook.NewHooks(),
 	}
 	// when
 	s.Disconnect(streamerror.E(streamerror.SystemShutdown))
@@ -725,8 +721,6 @@ func TestInC2S_HandleSessionElement(t *testing.T) {
 
 			userJID, _ := jid.NewWithString("ortuman@localhost", true)
 			stm := &inC2S{
-				ctx:      context.Background(),
-				cancelFn: func() {},
 				cfg: inCfg{
 					reqTimeout:       time.Minute,
 					maxStanzaSize:    8192,
@@ -825,8 +819,6 @@ func TestInC2S_HandleSessionError(t *testing.T) {
 			}
 
 			stm := &inC2S{
-				ctx:      context.Background(),
-				cancelFn: func() {},
 				cfg: inCfg{
 					reqTimeout:    time.Minute,
 					maxStanzaSize: 8192,

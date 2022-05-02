@@ -16,6 +16,7 @@ package memberlist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -194,9 +195,13 @@ func (ml *KVMemberList) getMembers(ctx context.Context) ([]clustermodel.Member, 
 }
 
 func (ml *KVMemberList) getLocalMember() (*clustermodel.Member, error) {
+	hostIP, err := getHostIP()
+	if err != nil {
+		return nil, err
+	}
 	return &clustermodel.Member{
 		InstanceID: instance.ID(),
-		Host:       instance.Hostname(),
+		Host:       hostIP,
 		Port:       ml.localPort,
 		APIVer:     version.ClusterAPIVersion,
 	}, nil
@@ -275,4 +280,20 @@ func localMemberKey() string {
 
 func isLocalMemberKey(k string) bool {
 	return k == localMemberKey()
+}
+
+func getHostIP() (string, error) {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addresses {
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+			if ipNet.IP.To4() != nil {
+				return ipNet.IP.String(), nil
+			}
+		}
+	}
+	return "", errors.New("instance: failed to get local ip")
 }

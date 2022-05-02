@@ -30,14 +30,12 @@ import (
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
-	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
-	contextutil "github.com/ortuman/jackal/pkg/util/context"
 )
 
 const (
@@ -329,7 +327,6 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 	stm.SendElement(stravaganza.NewBuilder("enabled").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
 		WithAttribute("id", smID).
-		WithAttribute("location", getLocation(ctx)).
 		WithAttribute("resume", "true").
 		Build(),
 	)
@@ -484,8 +481,4 @@ func decodeSMID(smID string) (jd *jid.JID, nonce []byte, err error) {
 
 func queueKey(jd *jid.JID) string {
 	return jd.String()
-}
-
-func getLocation(ctx context.Context) string {
-	return instance.Hostname() + ":" + strconv.Itoa(contextutil.ExtractListenerPort(ctx))
 }
