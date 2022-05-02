@@ -275,7 +275,7 @@ func (j *Jackal) initCluster(cfg ClusterConfig) error {
 
 	case noneClusterType:
 		j.memberList = memberlist.NewKVMemberList(cfg.Server.Port, j.kv, j.hk, j.logger)
-		j.resMng = resourcemanager.NewKVManager(j.kv, j.logger)
+		j.resMng = resourcemanager.NewKVManager(j.kv, j.hk, j.logger)
 
 	default:
 		return fmt.Errorf("unrecognized cluster type: %s", cfg.Type)
@@ -284,8 +284,8 @@ func (j *Jackal) initCluster(cfg ClusterConfig) error {
 	j.clusterConnMng = clusterconnmanager.NewManager(j.hk, j.logger)
 
 	j.registerStartStopper(j.clusterConnMng)
-	j.registerStartStopper(j.memberList)
 	j.registerStartStopper(j.resMng)
+	j.registerStartStopper(j.memberList)
 	return nil
 }
 
