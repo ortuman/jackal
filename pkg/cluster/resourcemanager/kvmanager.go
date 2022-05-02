@@ -29,6 +29,7 @@ import (
 	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/kv"
 	kvtypes "github.com/ortuman/jackal/pkg/cluster/kv/types"
+	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 )
 
@@ -38,28 +39,107 @@ const (
 	kvResourceManagerType = "kv"
 )
 
+type kvResources struct {
+	mu    sync.RWMutex
+	store map[string][]c2smodel.ResourceDesc
+}
+
+func (r *kvResources) get(username, resource string) c2smodel.ResourceDesc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	rss := r.store[username]
+	for _, res := range rss {
+		if res.JID().Resource() != resource {
+			continue
+		}
+		return res
+	}
+	return nil
+}
+
+func (r *kvResources) getAll(username string) []c2smodel.ResourceDesc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	rss := r.store[username]
+	if len(rss) == 0 {
+		return nil
+	}
+	retVal := make([]c2smodel.ResourceDesc, len(rss))
+	for i, res := range rss {
+		retVal[i] = res
+	}
+	return retVal
+}
+
+func (r *kvResources) put(res c2smodel.ResourceDesc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	jd := res.JID()
+
+	var username, resource = jd.Node(), jd.Resource()
+	var found bool
+
+	rss := r.store[username]
+	for i := 0; i < len(rss); i++ {
+		if rss[i].JID().Resource() != resource {
+			continue
+		}
+		rss[i] = res
+		found = true
+		break
+	}
+	if !found {
+		rss = append(rss, res)
+	}
+	r.store[username] = rss
+	return
+}
+
+func (r *kvResources) del(username, resource string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	rss := r.store[username]
+	for i := 0; i < len(rss); i++ {
+		if rss[i].JID().Resource() != resource {
+			continue
+		}
+		rss = append(rss[:i], rss[i+1:]...)
+		if len(rss) > 0 {
+			r.store[username] = rss
+		} else {
+			delete(r.store, username)
+		}
+		return
+	}
+}
+
 type kvManager struct {
 	kv        kv.KV
+	hk        *hook.Hooks
 	logger    kitlog.Logger
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 
-	storeMu sync.RWMutex
-	store   map[string][]c2smodel.ResourceDesc
+	instResMu sync.RWMutex
+	instRes   map[string]*kvResources
 
-	// active put key set
 	stopCh chan struct{}
 }
 
 // NewKVManager creates a new resource manager given a KV storage instance.
-func NewKVManager(kv kv.KV, logger kitlog.Logger) Manager {
+func NewKVManager(kv kv.KV, hk *hook.Hooks, logger kitlog.Logger) Manager {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	return &kvManager{
 		kv:        kv,
+		hk:        hk,
 		logger:    logger,
 		ctx:       ctx,
 		ctxCancel: ctxCancel,
-		store:     make(map[string][]c2smodel.ResourceDesc),
+		instRes:   make(map[string]*kvResources),
 		stopCh:    make(chan struct{}),
 	}
 }
@@ -80,30 +160,24 @@ func (m *kvManager) PutResource(ctx context.Context, res c2smodel.ResourceDesc) 
 }
 
 func (m *kvManager) GetResource(_ context.Context, username, resource string) (c2smodel.ResourceDesc, error) {
-	m.storeMu.RLock()
-	defer m.storeMu.RUnlock()
+	m.instResMu.RLock()
+	defer m.instResMu.RUnlock()
 
-	rss := m.store[username]
-	for _, res := range rss {
-		if res.JID().Resource() != resource {
-			continue
+	for _, kvr := range m.instRes {
+		if res := kvr.get(username, resource); res != nil {
+			return res, nil
 		}
-		return res, nil
 	}
 	return nil, nil
 }
 
 func (m *kvManager) GetResources(_ context.Context, username string) ([]c2smodel.ResourceDesc, error) {
-	m.storeMu.RLock()
-	defer m.storeMu.RUnlock()
+	m.instResMu.RLock()
+	defer m.instResMu.RUnlock()
 
-	rss := m.store[username]
-	if len(rss) == 0 {
-		return nil, nil
-	}
-	retVal := make([]c2smodel.ResourceDesc, len(rss))
-	for i, res := range rss {
-		retVal[i] = res
+	var retVal []c2smodel.ResourceDesc
+	for _, kvr := range m.instRes {
+		retVal = append(retVal, kvr.getAll(username)...)
 	}
 	return retVal, nil
 }
@@ -119,6 +193,8 @@ func (m *kvManager) DelResource(ctx context.Context, username, resource string) 
 }
 
 func (m *kvManager) Start(ctx context.Context) error {
+	m.hk.AddHook(hook.MemberListUpdated, m.onMemberListUpdated, hook.DefaultPriority)
+
 	if err := m.watchKVResources(ctx); err != nil {
 		return err
 	}
@@ -127,11 +203,27 @@ func (m *kvManager) Start(ctx context.Context) error {
 }
 
 func (m *kvManager) Stop(_ context.Context) error {
+	m.hk.RemoveHook(hook.MemberListUpdated, m.onMemberListUpdated)
+
 	// stop watching changes...
 	m.ctxCancel()
 	<-m.stopCh
 
 	level.Info(m.logger).Log("msg", "stopped resource manager", "type", kvResourceManagerType)
+	return nil
+}
+
+func (m *kvManager) onMemberListUpdated(_ context.Context, execCtx *hook.ExecutionContext) error {
+	inf := execCtx.Info.(*hook.MemberListInfo)
+	if len(inf.UnregisteredKeys) == 0 {
+		return nil
+	}
+	// drop unregistered instance(s) resources
+	m.instResMu.Lock()
+	for _, instanceID := range inf.UnregisteredKeys {
+		delete(m.instRes, instanceID)
+	}
+	m.instResMu.Unlock()
 	return nil
 }
 
@@ -203,46 +295,31 @@ func (m *kvManager) processKVEvents(kvEvents []kvtypes.WatchEvent) error {
 }
 
 func (m *kvManager) inMemPut(res c2smodel.ResourceDesc) {
-	m.storeMu.Lock()
-	defer m.storeMu.Unlock()
+	m.instResMu.Lock()
+	defer m.instResMu.Unlock()
 
-	jd := res.JID()
+	instID := res.InstanceID()
 
-	var username, resource = jd.Node(), jd.Resource()
-	var found bool
-
-	rss := m.store[username]
-	for i := 0; i < len(rss); i++ {
-		if rss[i].JID().Resource() != resource {
-			continue
+	kvr := m.instRes[instID]
+	if kvr == nil {
+		kvr = &kvResources{
+			store: make(map[string][]c2smodel.ResourceDesc),
 		}
-		rss[i] = res
-		found = true
-		break
+		m.instRes[instID] = kvr
 	}
-	if !found {
-		rss = append(rss, res)
-	}
-	m.store[username] = rss
+	kvr.put(res)
 	return
 }
 
 func (m *kvManager) inMemDel(username, resource string) {
-	m.storeMu.Lock()
-	defer m.storeMu.Unlock()
+	m.instResMu.RLock()
+	defer m.instResMu.RUnlock()
 
-	rss := m.store[username]
-	for i := 0; i < len(rss); i++ {
-		if rss[i].JID().Resource() != resource {
-			continue
+	for _, kvr := range m.instRes {
+		if kvr.get(username, resource) != nil {
+			kvr.del(username, resource)
+			return
 		}
-		rss = append(rss[:i], rss[i+1:]...)
-		if len(rss) > 0 {
-			m.store[username] = rss
-		} else {
-			delete(m.store, username)
-		}
-		return
 	}
 }
 
