@@ -12,6 +12,9 @@ LABEL maintainer="Miguel Ángel Ortuño <ortuman@protonmail.com>"
 ADD build/$TARGETARCH/jackal /jackal
 ADD build/$TARGETARCH/jackalctl /jackal
 
+RUN apt-get update && apt-get install -y ca-certificates
+RUN update-ca-certificates
+
 EXPOSE 5222
 
 ENV PATH $PATH:/jackal
