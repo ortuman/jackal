@@ -69,14 +69,14 @@ type Config struct {
 
 	// RequestAckInterval defines the period of stream inactivity
 	// that should be waited before requesting acknowledgement.
-	RequestAckInterval time.Duration `fig:"request_ack_interval" default:"2m"`
+	RequestAckInterval time.Duration `fig:"request_ack_interval" default:"20s"`
 
 	// WaitForAckTimeout defines stanza acknowledgement timeout.
 	WaitForAckTimeout time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
 
 	// MaxQueueSize defines maximum number of unacknowledged stanzas.
 	// When the limit is reached the c2s stream is terminated.
-	MaxQueueSize int `fig:"max_queue_size" default:"30"`
+	MaxQueueSize int `fig:"max_queue_size" default:"2500"`
 }
 
 // Stream represents a stream (XEP-0198) module type.

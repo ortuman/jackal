@@ -54,7 +54,7 @@ type ListenerConfig struct {
 	ResourceConflict string `fig:"resource_conflict" default:"terminate_old"`
 
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
-	MaxStanzaSize int `fig:"max_stanza_size" default:"32768"`
+	MaxStanzaSize int `fig:"max_stanza_size" default:"524288"`
 
 	// ConnectTimeout defines connection timeout.
 	ConnectTimeout time.Duration `fig:"conn_timeout" default:"3s"`
