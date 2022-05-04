@@ -39,7 +39,7 @@ type ListenerConfig struct {
 	RequestTimeout time.Duration `fig:"req_timeout" default:"15s"`
 
 	// MaxStanzaSize is the maximum size a listener incoming stanza may have.
-	MaxStanzaSize int `fig:"max_stanza_size" default:"131072"`
+	MaxStanzaSize int `fig:"max_stanza_size" default:"1048576"`
 
 	// DirectTLS, if true, tls.Listen will be used as network listener.
 	DirectTLS bool `fig:"direct_tls"`
