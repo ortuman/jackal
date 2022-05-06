@@ -49,6 +49,9 @@ const (
 	itemNotFound      = "item-not-found"
 
 	nonceLength = 24
+
+	// unacknowledgedStanzaCount defines the stanza count interval at which an "r" stanza will be sent
+	unacknowledgedStanzaCount = 25
 )
 
 var errInvalidSMID = errors.New("xep0198: invalid stream identifier format")
@@ -69,14 +72,14 @@ type Config struct {
 
 	// RequestAckInterval defines the period of stream inactivity
 	// that should be waited before requesting acknowledgement.
-	RequestAckInterval time.Duration `fig:"request_ack_interval" default:"20s"`
+	RequestAckInterval time.Duration `fig:"request_ack_interval" default:"1m"`
 
 	// WaitForAckTimeout defines stanza acknowledgement timeout.
 	WaitForAckTimeout time.Duration `fig:"wait_for_ack_timeout" default:"30s"`
 
 	// MaxQueueSize defines maximum number of unacknowledged stanzas.
 	// When the limit is reached the c2s stream is terminated.
-	MaxQueueSize int `fig:"max_queue_size" default:"2500"`
+	MaxQueueSize int `fig:"max_queue_size" default:"250"`
 }
 
 // Stream represents a stream (XEP-0198) module type.
@@ -197,12 +200,17 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	}
 	sq.handleOut(stanza)
 
-	if sq.len() >= m.cfg.MaxQueueSize { // max queue size reached
+	qLen := sq.len()
+	switch {
+	case qLen >= m.cfg.MaxQueueSize:
 		_ = sq.stream().Disconnect(streamerror.E(streamerror.PolicyViolation))
 
 		level.Info(m.logger).Log("msg", "max queue size reached",
 			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 		)
+
+	case qLen%unacknowledgedStanzaCount == 0:
+		sq.requestAck()
 	}
 	return nil
 }
