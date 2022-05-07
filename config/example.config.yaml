@@ -36,7 +36,8 @@
 #  cache:
 #    type: redis
 #    redis:
-#      address: localhost:6379
+#      addresses:
+#      - localhost:6379
 
 #cluster:
 #  type: kv
