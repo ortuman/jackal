@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/ortuman/jackal/pkg/model"
 
 	blocklistmodel "github.com/ortuman/jackal/pkg/model/blocklist"
@@ -27,8 +28,9 @@ import (
 const blockListItems = "items"
 
 type cachedBlockListRep struct {
-	c   Cache
-	rep repository.BlockList
+	c      Cache
+	rep    repository.BlockList
+	logger log.Logger
 }
 
 func (c *cachedBlockListRep) UpsertBlockListItem(ctx context.Context, item *blocklistmodel.Item) error {
@@ -68,6 +70,7 @@ func (c *cachedBlockListRep) FetchBlockListItems(ctx context.Context, username s
 			}
 			return &blocklistmodel.Items{Items: items}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

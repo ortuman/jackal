@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-kit/log"
 	"github.com/ortuman/jackal/pkg/model"
 	rostermodel "github.com/ortuman/jackal/pkg/model/roster"
 	"github.com/ortuman/jackal/pkg/storage/repository"
@@ -33,8 +34,9 @@ const (
 )
 
 type cachedRosterRep struct {
-	c   Cache
-	rep repository.Roster
+	c      Cache
+	rep    repository.Roster
+	logger log.Logger
 }
 
 func (c *cachedRosterRep) TouchRosterVersion(ctx context.Context, username string) (int, error) {
@@ -69,6 +71,7 @@ func (c *cachedRosterRep) FetchRosterVersion(ctx context.Context, username strin
 			}
 			return &rostermodel.Version{Version: int32(ver)}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -126,6 +129,7 @@ func (c *cachedRosterRep) FetchRosterItems(ctx context.Context, username string)
 			}
 			return &rostermodel.Items{Items: items}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -150,6 +154,7 @@ func (c *cachedRosterRep) FetchRosterItemsInGroups(ctx context.Context, username
 			}
 			return &rostermodel.Items{Items: items}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -170,6 +175,7 @@ func (c *cachedRosterRep) FetchRosterItem(ctx context.Context, username, jid str
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchRosterItem(ctx, username, jid)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -223,6 +229,7 @@ func (c *cachedRosterRep) FetchRosterNotification(ctx context.Context, contact s
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchRosterNotification(ctx, contact, jid)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -247,6 +254,7 @@ func (c *cachedRosterRep) FetchRosterNotifications(ctx context.Context, contact 
 			}
 			return &rostermodel.Notifications{Notifications: ns}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -271,6 +279,7 @@ func (c *cachedRosterRep) FetchRosterGroups(ctx context.Context, username string
 			}
 			return &rostermodel.Groups{Groups: grs}, nil
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

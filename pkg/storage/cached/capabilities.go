@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/ortuman/jackal/pkg/model"
 
 	capsmodel "github.com/ortuman/jackal/pkg/model/caps"
@@ -27,8 +28,9 @@ import (
 const capsKey = "caps"
 
 type cachedCapsRep struct {
-	c   Cache
-	rep repository.Capabilities
+	c      Cache
+	rep    repository.Capabilities
+	logger log.Logger
 }
 
 func (c *cachedCapsRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
@@ -51,6 +53,7 @@ func (c *cachedCapsRep) CapabilitiesExist(ctx context.Context, node, ver string)
 		missFn: func(ctx context.Context) (bool, error) {
 			return c.rep.CapabilitiesExist(ctx, node, ver)
 		},
+		logger: c.logger,
 	}
 	return op.do(ctx)
 }
@@ -64,6 +67,7 @@ func (c *cachedCapsRep) FetchCapabilities(ctx context.Context, node, ver string)
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchCapabilities(ctx, node, ver)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

@@ -84,13 +84,13 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 	c := rediscache.New(cfg.Redis)
 
 	return &CachedRepository{
-		User:         &cachedUserRep{c: c, rep: rep},
-		Last:         &cachedLastRep{c: c, rep: rep},
-		Capabilities: &cachedCapsRep{c: c, rep: rep},
-		Private:      &cachedPrivateRep{c: c, rep: rep},
-		BlockList:    &cachedBlockListRep{c: c, rep: rep},
-		Roster:       &cachedRosterRep{c: c, rep: rep},
-		VCard:        &cachedVCardRep{c: c, rep: rep},
+		User:         &cachedUserRep{c: c, rep: rep, logger: logger},
+		Last:         &cachedLastRep{c: c, rep: rep, logger: logger},
+		Capabilities: &cachedCapsRep{c: c, rep: rep, logger: logger},
+		Private:      &cachedPrivateRep{c: c, rep: rep, logger: logger},
+		BlockList:    &cachedBlockListRep{c: c, rep: rep, logger: logger},
+		Roster:       &cachedRosterRep{c: c, rep: rep, logger: logger},
+		VCard:        &cachedVCardRep{c: c, rep: rep, logger: logger},
 		Offline:      rep,
 		Locker:       rep,
 		rep:          rep,
