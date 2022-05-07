@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/ortuman/jackal/pkg/model"
-
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
@@ -27,8 +27,9 @@ import (
 const userKey = "usr"
 
 type cachedUserRep struct {
-	c   Cache
-	rep repository.User
+	c      Cache
+	rep    repository.User
+	logger log.Logger
 }
 
 func (c *cachedUserRep) UpsertUser(ctx context.Context, user *usermodel.User) error {
@@ -64,6 +65,7 @@ func (c *cachedUserRep) FetchUser(ctx context.Context, username string) (*usermo
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchUser(ctx, username)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {
@@ -83,6 +85,7 @@ func (c *cachedUserRep) UserExists(ctx context.Context, username string) (bool, 
 		missFn: func(ctx context.Context) (bool, error) {
 			return c.rep.UserExists(ctx, username)
 		},
+		logger: c.logger,
 	}
 	return op.do(ctx)
 }

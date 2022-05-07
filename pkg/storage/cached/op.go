@@ -17,6 +17,8 @@ package cachedrepository
 import (
 	"context"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/ortuman/jackal/pkg/model"
 )
 
@@ -25,12 +27,14 @@ type existsOp struct {
 	namespace string
 	key       string
 	missFn    func(context.Context) (bool, error)
+	logger    log.Logger
 }
 
 func (op existsOp) do(ctx context.Context) (bool, error) {
 	ok, err := op.c.HasKey(ctx, op.namespace, op.key)
 	if err != nil {
-		return false, err
+		level.Warn(op.logger).Log("msg", "cache exists operation failed", "err", err)
+		return op.missFn(ctx)
 	}
 	if ok {
 		return true, nil
@@ -66,12 +70,14 @@ type fetchOp struct {
 	key       string
 	codec     model.Codec
 	missFn    func(context.Context) (model.Codec, error)
+	logger    log.Logger
 }
 
 func (op fetchOp) do(ctx context.Context) (model.Codec, error) {
 	b, err := op.c.Get(ctx, op.namespace, op.key)
 	if err != nil {
-		return nil, err
+		level.Warn(op.logger).Log("msg", "cache fetch operation failed", "err", err)
+		return op.missFn(ctx)
 	}
 	if b == nil {
 		cdc, err := op.missFn(ctx)

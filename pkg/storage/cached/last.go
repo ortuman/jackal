@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/ortuman/jackal/pkg/model"
 
 	lastmodel "github.com/ortuman/jackal/pkg/model/last"
@@ -27,8 +28,9 @@ import (
 const lastKey = "lst"
 
 type cachedLastRep struct {
-	c   Cache
-	rep repository.Last
+	c      Cache
+	rep    repository.Last
+	logger log.Logger
 }
 
 func (c *cachedLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {
@@ -52,6 +54,7 @@ func (c *cachedLastRep) FetchLast(ctx context.Context, username string) (*lastmo
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchLast(ctx, username)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

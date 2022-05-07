@@ -18,14 +18,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/jackal-xmpp/stravaganza"
 	"github.com/ortuman/jackal/pkg/model"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
 type cachedPrivateRep struct {
-	c   Cache
-	rep repository.Private
+	c      Cache
+	rep    repository.Private
+	logger log.Logger
 }
 
 func (c *cachedPrivateRep) FetchPrivate(ctx context.Context, namespace, username string) (stravaganza.Element, error) {
@@ -37,6 +39,7 @@ func (c *cachedPrivateRep) FetchPrivate(ctx context.Context, namespace, username
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchPrivate(ctx, namespace, username)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

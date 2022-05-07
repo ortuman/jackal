@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
+
 	"github.com/ortuman/jackal/pkg/model"
 
 	"github.com/jackal-xmpp/stravaganza"
@@ -27,8 +29,9 @@ import (
 const vCardKey = "vc"
 
 type cachedVCardRep struct {
-	c   Cache
-	rep repository.VCard
+	c      Cache
+	rep    repository.VCard
+	logger log.Logger
 }
 
 func (c *cachedVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Element, username string) error {
@@ -52,6 +55,7 @@ func (c *cachedVCardRep) FetchVCard(ctx context.Context, username string) (strav
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return c.rep.FetchVCard(ctx, username)
 		},
+		logger: c.logger,
 	}
 	v, err := op.do(ctx)
 	switch {

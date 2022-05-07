@@ -19,10 +19,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-kit/log"
+
 	"github.com/golang/protobuf/proto"
-
 	"github.com/ortuman/jackal/pkg/model"
-
 	usermodel "github.com/ortuman/jackal/pkg/model/user"
 	"github.com/stretchr/testify/require"
 )
@@ -92,6 +92,7 @@ func TestCachedRepository_FetchOpHit(t *testing.T) {
 			missed = true
 			return nil, nil
 		},
+		logger: log.NewNopLogger(),
 	}
 
 	// when
@@ -119,6 +120,7 @@ func TestCachedRepository_FetchOpMiss(t *testing.T) {
 		missFn: func(ctx context.Context) (model.Codec, error) {
 			return &usr, nil
 		},
+		logger: log.NewNopLogger(),
 	}
 
 	// when
