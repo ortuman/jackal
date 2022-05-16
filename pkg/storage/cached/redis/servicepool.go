@@ -16,6 +16,7 @@ package rediscache
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -155,18 +156,18 @@ func (p *srvServicePool) runUpdate() {
 
 func (p *srvServicePool) syncClients(ctx context.Context, newTargets, oldTargets []string) error {
 	p.clientsMu.RLock()
-	newClientEntries := make([]clientEntry, len(p.clientEntries))
-	copy(newClientEntries, p.clientEntries)
+	clientEntries := make([]clientEntry, len(p.clientEntries))
+	copy(clientEntries, p.clientEntries)
 	p.clientsMu.RUnlock()
 
 	// disconnect from old targets and remove their entries
 	for _, oldTarget := range oldTargets {
-		for i, ent := range newClientEntries {
+		for i, ent := range clientEntries {
 			if ent.addr != oldTarget {
 				continue
 			}
 			_ = ent.client.Close()
-			newClientEntries = append(newClientEntries[:i], newClientEntries[i+1:]...)
+			clientEntries = append(clientEntries[:i], clientEntries[i+1:]...)
 			break
 		}
 	}
@@ -184,24 +185,24 @@ func (p *srvServicePool) syncClients(ctx context.Context, newTargets, oldTargets
 		if err := client.Ping(ctx).Err(); err != nil {
 			return err
 		}
-		p.clientEntries = append(p.clientEntries, clientEntry{
+		clientEntries = append(clientEntries, clientEntry{
 			addr:   newTarget,
 			client: client,
 		})
 	}
 
-	sort.Slice(p.clientEntries, func(i, j int) bool {
-		return p.clientEntries[i].addr < p.clientEntries[j].addr
+	sort.Slice(clientEntries, func(i, j int) bool {
+		return clientEntries[i].addr < clientEntries[j].addr
 	})
 	p.clientsMu.Lock()
-	p.clientEntries = newClientEntries
+	p.clientEntries = clientEntries
 	p.clientsMu.Unlock()
 
 	if len(newTargets) > 0 {
-		level.Debug(p.logger).Log("msg", "new SRV targets found", "targets", newTargets)
+		level.Debug(p.logger).Log("msg", "new SRV targets found", "targets", fmt.Sprintf("%v", newTargets))
 	}
 	if len(oldTargets) > 0 {
-		level.Debug(p.logger).Log("msg", "removed old SRV targets", "targets", oldTargets)
+		level.Debug(p.logger).Log("msg", "removed old SRV targets", "targets", fmt.Sprintf("%v", oldTargets))
 	}
 	return nil
 }
