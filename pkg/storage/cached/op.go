@@ -16,6 +16,7 @@ package cachedrepository
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -84,7 +85,7 @@ func (op fetchOp) do(ctx context.Context) (model.Codec, error) {
 		if err != nil {
 			return nil, err
 		}
-		if cdc == nil {
+		if cdc == nil || (reflect.ValueOf(cdc).Kind() == reflect.Ptr && reflect.ValueOf(cdc).IsNil()) {
 			return nil, nil
 		}
 		b, err = cdc.MarshalBinary()
