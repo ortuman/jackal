@@ -194,7 +194,7 @@ func (m *BlockList) processIncomingStanza(ctx context.Context, stanza stravaganz
 	toJID := stanza.ToJID()
 
 	isLocalTo := m.hosts.IsLocalHost(toJID.Domain())
-	if !isLocalTo || (isLocalTo && toJID.MatchesWithOptions(fromJID, jid.MatchesBare)) {
+	if len(toJID.Node()) == 0 || !isLocalTo || (isLocalTo && toJID.MatchesWithOptions(fromJID, jid.MatchesBare)) {
 		return nil
 	}
 	bli, err := m.rep.FetchBlockListItems(ctx, toJID.Node())
