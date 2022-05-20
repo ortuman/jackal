@@ -188,7 +188,7 @@ func (m *kvManager) DelResource(ctx context.Context, username, resource string) 
 	if err := m.kv.Del(ctx, rKey); err != nil {
 		return err
 	}
-	m.inMemDel(username, resource)
+	m.inMemDel(username, resource, instance.ID())
 	return nil
 }
 
@@ -281,14 +281,11 @@ func (m *kvManager) processKVEvents(kvEvents []kvtypes.WatchEvent) error {
 			m.inMemPut(res)
 
 		case kvtypes.Del:
-			memberKey := strings.TrimPrefix(ev.Key, resourceKeyPrefix)
-			ss := strings.Split(memberKey, "@")
-			if len(ss) != 2 {
-				return fmt.Errorf("invalid kv resource key: %s", ev.Key)
+			username, resource, instanceID, err := extractKeyInfo(ev.Key)
+			if err != nil {
+				return err
 			}
-			var username, resource = ss[0], ss[1]
-
-			m.inMemDel(username, resource)
+			m.inMemDel(username, resource, instanceID)
 		}
 	}
 	return nil
@@ -311,15 +308,12 @@ func (m *kvManager) inMemPut(res c2smodel.ResourceDesc) {
 	return
 }
 
-func (m *kvManager) inMemDel(username, resource string) {
+func (m *kvManager) inMemDel(username, resource, instanceID string) {
 	m.instResMu.RLock()
 	defer m.instResMu.RUnlock()
 
-	for _, kvr := range m.instRes {
-		if kvr.get(username, resource) != nil {
-			kvr.del(username, resource)
-			return
-		}
+	if kvr := m.instRes[instanceID]; kvr != nil {
+		kvr.del(username, resource)
 	}
 }
 
@@ -402,4 +396,25 @@ func resourceVal(res c2smodel.ResourceDesc) ([]byte, error) {
 
 func isLocalKey(rKey string) bool {
 	return strings.HasSuffix(rKey, fmt.Sprintf("/%s", instance.ID()))
+}
+
+func extractKeyInfo(rKey string) (username, resource, instanceID string, err error) {
+	memberKey := strings.TrimPrefix(rKey, resourceKeyPrefix)
+	ss := strings.Split(memberKey, "@")
+	if len(ss) != 2 {
+		return "", "", "", errInvalidKey(rKey)
+	}
+	username = ss[0]
+
+	ss = strings.Split(ss[1], "/")
+	if len(ss) != 2 {
+		return "", "", "", errInvalidKey(rKey)
+	}
+	resource = ss[0]
+	instanceID = ss[1]
+	return
+}
+
+func errInvalidKey(rKey string) error {
+	return fmt.Errorf("invalid kv resource key: %s", rKey)
 }

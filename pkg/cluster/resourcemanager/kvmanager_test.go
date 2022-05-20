@@ -111,7 +111,7 @@ func TestResourceManager_DelResource(t *testing.T) {
 
 	h := NewKVManager(kvmock, hook.NewHooks(), kitlog.NewNopLogger())
 
-	r0 := testResource("megaman-2", 10, "ortuman", "yard")
+	r0 := testResource(instance.ID(), 10, "ortuman", "yard")
 	_ = h.PutResource(context.Background(), r0)
 
 	var expectedKey string
