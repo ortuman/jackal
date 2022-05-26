@@ -44,7 +44,6 @@ type Config struct {
 type Cache struct {
 	cfg    Config
 	sp     servicePool
-	ttl    time.Duration
 	logger log.Logger
 }
 
@@ -78,7 +77,7 @@ func (c *Cache) Put(ctx context.Context, ns, key string, val []byte) error {
 	if err := cl.HSet(ctx, ns, key, val).Err(); err != nil {
 		return err
 	}
-	return cl.Expire(ctx, ns, c.ttl).Err()
+	return cl.Expire(ctx, ns, c.cfg.TTL).Err()
 }
 
 // Del satisfies Cache interface.
