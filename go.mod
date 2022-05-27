@@ -17,20 +17,20 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackal-xmpp/runqueue/v2 v2.0.0
-	github.com/jackal-xmpp/stravaganza v1.2.1
+	github.com/jackal-xmpp/stravaganza v1.2.3
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd/client/v3 v3.5.1
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
@@ -61,12 +61,12 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
-	golang.org/x/sys v0.0.0-20220408201424-a24fb2fb8a0f // indirect
+	golang.org/x/net v0.0.0-20220526153639-5463443f8c37 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace go.etcd.io/etcd/v3 => github.com/etcd-io/etcd/v3 v3.5.1
