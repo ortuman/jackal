@@ -2,10 +2,6 @@
 
 ## jackal - main / unreleased
 
-## 0.59.0 (2022/03/26)
-
-* [FEATURE] Improve k8s compatibility. [#219](https://github.com/ortuman/jackal/pull/219), [#220](https://github.com/ortuman/jackal/pull/220),
-
 ## 0.58.0 (2022/03/04)
 
 * [FEATURE] Added BoltDB repository type. [#212](https://github.com/ortuman/jackal/pull/212)
