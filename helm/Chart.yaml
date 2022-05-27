@@ -1,7 +1,7 @@
 apiVersion: "v1"
 name: jackal
 version: 1.0.0
-appVersion: v0.59.0
+appVersion: v0.60.0
 kubeVersion: "^1.10.0-0"
 description: "Instant messaging server for the Extensible Messaging and Presence Protocol (XMPP)."
 home: https://github.com/ortuman/jackal
