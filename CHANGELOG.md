@@ -2,6 +2,11 @@
 
 ## jackal - main / unreleased
 
+## 0.60.0 (2022/05/27)
+
+* [ENHANCEMENT] Helm chart. [#217](https://github.com/ortuman/jackal/pull/217)
+* [ENHANCEMENT] Improve k8s compatibility. [#219](https://github.com/ortuman/jackal/pull/219), [#220](https://github.com/ortuman/jackal/pull/220), [#221](https://github.com/ortuman/jackal/pull/221), [#222](https://github.com/ortuman/jackal/pull/222), [#223](https://github.com/ortuman/jackal/pull/223), [#224](https://github.com/ortuman/jackal/pull/224), [#225](https://github.com/ortuman/jackal/pull/225), [#226](https://github.com/ortuman/jackal/pull/226), [#227](https://github.com/ortuman/jackal/pull/227), [#228](https://github.com/ortuman/jackal/pull/228), [#229](https://github.com/ortuman/jackal/pull/229), [#230](https://github.com/ortuman/jackal/pull/230), [#231](https://github.com/ortuman/jackal/pull/231), [#232](https://github.com/ortuman/jackal/pull/232)
+
 ## 0.58.0 (2022/03/04)
 
 * [FEATURE] Added BoltDB repository type. [#212](https://github.com/ortuman/jackal/pull/212)
