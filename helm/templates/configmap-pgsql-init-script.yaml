@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgsql-init-script
+  namespace: {{ .Release.Namespace }}
+data:
+  pgsql.up.sql: |-
+{{ .Files.Get "sql/postgres.up.psql" | indent 4 }}

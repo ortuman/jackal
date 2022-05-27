@@ -36,6 +36,7 @@ type pgSQLCapabilitiesRep struct {
 
 func (r *pgSQLCapabilitiesRep) UpsertCapabilities(ctx context.Context, caps *capsmodel.Capabilities) error {
 	_, err := sq.Insert(capsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("node", "ver", "features").
 		Values(caps.Node, caps.Ver, pq.Array(caps.Features)).
 		Suffix("ON CONFLICT (node, ver) DO UPDATE SET features = $3").

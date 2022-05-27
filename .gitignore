@@ -48,3 +48,7 @@ build
 # BoltDB default database file
 .jackal.db
 
+# Helm
+charts/
+requirements.lock
+

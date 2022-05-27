@@ -32,7 +32,7 @@ func (l *pgSQLLocker) Lock(ctx context.Context, lockID string) error {
 		}
 		var acquired bool
 
-		err := l.conn.QueryRowContext(ctx, "SELECT pg_try_advisory_lock(hashtext($1))", lockID).Scan(&acquired)
+		err := l.conn.QueryRowContext(ctx, "/*NO LOAD BALANCE*/ SELECT pg_try_advisory_lock(hashtext($1))", lockID).Scan(&acquired)
 		switch err {
 		case nil:
 			if acquired {

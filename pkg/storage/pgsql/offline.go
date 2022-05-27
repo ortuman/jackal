@@ -35,6 +35,7 @@ func (r *pgSQLOfflineRep) InsertOfflineMessage(ctx context.Context, message *str
 		return err
 	}
 	q := sq.Insert(offlineMessagesTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "message").
 		Values(username, b)
 
@@ -88,6 +89,7 @@ func (r *pgSQLOfflineRep) FetchOfflineMessages(ctx context.Context, username str
 
 func (r *pgSQLOfflineRep) DeleteOfflineMessages(ctx context.Context, username string) error {
 	q := sq.Delete(offlineMessagesTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username})
 	_, err := q.RunWith(r.conn).ExecContext(ctx)
 	return err

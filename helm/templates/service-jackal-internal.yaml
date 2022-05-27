@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jackal-internal
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: jackal
+spec:
+  type: ClusterIP
+  selector:
+    component: jackal
+  ports:
+    - port: {{ .Values.jackal.config.http.port }}
+      name: http
+      targetPort: {{ .Values.jackal.config.http.port }}
+    - port: {{ .Values.jackal.config.admin.port }}
+      name: admin
+      targetPort: {{ .Values.jackal.config.admin.port }}
+    - port: {{ .Values.jackal.config.cluster.server.port }}
+      name: cluster
+      targetPort: {{ .Values.jackal.config.cluster.server.port }}

@@ -1,0 +1,193 @@
+# Default values for jackal.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# //////////////
+# Jackal
+# //////////////
+jackal:
+  replicasCount: 2
+
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+  extraVolumes: []
+  extraVolumeMounts: []
+  env: []
+
+  image:
+    repository: ortuman/jackal
+    tag: 0.59.0
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 120m
+      memory: 64Mi
+
+  config:
+    logger:
+      level: debug
+
+    http:
+      port: 6060
+
+    admin:
+      port: 15280
+
+    #domains:
+    #  - domain: jackal.im
+    #    tls:
+    #      cert_file: /var/jackal/cert/tls.crt
+    #      privkey_file: /var/jackal/cert/tls.key
+
+    #peppers:
+    #  keys:
+    #    v1: a-super-secret-key
+    #  use: v1
+
+    storage:
+      maxConns: 16
+      maxIdleConns: 0
+      connMaxLifetime: 0
+      connMaxIdleTime: 0
+
+    cluster:
+      server:
+        port: 14369
+
+    shapers:
+      - name: normal
+        max_sessions: 25
+        rate:
+          limit: 131072
+          burst: 65536
+
+    c2s:
+      listeners:
+        - port: 5222
+          req_timeout: 60s
+          transport: socket
+          sasl:
+            mechanisms:
+            - scram_sha_1
+            - scram_sha_256
+            - scram_sha_512
+            - scram_sha3_512
+
+        - port: 5223
+          direct_tls: true
+          req_timeout: 60s
+          transport: socket
+          sasl:
+            mechanisms:
+            - scram_sha_1
+            - scram_sha_256
+            - scram_sha_512
+            - scram_sha3_512
+
+    s2s:
+      listeners:
+        - port: 5269
+          req_timeout: 60s
+          max_stanza_size: 131072
+
+        - port: 5270
+          direct_tls: true
+          req_timeout: 60s
+          max_stanza_size: 131072
+
+      out:
+        dial_timeout: 5s
+        req_timeout: 60s
+        max_stanza_size: 131072
+
+    modules:
+      enabled:
+        - roster
+        - offline
+        - last        # XEP-0012: Last Activity
+        - disco       # XEP-0030: Service Discovery
+        - private     # XEP-0049: Private XML Storage
+        - vcard       # XEP-0054: vcard-temp
+        - version     # XEP-0092: Software Version
+        - caps        # XEP-0115: Entity Capabilities
+        - blocklist   # XEP-0191: Blocking Command
+        - stream_mgmt # XEP-0198: Stream Management
+        - ping        # XEP-0199: XMPP Ping
+        - time        # XEP-0202: Entity Time
+        - carbons     # XEP-0280: Message Carbons
+
+      version:
+        show_os: true
+
+      offline:
+        queue_size: 300
+
+      ping:
+        ack_timeout: 90s
+        interval: 3m
+        send_pings: true
+        timeout_action: kill
+
+    components:
+    #  listeners:
+    #    - port: 5275
+    #      secret: a-super-secret-key
+
+# //////////////
+# etcd
+# //////////////
+etcd:
+  auth:
+    rbac:
+      create: false
+  persistence:
+    enabled: false
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 120m
+      memory: 64Mi
+
+# //////////////
+# Redis
+# //////////////
+redis:
+  enabled: true
+  replicasCount: 2
+
+  image:
+    repository: redis
+    tag: 6.2.7
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+  port: 6379
+
+# //////////////
+# PostgresSQL
+# //////////////
+postgresql-ha:
+  postgresql:
+    syncReplication: true
+    initdbScriptsCM: pgsql-init-script
+    replicaCount: 2
+    username: jackal
+    database: jackal
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  pgpool:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 120m
+        memory: 256Mi
+  persistence:
+    size: 2Gi

@@ -35,6 +35,7 @@ type pgSQLLastRep struct {
 
 func (r *pgSQLLastRep) UpsertLast(ctx context.Context, last *lastmodel.Last) error {
 	_, err := sq.Insert(lastTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "seconds", "status").
 		Values(last.Username, last.Seconds, last.Status).
 		Suffix("ON CONFLICT (username) DO UPDATE SET seconds = $2, status = $3").
@@ -63,6 +64,7 @@ func (r *pgSQLLastRep) FetchLast(ctx context.Context, username string) (*lastmod
 
 func (r *pgSQLLastRep) DeleteLast(ctx context.Context, username string) error {
 	_, err := sq.Delete(lastTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).
 		ExecContext(ctx)

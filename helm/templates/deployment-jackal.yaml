@@ -1,0 +1,146 @@
+{{- $replicasCount := int .Values.jackal.replicasCount -}}
+{{- $baseNodePort := 30000 -}}
+{{- range $i := until $replicasCount }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jackal-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: jackal-{{ $i }}
+spec:
+  type: NodePort
+  selector:
+    app: jackal-{{ $i }}
+  ports:
+    {{- range $j, $ln := $.Values.jackal.config.c2s.listeners }}
+    - port: {{ $ln.port }}
+      name: c2s-{{ $j }}
+      targetPort: {{ $ln.port }}
+      nodePort: {{ $baseNodePort }}
+    {{- $baseNodePort = add1 $baseNodePort -}}
+    {{- end }}
+    {{- range $j, $ln := $.Values.jackal.config.s2s.listeners }}
+    - port: {{ $ln.port }}
+      name: s2s-{{ $j }}
+      targetPort: {{ $ln.port }}
+      nodePort: {{ $baseNodePort }}
+    {{- $baseNodePort = add1 $baseNodePort -}}
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jackal-{{ $i }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: jackal-{{ $i }}
+    heritage: {{ $.Release.Service }}
+    release: {{ $.Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jackal-{{ $i }}
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+      labels:
+        app: jackal-{{ $i }}
+        component: jackal
+    spec:
+      nodeSelector:
+        {{- toYaml $.Values.jackal.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml $.Values.jackal.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml $.Values.jackal.tolerations | nindent 8 }}
+      initContainers:
+        - name: wait-for-etcd
+          image: groundnuty/k8s-wait-for:v1.3
+          imagePullPolicy: Always
+          args:
+            - "pod"
+            - "-lapp.kubernetes.io/name=etcd"
+
+        - name: wait-for-pgpool
+          image: groundnuty/k8s-wait-for:v1.3
+          imagePullPolicy: Always
+          args:
+            - "pod"
+            - "-lapp.kubernetes.io/name=postgresql-ha"
+
+        - name: wait-for-redis
+          image: groundnuty/k8s-wait-for:v1.3
+          imagePullPolicy: Always
+          args:
+            - "pod"
+            - "-lapp=redis"
+
+      containers:
+        - name: jackal-{{ $i }}
+          args:
+            - ./jackal
+            - -config=/etc/jackal/config.yaml
+          image: {{ $.Values.jackal.image.repository }}:{{ $.Values.jackal.image.tag }}
+          imagePullPolicy: {{ $.Values.jackal.image.pullPolicy }}
+          ports:
+          {{- range $.Values.jackal.config.c2s.listeners }}
+            - containerPort: {{ .port }}
+          {{- end }}
+          {{- range $.Values.jackal.config.s2s.listeners }}
+            - containerPort: {{ .port }}
+          {{- end }}
+            - containerPort: {{ $.Values.jackal.config.http.port }}
+              name: http
+            - containerPort: {{ $.Values.jackal.config.admin.port }}
+              name: admin
+            - containerPort: {{ $.Values.jackal.config.cluster.server.port }}
+              name: cluster
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $.Values.jackal.config.http.port }}
+            periodSeconds: 10
+            initialDelaySeconds: 15
+
+          resources:
+            {{- toYaml $.Values.jackal.resources | nindent 12 }}
+
+          env:
+            {{- if $.Values.jackal.env }}
+              {{ toYaml $.Values.jackal.env | nindent 12}}
+            {{- end }}
+
+            - name: JACKAL_STORAGE_PGSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jackal-postgresql-ha-postgresql
+                  key: postgresql-password
+                  optional: false
+
+            - name: JACKAL_S2S_DIALBACK_SECRET
+              value: {{ randAlphaNum 16 }}
+
+          volumeMounts:
+            {{- if $.Values.jackal.extraVolumeMounts }}
+              {{ toYaml $.Values.jackal.extraVolumeMounts | nindent 12}}
+            {{- end }}
+
+            - mountPath: /etc/jackal
+              name: config-volume
+              readOnly: true
+
+      volumes:
+        {{- if $.Values.jackal.extraVolumes }}
+          {{ toYaml $.Values.jackal.extraVolumes | nindent 8}}
+        {{- end }}
+
+        - name: config-volume
+          configMap:
+            name: jackal-config
+{{- end }}

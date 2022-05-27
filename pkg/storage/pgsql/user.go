@@ -56,6 +56,7 @@ func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *usermodel.User) err
 		user.Scram.PepperId,
 	}
 	q := sq.Insert(usersTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns(cols...).
 		Values(vals...).
 		Suffix("ON CONFLICT (username) DO UPDATE SET h_sha_1 = $2, h_sha_256 = $3, h_sha_512 = $4, h_sha3_512 = $5, salt = $6, iteration_count = $7, pepper_id = $8")
@@ -66,6 +67,7 @@ func (r *pgSQLUserRep) UpsertUser(ctx context.Context, user *usermodel.User) err
 
 func (r *pgSQLUserRep) DeleteUser(ctx context.Context, username string) error {
 	_, err := sq.Delete(usersTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).
 		ExecContext(ctx)

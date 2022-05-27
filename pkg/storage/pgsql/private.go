@@ -59,6 +59,7 @@ func (r *pgSQLPrivateRep) UpsertPrivate(ctx context.Context, private stravaganza
 		return err
 	}
 	q := sq.Insert(privateStorageTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "namespace", "data").
 		Values(username, namespace, b).
 		Suffix("ON CONFLICT (username, namespace) DO UPDATE SET data = $3")
@@ -69,6 +70,7 @@ func (r *pgSQLPrivateRep) UpsertPrivate(ctx context.Context, private stravaganza
 
 func (r *pgSQLPrivateRep) DeletePrivates(ctx context.Context, username string) error {
 	_, err := sq.Delete(privateStorageTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).
 		ExecContext(ctx)

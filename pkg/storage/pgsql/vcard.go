@@ -38,6 +38,7 @@ func (r *pgSQLVCardRep) UpsertVCard(ctx context.Context, vCard stravaganza.Eleme
 		return err
 	}
 	q := sq.Insert(vCardsTableName).
+		Prefix(noLoadBalancePrefix).
 		Columns("username", "vcard").
 		Values(username, b).
 		Suffix("ON CONFLICT (username) DO UPDATE SET vcard = $2")
@@ -71,6 +72,7 @@ func (r *pgSQLVCardRep) FetchVCard(ctx context.Context, username string) (strava
 
 func (r *pgSQLVCardRep) DeleteVCard(ctx context.Context, username string) error {
 	_, err := sq.Delete(vCardsTableName).
+		Prefix(noLoadBalancePrefix).
 		Where(sq.Eq{"username": username}).
 		RunWith(r.conn).
 		ExecContext(ctx)
