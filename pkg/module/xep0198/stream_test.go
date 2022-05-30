@@ -20,16 +20,18 @@ import (
 	"testing"
 	"time"
 
-	kitlog "github.com/go-kit/log"
-
 	"github.com/google/uuid"
-	"github.com/jackal-xmpp/stravaganza"
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
+
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+
+	kitlog "github.com/go-kit/log"
+	"github.com/jackal-xmpp/stravaganza"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	"github.com/ortuman/jackal/pkg/router/stream"
-	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -98,7 +100,7 @@ func TestStream_Enable(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -126,10 +128,10 @@ func TestStream_Enable(t *testing.T) {
 	require.Equal(t, "enabled", sentEl.Name())
 	require.Equal(t, streamNamespace, sentEl.Attribute(stravaganza.Namespace))
 
-	sq := sm.queues[queueKey(jd)]
+	sq := sm.qm.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
-	sq.cancelTimers()
+	sq.CancelTimers()
 }
 
 func TestStream_InStanza(t *testing.T) {
@@ -147,17 +149,17 @@ func TestStream_InStanza(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
-	sq := newQueue(
-		stmMock, nil, time.Second, time.Minute,
+	sq := streamqueue.New(
+		stmMock, nil, nil, 0, 0, time.Second, time.Minute,
 	)
-	sm.queues[queueKey(jd)] = sq
+	sm.qm.Set(queueKey(jd), sq)
 
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
@@ -181,10 +183,10 @@ func TestStream_InStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq = sm.queues[queueKey(jd)]
+	sq = sm.qm.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
-	require.Equal(t, uint32(1), sq.inH)
+	require.Equal(t, uint32(1), sq.InboundH())
 }
 
 func TestStream_OutStanza(t *testing.T) {
@@ -202,17 +204,17 @@ func TestStream_OutStanza(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
-	sq := newQueue(
-		stmMock, nil, time.Second, time.Minute,
+	sq := streamqueue.New(
+		stmMock, nil, nil, 0, 0, time.Second, time.Minute,
 	)
-	sm.queues[queueKey(jd)] = sq
+	sm.qm.Set(queueKey(jd), sq)
 
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
@@ -236,12 +238,12 @@ func TestStream_OutStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq = sm.queues[queueKey(jd)]
+	sq = sm.qm.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
-	require.Len(t, sq.elements, 1)
-	require.Equal(t, sq.elements[0].st, testMsg)
-	require.Equal(t, uint32(1), sq.elements[0].h)
+	require.Len(t, sq.Elements(), 1)
+	require.Equal(t, sq.Elements()[0].Stanza, testMsg)
+	require.Equal(t, uint32(1), sq.Elements()[0].H)
 }
 
 func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
@@ -270,7 +272,7 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    cfg,
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -285,17 +287,15 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	testMsg1, _ := b.BuildMessage()
 	testMsg2, _ := b.BuildMessage()
 
-	sq := newQueue(
-		stmMock, nil, time.Second, time.Minute,
+	sq := streamqueue.New(
+		stmMock, nil, nil, 0, 0, time.Second, time.Minute,
 	)
-	sq.elements = append(sq.elements, queueElement{
-		st: testMsg1,
-		h:  1,
-	})
-	sm.queues[queueKey(jd)] = sq
+	sq.HandleOut(testMsg1)
 
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
+	sm.qm.Set(queueKey(jd), sq)
+
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	// when
 	_ = sm.Start(context.Background())
@@ -336,15 +336,15 @@ func TestStream_SendR(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
-	sq := newQueue(
-		stmMock, nil, time.Millisecond*500, time.Minute,
+	sq := streamqueue.New(
+		stmMock, nil, nil, 0, 0, time.Millisecond*500, time.Minute,
 	)
-	sm.queues[queueKey(jd)] = sq
-	defer sq.cancelTimers()
+	sm.qm.Set(queueKey(jd), sq)
+	defer sq.CancelTimers()
 
 	// when
 	var sentEl stravaganza.Element
@@ -387,19 +387,17 @@ func TestStream_HandleR(t *testing.T) {
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
-	sq := newQueue(
-		stmMock, nil, time.Second, time.Minute,
+	sq := streamqueue.New(
+		stmMock, nil, nil, 10, 0, time.Second, time.Minute,
 	)
-	sm.queues[queueKey(jd)] = sq
+	sm.qm.Set(queueKey(jd), sq)
 
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
-
-	sq.inH = 10
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	// when
 	_ = sm.Start(context.Background())
@@ -442,21 +440,6 @@ func TestStream_HandleA(t *testing.T) {
 		return nil
 	}
 
-	hk := hook.NewHooks()
-	sm := &Stream{
-		cfg:    testSMConfig(),
-		queues: make(map[string]*queue),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
-	}
-	sq := newQueue(
-		stmMock, nil, time.Second, time.Minute,
-	)
-	sm.queues[queueKey(jd)] = sq
-
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
-
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
 	b.WithAttribute("to", "noelia@jackal.im/yard")
@@ -477,11 +460,26 @@ func TestStream_HandleA(t *testing.T) {
 	b.WithAttribute("id", uid3)
 	testMsg3, _ := b.BuildMessage()
 
-	sq.elements = []queueElement{
-		{st: testMsg1, h: 20},
-		{st: testMsg2, h: 21},
-		{st: testMsg3, h: 22},
+	elements := []streamqueue.Element{
+		{Stanza: testMsg1, H: 20},
+		{Stanza: testMsg2, H: 21},
+		{Stanza: testMsg3, H: 22},
 	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:    testSMConfig(),
+		qm:     streamqueue.NewQueueMap(),
+		hk:     hk,
+		logger: kitlog.NewNopLogger(),
+	}
+	sq := streamqueue.New(
+		stmMock, nil, elements, 0, 0, time.Second, time.Minute,
+	)
+	sm.qm.Set(queueKey(jd), sq)
+
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	// when
 	_ = sm.Start(context.Background())
@@ -501,9 +499,9 @@ func TestStream_HandleA(t *testing.T) {
 	require.True(t, halted)
 	require.Nil(t, err)
 
-	sq = sm.queues[queueKey(jd)]
+	sq = sm.qm.Get(queueKey(jd))
 	require.NotNil(t, sq)
-	require.Len(t, sq.elements, 1)
+	require.Len(t, sq.Elements(), 1)
 
 	require.NotNil(t, sentEl)
 	require.Equal(t, uid3, sentEl.Attribute("id"))
@@ -543,11 +541,27 @@ func TestStream_Resume(t *testing.T) {
 		), nil
 	}
 
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "ortuman@jackal.im/yard")
+	b.WithAttribute("to", "noelia@jackal.im/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msgID := uuid.New().String()
+	b.WithAttribute("id", msgID)
+	testMsg, _ := b.BuildMessage()
+
+	elements := []streamqueue.Element{
+		{Stanza: testMsg, H: 22},
+	}
+
 	hk := hook.NewHooks()
 	sm := &Stream{
 		cfg:    testSMConfig(),
 		resMng: resMngMock,
-		queues: make(map[string]*queue),
+		qm:     streamqueue.NewQueueMap(),
 		hk:     hk,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -561,30 +575,13 @@ func TestStream_Resume(t *testing.T) {
 	}
 
 	nc := testNonce()
-	sq := newQueue(
-		oldStmMock, nc, time.Second, time.Minute,
+	sq := streamqueue.New(
+		oldStmMock, nc, elements, 10, 0, time.Second, time.Minute,
 	)
-	sm.queues[queueKey(jd)] = sq
+	sm.qm.Set(queueKey(jd), sq)
 
-	sq.cancelTimers() // do not send R
-	defer sq.cancelTimers()
-
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "ortuman@jackal.im/yard")
-	b.WithAttribute("to", "noelia@jackal.im/yard")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msgID := uuid.New().String()
-	b.WithAttribute("id", msgID)
-	testMsg, _ := b.BuildMessage()
-
-	sq.elements = []queueElement{
-		{st: testMsg, h: 22},
-	}
-	sq.inH = 10
+	sq.CancelTimers() // do not send R
+	defer sq.CancelTimers()
 
 	smID := encodeSMID(jd, nc)
 
