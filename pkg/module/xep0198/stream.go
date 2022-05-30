@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
+
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza"
@@ -91,8 +93,9 @@ type Stream struct {
 	hk     *hook.Hooks
 	logger kitlog.Logger
 
+	qm *streamqueue.QueueMap
+
 	mu      sync.RWMutex
-	queues  map[string]*queue
 	termTms map[string]*time.Timer
 }
 
@@ -110,10 +113,10 @@ func New(
 		router:  router,
 		hosts:   hosts,
 		resMng:  resMng,
+		qm:      streamqueue.NewQueueMap(),
+		termTms: make(map[string]*time.Timer),
 		hk:      hk,
 		logger:  kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
-		queues:  make(map[string]*queue),
-		termTms: make(map[string]*time.Timer),
 	}
 }
 
@@ -172,14 +175,11 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	m.mu.RLock()
-	sq := m.queues[queueKey(stm.JID())]
-	m.mu.RUnlock()
-
+	sq := m.qm.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
-	sq.handleIn()
+	sq.HandleIn()
 	return nil
 }
 
@@ -191,26 +191,23 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	}
 	stm := execCtx.Sender.(stream.C2S)
 
-	m.mu.RLock()
-	sq := m.queues[queueKey(stm.JID())]
-	m.mu.RUnlock()
-
+	sq := m.qm.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
-	sq.handleOut(stanza)
+	sq.HandleOut(stanza)
 
-	qLen := sq.len()
+	qLen := sq.Len()
 	switch {
 	case qLen >= m.cfg.MaxQueueSize:
-		_ = sq.stream().Disconnect(streamerror.E(streamerror.PolicyViolation))
+		_ = sq.GetStream().Disconnect(streamerror.E(streamerror.PolicyViolation))
 
 		level.Info(m.logger).Log("msg", "max queue size reached",
 			"id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 		)
 
 	case qLen%unacknowledgedStanzaCount == 0:
-		sq.requestAck()
+		sq.RequestAck()
 	}
 	return nil
 }
@@ -220,15 +217,12 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if !stm.Info().Bool(enabledInfoKey) {
 		return nil
 	}
-	m.mu.RLock()
-	sq := m.queues[queueKey(stm.JID())]
-	m.mu.RUnlock()
-
+	sq := m.qm.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
 	// cancel scheduled timers
-	sq.cancelTimers()
+	sq.CancelTimers()
 
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	discErr := inf.DisconnectError
@@ -260,21 +254,21 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 		return nil
 	}
 	// unregister stream queue
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	qk := queueKey(stm.JID())
-	sq := m.queues[qk]
+
+	sq := m.qm.Get(qk)
 	if sq == nil {
 		return nil
 	}
-	delete(m.queues, qk)
+	m.qm.Delete(qk)
 
 	// cancel scheduled termination
+	m.mu.Lock()
 	if tm := m.termTms[inf.ID]; tm != nil {
 		tm.Stop()
 	}
 	delete(m.termTms, inf.ID)
+	m.mu.Unlock()
 
 	return nil
 }
@@ -321,14 +315,16 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		nonce[i] = byte(rand.Intn(255) + 1)
 	}
 	// register stream queue
-	m.mu.Lock()
-	m.queues[queueKey(stm.JID())] = newQueue(
+	sq := streamqueue.New(
 		stm,
 		nonce,
+		nil,
+		0,
+		0,
 		m.cfg.RequestAckInterval,
 		m.cfg.WaitForAckTimeout,
 	)
-	m.mu.Unlock()
+	m.qm.Set(queueKey(stm.JID()), sq)
 
 	smID := encodeSMID(stm.JID(), nonce)
 
@@ -355,13 +351,10 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		return err
 	}
 	qk := queueKey(jd)
-
-	m.mu.RLock()
-	sq := m.queues[qk]
-	m.mu.RUnlock()
+	sq := m.qm.Get(qk)
 
 	// invalid smID?
-	if !jd.MatchesWithOptions(stm.JID(), jid.MatchesBare) || sq == nil || bytes.Compare(sq.nonce(), nonce) != 0 {
+	if !jd.MatchesWithOptions(stm.JID(), jid.MatchesBare) || sq == nil || bytes.Compare(sq.Nonce(), nonce) != 0 {
 		sendFailedReply(itemNotFound, "", stm)
 		return nil
 	}
@@ -375,15 +368,13 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		return nil
 	}
 	// disconnect hibernated c2s stream and establish new one
-	if err := <-sq.stream().Disconnect(streamerror.E(streamerror.Conflict)); err != nil {
+	if err := <-sq.GetStream().Disconnect(streamerror.E(streamerror.Conflict)); err != nil {
 		return err
 	}
-	sq.setStream(stm)
+	sq.SetStream(stm)
 
 	// since we disconnected old stream, we must re-register retained queue
-	m.mu.Lock()
-	m.queues[qk] = sq
-	m.mu.Unlock()
+	m.qm.Set(qk, sq)
 
 	// resume stream and send unacknowledged stanzas
 	if err := stm.Resume(ctx, res.JID(), res.Presence(), res.Info()); err != nil {
@@ -391,13 +382,13 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	}
 	stm.SendElement(stravaganza.NewBuilder("resumed").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
-		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
+		WithAttribute("h", strconv.FormatUint(uint64(sq.InboundH()), 10)).
 		WithAttribute("previd", prevSMID).
 		Build(),
 	)
-	sq.acknowledge(h)
-	sq.sendPending()
-	sq.scheduleR()
+	sq.Acknowledge(h)
+	sq.SendPending()
+	sq.ScheduleR()
 
 	level.Info(m.logger).Log("msg", "resumed stream",
 		"smID", prevSMID, "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
@@ -406,31 +397,26 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 }
 
 func (m *Stream) handleA(stm stream.C2S, h uint32) {
-	m.mu.RLock()
-	sq := m.queues[queueKey(stm.JID())]
-	m.mu.RUnlock()
+	sq := m.qm.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return
 	}
-	sq.acknowledge(h)
+	sq.Acknowledge(h)
 
 	level.Info(m.logger).Log("msg", "received stanza ack",
-		"ack_h", h, "h", sq.outboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
+		"ack_h", h, "h", sq.OutboundH(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
-	if sq.len() == 0 {
+	if sq.Len() == 0 {
 		return // done here
 	}
 	level.Info(m.logger).Log("msg", "resending pending stanzas...",
-		"len", sq.len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
+		"len", sq.Len(), "id", stm.ID(), "username", stm.Username(), "resource", stm.Resource(),
 	)
-	sq.sendPending()
+	sq.SendPending()
 }
 
 func (m *Stream) handleR(stm stream.C2S) {
-	m.mu.RLock()
-	sq := m.queues[queueKey(stm.JID())]
-	m.mu.RUnlock()
-
+	sq := m.qm.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return
 	}
@@ -439,7 +425,7 @@ func (m *Stream) handleR(stm stream.C2S) {
 	)
 	a := stravaganza.NewBuilder("a").
 		WithAttribute(stravaganza.Namespace, streamNamespace).
-		WithAttribute("h", strconv.FormatUint(uint64(sq.inboundH()), 10)).
+		WithAttribute("h", strconv.FormatUint(uint64(sq.InboundH()), 10)).
 		Build()
 	stm.SendElement(a)
 }
