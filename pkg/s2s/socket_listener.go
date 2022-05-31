@@ -147,10 +147,6 @@ func (l *SocketListener) Start(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			level.Info(l.logger).Log("msg", "received S2S incoming connection",
-				"bind_addr", l.getAddress(),
-				"remote_address", conn.RemoteAddr().String(),
-			)
 
 			go l.connHandlerFn(conn)
 		}

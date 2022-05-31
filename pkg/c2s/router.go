@@ -94,7 +94,6 @@ func (r *c2sRouter) Register(stm stream.C2S) error {
 	if err := r.local.Register(stm); err != nil {
 		return err
 	}
-	level.Info(r.logger).Log("msg", "registered C2S stream", "id", stm.ID())
 	return nil
 }
 
@@ -113,7 +112,6 @@ func (r *c2sRouter) Unregister(stm stream.C2S) error {
 	if err := r.local.Unregister(stm); err != nil {
 		return err
 	}
-	level.Info(r.logger).Log("msg", "unregistered C2S stream", "id", stm.ID())
 	return nil
 }
 
