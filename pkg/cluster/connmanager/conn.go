@@ -49,11 +49,12 @@ var stmErrReasonMap = map[streamerror.Reason]clusterpb.StreamErrorReason{
 var dialFn = dialContext
 
 type clusterConn struct {
-	target string
-	ver    *version.SemanticVersion
-	cc     io.Closer
-	lr     LocalRouter
-	cr     ComponentRouter
+	target     string
+	ver        *version.SemanticVersion
+	cc         io.Closer
+	lcRouter   LocalRouter
+	compRouter ComponentRouter
+	stmMgmt    StreamManagement
 }
 
 func newConn(addr string, port int, ver *version.SemanticVersion) *clusterConn {
@@ -63,20 +64,22 @@ func newConn(addr string, port int, ver *version.SemanticVersion) *clusterConn {
 	}
 }
 
-func (c *clusterConn) LocalRouter() LocalRouter         { return c.lr }
-func (c *clusterConn) ComponentRouter() ComponentRouter { return c.cr }
+func (c *clusterConn) LocalRouter() LocalRouter           { return c.lcRouter }
+func (c *clusterConn) ComponentRouter() ComponentRouter   { return c.compRouter }
+func (c *clusterConn) StreamManagement() StreamManagement { return c.stmMgmt }
 
 func (c *clusterConn) clusterAPIVer() *version.SemanticVersion {
 	return c.ver
 }
 
 func (c *clusterConn) dialContext(ctx context.Context) error {
-	lr, cr, cc, err := dialFn(ctx, c.target)
+	lcRouter, compRouter, stmMgmt, cc, err := dialFn(ctx, c.target)
 	if err != nil {
 		return err
 	}
-	c.lr = lr
-	c.cr = cr
+	c.lcRouter = lcRouter
+	c.compRouter = compRouter
+	c.stmMgmt = stmMgmt
 	c.cc = cc
 	return nil
 }
@@ -97,7 +100,7 @@ func toProtoStreamError(sErr *streamerror.Error) *clusterpb.StreamError {
 	return pse
 }
 
-func dialContext(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
+func dialContext(ctx context.Context, target string) (lcRouter LocalRouter, compRouter ComponentRouter, stmMgmt StreamManagement, cc io.Closer, err error) {
 	grpcConn, err := grpc.DialContext(ctx,
 		target,
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -109,9 +112,11 @@ func dialContext(ctx context.Context, target string) (lr LocalRouter, cr Compone
 		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	lr = &localRouter{cl: clusterpb.NewLocalRouterClient(grpcConn)}
-	cr = &componentRouter{cl: clusterpb.NewComponentRouterClient(grpcConn)}
-	return lr, cr, grpcConn, nil
+	lcRouter = &localRouter{cl: clusterpb.NewLocalRouterClient(grpcConn)}
+	compRouter = &componentRouter{cl: clusterpb.NewComponentRouterClient(grpcConn)}
+	stmMgmt = &streamManagement{cl: clusterpb.NewStreamManagementClient(grpcConn)}
+
+	return lcRouter, compRouter, stmMgmt, grpcConn, nil
 }

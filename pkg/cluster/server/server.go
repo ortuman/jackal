@@ -21,14 +21,12 @@ import (
 	"sync/atomic"
 
 	kitlog "github.com/go-kit/log"
-
 	"github.com/go-kit/log/level"
-
-	"github.com/ortuman/jackal/pkg/c2s"
-
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/ortuman/jackal/pkg/c2s"
 	clusterpb "github.com/ortuman/jackal/pkg/cluster/pb"
 	"github.com/ortuman/jackal/pkg/component"
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	"google.golang.org/grpc"
 )
 
@@ -42,6 +40,7 @@ type Server struct {
 	active      int32
 	localRouter *c2s.LocalRouter
 	comps       *component.Components
+	stmQueueMap *streamqueue.QueueMap
 	logger      kitlog.Logger
 }
 
@@ -52,11 +51,18 @@ type Config struct {
 }
 
 // New returns a new initialized Server instance.
-func New(cfg Config, localRouter *c2s.LocalRouter, comps *component.Components, logger kitlog.Logger) *Server {
+func New(
+	cfg Config,
+	localRouter *c2s.LocalRouter,
+	comps *component.Components,
+	streamQueueMap *streamqueue.QueueMap,
+	logger kitlog.Logger,
+) *Server {
 	return &Server{
 		cfg:         cfg,
 		localRouter: localRouter,
 		comps:       comps,
+		stmQueueMap: streamQueueMap,
 		logger:      logger,
 	}
 }
@@ -80,6 +86,7 @@ func (s *Server) Start(_ context.Context) error {
 	)
 	clusterpb.RegisterLocalRouterServer(s.srv, newLocalRouterService(s.localRouter))
 	clusterpb.RegisterComponentRouterServer(s.srv, newComponentRouterService(s.comps))
+	clusterpb.RegisterStreamManagementServer(s.srv, newStreamManagementService(s.stmQueueMap))
 
 	go func() {
 		if err := s.srv.Serve(s.ln); err != nil {

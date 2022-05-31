@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package clusterconnmanager
+package clusterserver
 
-import (
-	"io"
-)
+import "github.com/jackal-xmpp/stravaganza"
 
-//go:generate moq -out localrouter.mock_test.go . LocalRouter:localRouterMock
-//go:generate moq -out componentrouter.mock_test.go . ComponentRouter:componentRouterMock
-//go:generate moq -out streammanagement.mock_test.go . StreamManagement:streamManagementMock
-
-//go:generate moq -out grpcconn.mock_test.go . grpcConn
-type grpcConn interface {
-	io.Closer
+func testMessageStanza() *stravaganza.Message {
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "noelia@jackal.im/yard")
+	b.WithAttribute("to", "ortuman@jackal.im/balcony")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage()
+	return msg
 }

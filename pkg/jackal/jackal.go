@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
+
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -117,6 +119,7 @@ type Jackal struct {
 	router         router.Router
 	mods           *module.Modules
 	comps          *component.Components
+	stmQueueMap    *streamqueue.QueueMap
 	extCompMng     *extcomponentmanager.Manager
 
 	starters []starter
@@ -455,7 +458,7 @@ func (j *Jackal) initAdminServer(cfg adminserver.Config) {
 }
 
 func (j *Jackal) initClusterServer(cfg clusterserver.Config) {
-	clusterSrv := clusterserver.New(cfg, j.localRouter, j.comps, j.logger)
+	clusterSrv := clusterserver.New(cfg, j.localRouter, j.comps, j.stmQueueMap, j.logger)
 	j.registerStartStopper(clusterSrv)
 	return
 }

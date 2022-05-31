@@ -20,18 +20,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
+	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 
-	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/ortuman/jackal/pkg/cluster/instance"
 
 	kitlog "github.com/go-kit/log"
+	"github.com/google/uuid"
 	"github.com/jackal-xmpp/stravaganza"
+	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
 	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	"github.com/ortuman/jackal/pkg/router/stream"
+	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -99,10 +101,10 @@ func TestStream_Enable(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 
 	// when
@@ -128,7 +130,7 @@ func TestStream_Enable(t *testing.T) {
 	require.Equal(t, "enabled", sentEl.Name())
 	require.Equal(t, streamNamespace, sentEl.Attribute(stravaganza.Namespace))
 
-	sq := sm.qm.Get(queueKey(jd))
+	sq := sm.stmQueueMap.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
 	sq.CancelTimers()
@@ -148,15 +150,15 @@ func TestStream_InStanza(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	sq := streamqueue.New(
 		stmMock, nil, nil, 0, 0, time.Second, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -183,7 +185,7 @@ func TestStream_InStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq = sm.qm.Get(queueKey(jd))
+	sq = sm.stmQueueMap.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
 	require.Equal(t, uint32(1), sq.InboundH())
@@ -203,15 +205,15 @@ func TestStream_OutStanza(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	sq := streamqueue.New(
 		stmMock, nil, nil, 0, 0, time.Second, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -238,7 +240,7 @@ func TestStream_OutStanza(t *testing.T) {
 	// then
 	require.Nil(t, err)
 
-	sq = sm.qm.Get(queueKey(jd))
+	sq = sm.stmQueueMap.Get(queueKey(jd))
 	require.NotNil(t, sq)
 
 	require.Len(t, sq.Elements(), 1)
@@ -271,10 +273,10 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    cfg,
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         cfg,
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "ortuman@jackal.im/yard")
@@ -292,7 +294,7 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	)
 	sq.HandleOut(testMsg1)
 
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -335,15 +337,15 @@ func TestStream_SendR(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	sq := streamqueue.New(
 		stmMock, nil, nil, 0, 0, time.Millisecond*500, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 	defer sq.CancelTimers()
 
 	// when
@@ -386,15 +388,15 @@ func TestStream_HandleR(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	sq := streamqueue.New(
 		stmMock, nil, nil, 10, 0, time.Second, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -468,15 +470,15 @@ func TestStream_HandleA(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	sq := streamqueue.New(
 		stmMock, nil, elements, 0, 0, time.Second, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -499,7 +501,7 @@ func TestStream_HandleA(t *testing.T) {
 	require.True(t, halted)
 	require.Nil(t, err)
 
-	sq = sm.qm.Get(queueKey(jd))
+	sq = sm.stmQueueMap.Get(queueKey(jd))
 	require.NotNil(t, sq)
 	require.Len(t, sq.Elements(), 1)
 
@@ -517,6 +519,7 @@ func TestStream_Resume(t *testing.T) {
 	stmMock.JIDFunc = func() *jid.JID { return jd }
 	stmMock.UsernameFunc = func() string { return jd.Node() }
 	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.DisconnectFunc = func(_ *streamerror.Error) <-chan error { return nil }
 
 	sndElements := make([]stravaganza.Element, 0)
 	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
@@ -532,7 +535,7 @@ func TestStream_Resume(t *testing.T) {
 	resMngMock := &resourceManagerMock{}
 	resMngMock.GetResourceFunc = func(ctx context.Context, username string, resource string) (c2smodel.ResourceDesc, error) {
 		return c2smodel.NewResourceDesc(
-			uuid.New().String(),
+			instance.ID(),
 			jd,
 			xmpputil.MakePresence(jd, jd.ToBareJID(), stravaganza.AvailableType, nil),
 			c2smodel.NewInfoMapFromMap(
@@ -559,11 +562,11 @@ func TestStream_Resume(t *testing.T) {
 
 	hk := hook.NewHooks()
 	sm := &Stream{
-		cfg:    testSMConfig(),
-		resMng: resMngMock,
-		qm:     streamqueue.NewQueueMap(),
-		hk:     hk,
-		logger: kitlog.NewNopLogger(),
+		cfg:         testSMConfig(),
+		resMng:      resMngMock,
+		stmQueueMap: streamqueue.NewQueueMap(),
+		hk:          hk,
+		logger:      kitlog.NewNopLogger(),
 	}
 	var streamErr *streamerror.Error
 	oldStmMock := &c2sStreamMock{}
@@ -578,7 +581,7 @@ func TestStream_Resume(t *testing.T) {
 	sq := streamqueue.New(
 		oldStmMock, nc, elements, 10, 0, time.Second, time.Minute,
 	)
-	sm.qm.Set(queueKey(jd), sq)
+	sm.stmQueueMap.Set(queueKey(jd), sq)
 
 	sq.CancelTimers() // do not send R
 	defer sq.CancelTimers()
@@ -607,6 +610,120 @@ func TestStream_Resume(t *testing.T) {
 	require.True(t, resumed)
 
 	require.Equal(t, streamerror.Conflict, streamErr.Reason)
+
+	require.Len(t, sndElements, 2)
+
+	require.Equal(t, "resumed", sndElements[0].Name())
+	require.Equal(t, streamNamespace, sndElements[0].Attribute(stravaganza.Namespace))
+	require.Equal(t, smID, sndElements[0].Attribute("previd"))
+	require.Equal(t, "10", sndElements[0].Attribute("h"))
+
+	require.Equal(t, msgID, sndElements[1].Attribute(stravaganza.ID))
+}
+
+func TestStream_ResumeRemote(t *testing.T) {
+	// given
+	jd, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
+
+	stmMock := &c2sStreamMock{}
+	stmMock.IsAuthenticatedFunc = func() bool { return true }
+	stmMock.IDFunc = func() stream.C2SID { return 1234 }
+	stmMock.JIDFunc = func() *jid.JID { return jd }
+	stmMock.UsernameFunc = func() string { return jd.Node() }
+	stmMock.ResourceFunc = func() string { return jd.Resource() }
+	stmMock.DisconnectFunc = func(_ *streamerror.Error) <-chan error { return nil }
+
+	sndElements := make([]stravaganza.Element, 0)
+	stmMock.SendElementFunc = func(elem stravaganza.Element) <-chan error {
+		sndElements = append(sndElements, elem)
+		return nil
+	}
+	var resumed bool
+	stmMock.ResumeFunc = func(ctx context.Context, jd *jid.JID, pr *stravaganza.Presence, inf c2smodel.Info) error {
+		resumed = true
+		return nil
+	}
+
+	resMngMock := &resourceManagerMock{}
+	resMngMock.GetResourceFunc = func(ctx context.Context, username string, resource string) (c2smodel.ResourceDesc, error) {
+		return c2smodel.NewResourceDesc(
+			"inst-1234",
+			jd,
+			xmpputil.MakePresence(jd, jd.ToBareJID(), stravaganza.AvailableType, nil),
+			c2smodel.NewInfoMapFromMap(
+				map[string]string{enabledInfoKey: "true"},
+			),
+		), nil
+	}
+
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", "ortuman@jackal.im/yard")
+	b.WithAttribute("to", "noelia@jackal.im/yard")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("I'll give thee a wind.").
+			Build(),
+	)
+	msgID := uuid.New().String()
+	b.WithAttribute("id", msgID)
+	testMsg, _ := b.BuildMessage()
+
+	elements := []streamqueue.Element{
+		{Stanza: testMsg, H: 22},
+	}
+
+	nc := testNonce()
+
+	clusterConnMngMock := &clusterConnManagerMock{}
+	clusterConnMngMock.GetConnectionFunc = func(instanceID string) (clusterconnmanager.Conn, error) {
+		clusterConnMock := &clusterConnMock{}
+		clusterConnMock.StreamManagementFunc = func() clusterconnmanager.StreamManagement {
+			stmMgmtServiceMock := &streamManagementServiceMock{}
+			stmMgmtServiceMock.TransferQueueFunc = func(ctx context.Context, queueID string) (*clusterconnmanager.StreamQueue, error) {
+				return &clusterconnmanager.StreamQueue{
+					Elements: elements,
+					Nonce:    nc,
+					InH:      10,
+					OutH:     0,
+				}, nil
+			}
+			return stmMgmtServiceMock
+		}
+		return clusterConnMock, nil
+	}
+
+	hk := hook.NewHooks()
+	sm := &Stream{
+		cfg:            testSMConfig(),
+		resMng:         resMngMock,
+		stmQueueMap:    streamqueue.NewQueueMap(),
+		clusterConnMng: clusterConnMngMock,
+		hk:             hk,
+		logger:         kitlog.NewNopLogger(),
+	}
+
+	smID := encodeSMID(jd, nc)
+
+	// when
+	_ = sm.Start(context.Background())
+	defer func() { _ = sm.Stop(context.Background()) }()
+
+	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info: &hook.C2SStreamInfo{
+			Element: stravaganza.NewBuilder("resume").
+				WithAttribute(stravaganza.Namespace, streamNamespace).
+				WithAttribute("previd", smID).
+				WithAttribute("h", "21").
+				Build(),
+		},
+		Sender: stmMock,
+	})
+
+	// then
+	require.True(t, halted)
+	require.Nil(t, err)
+
+	require.True(t, resumed)
 
 	require.Len(t, sndElements, 2)
 

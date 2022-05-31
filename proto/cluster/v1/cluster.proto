@@ -33,6 +33,12 @@ service ComponentRouter {
   rpc Route(ComponentRouteRequest) returns (ComponentRouteResponse);
 }
 
+service StreamManagement {
+  // TransferQueue fetches a cluster stream queue.
+  // The stream and all associated resources are guaranteed to be released once this method returns.
+  rpc TransferQueue(TransferQueueRequest) returns (TransferQueueResponse);
+}
+
 // LocalRouteRequest is the parameter message for LocalRouter Route rpc.
 message LocalRouteRequest {
   // username name of the user to which the stanza is routed to.
@@ -97,4 +103,34 @@ enum StreamErrorReason {
   STREAM_ERROR_REASON_SYSTEM_SHUTDOWN          = 12; // System shutdown.
   STREAM_ERROR_REASON_UNDEFINED_CONDITION      = 13; // Undefined condition.
   STREAM_ERROR_REASON_INTERNAL_SERVER_ERROR    = 14; // Server error.
+}
+
+// TransferQueueRequest is the parameter message for StreamManagement TransferQueue rpc.
+message TransferQueueRequest {
+  // identifier is the queue identifier we want to transmit.
+  string identifier = 1;
+}
+
+// QueueElement represents a stream queue element.
+message QueueElement {
+  // stanza contains the element XMPP stanza.
+  stravaganza.PBElement stanza = 1;
+
+  // h contains the incremental value associated to this element.
+  uint32 h = 2;
+}
+
+// TransferQueueResponse is the response returned by StreamManagement TransferQueue rpc.
+message TransferQueueResponse {
+  // elements contains all queue elements.
+  repeated QueueElement elements = 1;
+
+  // nonce is the queue nonce value.
+  bytes nonce = 2;
+
+  // inH is the queue incoming h value.
+  uint32 inH = 3;
+
+  // outH is the queue outgoing h value.
+  uint32 outH = 4;
 }

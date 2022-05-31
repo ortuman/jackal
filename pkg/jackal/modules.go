@@ -26,6 +26,7 @@ import (
 	"github.com/ortuman/jackal/pkg/module/xep0115"
 	"github.com/ortuman/jackal/pkg/module/xep0191"
 	"github.com/ortuman/jackal/pkg/module/xep0198"
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	"github.com/ortuman/jackal/pkg/module/xep0199"
 	"github.com/ortuman/jackal/pkg/module/xep0202"
 	"github.com/ortuman/jackal/pkg/module/xep0280"
@@ -95,7 +96,8 @@ var modFns = map[string]func(a *Jackal, cfg *ModulesConfig) module.Module{
 	// XEP-0198: Stream Management
 	// (https://xmpp.org/extensions/xep-0198.html)
 	xep0198.ModuleName: func(j *Jackal, cfg *ModulesConfig) module.Module {
-		return xep0198.New(cfg.Stream, j.router, j.hosts, j.resMng, j.hk, j.logger)
+		j.stmQueueMap = streamqueue.NewQueueMap()
+		return xep0198.New(cfg.Stream, j.stmQueueMap, j.clusterConnMng, j.router, j.hosts, j.resMng, j.hk, j.logger)
 	},
 	// XEP-0199: XMPP Ping
 	// (https://xmpp.org/extensions/xep-0199.html)

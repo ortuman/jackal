@@ -21,24 +21,23 @@ import (
 	"testing"
 
 	kitlog "github.com/go-kit/log"
-
-	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
-
 	"github.com/ortuman/jackal/pkg/hook"
+	clustermodel "github.com/ortuman/jackal/pkg/model/cluster"
 	"github.com/ortuman/jackal/pkg/version"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConnections_UpdateMembers(t *testing.T) {
 	// given
-	lrMock := &localRouterMock{}
-	crMock := &componentRouterMock{}
+	lcRouterMock := &localRouterMock{}
+	compRouterMock := &componentRouterMock{}
+	stmMgmtMock := &streamManagementMock{}
 
 	ccMock := &grpcConnMock{}
 	ccMock.CloseFunc = func() error { return nil }
 
-	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
-		return lrMock, crMock, ccMock, nil
+	dialFn = func(ctx context.Context, target string) (LocalRouter, ComponentRouter, StreamManagement, io.Closer, error) {
+		return lcRouterMock, compRouterMock, stmMgmtMock, ccMock, nil
 	}
 	hk := hook.NewHooks()
 	connMng := NewManager(hk, kitlog.NewNopLogger())
@@ -80,12 +79,13 @@ func TestConnections_UpdateMembers(t *testing.T) {
 
 func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	// given
-	lrMock := &localRouterMock{}
-	crMock := &componentRouterMock{}
+	localRouterMock := &localRouterMock{}
+	compRouterMock := &componentRouterMock{}
+	stmMgmtMock := &streamManagementMock{}
 	ccMock := &grpcConnMock{}
 
-	dialFn = func(ctx context.Context, target string) (lr LocalRouter, cr ComponentRouter, cc io.Closer, err error) {
-		return lrMock, crMock, ccMock, nil
+	dialFn = func(ctx context.Context, target string) (LocalRouter, ComponentRouter, StreamManagement, io.Closer, error) {
+		return localRouterMock, compRouterMock, stmMgmtMock, ccMock, nil
 	}
 	hk := hook.NewHooks()
 	connMng := NewManager(hk, kitlog.NewNopLogger())
