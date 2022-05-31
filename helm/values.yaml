@@ -25,6 +25,9 @@ jackal:
       cpu: 120m
       memory: 64Mi
 
+  loadBalancer:
+    extraAnnotations: {}
+
   config:
     logger:
       level: debug

@@ -1,56 +1,24 @@
-{{- $replicasCount := int .Values.jackal.replicasCount -}}
-{{- $baseNodePort := 30000 -}}
-{{- range $i := until $replicasCount }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: jackal-{{ $i }}
-  namespace: {{ $.Release.Namespace }}
-  labels:
-    app: jackal-{{ $i }}
-spec:
-  type: NodePort
-  selector:
-    app: jackal-{{ $i }}
-  ports:
-    {{- range $j, $ln := $.Values.jackal.config.c2s.listeners }}
-    - port: {{ $ln.port }}
-      name: c2s-{{ $j }}
-      targetPort: {{ $ln.port }}
-      nodePort: {{ $baseNodePort }}
-    {{- $baseNodePort = add1 $baseNodePort -}}
-    {{- end }}
-    {{- range $j, $ln := $.Values.jackal.config.s2s.listeners }}
-    - port: {{ $ln.port }}
-      name: s2s-{{ $j }}
-      targetPort: {{ $ln.port }}
-      nodePort: {{ $baseNodePort }}
-    {{- $baseNodePort = add1 $baseNodePort -}}
-    {{- end }}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jackal-{{ $i }}
+  name: jackal
   namespace: {{ $.Release.Namespace }}
   labels:
-    app: jackal-{{ $i }}
+    app: jackal
     heritage: {{ $.Release.Service }}
     release: {{ $.Release.Name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.jackal.replicasCount }}
   selector:
     matchLabels:
-      app: jackal-{{ $i }}
+      app: jackal
   strategy: {}
   template:
     metadata:
       annotations:
         rollme: {{ randAlphaNum 5 | quote }}
       labels:
-        app: jackal-{{ $i }}
-        component: jackal
+        app: jackal
     spec:
       nodeSelector:
         {{- toYaml $.Values.jackal.nodeSelector | nindent 8 }}
@@ -81,7 +49,7 @@ spec:
             - "-lapp=redis"
 
       containers:
-        - name: jackal-{{ $i }}
+        - name: jackal
           args:
             - ./jackal
             - -config=/etc/jackal/config.yaml
@@ -143,4 +111,3 @@ spec:
         - name: config-volume
           configMap:
             name: jackal-config
-{{- end }}

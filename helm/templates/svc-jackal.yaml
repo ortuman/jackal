@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jackal
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    {{- toYaml $.Values.jackal.loadBalancer.extraAnnotations | nindent 4 }}
+  labels:
+    app: jackal
+spec:
+  type: LoadBalancer
+  selector:
+    app: jackal
+  ports:
+    {{- range $j, $ln := $.Values.jackal.config.c2s.listeners }}
+    - port: {{ $ln.port }}
+      name: c2s-{{ $j }}
+      targetPort: {{ $ln.port }}
+    {{- end }}
+    {{- range $j, $ln := $.Values.jackal.config.s2s.listeners }}
+    - port: {{ $ln.port }}
+      name: s2s-{{ $j }}
+      targetPort: {{ $ln.port }}
+    {{- end }}
