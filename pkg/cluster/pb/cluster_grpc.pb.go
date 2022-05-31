@@ -227,3 +227,93 @@ var ComponentRouter_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/cluster/v1/cluster.proto",
 }
+
+// StreamManagementClient is the client API for StreamManagement service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StreamManagementClient interface {
+	// TransferQueue fetches a cluster stream queue.
+	// The stream and all associated resources are guaranteed to be released once this method returns.
+	TransferQueue(ctx context.Context, in *TransferQueueRequest, opts ...grpc.CallOption) (*TransferQueueResponse, error)
+}
+
+type streamManagementClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStreamManagementClient(cc grpc.ClientConnInterface) StreamManagementClient {
+	return &streamManagementClient{cc}
+}
+
+func (c *streamManagementClient) TransferQueue(ctx context.Context, in *TransferQueueRequest, opts ...grpc.CallOption) (*TransferQueueResponse, error) {
+	out := new(TransferQueueResponse)
+	err := c.cc.Invoke(ctx, "/cluster.v1.StreamManagement/TransferQueue", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StreamManagementServer is the server API for StreamManagement service.
+// All implementations must embed UnimplementedStreamManagementServer
+// for forward compatibility
+type StreamManagementServer interface {
+	// TransferQueue fetches a cluster stream queue.
+	// The stream and all associated resources are guaranteed to be released once this method returns.
+	TransferQueue(context.Context, *TransferQueueRequest) (*TransferQueueResponse, error)
+	mustEmbedUnimplementedStreamManagementServer()
+}
+
+// UnimplementedStreamManagementServer must be embedded to have forward compatible implementations.
+type UnimplementedStreamManagementServer struct {
+}
+
+func (UnimplementedStreamManagementServer) TransferQueue(context.Context, *TransferQueueRequest) (*TransferQueueResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TransferQueue not implemented")
+}
+func (UnimplementedStreamManagementServer) mustEmbedUnimplementedStreamManagementServer() {}
+
+// UnsafeStreamManagementServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StreamManagementServer will
+// result in compilation errors.
+type UnsafeStreamManagementServer interface {
+	mustEmbedUnimplementedStreamManagementServer()
+}
+
+func RegisterStreamManagementServer(s grpc.ServiceRegistrar, srv StreamManagementServer) {
+	s.RegisterService(&StreamManagement_ServiceDesc, srv)
+}
+
+func _StreamManagement_TransferQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferQueueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StreamManagementServer).TransferQueue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cluster.v1.StreamManagement/TransferQueue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StreamManagementServer).TransferQueue(ctx, req.(*TransferQueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// StreamManagement_ServiceDesc is the grpc.ServiceDesc for StreamManagement service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var StreamManagement_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "cluster.v1.StreamManagement",
+	HandlerType: (*StreamManagementServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "TransferQueue",
+			Handler:    _StreamManagement_TransferQueue_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/cluster/v1/cluster.proto",
+}

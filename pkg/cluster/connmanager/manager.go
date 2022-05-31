@@ -41,6 +41,7 @@ var (
 type Conn interface {
 	LocalRouter() LocalRouter
 	ComponentRouter() ComponentRouter
+	StreamManagement() StreamManagement
 }
 
 // Manager is the cluster connection manager.

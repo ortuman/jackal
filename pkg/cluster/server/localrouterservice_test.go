@@ -68,16 +68,3 @@ func TestLocalRouterService_Disconnect(t *testing.T) {
 	// then
 	require.Len(t, lrMock.DisconnectCalls(), 1)
 }
-
-func testMessageStanza() *stravaganza.Message {
-	b := stravaganza.NewMessageBuilder()
-	b.WithAttribute("from", "noelia@jackal.im/yard")
-	b.WithAttribute("to", "ortuman@jackal.im/balcony")
-	b.WithChild(
-		stravaganza.NewBuilder("body").
-			WithText("I'll give thee a wind.").
-			Build(),
-	)
-	msg, _ := b.BuildMessage()
-	return msg
-}

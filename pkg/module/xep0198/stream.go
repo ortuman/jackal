@@ -25,6 +25,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ortuman/jackal/pkg/cluster/instance"
+
+	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
+
 	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 
 	kitlog "github.com/go-kit/log"
@@ -93,7 +97,8 @@ type Stream struct {
 	hk     *hook.Hooks
 	logger kitlog.Logger
 
-	qm *streamqueue.QueueMap
+	stmQueueMap    *streamqueue.QueueMap
+	clusterConnMng clusterConnManager
 
 	mu      sync.RWMutex
 	termTms map[string]*time.Timer
@@ -102,6 +107,8 @@ type Stream struct {
 // New returns a new initialized Stream instance.
 func New(
 	cfg Config,
+	stmQueueMap *streamqueue.QueueMap,
+	clusterConnMng *clusterconnmanager.Manager,
 	router router.Router,
 	hosts *host.Hosts,
 	resMng resourcemanager.Manager,
@@ -109,14 +116,15 @@ func New(
 	logger kitlog.Logger,
 ) *Stream {
 	return &Stream{
-		cfg:     cfg,
-		router:  router,
-		hosts:   hosts,
-		resMng:  resMng,
-		qm:      streamqueue.NewQueueMap(),
-		termTms: make(map[string]*time.Timer),
-		hk:      hk,
-		logger:  kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
+		cfg:            cfg,
+		router:         router,
+		hosts:          hosts,
+		resMng:         resMng,
+		stmQueueMap:    stmQueueMap,
+		clusterConnMng: clusterConnMng,
+		termTms:        make(map[string]*time.Timer),
+		hk:             hk,
+		logger:         kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
 	}
 }
 
@@ -175,7 +183,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	if !ok {
 		return nil
 	}
-	sq := m.qm.Get(queueKey(stm.JID()))
+	sq := m.stmQueueMap.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
@@ -191,7 +199,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	}
 	stm := execCtx.Sender.(stream.C2S)
 
-	sq := m.qm.Get(queueKey(stm.JID()))
+	sq := m.stmQueueMap.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
@@ -217,7 +225,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	if !stm.Info().Bool(enabledInfoKey) {
 		return nil
 	}
-	sq := m.qm.Get(queueKey(stm.JID()))
+	sq := m.stmQueueMap.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return nil
 	}
@@ -256,11 +264,11 @@ func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) 
 	// unregister stream queue
 	qk := queueKey(stm.JID())
 
-	sq := m.qm.Get(qk)
+	sq := m.stmQueueMap.Get(qk)
 	if sq == nil {
 		return nil
 	}
-	m.qm.Delete(qk)
+	m.stmQueueMap.Delete(qk)
 
 	// cancel scheduled termination
 	m.mu.Lock()
@@ -324,7 +332,7 @@ func (m *Stream) handleEnable(ctx context.Context, stm stream.C2S) error {
 		m.cfg.RequestAckInterval,
 		m.cfg.WaitForAckTimeout,
 	)
-	m.qm.Set(queueKey(stm.JID()), sq)
+	m.stmQueueMap.Set(queueKey(stm.JID()), sq)
 
 	smID := encodeSMID(stm.JID(), nonce)
 
@@ -350,14 +358,6 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 	if err != nil {
 		return err
 	}
-	qk := queueKey(jd)
-	sq := m.qm.Get(qk)
-
-	// invalid smID?
-	if !jd.MatchesWithOptions(stm.JID(), jid.MatchesBare) || sq == nil || bytes.Compare(sq.Nonce(), nonce) != 0 {
-		sendFailedReply(itemNotFound, "", stm)
-		return nil
-	}
 	// fetch resource info
 	res, err := m.resMng.GetResource(ctx, jd.Node(), jd.Resource())
 	if err != nil {
@@ -367,14 +367,55 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 		sendFailedReply(itemNotFound, "", stm)
 		return nil
 	}
-	// disconnect hibernated c2s stream and establish new one
-	if err := <-sq.GetStream().Disconnect(streamerror.E(streamerror.Conflict)); err != nil {
-		return err
-	}
-	sq.SetStream(stm)
+	var sq *streamqueue.Queue
 
-	// since we disconnected old stream, we must re-register retained queue
-	m.qm.Set(qk, sq)
+	qk := queueKey(jd)
+
+	if res.InstanceID() == instance.ID() { // local retained queue
+		sq = m.stmQueueMap.Get(qk)
+		if sq == nil {
+			sendFailedReply(itemNotFound, "", stm)
+			return nil
+		}
+		// disconnect hibernated c2s stream
+		if err := <-sq.GetStream().Disconnect(streamerror.E(streamerror.Conflict)); err != nil {
+			return err
+		}
+		// set new stream
+		sq.SetStream(stm)
+
+	} else { // transfer retained queue from internal cluster instance
+		conn, err := m.clusterConnMng.GetConnection(res.InstanceID())
+		if err != nil {
+			return err
+		}
+		resp, err := conn.StreamManagement().TransferQueue(ctx, qk)
+		if err != nil {
+			return err
+		}
+		sq = streamqueue.New(
+			stm,
+			resp.Nonce,
+			resp.Elements,
+			resp.InH,
+			resp.OutH,
+			m.cfg.RequestAckInterval,
+			m.cfg.WaitForAckTimeout,
+		)
+
+		level.Info(m.logger).Log(
+			"msg", "stream queue transferred", "key", qk, "from", res.InstanceID(), "to", instance.ID(),
+		)
+	}
+
+	// invalid smID?
+	if !jd.MatchesWithOptions(stm.JID(), jid.MatchesBare) || bytes.Compare(sq.Nonce(), nonce) != 0 {
+		sendFailedReply(itemNotFound, "", stm)
+		return nil
+	}
+
+	// register retained queue
+	m.stmQueueMap.Set(qk, sq)
 
 	// resume stream and send unacknowledged stanzas
 	if err := stm.Resume(ctx, res.JID(), res.Presence(), res.Info()); err != nil {
@@ -397,7 +438,7 @@ func (m *Stream) handleResume(ctx context.Context, stm stream.C2S, h uint32, pre
 }
 
 func (m *Stream) handleA(stm stream.C2S, h uint32) {
-	sq := m.qm.Get(queueKey(stm.JID()))
+	sq := m.stmQueueMap.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return
 	}
@@ -416,7 +457,7 @@ func (m *Stream) handleA(stm stream.C2S, h uint32) {
 }
 
 func (m *Stream) handleR(stm stream.C2S) {
-	sq := m.qm.Get(queueKey(stm.JID()))
+	sq := m.stmQueueMap.Get(queueKey(stm.JID()))
 	if sq == nil {
 		return
 	}

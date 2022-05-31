@@ -15,6 +15,7 @@
 package xep0198
 
 import (
+	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -33,4 +34,19 @@ type c2sStream interface {
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
 	resourcemanager.Manager
+}
+
+//go:generate moq -out clusterconnmanager.mock_test.go . clusterConnManager
+type clusterConnManager interface {
+	GetConnection(instanceID string) (clusterconnmanager.Conn, error)
+}
+
+//go:generate moq -out clusterconn.mock_test.go . clusterConn
+type clusterConn interface {
+	clusterconnmanager.Conn
+}
+
+//go:generate moq -out streammanagementservice.mock_test.go . streamManagementService
+type streamManagementService interface {
+	clusterconnmanager.StreamManagement
 }

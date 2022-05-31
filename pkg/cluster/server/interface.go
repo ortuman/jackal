@@ -19,7 +19,13 @@ import (
 
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
+	"github.com/ortuman/jackal/pkg/router/stream"
 )
+
+//go:generate moq -out c2s_stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
+}
 
 //go:generate moq -out localrouter.mock_test.go . localRouter
 type localRouter interface {
