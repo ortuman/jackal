@@ -2,6 +2,10 @@
 
 ## jackal - main / unreleased
 
+## 0.61.0 (2022/06/06)
+
+* [ENHANCEMENT] Added for cloud LB support. [237](https://github.com/ortuman/jackal/pull/237) 
+
 ## 0.60.0 (2022/05/27)
 
 * [ENHANCEMENT] Helm chart. [#217](https://github.com/ortuman/jackal/pull/217)

@@ -18,7 +18,7 @@ jackal:
 
   image:
     repository: ortuman/jackal
-    tag: 0.60.0
+    tag: 0.61.0
     pullPolicy: IfNotPresent
   resources:
     requests:
