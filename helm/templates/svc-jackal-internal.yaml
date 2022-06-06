@@ -8,7 +8,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    component: jackal
+    app: jackal
   ports:
     - port: {{ .Values.jackal.config.http.port }}
       name: http
