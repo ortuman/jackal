@@ -8,14 +8,6 @@
 jackal:
   replicasCount: 2
 
-  nodeSelector: {}
-  affinity: {}
-  tolerations: []
-
-  extraVolumes: []
-  extraVolumeMounts: []
-  env: []
-
   image:
     repository: ortuman/jackal
     tag: 0.61.0
@@ -27,6 +19,19 @@ jackal:
 
   loadBalancer:
     extraAnnotations: {}
+
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+  extraVolumes: []
+  extraVolumeMounts: []
+  env: []
+
+  securityContext:
+    enabled: true
+    runAsUser: 1001
+    runAsNonRoot: true
 
   config:
     logger:

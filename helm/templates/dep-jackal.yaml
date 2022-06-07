@@ -26,6 +26,10 @@ spec:
         {{- toYaml $.Values.jackal.affinity | nindent 8 }}
       tolerations:
         {{- toYaml $.Values.jackal.tolerations | nindent 8 }}
+      {{- if .Values.jackal.securityContext.enabled }}
+      securityContext: 
+        {{- omit .Values.jackal.securityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: wait-for-etcd
           image: groundnuty/k8s-wait-for:v1.3
