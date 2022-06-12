@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/jackal-xmpp/stravaganza"
-
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -41,10 +40,23 @@ func cleanUp(db *bolt.DB) {
 	_ = os.RemoveAll(dbPath)
 }
 
-func testMessageStanza(body string) *stravaganza.Message {
+func testMessageStanza() *stravaganza.Message {
 	b := stravaganza.NewMessageBuilder()
 	b.WithAttribute("from", "noelia@jackal.im/yard")
 	b.WithAttribute("to", "ortuman@jackal.im/balcony")
+	b.WithChild(
+		stravaganza.NewBuilder("body").
+			WithText("Call me but love, and I'll be new baptized; Henceforth I never will be Romeo.").
+			Build(),
+	)
+	msg, _ := b.BuildMessage()
+	return msg
+}
+
+func testMessageStanzaWithParameters(body, from, to string) *stravaganza.Message {
+	b := stravaganza.NewMessageBuilder()
+	b.WithAttribute("from", from)
+	b.WithAttribute("to", to)
 	b.WithChild(
 		stravaganza.NewBuilder("body").
 			WithText(body).

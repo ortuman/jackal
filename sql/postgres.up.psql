@@ -170,3 +170,25 @@ CREATE TABLE IF NOT EXISTS vcards (
 );
 
 SELECT enable_updated_at('vcards');
+
+-- archives
+
+CREATE TABLE IF NOT EXISTS archives (
+    serial     SERIAL PRIMARY KEY,
+    archive_id VARCHAR(1023),
+    id         VARCHAR(255) NOT NULL,
+    "from"     TEXT NOT NULL,
+    from_bare  TEXT NOT NULL,
+    "to"       TEXT NOT NULL,
+    to_bare    TEXT NOT NULL,
+    message    BYTEA NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_archives_archive_id ON archives(archive_id);
+CREATE INDEX IF NOT EXISTS i_archives_id ON archives(id);
+CREATE INDEX IF NOT EXISTS i_archives_to ON archives("to");
+CREATE INDEX IF NOT EXISTS i_archives_to_bare ON archives(to_bare);
+CREATE INDEX IF NOT EXISTS i_archives_from ON archives("from");
+CREATE INDEX IF NOT EXISTS i_archives_from_bare ON archives(from_bare);
+CREATE INDEX IF NOT EXISTS i_archives_created_at ON archives(created_at);

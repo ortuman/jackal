@@ -116,6 +116,12 @@ func TestField_Element(t *testing.T) {
 	f.Description = "A description"
 	f.Values = []string{"A value"}
 	f.Options = []Option{{"opt_label", "An option value"}}
+	f.Validate = &Validate{
+		DataType: BooleanDataType,
+		Validator: &RegExValidator{
+			RegEx: "([0-9]{3})-([0-9]{2})-([0-9]{4})",
+		},
+	}
 	elem := f.Element()
 
 	require.Equal(t, "field", elem.Name())
@@ -134,4 +140,11 @@ func TestField_Element(t *testing.T) {
 
 	valElem = optElem.Child("value")
 	require.Equal(t, "An option value", valElem.Text())
+
+	validateElem := elem.ChildNamespace("validate", validateNamespace)
+	require.NotNil(t, validateElem)
+
+	regexElem := validateElem.Child("regex")
+	require.NotNil(t, regexElem)
+	require.Equal(t, "([0-9]{3})-([0-9]{2})-([0-9]{4})", regexElem.Text())
 }

@@ -16,6 +16,7 @@ package hook
 
 import (
 	"github.com/jackal-xmpp/stravaganza"
+	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
 const (
@@ -25,7 +26,7 @@ const (
 	// S2SOutStreamDisconnected hook runs when an outgoing S2S connection is unregistered.
 	S2SOutStreamDisconnected = "s2s.out.stream.disconnected"
 
-	// S2SOutStreamElementSent hook runs whenever a XMPP element is sent over an outgoing S2S stream.
+	// S2SOutStreamElementSent hook runs whenever an XMPP element is sent over an outgoing S2S stream.
 	S2SOutStreamElementSent = "s2s.out.stream.element_sent"
 
 	// S2SInStreamRegistered hook runs when an incoming S2S connection is registered.
@@ -34,7 +35,7 @@ const (
 	// S2SInStreamUnregistered hook runs when an incoming S2S connection is unregistered.
 	S2SInStreamUnregistered = "s2s.in.stream.unregistered"
 
-	// S2SInStreamElementReceived hook runs when a XMPP element is received over an incoming S2S stream.
+	// S2SInStreamElementReceived hook runs when an XMPP element is received over an incoming S2S stream.
 	S2SInStreamElementReceived = "s2s.in.stream.stanza_received"
 
 	// S2SInStreamIQReceived hook runs when an iq stanza is received over an incoming S2S stream.
@@ -49,13 +50,13 @@ const (
 	// S2SInStreamWillRouteElement hook runs when an XMPP element is about to be routed on an incoming S2S stream.
 	S2SInStreamWillRouteElement = "s2s.in.stream.will_route_element"
 
-	// S2SInStreamIQRouted hook runs when an iq stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamIQRouted hook runs when an iq stanza is successfully routed to zero or more C2S streams.
 	S2SInStreamIQRouted = "s2s.in.stream.iq_routed"
 
-	// S2SInStreamPresenceRouted hook runs when a presence stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamPresenceRouted hook runs when a presence stanza is successfully routed to zero or more C2S streams.
 	S2SInStreamPresenceRouted = "s2s.in.stream.presence_routed"
 
-	// S2SInStreamMessageRouted hook runs when a message stanza is successfully routed to one ore more S2S streams.
+	// S2SInStreamMessageRouted hook runs when a message stanza is successfully routed to zero or more C2S streams.
 	S2SInStreamMessageRouted = "s2s.in.stream.message_routed"
 )
 
@@ -69,6 +70,9 @@ type S2SStreamInfo struct {
 
 	// Target is the S2S target domain.
 	Target string
+
+	// Targets contains all JIDs to which event stanza was routed.
+	Targets []jid.JID
 
 	// Element is the event associated XMPP element.
 	Element stravaganza.Element

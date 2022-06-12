@@ -47,8 +47,8 @@ func TestBlockList_GetBlockList(t *testing.T) {
 		return nil
 	}
 	c2sRouterMock := &c2sRouterMock{}
-	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
-		return stmMock
+	c2sRouterMock.LocalStreamFunc = func(username string, resource string) (stream.C2S, error) {
+		return stmMock, nil
 	}
 
 	var respStanzas []stravaganza.Stanza

@@ -60,8 +60,7 @@ func (op insertSeqOp) do() error {
 	if err != nil {
 		return err
 	}
-	k := fmt.Sprintf("%d", seq)
-	return b.Put([]byte(k), p)
+	return b.Put([]byte(fmt.Sprintf("%d", seq)), p)
 }
 
 type delBucketOp struct {

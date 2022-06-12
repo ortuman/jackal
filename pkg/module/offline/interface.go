@@ -17,6 +17,7 @@ package offline
 import (
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 )
 
@@ -38,4 +39,9 @@ type hosts interface {
 //go:generate moq -out resourcemanager.mock_test.go . resourceManager
 type resourceManager interface {
 	resourcemanager.Manager
+}
+
+//go:generate moq -out stream.mock_test.go . c2sStream
+type c2sStream interface {
+	stream.C2S
 }

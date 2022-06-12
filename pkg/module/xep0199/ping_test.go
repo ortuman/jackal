@@ -111,8 +111,8 @@ func TestPing_Timeout(t *testing.T) {
 		return nil
 	}
 	c2sRouterMock := &c2sRouterMock{}
-	c2sRouterMock.LocalStreamFunc = func(username string, resource string) stream.C2S {
-		return c2sStream
+	c2sRouterMock.LocalStreamFunc = func(username string, resource string) (stream.C2S, error) {
+		return c2sStream, nil
 	}
 	routerMock.C2SFunc = func() router.C2SRouter {
 		return c2sRouterMock

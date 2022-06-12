@@ -23,10 +23,12 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza"
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
-	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
+	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
+	"github.com/ortuman/jackal/pkg/module/xep0313"
 	"github.com/ortuman/jackal/pkg/router"
+	"github.com/ortuman/jackal/pkg/router/stream"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
 )
@@ -51,7 +53,6 @@ type Offline struct {
 	cfg    Config
 	hosts  hosts
 	router router.Router
-	resMng resourcemanager.Manager
 	rep    repository.Repository
 	hk     *hook.Hooks
 	logger kitlog.Logger
@@ -62,7 +63,6 @@ func New(
 	cfg Config,
 	router router.Router,
 	hosts *host.Hosts,
-	resMng resourcemanager.Manager,
 	rep repository.Repository,
 	hk *hook.Hooks,
 	logger kitlog.Logger,
@@ -71,7 +71,6 @@ func New(
 		cfg:    cfg,
 		router: router,
 		hosts:  hosts,
-		resMng: resMng,
 		rep:    rep,
 		hk:     hk,
 		logger: kitlog.With(logger, "module", ModuleName),
@@ -96,8 +95,8 @@ func (m *Offline) AccountFeatures(_ context.Context) ([]string, error) { return 
 
 // Start starts offline module.
 func (m *Offline) Start(_ context.Context) error {
-	m.hk.AddHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement, hook.LowestPriority)
-	m.hk.AddHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement, hook.LowestPriority)
+	m.hk.AddHook(hook.C2SStreamMessageRouted, m.onMessageRouted, hook.LowestPriority)
+	m.hk.AddHook(hook.S2SInStreamMessageRouted, m.onMessageRouted, hook.LowestPriority)
 
 	m.hk.AddHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv, hook.DefaultPriority)
 	m.hk.AddHook(hook.UserDeleted, m.onUserDeleted, hook.DefaultPriority)
@@ -108,8 +107,8 @@ func (m *Offline) Start(_ context.Context) error {
 
 // Stop stops offline module.
 func (m *Offline) Stop(_ context.Context) error {
-	m.hk.RemoveHook(hook.C2SStreamWillRouteElement, m.onWillRouteElement)
-	m.hk.RemoveHook(hook.S2SInStreamWillRouteElement, m.onWillRouteElement)
+	m.hk.RemoveHook(hook.C2SStreamMessageRouted, m.onMessageRouted)
+	m.hk.RemoveHook(hook.S2SInStreamMessageRouted, m.onMessageRouted)
 
 	m.hk.RemoveHook(hook.C2SStreamPresenceReceived, m.onC2SPresenceRecv)
 	m.hk.RemoveHook(hook.UserDeleted, m.onUserDeleted)
@@ -118,15 +117,23 @@ func (m *Offline) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Offline) onWillRouteElement(execCtx *hook.ExecutionContext) error {
+func (m *Offline) onMessageRouted(execCtx *hook.ExecutionContext) error {
 	var elem stravaganza.Element
+	var targets []jid.JID
 
 	switch inf := execCtx.Info.(type) {
 	case *hook.C2SStreamInfo:
+		targets = inf.Targets
 		elem = inf.Element
 	case *hook.S2SStreamInfo:
+		targets = inf.Targets
 		elem = inf.Element
 	}
+	// message was successufully routed to one of the available resources
+	if len(targets) > 0 {
+		return nil
+	}
+
 	msg, ok := elem.(*stravaganza.Message)
 	if !ok || !isMessageArchievable(msg) {
 		return nil
@@ -135,17 +142,15 @@ func (m *Offline) onWillRouteElement(execCtx *hook.ExecutionContext) error {
 	if !m.hosts.IsLocalHost(toJID.Domain()) {
 		return nil
 	}
-	rss, err := m.resMng.GetResources(execCtx.Context, toJID.Node())
-	if err != nil {
-		return err
-	}
-	if len(rss) > 0 {
-		return nil
-	}
 	return m.archiveMessage(execCtx.Context, msg)
 }
 
 func (m *Offline) onC2SPresenceRecv(execCtx *hook.ExecutionContext) error {
+	stm := execCtx.Sender.(stream.C2S)
+	if xep0313.IsArchiveRequested(stm.Info()) {
+		// user has already queried the MAM archive.
+		return nil
+	}
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
@@ -156,7 +161,7 @@ func (m *Offline) onC2SPresenceRecv(execCtx *hook.ExecutionContext) error {
 	if !pr.IsAvailable() || pr.Priority() < 0 {
 		return nil
 	}
-	return m.deliverOfflineMessages(execCtx.Context, toJID.Node())
+	return m.deliverOfflineMessages(execCtx.Context, stm)
 }
 
 func (m *Offline) onUserDeleted(execCtx *hook.ExecutionContext) error {
@@ -168,18 +173,20 @@ func (m *Offline) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
+	defer m.releaseLock(ctx, lockID)
 
 	return m.rep.DeleteOfflineMessages(ctx, inf.Username)
 }
 
-func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) error {
+func (m *Offline) deliverOfflineMessages(ctx context.Context, stm stream.C2S) error {
+	username := stm.Username()
+
 	lockID := offlineQueueLockID(username)
 
 	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
+	defer m.releaseLock(ctx, lockID)
 
 	ms, err := m.rep.FetchOfflineMessages(ctx, username)
 	if err != nil {
@@ -194,7 +201,7 @@ func (m *Offline) deliverOfflineMessages(ctx context.Context, username string) e
 	}
 	// route offline messages
 	for _, msg := range ms {
-		_, _ = m.router.Route(ctx, msg)
+		stm.SendElement(msg)
 	}
 	level.Info(m.logger).Log("msg", "delivered offline messages", "queue_size", len(ms), "username", username)
 
@@ -210,7 +217,7 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err := m.rep.Lock(ctx, lockID); err != nil {
 		return err
 	}
-	defer func() { _ = m.rep.Unlock(ctx, lockID) }()
+	defer m.releaseLock(ctx, lockID)
 
 	qSize, err := m.rep.CountOfflineMessages(ctx, username)
 	if err != nil {
@@ -241,6 +248,12 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	level.Info(m.logger).Log("msg", "archived offline message", "id", msg.Attribute(stravaganza.ID), "username", username)
 
 	return hook.ErrStopped // already handled
+}
+
+func (m *Offline) releaseLock(ctx context.Context, lockID string) {
+	if err := m.rep.Unlock(ctx, lockID); err != nil {
+		level.Warn(m.logger).Log("msg", "failed to release lock", "err", err)
+	}
 }
 
 func isMessageArchievable(msg *stravaganza.Message) bool {

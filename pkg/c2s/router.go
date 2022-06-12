@@ -16,6 +16,7 @@ package c2s
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	kitlog "github.com/go-kit/log"
@@ -115,8 +116,12 @@ func (r *c2sRouter) Unregister(stm stream.C2S) error {
 	return nil
 }
 
-func (r *c2sRouter) LocalStream(username, resource string) stream.C2S {
-	return r.local.Stream(username, resource)
+func (r *c2sRouter) LocalStream(username, resource string) (stream.C2S, error) {
+	stm := r.local.Stream(username, resource)
+	if stm == nil {
+		return nil, fmt.Errorf("c2s: local stream not found: %s/%s", username, resource)
+	}
+	return stm, nil
 }
 
 func (r *c2sRouter) Start(ctx context.Context) error {

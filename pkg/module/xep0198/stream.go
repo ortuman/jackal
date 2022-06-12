@@ -25,20 +25,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ortuman/jackal/pkg/cluster/instance"
-
-	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
-
-	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
-
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
+	clusterconnmanager "github.com/ortuman/jackal/pkg/cluster/connmanager"
+	"github.com/ortuman/jackal/pkg/cluster/instance"
 	"github.com/ortuman/jackal/pkg/cluster/resourcemanager"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/router/stream"
@@ -236,8 +233,11 @@ func (m *Stream) onDisconnect(execCtx *hook.ExecutionContext) error {
 
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	discErr := inf.DisconnectError
-	_, ok := discErr.(*streamerror.Error)
-	if ok || errors.Is(discErr, xmppparser.ErrStreamClosedByPeer) {
+	_, isStreamErr := discErr.(*streamerror.Error)
+
+	shouldHibernate := inf.Presence.IsAvailable() && !isStreamErr && !errors.Is(discErr, xmppparser.ErrStreamClosedByPeer)
+
+	if !shouldHibernate {
 		return nil
 	}
 	// schedule stream termination

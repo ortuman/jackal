@@ -28,6 +28,7 @@ type repTx struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.Archive
 	repository.Locker
 }
 
@@ -41,6 +42,7 @@ func newRepTx(tx *bolt.Tx) *repTx {
 		Private:      newPrivateRep(tx),
 		Roster:       newRosterRep(tx),
 		VCard:        newVCardRep(tx),
+		Archive:      newArchiveRep(tx),
 		Locker:       newLockerRep(),
 	}
 }

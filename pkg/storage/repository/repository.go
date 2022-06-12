@@ -38,6 +38,7 @@ type Transaction interface {
 }
 
 type baseRepository interface {
+	Archive
 	User
 	Last
 	Capabilities

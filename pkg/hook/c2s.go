@@ -47,16 +47,16 @@ const (
 	// C2SStreamWillRouteElement hook runs when an XMPP element is about to be routed over a C2S stream.
 	C2SStreamWillRouteElement = "c2s.stream.will_route_element"
 
-	// C2SStreamIQRouted hook runs when an iq stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamIQRouted hook runs when an iq stanza is successfully routed to zero or more C2S streams.
 	C2SStreamIQRouted = "c2s.stream.iq_routed"
 
-	// C2SStreamPresenceRouted hook runs when a presence stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamPresenceRouted hook runs when a presence stanza is successfully routed to zero or more C2S streams.
 	C2SStreamPresenceRouted = "c2s.stream.presence_routed"
 
-	// C2SStreamMessageRouted hook runs when a message stanza is successfully routed to one ore more C2S streams.
+	// C2SStreamMessageRouted hook runs when a message stanza is successfully routed to zero or more C2S streams.
 	C2SStreamMessageRouted = "c2s.stream.message_routed"
 
-	// C2SStreamElementSent hook runs when a XMPP element is sent over a C2S stream.
+	// C2SStreamElementSent hook runs when an XMPP element is sent over a C2S stream.
 	C2SStreamElementSent = "c2s.stream.element_sent"
 )
 

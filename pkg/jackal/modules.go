@@ -30,6 +30,7 @@ import (
 	"github.com/ortuman/jackal/pkg/module/xep0199"
 	"github.com/ortuman/jackal/pkg/module/xep0202"
 	"github.com/ortuman/jackal/pkg/module/xep0280"
+	"github.com/ortuman/jackal/pkg/module/xep0313"
 )
 
 var defaultModules = []string{
@@ -45,6 +46,7 @@ var defaultModules = []string{
 	xep0198.ModuleName,
 	xep0199.ModuleName,
 	xep0280.ModuleName,
+	xep0313.ModuleName,
 }
 
 var modFns = map[string]func(a *Jackal, cfg *ModulesConfig) module.Module{
@@ -56,7 +58,7 @@ var modFns = map[string]func(a *Jackal, cfg *ModulesConfig) module.Module{
 	// Offline
 	// (https://xmpp.org/extensions/xep-0160.html)
 	offline.ModuleName: func(j *Jackal, cfg *ModulesConfig) module.Module {
-		return offline.New(cfg.Offline, j.router, j.hosts, j.resMng, j.rep, j.hk, j.logger)
+		return offline.New(cfg.Offline, j.router, j.hosts, j.rep, j.hk, j.logger)
 	},
 	// XEP-0012: Last Activity
 	// (https://xmpp.org/extensions/xep-0012.html)
@@ -113,5 +115,10 @@ var modFns = map[string]func(a *Jackal, cfg *ModulesConfig) module.Module{
 	// (https://xmpp.org/extensions/xep-0280.html)
 	xep0280.ModuleName: func(j *Jackal, _ *ModulesConfig) module.Module {
 		return xep0280.New(j.router, j.hosts, j.resMng, j.hk, j.logger)
+	},
+	// XEP-0313: Message Archive Management
+	// (https://xmpp.org/extensions/xep-0313.html)
+	xep0313.ModuleName: func(j *Jackal, cfg *ModulesConfig) module.Module {
+		return xep0313.New(cfg.Mam, j.router, j.hosts, j.rep, j.hk, j.logger)
 	},
 }

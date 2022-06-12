@@ -128,6 +128,7 @@ modules:
 #    - ping        # XEP-0199: XMPP Ping
 #    - time        # XEP-0202: Entity Time
 #    - carbons     # XEP-0280: Message Carbons
+#    - mam         # XEP-0313: Message Archive Management
 #
 #  version:
 #    show_os: true
@@ -140,6 +141,10 @@ modules:
 #    interval: 3m
 #    send_pings: true
 #    timeout_action: kill
+#
+#  mam:
+#    queue_size: 1500
+#
 
 components:
   secret: a-super-secret-key

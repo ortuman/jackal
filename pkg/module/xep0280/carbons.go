@@ -16,7 +16,8 @@ package xep0280
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/ortuman/jackal/pkg/module/xep0313"
 
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -36,7 +37,6 @@ const (
 
 	carbonsNamespace          = "urn:xmpp:carbons:2"
 	deliveryReceiptsNamespace = "urn:xmpp:receipts"
-	forwardingNamespace       = "urn:xmpp:forward:0"
 	chatStatesNamespace       = "http://jabber.org/protocol/chatstates"
 	hintsNamespace            = "urn:xmpp:hints"
 )
@@ -97,8 +97,8 @@ func (p *Carbons) AccountFeatures(_ context.Context) ([]string, error) {
 func (p *Carbons) Start(_ context.Context) error {
 	p.hk.AddHook(hook.C2SStreamWillRouteElement, p.onC2SElementWillRoute, hook.DefaultPriority)
 	p.hk.AddHook(hook.S2SInStreamWillRouteElement, p.onS2SElementWillRoute, hook.DefaultPriority)
-	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.DefaultPriority)
-	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.DefaultPriority)
+	p.hk.AddHook(hook.C2SStreamMessageRouted, p.onC2SMessageRouted, hook.LowestPriority+1)
+	p.hk.AddHook(hook.S2SInStreamMessageRouted, p.onS2SMessageRouted, hook.LowestPriority+1)
 
 	level.Info(p.logger).Log("msg", "started carbons module")
 	return nil
@@ -175,7 +175,7 @@ func (p *Carbons) onS2SMessageRouted(execCtx *hook.ExecutionContext) error {
 	if !ok {
 		return nil
 	}
-	return p.processMessage(ctx, msg, nil)
+	return p.processMessage(ctx, msg, inf.Targets)
 }
 
 func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
@@ -207,9 +207,9 @@ func (p *Carbons) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 }
 
 func (p *Carbons) setCarbonsEnabled(ctx context.Context, username, resource string, enabled bool) error {
-	stm := p.router.C2S().LocalStream(username, resource)
-	if stm == nil {
-		return errStreamNotFound(username, resource)
+	stm, err := p.router.C2S().LocalStream(username, resource)
+	if err != nil {
+		return err
 	}
 	return stm.SetInfoValue(ctx, carbonsEnabledCtxKey, enabled)
 }
@@ -243,7 +243,7 @@ func (p *Carbons) routeSentCC(ctx context.Context, msg *stravaganza.Message, use
 		if !res.Info().Bool(carbonsEnabledCtxKey) {
 			continue
 		}
-		_, _ = p.router.Route(ctx, sentMsgCC(msg, res.JID()))
+		_, _ = p.router.Route(ctx, sentMsgCC(ctx, msg, res.JID()))
 	}
 	return nil
 }
@@ -257,7 +257,7 @@ func (p *Carbons) routeReceivedCC(ctx context.Context, msg *stravaganza.Message,
 		if !res.Info().Bool(carbonsEnabledCtxKey) {
 			continue
 		}
-		_, _ = p.router.Route(ctx, receivedMsgCC(msg, res.JID()))
+		_, _ = p.router.Route(ctx, receivedMsgCC(ctx, msg, res.JID()))
 	}
 	return nil
 }
@@ -316,46 +316,38 @@ func isCCMessage(msg *stravaganza.Message) bool {
 	return msg.ChildNamespace("sent", carbonsNamespace) != nil || msg.ChildNamespace("received", carbonsNamespace) != nil
 }
 
-func sentMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+func sentMsgCC(ctx context.Context, originalMsg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+	msg := originalMsg
+	if sentArchiveID := xep0313.ExtractSentArchiveID(ctx); len(sentArchiveID) > 0 {
+		msg = xmpputil.MakeStanzaIDMessage(msg, sentArchiveID, dest.ToBareJID().String())
+	}
 	ccMsg, _ := stravaganza.NewMessageBuilder().
 		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
 		WithAttribute(stravaganza.To, dest.String()).
-		WithAttribute(stravaganza.Type, stravaganza.ChatType).
+		WithAttribute(stravaganza.Type, msg.Type()).
 		WithChild(
 			stravaganza.NewBuilder("sent").
 				WithAttribute(stravaganza.Namespace, carbonsNamespace).
-				WithChild(
-					stravaganza.NewBuilder("forwarded").
-						WithAttribute(stravaganza.Namespace, forwardingNamespace).
-						WithChild(msg).
-						Build(),
-				).
+				WithChild(xmpputil.MakeForwardedStanza(msg, nil)).
 				Build(),
-		).
-		BuildMessage()
+		).BuildMessage()
 	return ccMsg
 }
 
-func receivedMsgCC(msg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+func receivedMsgCC(ctx context.Context, originalMsg *stravaganza.Message, dest *jid.JID) *stravaganza.Message {
+	msg := originalMsg
+	if receivedArchiveID := xep0313.ExtractReceivedArchiveID(ctx); len(receivedArchiveID) > 0 {
+		msg = xmpputil.MakeStanzaIDMessage(msg, receivedArchiveID, dest.ToBareJID().String())
+	}
 	ccMsg, _ := stravaganza.NewMessageBuilder().
 		WithAttribute(stravaganza.From, dest.ToBareJID().String()).
 		WithAttribute(stravaganza.To, dest.String()).
-		WithAttribute(stravaganza.Type, stravaganza.ChatType).
+		WithAttribute(stravaganza.Type, msg.Type()).
 		WithChild(
 			stravaganza.NewBuilder("received").
 				WithAttribute(stravaganza.Namespace, carbonsNamespace).
-				WithChild(
-					stravaganza.NewBuilder("forwarded").
-						WithAttribute(stravaganza.Namespace, forwardingNamespace).
-						WithChild(msg).
-						Build(),
-				).
+				WithChild(xmpputil.MakeForwardedStanza(msg, nil)).
 				Build(),
-		).
-		BuildMessage()
+		).BuildMessage()
 	return ccMsg
-}
-
-func errStreamNotFound(username, resource string) error {
-	return fmt.Errorf("xep0280: local stream not found: %s/%s", username, resource)
 }

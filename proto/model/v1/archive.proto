@@ -1,0 +1,85 @@
+// Copyright 2022 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto3";
+
+import "google/protobuf/timestamp.proto";
+
+import "github.com/jackal-xmpp/stravaganza/stravaganza.proto";
+
+package model.archive.v1;
+
+option go_package = "pkg/model/archive/;archivemodel";
+
+// Message represents an archive message entity.
+message Message {
+  // archived_id is the message archive identifier.
+  string archive_id = 1;
+
+  // id is the message archive unique identifier.
+  string id = 2;
+
+  // from_jid is the message from jid value.
+  string from_jid = 3;
+
+  // to_jid is the message from jid value.
+  string to_jid = 4;
+
+  // message is the archived message.
+  stravaganza.PBElement message = 5;
+
+  // stamp is the timestamp in which the message was archived.
+  google.protobuf.Timestamp stamp = 9;
+}
+
+// Messages represents a set of archive messages.
+message Messages {
+  repeated Message archive_messages = 1;
+}
+
+// Metadata represents an archive metadata information.
+message Metadata {
+  // start_timestamp is the identifier of the first archive message.
+  string start_id = 1;
+
+  // start_timestamp is the timestamp value of the first archive message.
+  string start_timestamp = 2;
+
+  // end_id is the identifier of the last archive message.
+  string end_id = 3;
+
+  // end_timestamp is the timestamp value of the last archive message.
+  string end_timestamp = 4;
+}
+
+// Filters define a set of filters to be applied when fetching archive messages.
+message Filters {
+  // start is used to filter out messages before a certain date/time.
+  google.protobuf.Timestamp start = 1;
+
+  // end is used to filter out messages after a certain date/time.
+  google.protobuf.Timestamp end = 2;
+
+  // with contains a JID against which to match messages.
+  string with = 3;
+
+  // before_id is the id of the newest message user wants to fetch.
+  string before_id = 4;
+
+  // after_id is the id of the oldest message user wants to fetch.
+  string after_id = 5;
+
+  // ids contains one or more ids the user wants to fetch.
+  repeated string ids = 6;
+}

@@ -214,7 +214,8 @@ func (p *Ping) timeout(jd *jid.JID) {
 	// perform timeout action
 	switch p.cfg.TimeoutAction {
 	case killAction:
-		if stm := p.router.C2S().LocalStream(jd.Node(), jd.Resource()); stm != nil {
+		stm, _ := p.router.C2S().LocalStream(jd.Node(), jd.Resource())
+		if stm != nil {
 			_ = stm.Disconnect(streamerror.E(streamerror.ConnectionTimeout))
 		}
 	}
