@@ -47,9 +47,9 @@
 #      username: root
 #      endpoints:
 #        - http://127.0.0.1:2379
-
-  server:
-    port: 14369
+#
+#  server:
+#    port: 14369
 
 shapers:
   - name: super
