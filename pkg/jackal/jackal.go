@@ -58,8 +58,6 @@ import (
 )
 
 const (
-	darwinOpenMax = 10240
-
 	defaultBootstrapTimeout = time.Minute
 	defaultShutdownTimeout  = time.Second * 30
 
