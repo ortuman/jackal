@@ -47,7 +47,6 @@ type socketTransport struct {
 	wr               io.Writer
 	bw               *bufio.Writer
 	compressed       bool
-	supportsCb       bool
 	connectTimeout   time.Duration
 	keepAliveTimeout time.Duration
 }
@@ -147,7 +146,6 @@ func (s *socketTransport) StartTLS(cfg *tls.Config, asClient bool) {
 		tlsConn = tls.Server(s.conn, cfg)
 	}
 	s.conn = newDeadlineConn(tlsConn, s.connectTimeout, s.keepAliveTimeout)
-	s.supportsCb = tlsConn.ConnectionState().Version < tls.VersionTLS13
 
 	lr := ratelimiter.NewReader(s.conn)
 	if rLim := s.lr.ReadRateLimiter(); rLim != nil {
@@ -169,13 +167,10 @@ func (s *socketTransport) EnableCompression(level compress.Level) {
 }
 
 func (s *socketTransport) SupportsChannelBinding() bool {
-	return s.supportsCb
+	return true
 }
 
 func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism) []byte {
-	if !s.supportsCb {
-		return nil
-	}
 	conn, ok := s.conn.underlyingConn().(tlsStateQueryable)
 	if !ok {
 		return nil
@@ -184,6 +179,13 @@ func (s *socketTransport) ChannelBindingBytes(mechanism ChannelBindingMechanism)
 	case TLSUnique:
 		connSt := conn.ConnectionState()
 		return connSt.TLSUnique
+	case TLSExporter:
+		connSt := conn.ConnectionState()
+		ekm, err := connSt.ExportKeyingMaterial("EXPORTER-Channel-Binding", nil, 32)
+		if err != nil {
+			return nil
+		}
+		return ekm
 	default:
 		break
 	}

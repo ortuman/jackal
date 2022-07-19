@@ -2,6 +2,8 @@
 
 ## jackal - main / unreleased
 
+* [ENHANCEMENT] Re-enable TLS 1.3 channel binding during auth using [RFC 9266](https://www.rfc-editor.org/rfc/rfc9266).
+
 ## 0.61.0 (2022/06/06)
 
 * [ENHANCEMENT] Helm: added support for cloud LB. [237](https://github.com/ortuman/jackal/pull/237) 

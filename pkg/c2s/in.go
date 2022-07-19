@@ -765,7 +765,7 @@ func (s *inC2S) unauthenticatedFeatures() []stravaganza.Element {
 		sb.WithAttribute(stravaganza.Namespace, saslNamespace)
 		for _, authenticator := range s.authSt.authenticators {
 			if authenticator.UsesChannelBinding() && !supportsCb {
-				continue // transport doesn't support channel binding (eg. TLS 1.3)
+				continue // transport doesn't support channel binding
 			}
 			sb.WithChild(
 				stravaganza.NewBuilder("mechanism").
