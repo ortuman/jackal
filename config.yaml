@@ -1,0 +1,128 @@
+peppers:
+  keys:
+    v1: m7FFfnHf2g3KsPRPvVjjEiu6uss8tAHg # <-- WARNING: please, use your custom key here!
+  use: v1
+
+logger:
+  level: "debug"
+  output_path: "jackal.log"
+
+# Prometheus metrics and pprof
+#http_port: 6060
+
+#admin:
+#  port: 15280
+
+hosts:
+  - domain: 192.168.1.9
+    tls:
+      cert_file: ".cert/cert.pem"
+      privkey_file: ".cert/key.pem"
+
+storage:
+  type: pgsql
+  pgsql:
+    host: 127.0.0.1:5432
+    user: postgres
+    password: 274455411
+    database: xmpp
+    max_open_conns: 16
+
+cluster:
+  etcd:
+    endpoints:
+      - http://127.0.0.1:23791
+      - http://127.0.0.1:23792
+      - http://127.0.0.1:23793
+  server:
+    port: 14369
+
+shapers:
+  - name: super
+    max_sessions: 20
+    rate:
+      limit: 131072
+      burst: 65536
+    matching:
+      jid:
+        # in: [ortuman@localhost]
+        regex: ^(ortuman|noelia).+
+
+  - name: normal
+    max_sessions: 10
+    rate:
+      limit: 65536
+      burst: 32768
+
+c2s:
+  listeners:
+    - port: 5222
+      req_timeout: 60s
+      transport: socket
+      sasl:
+        mechanisms: [ scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512 ]
+
+        # Authentication gateway
+        # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
+        external:
+          address: 0.0.0.0:4567
+          is_secure: false
+
+    - port: 5223
+      direct_tls: true
+      req_timeout: 60s
+      transport: socket
+      sasl:
+        mechanisms: [ scram_sha_1, scram_sha_256, scram_sha_512, scram_sha3_512 ]
+
+s2s:
+  listeners:
+    - port: 5269
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+    - port: 5270
+      direct_tls: true
+      req_timeout: 60s
+      max_stanza_size: 131072
+
+  out:
+    dialback_secret: s3cr3tf0rd14lb4ck
+    dial_timeout: 5s
+    req_timeout: 60s
+    max_stanza_size: 131072
+
+modules:
+  stream:
+    max_queue_size: 99999
+  #  enabled:
+  #    - roster
+  #    - offline
+  #    - last        # XEP-0012: Last Activity
+  #    - disco       # XEP-0030: Service Discovery
+  #    - private     # XEP-0049: Private XML Storage
+  #    - vcard       # XEP-0054: vcard-temp
+  #    - version     # XEP-0092: Software Version
+  #    - caps        # XEP-0115: Entity Capabilities
+  #    - blocklist   # XEP-0191: Blocking Command
+  #    - stream_mgmt # XEP-0198: Stream Management
+  #    - ping        # XEP-0199: XMPP Ping
+  #    - time        # XEP-0202: Entity Time
+  #    - carbons     # XEP-0280: Message Carbons
+  #
+  #  version:
+  #    show_os: true
+  #
+  #  offline:
+  #    queue_size: 300
+  #
+  ping:
+    ack_timeout: 90s
+    interval: 3m
+    send_pings: true
+    timeout_action: kill
+
+components:
+  listeners:
+    - port: 5275
+      secret: hqcUrfHtgE73FktcXwfrP
