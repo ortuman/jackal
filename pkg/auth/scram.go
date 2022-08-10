@@ -357,6 +357,8 @@ func (s *Scram) getCBindInputString() string {
 		switch s.params.cbMechanism {
 		case "tls-unique":
 			buf.Write(s.tr.ChannelBindingBytes(transport.TLSUnique))
+		case "tls-exporter":
+			buf.Write(s.tr.ChannelBindingBytes(transport.TLSExporter))
 		}
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes())

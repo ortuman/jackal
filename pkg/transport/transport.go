@@ -47,6 +47,8 @@ type ChannelBindingMechanism int
 const (
 	// TLSUnique represents 'tls-unique' channel binding mechanism.
 	TLSUnique ChannelBindingMechanism = iota
+	// TLSExporter represents the 'tls-exporter' channel binding mechanism.
+	TLSExporter
 )
 
 // Transport represents a stream transport mechanism.

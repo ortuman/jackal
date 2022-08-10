@@ -87,6 +87,7 @@ func TestSocket(t *testing.T) {
 
 	require.Nil(t, st2.ChannelBindingBytes(ChannelBindingMechanism(99)))
 	require.Nil(t, st2.ChannelBindingBytes(TLSUnique))
+	require.Nil(t, st2.ChannelBindingBytes(TLSExporter))
 
 	_ = st.Close()
 	require.True(t, conn.closed)
