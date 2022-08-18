@@ -33,6 +33,8 @@ require (
 	google.golang.org/protobuf v1.28.0
 )
 
+require google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f // indirect

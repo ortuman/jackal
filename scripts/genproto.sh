@@ -8,9 +8,6 @@ if ! [[ "$0" =~ scripts/genproto.sh ]]; then
 	exit 255
 fi
 
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
-
 FILES=(
   "admin/v1/users.proto"
   "c2s/v1/resourceinfo.proto"
@@ -23,7 +20,7 @@ FILES=(
 )
 
 for file in "${FILES[@]}"; do
-  protoc \
+  PATH="$(pwd)/scripts:$PATH" protoc \
     --proto_path=${GOPATH}/src \
     --proto_path=. \
     --go_out=. \
