@@ -19,9 +19,18 @@ FILES=(
   "model/v1/roster.proto"
 )
 
+# Create the vendor/ dir for protobuf files to import from, and clean it up at
+# the end of the script (regardless of the exit status).
+# We move the vendor directory to a new name to avoid "go run" trying to use it.
+function cleanup {
+	rm -rf ./tmp_vendor
+}
+trap cleanup EXIT
+go mod vendor -o tmp_vendor
+
 for file in "${FILES[@]}"; do
-  PATH="$(pwd)/scripts:$PATH" protoc \
-    --proto_path=${GOPATH}/src \
+  PATH="$PWD/scripts:$PATH" protoc \
+    --proto_path=./tmp_vendor \
     --proto_path=. \
     --go_out=. \
     --go-grpc_out=. \
