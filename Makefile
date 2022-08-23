@@ -1,4 +1,18 @@
+.POSIX:
+.SILENT:
 .PHONY: check fmt vet lint generate test proto build install installctl push-dockerimage
+
+GOFILES!=find . -name '*.go'
+GOLDFLAGS =-s -w -extldflags $(LDFLAGS)
+
+jackal: $(GOFILES) go.mod go.sum
+	CGO_ENABLED=0 go build -tags netgo -ldflags "$(GOLDFLAGS)" -o "$@" ./cmd/jackal
+
+jackalctl: $(GOFILES) go.mod go.sum
+	CGO_ENABLED=0 go build -tags netgo -ldflags "$(GOLDFLAGS)" -o "$@" ./cmd/jackalctl
+
+go.sum: $(GOFILES) go.mod
+	go mod tidy
 
 generate:
 	@echo "Generating mock files..."
@@ -26,9 +40,8 @@ proto:
 	@echo "Generating proto code..."
 	@bash scripts/genproto.sh
 
-build:
+build: jackal
 	@echo "Compiling jackal binary..."
-	@bash scripts/compile.sh
 
 install:
 	@echo "Installing jackal binary..."
