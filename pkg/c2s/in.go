@@ -352,19 +352,22 @@ func (s *inC2S) readLoop() {
 	s.tr.SetConnectDeadlineHandler(s.connTimeout)
 	s.tr.SetKeepAliveDeadlineHandler(s.connTimeout)
 
-	authTm := time.AfterFunc(s.cfg.authenticateTimeout, s.connTimeout) // schedule authenticate timeout
-	elem, sErr := s.session.Receive()
+	// schedule authenticate timeout
+	authTm := time.AfterFunc(s.cfg.authenticateTimeout, s.connTimeout)
 	defer authTm.Stop()
 
 	for {
+		elem, sErr := s.session.Receive()
+
+		// process result and update state accordingly
+		s.handleSessionResult(elem, sErr)
+
 		switch s.getState() {
 		case inAuthenticated:
 			authTm.Stop()
 		case inDisconnected, inTerminated:
 			return
 		}
-		s.handleSessionResult(elem, sErr)
-		elem, sErr = s.session.Receive()
 	}
 }
 
