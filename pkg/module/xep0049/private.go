@@ -120,9 +120,9 @@ func (m *Private) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Private) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Private) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return m.rep.DeletePrivates(ctx, inf.Username)
+	return m.rep.DeletePrivates(execCtx.Context, inf.Username)
 }
 
 func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaganza.Element) error {
@@ -160,12 +160,13 @@ func (m *Private) getPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run private fetched hook
-	_, err = m.hk.Run(ctx, hook.PrivateFetched, &hook.ExecutionContext{
+	_, err = m.hk.Run(hook.PrivateFetched, &hook.ExecutionContext{
 		Info: &hook.PrivateInfo{
 			Username: username,
 			Private:  prvElem,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }
@@ -189,12 +190,13 @@ func (m *Private) setPrivate(ctx context.Context, iq *stravaganza.IQ, q stravaga
 		level.Info(m.logger).Log("msg", "saved private XML", "username", username, "namespace", ns)
 
 		// run private updated hook
-		_, err := m.hk.Run(ctx, hook.PrivateUpdated, &hook.ExecutionContext{
+		_, err := m.hk.Run(hook.PrivateUpdated, &hook.ExecutionContext{
 			Info: &hook.PrivateInfo{
 				Username: username,
 				Private:  prv,
 			},
-			Sender: m,
+			Sender:  m,
+			Context: ctx,
 		})
 		if err != nil {
 			return err

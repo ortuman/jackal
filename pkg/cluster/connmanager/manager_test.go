@@ -46,21 +46,23 @@ func TestConnections_UpdateMembers(t *testing.T) {
 	_ = connMng.Start(context.Background())
 
 	// register cluster member
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.MemberListUpdated, &hook.ExecutionContext{
 		Info: &hook.MemberListInfo{
 			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: version.ClusterAPIVersion},
 			},
 		},
+		Context: context.Background(),
 	})
 
 	conn1, err1 := connMng.GetConnection("a1234")
 
 	// register cluster member
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.MemberListUpdated, &hook.ExecutionContext{
 		Info: &hook.MemberListInfo{
 			UnregisteredKeys: []string{"a1234"},
 		},
+		Context: context.Background(),
 	})
 
 	conn2, err2 := connMng.GetConnection("a1234")
@@ -94,12 +96,13 @@ func TestConnections_IncompatibleClusterAPI(t *testing.T) {
 	_ = connMng.Start(context.Background())
 
 	incompVer := version.NewVersion(version.ClusterAPIVersion.Major()+1, 0, 0)
-	_, _ = hk.Run(context.Background(), hook.MemberListUpdated, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.MemberListUpdated, &hook.ExecutionContext{
 		Info: &hook.MemberListInfo{
 			Registered: []clustermodel.Member{
 				{InstanceID: "a1234", Host: "192.168.2.1", Port: 1234, APIVer: incompVer},
 			},
 		},
+		Context: context.Background(),
 	})
 
 	// then

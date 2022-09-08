@@ -828,9 +828,10 @@ func (s *inS2S) getState() inState {
 }
 
 func (s *inS2S) runHook(ctx context.Context, hookName string, inf *hook.S2SStreamInfo) (halt bool, err error) {
-	return s.hk.Run(ctx, hookName, &hook.ExecutionContext{
-		Info:   inf,
-		Sender: s,
+	return s.hk.Run(hookName, &hook.ExecutionContext{
+		Info:    inf,
+		Sender:  s,
+		Context: ctx,
 	})
 }
 

@@ -170,8 +170,10 @@ func (m *Stream) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Stream) onElementRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
+	ctx := execCtx.Context
+
 	stm := execCtx.Sender.(stream.C2S)
 	if inf.Element.Attribute(stravaganza.Namespace) == streamNamespace {
 		if err := m.processCmd(ctx, inf.Element, stm); err != nil {
@@ -191,7 +193,7 @@ func (m *Stream) onElementRecv(ctx context.Context, execCtx *hook.ExecutionConte
 	return nil
 }
 
-func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Stream) onElementSent(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stanza, ok := inf.Element.(stravaganza.Stanza)
 	if !ok {
@@ -220,7 +222,7 @@ func (m *Stream) onElementSent(_ context.Context, execCtx *hook.ExecutionContext
 	return nil
 }
 
-func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Stream) onDisconnect(execCtx *hook.ExecutionContext) error {
 	stm := execCtx.Sender.(stream.C2S)
 	if !stm.Info().Bool(enabledInfoKey) {
 		return nil
@@ -255,7 +257,7 @@ func (m *Stream) onDisconnect(_ context.Context, execCtx *hook.ExecutionContext)
 	return hook.ErrStopped
 }
 
-func (m *Stream) onTerminate(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Stream) onTerminate(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	stm := execCtx.Sender.(stream.C2S)
 	if !stm.Info().Bool(enabledInfoKey) {

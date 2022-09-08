@@ -15,7 +15,6 @@
 package hook
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,9 +42,9 @@ func TestHooks_Remove(t *testing.T) {
 	h := NewHooks()
 
 	// when
-	var hnd1 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { return nil }
-	var hnd2 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { return nil }
-	var hnd3 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { return nil }
+	var hnd1 Handler = func(execCtx *ExecutionContext) error { return nil }
+	var hnd2 Handler = func(execCtx *ExecutionContext) error { return nil }
+	var hnd3 Handler = func(execCtx *ExecutionContext) error { return nil }
 
 	h.AddHook("h1", hnd1, 0)
 	h.AddHook("h1", hnd2, 0)
@@ -65,15 +64,15 @@ func TestHooks_Run(t *testing.T) {
 
 	// when
 	var i int
-	var hnd1 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return nil }
-	var hnd2 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return nil }
-	var hnd3 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return nil }
+	var hnd1 Handler = func(execCtx *ExecutionContext) error { i++; return nil }
+	var hnd2 Handler = func(execCtx *ExecutionContext) error { i++; return nil }
+	var hnd3 Handler = func(execCtx *ExecutionContext) error { i++; return nil }
 
 	h.AddHook("h1", hnd1, 0)
 	h.AddHook("h1", hnd2, 0)
 	h.AddHook("h1", hnd3, 0)
 
-	halted, err := h.Run(context.Background(), "h1", nil)
+	halted, err := h.Run("h1", nil)
 
 	// then
 	require.Nil(t, err)
@@ -88,15 +87,15 @@ func TestHooks_HaltedRun(t *testing.T) {
 
 	// when
 	var i int
-	var hnd1 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return nil }
-	var hnd2 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return ErrStopped }
-	var hnd3 Handler = func(ctx context.Context, execCtx *ExecutionContext) error { i++; return nil }
+	var hnd1 Handler = func(execCtx *ExecutionContext) error { i++; return nil }
+	var hnd2 Handler = func(execCtx *ExecutionContext) error { i++; return ErrStopped }
+	var hnd3 Handler = func(execCtx *ExecutionContext) error { i++; return nil }
 
 	h.AddHook("h1", hnd1, 10)
 	h.AddHook("h1", hnd2, 5)
 	h.AddHook("h1", hnd3, 0)
 
-	halted, err := h.Run(context.Background(), "h1", nil)
+	halted, err := h.Run("h1", nil)
 
 	// then
 	require.Nil(t, err)

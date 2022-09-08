@@ -118,7 +118,7 @@ func (m *Offline) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Offline) onWillRouteElement(execCtx *hook.ExecutionContext) error {
 	var elem stravaganza.Element
 
 	switch inf := execCtx.Info.(type) {
@@ -135,17 +135,17 @@ func (m *Offline) onWillRouteElement(ctx context.Context, execCtx *hook.Executio
 	if !m.hosts.IsLocalHost(toJID.Domain()) {
 		return nil
 	}
-	rss, err := m.resMng.GetResources(ctx, toJID.Node())
+	rss, err := m.resMng.GetResources(execCtx.Context, toJID.Node())
 	if err != nil {
 		return err
 	}
 	if len(rss) > 0 {
 		return nil
 	}
-	return m.archiveMessage(ctx, msg)
+	return m.archiveMessage(execCtx.Context, msg)
 }
 
-func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Offline) onC2SPresenceRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 
 	pr := inf.Element.(*stravaganza.Presence)
@@ -156,11 +156,12 @@ func (m *Offline) onC2SPresenceRecv(ctx context.Context, execCtx *hook.Execution
 	if !pr.IsAvailable() || pr.Priority() < 0 {
 		return nil
 	}
-	return m.deliverOfflineMessages(ctx, toJID.Node())
+	return m.deliverOfflineMessages(execCtx.Context, toJID.Node())
 }
 
-func (m *Offline) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Offline) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
+	ctx := execCtx.Context
 
 	lockID := offlineQueueLockID(inf.Username)
 
@@ -226,12 +227,13 @@ func (m *Offline) archiveMessage(ctx context.Context, msg *stravaganza.Message) 
 	if err := m.rep.InsertOfflineMessage(ctx, dMsg, username); err != nil {
 		return err
 	}
-	_, err = m.hk.Run(ctx, hook.OfflineMessageArchived, &hook.ExecutionContext{
+	_, err = m.hk.Run(hook.OfflineMessageArchived, &hook.ExecutionContext{
 		Info: &hook.OfflineInfo{
 			Username: username,
 			Message:  dMsg,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	if err != nil {
 		return err

@@ -111,13 +111,14 @@ func TestStream_Enable(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: stravaganza.NewBuilder("enable").
 				WithAttribute(stravaganza.Namespace, streamNamespace).
 				Build(),
 		},
-		Sender: stmMock,
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -177,9 +178,10 @@ func TestStream_InStanza(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	_, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
-		Info:   &hook.C2SStreamInfo{Element: testMsg},
-		Sender: stmMock,
+	_, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
+		Info:    &hook.C2SStreamInfo{Element: testMsg},
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -232,9 +234,10 @@ func TestStream_OutStanza(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	_, err := hk.Run(context.Background(), hook.C2SStreamElementSent, &hook.ExecutionContext{
-		Info:   &hook.C2SStreamInfo{Element: testMsg},
-		Sender: stmMock,
+	_, err := hk.Run(hook.C2SStreamElementSent, &hook.ExecutionContext{
+		Info:    &hook.C2SStreamInfo{Element: testMsg},
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -303,9 +306,10 @@ func TestStream_OutStanzaMaxQueueSizeReached(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	_, err := hk.Run(context.Background(), hook.C2SStreamElementSent, &hook.ExecutionContext{
-		Info:   &hook.C2SStreamInfo{Element: testMsg2},
-		Sender: stmMock,
+	_, err := hk.Run(hook.C2SStreamElementSent, &hook.ExecutionContext{
+		Info:    &hook.C2SStreamInfo{Element: testMsg2},
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -405,13 +409,14 @@ func TestStream_HandleR(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: stravaganza.NewBuilder("r").
 				WithAttribute(stravaganza.Namespace, streamNamespace).
 				Build(),
 		},
-		Sender: stmMock,
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -487,14 +492,15 @@ func TestStream_HandleA(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: stravaganza.NewBuilder("a").
 				WithAttribute(stravaganza.Namespace, streamNamespace).
 				WithAttribute("h", "21").
 				Build(),
 		},
-		Sender: stmMock,
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -592,7 +598,7 @@ func TestStream_Resume(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: stravaganza.NewBuilder("resume").
 				WithAttribute(stravaganza.Namespace, streamNamespace).
@@ -600,7 +606,8 @@ func TestStream_Resume(t *testing.T) {
 				WithAttribute("h", "21").
 				Build(),
 		},
-		Sender: stmMock,
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then
@@ -708,7 +715,7 @@ func TestStream_ResumeRemote(t *testing.T) {
 	_ = sm.Start(context.Background())
 	defer func() { _ = sm.Stop(context.Background()) }()
 
-	halted, err := hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: stravaganza.NewBuilder("resume").
 				WithAttribute(stravaganza.Namespace, streamNamespace).
@@ -716,7 +723,8 @@ func TestStream_ResumeRemote(t *testing.T) {
 				WithAttribute("h", "21").
 				Build(),
 		},
-		Sender: stmMock,
+		Sender:  stmMock,
+		Context: context.Background(),
 	})
 
 	// then

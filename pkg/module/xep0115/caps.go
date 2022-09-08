@@ -172,31 +172,31 @@ func (m *Capabilities) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Capabilities) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Capabilities) onC2SPresenceRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processPresence(ctx, pr)
+	return m.processPresence(execCtx.Context, pr)
 }
 
-func (m *Capabilities) onS2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Capabilities) onS2SPresenceRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.S2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processPresence(ctx, pr)
+	return m.processPresence(execCtx.Context, pr)
 }
 
-func (m *Capabilities) onC2SIQRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Capabilities) onC2SIQRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	iq := inf.Element.(*stravaganza.IQ)
-	return m.processIQ(ctx, iq)
+	return m.processIQ(execCtx.Context, iq)
 }
 
-func (m *Capabilities) onS2SIQRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Capabilities) onS2SIQRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.S2SStreamInfo)
 	iq := inf.Element.(*stravaganza.IQ)
-	return m.processIQ(ctx, iq)
+	return m.processIQ(execCtx.Context, iq)
 }
 
-func (m *Capabilities) onDiscoProvidersStarted(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Capabilities) onDiscoProvidersStarted(execCtx *hook.ExecutionContext) error {
 	disc := execCtx.Sender.(*xep0030.Disco)
 	m.mu.Lock()
 	m.srvProv = disc.ServerProvider()

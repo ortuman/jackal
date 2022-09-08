@@ -108,7 +108,7 @@ func (m *Manager) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Manager) onMemberListUpdated(execCtx *hook.ExecutionContext) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -125,7 +125,7 @@ func (m *Manager) onMemberListUpdated(ctx context.Context, execCtx *hook.Executi
 	// dial connections to new registered members...
 	for _, member := range inf.Registered {
 		cl := newConn(member.Host, member.Port, member.APIVer)
-		if err := cl.dialContext(ctx); err != nil {
+		if err := cl.dialContext(execCtx.Context); err != nil {
 			level.Warn(m.logger).Log("msg", "failed to dial cluster conn", "err", err)
 			continue
 		}

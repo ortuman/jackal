@@ -245,9 +245,10 @@ func (ml *KVMemberList) processKVEvents(ctx context.Context, kvEvents []kvtypes.
 }
 
 func (ml *KVMemberList) runHook(ctx context.Context, inf *hook.MemberListInfo) error {
-	_, err := ml.hk.Run(ctx, hook.MemberListUpdated, &hook.ExecutionContext{
-		Info:   inf,
-		Sender: ml,
+	_, err := ml.hk.Run(hook.MemberListUpdated, &hook.ExecutionContext{
+		Info:    inf,
+		Sender:  ml,
+		Context: ctx,
 	})
 	return err
 }

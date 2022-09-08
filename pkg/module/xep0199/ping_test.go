@@ -82,11 +82,12 @@ func TestPing_SendPing(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.C2SStreamBinded, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
+		Context: context.Background(),
 	})
 	time.Sleep(time.Second) // wait until ping is triggered
 
@@ -128,11 +129,12 @@ func TestPing_Timeout(t *testing.T) {
 
 	// when
 	_ = p.Start(context.Background())
-	_, _ = hk.Run(context.Background(), hook.C2SStreamBinded, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.C2SStreamBinded, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			ID:  "c2s1",
 			JID: jd,
 		},
+		Context: context.Background(),
 	})
 	time.Sleep(time.Second) // wait until ping is triggered
 

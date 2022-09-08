@@ -104,11 +104,12 @@ func (m *Modules) Start(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.hk.Run(ctx, hook.ModulesStarted, &hook.ExecutionContext{
+	_, err := m.hk.Run(hook.ModulesStarted, &hook.ExecutionContext{
 		Info: &hook.ModulesInfo{
 			ModuleNames: modNames,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }
@@ -127,11 +128,12 @@ func (m *Modules) Stop(ctx context.Context) error {
 		"iq_processors_count", len(m.iqProcessors),
 		"mods_count", len(m.mods),
 	)
-	_, err := m.hk.Run(ctx, hook.ModulesStopped, &hook.ExecutionContext{
+	_, err := m.hk.Run(hook.ModulesStopped, &hook.ExecutionContext{
 		Info: &hook.ModulesInfo{
 			ModuleNames: modNames,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }

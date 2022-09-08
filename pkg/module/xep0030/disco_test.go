@@ -56,8 +56,9 @@ func TestDisco_GetServerInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
-		Sender: modsMock,
+	_, _ = hk.Run(hook.ModulesStarted, &hook.ExecutionContext{
+		Sender:  modsMock,
+		Context: context.Background(),
 	})
 
 	// when
@@ -126,8 +127,9 @@ func TestDisco_GetServerItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
-		Sender: modsMock,
+	_, _ = hk.Run(hook.ModulesStarted, &hook.ExecutionContext{
+		Sender:  modsMock,
+		Context: context.Background(),
 	})
 
 	// when
@@ -197,8 +199,9 @@ func TestDisco_GetAccountInfo(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return []module.Module{modMock, d}
 	}
-	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
-		Sender: modsMock,
+	_, _ = hk.Run(hook.ModulesStarted, &hook.ExecutionContext{
+		Sender:  modsMock,
+		Context: context.Background(),
 	})
 
 	// when
@@ -271,8 +274,9 @@ func TestDisco_GetAccountItems(t *testing.T) {
 	modsMock.AllModulesFunc = func() []module.Module {
 		return nil
 	}
-	_, _ = hk.Run(context.Background(), hook.ModulesStarted, &hook.ExecutionContext{
-		Sender: modsMock,
+	_, _ = hk.Run(hook.ModulesStarted, &hook.ExecutionContext{
+		Sender:  modsMock,
+		Context: context.Background(),
 	})
 
 	// when
