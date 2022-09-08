@@ -264,10 +264,11 @@ func TestLast_InterceptInboundElement(t *testing.T) {
 	_ = m.Start(context.Background())
 	defer func() { _ = m.Stop(context.Background()) }()
 
-	halted, err := m.hk.Run(context.Background(), hook.C2SStreamElementReceived, &hook.ExecutionContext{
+	halted, err := m.hk.Run(hook.C2SStreamElementReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			Element: iq,
 		},
+		Context: context.Background(),
 	})
 
 	// then
@@ -303,11 +304,12 @@ func TestLast_ProcessPresence(t *testing.T) {
 	defer func() { _ = m.Stop(context.Background()) }()
 
 	jd0, _ := jid.NewWithString("ortuman@jackal.im/yard", true)
-	_, _ = hk.Run(context.Background(), hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
+	_, _ = hk.Run(hook.C2SStreamPresenceReceived, &hook.ExecutionContext{
 		Info: &hook.C2SStreamInfo{
 			JID:     jd0,
 			Element: xmpputil.MakePresence(jd0, jd0.ToBareJID(), stravaganza.UnavailableType, nil),
 		},
+		Context: context.Background(),
 	})
 
 	// then

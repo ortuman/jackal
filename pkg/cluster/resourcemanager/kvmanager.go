@@ -213,7 +213,7 @@ func (m *kvManager) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *kvManager) onMemberListUpdated(_ context.Context, execCtx *hook.ExecutionContext) error {
+func (m *kvManager) onMemberListUpdated(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.MemberListInfo)
 	if len(inf.UnregisteredKeys) == 0 {
 		return nil

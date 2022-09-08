@@ -110,9 +110,9 @@ func (m *VCard) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *VCard) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *VCard) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return m.rep.DeleteVCard(ctx, inf.Username)
+	return m.rep.DeleteVCard(execCtx.Context, inf.Username)
 }
 
 func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
@@ -141,12 +141,13 @@ func (m *VCard) getVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	_, _ = m.router.Route(ctx, resIQ)
 
 	// run vCard fetched hook
-	_, err = m.hk.Run(ctx, hook.VCardFetched, &hook.ExecutionContext{
+	_, err = m.hk.Run(hook.VCardFetched, &hook.ExecutionContext{
 		Info: &hook.VCardInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }
@@ -175,12 +176,13 @@ func (m *VCard) setVCard(ctx context.Context, iq *stravaganza.IQ) error {
 	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, nil))
 
 	// run vCard updated hook
-	_, err = m.hk.Run(ctx, hook.VCardUpdated, &hook.ExecutionContext{
+	_, err = m.hk.Run(hook.VCardUpdated, &hook.ExecutionContext{
 		Info: &hook.VCardInfo{
 			Username: toJID.Node(),
 			VCard:    vCard,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }

@@ -132,7 +132,7 @@ func (r *Roster) Stop(_ context.Context) error {
 	return nil
 }
 
-func (r *Roster) onPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (r *Roster) onPresenceRecv(execCtx *hook.ExecutionContext) error {
 	var pr *stravaganza.Presence
 	switch inf := execCtx.Info.(type) {
 	case *hook.C2SStreamInfo:
@@ -145,14 +145,16 @@ func (r *Roster) onPresenceRecv(ctx context.Context, execCtx *hook.ExecutionCont
 	if pr.ToJID().IsFull() {
 		return nil
 	}
-	if err := r.processPresence(ctx, pr); err != nil {
+	if err := r.processPresence(execCtx.Context, pr); err != nil {
 		return fmt.Errorf("roster: failed to process C2S presence: %s", err)
 	}
 	return nil
 }
 
-func (r *Roster) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (r *Roster) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
+	ctx := execCtx.Context
+
 	return r.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		if err := tx.DeleteRosterNotifications(ctx, inf.Username); err != nil {
 			return err
@@ -838,9 +840,10 @@ func (r *Roster) getStream(username, resource string) (stream.C2S, error) {
 }
 
 func (r *Roster) runHook(ctx context.Context, hookName string, inf *hook.RosterInfo) error {
-	_, err := r.hk.Run(ctx, hookName, &hook.ExecutionContext{
-		Info:   inf,
-		Sender: r,
+	_, err := r.hk.Run(hookName, &hook.ExecutionContext{
+		Info:    inf,
+		Sender:  r,
+		Context: ctx,
 	})
 	return err
 }

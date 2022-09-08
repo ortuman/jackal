@@ -68,10 +68,11 @@ func (s *usersService) CreateUser(ctx context.Context, req *userspb.CreateUserRe
 		return nil, err
 	}
 	// run user created hook
-	_, err := s.hk.Run(ctx, hook.UserCreated, &hook.ExecutionContext{
+	_, err := s.hk.Run(hook.UserCreated, &hook.ExecutionContext{
 		Info: &hook.UserInfo{
 			Username: username,
 		},
+		Context: ctx,
 	})
 	if err != nil {
 		return nil, err
@@ -102,10 +103,11 @@ func (s *usersService) DeleteUser(ctx context.Context, req *userspb.DeleteUserRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// run user deleted hook
-	_, err := s.hk.Run(ctx, hook.UserDeleted, &hook.ExecutionContext{
+	_, err := s.hk.Run(hook.UserDeleted, &hook.ExecutionContext{
 		Info: &hook.UserInfo{
 			Username: username,
 		},
+		Context: ctx,
 	})
 	if err != nil {
 		return nil, err

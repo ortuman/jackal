@@ -132,7 +132,7 @@ func (m *Last) Stop(_ context.Context) error {
 	return nil
 }
 
-func (m *Last) onElementRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Last) onElementRecv(execCtx *hook.ExecutionContext) error {
 	var iq *stravaganza.IQ
 	var ok bool
 
@@ -147,7 +147,7 @@ func (m *Last) onElementRecv(ctx context.Context, execCtx *hook.ExecutionContext
 	if !ok {
 		return nil
 	}
-	return m.processIncomingIQ(ctx, iq)
+	return m.processIncomingIQ(execCtx.Context, iq)
 }
 
 func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) error {
@@ -169,15 +169,15 @@ func (m *Last) processIncomingIQ(ctx context.Context, iq *stravaganza.IQ) error 
 	return nil
 }
 
-func (m *Last) onUserDeleted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Last) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return m.rep.DeleteLast(ctx, inf.Username)
+	return m.rep.DeleteLast(execCtx.Context, inf.Username)
 }
 
-func (m *Last) onC2SPresenceRecv(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Last) onC2SPresenceRecv(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.C2SStreamInfo)
 	pr := inf.Element.(*stravaganza.Presence)
-	return m.processC2SPresence(ctx, pr)
+	return m.processC2SPresence(execCtx.Context, pr)
 }
 
 func (m *Last) processC2SPresence(ctx context.Context, pr *stravaganza.Presence) error {
@@ -212,12 +212,13 @@ func (m *Last) getServerLastActivity(ctx context.Context, iq *stravaganza.IQ) er
 
 	level.Info(m.logger).Log("msg", "sent server uptime", "username", iq.FromJID().Node())
 
-	_, err := m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
+	_, err := m.hk.Run(hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{
 			Username: iq.FromJID().Node(),
 			JID:      iq.ToJID(),
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }
@@ -255,12 +256,13 @@ func (m *Last) getAccountLastActivity(ctx context.Context, iq *stravaganza.IQ) e
 
 	level.Info(m.logger).Log("msg", "sent last activity", "username", fromJID.Node(), "target", toJID.Node())
 
-	_, err = m.hk.Run(ctx, hook.LastActivityFetched, &hook.ExecutionContext{
+	_, err = m.hk.Run(hook.LastActivityFetched, &hook.ExecutionContext{
 		Info: &hook.LastActivityInfo{
 			Username: fromJID.Node(),
 			JID:      toJID,
 		},
-		Sender: m,
+		Sender:  m,
+		Context: ctx,
 	})
 	return err
 }

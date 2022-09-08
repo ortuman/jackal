@@ -157,11 +157,12 @@ func (c *Components) Start(ctx context.Context) error {
 	}
 	level.Info(c.logger).Log("msg", "started components", "total_components", len(c.comps))
 
-	_, err := c.hk.Run(ctx, hook.ComponentsStarted, &hook.ExecutionContext{
+	_, err := c.hk.Run(hook.ComponentsStarted, &hook.ExecutionContext{
 		Info: &hook.ComponentsInfo{
 			Hosts: hosts,
 		},
-		Sender: c,
+		Sender:  c,
+		Context: ctx,
 	})
 	return err
 }
@@ -181,11 +182,12 @@ func (c *Components) Stop(ctx context.Context) error {
 	}
 	level.Info(c.logger).Log("msg", "stopped components", "total_components", len(c.comps))
 
-	_, err := c.hk.Run(ctx, hook.ComponentsStopped, &hook.ExecutionContext{
+	_, err := c.hk.Run(hook.ComponentsStopped, &hook.ExecutionContext{
 		Info: &hook.ComponentsInfo{
 			Hosts: hosts,
 		},
-		Sender: c,
+		Sender:  c,
+		Context: ctx,
 	})
 	return err
 }

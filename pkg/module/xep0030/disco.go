@@ -161,7 +161,7 @@ func (m *Disco) AccountProvider() InfoProvider {
 	return m.accProv
 }
 
-func (m *Disco) onModulesStarted(ctx context.Context, execCtx *hook.ExecutionContext) error {
+func (m *Disco) onModulesStarted(execCtx *hook.ExecutionContext) error {
 	mods := execCtx.Sender.(modules)
 
 	m.mu.Lock()
@@ -169,8 +169,9 @@ func (m *Disco) onModulesStarted(ctx context.Context, execCtx *hook.ExecutionCon
 	m.accProv = newAccountProvider(mods.AllModules(), m.rosRep, m.resMng)
 	m.mu.Unlock()
 
-	_, err := m.hk.Run(ctx, hook.DiscoProvidersStarted, &hook.ExecutionContext{
-		Sender: m,
+	_, err := m.hk.Run(hook.DiscoProvidersStarted, &hook.ExecutionContext{
+		Sender:  m,
+		Context: execCtx.Context,
 	})
 	return err
 }
