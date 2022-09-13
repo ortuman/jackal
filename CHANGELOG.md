@@ -2,8 +2,11 @@
 
 ## jackal - main / unreleased
 
-* [ENHANCEMENT] Re-enable TLS 1.3 channel binding during auth using [RFC 9266](https://www.rfc-editor.org/rfc/rfc9266).
-* [ENHANCEMENT] hook: include propagated context into execution parameter. [249](https://github.com/ortuman/jackal/pull/249)
+## 0.62.0 (2022/09/13)
+
+* [FEATURE] module: added support for xep-0313 [#241](https://github.com/ortuman/jackal/pull/241)
+* [ENHANCEMENT] auth: re-enable TLS 1.3 channel binding during auth using [#247](https://github.com/ortuman/jackal/pull/247)
+* [ENHANCEMENT] hook: include propagated context into execution parameter. [#249](https://github.com/ortuman/jackal/pull/249)
 * [ENHANCEMENT] transport: limit writer buffer size [#251](https://github.com/ortuman/jackal/pull/251)
 
 ## 0.61.0 (2022/06/06)
