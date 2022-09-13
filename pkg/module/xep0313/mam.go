@@ -284,6 +284,13 @@ func (m *Mam) sendArchiveMessages(ctx context.Context, iq *stravaganza.IQ) error
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
 		return err
 	}
+	// run archive queried event
+	if err := m.runHook(ctx, hook.ArchiveMessageQueried, &hook.MamInfo{
+		ArchiveID: archiveID,
+		Filters:   filters,
+	}); err != nil {
+		return err
+	}
 
 	// return not found error if any requested id cannot be found
 	switch {
@@ -433,19 +440,27 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 }
 
 func (m *Mam) archiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
-	return m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
-		err := tx.InsertArchiveMessage(ctx, &archivemodel.Message{
-			ArchiveId: archiveID,
-			Id:        id,
-			FromJid:   message.FromJID().String(),
-			ToJid:     message.ToJID().String(),
-			Message:   message.Proto(),
-			Stamp:     timestamppb.Now(),
-		})
+	archiveMsg := &archivemodel.Message{
+		ArchiveId: archiveID,
+		Id:        id,
+		FromJid:   message.FromJID().String(),
+		ToJid:     message.ToJID().String(),
+		Message:   message.Proto(),
+		Stamp:     timestamppb.Now(),
+	}
+	err := m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
+		err := tx.InsertArchiveMessage(ctx, archiveMsg)
 		if err != nil {
 			return err
 		}
 		return tx.DeleteArchiveOldestMessages(ctx, archiveID, m.cfg.QueueSize)
+	})
+	if err != nil {
+		return err
+	}
+	return m.runHook(ctx, hook.ArchiveMessageArchived, &hook.MamInfo{
+		ArchiveID: archiveID,
+		Message:   archiveMsg,
 	})
 }
 
@@ -456,6 +471,15 @@ func (m *Mam) addRecipientStanzaID(originalMsg *stravaganza.Message) *stravaganz
 	}
 	archiveID := uuid.New().String()
 	return xmpputil.MakeStanzaIDMessage(originalMsg, archiveID, toJID.ToBareJID().String())
+}
+
+func (m *Mam) runHook(ctx context.Context, hookName string, inf *hook.MamInfo) error {
+	_, err := m.hk.Run(hookName, &hook.ExecutionContext{
+		Info:    inf,
+		Sender:  m,
+		Context: ctx,
+	})
+	return err
 }
 
 // IsArchiveRequested determines whether archive has been requested over a C2S stream by inspecting inf parameter.

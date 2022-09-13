@@ -101,6 +101,7 @@ func TestMam_Metadata(t *testing.T) {
 	}
 	mam := &Mam{
 		rep:    repMock,
+		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -274,6 +275,7 @@ func TestMam_SendArchiveMessages(t *testing.T) {
 
 	mam := &Mam{
 		rep:    repMock,
+		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
