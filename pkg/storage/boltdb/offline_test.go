@@ -31,8 +31,8 @@ func TestBoltDB_InsertAndFetchOfflineMessages(t *testing.T) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		rep := boltDBOfflineRep{tx: tx}
 
-		m0 := testMessageStanza("message 0")
-		m1 := testMessageStanza("message 1")
+		m0 := testMessageStanza()
+		m1 := testMessageStanza()
 
 		err := rep.InsertOfflineMessage(context.Background(), m0, "ortuman")
 		require.NoError(t, err)
@@ -45,8 +45,6 @@ func TestBoltDB_InsertAndFetchOfflineMessages(t *testing.T) {
 
 		require.Len(t, messages, 2)
 
-		require.Equal(t, "message 0", messages[0].Child("body").Text())
-		require.Equal(t, "message 1", messages[1].Child("body").Text())
 		return nil
 	})
 	require.NoError(t, err)
@@ -61,8 +59,8 @@ func TestBoltDB_CountOfflineMessages(t *testing.T) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		rep := boltDBOfflineRep{tx: tx}
 
-		m0 := testMessageStanza("message 0")
-		m1 := testMessageStanza("message 1")
+		m0 := testMessageStanza()
+		m1 := testMessageStanza()
 
 		err := rep.InsertOfflineMessage(context.Background(), m0, "ortuman")
 		require.NoError(t, err)
@@ -88,8 +86,8 @@ func TestBoltDB_DeleteOfflineMessages(t *testing.T) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		rep := boltDBOfflineRep{tx: tx}
 
-		m0 := testMessageStanza("message 0")
-		m1 := testMessageStanza("message 1")
+		m0 := testMessageStanza()
+		m1 := testMessageStanza()
 
 		err := rep.InsertOfflineMessage(context.Background(), m0, "ortuman")
 		require.NoError(t, err)

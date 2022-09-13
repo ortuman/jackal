@@ -26,8 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
-
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -47,6 +45,7 @@ import (
 	"github.com/ortuman/jackal/pkg/host"
 	"github.com/ortuman/jackal/pkg/log"
 	"github.com/ortuman/jackal/pkg/module"
+	streamqueue "github.com/ortuman/jackal/pkg/module/xep0198/queue"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/s2s"
 	"github.com/ortuman/jackal/pkg/shaper"

@@ -17,6 +17,7 @@ package s2s
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -401,7 +402,7 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if !ok {
 		return nil
 	}
-	_, err = s.router.Route(ctx, outIQ)
+	targets, err := s.router.Route(ctx, outIQ)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
@@ -412,11 +413,12 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	case router.ErrRemoteServerTimeout:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, iq).Element())
 
-	case nil:
+	case nil, router.ErrUserNotAvailable:
 		_, err = s.runHook(ctx, hook.S2SInStreamIQRouted, &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
+			Targets: targets,
 			Element: iq,
 		})
 		return err
@@ -456,7 +458,7 @@ sendMsg:
 	if !ok {
 		return nil
 	}
-	_, err = s.router.Route(ctx, outMsg)
+	targets, err := s.router.Route(ctx, outMsg)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -475,19 +477,25 @@ sendMsg:
 	case router.ErrRemoteServerTimeout:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.RemoteServerTimeout, message).Element())
 
-	case router.ErrUserNotAvailable:
-		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
-
-	case nil:
-		_, err = s.runHook(ctx, hook.S2SInStreamMessageRouted, &hook.S2SStreamInfo{
+	case nil, router.ErrUserNotAvailable:
+		halted, hErr := s.runHook(ctx, hook.S2SInStreamMessageRouted, &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
+			Targets: targets,
 			Element: msg,
 		})
+		if halted {
+			return nil
+		}
+		if errors.Is(err, router.ErrUserNotAvailable) {
+			return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, message).Element())
+		}
+		return hErr
+
+	default:
 		return err
 	}
-	return nil
 }
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
@@ -520,13 +528,14 @@ func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		if !ok {
 			return nil
 		}
-		_, err = s.router.Route(ctx, outPr)
+		targets, err := s.router.Route(ctx, outPr)
 		switch err {
-		case nil:
+		case nil, router.ErrUserNotAvailable:
 			_, err := s.runHook(ctx, hook.S2SInStreamPresenceRouted, &hook.S2SStreamInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
+				Targets: targets,
 				Element: presence,
 			})
 			return err

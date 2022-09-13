@@ -71,6 +71,7 @@ type Field struct {
 	Description string
 	Values      []string
 	Options     []Option
+	Validate    *Validate
 }
 
 // NewFieldFromElement returns a new form field entity reading it from it's XML representation.
@@ -109,6 +110,28 @@ func NewFieldFromElement(elem stravaganza.Element) (*Field, error) {
 			value = v.Text()
 		}
 		f.Options = append(f.Options, Option{Label: label, Value: value})
+	}
+
+	validateElem := elem.ChildNamespace("validate", validateNamespace)
+	if validateElem != nil {
+		v := &Validate{
+			DataType: validateElem.Attribute("datatype"),
+		}
+		if validateElem.Child("open") != nil {
+			v.Validator = &OpenValidator{}
+		} else if validateElem.Child("basic") != nil {
+			v.Validator = &BasicValidator{}
+		} else if rng := validateElem.Child("range"); rng != nil {
+			v.Validator = &RangeValidator{
+				Max: rng.Attribute("max"),
+				Min: rng.Attribute("min"),
+			}
+		} else if rgx := validateElem.Child("regex"); rgx != nil {
+			v.Validator = &RegExValidator{
+				RegEx: rgx.Text(),
+			}
+		}
+		f.Validate = v
 	}
 	return f, nil
 }
@@ -153,6 +176,9 @@ func (f *Field) Element() stravaganza.Element {
 				Build(),
 		)
 		b.WithChild(sb.Build())
+	}
+	if f.Validate != nil {
+		b.WithChild(f.Validate.Element())
 	}
 	return b.Build()
 }

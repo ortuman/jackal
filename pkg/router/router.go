@@ -72,7 +72,7 @@ type C2SRouter interface {
 	Unregister(stm stream.C2S) error
 
 	// LocalStream returns local instance stream.
-	LocalStream(username, resource string) stream.C2S
+	LocalStream(username, resource string) (stream.C2S, error)
 
 	// Start starts C2S router subsystem.
 	Start(ctx context.Context) error

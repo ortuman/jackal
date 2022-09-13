@@ -22,6 +22,8 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
+const delayTimeFormat = "2006-01-02T15:04:05Z"
+
 // MakeResultIQ creates a new result stanza derived from iq.
 func MakeResultIQ(iq *stravaganza.IQ, queryChild stravaganza.Element) *stravaganza.IQ {
 	b := iq.ResultBuilder()
@@ -57,10 +59,53 @@ func MakeDelayMessage(stanza stravaganza.Stanza, stamp time.Time, from, text str
 		stravaganza.NewBuilder("delay").
 			WithAttribute(stravaganza.Namespace, "urn:xmpp:delay").
 			WithAttribute(stravaganza.From, from).
-			WithAttribute("stamp", stamp.UTC().Format("2006-01-02T15:04:05Z")).
+			WithAttribute("stamp", stamp.UTC().Format(delayTimeFormat)).
 			WithText(text).
 			Build(),
 	)
 	dMsg, _ := sb.BuildMessage()
 	return dMsg
+}
+
+// MakeStanzaIDMessage creates and returns a new message containing a stanza-id element.
+func MakeStanzaIDMessage(originalMsg *stravaganza.Message, stanzaID, by string) *stravaganza.Message {
+	msg, _ := stravaganza.NewBuilderFromElement(originalMsg).
+		WithChild(
+			stravaganza.NewBuilder("stanza-id").
+				WithAttribute(stravaganza.Namespace, "urn:xmpp:sid:0").
+				WithAttribute("by", by).
+				WithAttribute("id", stanzaID).
+				Build(),
+		).
+		BuildMessage()
+	return msg
+}
+
+// MessageStanzaID returns the stanza-id value contained in msg parameter.
+func MessageStanzaID(msg *stravaganza.Message) string {
+	sidElem := msg.ChildNamespace("stanza-id", "urn:xmpp:sid:0")
+	if sidElem == nil {
+		return ""
+	}
+	return sidElem.Attribute("id")
+}
+
+// MakeForwardedStanza creates a new forwarded element derived from the passed stanza.
+func MakeForwardedStanza(stanza stravaganza.Stanza, stamp *time.Time) stravaganza.Element {
+	b := stravaganza.NewBuilder("forwarded").
+		WithAttribute(stravaganza.Namespace, "urn:xmpp:forward:0").
+		WithChild(
+			stravaganza.NewBuilderFromElement(stanza).
+				WithAttribute(stravaganza.Namespace, "jabber:client").
+				Build(),
+		)
+	if stamp != nil {
+		b.WithChild(
+			stravaganza.NewBuilder("delay").
+				WithAttribute(stravaganza.Namespace, "urn:xmpp:delay").
+				WithAttribute("stamp", stamp.UTC().Format(delayTimeFormat)).
+				Build(),
+		)
+	}
+	return b.Build()
 }

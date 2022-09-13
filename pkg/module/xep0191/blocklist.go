@@ -16,7 +16,6 @@ package xep0191
 
 import (
 	"context"
-	"fmt"
 
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -111,7 +110,8 @@ func (m *BlockList) MatchesNamespace(namespace string, serverTarget bool) bool {
 func (m *BlockList) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJID := iq.FromJID()
 	toJID := iq.ToJID()
-	if fromJID.Node() != toJID.Node() {
+
+	if !fromJID.MatchesWithOptions(toJID, jid.MatchesBare) {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
@@ -288,10 +288,10 @@ func (m *BlockList) getBlockList(ctx context.Context, iq *stravaganza.IQ) error 
 	username := fromJID.Node()
 	res := fromJID.Resource()
 
-	stm := m.router.C2S().LocalStream(username, res)
-	if stm == nil {
+	stm, err := m.router.C2S().LocalStream(username, res)
+	if err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return fmt.Errorf("xep0191: local stream not found: %s/%s", username, res)
+		return err
 	}
 	if err := stm.SetInfoValue(ctx, blockListRequestedCtxKey, true); err != nil {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))

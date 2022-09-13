@@ -18,6 +18,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/jackal-xmpp/stravaganza/jid"
+
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/jackal-xmpp/stravaganza"
@@ -87,8 +89,8 @@ func (m *Private) MatchesNamespace(namespace string, serverTarget bool) bool {
 func (m *Private) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	fromJid := iq.FromJID()
 	toJid := iq.ToJID()
-	validTo := toJid.Node() == fromJid.Node()
-	if !validTo {
+
+	if !fromJid.MatchesWithOptions(toJid, jid.MatchesBare) {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}

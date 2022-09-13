@@ -42,7 +42,7 @@ func (f Fields) ValuesForFieldOfType(fieldName, typ string) []string {
 	var res []string
 	for _, field := range f {
 		if field.Var == fieldName && field.Type == typ && len(field.Values) > 0 {
-			res = append(res, field.Values[0])
+			res = append(res, field.Values...)
 		}
 	}
 	return res

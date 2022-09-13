@@ -17,6 +17,8 @@ package jackal
 import (
 	"path/filepath"
 
+	"github.com/ortuman/jackal/pkg/module/xep0313"
+
 	"github.com/kkyr/fig"
 	adminserver "github.com/ortuman/jackal/pkg/admin/server"
 	"github.com/ortuman/jackal/pkg/auth/pepper"
@@ -95,6 +97,9 @@ type ModulesConfig struct {
 
 	// XEP-0199: XMPP Ping
 	Ping xep0199.Config `fig:"ping"`
+
+	// XEP-0313: Message Archive Management
+	Mam xep0313.Config `fig:"mam"`
 }
 
 // Config defines jackal application configuration.

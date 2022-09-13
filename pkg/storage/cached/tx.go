@@ -27,6 +27,7 @@ type cachedTx struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.Archive
 	repository.Locker
 }
 
@@ -39,6 +40,7 @@ func newCacheTx(c Cache, tx repository.Transaction) *cachedTx {
 		BlockList:    &cachedBlockListRep{c: c, rep: tx},
 		Roster:       &cachedRosterRep{c: c, rep: tx},
 		VCard:        &cachedVCardRep{c: c, rep: tx},
+		Archive:      tx,
 		Offline:      tx,
 		Locker:       tx,
 	}
