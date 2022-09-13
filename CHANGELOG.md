@@ -4,6 +4,7 @@
 
 * [ENHANCEMENT] Re-enable TLS 1.3 channel binding during auth using [RFC 9266](https://www.rfc-editor.org/rfc/rfc9266).
 * [ENHANCEMENT] hook: include propagated context into execution parameter. [249](https://github.com/ortuman/jackal/pull/249)
+* [ENHANCEMENT] transport: limit writer buffer size [#251](https://github.com/ortuman/jackal/pull/251)
 
 ## 0.61.0 (2022/06/06)
 

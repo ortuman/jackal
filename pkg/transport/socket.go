@@ -30,13 +30,17 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const readBufferSize = 4096
+const (
+	readBufferSize = 4096
+
+	maxWriteBufferSize = 256 * 1024
+)
 
 var errNoWriteFlush = errors.New("transport: flushing buffer before writing")
 
 var bufWriterPool = sync.Pool{
 	New: func() interface{} {
-		return bufio.NewWriter(nil)
+		return bufio.NewWriterSize(nil, maxWriteBufferSize)
 	},
 }
 
@@ -213,6 +217,8 @@ func (s *socketTransport) releaseBuffWriter() {
 	if s.bw == nil {
 		return
 	}
-	bufWriterPool.Put(s.bw)
+	if s.bw.Size() <= maxWriteBufferSize {
+		bufWriterPool.Put(s.bw)
+	}
 	s.bw = nil
 }
