@@ -22,7 +22,7 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 )
 
-const delayTimeFormat = "2006-01-02T15:04:05Z"
+const delayTimeFormat = "2006-01-02T15:04:05.000Z"
 
 // MakeResultIQ creates a new result stanza derived from iq.
 func MakeResultIQ(iq *stravaganza.IQ, queryChild stravaganza.Element) *stravaganza.IQ {
