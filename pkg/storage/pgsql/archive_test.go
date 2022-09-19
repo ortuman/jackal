@@ -130,17 +130,17 @@ func TestPgSQLArchive_FetchArchiveMessages(t *testing.T) {
 		},
 		"by start timestamp": {
 			filters:     &archivemodel.Filters{Start: timestamppb.New(starTm)},
-			withArgs:    []driver.Value{"ortuman", starTm.Unix()},
+			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm))},
 			expectQuery: `SELECT id, "from", "to", message, created_at FROM archives WHERE \(archive_id = \$1 AND EXTRACT\(epoch FROM created_at\) > \$2\) ORDER BY created_at`,
 		},
 		"by end timestamp": {
 			filters:     &archivemodel.Filters{End: timestamppb.New(endTm)},
-			withArgs:    []driver.Value{"ortuman", endTm.Unix()},
+			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(endTm))},
 			expectQuery: `SELECT id, "from", "to", message, created_at FROM archives WHERE \(archive_id = \$1 AND EXTRACT\(epoch FROM created_at\) < \$2\) ORDER BY created_at`,
 		},
 		"by start and end timestamp": {
 			filters:     &archivemodel.Filters{Start: timestamppb.New(starTm), End: timestamppb.New(endTm)},
-			withArgs:    []driver.Value{"ortuman", starTm.Unix(), endTm.Unix()},
+			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm)), toEpoch(timestamppb.New(endTm))},
 			expectQuery: `SELECT id, "from", "to", message, created_at FROM archives WHERE \(archive_id = \$1 AND EXTRACT\(epoch FROM created_at\) > \$2 AND EXTRACT\(epoch FROM created_at\) < \$3\) ORDER BY created_at`,
 		},
 	}

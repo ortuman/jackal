@@ -116,14 +116,14 @@ func TestMakeDelayStanza(t *testing.T) {
 	msg, _ := b.BuildMessage()
 
 	// when
-	stamp, _ := time.Parse(time.RFC3339, "2021-02-15T15:00:00Z")
+	stamp, _ := time.Parse(time.RFC3339, "2021-02-15T15:00:00.250Z")
 	dMsg := MakeDelayMessage(msg, stamp, "jackal.im", "Delayed IQ")
 
 	// then
 	dChild := dMsg.Child("delay")
 	require.NotNil(t, dChild)
 	require.Equal(t, "jackal.im", dChild.Attribute(stravaganza.From))
-	require.Equal(t, "2021-02-15T15:00:00Z", dChild.Attribute("stamp"))
+	require.Equal(t, "2021-02-15T15:00:00.250Z", dChild.Attribute("stamp"))
 	require.Equal(t, "Delayed IQ", dChild.Text())
 }
 
@@ -162,7 +162,7 @@ func TestMakeForwardedElement(t *testing.T) {
 	)
 	msg, _ := b.BuildMessage()
 
-	stamp, _ := time.Parse(time.RFC3339, "2021-02-15T15:00:00Z")
+	stamp, _ := time.Parse(time.RFC3339, "2021-02-15T15:00:00.125Z")
 	forwarded := MakeForwardedStanza(msg, &stamp)
 
 	// when
@@ -170,7 +170,7 @@ func TestMakeForwardedElement(t *testing.T) {
 
 	dChild := forwarded.Child("delay")
 	require.NotNil(t, dChild)
-	require.Equal(t, "2021-02-15T15:00:00Z", dChild.Attribute("stamp"))
+	require.Equal(t, "2021-02-15T15:00:00.125Z", dChild.Attribute("stamp"))
 
 	msgEl := forwarded.Child("message")
 	require.NotNil(t, msgEl)
