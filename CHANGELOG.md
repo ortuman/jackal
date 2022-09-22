@@ -2,6 +2,10 @@
 
 ## jackal - main / unreleased
 
+## 0.62.1 (2022/09/22)
+
+* [BUGFIX] storage/archive: fix timestamp precision [#254](https://github.com/ortuman/jackal/pull/254)
+
 ## 0.62.0 (2022/09/13)
 
 * [FEATURE] module: added support for xep-0313 [#241](https://github.com/ortuman/jackal/pull/241), [#253](https://github.com/ortuman/jackal/pull/253)
