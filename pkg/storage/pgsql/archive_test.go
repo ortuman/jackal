@@ -130,7 +130,7 @@ func TestPgSQLArchive_FetchArchiveMessages(t *testing.T) {
 		},
 		"by start timestamp": {
 			filters:     &archivemodel.Filters{Start: timestamppb.New(starTm)},
-			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm))},
+			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm)) + float64(time.Millisecond)},
 			expectQuery: `SELECT id, "from", "to", message, created_at FROM archives WHERE \(archive_id = \$1 AND EXTRACT\(epoch FROM created_at\) > \$2\) ORDER BY created_at`,
 		},
 		"by end timestamp": {
@@ -140,7 +140,7 @@ func TestPgSQLArchive_FetchArchiveMessages(t *testing.T) {
 		},
 		"by start and end timestamp": {
 			filters:     &archivemodel.Filters{Start: timestamppb.New(starTm), End: timestamppb.New(endTm)},
-			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm)), toEpoch(timestamppb.New(endTm))},
+			withArgs:    []driver.Value{"ortuman", toEpoch(timestamppb.New(starTm)) + float64(time.Millisecond), toEpoch(timestamppb.New(endTm))},
 			expectQuery: `SELECT id, "from", "to", message, created_at FROM archives WHERE \(archive_id = \$1 AND EXTRACT\(epoch FROM created_at\) > \$2 AND EXTRACT\(epoch FROM created_at\) < \$3\) ORDER BY created_at`,
 		},
 	}
