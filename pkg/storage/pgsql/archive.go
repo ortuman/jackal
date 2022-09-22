@@ -17,6 +17,8 @@ package pgsqlrepository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strconv"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -169,10 +171,10 @@ func filtersToPred(f *archivemodel.Filters, archiveID string) (interface{}, erro
 
 	// filtering by timestamp
 	if f.Start != nil {
-		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) > ?", f.Start.GetSeconds()))
+		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) > ?", toEpoch(f.Start)))
 	}
 	if f.End != nil {
-		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) < ?", f.End.GetSeconds()))
+		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) < ?", toEpoch(f.End)))
 	}
 	return pred, nil
 }
@@ -211,4 +213,12 @@ func scanArchiveMessage(scanner rowsScanner, archiveID string) (*archivemodel.Me
 	ret.Stamp = timestamppb.New(tm)
 
 	return &ret, nil
+}
+
+func toEpoch(tm *timestamppb.Timestamp) float64 {
+	sec := tm.GetSeconds()
+	ns := tm.GetNanos() + int32(time.Millisecond) // add a millisecond offset to avoid rounding errors
+
+	f, _ := strconv.ParseFloat(fmt.Sprintf("%d.%d", sec, ns), 64)
+	return f
 }
