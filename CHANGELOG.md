@@ -2,9 +2,9 @@
 
 ## jackal - main / unreleased
 
-## 0.62.1 (2022/09/22)
+## 0.62.2 (2022/09/23)
 
-* [BUGFIX] storage/archive: fix timestamp precision [#254](https://github.com/ortuman/jackal/pull/254)
+* [BUGFIX] storage/archive: fix timestamp range filtering [#254](https://github.com/ortuman/jackal/pull/254), [#257](https://github.com/ortuman/jackal/pull/257)
 
 ## 0.62.0 (2022/09/13)
 
