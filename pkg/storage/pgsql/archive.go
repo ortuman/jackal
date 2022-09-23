@@ -171,7 +171,11 @@ func filtersToPred(f *archivemodel.Filters, archiveID string) (interface{}, erro
 
 	// filtering by timestamp
 	if f.Start != nil {
-		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) > ?", toEpoch(f.Start)))
+		// due to higher precision of database timestamp we need to add an extra offset to discard first message.
+		epoch := toEpoch(f.Start)
+		epoch += float64(time.Millisecond)
+
+		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) > ?", epoch))
 	}
 	if f.End != nil {
 		pred = append(pred, sq.Expr("EXTRACT(epoch FROM created_at) < ?", toEpoch(f.End)))
@@ -216,9 +220,6 @@ func scanArchiveMessage(scanner rowsScanner, archiveID string) (*archivemodel.Me
 }
 
 func toEpoch(tm *timestamppb.Timestamp) float64 {
-	sec := tm.GetSeconds()
-	ns := tm.GetNanos() + int32(time.Millisecond) // add a millisecond offset to avoid rounding errors
-
-	f, _ := strconv.ParseFloat(fmt.Sprintf("%d.%d", sec, ns), 64)
+	f, _ := strconv.ParseFloat(fmt.Sprintf("%d.%d", tm.GetSeconds(), tm.GetNanos()), 64)
 	return f
 }
