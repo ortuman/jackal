@@ -277,7 +277,7 @@ func (m *Mam) sendArchiveMessages(ctx context.Context, iq *stravaganza.IQ) error
 			return err
 		}
 	}
-	archiveID := fromJID.Node()
+	archiveID := fromJID.ToBareJID().String()
 
 	messages, err := m.rep.FetchArchiveMessages(ctx, filters, archiveID)
 	if err != nil {
@@ -422,7 +422,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 	if m.hosts.IsLocalHost(fromJID.Domain()) {
 		sentArchiveID := uuid.New().String()
 		archiveMsg := xmpputil.MakeStanzaIDMessage(msg, sentArchiveID, fromJID.ToBareJID().String())
-		if err := m.archiveMessage(execCtx.Context, archiveMsg, fromJID.Node(), sentArchiveID); err != nil {
+		if err := m.archiveMessage(execCtx.Context, archiveMsg, fromJID.ToBareJID().String(), sentArchiveID); err != nil {
 			return err
 		}
 		execCtx.Context = context.WithValue(execCtx.Context, sentArchiveIDKey, sentArchiveID)
@@ -432,7 +432,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 		return nil
 	}
 	recievedArchiveID := xmpputil.MessageStanzaID(msg)
-	if err := m.archiveMessage(execCtx.Context, msg, toJID.Node(), recievedArchiveID); err != nil {
+	if err := m.archiveMessage(execCtx.Context, msg, toJID.ToBareJID().String(), recievedArchiveID); err != nil {
 		return err
 	}
 	execCtx.Context = context.WithValue(execCtx.Context, receivedArchiveIDKey, recievedArchiveID)

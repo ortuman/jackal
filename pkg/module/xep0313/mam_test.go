@@ -192,8 +192,8 @@ func TestMam_ArchiveMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, archivedMessages, 2)
 
-	require.Equal(t, "ortuman", archivedMessages[0].ArchiveId)
-	require.Equal(t, "noelia", archivedMessages[1].ArchiveId)
+	require.Equal(t, "ortuman@jackal.im", archivedMessages[0].ArchiveId)
+	require.Equal(t, "noelia@jackal.im", archivedMessages[1].ArchiveId)
 
 	require.Len(t, txMock.DeleteArchiveOldestMessagesCalls(), 2)
 	require.Len(t, txMock.InsertArchiveMessageCalls(), 2)
