@@ -45,6 +45,7 @@ func TestMam_FormFields(t *testing.T) {
 		return nil, nil
 	}
 	mam := &Mam{
+		mng:    NewManager(routerMock, nil, nil, 100, kitlog.NewNopLogger()),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -100,7 +101,7 @@ func TestMam_Metadata(t *testing.T) {
 		}, nil
 	}
 	mam := &Mam{
-		rep:    repMock,
+		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
@@ -163,9 +164,9 @@ func TestMam_ArchiveMessage(t *testing.T) {
 
 	hk := hook.NewHooks()
 	mam := &Mam{
+		mng:    NewManager(nil, hk, repMock, 100, kitlog.NewNopLogger()),
 		hk:     hk,
 		hosts:  hosts,
-		rep:    repMock,
 		logger: kitlog.NewNopLogger(),
 	}
 	_ = mam.Start(context.Background())
@@ -274,7 +275,7 @@ func TestMam_SendArchiveMessages(t *testing.T) {
 	}
 
 	mam := &Mam{
-		rep:    repMock,
+		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
@@ -332,7 +333,7 @@ func TestMam_Forbidden(t *testing.T) {
 	repMock := &repositoryMock{}
 
 	mam := &Mam{
-		rep:    repMock,
+		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -371,9 +372,9 @@ func TestMam_DeleteArchive(t *testing.T) {
 
 	hk := hook.NewHooks()
 	mam := &Mam{
+		mng:    NewManager(nil, hk, repMock, 100, kitlog.NewNopLogger()),
 		hk:     hk,
 		hosts:  hosts,
-		rep:    repMock,
 		logger: kitlog.NewNopLogger(),
 	}
 	_ = mam.Start(context.Background())
@@ -395,74 +396,6 @@ func TestMam_DeleteArchive(t *testing.T) {
 	require.Len(t, repMock.DeleteArchiveCalls(), 1)
 
 	require.Equal(t, "ortuman", deletedArchiveID)
-}
-
-func TestMam_FormToFields(t *testing.T) {
-	tcs := map[string]struct {
-		form    *xep0004.DataForm
-		filters *archivemodel.Filters
-	}{
-		"by jid": {
-			form: &xep0004.DataForm{
-				Type: xep0004.Submit,
-				Fields: []xep0004.Field{
-					{Var: xep0004.FormType, Type: xep0004.Hidden, Values: []string{mamNamespace}},
-					{Var: "with", Values: []string{"juliet@capulet.lit"}},
-				},
-			},
-			filters: &archivemodel.Filters{
-				With: "juliet@capulet.lit",
-			},
-		},
-		"time received": {
-			form: &xep0004.DataForm{
-				Type: xep0004.Submit,
-				Fields: []xep0004.Field{
-					{Var: xep0004.FormType, Type: xep0004.Hidden, Values: []string{mamNamespace}},
-					{Var: "start", Values: []string{"2010-06-07T00:00:00Z"}},
-					{Var: "end", Values: []string{"2010-07-07T13:23:54Z"}},
-				},
-			},
-			filters: &archivemodel.Filters{
-				Start: timestamppb.New(time.Date(2010, 06, 07, 00, 00, 00, 00, time.UTC)),
-				End:   timestamppb.New(time.Date(2010, 07, 07, 13, 23, 54, 00, time.UTC)),
-			},
-		},
-		"after/before id": {
-			form: &xep0004.DataForm{
-				Type: xep0004.Submit,
-				Fields: []xep0004.Field{
-					{Var: xep0004.FormType, Type: xep0004.Hidden, Values: []string{mamNamespace}},
-					{Var: "after-id", Values: []string{"28482-98726-73623"}},
-					{Var: "before-id", Values: []string{"09af3-cc343-b409f"}},
-				},
-			},
-			filters: &archivemodel.Filters{
-				AfterId:  "28482-98726-73623",
-				BeforeId: "09af3-cc343-b409f",
-			},
-		},
-		"ids": {
-			form: &xep0004.DataForm{
-				Type: xep0004.Submit,
-				Fields: []xep0004.Field{
-					{Var: xep0004.FormType, Type: xep0004.Hidden, Values: []string{mamNamespace}},
-					{Var: "ids", Values: []string{"28482-98726-73623", "09af3-cc343-b409f"}},
-				},
-			},
-			filters: &archivemodel.Filters{
-				Ids: []string{"28482-98726-73623", "09af3-cc343-b409f"},
-			},
-		},
-	}
-	for tn, tc := range tcs {
-		t.Run(tn, func(t *testing.T) {
-			filters, err := formToFilters(tc.form)
-
-			require.NoError(t, err)
-			require.Equal(t, tc.filters.String(), filters.String())
-		})
-	}
 }
 
 func testMessageStanzaWithParameters(body, from, to string) *stravaganza.Message {

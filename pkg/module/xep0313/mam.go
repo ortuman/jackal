@@ -16,8 +16,6 @@ package xep0313
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	kitlog "github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -27,15 +25,10 @@ import (
 	"github.com/jackal-xmpp/stravaganza/jid"
 	"github.com/ortuman/jackal/pkg/hook"
 	"github.com/ortuman/jackal/pkg/host"
-	archivemodel "github.com/ortuman/jackal/pkg/model/archive"
 	c2smodel "github.com/ortuman/jackal/pkg/model/c2s"
-	"github.com/ortuman/jackal/pkg/module/xep0004"
-	"github.com/ortuman/jackal/pkg/module/xep0059"
 	"github.com/ortuman/jackal/pkg/router"
 	"github.com/ortuman/jackal/pkg/storage/repository"
 	xmpputil "github.com/ortuman/jackal/pkg/util/xmpp"
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -48,12 +41,7 @@ const (
 	mamNamespace         = "urn:xmpp:mam:2"
 	extendedMamNamespace = "urn:xmpp:mam:2#extended"
 
-	dateTimeFormat = "2006-01-02T15:04:05Z"
-
 	archiveRequestedCtxKey = "mam:requested"
-
-	defaultPageSize = 50
-	maxPageSize     = 250
 )
 
 type archiveIDCtxKey int
@@ -72,11 +60,10 @@ type Config struct {
 
 // Mam represents a mam (XEP-0313) module type.
 type Mam struct {
-	cfg    Config
-	hosts  hosts
-	router router.Router
+	mng    *Manager
 	hk     *hook.Hooks
-	rep    repository.Repository
+	router router.Router
+	hosts  hosts
 	logger kitlog.Logger
 }
 
@@ -89,13 +76,13 @@ func New(
 	hk *hook.Hooks,
 	logger kitlog.Logger,
 ) *Mam {
+	logger = kitlog.With(logger, "module", ModuleName, "xep", XEPNumber)
 	return &Mam{
-		cfg:    cfg,
+		mng:    NewManager(router, hk, rep, cfg.QueueSize, logger),
 		router: router,
 		hosts:  hosts,
-		rep:    rep,
 		hk:     hk,
-		logger: kitlog.With(logger, "module", ModuleName, "xep", XEPNumber),
+		logger: logger,
 	}
 }
 
@@ -161,218 +148,24 @@ func (m *Mam) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	}
 	switch {
 	case iq.IsGet() && iq.ChildNamespace("metadata", mamNamespace) != nil:
-		return m.sendArchiveMetadata(ctx, iq)
+		return m.mng.QueryMetadata(ctx, iq)
 
 	case iq.IsGet() && iq.ChildNamespace("query", mamNamespace) != nil:
-		return m.sendFormFields(ctx, iq)
+		return m.mng.FormFields(ctx, iq)
 
 	case iq.IsSet() && iq.ChildNamespace("query", mamNamespace) != nil:
-		return m.sendArchiveMessages(ctx, iq)
-	}
-	return nil
-}
+		fromJID := iq.FromJID()
 
-func (m *Mam) sendArchiveMetadata(ctx context.Context, iq *stravaganza.IQ) error {
-	archiveID := iq.FromJID().Node()
-
-	metadata, err := m.rep.FetchArchiveMetadata(ctx, archiveID)
-	if err != nil {
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
-	}
-	// send reply
-	metadataBuilder := stravaganza.NewBuilder("metadata").WithAttribute(stravaganza.Namespace, mamNamespace)
-
-	startBuilder := stravaganza.NewBuilder("start")
-	if metadata != nil {
-		startBuilder.WithAttribute("id", metadata.StartId)
-		startBuilder.WithAttribute("timestamp", metadata.StartTimestamp)
-	}
-	endBuilder := stravaganza.NewBuilder("end")
-	if metadata != nil {
-		endBuilder.WithAttribute("id", metadata.EndId)
-		endBuilder.WithAttribute("timestamp", metadata.EndTimestamp)
-	}
-
-	metadataBuilder.WithChildren(startBuilder.Build(), endBuilder.Build())
-
-	resIQ := xmpputil.MakeResultIQ(iq, metadataBuilder.Build())
-	_, _ = m.router.Route(ctx, resIQ)
-
-	level.Info(m.logger).Log("msg", "requested archive metadata", "archive_id", archiveID)
-
-	return nil
-}
-
-func (m *Mam) sendFormFields(ctx context.Context, iq *stravaganza.IQ) error {
-	form := xep0004.DataForm{
-		Type: xep0004.Form,
-	}
-
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type:   xep0004.Hidden,
-		Var:    xep0004.FormType,
-		Values: []string{mamNamespace},
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.JidSingle,
-		Var:  "with",
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.TextSingle,
-		Var:  "start",
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.TextSingle,
-		Var:  "end",
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.TextSingle,
-		Var:  "before-id",
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.TextSingle,
-		Var:  "after-id",
-	})
-	form.Fields = append(form.Fields, xep0004.Field{
-		Type: xep0004.ListMulti,
-		Var:  "ids",
-		Validate: &xep0004.Validate{
-			DataType:  xep0004.StringDataType,
-			Validator: &xep0004.OpenValidator{},
-		},
-	})
-
-	qChild := stravaganza.NewBuilder("query").
-		WithAttribute(stravaganza.Namespace, mamNamespace).
-		WithChild(form.Element()).
-		Build()
-
-	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, qChild))
-
-	level.Info(m.logger).Log("msg", "requested form fields")
-
-	return nil
-}
-
-func (m *Mam) sendArchiveMessages(ctx context.Context, iq *stravaganza.IQ) error {
-	fromJID := iq.FromJID()
-
-	stm, err := m.router.C2S().LocalStream(fromJID.Node(), fromJID.Resource())
-	if err != nil {
-		return err
-	}
-
-	qChild := iq.ChildNamespace("query", mamNamespace)
-
-	// filter archive result
-	filters := &archivemodel.Filters{}
-	if x := qChild.ChildNamespace("x", xep0004.FormNamespace); x != nil {
-		form, err := xep0004.NewFormFromElement(x)
+		stm, err := m.router.C2S().LocalStream(fromJID.Node(), fromJID.Resource())
 		if err != nil {
 			return err
 		}
-		filters, err = formToFilters(form)
-		if err != nil {
+		if err := m.mng.QueryArchive(ctx, iq); err != nil {
 			return err
 		}
+		return stm.SetInfoValue(ctx, archiveRequestedCtxKey, true)
 	}
-	archiveID := fromJID.ToBareJID().String()
-
-	messages, err := m.rep.FetchArchiveMessages(ctx, filters, archiveID)
-	if err != nil {
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
-	}
-	// run archive queried event
-	if err := m.runHook(ctx, hook.ArchiveMessageQueried, &hook.MamInfo{
-		ArchiveID: archiveID,
-		Filters:   filters,
-	}); err != nil {
-		return err
-	}
-
-	// return not found error if any requested id cannot be found
-	switch {
-	case len(filters.Ids) > 0 && (len(messages) != len(filters.Ids)):
-		fallthrough
-
-	case (len(filters.AfterId) > 0 || len(filters.BeforeId) > 0) && len(messages) == 0:
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.ItemNotFound))
-		return nil
-	}
-
-	// apply RSM paging
-	var req *xep0059.Request
-	var res *xep0059.Result
-
-	if set := qChild.ChildNamespace("set", xep0059.RSMNamespace); set != nil {
-		req, err = xep0059.NewRequestFromElement(set)
-		if err != nil {
-			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.BadRequest))
-			return err
-		}
-		if req.Max > maxPageSize {
-			req.Max = maxPageSize
-		}
-	} else {
-		req = &xep0059.Request{Max: defaultPageSize}
-	}
-	messages, res, err = xep0059.GetResultSetPage(messages, req, func(m *archivemodel.Message) string {
-		return m.Id
-	})
-	if err != nil {
-		if errors.Is(err, xep0059.ErrPageNotFound) {
-			_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.ItemNotFound))
-			return nil
-		}
-		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.InternalServerError))
-		return err
-	}
-
-	// flip result page
-	if qChild.Child("flip-page") != nil {
-		messages = lo.Reverse(messages)
-
-		lastID := res.Last
-		res.Last = res.First
-		res.First = lastID
-	}
-
-	// route archive messages
-	for _, msg := range messages {
-		msgStanza, _ := stravaganza.NewBuilderFromProto(msg.Message).
-			BuildStanza()
-		stamp := msg.Stamp.AsTime()
-
-		resultElem := stravaganza.NewBuilder("result").
-			WithAttribute(stravaganza.Namespace, mamNamespace).
-			WithAttribute("queryid", qChild.Attribute("queryid")).
-			WithAttribute(stravaganza.ID, uuid.New().String()).
-			WithChild(xmpputil.MakeForwardedStanza(msgStanza, &stamp)).
-			Build()
-
-		archiveMsg, _ := stravaganza.NewMessageBuilder().
-			WithAttribute(stravaganza.From, iq.ToJID().String()).
-			WithAttribute(stravaganza.To, iq.FromJID().String()).
-			WithAttribute(stravaganza.ID, uuid.New().String()).
-			WithChild(resultElem).
-			BuildMessage()
-
-		_, _ = m.router.Route(ctx, archiveMsg)
-	}
-
-	finB := stravaganza.NewBuilder("fin").
-		WithChild(res.Element()).
-		WithAttribute(stravaganza.Namespace, mamNamespace)
-	if res.Complete {
-		finB.WithAttribute("complete", "true")
-	}
-	_, _ = m.router.Route(ctx, xmpputil.MakeResultIQ(iq, finB.Build()))
-
-	level.Info(m.logger).Log("msg", "archive messages requested", "archive_id", fromJID.Node(), "count", len(messages), "complete", res.Complete)
-
-	return stm.SetInfoValue(ctx, archiveRequestedCtxKey, true)
+	return nil
 }
 
 func (m *Mam) onMessageReceived(execCtx *hook.ExecutionContext) error {
@@ -406,7 +199,7 @@ func (m *Mam) onMessageRouted(execCtx *hook.ExecutionContext) error {
 
 func (m *Mam) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return m.rep.DeleteArchive(execCtx.Context, inf.Username)
+	return m.mng.DeleteArchive(execCtx.Context, inf.Username)
 }
 
 func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravaganza.Element) error {
@@ -414,7 +207,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 	if !ok {
 		return nil
 	}
-	if !isMessageArchievable(msg) {
+	if !IsMessageArchievable(msg) {
 		return nil
 	}
 
@@ -422,7 +215,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 	if m.hosts.IsLocalHost(fromJID.Domain()) {
 		sentArchiveID := uuid.New().String()
 		archiveMsg := xmpputil.MakeStanzaIDMessage(msg, sentArchiveID, fromJID.ToBareJID().String())
-		if err := m.archiveMessage(execCtx.Context, archiveMsg, fromJID.ToBareJID().String(), sentArchiveID); err != nil {
+		if err := m.mng.ArchiveMessage(execCtx.Context, archiveMsg, fromJID.ToBareJID().String(), sentArchiveID); err != nil {
 			return err
 		}
 		execCtx.Context = context.WithValue(execCtx.Context, sentArchiveIDKey, sentArchiveID)
@@ -432,36 +225,11 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 		return nil
 	}
 	recievedArchiveID := xmpputil.MessageStanzaID(msg)
-	if err := m.archiveMessage(execCtx.Context, msg, toJID.ToBareJID().String(), recievedArchiveID); err != nil {
+	if err := m.mng.ArchiveMessage(execCtx.Context, msg, toJID.ToBareJID().String(), recievedArchiveID); err != nil {
 		return err
 	}
 	execCtx.Context = context.WithValue(execCtx.Context, receivedArchiveIDKey, recievedArchiveID)
 	return nil
-}
-
-func (m *Mam) archiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
-	archiveMsg := &archivemodel.Message{
-		ArchiveId: archiveID,
-		Id:        id,
-		FromJid:   message.FromJID().String(),
-		ToJid:     message.ToJID().String(),
-		Message:   message.Proto(),
-		Stamp:     timestamppb.Now(),
-	}
-	err := m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
-		err := tx.InsertArchiveMessage(ctx, archiveMsg)
-		if err != nil {
-			return err
-		}
-		return tx.DeleteArchiveOldestMessages(ctx, archiveID, m.cfg.QueueSize)
-	})
-	if err != nil {
-		return err
-	}
-	return m.runHook(ctx, hook.ArchiveMessageArchived, &hook.MamInfo{
-		ArchiveID: archiveID,
-		Message:   archiveMsg,
-	})
 }
 
 func (m *Mam) addRecipientStanzaID(originalMsg *stravaganza.Message) *stravaganza.Message {
@@ -471,15 +239,6 @@ func (m *Mam) addRecipientStanzaID(originalMsg *stravaganza.Message) *stravaganz
 	}
 	archiveID := uuid.New().String()
 	return xmpputil.MakeStanzaIDMessage(originalMsg, archiveID, toJID.ToBareJID().String())
-}
-
-func (m *Mam) runHook(ctx context.Context, hookName string, inf *hook.MamInfo) error {
-	_, err := m.hk.Run(hookName, &hook.ExecutionContext{
-		Info:    inf,
-		Sender:  m,
-		Context: ctx,
-	})
-	return err
 }
 
 // IsArchiveRequested determines whether archive has been requested over a C2S stream by inspecting inf parameter.
@@ -503,44 +262,4 @@ func ExtractReceivedArchiveID(ctx context.Context) string {
 		return ret
 	}
 	return ""
-}
-
-func formToFilters(fm *xep0004.DataForm) (*archivemodel.Filters, error) {
-	var retVal archivemodel.Filters
-
-	fmType := fm.Fields.ValueForFieldOfType(xep0004.FormType, xep0004.Hidden)
-	if fm.Type != xep0004.Submit || fmType != mamNamespace {
-		return nil, errors.New("unexpected form type value")
-	}
-	if start := fm.Fields.ValueForField("start"); len(start) > 0 {
-		startTm, err := time.Parse(dateTimeFormat, start)
-		if err != nil {
-			return nil, err
-		}
-		retVal.Start = timestamppb.New(startTm)
-	}
-	if end := fm.Fields.ValueForField("end"); len(end) > 0 {
-		endTm, err := time.Parse(dateTimeFormat, end)
-		if err != nil {
-			return nil, err
-		}
-		retVal.End = timestamppb.New(endTm)
-	}
-	if with := fm.Fields.ValueForField("with"); len(with) > 0 {
-		retVal.With = with
-	}
-	if beforeID := fm.Fields.ValueForField("before-id"); len(beforeID) > 0 {
-		retVal.BeforeId = beforeID
-	}
-	if afterID := fm.Fields.ValueForField("after-id"); len(afterID) > 0 {
-		retVal.AfterId = afterID
-	}
-	if ids := fm.Fields.ValuesForField("ids"); len(ids) > 0 {
-		retVal.Ids = ids
-	}
-	return &retVal, nil
-}
-
-func isMessageArchievable(msg *stravaganza.Message) bool {
-	return (msg.IsNormal() || msg.IsChat()) && msg.IsMessageWithBody()
 }
