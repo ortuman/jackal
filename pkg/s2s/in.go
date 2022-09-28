@@ -324,20 +324,20 @@ func (s *inS2S) handleConnected(ctx context.Context, elem stravaganza.Element) e
 	default:
 		if s.flags.isAuthenticated() || s.flags.isDialbackKeyAuthorized() {
 			// post element received event
-			hInf := &hook.S2SStreamInfo{
+			hi := &hook.S2SStreamInfo{
 				ID:      s.ID().String(),
 				Sender:  s.sender,
 				Target:  s.target,
 				Element: elem,
 			}
-			halted, err := s.runHook(ctx, hook.S2SInStreamElementReceived, hInf)
+			halted, err := s.runHook(ctx, hook.S2SInStreamElementReceived, hi)
 			if err != nil {
 				return err
 			}
 			if halted {
 				return nil
 			}
-			switch stanza := hInf.Element.(type) {
+			switch stanza := hi.Element.(type) {
 			case stravaganza.Stanza:
 				return s.processStanza(ctx, stanza)
 
@@ -369,15 +369,18 @@ func (s *inS2S) processStanza(ctx context.Context, stanza stravaganza.Stanza) er
 
 func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	// run IQ received hook
-	_, err := s.runHook(ctx, hook.S2SInStreamIQReceived, &hook.S2SStreamInfo{
+	hi := &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: iq,
-	})
+	}
+	_, err := s.runHook(ctx, hook.S2SInStreamIQReceived, hi)
 	if err != nil {
 		return err
 	}
+	iq = hi.Element.(*stravaganza.IQ)
+
 	if iq.IsResult() || iq.IsError() {
 		return nil // silently ignore
 	}
@@ -385,24 +388,22 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		return s.mods.ProcessIQ(ctx, iq)
 	}
 	// run will route iq hook
-	hInf := &hook.S2SStreamInfo{
+	hi = &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: iq,
 	}
-	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hi)
 	if halted {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	outIQ, ok := hInf.Element.(*stravaganza.IQ)
-	if !ok {
-		return nil
-	}
-	targets, err := s.router.Route(ctx, outIQ)
+	iq = hi.Element.(*stravaganza.IQ)
+
+	targets, err := s.router.Route(ctx, iq)
 	switch err {
 	case router.ErrResourceNotFound:
 		return s.sendElement(ctx, stanzaerror.E(stanzaerror.ServiceUnavailable, iq).Element())
@@ -428,37 +429,36 @@ func (s *inS2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 
 func (s *inS2S) processMessage(ctx context.Context, message *stravaganza.Message) error {
 	// post message received event
-	_, err := s.runHook(ctx, hook.S2SInStreamMessageReceived, &hook.S2SStreamInfo{
+	hi := &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: message,
-	})
+	}
+	_, err := s.runHook(ctx, hook.S2SInStreamMessageReceived, hi)
 	if err != nil {
 		return err
 	}
-	msg := message
+	msg := hi.Element.(*stravaganza.Message)
 
 sendMsg:
 	// run will route Message hook
-	hInf := &hook.S2SStreamInfo{
+	hi = &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: msg,
 	}
-	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
+	halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hi)
 	if halted {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	outMsg, ok := hInf.Element.(*stravaganza.Message)
-	if !ok {
-		return nil
-	}
-	targets, err := s.router.Route(ctx, outMsg)
+	msg = hi.Element.(*stravaganza.Message)
+
+	targets, err := s.router.Route(ctx, msg)
 	switch err {
 	case router.ErrResourceNotFound:
 		// treat the stanza as if it were addressed to <node@domain>
@@ -500,35 +500,36 @@ sendMsg:
 
 func (s *inS2S) processPresence(ctx context.Context, presence *stravaganza.Presence) error {
 	// run presence received hook
-	_, err := s.runHook(ctx, hook.S2SInStreamPresenceReceived, &hook.S2SStreamInfo{
+	hi := &hook.S2SStreamInfo{
 		ID:      s.ID().String(),
 		Sender:  s.sender,
 		Target:  s.target,
 		Element: presence,
-	})
+	}
+	_, err := s.runHook(ctx, hook.S2SInStreamPresenceReceived, hi)
 	if err != nil {
 		return err
 	}
+	presence = hi.Element.(*stravaganza.Presence)
+
 	if presence.ToJID().IsFullWithUser() {
 		// run will route presence hook
-		hInf := &hook.S2SStreamInfo{
+		hi = &hook.S2SStreamInfo{
 			ID:      s.ID().String(),
 			Sender:  s.sender,
 			Target:  s.target,
 			Element: presence,
 		}
-		halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hInf)
+		halted, err := s.runHook(ctx, hook.S2SInStreamWillRouteElement, hi)
 		if halted {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		outPr, ok := hInf.Element.(*stravaganza.Presence)
-		if !ok {
-			return nil
-		}
-		targets, err := s.router.Route(ctx, outPr)
+		presence = hi.Element.(*stravaganza.Presence)
+
+		targets, err := s.router.Route(ctx, presence)
 		switch err {
 		case nil, router.ErrUserNotAvailable:
 			_, err := s.runHook(ctx, hook.S2SInStreamPresenceRouted, &hook.S2SStreamInfo{
