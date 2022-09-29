@@ -2,6 +2,10 @@
 
 ## jackal - main / unreleased
 
+## 0.62.3 (2022/09/29)
+
+* [BUGFIX] s2s: overwrite stanza value on received hooks [#261](https://github.com/ortuman/jackal/pull/261)
+
 ## 0.62.2 (2022/09/23)
 
 * [BUGFIX] storage/archive: fix timestamp range filtering [#254](https://github.com/ortuman/jackal/pull/254), [#257](https://github.com/ortuman/jackal/pull/257)
