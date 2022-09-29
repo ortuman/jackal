@@ -592,10 +592,8 @@ func (s *inC2S) processIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	if err != nil {
 		return err
 	}
-	iq, ok := hi.Element.(*stravaganza.IQ)
-	if !ok {
-		return nil
-	}
+	iq = hi.Element.(*stravaganza.IQ)
+
 	targets, err := s.router.Route(ctx, iq)
 	switch err {
 	case router.ErrResourceNotFound:
@@ -649,10 +647,8 @@ func (s *inC2S) processPresence(ctx context.Context, presence *stravaganza.Prese
 		if err != nil {
 			return err
 		}
-		presence, ok := hi.Element.(*stravaganza.Presence)
-		if !ok {
-			return nil
-		}
+		presence = hi.Element.(*stravaganza.Presence)
+
 		targets, err := s.router.Route(ctx, presence)
 		switch err {
 		case nil, router.ErrUserNotAvailable:
@@ -704,10 +700,8 @@ sendMsg:
 	if err != nil {
 		return err
 	}
-	msg, ok := hi.Element.(*stravaganza.Message)
-	if !ok {
-		return nil
-	}
+	msg = hi.Element.(*stravaganza.Message)
+
 	targets, err := s.router.Route(ctx, msg)
 	switch err {
 	case router.ErrResourceNotFound:
