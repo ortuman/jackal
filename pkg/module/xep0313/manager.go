@@ -68,8 +68,59 @@ func NewManager(
 	}
 }
 
-// FormFields returns archive form fields supported by the manager.
-func (m *Manager) FormFields(ctx context.Context, iq *stravaganza.IQ) error {
+// ProcessIQ processes a MAM IQ.
+func (m *Manager) ProcessIQ(ctx context.Context, iq *stravaganza.IQ, onArchiveRequestedFn func(archiveID string) error) error {
+	switch {
+	case iq.IsGet() && iq.ChildNamespace("metadata", mamNamespace) != nil:
+		return m.queryMetadata(ctx, iq)
+
+	case iq.IsGet() && iq.ChildNamespace("query", mamNamespace) != nil:
+		return m.formFields(ctx, iq)
+
+	case iq.IsSet() && iq.ChildNamespace("query", mamNamespace) != nil:
+		if err := m.queryArchive(ctx, iq); err != nil {
+			return err
+		}
+		if onArchiveRequestedFn != nil {
+			archiveID := iq.ToJID().ToBareJID().String()
+			return onArchiveRequestedFn(archiveID)
+		}
+	}
+	return nil
+}
+
+// ArchiveMessage archives a message.
+func (m *Manager) ArchiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
+	archiveMsg := &archivemodel.Message{
+		ArchiveId: archiveID,
+		Id:        id,
+		FromJid:   message.FromJID().String(),
+		ToJid:     message.ToJID().String(),
+		Message:   message.Proto(),
+		Stamp:     timestamppb.Now(),
+	}
+	err := m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
+		err := tx.InsertArchiveMessage(ctx, archiveMsg)
+		if err != nil {
+			return err
+		}
+		return tx.DeleteArchiveOldestMessages(ctx, archiveID, m.maxQueueSize)
+	})
+	if err != nil {
+		return err
+	}
+	return m.runHook(ctx, hook.ArchiveMessageArchived, &hook.MamInfo{
+		ArchiveID: archiveID,
+		Message:   archiveMsg,
+	})
+}
+
+// DeleteArchive deletes an archive.
+func (m *Manager) DeleteArchive(ctx context.Context, archiveID string) error {
+	return m.rep.DeleteArchive(ctx, archiveID)
+}
+
+func (m *Manager) formFields(ctx context.Context, iq *stravaganza.IQ) error {
 	form := xep0004.DataForm{
 		Type: xep0004.Form,
 	}
@@ -120,8 +171,7 @@ func (m *Manager) FormFields(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-// QueryMetadata queries archive metadata.
-func (m *Manager) QueryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Manager) queryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
 	archiveID := iq.FromJID().ToBareJID().String()
 
 	metadata, err := m.rep.FetchArchiveMetadata(ctx, archiveID)
@@ -153,8 +203,7 @@ func (m *Manager) QueryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-// QueryArchive query and returns archive items.
-func (m *Manager) QueryArchive(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Manager) queryArchive(ctx context.Context, iq *stravaganza.IQ) error {
 	qChild := iq.ChildNamespace("query", mamNamespace)
 
 	// filter archive result
@@ -265,37 +314,6 @@ func (m *Manager) QueryArchive(ctx context.Context, iq *stravaganza.IQ) error {
 	level.Info(m.logger).Log("msg", "archive messages requested", "archive_id", archiveID, "count", len(messages), "complete", res.Complete)
 
 	return nil
-}
-
-// ArchiveMessage archives a message.
-func (m *Manager) ArchiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
-	archiveMsg := &archivemodel.Message{
-		ArchiveId: archiveID,
-		Id:        id,
-		FromJid:   message.FromJID().String(),
-		ToJid:     message.ToJID().String(),
-		Message:   message.Proto(),
-		Stamp:     timestamppb.Now(),
-	}
-	err := m.rep.InTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
-		err := tx.InsertArchiveMessage(ctx, archiveMsg)
-		if err != nil {
-			return err
-		}
-		return tx.DeleteArchiveOldestMessages(ctx, archiveID, m.maxQueueSize)
-	})
-	if err != nil {
-		return err
-	}
-	return m.runHook(ctx, hook.ArchiveMessageArchived, &hook.MamInfo{
-		ArchiveID: archiveID,
-		Message:   archiveMsg,
-	})
-}
-
-// DeleteArchive deletes an archive.
-func (m *Manager) DeleteArchive(ctx context.Context, archiveID string) error {
-	return m.rep.DeleteArchive(ctx, archiveID)
 }
 
 func (m *Manager) runHook(ctx context.Context, hookName string, inf *hook.MamInfo) error {
