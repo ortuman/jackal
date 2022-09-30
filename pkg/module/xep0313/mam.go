@@ -146,26 +146,15 @@ func (m *Mam) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
-	switch {
-	case iq.IsGet() && iq.ChildNamespace("metadata", mamNamespace) != nil:
-		return m.mng.QueryMetadata(ctx, iq)
-
-	case iq.IsGet() && iq.ChildNamespace("query", mamNamespace) != nil:
-		return m.mng.FormFields(ctx, iq)
-
-	case iq.IsSet() && iq.ChildNamespace("query", mamNamespace) != nil:
+	return m.mng.ProcessIQ(ctx, iq, func(_ string) error {
 		fromJID := iq.FromJID()
 
 		stm, err := m.router.C2S().LocalStream(fromJID.Node(), fromJID.Resource())
 		if err != nil {
 			return err
 		}
-		if err := m.mng.QueryArchive(ctx, iq); err != nil {
-			return err
-		}
 		return stm.SetInfoValue(ctx, archiveRequestedCtxKey, true)
-	}
-	return nil
+	})
 }
 
 func (m *Mam) onMessageReceived(execCtx *hook.ExecutionContext) error {
