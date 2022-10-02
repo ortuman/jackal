@@ -42,8 +42,8 @@ const (
 	maxPageSize     = 250
 )
 
-// Manager represents an archive manager.
-type Manager struct {
+// Service represents a MAM service.
+type Service struct {
 	router       router.Router
 	hk           *hook.Hooks
 	rep          repository.Repository
@@ -51,15 +51,15 @@ type Manager struct {
 	maxQueueSize int
 }
 
-// NewManager returns a new archive manager instance.
-func NewManager(
+// NewService returns a new archive service instance.
+func NewService(
 	router router.Router,
 	hk *hook.Hooks,
 	rep repository.Repository,
 	maxQueueSize int,
 	logger kitlog.Logger,
-) *Manager {
-	return &Manager{
+) *Service {
+	return &Service{
 		router:       router,
 		hk:           hk,
 		rep:          rep,
@@ -69,7 +69,7 @@ func NewManager(
 }
 
 // ProcessIQ processes a MAM IQ.
-func (m *Manager) ProcessIQ(ctx context.Context, iq *stravaganza.IQ, onArchiveRequestedFn func(archiveID string) error) error {
+func (m *Service) ProcessIQ(ctx context.Context, iq *stravaganza.IQ, onArchiveRequestedFn func(archiveID string) error) error {
 	switch {
 	case iq.IsGet() && iq.ChildNamespace("metadata", mamNamespace) != nil:
 		return m.queryMetadata(ctx, iq)
@@ -90,7 +90,7 @@ func (m *Manager) ProcessIQ(ctx context.Context, iq *stravaganza.IQ, onArchiveRe
 }
 
 // ArchiveMessage archives a message.
-func (m *Manager) ArchiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
+func (m *Service) ArchiveMessage(ctx context.Context, message *stravaganza.Message, archiveID, id string) error {
 	archiveMsg := &archivemodel.Message{
 		ArchiveId: archiveID,
 		Id:        id,
@@ -116,11 +116,11 @@ func (m *Manager) ArchiveMessage(ctx context.Context, message *stravaganza.Messa
 }
 
 // DeleteArchive deletes an archive.
-func (m *Manager) DeleteArchive(ctx context.Context, archiveID string) error {
+func (m *Service) DeleteArchive(ctx context.Context, archiveID string) error {
 	return m.rep.DeleteArchive(ctx, archiveID)
 }
 
-func (m *Manager) formFields(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Service) formFields(ctx context.Context, iq *stravaganza.IQ) error {
 	form := xep0004.DataForm{
 		Type: xep0004.Form,
 	}
@@ -171,7 +171,7 @@ func (m *Manager) formFields(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (m *Manager) queryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Service) queryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
 	archiveID := iq.FromJID().ToBareJID().String()
 
 	metadata, err := m.rep.FetchArchiveMetadata(ctx, archiveID)
@@ -203,7 +203,7 @@ func (m *Manager) queryMetadata(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (m *Manager) queryArchive(ctx context.Context, iq *stravaganza.IQ) error {
+func (m *Service) queryArchive(ctx context.Context, iq *stravaganza.IQ) error {
 	qChild := iq.ChildNamespace("query", mamNamespace)
 
 	// filter archive result
@@ -316,7 +316,7 @@ func (m *Manager) queryArchive(ctx context.Context, iq *stravaganza.IQ) error {
 	return nil
 }
 
-func (m *Manager) runHook(ctx context.Context, hookName string, inf *hook.MamInfo) error {
+func (m *Service) runHook(ctx context.Context, hookName string, inf *hook.MamInfo) error {
 	_, err := m.hk.Run(hookName, &hook.ExecutionContext{
 		Info:    inf,
 		Sender:  m,

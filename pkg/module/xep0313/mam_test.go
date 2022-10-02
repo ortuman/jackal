@@ -45,7 +45,7 @@ func TestMam_FormFields(t *testing.T) {
 		return nil, nil
 	}
 	mam := &Mam{
-		mng:    NewManager(routerMock, nil, nil, 100, kitlog.NewNopLogger()),
+		svc:    NewService(routerMock, nil, nil, 100, kitlog.NewNopLogger()),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -101,7 +101,7 @@ func TestMam_Metadata(t *testing.T) {
 		}, nil
 	}
 	mam := &Mam{
-		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
+		svc:    NewService(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
@@ -164,7 +164,7 @@ func TestMam_ArchiveMessage(t *testing.T) {
 
 	hk := hook.NewHooks()
 	mam := &Mam{
-		mng:    NewManager(nil, hk, repMock, 100, kitlog.NewNopLogger()),
+		svc:    NewService(nil, hk, repMock, 100, kitlog.NewNopLogger()),
 		hk:     hk,
 		hosts:  hosts,
 		logger: kitlog.NewNopLogger(),
@@ -275,7 +275,7 @@ func TestMam_SendArchiveMessages(t *testing.T) {
 	}
 
 	mam := &Mam{
-		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
+		svc:    NewService(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		hk:     hook.NewHooks(),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
@@ -333,7 +333,7 @@ func TestMam_Forbidden(t *testing.T) {
 	repMock := &repositoryMock{}
 
 	mam := &Mam{
-		mng:    NewManager(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
+		svc:    NewService(routerMock, hook.NewHooks(), repMock, 100, kitlog.NewNopLogger()),
 		router: routerMock,
 		logger: kitlog.NewNopLogger(),
 	}
@@ -372,7 +372,7 @@ func TestMam_DeleteArchive(t *testing.T) {
 
 	hk := hook.NewHooks()
 	mam := &Mam{
-		mng:    NewManager(nil, hk, repMock, 100, kitlog.NewNopLogger()),
+		svc:    NewService(nil, hk, repMock, 100, kitlog.NewNopLogger()),
 		hk:     hk,
 		hosts:  hosts,
 		logger: kitlog.NewNopLogger(),

@@ -60,7 +60,7 @@ type Config struct {
 
 // Mam represents a mam (XEP-0313) module type.
 type Mam struct {
-	mng    *Manager
+	svc    *Service
 	hk     *hook.Hooks
 	router router.Router
 	hosts  hosts
@@ -78,7 +78,7 @@ func New(
 ) *Mam {
 	logger = kitlog.With(logger, "module", ModuleName, "xep", XEPNumber)
 	return &Mam{
-		mng:    NewManager(router, hk, rep, cfg.QueueSize, logger),
+		svc:    NewService(router, hk, rep, cfg.QueueSize, logger),
 		router: router,
 		hosts:  hosts,
 		hk:     hk,
@@ -146,7 +146,7 @@ func (m *Mam) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 		_, _ = m.router.Route(ctx, xmpputil.MakeErrorStanza(iq, stanzaerror.Forbidden))
 		return nil
 	}
-	return m.mng.ProcessIQ(ctx, iq, func(_ string) error {
+	return m.svc.ProcessIQ(ctx, iq, func(_ string) error {
 		fromJID := iq.FromJID()
 
 		stm, err := m.router.C2S().LocalStream(fromJID.Node(), fromJID.Resource())
@@ -188,7 +188,7 @@ func (m *Mam) onMessageRouted(execCtx *hook.ExecutionContext) error {
 
 func (m *Mam) onUserDeleted(execCtx *hook.ExecutionContext) error {
 	inf := execCtx.Info.(*hook.UserInfo)
-	return m.mng.DeleteArchive(execCtx.Context, inf.Username)
+	return m.svc.DeleteArchive(execCtx.Context, inf.Username)
 }
 
 func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravaganza.Element) error {
@@ -204,7 +204,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 	if m.hosts.IsLocalHost(fromJID.Domain()) {
 		sentArchiveID := uuid.New().String()
 		archiveMsg := xmpputil.MakeStanzaIDMessage(msg, sentArchiveID, fromJID.ToBareJID().String())
-		if err := m.mng.ArchiveMessage(execCtx.Context, archiveMsg, fromJID.ToBareJID().String(), sentArchiveID); err != nil {
+		if err := m.svc.ArchiveMessage(execCtx.Context, archiveMsg, fromJID.ToBareJID().String(), sentArchiveID); err != nil {
 			return err
 		}
 		execCtx.Context = context.WithValue(execCtx.Context, sentArchiveIDKey, sentArchiveID)
@@ -214,7 +214,7 @@ func (m *Mam) handleRoutedMessage(execCtx *hook.ExecutionContext, elem stravagan
 		return nil
 	}
 	recievedArchiveID := xmpputil.MessageStanzaID(msg)
-	if err := m.mng.ArchiveMessage(execCtx.Context, msg, toJID.ToBareJID().String(), recievedArchiveID); err != nil {
+	if err := m.svc.ArchiveMessage(execCtx.Context, msg, toJID.ToBareJID().String(), recievedArchiveID); err != nil {
 		return err
 	}
 	execCtx.Context = context.WithValue(execCtx.Context, receivedArchiveIDKey, recievedArchiveID)
