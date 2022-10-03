@@ -77,7 +77,7 @@ c2s:
         - scram_sha_1
         - scram_sha_256
         - scram_sha_512
-        - scram_sha3_512]
+        - scram_sha3_512
 
         # Authentication gateway
         # (proto: https://github.com/jackal-xmpp/jackal-proto/blob/master/jackal/proto/authenticator/v1/authenticator.proto)
