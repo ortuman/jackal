@@ -57,6 +57,7 @@ type Repository struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.PubSub
 	repository.Archive
 	repository.Locker
 
@@ -120,6 +121,7 @@ func (r *Repository) Start(ctx context.Context) error {
 	r.BlockList = &pgSQLBlockListRep{conn: db, logger: r.logger}
 	r.Private = &pgSQLPrivateRep{conn: db, logger: r.logger}
 	r.Roster = &pgSQLRosterRep{conn: db, logger: r.logger}
+	r.PubSub = &pgSQLPubSubRep{conn: db, logger: r.logger}
 	r.VCard = &pgSQLVCardRep{conn: db, logger: r.logger}
 	r.Archive = &pgSQLArchiveRep{conn: db, logger: r.logger}
 	r.Locker = &pgSQLLocker{conn: db}

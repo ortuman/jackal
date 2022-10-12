@@ -1,0 +1,137 @@
+// Copyright 2022 The jackal Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto3";
+
+package model.pubsub.v1;
+
+import "github.com/jackal-xmpp/stravaganza/stravaganza.proto";
+
+option go_package = "pkg/model/pubsub/;pubsubmodel";
+
+// NodeType represents a node type.
+enum NodeType {
+  NT_UNKNOWN = 0;
+  NT_LEAF = 1;
+  NT_COLLECTION = 2;
+}
+
+// Options represents a pubsub node options.
+message Options {
+  string language = 1;
+  string title = 2;
+  string description = 3;
+  bool deliver_payloads = 4;
+  bool deliver_notifications = 5;
+  bool notify_config = 6;
+  bool notify_delete = 7;
+  bool notify_retract = 8;
+  bool notify_sub = 9;
+  bool persist_items = 10;
+  int64 max_items = 11;
+  uint64 item_expire = 12;
+  bool subscribe = 13;
+  string access_model = 14;
+  repeated string roster_groups_allowed = 15;
+  string publish_model = 16;
+  bool purge_offline = 17;
+  int64  max_payload_size = 18;
+  string send_last_published_item = 19;
+  bool presence_based_delivery = 20;
+  string notification_type = 21;
+  string type = 22;
+  string body_xslt = 23;
+  string dataform_xslt = 24;
+}
+
+// Node represents a node in the pubsub tree.
+message Node {
+  int64 id = 1;
+  string host = 2;
+  string name = 3;
+  string parent = 4;
+  NodeType type = 5;
+  Options options = 6;
+}
+
+// Nodes represents a set of pubsub nodes.
+message Nodes {
+  repeated Node nodes = 1;
+}
+
+// NodeAccessModel represents a node access model.
+enum NodeAccessModel {
+  NAM_UNKNOWN = 0;
+  NAM_AUTHORIZE = 1;
+  NAM_OPEN = 2;
+  NAM_PRESENCE = 3;
+  NAM_ROSTER = 4;
+  NAM_WHITELIST = 5;
+}
+
+// AffiliationState represents a pubsub node affiliation state.
+enum AffiliationState {
+  AFF_NONE = 0;
+  AFF_OWNER = 1;
+  AFF_PUBLISHER = 2;
+  AFF_PUBLISH_ONLY = 3;
+  AFF_MEMBER = 4;
+  AFF_OUTCAST = 5;
+}
+
+// Affiliation represents a pubsub node affiliation.
+message Affiliation {
+  int64 node_id = 1;
+  string jid = 2;
+  AffiliationState state = 3;
+}
+
+// Affiliations represents a set of pubsub affiliations.
+message Affiliations {
+  repeated Affiliation affiliations = 1;
+}
+
+// SubscriptionState represents a pubsub node subscription state.
+enum SubscriptionState {
+  SUB_NONE = 0;
+  SUB_PENDING = 1;
+  SUB_SUBSCRIBED = 2;
+  SUB_UNCONFIGURED = 3;
+}
+
+// Subscription represents a pubsub node subscription.
+message Subscription {
+  string id = 1;
+  int64 node_id = 2;
+  string jid = 3;
+  SubscriptionState state = 4;
+}
+
+// Subscriptions represents a set of pubsub subscriptions.
+message Subscriptions {
+  repeated Subscription subscriptions = 1;
+}
+
+// Item represents a pubsub node item.
+message Item {
+  string id = 1;
+  int64 node_id = 2;
+  string publisher = 3;
+  stravaganza.PBElement payload = 4;
+}
+
+// Items represents a set of pubsub items.
+message Items {
+  repeated Item items = 1;
+}

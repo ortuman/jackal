@@ -15,11 +15,10 @@
 package c2s
 
 const (
-	streamNamespace        = "http://etherx.jabber.org/streams"
-	saslNamespace          = "urn:ietf:params:xml:ns:xmpp-sasl"
-	tlsNamespace           = "urn:ietf:params:xml:ns:xmpp-tls"
-	compressNamespace      = "http://jabber.org/protocol/compress"
-	bindNamespace          = "urn:ietf:params:xml:ns:xmpp-bind"
-	sessionNamespace       = "urn:ietf:params:xml:ns:xmpp-session"
-	blockingErrorNamespace = "urn:xmpp:blocking:errors"
+	streamNamespace   = "http://etherx.jabber.org/streams"
+	saslNamespace     = "urn:ietf:params:xml:ns:xmpp-sasl"
+	tlsNamespace      = "urn:ietf:params:xml:ns:xmpp-tls"
+	compressNamespace = "http://jabber.org/protocol/compress"
+	bindNamespace     = "urn:ietf:params:xml:ns:xmpp-bind"
+	sessionNamespace  = "urn:ietf:params:xml:ns:xmpp-session"
 )

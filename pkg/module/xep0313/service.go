@@ -330,7 +330,7 @@ func formToFilters(fm *xep0004.DataForm) (*archivemodel.Filters, error) {
 
 	fmType := fm.Fields.ValueForFieldOfType(xep0004.FormType, xep0004.Hidden)
 	if fm.Type != xep0004.Submit || fmType != mamNamespace {
-		return nil, errors.New("unexpected form type value")
+		return nil, errors.New("unexpected filters form type value")
 	}
 	if start := fm.Fields.ValueForField("start"); len(start) > 0 {
 		startTm, err := time.Parse(dateTimeFormat, start)

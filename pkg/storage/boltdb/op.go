@@ -95,6 +95,20 @@ func (op bucketExistsOp) do() bool {
 	return op.tx.Bucket([]byte(op.bucket)) != nil
 }
 
+type keyExistsOp struct {
+	tx     *bolt.Tx
+	bucket string
+	key    string
+}
+
+func (op keyExistsOp) do() bool {
+	b := op.tx.Bucket([]byte(op.bucket))
+	if b == nil {
+		return false
+	}
+	return b.Get([]byte(op.key)) != nil
+}
+
 type fetchKeyOp struct {
 	tx     *bolt.Tx
 	bucket string

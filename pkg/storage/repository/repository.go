@@ -47,5 +47,6 @@ type baseRepository interface {
 	Private
 	Roster
 	VCard
+	PubSub
 	Locker
 }

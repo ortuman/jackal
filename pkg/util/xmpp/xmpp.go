@@ -52,6 +52,15 @@ func MakeErrorStanza(stanza stravaganza.Stanza, errReason stanzaerror.Reason) st
 	return errStanza
 }
 
+// MakeErrorStanzaWithApplicationElement creates an error stanza using errReason as reason.
+func MakeErrorStanzaWithApplicationElement(stanza stravaganza.Stanza, applicationElement stravaganza.Element, errReason stanzaerror.Reason) stravaganza.Stanza {
+	se := stanzaerror.E(errReason, stanza)
+	se.ApplicationElement = applicationElement
+
+	errStanza, _ := se.Stanza(false)
+	return errStanza
+}
+
 // MakeDelayMessage creates a new message adding delayed information.
 func MakeDelayMessage(stanza stravaganza.Stanza, stamp time.Time, from, text string) *stravaganza.Message {
 	sb := stravaganza.NewBuilderFromElement(stanza)

@@ -16,6 +16,7 @@ FILES=(
   "c2s/v1/resourceinfo.proto"
   "cluster/v1/cluster.proto"
   "model/v1/archive.proto"
+  "model/v1/pubsub.proto"
   "model/v1/user.proto"
   "model/v1/last.proto"
   "model/v1/blocklist.proto"

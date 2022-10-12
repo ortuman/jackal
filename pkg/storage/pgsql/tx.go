@@ -30,6 +30,7 @@ type repTx struct {
 	repository.Roster
 	repository.VCard
 	repository.Archive
+	repository.PubSub
 	repository.Locker
 }
 
@@ -44,6 +45,7 @@ func newRepTx(tx *sql.Tx) *repTx {
 		Roster:       &pgSQLRosterRep{conn: tx},
 		VCard:        &pgSQLVCardRep{conn: tx},
 		Archive:      &pgSQLArchiveRep{conn: tx},
+		PubSub:       &pgSQLPubSubRep{conn: tx},
 		Locker:       &pgSQLLocker{conn: tx},
 	}
 }

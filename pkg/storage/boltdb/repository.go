@@ -39,6 +39,7 @@ type Repository struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.PubSub
 	repository.Archive
 	repository.Locker
 

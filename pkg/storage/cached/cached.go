@@ -68,6 +68,7 @@ type CachedRepository struct {
 	repository.Private
 	repository.Roster
 	repository.VCard
+	repository.PubSub
 	repository.Archive
 	repository.Locker
 
@@ -92,6 +93,7 @@ func New(cfg Config, rep repository.Repository, logger kitlog.Logger) (repositor
 		BlockList:    &cachedBlockListRep{c: c, rep: rep, logger: logger},
 		Roster:       &cachedRosterRep{c: c, rep: rep, logger: logger},
 		VCard:        &cachedVCardRep{c: c, rep: rep, logger: logger},
+		PubSub:       &cachedPubSubRep{c: c, rep: rep, logger: logger},
 		Archive:      rep,
 		Offline:      rep,
 		Locker:       rep,

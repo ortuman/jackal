@@ -192,3 +192,70 @@ CREATE INDEX IF NOT EXISTS i_archives_to_bare ON archives(to_bare);
 CREATE INDEX IF NOT EXISTS i_archives_from ON archives("from");
 CREATE INDEX IF NOT EXISTS i_archives_from_bare ON archives(from_bare);
 CREATE INDEX IF NOT EXISTS i_archives_created_at ON archives(created_at);
+
+-- pubsub_nodes
+
+CREATE TABLE IF NOT EXISTS pubsub_nodes (
+    id         BIGSERIAL,
+    host       TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    options    BYTEA NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_nodes_host_name ON pubsub_nodes(host, name);
+
+SELECT enable_updated_at('pubsub_nodes');
+
+-- pubsub_affiliations
+
+CREATE TABLE IF NOT EXISTS pubsub_affiliations (
+    node_id          BIGINT NOT NULL,
+    jid              TEXT NOT NULL,
+    affiliation      TEXT NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_affiliations_jid ON pubsub_affiliations(jid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_affiliations_node_id_jid ON pubsub_affiliations(node_id, jid);
+
+SELECT enable_updated_at('pubsub_affiliations');
+
+-- pubsub_subscriptions
+
+CREATE TABLE IF NOT EXISTS pubsub_subscriptions (
+    id           TEXT NOT NULL,
+    node_id      BIGINT NOT NULL,
+    jid          TEXT NOT NULL,
+    subscription TEXT NOT NULL,
+    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_subscriptions_jid ON pubsub_subscriptions(jid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_subscriptions_node_id_jid ON pubsub_subscriptions(node_id, jid);
+
+SELECT enable_updated_at('pubsub_subscriptions');
+
+-- pubsub_items
+
+CREATE TABLE IF NOT EXISTS pubsub_items (
+    id         TEXT NOT NULL,
+    node_id    BIGINT NOT NULL,
+    publisher  TEXT NOT NULL,
+    payload    BYTEA NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS i_pubsub_items_id ON pubsub_items(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS i_pubsub_items_node_id_item_id ON pubsub_items(node_id, id);
+
+SELECT enable_updated_at('pubsub_items');
