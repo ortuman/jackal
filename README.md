@@ -178,6 +178,8 @@ Start a new jackal Docker container with custom configuration.
 ```sh
 docker run --name=jackal \
    --mount type=bind,src=/path-on-host-machine/my-custom-config.yaml,dst=/jackal/config.yaml \
+   -p "5222:5222" \
+   -p "15280:15280" \  # used by jackalctl
    -d ortuman/jackal:latest
 ```
 
