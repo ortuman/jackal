@@ -8,7 +8,7 @@
 #  use: v1
 
 #logger:
-#  level: "debug"
+#  level: "debug" # debug|info|warn|error|off
 #  output_path: "jackal.log"
 
 # Prometheus metrics, pprof & health check
