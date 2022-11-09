@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.19.1-bullseye as stage
+FROM --platform=$BUILDPLATFORM golang:1.19.3-bullseye as stage
 
 ARG TARGETARCH
 
