@@ -228,6 +228,19 @@ The [jackal developer community](https://gitter.im/jackal-im/jackal?utm_source=b
 
 Contributions of all kinds are welcome: reporting issues, updating documentation, fixing bugs, improving unit tests, sharing ideas, and any other tips that may help the jackal community.
 
+## Development setup
+
+### Requirements
+
+* Go 1.19+
+* moq: `go install github.com/matryer/moq@latest`
+
+### Main steps
+
+* Build: `make build`
+* Test: `make test`
+
+
 ## Code of Conduct
 
 Help us keep jackal open and inclusive. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
