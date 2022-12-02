@@ -124,7 +124,7 @@ done:
 func (p *Parser) startElement(t xml.StartElement) {
 	name := xmlName(t.Name.Space, t.Name.Local)
 
-	var attrs []stravaganza.Attribute
+	attrs := make([]stravaganza.Attribute, 0, len(t.Attr))
 	for _, a := range t.Attr {
 		name := xmlName(a.Name.Space, a.Name.Local)
 		attrs = append(attrs, stravaganza.Attribute{Label: name, Value: a.Value})
