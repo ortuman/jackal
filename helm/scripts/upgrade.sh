@@ -9,7 +9,7 @@ if [ $# -eq 0 ] || [ -z $1 ]; then
    exit 1;
 fi
 
-export POSTGRESQL_PASSWORD=$(kubectl get secret --namespace "jackal" jackal-postgresql-ha-postgresql -o jsonpath="{.data.postgresql-password}" | base64 --decode)
+export POSTGRESQL_PASSWORD=$(kubectl get secret --namespace "jackal" jackal-postgresql-ha-postgresql -o jsonpath="{.data.password}" | base64 --decode)
 export REPMGR_PASSWORD=$(kubectl get secret --namespace "jackal" jackal-postgresql-ha-postgresql -o jsonpath="{.data.repmgr-password}" | base64 --decode)
 export ADMIN_PASSWORD=$(kubectl get secret --namespace "jackal" jackal-postgresql-ha-pgpool -o jsonpath="{.data.admin-password}" | base64 --decode)
 

@@ -92,7 +92,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: jackal-postgresql-ha-postgresql
-                  key: postgresql-password
+                  key: password
                   optional: false
 
             - name: JACKAL_S2S_DIALBACK_SECRET
