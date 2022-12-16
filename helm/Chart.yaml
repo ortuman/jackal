@@ -19,8 +19,8 @@ maintainers:
     email: ortuman@gmail.com
 dependencies:
   - name: etcd
-    version: 7.0.2
+    version: 8.5.10
     repository: https://charts.bitnami.com/bitnami
   - name: postgresql-ha
-    version: 8.6.13
+    version: 10.0.7
     repository: https://charts.bitnami.com/bitnami
