@@ -156,7 +156,7 @@ etcd:
       create: false
   persistence:
     enabled: false
-  replicaCount: 2
+  replicaCount: 3
   resources:
     requests:
       cpu: 120m
