@@ -1,6 +1,6 @@
 {{ if index .Values.redis.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: redis
   namespace: {{ $.Release.Namespace }}
@@ -13,7 +13,7 @@ spec:
   selector:
     matchLabels:
       app: redis
-  strategy: {}
+  serviceName: "redis"
   template:
     metadata:
       labels:
