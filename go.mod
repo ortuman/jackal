@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackal-xmpp/runqueue/v2 v2.0.0
-	github.com/jackal-xmpp/stravaganza v1.2.4
+	github.com/jackal-xmpp/stravaganza v1.5.0
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
@@ -64,7 +64,7 @@ require (
 	go.uber.org/zap v1.17.0 // indirect
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/net v0.0.0-20220526153639-5463443f8c37 // indirect
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
