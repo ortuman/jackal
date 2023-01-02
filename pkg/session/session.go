@@ -32,8 +32,8 @@ import (
 	stanzaerror "github.com/jackal-xmpp/stravaganza/errors/stanza"
 	streamerror "github.com/jackal-xmpp/stravaganza/errors/stream"
 	"github.com/jackal-xmpp/stravaganza/jid"
+	xmppparser "github.com/jackal-xmpp/stravaganza/parser"
 	"github.com/ortuman/jackal/pkg/host"
-	xmppparser "github.com/ortuman/jackal/pkg/parser"
 	"github.com/ortuman/jackal/pkg/transport"
 	"github.com/ortuman/jackal/pkg/util/ratelimiter"
 )
