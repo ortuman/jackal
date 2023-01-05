@@ -2,6 +2,8 @@
 
 ## jackal - main / unreleased
 
+* [ENHANCEMENT] stravaganza: improved xml parsing performance. [#283](https://github.com/ortuman/jackal/pull/283)
+
 ## 0.62.3 (2022/09/29)
 
 * [BUGFIX] s2s: overwrite stanza value on received hooks [#261](https://github.com/ortuman/jackal/pull/261)
