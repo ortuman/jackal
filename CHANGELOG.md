@@ -2,7 +2,7 @@
 
 ## jackal - main / unreleased
 
-## 0.63.0 (2023/01/05)
+## 0.64.0 (2023/01/06)
 
 * [ENHANCEMENT] stravaganza: improved xml parsing performance. [#283](https://github.com/ortuman/jackal/pull/283)
 
