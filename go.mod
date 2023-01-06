@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jackal-xmpp/runqueue/v2 v2.0.0
-	github.com/jackal-xmpp/stravaganza v1.4.1
+	github.com/jackal-xmpp/stravaganza v1.5.0
 	github.com/kkyr/fig v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v1.14.5 // indirect
@@ -45,7 +45,6 @@ require (
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
