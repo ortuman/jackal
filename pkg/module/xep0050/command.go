@@ -32,11 +32,18 @@ import (
 // CommandNamespace represents the ad-hoc command namespace.
 const CommandNamespace = "http://jabber.org/protocol/commands"
 
+// IsCommandIQ returns whether a given IQ is an ad-hoc command.
+func IsCommandIQ(iq *stravaganza.IQ) bool {
+	return iq.ChildNamespace("command", CommandNamespace) != nil
+}
+
+// Config represents ad-hoc command handler configuration.
 type Config struct {
 	MaxSessionsPerNode int
 	SessionTTL         time.Duration
 }
 
+// Handler represents an ad-hoc command handler.
 type Handler struct {
 	cfg      Config
 	router   router.Router
@@ -76,6 +83,7 @@ func (m *Handler) RegisterCommand(cmd AdHocCommand) {
 	m.commands[node] = cmd
 }
 
+// ProcessIQ processes a given ad-hoc command IQ.
 func (m *Handler) ProcessIQ(ctx context.Context, iq *stravaganza.IQ) error {
 	cmdElement := iq.ChildNamespace("command", CommandNamespace)
 	if cmdElement == nil || !iq.IsSet() {
@@ -223,23 +231,32 @@ func (m *Handler) registerSession(owner, node string) *Session {
 	return ss
 }
 
-func (m *Handler) unregisterSession(ss *Session) {
+func (m *Handler) unregisterSession(session *Session) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// clear timer
-	tm := m.timers[ss.ID]
+	tm := m.timers[session.ID]
 	if tm != nil {
 		tm.Stop()
-		delete(m.timers, ss.ID)
+		delete(m.timers, session.ID)
 	}
 
-	panic("remove session from activeSessions")
-}
+	// remove session from active sessions
+	requesterSessions := m.activeSessions[session.Owner]
+	if requesterSessions == nil {
+		return
+	}
+	requesterSessions.Lock()
+	defer requesterSessions.Unlock()
 
-// IsCommandIQ returns whether a given IQ is an ad-hoc command.
-func IsCommandIQ(iq *stravaganza.IQ) bool {
-	return iq.ChildNamespace("command", CommandNamespace) != nil
+	for i, ss := range requesterSessions.sessions {
+		if ss.ID != session.ID {
+			continue
+		}
+		requesterSessions.sessions = append(requesterSessions.sessions[:i], requesterSessions.sessions[i+1:]...)
+		break
+	}
 }
 
 func getCommandAction(cmdElement stravaganza.Element) Action {
