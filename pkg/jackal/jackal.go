@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ortuman/jackal/pkg/util/rlimit"
 	"io"
 	"math/rand"
 	"os"
@@ -56,8 +57,6 @@ import (
 )
 
 const (
-	darwinOpenMax = 10240
-
 	defaultBootstrapTimeout = time.Minute
 	defaultShutdownTimeout  = time.Second * 30
 
@@ -201,7 +200,7 @@ func (j *Jackal) Run() error {
 	grpc_prometheus.EnableHandlingTimeHistogram()
 
 	// set maximum opened files limit
-	if err := setRLimit(); err != nil {
+	if err := rlimit.SetRLimit(); err != nil {
 		return err
 	}
 
@@ -521,24 +520,4 @@ func (j *Jackal) shutdown() error {
 func (j *Jackal) waitForStopSignal() os.Signal {
 	signal.Notify(j.waitStopCh, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	return <-j.waitStopCh
-}
-
-func setRLimit() error {
-	var rLim syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLim); err != nil {
-		return err
-	}
-	if rLim.Cur < rLim.Max {
-		switch runtime.GOOS {
-		case "darwin":
-			// The max file limit is 10240, even though
-			// the max returned by Getrlimit is 1<<63-1.
-			// This is OPEN_MAX in sys/syslimits.h.
-			rLim.Cur = darwinOpenMax
-		default:
-			rLim.Cur = rLim.Max
-		}
-		return syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLim)
-	}
-	return nil
 }
