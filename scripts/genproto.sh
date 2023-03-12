@@ -8,9 +8,6 @@ if ! [[ "$0" =~ scripts/genproto.sh ]]; then
 	exit 255
 fi
 
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.26
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
-
 FILES=(
   "admin/v1/users.proto"
   "c2s/v1/resourceinfo.proto"
@@ -23,9 +20,18 @@ FILES=(
   "model/v1/roster.proto"
 )
 
+# Create the vendor/ dir for protobuf files to import from, and clean it up at
+# the end of the script (regardless of the exit status).
+# We move the vendor directory to a new name to avoid "go run" trying to use it.
+function cleanup {
+	rm -rf ./tmp_vendor
+}
+trap cleanup EXIT
+go mod vendor -o tmp_vendor
+
 for file in "${FILES[@]}"; do
-  protoc \
-    --proto_path=${GOPATH}/src \
+  PATH="$PWD/scripts:$PATH" protoc \
+    --proto_path=./tmp_vendor \
     --proto_path=. \
     --go_out=. \
     --go-grpc_out=. \
