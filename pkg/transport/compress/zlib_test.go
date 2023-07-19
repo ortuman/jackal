@@ -16,7 +16,7 @@ package compress
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -94,7 +94,7 @@ func TestZlibInflate(t *testing.T) {
 		rBuf.Reset()
 		rBuf.Write(tc.input)
 		compressor := NewZlibCompressor(rBuf, nil, tc.level)
-		b, _ := ioutil.ReadAll(compressor)
+		b, _ := io.ReadAll(compressor)
 		require.Equal(t, tc.output, string(b))
 	}
 }
@@ -109,6 +109,6 @@ func TestInvalidInflate(t *testing.T) {
 	rBuf := new(bytes.Buffer)
 	rBuf.Write([]byte("this is garbage!"))
 	compressor := NewZlibCompressor(rBuf, nil, DefaultCompression)
-	_, err := ioutil.ReadAll(compressor)
+	_, err := io.ReadAll(compressor)
 	require.NotNil(t, err)
 }
