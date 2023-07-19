@@ -448,9 +448,7 @@ func computeVer(
 
 			// sort values
 			var values []string
-			for _, val := range field.Values {
-				values = append(values, val)
-			}
+			values = append(values, field.Values...)
 			sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
 
 			for _, val := range values {
